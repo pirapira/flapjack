@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.PanBst
 import Flapjack.PanValueFfiClockSemantics
 
 /-!
@@ -19,6 +20,11 @@ the source clock and state transitions.
 -/
 
 namespace Flapjack
+
+/-- HOL `panSem$empty_locals`: clear only the source state's local map. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
+def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
+  { state with locals := fun _ => none }
 
 /-- Faithful context-free port of Cake `panSem$shape_of`
     (`cakeml/pancake/semantics/panSemScript.sml:80`). `PanValue.word`

@@ -2528,12 +2528,28 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "clearCrepRuntimeLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "shape_of_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panSemShapeOf",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "panEmptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -2681,19 +2697,19 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "EL_load_globals",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "elLoadGlobals",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "res_var_commutes'",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "resVarCommutesPrime",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (finite-map equation comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "EL_load_globals",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "elLoadGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,
@@ -2848,11 +2864,11 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_empty_locals",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "crepCodeStateSkipBoundary",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (runtime state boundary review)"
+    "lean_name": "codeRelEmptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL state field review)"
   }
 ]

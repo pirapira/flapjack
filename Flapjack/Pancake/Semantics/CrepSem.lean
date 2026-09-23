@@ -1,4 +1,6 @@
 import Flapjack.CrepeSemantics
+import Flapjack.FiniteMap.Basic
+import Flapjack.HolRef
 import Flapjack.PanValueFfiSemantics
 
 /-!
@@ -67,7 +69,8 @@ def natCrepRuntimeFfiState : FfiState Unit :=
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
   globals : α → Option α
-  functions : List (CompiledFunction α)
+  /-- HOL `crepSem$state.code`: the code map used by runtime function calls. -/
+  code : FunName → Option (List Nat × CrepProg α)
   memory : α → Option α
   memaddrs : α → Bool
   shMemaddrs : α → Bool
@@ -90,8 +93,26 @@ def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
 /- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
    (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
    expose the caller's transient locals. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
+
+/-- Flapjack-only projection lemma for the production HOL empty-locals port. -/
+@[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).code = state.code := rfl
+
+def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    Option (CrepProg α × (Nat → Option α)) :=
+  match FLOOKUP code name with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length == values.length &&
+          parameters.eraseDups.length == parameters.length then
+        match assignCrepValues (fun _ => none) parameters values with
+        | some locals => some (body, locals)
+        | none => none
+      else none
 
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
@@ -382,7 +403,7 @@ def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=
   { caller with
     globals := callee.globals
-    functions := callee.functions
+    code := callee.code
     memory := callee.memory
     memaddrs := callee.memaddrs
     shMemaddrs := callee.shMemaddrs
@@ -423,7 +444,7 @@ mutual
         match evalCrepRuntimeExps caller arguments with
         | none => some (.error, caller)
         | some values =>
-            match lookupCrepCode function values caller.functions with
+            match lookupCrepRuntimeCode function values caller.code with
             | none => some (.error, caller)
             | some (body, calleeLocals) =>
                 if !crepRuntimeCallInfoValid info then

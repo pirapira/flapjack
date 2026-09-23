@@ -49,7 +49,7 @@ structure LoopMachineState (W : Type := Nat) (F : Type := Nat) where
   baseAddr : W
   topAddr : W
 
-/-- A canonical FFI state with a diverging oracle, for building machine states
+/-- A canonical FFI state with a failing oracle, for building machine states
     in tests and probe harnesses. -/
 def trivialFfiState (F : Type) (state : F) : FfiState F :=
   { oracle := fun _ _ _ _ => .final .failed, state := state, ioEvents := [] }

@@ -715,6 +715,61 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
         context := second.context } :=
   globalCompileDecsThreaded_append context decs rest
 
+/-- Exact-shaped port of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`) over the
+    HOL-shaped `CakeContext` (globals, globals_size, max_globals_size). The
+    context fixes `bytes_in_word` and the numeral conversion to their HOL values
+    for a `width`-bit word, and `[LawfulBEq String]` makes the name test reflect
+    HOL's `=`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
+theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat}
+    (context : CakeContext width) (code : List (Decl (BitVec width)))
+    (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
+    (ctxt' : CakeContext width)
+    (hcompile : compileDecsCake context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' })
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    funs = [] := by
+  have hfuns : funs = (compileDecsCake context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact compileDecsCake_functions_eq_nil_of_no_functions code context hnone
+
+/-- Exact-shaped port of Cake's `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) over the
+    HOL-shaped `CakeContext`; see `compile_decs_decls_thm_cake` for the
+    canonical word/equality conditions. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
+theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat}
+    (context : CakeContext width) (code : List (Decl (BitVec width)))
+    (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
+    (ctxt' : CakeContext width)
+    (hcompile : compileDecsCake context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    funs.all globalDeclIsFunction = true := by
+  have hfuns : funs = (compileDecsCake context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact compileDecsCake_functions_all_isFunction context code
+
+/-- Exact-shaped port of Cake's `compile_decls_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) over the
+    HOL-shaped `CakeContext`: the second declaration list runs under the context
+    reached by the first, and the three output lists append. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decls_append"]
+theorem compile_decls_append_cake [LawfulBEq String] {width : Nat}
+    (context : CakeContext width) (decs rest : List (Decl (BitVec width))) :
+    compileDecsCake context (decs ++ rest) =
+      let first := compileDecsCake context decs
+      let second := compileDecsCake first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } :=
+  compileDecsCake_append context decs rest
+
 /-- Flapjack-only (untagged) counterpart of Cake's `compile_decs_functions_thm`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1951`) for
     `globalCompileDecsThreaded`, for a program consisting only of functions:

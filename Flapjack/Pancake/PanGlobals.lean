@@ -1426,6 +1426,149 @@ theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
           simp only [List.cons_append, globalCompileDecsThreaded]
           rw [ih context]
 
+/-! HOL-shaped context for `pan_globals$compile_decs_def`
+    (`pan_globalsScript.sml:1-9`): exactly HOL's three fields over a `width`-bit
+    word. HOL fixes `bytes_in_word = n2w (dimindex DIV 8)` and the numeral
+    conversion `n2w`; Flapjack's generalized `GlobalPassContext` exposes those
+    as fields, so `toPass` pins them to those HOL choices. -/
+structure CakeContext (width : Nat) where
+  globals : List (String × (Shape × BitVec width))
+  globalsSize : BitVec width
+  maxGlobalsSize : BitVec width
+
+namespace CakeContext
+
+/-- Canonical Flapjack pass context corresponding to a HOL `pan_globals` context
+    over `width`-bit words. -/
+def toPass {width : Nat} (context : CakeContext width) :
+    GlobalPassContext (BitVec width) :=
+  { globals := context.globals
+    globalsSize := context.globalsSize
+    maxGlobalsSize := context.maxGlobalsSize
+    bytesInWord := BitVec.ofNat width (width / 8)
+    fromNat := BitVec.ofNat width }
+
+/-- HOL-shaped projection of a Flapjack pass context. -/
+def ofPass {width : Nat} (context : GlobalPassContext (BitVec width)) :
+    CakeContext width :=
+  { globals := context.globals
+    globalsSize := context.globalsSize
+    maxGlobalsSize := context.maxGlobalsSize }
+
+@[simp] theorem ofPass_toPass {width : Nat} (context : CakeContext width) :
+    ofPass (toPass context) = context := rfl
+
+end CakeContext
+
+/-- HOL-shaped output of `compile_decs`. -/
+structure CakeCompileDecsResult (width : Nat) where
+  initializers : List (Prog (BitVec width))
+  functions : List (Decl (BitVec width))
+  exceptions : List (Decl (BitVec width))
+  context : CakeContext width
+
+/-- Exact-shaped `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`)
+    over the HOL-shaped `CakeContext`: the pass context is threaded through the
+    declaration list, so a function body is compiled under the context as of its
+    own position. This is an intermediate exact port; production
+    `globalCompileDecs` is switched over in `flapjack-pxn.18.5.2.20.2`. -/
+def compileDecsCake {width : Nat} (context : CakeContext width) :
+    List (Decl (BitVec width)) → CakeCompileDecsResult width
+  | [] => { initializers := [], functions := [], exceptions := [], context := context }
+  | .function declaration :: declarations =>
+      let rest := compileDecsCake context declarations
+      { initializers := rest.initializers
+        functions := .function { declaration with
+            body := globalCompileProg context.toPass declaration.body } :: rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+  | .exnDecl exception shape :: declarations =>
+      let rest := compileDecsCake context declarations
+      { rest with exceptions := .exnDecl exception shape :: rest.exceptions }
+  | .name _ _ :: declarations => compileDecsCake context declarations
+  | .decl shape name value :: declarations =>
+      let address := globalAddress context.toPass shape
+      let nextContext := { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      let rest := compileDecsCake nextContext declarations
+      { initializers :=
+          .store (.op .sub [.topAddr, .const address])
+            (globalCompileExp context.toPass value) :: rest.initializers
+        functions := rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+
+theorem compileDecsCake_functions_all_isFunction {width : Nat}
+    (context : CakeContext width) (declarations : List (Decl (BitVec width))) :
+    (compileDecsCake context declarations).functions.all globalDeclIsFunction = true := by
+  induction declarations generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [compileDecsCake, List.all_cons, globalDeclIsFunction, Bool.true_and]
+          exact ih context
+      | decl shape name value =>
+          simp only [compileDecsCake]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [compileDecsCake]
+          exact ih context
+      | name struct fields =>
+          simp only [compileDecsCake]
+          exact ih context
+
+theorem compileDecsCake_functions_eq_nil_of_no_functions {width : Nat}
+    (declarations : List (Decl (BitVec width))) :
+    ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
+      (compileDecsCake context declarations).functions = [] := by
+  induction declarations with
+  | nil => intro context _; rfl
+  | cons declaration declarations ih =>
+      intro context hnone
+      cases declaration with
+      | function function =>
+          simp [List.all_cons, globalDeclIsFunction] at hnone
+      | decl shape name value =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+      | exnDecl exception shape =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+      | name struct fields =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+
+theorem compileDecsCake_append {width : Nat} (context : CakeContext width)
+    (decs rest : List (Decl (BitVec width))) :
+    compileDecsCake context (decs ++ rest) =
+      let first := compileDecsCake context decs
+      let second := compileDecsCake first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } := by
+  induction decs generalizing context with
+  | nil => simp [compileDecsCake]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih context]
+      | decl shape name value =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih _]
+      | exnDecl exception shape =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih _]
+      | name struct fields =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih context]
+
 /-! Counterpart of Cake's `compile_decs_preserve_functions`
     (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the
     function-name table. -/

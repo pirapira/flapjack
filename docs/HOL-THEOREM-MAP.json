@@ -2883,7 +2883,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_decls_thm",
     "lean_name": "compile_decs_decls_thm_threaded"
   },
@@ -2891,7 +2891,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_name": "compile_decs_EVERY_is_function_threaded"
   },
@@ -2899,9 +2899,33 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_decls_thm_cake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over width-bit words fixing bytes_in_word and n2w, LawfulBEq String)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_EVERY_is_function_cake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over width-bit words fixing bytes_in_word and n2w, LawfulBEq String)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decls_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decls_append_cake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over width-bit words, append threads the reached context)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

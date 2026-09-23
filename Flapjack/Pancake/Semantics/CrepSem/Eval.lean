@@ -945,7 +945,8 @@ def holFiniteWordSourceGetByte {ι : Type u}
 def holFiniteWordSourceAligned {ι : Type u}
     (dimension : HolFiniteDimension ι) (alignment : Nat) (address : ι → Bool) :
     Bool :=
-  decide ((holWordToBitVec dimension address).toNat % alignment = 0)
+  let exponent := Nat.log2 alignment
+  decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
 
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)

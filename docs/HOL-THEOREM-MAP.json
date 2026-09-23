@@ -3688,6 +3688,14 @@
     "reviewer": "Flapjack Call-entry proof of the expanded locals_rel_def body for slc parameters and the actual word_lab target tlc map under source panSem shape_of/is_wf_shape_v_nil premises; does not claim state/code/excp preservation or an exact theorem port."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcTlcWordLabLocalsRelOfIndexedPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack composition from the indexed formal/argument shape form of HOL LIST_REL_EL_EQN to the expanded Call locals_rel_def body; enclosing state/code/excp preservation remains unproved."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "state_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

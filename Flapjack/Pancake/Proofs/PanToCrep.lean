@@ -342,4 +342,28 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
 
+/-- HOL `code_rel_imp`: an entry in related source code is localised and
+    has the corresponding function metadata and compiled target entry. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_imp"]
+theorem codeRelImp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (hrel : codeRel context sourceCode targetCode)
+    (function : FunName) (variableShapes : List (VarName × Shape))
+    (program : Prog α) (returnShape : Shape)
+    (hlookup : FLOOKUP sourceCode function =
+      some (variableShapes, program, returnShape)) :
+    localisedProg program ∧
+      FLOOKUP context.funcs function = some (variableShapes, returnShape) ∧
+      let variables := variableShapes.map Prod.fst
+      let shapes := variableShapes.map Prod.snd
+      let names := List.range (Shape.shapeSize (.comb shapes))
+      let nextContext := ctxtFc context.funcs context.eids variables shapes names
+      FLOOKUP targetCode function = some
+        (names, compileCodeRelProg nextContext program) :=
+  hrel function variableShapes program returnShape hlookup
+
 end Flapjack

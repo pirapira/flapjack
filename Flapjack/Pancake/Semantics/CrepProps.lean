@@ -1,6 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
-import Flapjack.CrepeSemantics
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Crepe language properties from `cakeml/pancake/semantics/crepPropsScript.sml`.
@@ -14,25 +14,25 @@ namespace Flapjack
 universe u
 
 /-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). Lean's
-    `state.locals` is the `FLOOKUP` view of the local finite map, and the
-    state-aware evaluator reduces `.var name` to that lookup. The address
-    parameters are evaluator context that this variable-only theorem does not
-    inspect. -/
+    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). HOL uses
+    `crepSem.eval`; this port uses its source-path Lean counterpart
+    `crepSemEvalExp`, whose variable case reads the runtime state's local
+    lookup. Lean represents `FLOOKUP state.locals name` directly as
+    `state.locals name`. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (state : CrepState α) (baseAddress topAddress : α) (names : List Nat) :
+    (state : CrepRuntimeState α σ) (names : List Nat) :
     names.mapM state.locals =
       (names.map (CrepExp.var (α := α))).mapM
-        (evalCrepFullExpState state baseAddress topAddress) := by
+        (crepSemEvalExp state) := by
   induction names with
   | nil => rfl
   | cons name names ih =>
-      simp [evalCrepFullExpState, ih]
+      simp [crepSemEvalExp, evalCrepRuntimeExp, ih]
 
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/

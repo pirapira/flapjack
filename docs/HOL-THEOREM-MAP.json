@@ -4179,22 +4179,6 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructValueFieldsOk",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Not an exact port of HOL v_flds_ok_def: HOL returns bool while this Lean predicate returns Prop; Lean lookup uses unconstrained [BEq String] through lookupInfo whereas HOL uses equality-based ALOOKUP, and equivalence is unproved. StructInfo also has a size field absent from the HOL projection, though this predicate reads only fields."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructValueShapeWf",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Not an exact port of is_wf_shape_v_def: HOL returns bool while this Lean predicate returns Prop; Lean lookup uses unconstrained [BEq String] through lookupInfo whereas HOL uses equality-based ALOOKUP, and equivalence is unproved. StructInfo has a size field absent from the HOL projection."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertState_code",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Projection helper for the untagged PanSemState convert_s adapter; total function maps do not preserve HOL finite-map support."

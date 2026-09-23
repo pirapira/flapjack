@@ -1,4 +1,4 @@
-import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.Semantics.CrepProps
 
 /-!
 # `crepEveryExp` parity guards

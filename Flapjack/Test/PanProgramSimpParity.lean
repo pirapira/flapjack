@@ -791,16 +791,6 @@ example : True := by
     ([] : StructContext) evalRelState wfFunction oneFunLastDecls none hrest
   trivial
 
-/-- Focused regression for the `pair_map_I` counterpart. -/
-theorem prod_mk_pair_eq_id_fixture :
-    (fun p : Nat × Nat => (p.1, p.2)) = id :=
-  prod_mk_pair_eq_id
-
-/-- Focused regression for the `not_none_then_some` counterpart. -/
-theorem option_ne_none_iff_exists_fixture :
-    (some 3 : Option Nat) ≠ none ↔ ∃ a, (some 3 : Option Nat) = some a :=
-  option_ne_none_iff_exists (some 3)
-
 /-- Focused regression for the `resort_decls_evaluate` counterpart: resorting
     declarations into the name/exception/global/function partition preserves
     the declaration evaluator's result. -/
@@ -833,24 +823,6 @@ example : True := by
   have _h := evalPanValueDeclarationsWithStructs_resortDecls
     ([] : StructContext) evalRelState resortDecls none hall
   trivial
-
-/-- Focused regression for the `filter_not_mem_self` counterpart. -/
-theorem filter_not_mem_self_fixture :
-    ([1, 2, 3] : List Nat).filter (fun x => decide (x ∉ [1, 2, 3])) = [] :=
-  filter_not_mem_self [1, 2, 3]
-
-/-- Focused regression for the `MAP_SOME_MEM_lemma` counterpart. -/
-theorem map_flatten_eq_map_some_flatten_fixture :
-    ∃ y, (fun n : Nat => if n == 4 then none else some (n + 1)) 3 = some y ∧
-      y ∈ ([4, 6] : List Nat) :=
-  map_flatten_eq_map_some_flatten
-    (fun n : Nat => if n == 4 then none else some (n + 1))
-    [[3], [5]] [[4], [6]] [3] 3 (by decide) (by simp) (by simp)
-
-/-- Focused regression for the `mod_eq_lt_eq` counterpart. -/
-theorem mod_eq_of_lt_eq_fixture {n x m : Nat} (hn : n < x) (hm : m < x)
-    (h : n % x = m % x) : n = m :=
-  mod_eq_of_lt_eq hn hm h
 
 /-- `evaluate_decls_only_functions_SOME`
     (`pan_globalsProofScript.sml:2390`): a function-only declaration list with
@@ -1000,6 +972,10 @@ theorem map_eq_append_drop_fixture :
 theorem list_mapM_eq_some_map_some_fixture :
     (([2, 4, 6] : List Nat).map sampleMapF) = ([3, 5, 7] : List Nat).map some :=
   (list_mapM_eq_some_map_some sampleMapF [2, 4, 6] [3, 5, 7]).mp (by decide)
+
+theorem optMmapEqSome_fixture :
+    (([2, 4, 6] : List Nat).map sampleMapF) = ([3, 5, 7] : List Nat).map some :=
+  (optMmapEqSome [2, 4, 6] sampleMapF [3, 5, 7]).mp (by decide)
 
 theorem list_mapM_eq_some_map_some_rev_fixture :
     ([2, 4, 6] : List Nat).mapM sampleMapF = some [3, 5, 7] :=

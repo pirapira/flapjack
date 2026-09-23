@@ -6,9 +6,11 @@ import Flapjack.Pancake.PanToCrep
 The expected values come from the direct HOL-EVAL fixture
 `scripts/hol-probes/exp_hdl_probe.out`, sourced from
 `cakeml/pancake/pan_to_crepScript.sml:106-112`.  `expHdlFiniteMap` is the
-faithful finite-map port; the list-backed `expHdl` checks the existing
-first-match executable helper.  The duplicate fixtures pin the finite-map
-semantics: for both `FUPDATE` and `FUPDATE_LIST` the last binding wins.
+faithful finite-map port; the executable adapter `expHdl` builds HOL's finite
+map from the association-list compiler context (`infoMapToFiniteMap`) and calls
+that port.  The duplicate fixtures pin the finite-map semantics: for both
+`FUPDATE` and `FUPDATE_LIST` the last binding wins, and the executed adapter
+must reproduce that on a duplicate-bearing context.
 -/
 
 namespace Flapjack.Test.ExpHdlParity
@@ -59,8 +61,24 @@ def dupUpdateOK : Bool :=
 def dupListOK : Bool :=
   dupPattern (expHdlFiniteMap (α := Nat) dupListVars "x")
 
+/-! The compiler context stores bindings most-recent-first, so the association
+    list whose finite-map replay is HOL's `FEMPTY |++ [(x,[3,4]); (x,[7])]` is
+    the reversed list `[(x,[7]); (x,[3,4])]`.  The executed adapter must still
+    emit the last-binding code, matching the HOL duplicate oracle. -/
+def execDupVars : InfoMap (Shape × List Nat) :=
+  [("x", (.one, [7])), ("x", (.one, [3, 4]))]
+
+def execDupOK : Bool :=
+  dupPattern (expHdl (α := Nat) execDupVars "x")
+
+/-- The executable adapter's bridged finite map is exactly the HOL duplicate
+    `FUPDATE_LIST` map, so its output equals the faithful port's. -/
+example : expHdl (α := Nat) execDupVars "x" =
+    expHdlFiniteMap (α := Nat) dupListVars "x" := rfl
+
 def parityGuard : Bool :=
   missingOK && knownOK && fmMissingOK && fmKnownOK && dupUpdateOK && dupListOK
+    && execDupOK
 
 #eval parityGuard
 #guard parityGuard
@@ -68,7 +86,7 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println
-      "PASS exp_hdl missing/known global-load assignments; duplicate finite-map updates keep the last binding"
+      "PASS exp_hdl missing/known global-load assignments; duplicate finite-map updates keep the last binding on the executed path"
   else
     IO.println "FAIL exp_hdl parity"
   pure parityGuard

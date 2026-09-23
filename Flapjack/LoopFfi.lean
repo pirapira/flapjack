@@ -19,7 +19,7 @@ namespace Flapjack
 
 structure LoopFfiState (α : Type u) (σ : Type v) where
   locals : Nat → Option α
-  globals : α → Option α
+  globals : BitVec 5 → Option (LoopStateCell α)
   memory : α → Option UInt8
   memaddrs : α → Bool
   shMemaddrs : α → Bool
@@ -122,7 +122,10 @@ def loopFfiEvalExp
     (state : LoopFfiState α σ) : LoopExp α → Option α
   | .const value => some value
   | .var name => state.locals name
-  | .lookup address => state.globals address
+  | .lookup address =>
+      match state.globals address with
+      | some (.word value) => some value
+      | some (.loc _ _) | none => none
   | .load address => do
       let address ← loopFfiEvalExp state address
       let bytes ← loopFfiReadBytes state address 1

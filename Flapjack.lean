@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Display
 import Flapjack.Ffi
@@ -61,7 +62,11 @@ import Flapjack.PanSimpLocalised
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.Proofs.PanGlobals
+import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep
+import Flapjack.Pancake.Proofs.PanToCrep.Primop
+import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
+import Flapjack.Pancake.Proofs.PanToCrep.EvaluatorBoundary
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps

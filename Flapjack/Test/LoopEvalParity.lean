@@ -22,7 +22,8 @@ def word (value : Nat) : ProbeWord := BitVec.ofNat 8 value
 
 def probeState : LoopState ProbeWord :=
   { locals := fun name => if name == 2 then some (word 7) else none
-    globals := fun address => if address == word 3 then some (word 9) else none
+    globals := fun address =>
+      if address == (3 : BitVec 5) then some (.word (word 9)) else none
     memory := fun address => if address == word 3 then some (word 11) else none }
 
 def eval (expression : LoopExp ProbeWord) : Option ProbeWord :=
@@ -47,8 +48,8 @@ def checks : List (String × Bool) := [
   ("eval Const", eval (.const (word 7)) == originalConst),
   ("eval Var hit", eval (.var 2) == originalVarHit),
   ("eval Var miss", eval (.var 3) == originalVarMiss),
-  ("eval Lookup hit", eval (.lookup (word 3)) == originalLookupHit),
-  ("eval Lookup miss", eval (.lookup (word 4)) == originalLookupMiss),
+  ("eval Lookup hit", eval (.lookup (3 : BitVec 5)) == originalLookupHit),
+  ("eval Lookup miss", eval (.lookup (4 : BitVec 5)) == originalLookupMiss),
   ("eval Load hit", eval (.load (.const (word 3))) == originalLoadHit),
   ("eval Load miss", eval (.load (.const (word 4))) == originalLoadMiss),
   ("eval n-ary Add intermediate computation",
@@ -77,8 +78,8 @@ def runChecks : IO Bool := do
 #guard eval (.const (word 7)) == originalConst
 #guard eval (.var 2) == originalVarHit
 #guard eval (.var 3) == originalVarMiss
-#guard eval (.lookup (word 3)) == originalLookupHit
-#guard eval (.lookup (word 4)) == originalLookupMiss
+#guard eval (.lookup (3 : BitVec 5)) == originalLookupHit
+#guard eval (.lookup (4 : BitVec 5)) == originalLookupMiss
 #guard eval (.load (.const (word 3))) == originalLoadHit
 #guard eval (.load (.const (word 4))) == originalLoadMiss
 #guard eval (.op .add [.const (word 1), .const (word 2), .const (word 3)]) ==

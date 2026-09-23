@@ -11,7 +11,7 @@ calls, loops, and foreign calls.
 namespace Flapjack
 
 inductive WordStore (α : Type u) where
-  | temp (address : α)
+  | temp (address : BitVec 5)
   | nextFree
   | endOfHeap
   | triggerGC

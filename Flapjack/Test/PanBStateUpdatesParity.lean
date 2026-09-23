@@ -17,7 +17,7 @@ def baseState : PanBState Nat where
     "x" (.word 5)) "y" (.word 7)
   globals := updatePanValueMap (fun _ => none) "g" (.word 1)
   structs := []
-  code := fun _ => none
+  code := []
   exceptionShapes := fun _ => none
   memory := fun address => if address == 9 then some (.word 13) else none
   memaddrs := fun address => address == 9

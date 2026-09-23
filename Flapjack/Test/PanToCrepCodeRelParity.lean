@@ -72,37 +72,10 @@ def compiledGlobalDestinationMatchesHolOracle : Bool :=
   | .call (some ([0, 1], none)) "f" [] => true
   | _ => false
 
-def compilerContext : CompileContext Nat :=
-  compileCodeRelContext proofContext sourceBody
-
-theorem sourceBodyFreeVariables : freeVarIds sourceBody = ["x"] := by
-  simp [freeVarIds, expLocalVars, sourceBody]
-
-theorem parameterVariableProjection :
-    projectFiniteMapToInfoMap ["x"] proofContext.vars = [("x", (.one, [0]))] := by
-  simp [proofContext, compilerFunctions, ctxtFc, projectFiniteMapToInfoMap,
-    FUPDATE, FUPDATE_LIST, FEMPTY, FLOOKUP, withShape]
-
-theorem compilerContextVariables :
-    compilerContext.vars = [("x", (.one, [0]))] := by
-  have hcalls : callVarsUsedByProg sourceBody = [] := by
-    simp [sourceBody, callVarsUsedByProg]
-  simp [compilerContext, compileCodeRelContext, sourceBodyFreeVariables, hcalls,
-    parameterVariableProjection]
-
 theorem compiledReturnMatchesHolOracle :
     compileCodeRelProg proofContext sourceBody = .return [.var 0] := by
-  rw [compileCodeRelProg, sourceBody, compileProg_return]
-  change CrepProg.return
-    (compileExp (compileCodeRelContext proofContext
-      (.return (.var .local "x"))) (.var .local "x")).1 = .return [.var 0]
-  have hvars :
-      (compileCodeRelContext proofContext (.return (.var .local "x"))).vars =
-        [("x", (.one, [0]))] := by
-    simpa [compilerContext, sourceBody] using compilerContextVariables
-  simp only [compileExp]
-  rw [hvars]
-  simp [lookupInfo]
+  simp [compileCodeRelProg, compileProgHOL, compileExpHOL, sourceBody,
+    proofContext, ctxtFc, FUPDATE_LIST, FUPDATE, FLOOKUP, withShape]
 
 theorem matchingCodeRel : codeRel proofContext sourceCode matchingTargetCode := by
   intro function variableShapes program returnShape hsource
@@ -134,9 +107,18 @@ theorem rejectsWrongCompiledBody :
       some (parameterShapes, sourceBody, .one) := by
     simp [sourceCode, FLOOKUP, FUPDATE]
   have hcompiled := (hrel "f" parameterShapes sourceBody .one hsource).2.2
-  simp [wrongBodyTargetCode, FLOOKUP, FUPDATE, proofContext, ctxtFc,
-    compileCodeRelProg, sourceBody, parameterShapes, compilerFunctions,
-    compileProg, compileExp] at hcompiled
+  simp [wrongBodyTargetCode, FLOOKUP, FUPDATE, parameterShapes] at hcompiled
+  change [0] = List.range (Shape.shapeSize (.comb [Shape.one])) ∧
+    CrepProg.skip = compileCodeRelProg
+      (ctxtFc proofContext.funcs proofContext.eids ["x"] [.one]
+        (List.range (Shape.shapeSize (.comb [Shape.one])))) sourceBody at hcompiled
+  have hslots : List.range (Shape.shapeSize (.comb [Shape.one])) = [0] := by
+    simp [Shape.shapeSize]
+  have hnext : ctxtFc proofContext.funcs proofContext.eids ["x"] [.one] [0] =
+      proofContext := by rfl
+  rcases hcompiled with ⟨_hnames, hbody⟩
+  rw [hslots, hnext, compiledReturnMatchesHolOracle] at hbody
+  cases hbody
 
 theorem rejectsMissingFunctionSignature :
     ¬ codeRel missingSignatureContext sourceCode matchingTargetCode := by

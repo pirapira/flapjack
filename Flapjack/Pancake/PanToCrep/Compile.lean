@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.PanGlobals
 
 /-!
 Core statement lowering from Flapjack to Crepe.
@@ -19,6 +20,291 @@ def compileArgs [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | expression :: expressions =>
       (compileExp context expression).1 ++ compileArgs context expressions
 termination_by structural expressions
+
+/-! Finite-map expression lowering for the HOL `context` record. The lookup is
+    directly `FLOOKUP context.vars`; this path does not enumerate or project a
+    finite map into `InfoMap`. `compileProgHOL` uses this expression compiler
+    throughout its recursive program lowering. -/
+def compileExpHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) : Exp α → List (CrepExp α) × Shape
+  | .const value => ([.const value], .one)
+  | .var .local name =>
+      match FLOOKUP context.vars name with
+      | some (shape, names) => (names.map .var, shape)
+      | none => ([.const 0], .one)
+  | .var .global _ => ([.const 0], .one)
+  | .rStruct expressions =>
+      let compiled := compileExpListHOL context expressions
+      (compiled.flatMap Prod.fst, .comb (compiled.map Prod.snd))
+  | .rField index expression =>
+      let compiled := compileExpHOL context expression
+      match compiled.2 with
+      | .comb shapes => compileField index shapes compiled.1
+      | _ => ([.const 0], .one)
+  | .nStruct _ _ => ([.const 0], .one)
+  | .nField _ _ => ([.const 0], .one)
+  | .load shape expression =>
+      match compileExpHOL context expression with
+      | (expression :: _, _) =>
+          (loadShape 0 CrepBytesInWord.bytesInWord (Shape.shapeSize shape) expression, shape)
+      | _ => ([.const 0], .one)
+  | .load32 expression =>
+      match compileExpHOL context expression with
+      | (expression :: _, .one) => ([.load32 expression], .one)
+      | _ => ([.const 0], .one)
+  | .loadByte expression =>
+      match compileExpHOL context expression with
+      | (expression :: _, .one) => ([.loadByte expression], .one)
+      | _ => ([.const 0], .one)
+  | .op operator expressions =>
+      match cexpHeads (compileExpListHOL context expressions |>.map Prod.fst) with
+      | some expressions => ([.op operator expressions], .one)
+      | none => ([.const 0], .one)
+  | .panOp operator expressions =>
+      match cexpHeads (compileExpListHOL context expressions |>.map Prod.fst) with
+      | some expressions => ([.crepOp (compilePanOp operator) expressions], .one)
+      | none => ([.const 0], .one)
+  | .cmp operator left right =>
+      match compileExpHOL context left, compileExpHOL context right with
+      | (left :: _, _), (right :: _, _) => ([.cmp operator left right], .one)
+      | _, _ => ([.const 0], .one)
+  | .shift operator left right =>
+      match compileExpHOL context left, compileExpHOL context right with
+      | (left :: _, _), (right :: _, _) => ([.shift operator left right], .one)
+      | _, _ => ([.const 0], .one)
+  | .baseAddr => ([.baseAddr], .one)
+  | .topAddr => ([.topAddr], .one)
+  | .bytesInWord => ([.const CrepBytesInWord.bytesInWord], .one)
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  compileExpListHOL (context : PanToCrepHOLContext α) (expressions : List (Exp α)) :
+      List (List (CrepExp α) × Shape) :=
+    match expressions with
+    | [] => []
+    | expression :: expressions =>
+        compileExpHOL context expression :: compileExpListHOL context expressions
+  termination_by sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def compileArgsHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
+  match expressions with
+  | [] => []
+  | expression :: expressions =>
+      (compileExpHOL context expression).1 ++ compileArgsHOL context expressions
+termination_by structural expressions
+
+def allocatedNamesHOL (context : PanToCrepHOLContext α) (shape : Shape) : List Nat :=
+  (List.range (Shape.shapeSize shape)).map (fun offset => context.vmax + 1 + offset)
+
+def freshNamesHOL (context : PanToCrepHOLContext α) (count start : Nat) : List Nat :=
+  (List.range count).map (fun offset => context.vmax + start + offset)
+
+def functionReturnNamesHOL (context : PanToCrepHOLContext α) (function : FunName) : List Nat :=
+  match FLOOKUP context.funcs function with
+  | some (_, shape) => allocatedNamesHOL context shape
+  | none => []
+
+def callDestinationNamesHOL (context : PanToCrepHOLContext α) (_kind : VarKind)
+    (name : VarName) : Option (List Nat) :=
+  (wrapRt (FLOOKUP context.vars name)).map Prod.snd
+
+def firstCompiledExpHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (expression : Exp α) : Option (CrepExp α) :=
+  match compileExpHOL context expression with
+  | (compiled :: _, .one) => some compiled
+  | _ => none
+
+def firstCompiledExpAnyShapeHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (expression : Exp α) : Option (CrepExp α) :=
+  match compileExpHOL context expression with
+  | (compiled :: _, _) => some compiled
+  | _ => none
+
+def maxCrepExpVarHOL (expressions : List (CrepExp α)) : Nat :=
+  (expressions.flatMap crepExpVars).foldl max 0
+
+def loadMemOpHOL : OpSize → CrepMemOp
+  | .op8 => .load8
+  | .opW => .load
+  | .op32 => .load32
+  | .op16 => .load16
+
+def storeMemOpHOL : OpSize → CrepMemOp
+  | .op8 => .store8
+  | .opW => .store
+  | .op32 => .store32
+  | .op16 => .store16
+
+/-! Generic finite-map implementation used to share the compile equations
+    with non-word fixtures. This helper takes the target word's byte stride as
+    an instance parameter, so the HOL reference belongs to the RISC-V
+    specialization below rather than this generic adapter. -/
+def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepHOLContext α)
+    (program : Prog α) : CrepProg α :=
+  match program with
+  | .skip => .skip
+  | .dec name _shape value body =>
+      let compiled := compileExpHOL context value
+      let names := allocatedNamesHOL context compiled.2
+      let nextContext := { context with
+        vars := FUPDATE context.vars (name, (compiled.2, names))
+        vmax := context.vmax + Shape.shapeSize compiled.2 }
+      if Shape.shapeSize compiled.2 = compiled.1.length then
+        nestedDecs names compiled.1 (compileProgHOL nextContext body)
+      else .skip
+  | .assign .local name value =>
+      match FLOOKUP context.vars name, compileExpHOL context value with
+      | some (_, names), (expressions, _) =>
+          if names.length = expressions.length then
+            if distinctLists names (expressions.flatMap crepExpVars) then
+              crepNestedSeq
+                (names.zipWith (fun name expression => .assign name expression) expressions)
+            else
+              let temporaries := freshNamesHOL context names.length 1
+              nestedDecs temporaries expressions
+                (crepNestedSeq
+                  (names.zipWith (fun name temporary => .assign name (.var temporary))
+                    temporaries))
+          else .skip
+      | _, _ => .skip
+  | .assign .global _ _ => .skip
+  | .primitive name operator arguments =>
+      match FLOOKUP context.vars name with
+      | some (_, names) =>
+          let compiledArgs := compileArgsHOL context arguments
+          let temporaries := freshNamesHOL context compiledArgs.length 1
+          nestedDecs temporaries compiledArgs (.primitive names operator temporaries)
+      | none => .skip
+  | .store address value =>
+      match compileExpHOL context address, compileExpHOL context value with
+      | (address :: _, _), (values, shape) =>
+          let addressTemporary := context.vmax + 1
+          let temporaries := freshNamesHOL context values.length 2
+          if values.length = Shape.shapeSize shape then
+            nestedDecs (addressTemporary :: temporaries) (address :: values)
+              (crepNestedSeq (stores (.var addressTemporary) (temporaries.map .var)
+                0 CrepBytesInWord.bytesInWord))
+          else .skip
+      | _, _ => .skip
+  | .store32 address value =>
+      match compileExpHOL context address, compileExpHOL context value with
+      | (address :: _, _), (value :: _, _) => .store32 address value
+      | _, _ => .skip
+  | .storeByte address value =>
+      match compileExpHOL context address, compileExpHOL context value with
+      | (address :: _, _), (value :: _, _) => .storeByte address value
+      | _, _ => .skip
+  | .seq first second => .seq (compileProgHOL context first) (compileProgHOL context second)
+  | .ite condition thenBranch elseBranch =>
+      match compileExpHOL context condition with
+      | (condition :: _, _) =>
+          .ite condition (compileProgHOL context thenBranch) (compileProgHOL context elseBranch)
+      | _ => .skip
+  | .while condition body =>
+      match compileExpHOL context condition with
+      | (condition :: _, _) => .while condition (compileProgHOL context body)
+      | _ => .skip
+  | .break => .break 0
+  | .continue => .continue 0
+  | .call info function arguments =>
+      let args := compileArgsHOL context arguments
+      match info with
+      | none => .call none function args
+      | some (destination, handler) =>
+          let compiledHandler :=
+            match handler with
+            | none => none
+            | some (exception, handlerVar, handlerProgram) =>
+                match FLOOKUP context.eids exception with
+                | none => none
+                | some code =>
+                    let handlerSetup := expHdlFiniteMap context.vars handlerVar
+                    some (code, .seq handlerSetup (compileProgHOL context handlerProgram))
+          match destination with
+          | none =>
+              let returnNames := functionReturnNamesHOL context function
+              nestedDecs returnNames (returnNames.map (fun _ => .const 0))
+                (.call (some (returnNames, compiledHandler)) function args)
+          | some (kind, name) =>
+              match callDestinationNamesHOL context kind name with
+              | none =>
+                  compiledHandler.elim (.call none function args)
+                    (fun handler => .call (some ([], some handler)) function args)
+              | some names => .call (some (names, compiledHandler)) function args
+  | .decCall name shape function arguments body =>
+      let names := allocatedNamesHOL context shape
+      let nextContext := { context with
+        vars := FUPDATE context.vars (name, (shape, names))
+        vmax := context.vmax + Shape.shapeSize shape }
+      let call := .call (some (names, none)) function (compileArgsHOL context arguments)
+      nestedDecs names (names.map (fun _ => .const 0))
+        (.seq call (compileProgHOL nextContext body))
+  | .extCall function configuration configurationLength array arrayLength =>
+      let compiledConfiguration := compileExpHOL context configuration
+      let compiledConfigurationLength := compileExpHOL context configurationLength
+      let compiledArray := compileExpHOL context array
+      let compiledArrayLength := compileExpHOL context arrayLength
+      match compiledConfiguration, compiledConfigurationLength,
+          compiledArray, compiledArrayLength with
+      | (configuration :: _, .one), (configurationLength :: _, .one),
+          (array :: _, .one), (arrayLength :: _, .one) =>
+          /- HOL computes this bound from every compiled expression element,
+             before selecting each One-shaped expression's head for Dec. -/
+          let base := maxCrepExpVarHOL
+            (compiledConfiguration.1 ++ compiledConfigurationLength.1 ++
+              compiledArray.1 ++ compiledArrayLength.1) + 1
+          let configurationName := base
+          let configurationLengthName := base + 1
+          let arrayName := base + 2
+          let arrayLengthName := base + 3
+          let names := [configurationName, configurationLengthName, arrayName, arrayLengthName]
+          nestedDecs names [configuration, configurationLength, array, arrayLength]
+            (.extCall function configurationName configurationLengthName arrayName arrayLengthName)
+      | _, _, _, _ => .skip
+  | .raise exception value =>
+      match FLOOKUP context.eids exception with
+      | some code =>
+          let compiled := compileExpHOL context value
+          let temporaries := freshNamesHOL context compiled.1.length 1
+          if compiled.1.length = Shape.shapeSize compiled.2 then
+            .seq
+              (nestedDecs temporaries compiled.1
+                (crepNestedSeq (storeGlobals 0 (temporaries.map .var))))
+              (.raise code)
+          else .skip
+      | none => .skip
+  | .return value =>
+      let compiled := compileExpHOL context value
+      if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1
+  | .shMemLoad size .local name address =>
+      match FLOOKUP context.vars name, firstCompiledExpAnyShapeHOL context address with
+      | some (_, destination :: _), some address => .shMem (loadMemOpHOL size) destination address
+      | _, _ => .skip
+  | .shMemLoad _ .global _ _ => .skip
+  | .shMemStore size address value =>
+      match firstCompiledExpAnyShapeHOL context address,
+          firstCompiledExpAnyShapeHOL context value with
+      | some address, some value =>
+          let temporary := maxCrepExpVarHOL [address] + 1
+          nestedDecs [temporary] [value] (.shMem (storeMemOpHOL size) temporary address)
+      | _, _ => .skip
+  | .tick => .tick
+  | .annot _ _ => .skip
+termination_by structural program
+
+/-! Exact RISC-V word specialization of CakeML's `compile_def`: the word type
+    fixes `bytes_in_word` to `BitVec width / 8`, and the source context retains
+    the HOL finite-map fields directly. No caller-supplied stride or
+    list-backed map conversion appears in the tagged definition. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_def"]
+def compileProgRiscV (context : PanToCrepHOLContext (BitVec width))
+    (program : Prog (BitVec width)) : CrepProg (BitVec width) :=
+  compileProgHOL context program
 
 def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
   (List.range (Shape.shapeSize shape)).map (fun offset => context.maxVar + 1 + offset)
@@ -214,13 +500,14 @@ def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape
 /-! Source-named port of CakeML Pancake's `crep_vars_def`
     (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
     consecutive slot for every flattened parameter word. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "crep_vars_def"]
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
   List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 
-/-! Flapjack's executable `pan_to_crep$compile` analogue. It is not yet an
-    exact port of HOL `compile_def`: `CompileContext` admits a caller-supplied
-    `bytesInWord`, whereas HOL's context has no such field and uses the fixed
-    `byte$bytes_in_word`. Bead `flapjack-pxn.18.3.1.4` tracks the exact port.
+/-! Legacy list-backed `pan_to_crep$compile` implementation. It is retained
+    for list-context analyses, but is not the exact HOL `compile_def` port:
+    `CompileContext` admits a caller-supplied width and its maps are `InfoMap`
+    lists. The exact finite-map compiler is `compileProgHOL` below.
 
     The recursive compiler below keeps CakeML's fallback behavior for
     malformed compiled expressions and preserves the source control-flow
@@ -307,6 +594,9 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
                 match lookupInfo exception context.exceptions with
                 | none => none
                 | some code =>
+                    /- HOL's handled-call branch builds the handler body with
+                       `exp_hdl` (`pan_to_crepScript.sml:238`) and never calls
+                       `ret_hdl`/`ret_var`; see bead `flapjack-pxn.18.2.4.1`. -/
                     let handlerSetup := expHdl context.vars handlerVar
                     some (code, .seq handlerSetup (compileProg context handlerProgram))
           match destination with
@@ -366,7 +656,9 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
               (.raise code)
           else .skip
       | none => .skip
-  | .return value => .return (compileExp context value).1
+  | .return value =>
+      let compiled := compileExp context value
+      if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1
   | .shMemLoad size .local name address =>
       match lookupInfo name context.vars, firstCompiledExpAnyShape context address with
       | some (_, destination :: _), some address => .shMem (loadMemOp size) destination address
@@ -427,6 +719,71 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   let context := { context with functions := functionInfos declarations }
   compileFunctionsSource context declarations
 
+/-! HOL finite-map variants used by the RISC-V production path. The parameter
+    and function tables are built with `FUPDATE_LIST`; body compilation then
+    uses `compileProgHOL` without converting the context to `InfoMap`. -/
+/-- HOL `make_vmap_def`: allocate consecutive flattened parameter slots and
+    update the finite map in source order, so a later duplicate name wins. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "make_vmap_def"]
+def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
+    FiniteMap VarName (Shape × List Nat) :=
+  FUPDATE_LIST FEMPTY (compileParamVars params 0).1
+
+def functionInfosHOL (declarations : List (Decl α)) :
+    FiniteMap FunName (List (VarName × Shape) × Shape) :=
+  /- HOL `alist_to_fmap` is `FOLDR FUPDATE FEMPTY`, so the first duplicate
+     function name wins. `FUPDATE_LIST` is a left fold and needs reversal. -/
+  FUPDATE_LIST FEMPTY (panToCrepMakeFuncs declarations).reverse
+
+def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
+    (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
+    CrepProg (BitVec width) :=
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProgRiscV
+    (panToCrepMkCtxtHOL (panToCrepMakeVmapHOL params)
+      context.funcs vmax context.eids) body
+
+/-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
+order and turn their zero-based indices into words. HOL `alist_to_fmap` uses
+`FOLDR FUPDATE FEMPTY`, so the first duplicate exception name wins. The word
+type fixes the conversion, rather than taking a caller-supplied map. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "get_eids_from_decls_def"]
+def panToCrepGetEidsFromDeclsHOL
+    (declarations : List (Decl (BitVec width))) :
+    FiniteMap ExceptionId (BitVec width) :=
+  let names := (exceptionEntries declarations).map Prod.fst
+  FUPDATE_LIST FEMPTY
+    (names.zip ((List.range names.length).map (BitVec.ofNat width))).reverse
+
+/-! HOL `compile_to_crep_def` returns triples, not Flapjack's downstream
+`CompiledFunction` record (which additionally stores source return-shape
+metadata). Preserve that exact output boundary here and attach metadata only
+in the untagged adapter below. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_to_crep_def"]
+def compileToCrepHOL
+    (declarations : List (Decl (BitVec width))) :
+    List (FunName × List Nat × CrepProg (BitVec width)) :=
+  let functions := functionEntries declarations
+  let functionMap := functionInfosHOL declarations
+  let exceptionMap := panToCrepGetEidsFromDeclsHOL declarations
+  let context : PanToCrepHOLContext (BitVec width) :=
+    panToCrepMkCtxtHOL FEMPTY functionMap 0 exceptionMap
+  functions.map fun (name, parameters, body, _returnShape) =>
+    (name, panToCrepVars parameters,
+      panToCrepCompFuncRiscV context parameters body)
+
+/-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
+Cake's following Crep passes operate on triples; Flapjack retains the source
+return shape in `CompiledFunction` for its existing downstream interfaces. -/
+def compileToCrepHOLWithMetadata
+    (declarations : List (Decl (BitVec width))) :
+    List (CompiledFunction (BitVec width)) :=
+  (functionEntries declarations).zipWith
+    (fun (_, _, _, returnShape) (name, parameters, body) =>
+      { name, params := parameters, body, returnShape })
+    (compileToCrepHOL declarations)
+
 theorem compileProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by
   simp [compileProg]
@@ -439,7 +796,9 @@ theorem compileProg_seq [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
 theorem compileProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (value : Exp α) :
-    compileProg context (.return value) = .return (compileExp context value).1 := by
+    compileProg context (.return value) =
+      let compiled := compileExp context value
+      if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1 := by
   simp [compileProg]
 
 theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]

@@ -18,7 +18,7 @@ namespace Flapjack
     directly. -/
 inductive PanWordLab (α : Type u) where
   | word (value : α)
-  deriving Repr
+  deriving BEq, Repr
 
 def panIsWord : PanWordLab α → Bool
   | .word _ => true
@@ -80,7 +80,8 @@ def panValueWordMemory (memory : α → Option (PanValue α)) : α → Option α
 def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α)
     (domain : α → Bool := fun _ => true)
-    (sharedDomain : α → Bool := domain) : PanValueMemoryAccess α :=
+    (sharedDomain : α → Bool := domain)
+    (bigEndian : Bool := false) : PanValueMemoryAccess α :=
   { domain := domain
     wordOp := model.wordOp
     compare := model.compare
@@ -96,27 +97,27 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
       else none
     readByte := fun _ memory bytesInWord address =>
       panModelReadByte model domain (panValueWordMemory memory)
-        bytesInWord address false
+        bytesInWord address bigEndian
     read16 := fun _ memory bytesInWord address =>
       if model.aligned 2 address then
         let alignedAddress := model.byteAlign bytesInWord address
         if domain alignedAddress then do
           let cell ← memory alignedAddress
           let .word cell := cell | none
-          pure (model.wordOfBytes false
-            [model.getByte bytesInWord address cell false,
-             model.getByte bytesInWord (address + 1) cell false])
+          pure (model.wordOfBytes bigEndian
+            [model.getByte bytesInWord address cell bigEndian,
+             model.getByte bytesInWord (address + 1) cell bigEndian])
         else none
       else none
     read32 := fun _ memory bytesInWord address =>
       panModelRead32 model domain (panValueWordMemory memory)
-        bytesInWord address false
+        bytesInWord address bigEndian
     storeByte := fun _ memory bytesInWord address value => do
       let alignedAddress := model.byteAlign bytesInWord address
       if domain alignedAddress then
         let cell ← memory alignedAddress
         let .word cell := cell | none
-        let updated := model.setByte bytesInWord address value cell false
+        let updated := model.setByte bytesInWord address value cell bigEndian
         pure (fun current =>
           if current == alignedAddress then some (.word updated) else memory current)
       else none
@@ -127,9 +128,9 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
           let cell ← memory alignedAddress
           let .word cell := cell | none
           let cell0 := model.setByte bytesInWord address
-            (model.getByte bytesInWord 0 value false) cell false
+            (model.getByte bytesInWord 0 value bigEndian) cell bigEndian
           let cell1 := model.setByte bytesInWord (address + 1)
-            (model.getByte bytesInWord 1 value false) cell0 false
+            (model.getByte bytesInWord 1 value bigEndian) cell0 bigEndian
           pure (fun current =>
             if current == alignedAddress then some (.word cell1) else memory current)
         else none
@@ -141,13 +142,13 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
           let cell ← memory alignedAddress
           let .word cell := cell | none
           let cell0 := model.setByte bytesInWord address
-            (model.getByte bytesInWord 0 value false) cell false
+            (model.getByte bytesInWord 0 value bigEndian) cell bigEndian
           let cell1 := model.setByte bytesInWord (address + 1)
-            (model.getByte bytesInWord 1 value false) cell0 false
+            (model.getByte bytesInWord 1 value bigEndian) cell0 bigEndian
           let cell2 := model.setByte bytesInWord (address + 2)
-            (model.getByte bytesInWord 2 value false) cell1 false
+            (model.getByte bytesInWord 2 value bigEndian) cell1 bigEndian
           let cell3 := model.setByte bytesInWord (address + 3)
-            (model.getByte bytesInWord 3 value false) cell2 false
+            (model.getByte bytesInWord 3 value bigEndian) cell2 bigEndian
           pure (fun current =>
             if current == alignedAddress then some (.word cell3) else memory current)
         else none
@@ -156,7 +157,7 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
       match size with
       | .opW => (panModelReadWord sharedDomain (panValueWordMemory memory) address).map .word
       | .op8 => (panModelReadByte model sharedDomain (panValueWordMemory memory)
-          bytesInWord address false).map .word
+          bytesInWord address bigEndian).map .word
       /- CakeML's `sh_mem_load` has no `aligned` requirement for Op16/Op32;
          the only check is `byte_align addr ∈ sh_memaddrs`
          (`panSemScript.sml:519-520`). -/
@@ -165,20 +166,20 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
           if sharedDomain alignedAddress then do
             let cell ← memory alignedAddress
             let .word cell := cell | none
-            pure (.word (model.wordOfBytes false
-              [model.getByte bytesInWord address cell false,
-               model.getByte bytesInWord (address + 1) cell false]))
+            pure (.word (model.wordOfBytes bigEndian
+              [model.getByte bytesInWord address cell bigEndian,
+               model.getByte bytesInWord (address + 1) cell bigEndian]))
           else none
       | .op32 =>
           let alignedAddress := model.byteAlign bytesInWord address
           if sharedDomain alignedAddress then do
             let cell ← memory alignedAddress
             let .word cell := cell | none
-            pure (.word (model.wordOfBytes false
-              [model.getByte bytesInWord address cell false,
-               model.getByte bytesInWord (address + 1) cell false,
-               model.getByte bytesInWord (address + 2) cell false,
-               model.getByte bytesInWord (address + 3) cell false]))
+            pure (.word (model.wordOfBytes bigEndian
+              [model.getByte bytesInWord address cell bigEndian,
+               model.getByte bytesInWord (address + 1) cell bigEndian,
+               model.getByte bytesInWord (address + 2) cell bigEndian,
+               model.getByte bytesInWord (address + 3) cell bigEndian]))
           else none
     sharedStore := fun memory bytesInWord size address value =>
       match value with
@@ -188,7 +189,7 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 if current == address then some (.word value) else memory current)
             else none
           | .op8 => (panModelStoreByte model sharedDomain (panValueWordMemory memory)
-              bytesInWord address value false).map fun wordMemory current =>
+              bytesInWord address value bigEndian).map fun wordMemory current =>
                 if current == model.byteAlign bytesInWord address then
                   (wordMemory current).map .word
                 else memory current
@@ -201,9 +202,9 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 let cell ← memory alignedAddress
                 let .word cell := cell | none
                 let cell0 := model.setByte bytesInWord address
-                  (model.getByte bytesInWord 0 value false) cell false
+                  (model.getByte bytesInWord 0 value bigEndian) cell bigEndian
                 let cell1 := model.setByte bytesInWord (address + 1)
-                  (model.getByte bytesInWord 1 value false) cell0 false
+                  (model.getByte bytesInWord 1 value bigEndian) cell0 bigEndian
                 pure (fun current =>
                   if current == alignedAddress then some (.word cell1) else memory current)
               else none
@@ -213,13 +214,13 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 let cell ← memory alignedAddress
                 let .word cell := cell | none
                 let cell0 := model.setByte bytesInWord address
-                  (model.getByte bytesInWord 0 value false) cell false
+                  (model.getByte bytesInWord 0 value bigEndian) cell bigEndian
                 let cell1 := model.setByte bytesInWord (address + 1)
-                  (model.getByte bytesInWord 1 value false) cell0 false
+                  (model.getByte bytesInWord 1 value bigEndian) cell0 bigEndian
                 let cell2 := model.setByte bytesInWord (address + 2)
-                  (model.getByte bytesInWord 2 value false) cell1 false
+                  (model.getByte bytesInWord 2 value bigEndian) cell1 bigEndian
                 let cell3 := model.setByte bytesInWord (address + 3)
-                  (model.getByte bytesInWord 3 value false) cell2 false
+                  (model.getByte bytesInWord 3 value bigEndian) cell2 bigEndian
                 pure (fun current =>
                   if current == alignedAddress then some (.word cell3) else memory current)
               else none
@@ -550,9 +551,11 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨ihValue h1, ihValues h2⟩
 
-/-- Counterpart of Cake's `shape_of_val` (`panPropsScript.sml:14`) and
-    `shape_of_alt` (`pan_to_crepProofScript.sml:1906`): the shape of a scalar
-    value is `One`. -/
+/-- Flapjack's context-parameterized scalar-shape fact. Its extra
+    `StructContext` argument means it is not itself the exact HOL
+    `shape_of_alt` statement; the context-free `panSemShapeOf` port and exact
+    proof counterpart live in `Pancake/Semantics/PanSem.lean` and
+    `Pancake/Proofs/PanToCrep.lean`. -/
 theorem panValueShape_word (structs : StructContext) (value : α) :
     panValueShape structs (.word value) = .one := by
   simp [panValueShape]
@@ -2493,9 +2496,8 @@ theorem panValueResVar_eq_ite [BEq String] [LawfulBEq String]
     panValueResVar locals name oldValue other =
       if other == name then oldValue else locals other := rfl
 
-/-- Counterpart of Cake's `res_var_commutes'`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4094`): restoring two
-    distinct locals commutes. -/
+/-- Flapjack-specific function-map analogue of Cake's `res_var_commutes'`.
+    The exact HOL finite-map theorem is tagged in `Proofs/PanToCrep.lean`. -/
 theorem panValueResVar_comm [BEq String] [LawfulBEq String]
     (locals : VarName → Option (PanValue α)) (h n : VarName)
     (v v' : Option (PanValue α)) (hne : n ≠ h) :

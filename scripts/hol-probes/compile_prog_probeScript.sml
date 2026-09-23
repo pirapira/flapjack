@@ -31,6 +31,44 @@ val _ = print_eval "inline_call"
             params := []; body := panLang$Call NONE «id» [];
             return := panLang$One |>]``;
 
+val _ = print_eval "duplicate_first"
+  ``pan_to_crep$compile_prog
+      [panLang$Function
+         <| name := «id»; inline := T; export := F;
+            params := []; body := panLang$Return (panLang$Const (7w : 8 word));
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «id»; inline := T; export := F;
+            params := []; body := panLang$Return (panLang$Const (9w : 8 word));
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «main»; inline := F; export := T;
+            params := []; body := panLang$Call NONE «id» [];
+            return := panLang$One |>]``;
+
+val _ = print_eval "nested_inline"
+  ``pan_to_crep$compile_prog
+      [panLang$Function
+         <| name := «leaf»; inline := T; export := F;
+            params := []; body := panLang$Return (panLang$Const (7w : 8 word));
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «mid»; inline := T; export := F;
+            params := []; body := panLang$Call NONE «leaf» [];
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «main»; inline := F; export := T;
+            params := []; body := panLang$Call NONE «mid» [];
+            return := panLang$One |>]``;
+
+val _ = print_eval "params_two_words"
+  ``pan_to_crep$compile_prog
+      [panLang$Function
+         <| name := «pair»; inline := F; export := F;
+            params := [(«p», panLang$Comb [panLang$One; panLang$One])];
+            body := panLang$Skip;
+            return := panLang$One |>]``;
+
 val _ = print_eval "global_dest"
   ``pan_to_crep$compile_to_crep
       ([panLang$Function

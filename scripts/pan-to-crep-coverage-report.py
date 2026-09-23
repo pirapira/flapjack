@@ -15,22 +15,33 @@ OUTPUT = ROOT / "docs" / "PAN-TO-CREP-PARITY-COVERAGE.md"
 # captured output; Lean markers name the corresponding executable checks.
 FIXTURES = [
     {
+        "area": "Expression compiler finite maps",
+        "boundary": "compile_exp",
+        "probe": "compile_exp_probe",
+        "hol_labels": ["leaves", "struct_field", "loads_ops", "cmp_shift", "finite_map_shadow"],
+        "lean": "Flapjack/Test/CompileExpParity.lean",
+        "lean_markers": ["compileExpHOL", "finiteMapLookupOK", "parityGuard"],
+        "covers": "original expression cases plus duplicate-key FUPDATE lookup through the finite-map context",
+    },
+    {
         "area": "Program compiler",
         "boundary": "compile_prog",
         "probe": "compile_prog_probe",
-        "hol_labels": ["empty", "inline_call", "global_dest", "handled_missing_dest"],
+        "hol_labels": ["empty", "inline_call", "global_dest", "handled_missing_dest", "duplicate_first", "nested_inline", "params_two_words"],
         "lean": "Flapjack/Test/CompileProgParity.lean",
-        "lean_markers": ["compile_prog_inline_call_parity", "shMemStoreAddressTempParity"],
-        "covers": "empty input; inline calls; valid Global return destination; handled call with missing destination and a two-word payload",
+        "lean_markers": ["compile_prog_inline_call_parity", "compileProgTopEmptyParity", "compileProgTopDuplicateParity", "compileProgTopNestedParity", "shMemStoreAddressTempParity", "holInlineDuplicateParity", "holInlineNestedParity"],
+        "related_lean": "Flapjack/Test/CompileProgParamsParity.lean",
+        "related_markers": ["twoWordParamParity", "twoWordParamNodup"],
+        "covers": "empty input; direct compile_prog triples for inline calls including first duplicate binding and nested expansion; two-word function parameters; valid Global return destination; handled call with missing destination and a two-word payload",
     },
     {
         "area": "Function and declaration lowering",
         "boundary": "compile_to_crep",
         "probe": "compile_to_crep_probe",
-        "hol_labels": ["empty", "raise_const", "raise_pair"],
+        "hol_labels": ["empty", "raise_const", "raise_pair", "raise_pair_later", "handled_pair"],
         "lean": "Flapjack/Test/CompileToCrepeParity.lean",
-        "lean_markers": ["compile_to_crep_raise_const_parity", "pairRaiseOracle", "globalDestinationOracle", "handledMissingDestinationOracle"],
-        "covers": "empty input; one-word and two-word exception raises; flattened parameters",
+        "lean_markers": ["compile_to_crep_raise_const_parity", "pairRaiseOracle", "laterPairOracle", "handledPairOracle", "globalDestinationOracle", "handledMissingDestinationOracle"],
+        "covers": "empty input; one-word and two-word exception raises, including a two-word payload lowered after earlier declarations so its later Temp slots stay word-strided; handled two-word exception; flattened parameters",
     },
     {
         "area": "Expression handler setup",
@@ -38,8 +49,8 @@ FIXTURES = [
         "probe": "exp_hdl_probe",
         "hol_labels": ["missing", "known", "dup_update", "dup_list"],
         "lean": "Flapjack/Test/ExpHdlParity.lean",
-        "lean_markers": ["expHdlFiniteMap", "parityGuard", "dupUpdateOK", "dupListOK"],
-        "covers": "missing and known handler variables; duplicate finite-map updates in both FUPDATE and FUPDATE_LIST form, where the last binding wins",
+        "lean_markers": ["expHdlFiniteMap", "parityGuard", "dupUpdateOK", "dupListOK", "execDupOK"],
+        "covers": "missing and known handler variables; duplicate finite-map updates in both FUPDATE and FUPDATE_LIST form, where the last binding wins; the executed adapter on a duplicate-bearing association-list context",
     },
     {
         "area": "Return handler",
@@ -72,12 +83,20 @@ FIXTURES = [
         "area": "Assigned-call edge cases",
         "boundary": "compile",
         "probe": "compile_def_probe",
-        "hol_labels": ["missing_global", "empty_one_global", "extra_names_global", "missing_names_global"],
+        "hol_labels": ["missing_global", "empty_one_global", "extra_names_global",
+                       "missing_names_global", "missing_local", "empty_one_local",
+                       "extra_names_local", "missing_names_local", "valid_local",
+                       "empty_struct_return", "finite_map_shadow_return", "pair_load", "pair_store"],
         "lean": "Flapjack/Test/CompileDefParity.lean",
-        "lean_markers": ["parityGuard", "missingGlobalCall", "emptyOneGlobalCall", "extraNamesGlobalCall", "missingNamesGlobalCall"],
+        "lean_markers": ["parityGuard", "missingGlobalCall", "emptyOneGlobalCall",
+                         "extraNamesGlobalCall", "missingNamesGlobalCall",
+                         "missingLocalCall", "emptyOneLocalCall", "extraNamesLocalCall",
+                         "missingNamesLocalCall", "validLocalCall", "nativeProgramParityGuard",
+                         "finiteMapLoadStoreParityGuard", "finiteMapParityGuard",
+                         "riscv64PairLoad", "riscv64PairStore"],
         "related_lean": "Flapjack/Test/StandaloneCallParity.lean",
         "related_markers": ["assigned call to an unknown local destination", "assigned call to a local whose shape"],
-        "covers": "missing Global lookup, malformed empty/extra/missing name lists, and unknown/shape-dropped Local destinations",
+        "covers": "finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; 64-bit RISC-V specialization against HOL word64 stride; missing/empty/malformed Global and Local destination lists; valid Local pair destination",
     },
 ]
 
@@ -117,6 +136,9 @@ def render() -> str:
 
         probe_link = f"[`{probe}.out`](../scripts/hol-probes/{probe}.out)"
         lean_link = f"[`{lean_path.name}`](../{fixture['lean']})"
+        if "related_lean" in fixture:
+            related = Path(fixture["related_lean"])
+            lean_link += f", [`{related.name}`](../{fixture['related_lean']})"
         lines.append(
             f"| `{fixture['boundary']}` | {probe_link} | {lean_link} | {fixture['covers']} |"
         )

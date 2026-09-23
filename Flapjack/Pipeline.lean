@@ -1,5 +1,6 @@
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepArith
@@ -315,6 +316,37 @@ def pipelineCrepeContext [BEq α] [Add α]
     maxVar := 0
     bytesInWord := bytesInWord }
 
+def pipelineCrepeCompileContext [BEq α] [Add α]
+    (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
+    PanToCrepHOLContext α :=
+  { vars := FEMPTY
+    funcs := FEMPTY
+    eids := FUPDATE_LIST FEMPTY (crepGetEidsFromDecls fromNat program.declarations)
+    vmax := 0 }
+
+/-- The executed RV64 compiler context obtains Cake's fixed byte width from
+    the word type, not a caller-controlled field. -/
+theorem pipelineCrepeCompileContext_riscv64
+    (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64)) :
+    compileExpHOL (pipelineCrepeCompileContext fromNat program) .bytesInWord =
+      ([.const CrepBytesInWord.bytesInWord], .one) := by
+  simp [compileExpHOL]
+
+/-- The production RV64 context lowers a structured load at Cake's fixed
+    byte stride. -/
+theorem compileExp_load_pipelineRiscv64
+    (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64))
+    (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
+    (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
+    (hcompile : compileExpHOL (pipelineCrepeCompileContext fromNat program)
+      expression = (head :: rest, shape')) :
+    (compileExpHOL (pipelineCrepeCompileContext fromNat program)
+        (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head :=
+  by
+    simp only [compileExpHOL, hcompile]
+    exact loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ rfl
+
 /-! Source-named ports of CakeML Pancake's `first_name_def` and
     `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable
     pipeline also needs a caller-selected label base when runtime sections
@@ -556,76 +588,7 @@ def panCompileTap [CakeDisplayWord α]
   else
     (output, [])
 
-/-! The pass-local core used when the target wrapper cannot be constructed (in
-    particular for an empty declaration list).  The public `compileFlapjack`
-    below goes through `compileFlapjackTarget`, matching Cake's
-    initializer-wrapper path; keeping this core named prevents the target
-    fallback from recursively calling the public entry point. -/
-def compileFlapjackCore [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (declarations : List (Decl α)) :
-    FlapjackPipelineResult α :=
-  let simplified := panSimpDecls declarations
-  let structured := structCompileTop simplified
-  let globals := globalCompileTop bytesInWord fromNat structured
-  let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-  let declarations := pipelinePrependInitializers globals.initializers globals.declarations
-  let compiled := compileToCrep crepeContext declarations
-  let crepe := crepSimpFunctions fromNat
-    (crepInlineTopRecursiveByNames (pipelineInlineNames declarations) compiled)
-  let loop := pipelineLoopFunctionsSource architecture 1 crepe
-  let word := pipelineWordFunctionsSource loop
-  { simplified := simplified
-    structured := structured
-    globals := globals
-    crepe := crepe
-    loop := loop
-    word := word }
-
-/-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
-    retained for pass-local fixtures.  This entry-point form follows CakeML: it
-    moves the requested source function to the front of the program (the
-    SPLITP permutation above), finds it, gives it a fresh name, permutes all
-    function references, and emits a new public `main` whose body runs global
-    initializers before a tail call to the renamed source entry. -/
-def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
-    Option (FlapjackPipelineResult α) :=
-  let declarations := panTargetMoveStartToFront start declarations
-  let simplified := panSimpDecls declarations
-  let structured := structCompileTop simplified
-  match pipelineFindFunction start structured with
-  | none => none
-  | some entry =>
-      /- CakeML's `compile_top` always freshens the literal `main`, not the
-         `start` parameter (`pan_globalsScript.sml:224-226,242`). -/
-      let renamed := globalNewMainName structured
-      let prepared := globalRenameDecls start renamed (globalResortDecls structured)
-      let globals := globalCompileTop bytesInWord fromNat prepared
-      let entryArguments := entry.params.map (fun parameter =>
-        Exp.var .local parameter.1)
-      let wrapper : Decl α := .function
-        { name := start
-          inline := false
-          exported := false
-          params := entry.params
-          body := .seq (nestedSeq globals.initializers)
-            (.call none renamed entryArguments)
-          returnShape := entry.returnShape }
-      let globals := { globals with declarations := wrapper :: globals.declarations }
-      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrep crepeContext globals.declarations
-      let crepe := crepSimpFunctions fromNat
-        (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
-      let loop := pipelineLoopFunctionsSource architecture 1 crepe
-      let word := pipelineWordFunctionsSource loop
-      some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
-
-/-! Source-facing Pancake compiler entry point.  Unlike the generic
-    pass-local helper above, this version executes the fixed-interface
+/-! Source-facing Pancake compiler entry point. This executes the fixed-interface
     `globalCompileTopCake` result at the global pass boundary.  The remaining
     metadata is retained from `globalCompileTop` for callers that inspect the
     intermediate pipeline record; the declarations sent into Crep are the
@@ -649,10 +612,8 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrep crepeContext cakeDeclarations
       let crepe := crepSimpFunctions fromNat
-        (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
+        (compileProgTopHOLWithMetadata cakeDeclarations)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
@@ -674,63 +635,5 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
       .function
         { name := "main", inline := false, exported := false, params := [],
           body := .return (.const 0), returnShape := .one } :: declarations
-
-/-! Target entry point.  `pan_to_target` first supplies a zero-returning
-    `main` when the source has no entry function, then takes the exact entry
-    wrapper path.  This matters even when the caller only asks for the
-    intermediate pipeline: the synthetic function changes declaration order,
-    labels, and the linked artifact. -/
-def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (declarations : List (Decl α)) :
-    FlapjackPipelineResult α :=
-  let declarations := panTargetDeclarationsWithDefaultMain declarations
-  match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
-  | some result => result
-  | none => compileFlapjackCore architecture bytesInWord fromNat declarations
-
-/-! Public source compiler entry point.  Cake's `pan_to_target` wrapper is the
-    default behavior: global initializers execute once in the synthesized
-    entry wrapper, rather than being prepended to the recursive source `main`.
-    The old pass-local implementation remains available as
-    `compileFlapjackCore` for the empty-program fallback and intermediate
-    fixtures that intentionally exercise the unwrapped pass. -/
-def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (declarations : List (Decl α)) :
-    FlapjackPipelineResult α :=
-  compileFlapjackTarget architecture bytesInWord fromNat declarations
-
-/-! Executable port of `pan_to_word$compile_prog`: compose the existing
-    Pancake passes, then expose the source-shaped `loop_to_word` result. -/
-def compilePanToWord [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (declarations : List (Decl α)) :
-    List (Nat × Nat × WordProg α) :=
-  panToWordCompileProg
-    (compileFlapjackTarget architecture bytesInWord fromNat declarations).loop
-
-def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α)
-    (fromNat : Nat → α) (declarations : List (Decl α)) :
-    StaticResult (FlapjackPipelineResult α) :=
-  staticBind (staticCheck declarations) (fun _ =>
-    staticOk (compileFlapjack architecture bytesInWord fromNat declarations))
-
-theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [AndOp α] [ShiftRight α] [PanShiftWidth α]
-    (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :
-    (compileFlapjack architecture bytesInWord fromNat []).simplified = [] := by
-  simp [compileFlapjack, compileFlapjackTarget, compileFlapjackEntry,
-    pipelineFindFunction, panTargetDeclarationsWithDefaultMain,
-    panTargetMoveStartToFront, globalDeclsFilter, compileFlapjackCore,
-    panSimpDecls, structCompileTop, structGetNames, structCompileDecls,
-    globalCompileTop, globalCollect, globalCompileDecls,
-    globalCompileInitializers, pipelineCrepeContext, pipelineLoopFunctionsSource,
-    pipelineWordFunctionsSource, pipelinePrependInitializers]
 
 end Flapjack

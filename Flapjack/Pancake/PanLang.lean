@@ -1,3 +1,5 @@
+import Flapjack.HolRef
+
 /-!
 The core Flapjack syntax.
 
@@ -1265,6 +1267,9 @@ theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : N
   rw [hdrop]
   exact Nat.min_eq_left (shapeSize_drop_head_le shapes n hn)
 
+/-- HOL `panLang$var_exp`: collect exactly the local variable occurrences of
+    an expression, preserving their left-to-right order and duplicates. -/
+@[hol "cakeml/pancake/panLangScript.sml" "var_exp_def"]
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

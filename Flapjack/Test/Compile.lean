@@ -118,7 +118,7 @@ example :
       .dec 2 (.const 0)
         (.call (some ([2], some (9, .seq .skip .skip))) "f" []) := by
   simp [compileProg, compileArgs, functionReturnNames, allocatedNames, compileProg,
-    expHdl, callContext, crepContext, lookupInfo, nestedDecs]
+    expHdl, expHdlFiniteMap, callContext, crepContext, lookupInfo, nestedDecs]
 
 example :
     compileProg callContext (.raise "E" (.const (α := Nat) 0)) =
@@ -203,6 +203,12 @@ example :
             [.const (α := Nat) 1, .const 2, .const 0])
           (.return (.var .local "pair"))))).map Prod.snd =
       some [3, 0] := by
+  rw [compileProg_seq]
+  have hreturn : compileProg crepContext (.return (.var .local "pair")) =
+      .return [.var 0, .var 1] := by
+    rw [compileProg_return]
+    simp [compileExp, lookupInfo, crepContext, Shape.shapeSize]
+  rw [hreturn]
   decide +kernel
 
 example :

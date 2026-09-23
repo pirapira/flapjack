@@ -128,9 +128,12 @@ def tagged_declarations(root: Path = ROOT) -> dict[tuple[str, str], tuple[str, s
     for path in REFS["lean_files"]():
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
-        for line, hol_path, hol_name in HOL_ATTRIBUTE_SITES(lines):
+        for line, hol_path, hol_name, _hol_line in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
+            # Source-line disambiguation is checked against the HOL script by
+            # check-hol-refs.py. The inventory keys the declaration by its
+            # stable HOL file/name pair, not by an editable source line.
             value = (hol_path, hol_name)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")

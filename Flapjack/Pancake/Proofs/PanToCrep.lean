@@ -2,6 +2,7 @@ import Flapjack.FiniteMap
 import Flapjack.HolRef
 import Flapjack.PanBst
 import Flapjack.PanLocalised
+import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
@@ -51,6 +52,56 @@ def ctxtFc
     eids := exceptionCodes
     vmax := maxList names }
 
+/-- HOL `ctxt_fc_funcs_eq`: constructing a function context preserves the
+    supplied function map. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_funcs_eq"]
+theorem ctxtFcFuncsEq
+    (functions : FiniteMap String (List (String × Shape) × Shape))
+    (codes : FiniteMap String α) (variables : List String)
+    (shapes : List Shape) (names : List Nat) :
+    (ctxtFc functions codes variables shapes names).funcs = functions := rfl
+
+/-- HOL `ctxt_fc_eids_eq`: constructing a function context preserves the
+    supplied exception-code map. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_eids_eq"]
+theorem ctxtFcEidsEq
+    (functions : FiniteMap String (List (String × Shape) × Shape))
+    (codes : FiniteMap String α) (variables : List String)
+    (shapes : List Shape) (names : List Nat) :
+    (ctxtFc functions codes variables shapes names).eids = codes := rfl
+
+/-- HOL `ctxt_fc_vmax`: the constructed context's maximum slot is the
+    maximum of the supplied slot list. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_vmax"]
+theorem ctxtFcVmax
+    (context : PanToCrepProofContext α) (codes : FiniteMap String α)
+    (variables : List String) (shapes : List Shape) (names : List Nat) :
+    (ctxtFc context.funcs codes variables shapes names).vmax = maxList names := rfl
+
+/-- HOL `slc_def`: pair each source parameter name with its argument value,
+    with `ZIP` truncation represented by Lean's `List.zip`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_def"]
+def slc [BEq String] (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) : FiniteMap String (PanValue α) :=
+  FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments)
+
+/-- HOL `tlc_def`: pair target slots with the flattened argument words. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "tlc_def"]
+def tlc [BEq Nat] (slots : List Nat) (arguments : List (PanValue α)) :
+    FiniteMap Nat α :=
+  FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten))
+
+/-- HOL `slc_tlc_rw`: both local-map constructor names unfold to their
+    original finite-map updates. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_tlc_rw"]
+theorem slcTlcRw [BEq String] [BEq Nat]
+    (parameters : List (String × Shape)) (slots : List Nat)
+    (arguments : List (PanValue α)) :
+    (FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments) =
+      slc parameters arguments) ∧
+    (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
+      tlc slots arguments) := ⟨rfl, rfl⟩
+
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has
@@ -98,6 +149,21 @@ def localsRel (context : PanToCrepProofContext α)
       ∃ ns vs, FLOOKUP context.vars vname = some (panValueShape [] v, ns) ∧
         ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
         isWfShape [] (panValueShape [] v) = true
+
+/-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
+    relation is a well-formed value in the empty struct context. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape"]
+theorem localsRelWfShape
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hlookup : FLOOKUP sourceLocals name = some value) :
+    panValueIsWf [] value = true := by
+  obtain ⟨_, _, hmembers⟩ := hrel
+  obtain ⟨_, _, _, _, _, hshape⟩ := hmembers name value hlookup
+  rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
+  exact hshape
 
 /-! Finite-map lookups needed by the extracted compiler are represented in its
 list-backed executable context.  Repeated keys are harmless: every projected

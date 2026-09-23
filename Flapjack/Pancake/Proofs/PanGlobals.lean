@@ -467,4 +467,33 @@ theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
         (globalRenameDecls source target declarations) :=
   globalRenameDecls_filter_function source target declarations
 
+/-- Exact-shaped port of Cake's `fperm_decs_decls`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2023`).  The HOL
+    statement carries an unused `ys` binder introduced by `recInduct`, which is
+    reproduced here for statement parity.  HOL `EVERY ($¬ ∘ is_function)` is
+    Lean `declarations.all (fun declaration => !globalDeclIsFunction declaration)`
+    and HOL `fperm_decs` is the reviewed production `globalRenameDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_decs_decls"]
+theorem fperm_decs_decls [BEq String] (source target : FunName)
+    (declarations _unused : List (Decl α))
+    (hnone : declarations.all
+      (fun declaration => !globalDeclIsFunction declaration) = true) :
+    globalRenameDecls source target declarations = declarations :=
+  globalRenameDecls_eq_self_of_no_functions source target declarations hnone
+
+/-- Exact-shaped port of Cake's `new_main_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2073`): the synthesized
+    `main` entry-point name is not one of the program's existing function names.
+    HOL's `MEM (new_main_name code) (MAP FST (functions code)) ⇒ F` is stated as
+    failure of membership in `(functions declarations).map (fun entry => entry.1)`;
+    `globalFunctionNames_eq_functions_map` bridges the production
+    `globalFunctionNames`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "new_main_name_correct"]
+theorem new_main_name_correct [BEq String] [LawfulBEq String]
+    (declarations : List (Decl α)) :
+    globalNewMainName declarations ∈
+        (functions declarations).map (fun entry => entry.1) → False := by
+  rw [← globalFunctionNames_eq_functions_map]
+  exact globalNewMainName_not_mem declarations
+
 end Flapjack

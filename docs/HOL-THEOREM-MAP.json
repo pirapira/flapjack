@@ -4296,22 +4296,6 @@
     "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "v_flds_ok_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructValueFieldsOkBool",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are ignored, with the projected fields context given by panStructContextShapeView. Direct HOL EVAL fixtures cover word, matching/mismatching named values, missing context, and duplicate-key first-match."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-    "hol_name": "is_wf_shape_v_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-    "lean_name": "panIsWfShapeValueBool",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Bool equations compared constructor by constructor with HOL. Uses production lookupInfo; lookupInfo_eq_panPropsALookupEq proves its lawful String comparison is the equality-based HOL ALOOKUP. StructInfo.shapedFields and size are unused by this predicate. Direct HOL EVAL fixtures cover word, matching named struct, and missing context."
-  },
-  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

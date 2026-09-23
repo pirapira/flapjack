@@ -313,7 +313,9 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
                 let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
                   compiledArguments.flatMap globalExpVars
                 let resultName := globalFreshName "" names
-                let flagName := globalFreshName resultName (resultName :: names)
+                /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
+                   handler flag, independently of the fresh result name. -/
+                let flagName := globalFreshName "vn'" (resultName :: names)
                 let handlerBody :=
                   .seq compiledHandlerProgram
                     (.assign .local flagName (.const (context.fromNat 1)))

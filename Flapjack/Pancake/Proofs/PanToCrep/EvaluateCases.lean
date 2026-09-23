@@ -292,6 +292,384 @@ theorem panToCrepPcCompileCorrectSkipCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
+/-- The state-owned source evaluator's Break equation. -/
+theorem panSemEvaluateCodeState_break
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .break =
+      some (.control (.broke state.locals state.globals state.memory state.ffi),
+        state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.break : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.break : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps]
+
+/-- Actual-state Break case for the source-run-implies-target-run direction of
+HOL `pc_compile_correct`. It proves all runtime, code, exception, and local
+relations over the code fields carried by the source and target states. This
+is local case infrastructure, not the complete theorem. -/
+theorem panToCrepPcCompileCorrectBreakCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState .break =
+        some (.control (.broke sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .break) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (.control (.broke sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (.control (.broke sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (.control (.broke sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).exceptionShapes ∧
+      targetResult = .broke 0 ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState
+          (.control (.broke sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).locals
+        targetPost.locals := by
+  refine ⟨panSemEvaluateCodeState_break sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState, ?_⟩
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.broke sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  refine ⟨.broke 0, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · simpa [compileCodeRelProg, compileProgHOL] using
+      (crepBreakEvaluationEquation targetHandler targetPrimitive fuel targetState)
+  · simpa [hsourcePost] using hstate
+  · simpa [hsourcePost] using hcode
+  · simpa [hsourcePost] using hexcp
+  · simpa [hsourcePost] using hlocals
+
+/-- The state-owned source evaluator's Continue equation. -/
+theorem panSemEvaluateCodeState_continue
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .continue =
+      some (.control (.continued state.locals state.globals state.memory state.ffi),
+        state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.continue : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.continue : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps]
+
+/-- Actual-state Continue case for the source-run-implies-target-run direction
+of HOL `pc_compile_correct`. It preserves source and target runtime, code, and
+exception state and proves the post-state local relation. -/
+theorem panToCrepPcCompileCorrectContinueCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState .continue =
+        some (.control (.continued sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .continue) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (.control (.continued sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).exceptionShapes ∧
+      targetResult = .continued 0 ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState
+          (.control (.continued sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).locals
+        targetPost.locals := by
+  refine ⟨panSemEvaluateCodeState_continue sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState, ?_⟩
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.continued sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  refine ⟨.continued 0, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · simpa [compileCodeRelProg, compileProgHOL] using
+      (crepContinueEvaluationEquation targetHandler targetPrimitive fuel targetState)
+  · simpa [hsourcePost] using hstate
+  · simpa [hsourcePost] using hcode
+  · simpa [hsourcePost] using hexcp
+  · simpa [hsourcePost] using hlocals
+
+/-- The state-owned source evaluator's Tick equation, including the source
+zero-clock timeout and positive-clock decrement. -/
+theorem panSemEvaluateCodeState_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state .tick =
+      if state.clock = 0 then
+        some (panValueFfiClockTimeout state.globals state.memory state.ffi state.clock)
+      else some (.control (.normal state.locals state.globals state.memory state.ffi),
+        decPanClock state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.tick : Prog α) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.tick : Prog α) with
+  | zero => omega
+  | succ fuel =>
+      by_cases hclock : state.clock = 0 <;>
+        simp [evalPanValueFfiClockCodeProg, panValueFfiClockTimeout, hclock]
+
+/-- Actual-state Tick case for HOL `pc_compile_correct`. The source and target
+run and state relations use the production finite code fields, and the two
+clock branches retain the source timeout/decrement behavior. -/
+theorem panToCrepPcCompileCorrectTickCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState .tick =
+        (if sourceState.clock = 0 then
+          some (panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock)
+        else some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), decPanClock sourceState.clock)) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context .tick) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (if sourceState.clock = 0 then
+          panValueFfiClockTimeout sourceState.globals sourceState.memory
+            sourceState.ffi sourceState.clock
+        else (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), decPanClock sourceState.clock)))
+        targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (if sourceState.clock = 0 then
+            panValueFfiClockTimeout sourceState.globals sourceState.memory
+              sourceState.ffi sourceState.clock
+          else (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).exceptionShapes ∧
+      (sourceState.clock = 0 → targetResult = .timeout) ∧
+      (sourceState.clock ≠ 0 →
+        targetResult = .normal ∧
+        localsRel context
+          (panSemCodeStateAfter sourceState
+            (if sourceState.clock = 0 then
+              panValueFfiClockTimeout sourceState.globals sourceState.memory
+                sourceState.ffi sourceState.clock
+            else (.control (.normal sourceState.locals sourceState.globals
+              sourceState.memory sourceState.ffi), decPanClock sourceState.clock))).locals
+          targetPost.locals) := by
+  refine ⟨panSemEvaluateCodeState_tick sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState, ?_⟩
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals, hclock,
+    hbe, hffi, hbase, htop⟩
+  by_cases hzero : sourceState.clock = 0
+  · have htargetZero : targetState.clock = 0 := by omega
+    refine ⟨.timeout, clearCrepRuntimeLocals targetState, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · change evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1)
+        targetState .tick = some (.timeout, clearCrepRuntimeLocals targetState)
+      rw [crepTickEvaluationEquation]
+      simp [htargetZero]
+    · simp [stateRel, panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero, htargetZero, hmem, hmemaddrs,
+        hshared, hstructs, hglobals, hbe, hffi, hbase, htop]
+    · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero] using hcode
+    · simpa [panSemCodeStateAfter, panValueFfiClockTimeout,
+        clearCrepRuntimeLocals, hzero] using hexcp
+    · intro _
+      rfl
+    · intro hnonzero
+      exact False.elim (hnonzero hzero)
+  · have htargetNonzero : targetState.clock ≠ 0 := by omega
+    refine ⟨.normal, decCrepClock targetState, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · simpa [compileCodeRelProg, compileProgHOL, htargetNonzero,
+        decCrepClock] using
+        (crepTickEvaluationEquation targetHandler targetPrimitive fuel targetState)
+    · simp only [stateRel, panSemCodeStateAfter, decPanClock, decCrepClock,
+        if_neg hzero]
+      exact ⟨hmem, hmemaddrs, hshared, hstructs, hglobals,
+        by rw [hclock], hbe, hffi, hbase, htop⟩
+    · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hcode
+    · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hexcp
+    · intro hzero'
+      exact False.elim (hzero hzero')
+    · intro _
+      constructor
+      · rfl
+      · simpa [panSemCodeStateAfter, decCrepClock, hzero] using hlocals
+
+/-- The state-owned source evaluator's Annot equation. -/
+theorem panSemEvaluateCodeState_annot
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (tag text : String) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state
+      (.annot tag text) =
+      some (.control (.normal state.locals state.globals state.memory state.ffi),
+        state.clock) := by
+  have hpositive : 0 < panSemCodeEvaluateFuel state (.annot tag text) := by
+    unfold panSemCodeEvaluateFuel
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  cases hfuel : panSemCodeEvaluateFuel state (.annot tag text) with
+  | zero => omega
+  | succ fuel =>
+      simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf,
+        evalPanValueFfiProgSteps]
+
+/-- Actual-state Annot case for HOL `pc_compile_correct`. The source annotation
+is evaluated against the production source state; HOL compilation erases it
+to Skip, and all runtime/code/exception/local relations are preserved. -/
+theorem panToCrepPcCompileCorrectAnnotCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemState α (FfiState σ))
+    (targetState : CrepRuntimeState α σ)
+    (tag text : String)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeState sourceContext sourcePrimitive sourceHandler
+      targetState.bytesInWord sourceState (.annot tag text) =
+        some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+        (compileCodeRelProg context (.annot tag text)) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock)) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).exceptionShapes ∧
+      targetResult = .normal ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).locals
+        targetPost.locals := by
+  refine ⟨panSemEvaluateCodeState_annot sourceContext sourcePrimitive sourceHandler
+    targetState.bytesInWord sourceState tag text, ?_⟩
+  have hsourcePost : panSemCodeStateAfter sourceState
+      (.control (.normal sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
+    cases sourceState
+    rfl
+  refine ⟨.normal, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · simpa [compileCodeRelProg, compileProgHOL] using
+      (crepSkipEvaluationEquation targetHandler targetPrimitive fuel targetState)
+  · simpa [hsourcePost] using hstate
+  · simpa [hsourcePost] using hcode
+  · simpa [hsourcePost] using hexcp
+  · simpa [hsourcePost] using hlocals
+
 /-- The `Skip` constructor satisfies the concrete source-run-implies-target-run
 goal. The target run is constructed here; only clock agreement is needed
 because both evaluators leave their runtime states unchanged. -/

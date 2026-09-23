@@ -149,42 +149,41 @@ theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
   have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
   exact (by simpa using hs.2.1)
 
-/-! This is an untagged RISC-V 64-bit support lemma for CakeML's
-    `eval_mul_const`. Its type fixes `RiscV.Word 64` and the canonical RISC-V
-    runtime target, while the HOL theorem is polymorphic over the word type
-    and uses the corresponding HOL word operations. The fixed-width target
-    operations here do not establish that generic statement. The faithful
-    generic theorem remains open; this specialization is retained to support
-    the later `simp_exp_correct` proof. -/
-theorem crepEvalMulConst {σ : Type} (state : CrepRuntimeState (RiscV.Word 64) σ)
-    (expression : CrepExp (RiscV.Word 64)) (constant value : RiscV.Word 64)
-    (h : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget state) expression).map
+/-! Exact width-generic counterpart of CakeML's `eval_mul_const`. `Word n`
+    represents HOL's polymorphic word type and `[NeZero n]` records its
+    positive dimension. `riscvCrepWordTarget` fixes the generic word-cell
+    operations to the width-derived values used by HOL. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "eval_mul_const"]
+theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)
+    (h : (evalCrepRuntimeExp (riscvCrepWordTarget state) expression).map
         PanWordLab.word = some (.word value)) :
-    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget state)
-        (crepMulConst (BitVec.ofNat 64) expression constant)).map
+    (evalCrepRuntimeExp (riscvCrepWordTarget state)
+        (crepMulConst (BitVec.ofNat n) expression constant)).map
       PanWordLab.word = some (.word (value * constant)) := by
-  have hInjective : Function.Injective (PanWordLab.word : RiscV.Word 64 →
-      PanWordLab (RiscV.Word 64)) := by
+  have hInjective : Function.Injective (PanWordLab.word : RiscV.Word n →
+      PanWordLab (RiscV.Word n)) := by
     intro left right hEq
     cases hEq
     rfl
-  have hRaw : evalCrepRuntimeExp (riscv64CrepRuntimeTarget state) expression =
+  have hRaw : evalCrepRuntimeExp (riscvCrepWordTarget state) expression =
       some value := by
     apply Option.map_injective hInjective
     simpa using h
   change Option.map PanWordLab.word
-      (evalCrepRuntimeExp (riscv64CrepRuntimeTarget state)
-        (crepMulConst (BitVec.ofNat 64) expression constant)) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget state)
+        (crepMulConst (BitVec.ofNat n) expression constant)) =
     Option.map PanWordLab.word (some (value * constant))
   apply congrArg (Option.map PanWordLab.word)
-  by_cases hzero : constant = (0 : RiscV.Word 64)
+  by_cases hzero : constant = (0 : RiscV.Word n)
   · simp [crepMulConst, hzero, evalCrepRuntimeExp]
-  · by_cases hone : constant = (1 : RiscV.Word 64)
-    · simp [crepMulConst, hone, hRaw]
-    · have hzeroWord : constant ≠ (0 : RiscV.Word 64) := by
+  · by_cases hone : constant = (1 : RiscV.Word n)
+    · simp [crepMulConst, hone, hRaw, NeZero.ne n]
+    · have hzeroWord : constant ≠ (0 : RiscV.Word n) := by
         intro hz
         exact hzero hz
-      have honeWord : constant ≠ (1 : RiscV.Word 64) := by
+      have honeWord : constant ≠ (1 : RiscV.Word n) := by
         intro ho
         exact hone ho
       have hzeroCond : ¬((constant == 0) = true) := by
@@ -197,42 +196,42 @@ theorem crepEvalMulConst {σ : Type} (state : CrepRuntimeState (RiscV.Word 64) �
         exact honeWord heq
       cases hdest : crepDest2Exp 0 constant with
       | none =>
-          have hmul : crepMulConst (BitVec.ofNat 64) expression constant =
+          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
               .crepOp .mul [expression, .const constant] := by
             unfold crepMulConst
             simp only [if_neg hzeroCond, if_neg honeCond, hdest]
           rw [hmul]
           simp [evalCrepRuntimeExp, hRaw]
       | some exponent =>
-          have hbound : exponent < 64 :=
+          have hbound : exponent < n :=
             crepDest2Exp_lt_width constant exponent hdest
-          have hpower : constant = BitVec.twoPow 64 exponent := by
+          have hpower : constant = BitVec.twoPow n exponent := by
             simpa [BitVec.twoPow, BitVec.shiftLeft_eq] using
               crepDest2Exp_eq_shift constant exponent hdest
-          have hfromNat : (BitVec.ofNat 64 exponent).toNat = exponent := by
+          have hfromNat : (BitVec.ofNat n exponent).toNat = exponent := by
             rw [BitVec.toNat_ofNat]
             apply Nat.mod_eq_of_lt
             exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
               (Nat.pow_lt_pow_right (by decide) hbound)
           have hmulShift : value <<< exponent = value * constant := by
             calc
-              value <<< exponent = value * BitVec.twoPow 64 exponent :=
+              value <<< exponent = value * BitVec.twoPow n exponent :=
                 BitVec.shiftLeft_eq_mul_twoPow value exponent
               _ = value * constant := by rw [← hpower]
           have hshift :
-              RiscV.panRiscVShift .lsl value (BitVec.ofNat 64 exponent) =
+              RiscV.panRiscVShift .lsl value (BitVec.ofNat n exponent) =
                 some (value * constant) := by
             unfold RiscV.panRiscVShift
             rw [hfromNat]
             simp only [if_pos hbound]
             simp [hmulShift]
-          have hmul : crepMulConst (BitVec.ofNat 64) expression constant =
-              .shift .lsl expression (.const (BitVec.ofNat 64 exponent)) := by
+          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
+              .shift .lsl expression (.const (BitVec.ofNat n exponent)) := by
             unfold crepMulConst
             simp only [if_neg hzeroCond, if_neg honeCond, hdest]
           rw [hmul]
           simp only [evalCrepRuntimeExp]
           rw [hRaw]
-          simp [riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, hshift]
+          simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModel, hshift]
 
 end Flapjack

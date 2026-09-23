@@ -378,6 +378,51 @@ theorem list_mapM_getElem? {α β : Type} (f : α → Option β) (xs : List α)
     rw [List.getElem?_eq_none hxsn, List.getElem?_eq_none (by omega)]
     rfl
 
+/-! A successful `OPT_MMAP` remains successful on the same `drop`/`take`
+window of its input and output. This Flapjack list utility supports projecting
+the target local words associated with one `ctxtFc` parameter. -/
+theorem list_mapM_takeDrop_of_success {α β : Type} (f : α → Option β)
+    (inputs : List α) (outputs : List β) (start count : Nat)
+    (hmap : inputs.mapM f = some outputs) :
+    ((inputs.drop start).take count).mapM f =
+      some ((outputs.drop start).take count) := by
+  apply (list_mapM_eq_some_iff f _ _).2
+  constructor
+  · simp only [List.length_take, List.length_drop]
+    have hlength := list_mapM_length f inputs outputs hmap
+    omega
+  · intro index hindex
+    have hlength := list_mapM_length f inputs outputs hmap
+    have hcount : index < count := by
+      simp only [List.length_take, List.length_drop] at hindex
+      omega
+    have hinput : start + index < inputs.length := by
+      have hdrop : index < (inputs.drop start).length := by
+        have hindex' : index < min count (inputs.length - start) := by
+          simpa [List.length_take, List.length_drop, hlength] using hindex
+        have hmin : min count (inputs.length - start) ≤
+            (inputs.drop start).length := by
+          rw [List.length_drop]
+          exact Nat.min_le_right _ _
+        exact Nat.lt_of_lt_of_le hindex' hmin
+      simp only [List.length_drop] at hdrop
+      omega
+    have houtput : start + index < outputs.length := by
+      have hdrop : index < (outputs.drop start).length := by
+        have hindex' : index < min count (outputs.length - start) := by
+          simpa [List.length_take, List.length_drop] using hindex
+        have hmin : min count (outputs.length - start) ≤
+            (outputs.drop start).length := by
+          rw [List.length_drop]
+          exact Nat.min_le_right _ _
+        exact Nat.lt_of_lt_of_le hindex' hmin
+      simp only [List.length_drop] at hdrop
+      omega
+    have hpoint := (list_mapM_eq_some_iff f inputs outputs).mp hmap |>.2
+      (start + index) houtput
+    simpa [List.getElem?_take, List.getElem?_drop, hcount, hinput, houtput]
+      using hpoint
+
 /-- Cake's `opt_mmap_mem_defined` (`pan_commonPropsScript.sml:59`): a
     successful `OPT_MMAP` contains the image of every successful element map. -/
 theorem list_mapM_mem_defined {α β : Type} (f : α → Option β) {x : α} {xs : List α}

@@ -127,6 +127,16 @@ def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
     finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
 
+/-! A 17-bit source word has two full byte slots. HOL `word_of_bytes` applies
+    four recursive `set_byte` calls, so later byte addresses wrap onto slots
+    0 and 1 and the outer first two bytes take precedence. -/
+@[instance_reducible] def dimension17 : HolFiniteDimension (Fin 17) := inferInstance
+def finiteWord17 (value : Nat) : Fin 17 → Bool :=
+  bitVecToHolWord dimension17 (BitVec.ofNat 17 value)
+def finiteWord17WordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 false).wordOfBytes false
+    [finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32]
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
@@ -150,5 +160,7 @@ def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   some (BitVec.ofNat 24 0x11)
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
+#guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
+  BitVec.ofNat 17 0x3211
 
 end Flapjack.Test.PanFixedLoadParity

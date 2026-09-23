@@ -969,8 +969,17 @@ def holFiniteWordSourceWordOfBytes {ι : Type u}
   let b1 := (holWordToBitVec dimension byte1).toNat % 256
   let b2 := (holWordToBitVec dimension byte2).toNat % 256
   let b3 := (holWordToBitVec dimension byte3).toNat % 256
-  let little := b0 + 256 * b1 + 256 ^ 2 * b2 + 256 ^ 3 * b3
-  let big := b3 + 256 * b2 + 256 ^ 2 * b1 + 256 ^ 3 * b0
+  let bytesPerWord := dimension.width / 8
+  let little :=
+    if bytesPerWord ≤ 1 then b0
+    else if bytesPerWord = 2 then b0 + 256 * b1
+    else if bytesPerWord = 3 then b0 + 256 * b1 + 256 ^ 2 * b2
+    else b0 + 256 * b1 + 256 ^ 2 * b2 + 256 ^ 3 * b3
+  let big :=
+    if bytesPerWord ≤ 1 then b0
+    else if bytesPerWord = 2 then b1 + 256 * b0
+    else if bytesPerWord = 3 then b2 + 256 * b1 + 256 ^ 2 * b0
+    else b3 + 256 * b2 + 256 ^ 2 * b1 + 256 ^ 3 * b0
   exact bitVecToHolWord dimension (BitVec.ofNat dimension.width
     (if bigEndian then big else little))
 

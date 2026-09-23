@@ -284,12 +284,11 @@ theorem globalCompileDecs_result_shapes_wf [BEq String] [LawfulBEq String]
     [Add α] [Mul α] (structs : StructContext) (context : GlobalPassContext α)
     (declarations : List (Decl α)) (extra : Decl α)
     (hextra : panDeclShapesWellFormed structs extra = true)
-    (hsource : declarations.all
+    (hsource : ∀ context, declarations.all
       (fun declaration => match declaration with
         | .function function =>
             panDeclShapesWellFormed structs (.function { function with
-              body := globalCompileProg (globalCollect context declarations)
-                function.body })
+              body := globalCompileProg context function.body })
         | _ => true) = true) :
     ((globalCompileDecs context declarations).exceptions ++ [extra] ++
         (globalCompileDecs context declarations).functions).all

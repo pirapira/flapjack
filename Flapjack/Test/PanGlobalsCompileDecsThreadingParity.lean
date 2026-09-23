@@ -67,13 +67,12 @@ theorem threadedAfterBodyResolved : firstFunctionBodyKind threadedAfter = 1 := b
     globalFunction, functionAfterDecl, globalCompileProg, globalCompileExp,
     compileContext, globalAddress, lookupInfo]
 
-/-- The old production pass compiles every body under the final collected
-    context, so it wrongly resolves the forward reference. -/
-theorem productionBeforeBodyResolved : firstFunctionBodyKind productionBefore = 1 := by
+/-- The production pass now uses the threaded definition, so it also leaves the
+    forward reference unresolved. -/
+theorem productionBeforeBodyUnresolved : firstFunctionBodyKind productionBefore = 0 := by
   simp [firstFunctionBodyKind, productionBefore, bodyKind, globalFunction,
-    functionBeforeDecl, globalCompileProg, globalCompileExp, compileContext,
-    globalCompileDecs, globalCollect, globalCompileInitializers,
-    globalCompileDecls, globalDeclsFilter, globalDeclIsFunction, globalAddress,
+    functionBeforeDecl, globalCompileDecs, globalCompileDecsThreaded,
+    globalCompileProg, globalCompileExp, compileContext, globalAddress,
     lookupInfo]
 
 theorem threadedEveryIsFunction :
@@ -373,7 +372,7 @@ def cakeThreadingGuard : Bool :=
 def threadingGuard : Bool :=
   firstFunctionBodyKind threadedBefore == 0 &&
   firstFunctionBodyKind threadedAfter == 1 &&
-  firstFunctionBodyKind productionBefore == 1 &&
+  firstFunctionBodyKind productionBefore == 0 &&
   threadedBefore.functions.all globalDeclIsFunction &&
   threadedNonFunction.functions.isEmpty
 

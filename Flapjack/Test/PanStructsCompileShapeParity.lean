@@ -63,6 +63,24 @@ theorem structCompileShapeWF_isWfShape_fixture :
     forwardContext [.named "outer", .comb [.one, .named "inner"], .named "missing"]
   exact ⟨hshape, hshapes⟩
 
+/-! Paired concrete instance of HOL `size_of_compile_shape` from the
+    `size_of_compile_shape_comb` oracle row. -/
+def sizeOfCompileShapeParityGuard : Bool :=
+  isWfShape ([] : StructContext) (.comb [.one, .one]) &&
+    (shapeSizeWithContext []
+      (structCompileShapeWF ([] : StructContext) (.comb [.one, .one])) == 2) &&
+    (shapeSizeWithContext ([] : StructContext) (.comb [.one, .one]) == 2)
+
+#eval sizeOfCompileShapeParityGuard
+#guard sizeOfCompileShapeParityGuard
+
+theorem structCompileShapeWF_size_comb_fixture :
+    shapeSizeWithContext []
+        (structCompileShapeWF ([] : StructContext) (.comb [.one, .one])) =
+      shapeSizeWithContext ([] : StructContext) (.comb [.one, .one]) := by
+  exact structCompileShapeWF_size [] (.comb [.one, .one])
+    (by simp [isWfShape, isWfShape.isWfShapeList]) (by simp [structInfosOk])
+
 /-! The fuel-indexed helper remains a separate untagged analogue. -/
 theorem structCompileShapesFuel_eq_map_fixture :
     structCompileShapeFuel.structCompileShapesFuel 8 forwardContext

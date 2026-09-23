@@ -187,6 +187,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "functions_filter_nil"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "functions_FILTER_exn_decl"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "functions_FILTER_is_name"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "MEM_functions"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_name_cancel"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_name_cong"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_append"),

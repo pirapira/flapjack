@@ -2297,6 +2297,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_shapes_eq_map",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapes_eq_map",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; no-fuel production recursion)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "old_exp_shapes_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structOldExpShapes_eq_map",
@@ -3246,6 +3254,30 @@
     "lean_name": "panToCrepPcCompileCorrectCallReturnConstCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state Call case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_callReturnParameter_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (state-owned Call evaluator equation; untagged infrastructure)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_callReturnParameter_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 state-owned Call evaluator specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallReturnParameterCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Call induction case; untagged)"
   },
   {
     "hol_path": null,

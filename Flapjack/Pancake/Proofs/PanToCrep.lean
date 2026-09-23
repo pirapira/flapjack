@@ -28,8 +28,11 @@ namespace Flapjack
 /-! Exact Lean port of HOL `globals_lookup_def`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The production
     globals field has HOL's `5 word` keys and `word_lab` cells; `panSemShapeOf`
-    is the exact `shape_of` port. `List.range` with `BitVec.ofNat` represents
-    `GENLIST n2w`, and `List.mapM` represents `OPT_MMAP`. -/
+    is the exact `shape_of` port constructor by constructor, with no premises.
+    `Shape.shapeSize` matches HOL `size_of_shape_def` on `One`, `Comb` (sum of
+    child sizes), and `Named`, also without side conditions. `List.range` with
+    `BitVec.ofNat` represents `GENLIST n2w` including 5-bit truncation, and
+    `List.mapM` represents `OPT_MMAP`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=

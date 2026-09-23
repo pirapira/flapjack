@@ -2930,6 +2930,38 @@ mutual
               panShapeListMatches_shapeSize_eq leftTail rightTail htail]
 end
 
+/-! The successful `lookup_code` parameter check fixes each formal shape to its
+source `shape_of` argument shape. This Flapjack projection exposes the
+map-level fact needed by the indexed HOL `LIST_REL` locals bridge. -/
+private theorem panSemCodeArgumentsMatch_shapeMapEq (structs : StructContext)
+    (parameters : List (String × Shape)) (values : List (PanValue α))
+    (hmatch : panSemCodeArgumentsMatch structs parameters values = true) :
+    parameters.map Prod.snd = values.map (panValueShape structs) := by
+  induction parameters generalizing values with
+  | nil => cases values <;> simp [panSemCodeArgumentsMatch] at hmatch ⊢
+  | cons parameter parameters ih =>
+      cases values with
+      | nil => simp [panSemCodeArgumentsMatch] at hmatch
+      | cons value values =>
+          simp only [panSemCodeArgumentsMatch, Bool.and_eq_true] at hmatch
+          rcases hmatch with ⟨hshape, htail⟩
+          simp only [List.map_cons]
+          rw [panShapeMatches_eq (panValueShape structs value) parameter.2 hshape,
+            ih values htail]
+
+private theorem panSemCodeArgumentsMatch_length (structs : StructContext)
+    (parameters : List (String × Shape)) (values : List (PanValue α))
+    (hmatch : panSemCodeArgumentsMatch structs parameters values = true) :
+    parameters.length = values.length := by
+  induction parameters generalizing values with
+  | nil => cases values <;> simp [panSemCodeArgumentsMatch] at hmatch ⊢
+  | cons parameter parameters ih =>
+      cases values with
+      | nil => simp [panSemCodeArgumentsMatch] at hmatch
+      | cons value values =>
+          simp only [panSemCodeArgumentsMatch, Bool.and_eq_true] at hmatch
+          exact congrArg Nat.succ (ih values hmatch.2)
+
 /-! Successful source parameter matching plus well-formed source values fixes
 the flattened argument length used by target code lookup. -/
 private theorem panSemCodeArgumentsMatch_flattenLength
@@ -3044,6 +3076,32 @@ theorem lookupCrepRuntimeCode_ofCodeRel
   rw [htargetEntry]
   simp [names, hnamesLength, hnamesEraseDups, assignCrepRuntimeLocals]
 
+private theorem crepRuntimeLocals_zip_eq_fupdateList
+    (slots : List Nat) (words : List (RiscV.Word 64))
+    (locals : Nat → Option (PanWordLab (RiscV.Word 64))) :
+    (slots.zip words).foldl
+        (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
+        locals =
+      FUPDATE_LIST locals (slots.zip (words.map PanWordLab.word)) := by
+  induction slots generalizing words locals with
+  | nil => cases words <;> simp [FUPDATE_LIST]
+  | cons slot slots ih =>
+      cases words with
+      | nil => rfl
+      | cons word words =>
+          simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons, FUPDATE_LIST]
+          have hfirst : updateCrepRuntimeLocal locals slot (.word word) =
+              FUPDATE locals (slot, .word word) := by
+            funext key
+            by_cases hkey : key = slot
+            · subst key
+              simp [updateCrepRuntimeLocal, FUPDATE]
+            · have hslotKey : (slot == key) = false := by
+                exact beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+              simp [updateCrepRuntimeLocal, FUPDATE, hslotKey]
+          rw [hfirst, ih]
+          rfl
+
 /-! Compose the restricted HOL compiled-argument cases with the state-owned
 code_rel lookup. For Const/Local/RStruct/address arguments, target argument
 evaluation is derived from the source state evaluator, and the production
@@ -3080,17 +3138,36 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
           (ctxtFc context.funcs context.eids
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
-          sourceBody, targetLocals) := by
+          sourceBody, targetLocals) ∧
+      targetLocals = tlcWordLab
+        (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
   let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
     { vars := context.vars, funcs := context.funcs,
       eids := context.eids, vmax := context.vmax }
   have harguments := compileArgsHOL_constLocalStructAddress_eval_flatten
     context source target expressions values hstate hlocals hsupported hsource
-  obtain ⟨targetLocals, hlookup, _⟩ :=
+  obtain ⟨targetLocals, hlookup, htargetFold⟩ :=
     lookupCrepRuntimeCode_ofCodeRel context source target function parameters
       sourceBody returnShape (values.flatMap panValueFlatten) hcode hentry
       hargumentLength
-  exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup⟩
+  have htargetMap : targetLocals = tlcWordLab
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
+    calc
+      targetLocals = ((List.range
+          (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+          (values.flatMap panValueFlatten)).foldl
+            (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
+            (FEMPTY : Nat → Option (PanWordLab (RiscV.Word 64))) := htargetFold
+      _ = FUPDATE_LIST FEMPTY
+          ((List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+            ((values.flatMap panValueFlatten).map PanWordLab.word)) :=
+        crepRuntimeLocals_zip_eq_fupdateList
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+          (values.flatMap panValueFlatten) FEMPTY
+      _ = tlcWordLab
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := rfl
+  exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup,
+    htargetMap⟩
 
 /-! The caller's state, code, and exception relations survive Call's callee
 entry setup: the two evaluators replace only locals and decrement the related
@@ -3322,7 +3399,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs
         clearCrepRuntimeLocals
           { crepRuntimeCallerState caller calleeState with
             locals := updateCrepRuntimeLocal caller.locals slot (.word value) }) := by
-  obtain ⟨targetLocals, harguments, hlookup⟩ :=
+  obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
     lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength
@@ -3406,7 +3483,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs
         { vars := context.vars, funcs := context.funcs,
           eids := context.eids, vmax := context.vmax }
         expressions) = some handlerResult := by
-  obtain ⟨targetLocals, harguments, hlookup⟩ :=
+  obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
     lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength
@@ -3845,7 +3922,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
       with ffi := calleeFfi }
     with clock := min (decPanClock source.clock) calleeClock }
-  obtain ⟨targetLocals, _htargetArgs, htargetLookup⟩ :=
+  obtain ⟨targetLocals, _htargetArgs, htargetLookup, htargetMap⟩ :=
     lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength

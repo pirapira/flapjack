@@ -5518,5 +5518,53 @@
     "lean_name": "crepInlineLocalsExtRel_self",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only helper for the extensional FDOM/FDIFF rendering used by the exact crepInlineLocalsExtRel port; no HOL declaration of this name"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panShapeMatches_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only support showing successful panShapeMatches is exact structural shape equality; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panShapeListMatches_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list recursion supporting panShapeMatches_eq; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcTlcWordLabLocalsRelOfIndexedPanSem_exact",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only literal localsRel wrapper for the indexed source-shape bridge; still untagged and not yet tied to the production source/target Call entry maps"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_shapeMapEq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection of the successful source argument matcher to a formal/argument shape map; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-length projection of the successful source argument matcher; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
   }
 ]

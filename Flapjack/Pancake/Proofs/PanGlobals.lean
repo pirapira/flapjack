@@ -719,17 +719,13 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
     `compileDecsCake`, with the shape of Cake's `compile_decs_decls_thm`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`).  The `@[hol]` tag
     is withheld pending an exactness review of the underlying representation:
-    `compileDecsCake` also composes `compileProgCake`, which is not yet proved
-    to implement every HOL `pan_globals$compile` clause (its global-handler
-    case now uses the exact tagged `freshNameHOL`, but the program compiler
-    still awaits clause/side-condition review; tracked by bead
-    `flapjack-pxn.18.5.2.20.1.1.1`), and
-    `CakeContext.globals` renders HOL's extensional finite map by a
-    `FiniteMap` lookup function that need not have finite support.  `width` is
+    `CakeContext.globals` renders HOL's extensional finite map by a `FiniteMap`
+    lookup function that need not have finite support.  The program compiler
+    `compileProgCake` is now the reviewed exact `compile_def` port (using the
+    exact `freshNameHOL`/`freeVarIds`/`expLocalVars` helpers), and `width` is
     restricted by `[NeZero width]` as HOL `dimindex` is positive.  The
-    `compile_exp` half is now an exact tagged port
-    (`compileExpCake`, `reviewed_exact`).  Tracked by bead
-    `flapjack-pxn.18.5.2.20.1.1`. -/
+    `compile_exp` half is the exact tagged port `compileExpCake`
+    (`reviewed_exact`).  Tracked by bead `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -747,9 +743,9 @@ theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero wid
 /-- FLAPJACK-SPECIFIC (not an exact HOL port). The `EVERY is_function` result
     for `compileDecsCake`, with the shape of Cake's
     `compile_decs_EVERY_is_function`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`).  Untagged for the
-    same representation/definition reasons as `compile_decs_decls_thm_cake`; see
-    bead `flapjack-pxn.18.5.2.20.1.1`. -/
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`).      Untagged for the
+    same finite-support representation reason as `compile_decs_decls_thm_cake`;
+    see bead `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -767,9 +763,8 @@ theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [Ne
     for `compileDecsCake`, with the shape of Cake's `compile_decls_append`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`): the second list
     runs under the context reached by the first and the output lists append.
-    Untagged for the same representation/definition reasons as
-    `compile_decs_decls_thm_cake` (untagged `compileProgCake`/`fresh_name`);
-    see bead `flapjack-pxn.18.5.2.20.1.1`. -/
+    Untagged for the same finite-support representation reason as
+    `compile_decs_decls_thm_cake`; see bead `flapjack-pxn.18.5.2.20.1.1`. -/
 theorem compile_decls_append_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =

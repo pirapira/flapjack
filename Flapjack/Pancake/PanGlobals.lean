@@ -1550,14 +1550,17 @@ def compileExpCakeArgs {width : Nat} [NeZero width] (context : CakeContext width
 termination_by expressions => sizeOf expressions
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port).  Clause-structured `compile`
-    over `CakeContext`, mirroring HOL `pan_globals$compile_def`
-    (`pan_globalsScript.sml:69-149`).  The global-return-handler case now calls
-    the exact `freshNameHOL` port of HOL `fresh_name` (`pan_globalsScript.sml:55`).
-    The `@[hol]` tag is still withheld pending full clause/side-condition review
-    of the program compiler and the finite-map representation note.  See beads
-    `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
-def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+/-- Exact clause-structured port of HOL `pan_globals$compile_def`
+    (`pan_globalsScript.sml:69-149`) over the canonical word context
+    `CakeContext`.  Each clause matches HOL directly; the global-return-handler
+    case uses the exact `freshNameHOL` port of HOL `fresh_name`
+    (`pan_globalsScript.sml:55`) and the exact `freeVarIds`/`expLocalVars`
+    ports of HOL `free_var_ids`/`var_exp` (`panLangScript.sml:347`/`:253`).
+    String equality is lawful, so the `==`/`!=` comparisons implement HOL `=`.
+    The finite-map `globals` is consulted only through `FLOOKUP`, as in HOL.
+    See beads `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_def"]
+def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>
       .dec name shape (compileExpCake context value) (compileProgCake context body)
@@ -1608,8 +1611,8 @@ def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
             match FLOOKUP context.globals name with
             | some (shape, address) =>
                 let compiledHandlerProgram := compileProgCake context handler
-                let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
-                  compiledArguments.flatMap globalExpVars
+                let names := handlerVar :: freeVarIds compiledHandlerProgram ++
+                  compiledArguments.flatMap expLocalVars
                 let resultName := freshNameHOL "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/
@@ -1670,13 +1673,13 @@ structure CakeCompileDecsResult (width : Nat) where
     `compile_decs` over `CakeContext`, with the clause shapes of HOL
     `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): a function
     body is compiled under the context as of its own position, and a `Decl`
-    extends the context for the declarations that follow.  The `@[hol]` tag is
-    withheld because the program compiler used here (`compileProgCake`) still
-    calls the untagged `globalFreshName` in its handler case (exact HOL
-    `fresh_name` port tracked by bead `flapjack-pxn.18.5.2.20.1.1.1.1`), and
-    because `CakeContext.globals` is a `FiniteMap` lookup function without a
-    finite-support invariant.  `width` is restricted by `[NeZero width]`, as
-    HOL `dimindex` is positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
+    extends the context for the declarations that follow.  The program compiler
+    `compileProgCake` is now the reviewed exact `compile_def` port.  The
+    `@[hol]` tag is still withheld because `CakeContext.globals` is a
+    `FiniteMap` lookup function without a finite-support invariant; the
+    per-declaration `FUPDATE`/`globalAddress` clauses are clause-identical to
+    HOL.  `width` is restricted by `[NeZero width]`, as HOL `dimindex` is
+    positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
 def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }

@@ -5082,17 +5082,17 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "set_globals_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "setCrepRuntimeGlobals",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_name": "setCrepHolGlobals",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (body compared to set_globals_def crepSemScript.sml:61: record update of the 5-word-keyed word_lab globals cell; setCrepRuntimeGlobals_eq_FUPDATE shows the component is HOL finite-map FUPDATE. The Lean runtime state adds memoryModel/bytesInWord/ffiContext target-configuration fields, which the same record update leaves untouched. Direct HOL oracle crep_store_global_probe.out rows and Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. The production 14-field CrepRuntimeState version is the separate untagged setCrepRuntimeGlobals, related by setCrepRuntimeGlobals_eq_FUPDATE and the untagged commutation setCrepHolGlobals_toRuntime. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "FLOOKUP_set_globals",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "flookup_setCrepRuntimeGlobals_locals",
+    "lean_name": "flookup_setCrepHolGlobals_locals",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared to FLOOKUP_set_globals crepPropsScript.sml:297; locals projection unchanged by the tagged set_globals update. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n, using tagged setCrepHolGlobals. The production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

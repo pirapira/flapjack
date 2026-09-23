@@ -103,14 +103,14 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- HOL `crepSem$set_globals` (crepSemScript.sml:61):
-    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`. The Lean
-    runtime state additionally carries the three target-configuration fields
-    `memoryModel`, `bytesInWord`, and `ffiContext`; this record update changes
-    only `globals`, so those fields are preserved exactly as HOL preserves its
-    remaining fields. `setCrepRuntimeGlobals_eq_FUPDATE` records that the
+/-- Production global update on the 14-field `CrepRuntimeState`. Its field
+    operation follows HOL `crepSem$set_globals` (crepSemScript.sml:61), but the
+    runtime state carries three target-configuration fields
+    (`memoryModel`, `bytesInWord`, `ffiContext`) absent from HOL's 11-field
+    state, so this is NOT tagged as the exact HOL definition. The exact
+    HOL-shaped port lives in `Flapjack/Pancake/Semantics/CrepSem/Eval.lean` as
+    `setCrepHolGlobals`; `setCrepRuntimeGlobals_eq_FUPDATE` records that the
     update is HOL's finite-map `|+`/`FUPDATE` on the globals component. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with globals := updateCrepRuntimeGlobal state.globals key value }

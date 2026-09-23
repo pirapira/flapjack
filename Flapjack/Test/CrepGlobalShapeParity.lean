@@ -75,16 +75,68 @@ def directUpdateState : CrepRuntimeState Nat Unit :=
   | _ => false
 
 /- HOL `crepSem$set_globals_def` (crepSemScript.sml:61) is the record update
-   `s with globals := s.globals |+ (gv,w)`; the tagged `setCrepRuntimeGlobals`
-   has exactly that body written through the HOL finite-map `FUPDATE`. -/
+   `s with globals := s.globals |+ (gv,w)` on the 11-field state. The exact
+   HOL-shaped port is `setCrepHolGlobals` over `CrepHolState`; the production
+   14-field `setCrepRuntimeGlobals` is the untagged adapter, and
+   `setCrepRuntimeGlobals_eq_FUPDATE` records the same body through FUPDATE. -/
 example :
     setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState =
       { directUpdateState with
         globals := FUPDATE directUpdateState.globals ((4 : BitVec 5), .word 22) } :=
   setCrepRuntimeGlobals_eq_FUPDATE (4 : BitVec 5) (.word 22) directUpdateState
 
-/- HOL `crepProps$FLOOKUP_set_globals` (crepPropsScript.sml:297): writing a
-   global cell leaves every local lookup unchanged. -/
+/- Exact HOL-shaped state fixture for the 11-field `CrepHolState`. -/
+def holState : CrepHolState Nat Unit :=
+  { locals := fun name => if name == 3 then some (.word 7) else none
+    globals := updateCrepRuntimeGlobal (fun _ => none) (4 : BitVec 5) (.word 11)
+    code := FEMPTY
+    memory := noNatMemory
+    memaddrs := noNatDomain
+    shMemaddrs := noNatDomain
+    clock := 3
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 12
+    topAddress := 13 }
+
+/-- The exact HOL-shaped `setCrepHolGlobals` has HOL's `FUPDATE` body. -/
+example :
+    setCrepHolGlobals (4 : BitVec 5) (.word 22) holState =
+      { holState with globals := FUPDATE holState.globals ((4 : BitVec 5), .word 22) } :=
+  rfl
+
+/- HOL `crepProps$FLOOKUP_set_globals` (crepPropsScript.sml:297) over the
+   11-field `CrepHolState`: writing a global cell leaves every local lookup
+   unchanged. -/
+example :
+    FLOOKUP (setCrepHolGlobals (4 : BitVec 5) (.word 22) holState).locals 3 =
+      FLOOKUP holState.locals 3 :=
+  flookup_setCrepHolGlobals_locals (4 : BitVec 5) (.word 22) holState 3
+
+/-- Production adapter: the exact HOL-shaped update commutes with
+   `CrepHolState.toRuntime`, so the executable `setCrepRuntimeGlobals` performs
+   the same global update. -/
+def holState64 : CrepHolState (RiscV.Word 64) Unit :=
+  { locals := fun name => if name == 3 then some (.word (7 : RiscV.Word 64)) else none
+    globals := updateCrepRuntimeGlobal (fun _ => none) (4 : BitVec 5)
+      (.word (11 : RiscV.Word 64))
+    code := FEMPTY
+    memory := fun _ => .word 0
+    memaddrs := fun _ => false
+    shMemaddrs := fun _ => false
+    clock := 3
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 12
+    topAddress := 13 }
+
+example :
+    (setCrepHolGlobals (4 : BitVec 5) (.word (22 : RiscV.Word 64)) holState64).toRuntime =
+      setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) holState64.toRuntime :=
+  setCrepHolGlobals_toRuntime (4 : BitVec 5) (.word 22) holState64
+
+/- Untagged production adapter: writing a global cell on the 14-field runtime
+   state leaves every local lookup unchanged. -/
 example :
     FLOOKUP (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).locals 3 =
       FLOOKUP directUpdateState.locals 3 :=

@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Crepe language properties from `cakeml/pancake/semantics/crepPropsScript.sml`.
@@ -230,14 +231,23 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWith {α : Type u} (names : Lis
           simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
           simp [crepNestedSeq, crepAssignedFreeVars, ih values (by omega)]
 
-/-- Faithful port of Cake `crepProps$FLOOKUP_set_globals`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:297`): writing a `word_lab`
-    global cell leaves every local binding unchanged. The globals update is
-    `setCrepRuntimeGlobals` (tagged `set_globals_def`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+/-- Untagged production adapter: writing a `word_lab` global cell on the
+    14-field `CrepRuntimeState` leaves every local binding unchanged. HOL's
+    exact `FLOOKUP_set_globals` (crepPropsScript.sml:297) is over the 11-field
+    state and is ported as `flookup_setCrepHolGlobals_locals`. -/
 theorem flookup_setCrepRuntimeGlobals_locals {α σ : Type}
     (gv : BitVec 5) (w : PanWordLab α) (s : CrepRuntimeState α σ) (n : Nat) :
     FLOOKUP (setCrepRuntimeGlobals gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
+
+/-- Exact HOL-shaped port of Cake `crepProps$FLOOKUP_set_globals`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:297`) over the 11-field
+    `CrepHolState`: `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
+    The globals update is the tagged `setCrepHolGlobals` (`set_globals_def`). -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+theorem flookup_setCrepHolGlobals_locals {α σ : Type}
+    (gv : BitVec 5) (w : PanWordLab α) (s : CrepHolState α σ) (n : Nat) :
+    FLOOKUP (setCrepHolGlobals gv w s).locals n = FLOOKUP s.locals n :=
   rfl
 
 end Flapjack

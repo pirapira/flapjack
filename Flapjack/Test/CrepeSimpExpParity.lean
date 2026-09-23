@@ -371,6 +371,22 @@ def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
   baseAddress := holBits4
   topAddress := holBits4
 
+def holWordBits64 (value : Nat) : Fin 64 → Bool :=
+  bitVecToHolWordBits (BitVec.ofNat 64 value)
+
+def holWordBitsState64 : CrepHolState (Fin 64 → Bool) Unit where
+  locals := fun _ => none
+  globals := fun _ => none
+  code := fun _ => none
+  memory := fun _ => .word (holWordBits64 0x0807060504030201)
+  memaddrs := fun address => address == holWordBits64 8
+  shMemaddrs := fun _ => false
+  clock := 0
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := holWordBits64 0
+  topAddress := holWordBits64 0
+
 #guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime (.const holBits4) ==
   some holBits4
 #guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
@@ -418,6 +434,28 @@ example :
       (.const holBits4)).map PanWordLab.word := by
   apply crepSimpExpCorrect1HolWordBitsSourceRuntime id holWordBitsState4 _
   simp [evalCrepRuntimeExp]
+
+example :
+    crepRuntimeLoadByte
+        (CrepHolState.toHolFiniteWordSourceRuntime
+          (instFinHolFiniteDimension (width := 64)) holWordBitsState64)
+        (holWordBits64 9) =
+      crepHolEvalMemLoadByte
+        (holFiniteWordSourceMemoryModel
+          (instFinHolFiniteDimension (width := 64)) false)
+        (holWordBits64 8) holWordBitsState64 (holWordBits64 9) :=
+  crepHolFiniteWordSourceRuntime_loadByte holWordBitsState64 (holWordBits64 9)
+
+example :
+    crepRuntimeLoad32
+        (CrepHolState.toHolFiniteWordSourceRuntime
+          (instFinHolFiniteDimension (width := 64)) holWordBitsState64)
+        (holWordBits64 8) =
+      crepHolEvalMemLoad32
+        (holFiniteWordSourceMemoryModel
+          (instFinHolFiniteDimension (width := 64)) false)
+        (holWordBits64 8) holWordBitsState64 (holWordBits64 8) :=
+  crepHolFiniteWordSourceRuntime_load32 holWordBitsState64 (holWordBits64 8)
 
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,

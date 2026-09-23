@@ -1652,8 +1652,9 @@ shape-preserving source update, using the slots recorded in `context.vars`.
 For the one-word Call exception-handler case, the target `exp_hdl` execution
 and resulting `locals_rel` postcondition are proved by
 `EvaluateCases.crepRuntimeExpHdlOneWord` and
-`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`; that target step is closed,
-not a separate remaining proof obligation. The same target setup and
+`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. Thus the target `exp_hdl`
+step is complete and is not a separate remaining proof obligation. The same
+target setup and
 `locals_rel` precondition are proved for a two-word payload by
 `EvaluateCases.crepRuntimeExpHdlTwoWords` and
 `EvaluateCases.crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the map

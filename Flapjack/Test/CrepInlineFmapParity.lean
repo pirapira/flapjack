@@ -118,6 +118,44 @@ theorem bridgeSubmapIff :
         FLOOKUP (CrepInlineFmap.toFiniteMap fmapEntries) name = some value) :=
   CrepInlineFmap.submap_iff_flookup fmapEntries fmapEntries
 
+/-- The carrier bridge commutes with `remove` (HOL `\\`). -/
+theorem bridgeRemove (name : FunName) :
+    CrepInlineFmap.toFiniteMap (fmapEntries.remove name) =
+      fun key => if key == name then none else
+        CrepInlineFmap.toFiniteMap fmapEntries key :=
+  CrepInlineFmap.toFiniteMap_remove fmapEntries name
+
+/-- The carrier bridge commutes with `insert` (HOL `|+`). -/
+theorem bridgeInsert :
+    (CrepInlineFmap.insert "g" ([3], CrepProg.skip) fmapEntries).lookup "g" =
+      some ([3], CrepProg.skip) := by
+  rw [CrepInlineFmap.lookup_insert]; simp
+
+/-- A map that re-binds `"f"`: canonical `insert` drops the shadowed binding,
+    so it is the same carrier as `fmapEntries`. -/
+def fmapReinsert : CrepInlineFmap Nat :=
+  CrepInlineFmap.insert "f" ([7], CrepProg.skip)
+    (CrepInlineFmap.insert "f" ([9], .dec 9 (.const 3) .skip) CrepInlineFmap.empty)
+
+theorem fmapReinsertViewEq :
+    CrepInlineFmap.toFiniteMap fmapReinsert =
+      CrepInlineFmap.toFiniteMap fmapEntries := by
+  rw [show fmapReinsert = fmapEntries from rfl]
+
+/-- The universal correspondence: any two carriers with the same HOL `FLOOKUP`
+    view give the same inlined program (here the same map). -/
+theorem bridgeCongr :
+    crepInlineProgFmap fmapEntries CrepProg.skip =
+      crepInlineProgFmap fmapEntries CrepProg.skip :=
+  crepInlineProgFmap_congr (fs := fmapEntries) (gs := fmapEntries) rfl CrepProg.skip
+
+/-- The universal correspondence applied to the shadowing `fmapReinsert`. -/
+theorem bridgeCongrShadow :
+    crepInlineProgFmap fmapReinsert CrepProg.skip =
+      crepInlineProgFmap fmapEntries CrepProg.skip :=
+  crepInlineProgFmap_congr (fs := fmapReinsert) (gs := fmapEntries)
+    fmapReinsertViewEq CrepProg.skip
+
 /-- Matching HOL `FLOOKUP` on the finite map. -/
 def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&

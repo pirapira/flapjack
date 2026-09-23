@@ -1032,9 +1032,10 @@ def CrepHolState.toHolFiniteWordRuntime {ι : Type u}
 /-- Runtime adapter for proofs that need HOL's generic finite-word byte-load
     primitives. It retains the state fields and word-size value of
     `toHolFiniteWordRuntime` while selecting the source-shaped memory model.
-    The recursive `simp_exp_correct1` proof has not yet been moved to this
-    evaluator; the remaining word-operator correspondence is tracked locally
-    beside `holFiniteWordSourceMemoryModel`. -/
+    The all-width untagged recursive simp-preservation theorem uses this
+    runtime, and the load branches are connected to the model-parametric HOL
+    source helpers below. Other target primitives remain transported through
+    BitVec/RISC-V; their HOL correspondence is still open. -/
 def CrepHolState.toHolFiniteWordSourceRuntime {ι : Type u}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) :
@@ -1042,6 +1043,109 @@ def CrepHolState.toHolFiniteWordSourceRuntime {ι : Type u}
   let runtime := state.toHolFiniteWordRuntime dimension
   { runtime with
     memoryModel := holFiniteWordSourceMemoryModel dimension state.bigEndian }
+
+/-! The production byte/word load branches over the source-shaped runtime
+    reduce to the model-parametric state helpers that spell out HOL's
+    `mem_load_byte_def` and `mem_load_32_def`. These equations connect the
+    production evaluator path to those source formulas; they do not assert
+    that the finite-dimension BitVec encoding is HOL's implicit `finite_index`
+    representation. -/
+theorem crepHolFiniteWordSourceRuntime_loadByte {ι : Type u} {σ : Type u}
+    [dimension : HolFiniteDimension ι]
+    (state : CrepHolState (ι → Bool) σ) (address : ι → Bool) :
+    crepRuntimeLoadByte (state.toHolFiniteWordSourceRuntime dimension) address =
+      crepHolEvalMemLoadByte
+        (holFiniteWordSourceMemoryModel dimension state.bigEndian)
+        (bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width (dimension.width / 8)))
+        state address := by
+  cases hcell : state.memory
+      ((holFiniteWordSourceMemoryModel dimension state.bigEndian).byteAlign
+        (bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width (dimension.width / 8))) address) with
+  | word value =>
+      simp [CrepHolState.toHolFiniteWordSourceRuntime,
+        CrepHolState.toHolFiniteWordRuntime, crepRuntimeLoadByte,
+        crepHolEvalMemLoadByte, hcell, panTheWord]
+
+theorem crepHolFiniteWordSourceRuntime_load32 {ι : Type u} {σ : Type u}
+    [dimension : HolFiniteDimension ι]
+    (state : CrepHolState (ι → Bool) σ) (address : ι → Bool) :
+    crepRuntimeLoad32 (state.toHolFiniteWordSourceRuntime dimension) address =
+      crepHolEvalMemLoad32
+        (holFiniteWordSourceMemoryModel dimension state.bigEndian)
+        (bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width (dimension.width / 8)))
+        state address := by
+  have hWordToBitVecInjective : Function.Injective (holWordToBitVec dimension) := by
+    intro left right h
+    calc
+      left = bitVecToHolWord dimension (holWordToBitVec dimension left) := by
+        rw [bitVecToHolWord_holWordToBitVec]
+      _ = bitVecToHolWord dimension (holWordToBitVec dimension right) :=
+        congrArg (bitVecToHolWord dimension) h
+      _ = right := bitVecToHolWord_holWordToBitVec dimension right
+  have hTwo : holWordToBitVec dimension (2 : ι → Bool) =
+      BitVec.ofNat dimension.width 2 := by
+    change holWordToBitVec dimension
+      (bitVecToHolWord dimension (BitVec.ofNat dimension.width 2)) = _
+    rw [holWordToBitVec_bitVecToHolWord]
+  have hThree : holWordToBitVec dimension (3 : ι → Bool) =
+      BitVec.ofNat dimension.width 3 := by
+    change holWordToBitVec dimension
+      (bitVecToHolWord dimension (BitVec.ofNat dimension.width 3)) = _
+    rw [holWordToBitVec_bitVecToHolWord]
+  have hBits12 : BitVec.ofNat dimension.width 1 +
+      BitVec.ofNat dimension.width 1 = BitVec.ofNat dimension.width 2 := by
+    change BitVec.ofNat dimension.width 1 + BitVec.ofNat dimension.width 1 =
+      BitVec.ofNat dimension.width (1 + 1)
+    rw [BitVec.ofNat_add_ofNat]
+  have hBits23 : BitVec.ofNat dimension.width 2 +
+      BitVec.ofNat dimension.width 1 = BitVec.ofNat dimension.width 3 := by
+    change BitVec.ofNat dimension.width 2 + BitVec.ofNat dimension.width 1 =
+      BitVec.ofNat dimension.width (2 + 1)
+    rw [BitVec.ofNat_add_ofNat]
+  have hAddress2 : address + 1 + 1 = address + 2 := by
+    apply hWordToBitVecInjective
+    simp only [holFiniteWordToBitVec_add]
+    rw [holFiniteWordToBitVec_one, hTwo]
+    calc
+      (holWordToBitVec dimension address + BitVec.ofNat dimension.width 1) +
+          BitVec.ofNat dimension.width 1 =
+          holWordToBitVec dimension address +
+            (BitVec.ofNat dimension.width 1 + BitVec.ofNat dimension.width 1) :=
+        BitVec.add_assoc _ _ _
+      _ = holWordToBitVec dimension address + BitVec.ofNat dimension.width 2 :=
+        congrArg (fun word => holWordToBitVec dimension address + word) hBits12
+  have hAddress3 : address + 1 + 1 + 1 = address + 2 + 1 := by
+    exact congrArg (fun value => value + 1) hAddress2
+  have hAddress23 : address + 2 + 1 = address + 3 := by
+    apply hWordToBitVecInjective
+    simp only [holFiniteWordToBitVec_add]
+    rw [hTwo, holFiniteWordToBitVec_one, hThree]
+    calc
+      (holWordToBitVec dimension address + BitVec.ofNat dimension.width 2) +
+          BitVec.ofNat dimension.width 1 =
+          holWordToBitVec dimension address +
+            (BitVec.ofNat dimension.width 2 + BitVec.ofNat dimension.width 1) :=
+        BitVec.add_assoc _ _ _
+      _ = holWordToBitVec dimension address + BitVec.ofNat dimension.width 3 :=
+        congrArg (fun word => holWordToBitVec dimension address + word) hBits23
+  by_cases haligned :
+      (holFiniteWordSourceMemoryModel dimension state.bigEndian).aligned 4 address = true
+  · let alignedAddress :=
+      (holFiniteWordSourceMemoryModel dimension state.bigEndian).byteAlign
+        (bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width (dimension.width / 8))) address
+    cases hcell : state.memory alignedAddress with
+    | word value =>
+        simp [CrepHolState.toHolFiniteWordSourceRuntime,
+          CrepHolState.toHolFiniteWordRuntime, crepRuntimeLoad32,
+          crepHolEvalMemLoad32, alignedAddress, haligned, hcell, panTheWord,
+          hAddress2, hAddress23]
+  · simp [CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime, crepRuntimeLoad32,
+      crepHolEvalMemLoad32, haligned]
 
 theorem crepHolFiniteDimension_local_toBitVec {ι : Type}
     (dimension : HolFiniteDimension ι) (state : CrepHolState (ι → Bool) σ)

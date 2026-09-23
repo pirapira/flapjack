@@ -67,7 +67,10 @@ def natCrepRuntimeFfiState : FfiState Unit :=
     ioEvents := [] }
 
 structure CrepRuntimeState (α σ : Type u) where
-  locals : Nat → Option α
+  /-- HOL `crepSem$state.locals` is a finite map from `varname` to `word_lab`.
+      Lean's function representation is extensionally the same finite map;
+      `PanWordLab.word` retains the HOL cell wrapper. -/
+  locals : Nat → Option (PanWordLab α)
   /-- HOL `crepSem$state.globals` is a finite map from `5 word` to `word_lab`.
       Lean's function representation is extensionally the same finite map;
       `PanWordLab.word` retains the HOL cell wrapper. -/
@@ -89,8 +92,8 @@ structure CrepRuntimeState (α σ : Type u) where
   topAddress : α
 
 /- Flapjack clock update. Its field operation follows CakeML Pancake's
-   `dec_clock_def`, but the whole state type is not HOL-shaped while locals
-   contain bare words rather than `word_lab` cells. -/
+   `dec_clock_def`; with locals cells now `word_lab`-shaped this is also the
+   HOL state update. -/
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
 
@@ -98,15 +101,19 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- Flapjack runtime helper for one fixed-width global update. This is not
-    tagged as HOL `set_globals_def`: the target state's locals still store bare
-    words, whereas HOL `crepSem$state.locals` stores `word_lab` cells. -/
+/-- Fixed-width `set_globals` cell update on the emitted `word_lab` cells
+    (HOL `crepSem$set_globals_def`). -/
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with globals := updateCrepRuntimeGlobal state.globals key value }
 
-/- Flapjack local-clear operation. Its field operation follows CakeML's
-   `empty_locals_def`, but the whole state type still differs in locals cells. -/
+def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
+    (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=
+  fun candidate => if name == candidate then some value else locals candidate
+
+/- Flapjack local-clear operation, matching CakeML's `empty_locals_def`
+   (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
+   expose the caller's transient locals. -/
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
 
@@ -114,15 +121,26 @@ def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState �
 @[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
     (clearCrepRuntimeLocals state).code = state.code := rfl
 
+/-- `upd_locals` for callee parameters on the emitted `word_lab` cells: each
+    bound value is wrapped with `PanWordLab.word`, exactly as HOL's cell type. -/
+def assignCrepRuntimeLocals (locals : Nat → Option (PanWordLab α))
+    (names : List Nat) (values : List α) :
+    Option (Nat → Option (PanWordLab α)) :=
+  if names.length != values.length then none
+  else
+    some ((names.zip values).foldl
+      (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
+      locals)
+
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
-    Option (CrepProg α × (Nat → Option α)) :=
+    Option (CrepProg α × (Nat → Option (PanWordLab α))) :=
   match FLOOKUP code name with
   | none => none
   | some (parameters, body) =>
       if parameters.length == values.length &&
           parameters.eraseDups.length == parameters.length then
-        match assignCrepValues (fun _ => none) parameters values with
+        match assignCrepRuntimeLocals (fun _ => none) parameters values with
         | some locals => some (body, locals)
         | none => none
       else none
@@ -236,14 +254,15 @@ def crepRuntimeStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
   else none
 
 def crepRuntimeAssignExisting
-    (locals : Nat → Option α) (names : List Nat) (values : List α) :
-    Option (Nat → Option α) :=
+    (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
+    Option (Nat → Option (PanWordLab α)) :=
   if names.length != values.length then none
   else if !names.all (fun name => (locals name).isSome) then none
   else if names.eraseDups.length != names.length then none
   else
     some ((names.zip values).foldl
-      (fun locals (name, value) => updateCrepLocal locals name value) locals)
+      (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
+      locals)
 
 def crepRuntimeReadBytes [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Nat → Option (List UInt8)
@@ -290,8 +309,10 @@ def crepRuntimeExtCall [BEq α] [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (function : FunName)
     (configuration configurationLength array arrayLength : Nat) :
     CrepRuntimeStep α σ ε :=
-  match state.locals configuration, state.locals configurationLength,
-      state.locals array, state.locals arrayLength with
+  match (state.locals configuration).map panTheWord,
+      (state.locals configurationLength).map panTheWord,
+      (state.locals array).map panTheWord,
+      (state.locals arrayLength).map panTheWord with
   | some configuration, some configurationLength, some array, some arrayLength =>
       crepRuntimeExtCallValues handler state function configuration configurationLength
         array arrayLength
@@ -308,10 +329,10 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
             let state := { state with ffi := ffi }
-            (.normal, { state with locals := updateCrepLocal state.locals name value })
+            (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
-        match state.locals name with
+        match (state.locals name).map panTheWord with
         | none => (.error, state)
         | some value =>
             let width := crepRuntimeMemWidth operator
@@ -333,7 +354,7 @@ def evalCrepRuntimeExp
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : CrepRuntimeState α σ) : CrepExp α → Option α
   | .const value => some value
-  | .var name => state.locals name
+  | .var name => (state.locals name).map panTheWord
   | .load address => do
       let address ← evalCrepRuntimeExp state address
       crepRuntimeLoad state address
@@ -407,10 +428,10 @@ def evalCrepRuntimeExps
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
-def restoreCrepRuntimeStep (name : Nat) (oldValue : Option α) :
+def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>
-      (result, { state with locals := restoreCrepLocal state.locals name oldValue })
+      (result, { state with locals := fun candidate => if name == candidate then oldValue else state.locals candidate })
 
 def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=
@@ -516,7 +537,8 @@ mutual
         match evalCrepRuntimeExp state value with
         | none => some (.error, state)
         | some value =>
-            let nextState := { state with locals := updateCrepLocal state.locals name value }
+            let nextState :=
+              { state with locals := updateCrepRuntimeLocal state.locals name (.word value) }
             match evalCrepRuntimeProg handler primitive fuel nextState body with
             | none => some (.error, state)
             | some result => some (restoreCrepRuntimeStep name (state.locals name) result)
@@ -526,10 +548,10 @@ mutual
         | some value =>
             match state.locals name with
             | some _ =>
-                some (.normal, { state with locals := updateCrepLocal state.locals name value })
+                some (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
             | none => some (.error, state)
     | _fuel + 1, state, .primitive names operator arguments =>
-        match arguments.mapM state.locals with
+        match arguments.mapM (fun name => (state.locals name).map panTheWord) with
         | none => some (.error, state)
         | some arguments =>
             match primitive operator arguments with

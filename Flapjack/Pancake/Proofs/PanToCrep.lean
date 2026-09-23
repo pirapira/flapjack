@@ -514,11 +514,12 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_def"]
 def localsRel (context : PanToCrepProofContext α)
     (sLocals : FiniteMap String (PanValue α))
-    (tLocals : FiniteMap Nat α) : Prop :=
+    (tLocals : FiniteMap Nat (PanWordLab α)) : Prop :=
   noOverlap context.vars ∧ ctxtMax context.vmax context.vars ∧
     ∀ vname v, FLOOKUP sLocals vname = some v →
       ∃ ns vs, FLOOKUP context.vars vname = some (panValueShape [] v, ns) ∧
-        ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
+        ns.mapM (FLOOKUP tLocals) = some vs ∧
+        (panValueFlatten v).map PanWordLab.word = vs ∧
         isWfShape [] (panValueShape [] v) = true
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
@@ -527,7 +528,7 @@ def localsRel (context : PanToCrepProofContext α)
 theorem localsRelWfShape
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (name : String) (value : PanValue α)
     (hrel : localsRel context sourceLocals targetLocals)
     (hlookup : FLOOKUP sourceLocals name = some value) :
     panValueIsWf [] value = true := by
@@ -556,7 +557,7 @@ theorem evalPanSemStateExpsWfShapeOfStateRel
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (target : CrepRuntimeState (RiscV.Word 64) σ)
     (context : PanToCrepProofContext (RiscV.Word 64))
-    (targetLocals : FiniteMap Nat (RiscV.Word 64))
+    (targetLocals : FiniteMap Nat (PanWordLab (RiscV.Word 64)))
     (expressions : List (Exp (RiscV.Word 64)))
     (values : List (PanValue (RiscV.Word 64)))
     (heval : evalPanSemStateExps source expressions = some values)
@@ -594,21 +595,24 @@ theorem evalPanSemStateExpsWfShapeOfStateRel
 theorem localsRelLookupCtxt
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (name : String) (value : PanValue α)
     (hrel : localsRel context sourceLocals targetLocals)
     (hlookup : FLOOKUP sourceLocals name = some value) :
     ∃ slots,
       FLOOKUP context.vars name = some (panValueShape [] value, slots) ∧
       slots.length = (panValueFlatten value).length ∧
-      slots.mapM (FLOOKUP targetLocals) = some (panValueFlatten value) ∧
+      slots.mapM (FLOOKUP targetLocals) =
+        some ((panValueFlatten value).map PanWordLab.word) ∧
       isWfShape [] (panValueShape [] value) = true := by
   obtain ⟨slots, values, hcontext, hmap, hflatten, hwf⟩ :=
     hrel.2.2 name value hlookup
   refine ⟨slots, hcontext, ?_, ?_, hwf⟩
-  · rw [hflatten]
-    exact list_mapM_length (FLOOKUP targetLocals) slots values hmap
-  · rw [hflatten]
-    exact hmap
+  · calc slots.length = values.length :=
+        list_mapM_length (FLOOKUP targetLocals) slots values hmap
+      _ = ((panValueFlatten value).map PanWordLab.word).length :=
+        congrArg List.length hflatten.symm
+      _ = (panValueFlatten value).length := List.length_map PanWordLab.word
+  · rw [hmap, ← hflatten]
 
 /-- HOL `local_rel_gt_vmax_preserved`: a target local slot strictly above the
     proof context's maximum cannot occur in any source variable's slot list. -/
@@ -616,7 +620,8 @@ theorem localsRelLookupCtxt
 theorem localRelGtVmaxPreserved
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (slot : Nat) (newValue : α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (slot : Nat)
+    (newValue : PanWordLab α)
     (hrel : localsRel context sourceLocals targetLocals)
     (habove : context.vmax < slot) :
     localsRel context sourceLocals (FUPDATE targetLocals (slot, newValue)) := by
@@ -644,7 +649,7 @@ theorem localRelGtVmaxPreserved
 theorem localRelLeZipUpdatePreserved
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α)
+    (targetLocals : FiniteMap Nat (PanWordLab α))
     (name : String) (oldValue newValue : PanValue α)
     (shape : Shape) (slots : List Nat)
     (hrel : localsRel context sourceLocals targetLocals)
@@ -653,7 +658,8 @@ theorem localRelLeZipUpdatePreserved
     (hshape : panValueShape [] oldValue = panValueShape [] newValue)
     (hdistinct : slots.Nodup) :
     localsRel context (FUPDATE sourceLocals (name, newValue))
-      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten newValue))) := by
+      (FUPDATE_LIST targetLocals
+        (slots.zip ((panValueFlatten newValue).map PanWordLab.word))) := by
   obtain ⟨oldSlots, hlookup, hlen, _, hwf⟩ :=
     localsRelLookupCtxt context sourceLocals targetLocals name oldValue hrel hsource
   have hpair : (panValueShape [] oldValue, oldSlots) = (shape, slots) := by
@@ -667,7 +673,9 @@ theorem localRelLeZipUpdatePreserved
   have hwfNew : isWfShape [] (panValueShape [] newValue) = true := by
     rw [← hshape]
     exact hwf
-  have hlenNew : slots.length = (panValueFlatten newValue).length := by
+  have hlenNew : slots.length =
+      ((panValueFlatten newValue).map PanWordLab.word).length := by
+    rw [List.length_map]
     rw [← hslots, hlen, panValueFlatten_length_eq_shapeSize oldValue hwf,
       panValueFlatten_length_eq_shapeSize newValue hwfNew, hshape]
   refine ⟨hrel.1, hrel.2.1, ?_⟩
@@ -677,11 +685,11 @@ theorem localRelLeZipUpdatePreserved
   · subst other
     simp at hsourceOther
     cases hsourceOther
-    refine ⟨slots, panValueFlatten newValue, ?_, ?_, rfl, hwfNew⟩
+    refine ⟨slots, (panValueFlatten newValue).map PanWordLab.word, ?_, ?_, rfl, hwfNew⟩
     · rw [← hshape]
       exact hcontextOld
     · exact opt_mmap_some_eq_zip_flookup slots targetLocals
-        (panValueFlatten newValue) hdistinct hlenNew
+        ((panValueFlatten newValue).map PanWordLab.word) hdistinct hlenNew
   · have hneq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
     simp [hneq] at hsourceOther
     obtain ⟨otherSlots, words, hother, hmap, hflat, hotherWf⟩ :=
@@ -694,7 +702,7 @@ theorem localRelLeZipUpdatePreserved
         (panValueShape [] value) slots otherSlots hcontextOld hother
         ⟨slot, hin, hotherIn⟩
     rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
-      (panValueFlatten newValue) hdisjoint hlenNew]
+      ((panValueFlatten newValue).map PanWordLab.word) hdisjoint hlenNew]
     exact hmap
 
 /-- HOL `locals_rel_extend_new_var`: a fresh, well-shaped source local can be
@@ -703,7 +711,7 @@ theorem localRelLeZipUpdatePreserved
 theorem localsRelExtendNewVar
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α)
+    (targetLocals : FiniteMap Nat (PanWordLab α))
     (value : PanValue α) (name : String) (slots : List Nat)
     (hrel : localsRel context sourceLocals targetLocals)
     (hwf : isWfShape [] (panValueShape [] value) = true)
@@ -717,9 +725,11 @@ theorem localsRelExtendNewVar
         vars := FUPDATE context.vars (name, (panValueShape [] value, slots))
         vmax := context.vmax + Shape.shapeSize (panValueShape [] value) }
       (FUPDATE sourceLocals (name, value))
-      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten value))) := by
-  have hlenFlat : slots.length = (panValueFlatten value).length := by
-    rw [hlen, panValueFlatten_length_eq_shapeSize value hwf]
+      (FUPDATE_LIST targetLocals
+        (slots.zip ((panValueFlatten value).map PanWordLab.word))) := by
+  have hlenFlat : slots.length =
+      ((panValueFlatten value).map PanWordLab.word).length := by
+    rw [List.length_map, hlen, panValueFlatten_length_eq_shapeSize value hwf]
   have hdisjointOld : ∀ other shape otherSlots,
       FLOOKUP context.vars other = some (shape, otherSlots) →
       ListDisjoint slots otherSlots := by
@@ -784,10 +794,10 @@ theorem localsRelExtendNewVar
     by_cases hsame : name = other
     · simp [beq_iff_eq.mpr hsame] at hlookupSource
       cases hlookupSource
-      refine ⟨slots, panValueFlatten value, ?_, ?_, rfl, hwf⟩
+      refine ⟨slots, (panValueFlatten value).map PanWordLab.word, ?_, ?_, rfl, hwf⟩
       · simp [FLOOKUP_update, beq_iff_eq.mpr hsame]
       · exact opt_mmap_some_eq_zip_flookup slots targetLocals
-          (panValueFlatten value) hdistinct hlenFlat
+          ((panValueFlatten value).map PanWordLab.word) hdistinct hlenFlat
     · have hbeq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
       simp [hbeq] at hlookupSource
       obtain ⟨otherSlots, words, hcontext, hmap, hflat, hotherWf⟩ :=
@@ -795,7 +805,7 @@ theorem localsRelExtendNewVar
       refine ⟨otherSlots, words, ?_, ?_, hflat, hotherWf⟩
       · simpa [FLOOKUP_update, hbeq] using hcontext
       · rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
-          (panValueFlatten value)
+          ((panValueFlatten value).map PanWordLab.word)
           (hdisjointOld other (panValueShape [] otherValue) otherSlots hcontext)
           hlenFlat]
         exact hmap

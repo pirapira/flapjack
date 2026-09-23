@@ -18,7 +18,7 @@ namespace Flapjack
 def crepRuntimeShMemStore (state : CrepRuntimeState α σ)
     (name : Nat) (address : α) (width : Nat) :
     CrepRuntimeStep α σ FfiFinalEvent :=
-  match state.locals name with
+  match (state.locals name).map panTheWord with
   | none => (.error, state)
   | some value =>
       let alignedAddress :=

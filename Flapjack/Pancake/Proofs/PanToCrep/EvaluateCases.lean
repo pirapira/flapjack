@@ -777,7 +777,7 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
       some (.skip, fun _ => none) := by
     unfold lookupCrepRuntimeCode
     rw [htargetCodeLookup]
-    simp [assignCrepValues]
+    simp [assignCrepRuntimeLocals]
   have htargetCallRun : evalCrepRuntimeCall targetHandler targetPrimitive
       (fuel + 1) targetState none function [] =
       some (.timeout, clearCrepRuntimeLocals targetState) := by

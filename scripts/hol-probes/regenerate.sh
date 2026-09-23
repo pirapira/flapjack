@@ -478,6 +478,12 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
   set_globals_direct store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+# The locals_wordlab probe observes varname |-> word_lab cell retention,
+# Var-read flattening and overwrite behaviour.
+run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
+  locals_set_var_cell locals_set_var_overwrite \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

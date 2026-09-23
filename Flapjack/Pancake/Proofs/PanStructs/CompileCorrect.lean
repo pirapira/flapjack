@@ -2186,21 +2186,18 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- This documentation belongs only to the immediately following
-    `panStructCompileExpCorrectVarCase` theorem; it does not describe the
-    preceding private lookup helper. The Var case is a derived Local/Global
-    Var-constructor specialization of HOL `compile_exp_correct`, so it is
-    intentionally untagged: HOL has only the
-    universally quantified theorem, not a separately named Var-case
-    declaration. This Lean statement is not an exact statement port. It keeps
-    successful source evaluation, but re-encodes the HOL premises: the direct
-    `ctxt.structs = MAP ... s.structs` equality is replaced by equality of
-    shape views (which observes names and fields, not the full Lean struct-info
-    records); finite-map `FEVERY` field-validity is expressed as pointwise Bool
-    predicates over total runtime lookups; and the `FMAP_MAP2` premises are
-    expressed through pointwise shape-map adapters. The state wrapper supplies
-    nodup `InfoMap` lists and lookup equations, while lawful `BEq String` is
-    needed to align production lookup with HOL equality. The theorem carries
+/-- Untagged derived Local/Global Var-constructor specialization of HOL
+    `compile_exp_correct`; this note applies to this theorem only. HOL has only
+    the universally quantified theorem, not a separately named Var-case
+    declaration, and this Lean statement is not an exact statement port. It
+    keeps successful source evaluation but re-encodes the HOL premises: the
+    direct `ctxt.structs = MAP ... s.structs` equality is replaced by equality
+    of shape views (which observes names and fields, not the full Lean struct
+    info records); finite-map `FEVERY` field-validity is expressed as
+    pointwise Bool predicates over total runtime lookups; and `FMAP_MAP2`
+    premises are expressed through pointwise shape-map adapters. The state
+    wrapper supplies nodup `InfoMap` lists and lookup equations, while lawful
+    `BEq String` aligns production lookup with HOL equality. The theorem carries
     `structInfosOk` as a premise, but this Var-case proof does not use it. Lean
     also stores a `shapedFields` cache absent from HOL, which these premises do
     not inspect, and its evaluator takes an explicit `bytesInWord` parameter.

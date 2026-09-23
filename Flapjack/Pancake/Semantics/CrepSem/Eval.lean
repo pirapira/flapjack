@@ -452,12 +452,38 @@ theorem evalCrepRuntimeExp_loadGlob_toHolWordBits [NeZero width]
   rw [← crepHolWordBits_global_toBitVec state address]
   simp [Function.comp_def, mapCrepHolWordLab, panTheWord]
 
+theorem evalCrepRuntimeExp_load_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (address : CrepExp (Fin width → Bool))
+    (ih : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+      evalCrepHolWordBitsExp state address) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.load address) =
+      evalCrepHolWordBitsExp state (.load address) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ih ⊢
+  cases hEval : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec address) with
+  | none =>
+      simp [hEval] at ih
+      simp [ih]
+  | some value =>
+      have hAddress : evalCrepRuntimeExp state.toHolWordBitsRuntime address =
+          some (bitVecToHolWordBits value) := by
+        simpa [hEval] using ih
+      rw [hAddress]
+      simp
+      rw [crepHolWordBits_load_toBitVec state (bitVecToHolWordBits value)]
+      simp [crepRuntimeLoad, CrepHolState.toRuntime,
+        CrepHolState.toBitVecState, mapCrepHolWordLab, panTheWord,
+        holWordBitsToBitVec_bitVecToHolWordBits] <;> rfl
+
 /-! The next desired bridge would show that the production runtime evaluator on
     the finite-index HOL-word carrier equals the transported source evaluator
-    above. This is not implied by the carrier equivalence alone: the 32-bit
-    load, list-valued `wordOp`, comparisons, and shifts must commute with the
-    conversion. Keep the statement out of the HOL map until those operation
-    and state equations are proved. -/
+    above. Production `Var`, `LoadGlob`, and recursive plain `Load` cases are
+    now proved, as are conversion equations for list `wordOp`, comparisons,
+    shifts, and byte loads. The 32-bit load and the list-recursive evaluator
+    proof remain open. Keep the full theorem out of the HOL map until every
+    expression case is proved. -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :

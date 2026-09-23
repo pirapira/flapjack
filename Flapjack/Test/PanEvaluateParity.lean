@@ -133,6 +133,16 @@ def evaluateSourceCallStructArgument :=
     (.call none "pair" [.rStruct [.const (BitVec.ofNat 64 7),
       .const (BitVec.ofNat 64 8)]] : Prog Word64)
 
+def evaluateSourceCallFirstRecordField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceIdCode with
+        locals := fun name =>
+          if name == "pair" then
+            some (.rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 8)])
+          else none })
+    (.call none "id" [.rField 0 (.var .local "pair")] : Prog Word64)
+
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -230,6 +240,9 @@ def observeSourceCallStructArgument : Bool :=
       left == BitVec.ofNat 64 7 && right == BitVec.ofNat 64 8
   | _ => false
 
+def observeSourceCallFirstRecordField := isSourceReturnedWord
+  evaluateSourceCallFirstRecordField (BitVec.ofNat 64 7) 9
+
 def observeSourceCallAssigned : Bool :=
   match evaluateSourceCallAssigned with
   | some (.control (.normal locals _globals _memory _ffi), 9) =>
@@ -283,6 +296,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 
 #guard observeSourceCodeCall
 #guard observeSourceCallStructArgument
+#guard observeSourceCallFirstRecordField
 #guard observeSourceCallAssigned
 #guard observeSourceCallRaisesException
 #guard observeSourceCallHandlesException
@@ -605,6 +619,9 @@ def runChecks : IO Bool := do
   if observeSourceCallStructArgument then
     IO.println "PASS state-owned Call binds and returns a structured argument like HOL"
   else IO.println "FAIL state-owned Call binds and returns a structured argument like HOL"
+  if observeSourceCallFirstRecordField then
+    IO.println "PASS state-owned Call evaluates first field of a local record like HOL"
+  else IO.println "FAIL state-owned Call evaluates first field of a local record like HOL"
   if observeSourceCallAssigned then IO.println "PASS state-owned Call writes the existing local destination" else
     IO.println "FAIL state-owned Call writes the existing local destination"
   if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
@@ -654,7 +671,8 @@ def runChecks : IO Bool := do
   if observeShMemStoreDomainFailure then IO.println "PASS evaluate ShMemStore rejects shared-domain miss with Error" else
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
-    observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCodeDecCall &&
+    observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
+    observeSourceCodeDecCall &&
     observeSourceNestedCodeCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&

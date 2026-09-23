@@ -4379,9 +4379,17 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "compileExpHOL_rFieldZero_singleLocal_eval_flatten",
+    "lean_name": "mapM_take_of_success",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only evaluation support for first-field projection from a one-field local record; this is a restricted helper for source-shaped Call arguments, not a separate HOL theorem port"
+    "reviewer": "Flapjack-only Option mapM list infrastructure: successful lookup/evaluation on a flattened local slice is preserved for matching prefixes; no separate HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluation support for HOL comp_field index zero on an rField over a nonempty source-local rStruct; Call argument support remains restricted and this is not the full compile_exp_val_rel theorem"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

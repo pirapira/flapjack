@@ -176,6 +176,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_not_in"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_all_distinct"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "moreThenNotMaxList"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "max_list_genlist_add_suc_val"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf_nil"),

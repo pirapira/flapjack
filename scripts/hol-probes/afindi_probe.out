@@ -15,3 +15,4 @@ alookup_map_structs_ok=ALOOKUP [(«S»,<|fields := [(«f»,One)]; size := 1|>)] 
 fields_in_order_reorder_noop=∀eflds info_fields.   MAP FST info_fields = MAP FST eflds ∧ ALL_DISTINCT (MAP FST info_fields) ⇒   FLAT     (MAP        (λ(nm',sh).             case ALOOKUP (compile_fields ctxt eflds) nm' of               NONE => []             | SOME e => [e]) info_fields) =   MAP (compile_exp ctxt ∘ SND) eflds
 opt_mmap_eq_every=∀f xs ys P.   OPT_MMAP f xs = SOME ys ∧ (∀x y. MEM x xs ∧ f x = SOME y ⇒ P y) ⇒   EVERY P ys
 alookup_drop_helper=T
+map_fst_eq_alookup=T

@@ -267,6 +267,46 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only transport of constant-multiplication preservation across an explicit HolFiniteDimension representation; not a port of polymorphic HOL eval_mul_const"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "holFiniteWord_mul_comm",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only multiplication commutativity transport through the explicit finite-dimension BitVec model"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpMulEvalHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only proof of the CrepOp.mul simplifier case under an explicit finite-dimension RISC-V/BitVec evaluator interpretation"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolFiniteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor production evaluator preservation helper using an explicit finite-dimension RISC-V/BitVec interpretation"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteDimension",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Generic finite-dimension production support with HOL's premise and code-map update, but still interprets words through explicit HolFiniteDimension/BitVec and returns only word-valued expression results; not the unrestricted crepSem word_lab theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepMulConst_holWordBits",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only finite-index/BitVec naturality for the arithmetic multiplier rewrite; required for a generic word-carrier evaluator proof and has no standalone HOL declaration"

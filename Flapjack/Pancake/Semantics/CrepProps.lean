@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
 Crepe language properties from `cakeml/pancake/semantics/crepPropsScript.sml`.
@@ -228,5 +229,15 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWith {α : Type u} (names : Lis
       | cons value values =>
           simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
           simp [crepNestedSeq, crepAssignedFreeVars, ih values (by omega)]
+
+/-- Faithful port of Cake `crepProps$FLOOKUP_set_globals`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:297`): writing a `word_lab`
+    global cell leaves every local binding unchanged. The globals update is
+    `setCrepRuntimeGlobals` (tagged `set_globals_def`). -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+theorem flookup_setCrepRuntimeGlobals_locals {α σ : Type}
+    (gv : BitVec 5) (w : PanWordLab α) (s : CrepRuntimeState α σ) (n : Nat) :
+    FLOOKUP (setCrepRuntimeGlobals gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
 
 end Flapjack

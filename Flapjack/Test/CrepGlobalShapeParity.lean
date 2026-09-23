@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepProps
 
 /-!
 Direct runtime checks against `scripts/hol-probes/crep_eval_probe.out` and
@@ -72,5 +73,25 @@ def directUpdateState : CrepRuntimeState Nat Unit :=
   | some (.normal, state) =>
       evalCrepRuntimeExp state (.loadGlob (4 : BitVec 5)) == some 11
   | _ => false
+
+/- HOL `crepSem$set_globals_def` (crepSemScript.sml:61) is the record update
+   `s with globals := s.globals |+ (gv,w)`; the tagged `setCrepRuntimeGlobals`
+   has exactly that body written through the HOL finite-map `FUPDATE`. -/
+example :
+    setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState =
+      { directUpdateState with
+        globals := FUPDATE directUpdateState.globals ((4 : BitVec 5), .word 22) } :=
+  setCrepRuntimeGlobals_eq_FUPDATE (4 : BitVec 5) (.word 22) directUpdateState
+
+/- HOL `crepProps$FLOOKUP_set_globals` (crepPropsScript.sml:297): writing a
+   global cell leaves every local lookup unchanged. -/
+example :
+    FLOOKUP (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).locals 3 =
+      FLOOKUP directUpdateState.locals 3 :=
+  flookup_setCrepRuntimeGlobals_locals (4 : BitVec 5) (.word 22) directUpdateState 3
+
+#guard FLOOKUP (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).locals 3 ==
+    some (.word 7) &&
+  FLOOKUP (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).locals 9 == none
 
 end Flapjack.Test.CrepGlobalShapeParity

@@ -4982,5 +4982,21 @@
     "lean_name": "stateRel_riscv64CrepRuntimeTarget_iff",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "deepseek-two: Flapjack-only canonicalization lemma; riscv64CrepRuntimeTarget edits bytesInWord/memoryModel/ffiContext (not constrained by state_rel) and bigEndian, so stateRel source base and stateRel source (riscv64CrepRuntimeTarget base) coincide when base.bigEndian = false"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_globals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "setCrepRuntimeGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (body compared to set_globals_def crepSemScript.sml:61: record update of the 5-word-keyed word_lab globals cell; setCrepRuntimeGlobals_eq_FUPDATE shows the component is HOL finite-map FUPDATE. The Lean runtime state adds memoryModel/bytesInWord/ffiContext target-configuration fields, which the same record update leaves untouched. Direct HOL oracle crep_store_global_probe.out rows and Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "FLOOKUP_set_globals",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "flookup_setCrepRuntimeGlobals_locals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared to FLOOKUP_set_globals crepPropsScript.sml:297; locals projection unchanged by the tagged set_globals update. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

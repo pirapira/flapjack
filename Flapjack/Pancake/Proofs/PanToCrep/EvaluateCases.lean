@@ -2775,6 +2775,89 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach
 
+/-! A successful source parameter-shape match preserves `Shape.shapeSize`.
+Named shapes also satisfy this because every named shape has size one; their
+name equality is only the matching condition. -/
+mutual
+  private theorem panShapeMatches_shapeSize_eq (left right : Shape)
+      (hmatch : panShapeMatches left right = true) :
+      Shape.shapeSize left = Shape.shapeSize right := by
+    cases left with
+    | one => cases right <;> simp [panShapeMatches] at hmatch ⊢
+    | named leftName =>
+        cases right <;> simp [panShapeMatches] at hmatch ⊢
+    | comb leftFields =>
+        cases right with
+        | one => simp [panShapeMatches] at hmatch
+        | named _ => simp [panShapeMatches] at hmatch
+        | comb rightFields =>
+            simp only [panShapeMatches] at hmatch
+            rw [shapeSize_comb_eq_sum, shapeSize_comb_eq_sum]
+            exact panShapeListMatches_shapeSize_eq leftFields rightFields hmatch
+
+  private theorem panShapeListMatches_shapeSize_eq (left right : List Shape)
+      (hmatch : panShapeMatches.panShapeListMatches left right = true) :
+      (left.map Shape.shapeSize).sum = (right.map Shape.shapeSize).sum := by
+    cases left with
+    | nil => cases right <;> simp [panShapeMatches.panShapeListMatches] at hmatch ⊢
+    | cons leftHead leftTail =>
+        cases right with
+        | nil => simp [panShapeMatches.panShapeListMatches] at hmatch
+        | cons rightHead rightTail =>
+            simp only [panShapeMatches.panShapeListMatches, Bool.and_eq_true] at hmatch
+            rcases hmatch with ⟨hhead, htail⟩
+            simp only [List.map_cons, List.sum_cons]
+            rw [panShapeMatches_shapeSize_eq leftHead rightHead hhead,
+              panShapeListMatches_shapeSize_eq leftTail rightTail htail]
+end
+
+/-! Successful source parameter matching plus well-formed source values fixes
+the flattened argument length used by target code lookup. -/
+private theorem panSemCodeArgumentsMatch_flattenLength
+    (parameters : List (String × Shape)) (values : List (PanValue (RiscV.Word 64)))
+    (hmatch : panSemCodeArgumentsMatch [] parameters values = true)
+    (hwf : panValueIsWfValues ([] : StructContext) values = true) :
+    Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+      (values.flatMap panValueFlatten).length := by
+  induction parameters generalizing values with
+  | nil => cases values <;> simp [panSemCodeArgumentsMatch, Shape.shapeSize] at hmatch ⊢
+  | cons parameter parameters ih =>
+      cases values with
+      | nil => simp [panSemCodeArgumentsMatch] at hmatch
+      | cons value values =>
+          simp only [panSemCodeArgumentsMatch, Bool.and_eq_true] at hmatch
+          rcases hmatch with ⟨hshape, htailMatch⟩
+          simp only [panValueIsWfValues, Bool.and_eq_true] at hwf
+          have hshapeSize := panShapeMatches_shapeSize_eq
+            (panValueShape [] value) parameter.2 hshape
+          have hwfShape : isWfShape [] (panValueShape [] value) = true :=
+            panValueIsWf_isWfShape_panValueShape [] value hwf.1
+          have hflatLength := panValueFlatten_length_eq_shapeSize value hwfShape
+          have htail := ih values htailMatch hwf.2
+          calc
+            Shape.shapeSize (.comb ((parameter :: parameters).map Prod.snd)) =
+                Shape.shapeSize parameter.2 +
+                  Shape.shapeSize (.comb (parameters.map Prod.snd)) := by
+              simp only [shapeSize_comb_eq_sum, List.map_cons, List.sum_cons]
+            _ = (panValueFlatten value).length +
+                  (values.flatMap panValueFlatten).length := by
+              rw [← hshapeSize, ← hflatLength, htail]
+            _ = ((value :: values).flatMap panValueFlatten).length := by
+              simp [List.flatMap, List.length_append]
+
+private theorem panSemCodeArgumentsMatch_of_lookup_success [BEq String]
+    (structs : StructContext) (code : PanSemCodeMap α) (function : String)
+    (parameters : List (String × Shape)) (values : List (PanValue α))
+    (body : Prog α) (returnShape : Shape)
+    (locals : String → Option (PanValue α))
+    (hentry : panSemCodeLookup code function = some (parameters, body, returnShape))
+    (hlookup : lookupPanSemCodeCall structs code function values =
+      some (body, returnShape, locals)) :
+    panSemCodeArgumentsMatch structs parameters values = true := by
+  cases hargs : panSemCodeArgumentsMatch structs parameters values with
+  | true => rfl
+  | false => simp [lookupPanSemCodeCall, hentry, hargs] at hlookup
+
 /-! Derive the production Crep callee lookup and parameter locals from the
 state-owned source/target code maps. The argument words are arbitrary; their
 length must match the flattened source parameter shapes. The HOL compiled
@@ -3483,9 +3566,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
-    (hargumentLength :
-      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
-        (arguments.flatMap panValueFlatten).length)
     (hinfoValid : crepRuntimeCallInfoValid
       (some (destinations, some (caught,
         .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true)
@@ -3570,8 +3650,22 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       handlerResult.2.code ∧
     excpRel context.eids
       (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
-      localsRel context (panSemCodeStateAfter source sourceResult).locals
+    localsRel context (panSemCodeStateAfter source sourceResult).locals
         handlerResult.2.locals := by
+  have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success
+    source.structs source.code function parameters arguments sourceBody returnShape
+    calleeLocals hentry hsourceCallee
+  have hwfArguments := evalPanSemStateExpsWfShapeOfStateRel source caller context
+    caller.locals expressions arguments hsourceArgs hstate hlocals
+  have hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length := by
+    have hstructs := stateRel_structs source caller hstate
+    have hsourceArgsMatchEmpty :
+        panSemCodeArgumentsMatch [] parameters arguments = true := by
+      simpa [hstructs] using hsourceArgsMatch
+    exact panSemCodeArgumentsMatch_flattenLength parameters arguments
+      hsourceArgsMatchEmpty hwfArguments
   have hsourceArguments : evalPanSemStateExps source sourceExpressions = some arguments := by
     simpa [hsourceExpressions] using hsourceArgs
   have hsourceRun := panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState

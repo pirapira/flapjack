@@ -252,7 +252,6 @@ def functionEntries : List (Decl α) →
       (declaration.name, declaration.params, declaration.body,
         declaration.returnShape) :: functionEntries declarations
   | _ :: declarations => functionEntries declarations
-termination_by declarations => sizeOf declarations
 
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip

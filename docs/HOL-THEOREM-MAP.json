@@ -2544,6 +2544,38 @@
     "reviewer": "Lean specialization of local alookup_drop_helper; no separate HOL declaration"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "isWfShapeList_of_all",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean support lemma for the struct_infos_ok_drop proof"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared all four clauses with HOL struct_infos_ok_def at pan_structsProofScript.sml:68-76)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source definition clauses and DROP conclusion matched by a concrete HOL theorem instance)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source implication and appended-context premise/conclusion shape comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -3694,5 +3726,29 @@
     "lean_name": "crepMemoryRel_store",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "stateRel_ffiUpdate",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only preservation lemma: installing the same call_FFI result on both sides keeps state_rel; no single CakeML HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_error",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source/target failing-read ExtCall step returning Error; assembles the proven canonical-target error branch with state_rel; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source/target ExtCall simulation step following call_FFI (FFI_return/FFI_final) with state_rel; assembles the proven canonical-target branches; no single HOL declaration"
   }
 ]

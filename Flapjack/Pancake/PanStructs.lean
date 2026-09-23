@@ -357,7 +357,7 @@ theorem functions_names_structCompileDecls [BEq String]
   induction declarations generalizing context with
   | nil => simp [structCompileDecls]
   | cons declaration declarations ih =>
-      cases declaration <;> simp [structCompileDecls, functions, ih]
+      cases declaration <;> simp [structCompileDecls, functions, functionEntries, ih]
 
 /-- Cake's `function_names_structs_compile_top`
     (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:313`): the struct pass at

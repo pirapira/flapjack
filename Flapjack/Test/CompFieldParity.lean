@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.Proofs.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 
 /-!

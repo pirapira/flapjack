@@ -103,34 +103,6 @@ theorem compileField_vars_mem
           exact flatMap_crepExpVars_mem_drop expressions (Shape.shapeSize shape)
             varName htail
 
-/-! Cake's `mem_comp_field_lem` (`pan_to_crepProofScript.sml:397-408`):
-    selecting a compiled record field can only retain an input expression, or
-    produce the zero fallback used when the shape list is exhausted. -/
-theorem compileField_mem_or_zero
-    [OfNat α 0]
-    (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
-    (expression : CrepExp α)
-    (hmem : expression ∈ (compileField index shapes expressions).1) :
-    expression ∈ expressions ∨ expression = .const 0 := by
-  induction shapes generalizing index expressions with
-  | nil =>
-      simp [compileField] at hmem
-      exact Or.inr hmem
-  | cons shape shapes ih =>
-      cases index with
-      | zero =>
-          left
-          exact List.mem_of_mem_take hmem
-      | succ index =>
-          have hdrop : expression ∈
-              (compileField index shapes
-                (expressions.drop (Shape.shapeSize shape))).1 := by
-            simpa [compileField] using hmem
-          rcases ih index (expressions.drop (Shape.shapeSize shape)) hdrop with
-            hinput | hzero
-          · exact Or.inl (List.mem_of_mem_drop hinput)
-          · exact Or.inr hzero
-
 theorem flatMap_crepExpVars_map_var_mem
     {α : Type u}
     (names : List Nat) (varName : Nat)

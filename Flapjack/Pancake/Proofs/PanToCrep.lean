@@ -19,6 +19,34 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
+/-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
+    input expression or produces the zero fallback. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]
+theorem compileField_mem_or_zero
+    [OfNat α 0]
+    (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
+    (expression : CrepExp α)
+    (hmem : expression ∈ (compileField index shapes expressions).1) :
+    expression ∈ expressions ∨ expression = .const 0 := by
+  induction shapes generalizing index expressions with
+  | nil =>
+      simp [compileField] at hmem
+      exact Or.inr hmem
+  | cons shape shapes ih =>
+      cases index with
+      | zero =>
+          left
+          exact List.mem_of_mem_take hmem
+      | succ index =>
+          have hdrop : expression ∈
+              (compileField index shapes
+                (expressions.drop (Shape.shapeSize shape))).1 := by
+            simpa [compileField] using hmem
+          rcases ih index (expressions.drop (Shape.shapeSize shape)) hdrop with
+            hinput | hzero
+          · exact Or.inl (List.mem_of_mem_drop hinput)
+          · exact Or.inr hzero
+
 /-- HOL `filter_not_mem_self`: filtering a list by non-membership in that
     same list removes every element. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]

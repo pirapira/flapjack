@@ -120,3 +120,8 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl opt_mmap_eq_every_oracle)));
 val _ = print "\n";
+val _ = print_eval "alookup_drop_helper"
+  ``ALOOKUP (DROP 1 [(strlit "a", 10); (strlit "b", 20)]) (strlit "b") = SOME 20 /\
+    ALL_DISTINCT (MAP FST [(strlit "a", 10); (strlit "b", 20)]) ==>
+    ~MEM (strlit "b") (MAP FST (TAKE 1 [(strlit "a", 10); (strlit "b", 20)])) /\
+    ALOOKUP [(strlit "a", 10); (strlit "b", 20)] (strlit "b") = SOME 20``;

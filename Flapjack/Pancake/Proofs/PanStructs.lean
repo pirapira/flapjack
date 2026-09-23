@@ -378,6 +378,204 @@ theorem structInfosOk_drop (n : Nat) (context : StructContext)
     rw [hsize]
     exact hctx
 
+private theorem lookupInfoWithRest_suffix_drop (name : String)
+    (context : StructContext) (info : StructInfo) (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix)) :
+    ∃ n, context.drop n = suffix := by
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨rfl, rfl⟩
+        exact ⟨1, by simp⟩
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        obtain ⟨n, hn⟩ := ih hlookup
+        refine ⟨n + 1, ?_⟩
+        simpa [List.drop_succ_cons, Nat.succ_eq_add_one] using hn
+
+private theorem lookupInfoWithRest_lookupInfo (name : String)
+    (context : StructContext) (info : StructInfo) (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix)) :
+    lookupInfo name context = some info := by
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨rfl, rfl⟩
+        simp [lookupInfo, hmatch]
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        simpa [lookupInfo, hmatch] using ih hlookup
+
+private theorem lookupInfoWithRest_none_lookupInfo_none
+    (name : String) (context : StructContext)
+    (hlookup : lookupInfoWithRest name context = none) :
+    lookupInfo name context = none := by
+  induction context with
+  | nil => simp [lookupInfo]
+  | cons entry context ih =>
+      obtain ⟨candidate, info⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        simpa [lookupInfo, hmatch] using ih hlookup
+
+private theorem lookupInfoWithRest_mem [LawfulBEq String]
+    (name : String) (context : StructContext) (info : StructInfo)
+    (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix)) :
+    (name, info) ∈ context := by
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨rfl, rfl⟩
+        have hname : candidate = name := LawfulBEq.eq_of_beq hmatch
+        subst candidate
+        simp
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        exact List.mem_cons_of_mem _ (ih hlookup)
+
+private theorem lookupInfoWithRest_fields_wf
+    (name : String) (context : StructContext) (info : StructInfo)
+    (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix))
+    (hok : structInfosOk context) :
+    isWfShape.isWfShapeList suffix (info.fields.map Prod.snd) = true := by
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨rfl, rfl⟩
+        obtain ⟨_, _, hfields, _⟩ := hok
+        have hhead := hfields 0 candidate entryInfo (by simp)
+        have htail : ((candidate, entryInfo) :: context).drop 1 = context := rfl
+        rw [htail] at hhead
+        exact isWfShapeList_of_all (fun shape hshape => hhead shape hshape)
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
+
+private theorem shapeSizeWithContext_fold_drop
+    (context suffix : StructContext) (n : Nat) (shapes : List Shape)
+    (hdrop : context.drop n = suffix)
+    (hwf : isWfShape.isWfShapeList suffix shapes = true)
+    (hnodup : (context.map Prod.fst).Nodup) (acc : Nat) :
+    shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) acc =
+      shapes.foldl (fun total shape => total + shapeSizeWithContext suffix shape) acc := by
+  induction shapes generalizing acc with
+  | nil => rfl
+  | cons shape shapes ih =>
+      have hparts : isWfShape.isWfShapeList suffix (shape :: shapes) = true := hwf
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at hparts
+      have hshapeSuffix : isWfShape suffix shape = true := hparts.1
+      have hshapeContext : isWfShape (context.drop n) shape = true := by
+        rw [hdrop]
+        exact hshapeSuffix
+      have hsize := shapeSizeWithContext_drop context shape n hshapeContext hnodup
+      rw [hdrop] at hsize
+      have htail := ih hparts.2 (acc + shapeSizeWithContext suffix shape)
+      simp only [List.foldl_cons]
+      rw [← hsize]
+      exact htail
+
+/-- Exact size-preservation theorem used by HOL's `mem_load_conversion`
+    (`pan_structsProofScript.sml:512`). It compares Cake's context-sensitive
+    shape size before and after `compile_shape`; Lean's extra `shapedFields`
+    cache is not inspected. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_compile_shape"]
+theorem structCompileShapeWF_size
+    (context : StructContext) (shape : Shape)
+    (hshape : isWfShape context shape = true) (hok : structInfosOk context) :
+    shapeSizeWithContext [] (structCompileShapeWF context shape) =
+      shapeSizeWithContext context shape := by
+  have hsize : ∀ (context : StructContext) (shape : Shape),
+      isWfShape context shape = true → structInfosOk context →
+        shapeSizeWithContext [] (structCompileShapeWF context shape) =
+          shapeSizeWithContext context shape := by
+    intro context shape
+    apply structCompileShapeWF.induct
+      (motive1 := fun context shapes =>
+        ∀ acc, isWfShape.isWfShapeList context shapes = true → structInfosOk context →
+          shapes.foldl (fun total shape =>
+            total + shapeSizeWithContext [] (structCompileShapeWF context shape)) acc =
+          shapes.foldl (fun total shape => total + shapeSizeWithContext context shape) acc)
+      (motive2 := fun context shape =>
+        isWfShape context shape = true → structInfosOk context →
+          shapeSizeWithContext [] (structCompileShapeWF context shape) =
+            shapeSizeWithContext context shape)
+    · intro context acc hlist hok
+      rfl
+    · intro context shape shapes ihShape ihShapes acc hlist hok
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at hlist
+      simp only [List.foldl_cons]
+      rw [ihShape hlist.1 hok, ihShapes (acc + shapeSizeWithContext context shape)
+        hlist.2 hok]
+    · intro context hshape hok
+      simp [structCompileShapeWF, shapeSizeWithContext]
+    · intro context shapes ihShapes hshape hok
+      have hlist : isWfShape.isWfShapeList context shapes = true := by
+        simpa [isWfShape] using hshape
+      rw [structCompileShapeWF.eq_def]
+      change shapeSizeWithContext []
+          (.comb (structCompileShapeWF.structCompileShapesWF context shapes)) =
+        shapeSizeWithContext context (.comb shapes)
+      rw [structCompileShapes_eq_map]
+      simpa only [shapeSizeWithContext, List.foldl_map] using ihShapes 0 hlist hok
+    · intro context name info suffix hlookup ihShapes hshape hok
+      have hfieldsWf := lookupInfoWithRest_fields_wf name context info suffix hlookup hok
+      have hdrop : ∃ n, context.drop n = suffix :=
+        lookupInfoWithRest_suffix_drop name context info suffix hlookup
+      obtain ⟨n, hdrop⟩ := hdrop
+      have hokSuffix : structInfosOk suffix := by
+        rw [← hdrop]
+        exact structInfosOk_drop n context hok
+      obtain ⟨_, hkeys, _, hsizes⟩ := hok
+      have hmem := lookupInfoWithRest_mem name context info suffix hlookup
+      have hinfoSize := hsizes (name, info) hmem
+      have hfieldSizes := shapeSizeWithContext_fold_drop context suffix n
+        (info.fields.map Prod.snd) hdrop hfieldsWf hkeys 0
+      have htarget := ihShapes 0 hfieldsWf hokSuffix
+      have hlookupInfo := lookupInfoWithRest_lookupInfo name context info suffix hlookup
+      have htargetFields :
+          (info.fields).foldl (fun total field =>
+            total + shapeSizeWithContext [] (structCompileShapeWF suffix field.2)) 0 =
+          (info.fields).foldl (fun total field =>
+            total + shapeSizeWithContext suffix field.2) 0 := by
+        simpa only [List.foldl_map] using htarget
+      have hfieldSizesFields :
+          (info.fields).foldl (fun total field =>
+            total + shapeSizeWithContext context field.2) 0 =
+          (info.fields).foldl (fun total field =>
+            total + shapeSizeWithContext suffix field.2) 0 := by
+        simpa only [List.foldl_map] using hfieldSizes
+      have hinfoSizeFields : info.size =
+          (info.fields).foldl (fun total field =>
+            total + shapeSizeWithContext context field.2) 0 := by
+        simpa only [shapeSizeWithContext, List.foldl_map] using hinfoSize
+      have hcompiled : structCompileShapeWF context (.named name) =
+          .comb (structCompileShapeWF.structCompileShapesWF suffix
+            (info.fields.map Prod.snd)) := by
+        rw [structCompileShapeWF.eq_def]
+        dsimp only
+        rw [hlookup]
+      rw [hcompiled]
+      rw [structCompileShapes_eq_map]
+      simp only [shapeSizeWithContext, List.foldl_map]
+      rw [htargetFields, hfieldSizesFields.symm, hinfoSizeFields.symm]
+      simp [hlookupInfo]
+    · intro context name hlookup hshape hok
+      have hlookupInfo := lookupInfoWithRest_none_lookupInfo_none name context hlookup
+      have hfalse : False := by simp [isWfShape, hlookupInfo] at hshape
+      exact hfalse.elim
+  exact hsize context shape hshape hok
+
 /-- Exact API translation of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
     remains valid in its suffix. -/

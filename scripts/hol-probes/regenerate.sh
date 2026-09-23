@@ -113,7 +113,8 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
-  compile_exp_correct_rfield compile_exp_correct_op \
+  compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
+  size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -168,7 +169,8 @@ run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
 run_probe pan_op_probeScript.sml pan_op_probe.out \
   mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
-  byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+  mem_load_byte_definition byte_align_width24_address5 \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \

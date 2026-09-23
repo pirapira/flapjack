@@ -5598,5 +5598,101 @@
     "lean_name": "not_crepInlineCodeInlRel_of_target_none",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "MEM_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "MEM_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "updatePanValueMap_eq_FUPDATE",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack finite-map support equating one source-local update with HOL-shaped FUPDATE; no standalone HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "updatePanValueMap_fold_eq_FUPDATE_LIST",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack finite-map support equating folded source-local updates with FUPDATE_LIST; no standalone HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "bindPanValueParameters_eq_slc",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge from successful state evaluator parameter binding to HOL slc; supports Call argument locals_rel, not itself an exact HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "bindPanValueParametersLocalsRelOfIndexedPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only callee-entry locals_rel bridge from the successful source evaluator binder to actual target word_lab locals; derives the relation through slc, not the enclosing Call preservation theorem"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "size_of_compile_shape",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapeWF_size",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source premises and size equality compared field-by-field; direct HOL EVAL row size_of_compile_shape_comb and Lean fixture in PanStructsCompileShapeParity)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_suffix_drop",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only suffix-extraction helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_lookupInfo",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only lookup bridge helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_none_lookupInfo_none",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only absent-lookup bridge helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only membership helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_fields_wf",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only field-well-formedness helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "shapeSizeWithContext_fold_drop",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only fold-size context-suffix helper for the size_of_compile_shape proof"
   }
 ]

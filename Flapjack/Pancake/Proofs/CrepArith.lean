@@ -1439,14 +1439,21 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     changes the word denoted by 1. No theorem currently identifies the
     selected encoding with HOL's canonical `dimindex`/index map, so this is
     not yet an unrestricted correspondence for HOL's polymorphic word type.
-    There is also a concrete evaluator mismatch in the address-load
-    constructors: `evalCrepHolFiniteDimensionExp` transports through
-    `evalCrepHolExp`, whose `Load32`/`LoadByte` cases use
-    `RiscV.panRiscVMemoryModelForEndian`; HOL `crepSem$eval_def` uses the
-    generic `mem_load_32`/`mem_load_byte` operations. Their equality for every
-    HOL word dimension and memory state remains unproved. The successful
-    evaluation induction needs these branches, so this theorem is not tagged
-    as HOL `simp_exp_correct1`. -/
+    The address-load constructors now pass through source-shaped helpers
+    `crepHolEvalMemLoad32`/`crepHolEvalMemLoadByte`, but the evaluator supplies
+    `RiscV.panRiscVMemoryModelForEndian` and a BitVec-derived `bytesInWord`.
+    HOL `crepSem$eval_def` instead gets `mem_load_32`/`mem_load_byte` and their
+    `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` operations from
+    the polymorphic word type. Their equality for every HOL word dimension
+    and memory state remains unproved. The successful evaluation induction
+    needs these branches, so this theorem is not tagged as HOL
+    `simp_exp_correct1`. There is a concrete counterexample to identifying
+    the current RISC-V model with the HOL model at every dimension: for a
+    24-bit word, the probed HOL definition gives `byte_align 5w = 4w` because
+    it aligns by `LOG2 (24 DIV 8) = 1`, while the production model supplied
+    `bytesInWord = 3` and rounds address 5 down to 3. See
+    `PanFixedLoadParity.holByteAlignWidth24Address5` and the direct HOL row in
+    `pan_fixed_load_probe.out`. -/
 theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

@@ -608,6 +608,57 @@ theorem slcTlcRw
     (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
       tlc slots arguments) := ⟨rfl, rfl⟩
 
+private theorem updatePanValueMap_eq_FUPDATE
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (value : PanValue α) :
+    updatePanValueMap locals name value = FUPDATE locals (name, value) := by
+  funext key
+  by_cases hkey : key = name
+  · subst key
+    simp [updatePanValueMap, FUPDATE]
+  · have hkeyName : (key == name) = false :=
+      beq_eq_false_iff_ne.mpr hkey
+    have hnameKey : (name == key) = false :=
+      beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+    simp [updatePanValueMap, FUPDATE, hkeyName, hnameKey]
+
+private theorem updatePanValueMap_fold_eq_FUPDATE_LIST
+    (entries : List (VarName × PanValue α))
+    (locals : VarName → Option (PanValue α)) :
+    entries.foldl
+        (fun current (name, value) => updatePanValueMap current name value) locals =
+      FUPDATE_LIST locals entries := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry entries ih =>
+      simp only [List.foldl_cons, FUPDATE_LIST]
+      rw [updatePanValueMap_eq_FUPDATE, ih]
+      rfl
+
+/-! Flapjack source-entry bridge: the actual evaluator binder and HOL `slc`
+produce extensionally identical source-local maps. -/
+theorem bindPanValueParameters_eq_slc
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (hlength : parameters.length = arguments.length) :
+    bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some (slc parameters arguments) := by
+  have hnamesLength : (parameters.map Prod.fst).length = arguments.length := by
+    simpa using hlength
+  unfold bindPanValueParameters
+  have hfold := updatePanValueMap_fold_eq_FUPDATE_LIST
+    ((parameters.map Prod.fst).zip arguments)
+    (FEMPTY : VarName → Option (PanValue α))
+  have hlengthCheck :
+      ¬ ((parameters.map Prod.fst).length != arguments.length) := by
+    simp [hnamesLength]
+  rw [if_neg hlengthCheck]
+  apply congrArg some
+  have hempty : (FEMPTY : VarName → Option (PanValue α)) = fun _ => none := rfl
+  rw [hempty] at hfold
+  change _ = FUPDATE_LIST (FEMPTY : VarName → Option (PanValue α))
+    ((parameters.map Prod.fst).zip arguments)
+  exact hfold
+
 /-! A successful source-local lookup after `slc` comes from one of the zipped
 formal/argument pairs. This Flapjack finite-map support lemma is used to expose
 the source-side parameter index in the Call-entry `locals_rel` proof; it does
@@ -1363,6 +1414,37 @@ theorem slcTlcWordLabLocalsRelOfIndexedPanSem_exact
   exact slcTlcWordLabLocalsRelOfIndexedPanSem context parameters arguments slots
     hnames hlength hshapeAt hslots hslotsLength hwf
 
+/-! Relate the successful source evaluator binder directly to the target
+callee-entry word_lab locals. This is the state-owned Call boundary: the
+source's `bindPanValueParameters` result is identified with HOL `slc`, then
+the exact expanded `locals_rel` proof above applies. It remains support for the
+enclosing recursive Call case and is not itself a HOL theorem port. -/
+theorem bindPanValueParametersLocalsRelOfIndexedPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (sourceLocals : String → Option (PanValue α))
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hbind : bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some sourceLocals) :
+    localsRel
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots)
+      sourceLocals (tlcWordLab slots arguments) := by
+  have hbindSlc := bindPanValueParameters_eq_slc parameters arguments hlength
+  have hsourceLocals : sourceLocals = slc parameters arguments :=
+    Option.some.inj (hbind.symm.trans hbindSlc)
+  rw [hsourceLocals]
+  exact slcTlcWordLabLocalsRelOfIndexedPanSem_exact context parameters
+    arguments slots hnames hlength hshapeAt hslots hslotsLength hwf
+
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape" 2345]
@@ -1569,12 +1651,12 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For a one-word Call exception payload, `EvaluateCases.crepRuntimeExpHdlOneWord`
-proves the production target `exp_hdl` execution and
-`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel` proves its resulting
-`locals_rel` postcondition. This lemma supplies the map update used by that
-one-word proof. Runtime updates for wider payloads and the enclosing general
-HOL Call case remain open. -/
+For the one-word Call exception-handler case, the target `exp_hdl` execution is
+proved by `EvaluateCases.crepRuntimeExpHdlOneWord`, and its resulting
+`locals_rel` postcondition is proved by
+`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`; this lemma supplies the map
+update used in that proof. The general HOL Call case, including wider handler
+payloads, remains open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

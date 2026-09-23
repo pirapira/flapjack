@@ -1151,18 +1151,14 @@ def evalCrepHolExp [NeZero width]
       if state.memaddrs address then some (panTheWord (state.memory address)) else none
   | .load32 address => do
       let address ← evalCrepHolExp state address
-      let memory : RiscV.Word width → Option (RiscV.Word width) :=
-        fun current => some (panTheWord (state.memory current))
-      (panModelRead32 (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
-        state.memaddrs memory (BitVec.ofNat width (width / 8)) address
-        state.bigEndian)
+      crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        (BitVec.ofNat width (width / 8)) state address
   | .loadByte address => do
       let address ← evalCrepHolExp state address
-      let memory : RiscV.Word width → Option (RiscV.Word width) :=
-        fun current => some (panTheWord (state.memory current))
-      (panModelReadByte (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
-        state.memaddrs memory (BitVec.ofNat width (width / 8)) address
-        state.bigEndian)
+      crepHolEvalMemLoadByte
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        (BitVec.ofNat width (width / 8)) state address
   | .loadGlob address => (state.globals address).map panTheWord
   | .op operator expressions => do
       let values ← expressions.mapM (evalCrepHolExp state)
@@ -1740,6 +1736,7 @@ theorem evalCrepRuntimeExp_finiteDimension_loadByte {ι : Type}
       rw [crepHolFiniteDimension_loadByte_toBitVec dimension state
         (bitVecToHolWord dimension value)]
       rw [crepHolState_loadByte]
+      rw [← crepHolEvalMemLoadByte_eq_panModelReadByte]
       simp [holWordToBitVec_bitVecToHolWord dimension]
 
 theorem evalCrepRuntimeExp_finiteDimension_load32 {ι : Type}
@@ -1767,6 +1764,7 @@ theorem evalCrepRuntimeExp_finiteDimension_load32 {ι : Type}
       rw [crepHolFiniteDimension_load32_toBitVec dimension state
         (bitVecToHolWord dimension value)]
       rw [crepHolState_load32]
+      rw [← crepHolEvalMemLoad32_eq_panModelRead32]
       simp [holWordToBitVec_bitVecToHolWord dimension]
 
 private theorem mapM_evalCrepHolFiniteDimensionExp {ι : Type}
@@ -1907,11 +1905,11 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
   case load32 address ih =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]
     rw [ih state]
-    simp [crepHolState_load32]
+    simp [crepHolState_load32, crepHolEvalMemLoad32_eq_panModelRead32]
   case loadByte address ih =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]
     rw [ih state]
-    simp [crepHolState_loadByte]
+    simp [crepHolState_loadByte, crepHolEvalMemLoadByte_eq_panModelReadByte]
   case loadGlob address => simp [evalCrepRuntimeExp, evalCrepHolExp,
     riscvCrepWordTarget, CrepHolState.toRuntime]
   case op operator expressions ih =>
@@ -1981,6 +1979,7 @@ theorem evalCrepRuntimeExp_loadByte_toHolWordBits [NeZero width]
       rw [crepHolWordBits_loadByte_toBitVec state
         (bitVecToHolWordBits value)]
       rw [crepHolState_loadByte]
+      rw [← crepHolEvalMemLoadByte_eq_panModelReadByte]
       simp [holWordBitsToBitVec_bitVecToHolWordBits]
 
 theorem evalCrepRuntimeExp_load32_toHolWordBits [NeZero width]
@@ -2006,6 +2005,7 @@ theorem evalCrepRuntimeExp_load32_toHolWordBits [NeZero width]
       rw [crepHolWordBits_load32_toBitVec state
         (bitVecToHolWordBits value)]
       rw [crepHolState_load32]
+      rw [← crepHolEvalMemLoad32_eq_panModelRead32]
       simp [holWordBitsToBitVec_bitVecToHolWordBits]
 
 private theorem mapM_evalCrepHolWordBitsExp [NeZero width]

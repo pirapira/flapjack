@@ -3838,5 +3838,13 @@
     "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only source/target ExtCall simulation step following call_FFI (FFI_return/FFI_final) with state_rel; assembles the proven canonical-target branches; no single HOL declaration"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "fields_in_order_reorder_noop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "fieldsInOrderReorderNoop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source MAP/FST, ALL_DISTINCT, FLAT/ALOOKUP statement matched to production structCompileFields/structSelectFields; direct HOL oracle and Lean fixture)"
   }
 ]

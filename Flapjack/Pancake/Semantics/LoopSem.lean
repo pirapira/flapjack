@@ -4,6 +4,7 @@ import Flapjack.LoopFindCode
 import Flapjack.LoopGetVarImm
 import Flapjack.LoopSetVars
 import Flapjack.LoopArith
+import Flapjack.Compiler.Backend.BackendCommon
 
 /-!
 # Pancake `loopSem.evaluate`
@@ -303,5 +304,19 @@ mutual
   termination_by fuel _ _ _ _ _ _ => fuel
 
 end
+
+/-- HOL `loopSem$loop_primop` (`cakeml/pancake/semantics/loopSemScript.sml:242-252`).
+    The only Loop primitive is `AddCarry`: it accepts exactly three word cells
+    and returns the low word followed by the carry word; a malformed arity or
+    any non-word cell yields `none`.  This is the `LoopEvaluateHooks.primitive`
+    boundary over word-location cells. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "loop_primop_def"]
+def loopPrimopHOL {width : Nat} [NeZero width] :
+    PrimOp → List (LoopValue (BitVec width)) →
+      Option (List (LoopValue (BitVec width)))
+  | .addCarry, [.word left, .word right, .word carry] =>
+      let (result, overflow) := wordAddCarryHOL left right carry
+      some [.word result, .word overflow]
+  | _, _ => none
 
 end Flapjack

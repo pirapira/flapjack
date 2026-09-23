@@ -112,6 +112,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "loop_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "loopPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",

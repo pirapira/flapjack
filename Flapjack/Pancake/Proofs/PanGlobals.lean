@@ -349,4 +349,33 @@ theorem ALL_DISTINCT_fperm_decs [BEq String] [LawfulBEq String]
         (fun entry => entry.1)).Nodup :=
   globalRenameDecls_names_nodup source target declarations hnodup
 
+/-! Exact-shaped port of Cake's `map_pick_up_first`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2995`): projecting the
+    first component of a quadruple map recovers the mapped first components.
+    HOL `MAP` is Lean `List.map` and `FST` is `Prod.fst`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "map_pick_up_first"]
+theorem map_pick_up_first {α β γ δ ε ζ η θ : Type}
+    (l : List (α × β × γ × δ)) (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η)
+    (f4 : δ → θ) :
+    ((l.map (fun p => (f1 p.1, f2 p.2.1, f3 p.2.2.1, f4 p.2.2.2))).map Prod.fst) =
+      (l.map Prod.fst).map f1 := by
+  rw [List.map_map, List.map_map]
+  rfl
+
+/-! Exact-shaped port of Cake's `tuple_4_o`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:3003`): composing two
+    quadruple projections composes the four component functions pointwise. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "tuple_4_o"]
+theorem tuple_4_o {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
+    (f1 : α → ε) (f2 : β → ζ) (f3 : γ → η) (f4 : δ → θ)
+    (g1 : ι → α) (g2 : κ → β) (g3 : ℓ → γ) (g4 : μ → δ) :
+    (fun p : ι × κ × ℓ × μ =>
+        (f1 (g1 p.1), f2 (g2 p.2.1), f3 (g3 p.2.2.1), f4 (g4 p.2.2.2))) =
+      ((fun q : α × β × γ × δ => (f1 q.1, f2 q.2.1, f3 q.2.2.1, f4 q.2.2.2)) ∘
+        (fun p : ι × κ × ℓ × μ =>
+          (g1 p.1, g2 p.2.1, g3 p.2.2.1, g4 p.2.2.2))) := by
+  funext p
+  obtain ⟨x, y, z, t⟩ := p
+  rfl
+
 end Flapjack

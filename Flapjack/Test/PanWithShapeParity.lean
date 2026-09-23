@@ -1,5 +1,6 @@
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.Proofs.CrepInline
+import Flapjack.Pancake.Proofs.PanGlobals
 
 /-!
 # Original-domain parity for `panLang$with_shape`
@@ -376,12 +377,12 @@ theorem zero_not_mem_genlist_offset_fixture :
       (List.range 3).map (fun i => BitVec.ofNat 5 (i + 1)) :=
   zero_not_mem_genlist_offset ([1, 2, 3] : List Nat) (by decide)
 
-theorem map_fst_map_quad_fixture :
+theorem map_pick_up_first_fixture :
     ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
         (fun p => (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2))).map Prod.fst) =
       ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map Prod.fst).map
         (fun x => x + 1)) :=
-  map_fst_map_quad [(1, 2, 3, 4)] (fun x => x + 1) id id id
+  map_pick_up_first [(1, 2, 3, 4)] (fun x => x + 1) id id id
 
 def quadProjectionGuard : Bool :=
   ((([(1, 2, 3, 4)] : List (Nat × Nat × Nat × Nat)).map
@@ -392,12 +393,12 @@ def quadProjectionGuard : Bool :=
 
 /-! Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`). -/
 
-theorem quadProjection_comp_fixture :
+theorem tuple_4_o_fixture :
     (fun p : Nat × Nat × Nat × Nat =>
         (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2)) =
       ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
         (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2))) :=
-  quadProjection_comp (fun x => x + 1) id id id id id id id
+  tuple_4_o (fun x => x + 1) id id id id id id id
 
 def quadCompGuard : Bool :=
   ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘

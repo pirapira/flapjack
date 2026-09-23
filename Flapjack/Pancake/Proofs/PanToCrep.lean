@@ -2667,4 +2667,23 @@ theorem panValueFfiSharedStore_stateRel_final
        erw [hcallGoal])
   · simpa only [stateRel] using hstate
 
+/-- HOL `pan_to_crepProofScript.sml:3051` `evaluate_replicate_const`: the
+HOL-shaped Crep evaluator maps a `REPLICATE n (Const 0w)` argument list to
+`SOME (REPLICATE n (Word 0w))`.  Stated over the `word_lab`-returning core
+`evalCrepRuntimeExpsWordLab`, so the result already has HOL's `word_lab`
+shape with no post-map. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "evaluate_replicate_const"]
+theorem evaluateReplicateConst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (count : Nat) (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeExpsWordLab state (List.replicate count (.const (0 : α))) =
+      some (List.replicate count (.word (0 : α))) := by
+  induction count with
+  | zero => simp [evalCrepRuntimeExpsWordLab]
+  | succ count ih =>
+      simp [List.replicate_succ, evalCrepRuntimeExpsWordLab, evalCrepRuntimeExpWordLab, ih]
+
 end Flapjack

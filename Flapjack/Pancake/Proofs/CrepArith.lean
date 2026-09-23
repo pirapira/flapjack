@@ -234,4 +234,67 @@ theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
           rw [hRaw]
           simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModel, hshift]
 
+/-- Flapjack representation of HOL's local `mapc f` state update: apply `f`
+    to each present code-map entry and leave every other runtime field alone. -/
+def crepArithMapCode {n : Nat} (f : (List Nat × CrepProg (RiscV.Word n)) →
+    (List Nat × CrepProg (RiscV.Word n))) (state : CrepRuntimeState (RiscV.Word n) σ) :
+    CrepRuntimeState (RiscV.Word n) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+/-! Internal evaluator lemma: `evalCrepRuntimeExp` reads locals, globals,
+    memory, and target operations but never the code map. This supports the
+    HOL-local `mapc f` step and is infrastructure rather than a HOL theorem. -/
+private theorem crepEvalCodeMapIrrel {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) → (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepRuntimeState (RiscV.Word n) σ) (expression : CrepExp (RiscV.Word n)) :
+    evalCrepRuntimeExp (riscvCrepWordTarget (crepArithMapCode f state)) expression =
+      evalCrepRuntimeExp (riscvCrepWordTarget state) expression := by
+  have evalExpsMapM (targetState : CrepRuntimeState (RiscV.Word n) σ) :
+      ∀ expressions,
+        evalCrepRuntimeExps (riscvCrepWordTarget targetState) expressions =
+          expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget targetState)) := by
+    intro expressions
+    induction expressions with
+    | nil => simp [evalCrepRuntimeExps]
+    | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        ∀ (state : CrepRuntimeState (RiscV.Word n) σ)
+          (f : List Nat × CrepProg (RiscV.Word n) → List Nat × CrepProg (RiscV.Word n)),
+          (∀ e, e ∈ expressions →
+            evalCrepRuntimeExp (riscvCrepWordTarget (crepArithMapCode f state)) e =
+              evalCrepRuntimeExp (riscvCrepWordTarget state) e) ∧
+          evalCrepRuntimeExps (riscvCrepWordTarget (crepArithMapCode f state)) expressions =
+            evalCrepRuntimeExps (riscvCrepWordTarget state) expressions))
+      generalizing state f <;>
+    all_goals try simp_all [crepArithMapCode, riscvCrepWordTarget, evalCrepRuntimeExp,
+      evalCrepRuntimeExps, crepRuntimeLoad, crepRuntimeLoad32, crepRuntimeLoadByte]
+  case op operator expressions ih =>
+    have hArgs := ih state f |>.2
+    have hArgs' :
+        List.mapM (evalCrepRuntimeExp
+          (riscvCrepWordTarget (crepArithMapCode f state))) expressions =
+        List.mapM (evalCrepRuntimeExp (riscvCrepWordTarget state)) expressions := by
+      calc
+        _ = evalCrepRuntimeExps (riscvCrepWordTarget (crepArithMapCode f state)) expressions :=
+          (evalExpsMapM (crepArithMapCode f state) expressions).symm
+        _ = _ := hArgs
+    simpa [riscvCrepWordTarget, crepArithMapCode] using
+      congrArg (fun values => values.bind
+        (fun words => RiscV.panRiscVMemoryModel.wordOp operator words)) hArgs'
+  case crepOp operator expressions ih =>
+    cases operator
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExp]
+    | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp]
+      | cons right rest =>
+        cases rest with
+        | nil =>
+          simp only [evalCrepRuntimeExp]
+          rw [ih state f |>.1 left (by simp)]
+          rw [ih state f |>.1 right (by simp)]
+        | cons _ _ => simp [evalCrepRuntimeExp]
+
 end Flapjack

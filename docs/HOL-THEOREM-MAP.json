@@ -144,6 +144,14 @@
     "reviewer": "Codex (generic positive BitVec width, production expression target, wrapped Word result)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalCodeMapIrrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only evaluator infrastructure; supports the local mapc update in simp_exp_correct1)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "genlist_less_than",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",

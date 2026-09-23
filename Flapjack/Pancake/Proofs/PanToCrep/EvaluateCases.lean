@@ -3916,6 +3916,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hcompiledHandlerBody : compileCodeRelProg context sourceHandlerBody = handlerBody)
     (hstate : stateRel source caller)
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hexcp : excpRel context.eids source.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
@@ -3945,6 +3946,20 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
           sourceBody, targetLocals) →
+      stateRel
+        ({ { source with locals := calleeLocals } with
+          clock := decPanClock source.clock })
+        (decCrepClock { caller with locals := targetLocals }) →
+      codeRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        (panSemCodeAsLookup source.code) caller.code →
+      excpRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))).eids
+        source.exceptionShapes →
       localsRel
         (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
           (parameters.map Prod.snd)
@@ -4050,9 +4065,13 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       parameters sourceBody returnShape expressions arguments calleeLocals
       hsupported hstate hcode hlocals hsourceArgs hentry hsourceCallee
       hargumentLength
+  obtain ⟨hcalleeStateEntry, hcalleeCodeEntry, hcalleeExcpEntry⟩ :=
+    panSemCallCalleeEntryStateCodeExcpRel context source caller parameters
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+      calleeLocals targetLocals hstate hcode hexcp
   obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp, hglobal⟩ :=
     hcalleeTargetBodyIH hsourceCalleeBody targetLocals htargetLookup
-      hcalleeEntryLocals
+      hcalleeStateEntry hcalleeCodeEntry hcalleeExcpEntry hcalleeEntryLocals
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -4065,7 +4084,12 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
         have hsame : targetLocals' = targetLocals := by
           have htuple := Option.some.inj (hlookup'.symm.trans htargetLookup)
           exact congrArg Prod.snd htuple
+        obtain ⟨hstateEntry', hcodeEntry', hexcpEntry'⟩ :=
+          panSemCallCalleeEntryStateCodeExcpRel context source caller parameters
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+            calleeLocals targetLocals' hstate hcode hexcp
         exact (hcalleeTargetBodyIH hsourceCalleeBody targetLocals' hlookup'
+          hstateEntry' hcodeEntry' hexcpEntry'
           (by simpa [hsame] using hcalleeEntryLocals)).1)
       (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>

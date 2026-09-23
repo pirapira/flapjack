@@ -1281,7 +1281,6 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
     evalPanValueExpCounted, evalPanValueExp, hargs, hcallee,
     hexception, hclock, panValueShape, panShapeMatches, decPanClock]
 
-
 /-! Actual-state fixed-RV64 Call simulation for a nonempty source code map.
 The callee's parameter slot and returned body are derived from `code_rel`;
 the result remains induction-case infrastructure, not a standalone HOL tag. -/
@@ -2095,4 +2094,6 @@ theorem panToCrepPcCompileCorrectCallRaiseOneWordExceptionCodeStateRiscV64
   · simp [globalsLookup, targetPost, panSemShapeOf,
       updateCrepRuntimeGlobal]
   · simp [targetPost, decPanClock, decCrepClock, hclockRel]
+
+
 end Flapjack

@@ -218,3 +218,28 @@ val _ = print_simp "compile_exp_correct_op"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^op_expression) =
        SOME (pan_structsProof$convert_v ^op_value))``;
+
+val load_state =
+  ``^local_state with <|
+      memory := (\a:8 word. if a = 0w then Word (3w:8 word)
+                              else if a = 1w then Word (5w:8 word) else ARB);
+      memaddrs := {0w; 1w}; sh_memaddrs := {} |>``;
+val load_value = ``RStruct [ValWord (3w:8 word); ValWord (5w:8 word)]``;
+val load_expression =
+  ``(panLang$Load (Comb [One; One]) (panLang$Const (0w:8 word))
+      : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_load"
+  ``(pan_structs$old_exp_shape ^ctxt ^load_expression,
+     panSem$shape_of ^load_value,
+     pan_structsProof$v_flds_ok (^load_state).structs ^load_value,
+     panSem$eval ^load_state ^load_expression = SOME ^load_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^load_state)
+       (pan_structs$compile_exp ^ctxt ^load_expression) =
+         SOME (pan_structsProof$convert_v ^load_value))``;
+
+val _ = print_eval "size_of_compile_shape_comb"
+  ``(is_wf_shape [] (Comb [One; One]),
+     struct_infos_ok [],
+     size_of_sh_with_ctxt []
+       (pan_structs$compile_shape [] (Comb [One; One])) =
+       size_of_sh_with_ctxt [] (Comb [One; One]))``;

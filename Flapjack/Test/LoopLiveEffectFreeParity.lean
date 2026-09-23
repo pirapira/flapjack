@@ -16,10 +16,10 @@ Scope: the test exercises only the *effect-free* fragment of the Loop machine.
 The tested programs contain no `Primitive`, `Arith`, `Store`, `SetGlobal`,
 `Load32`, `LoadByte`, `Store32`, `StoreByte`, `ShMem`, or `Ffi` nodes and no
 `.call`, so the corresponding `LoopEvaluateHooks` fields are never invoked.
-The operations without a faithful Lean port yet (`loop_primop`, `sh_mem_op`,
-and the ExtCall `call_FFI` boundary, beads `flapjack-s6a.3.1/.2/.3`) are
-supplied as total functions that yield `Error`; `arith` and `setGlobal` are
-no-ops.  The successful `[7]` result therefore also witnesses that the
+This fixture supplies the effect hooks as total functions that yield `Error`,
+even though ports of `loop_primop`, `sh_mem_op`, and the ExtCall boundary now
+exist elsewhere. Its `arith` and `setGlobal` hooks are no-ops. The successful
+`[7]` result therefore also witnesses that the
 execution path never reaches them.  `effectFree` asserts this structurally
 over the compiled `LoopProg`, rejecting every `.call`.  The `eval` hook is a
 word-only fixture bridge (`machineToLoopState` drops `.loc` locals/memory); it

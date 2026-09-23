@@ -973,6 +973,10 @@ theorem list_mapM_eq_some_map_some_fixture :
     (([2, 4, 6] : List Nat).map sampleMapF) = ([3, 5, 7] : List Nat).map some :=
   (list_mapM_eq_some_map_some sampleMapF [2, 4, 6] [3, 5, 7]).mp (by decide)
 
+theorem optMmapEqSome_fixture :
+    (([2, 4, 6] : List Nat).map sampleMapF) = ([3, 5, 7] : List Nat).map some :=
+  (optMmapEqSome [2, 4, 6] sampleMapF [3, 5, 7]).mp (by decide)
+
 theorem list_mapM_eq_some_map_some_rev_fixture :
     ([2, 4, 6] : List Nat).mapM sampleMapF = some [3, 5, 7] :=
   (list_mapM_eq_some_map_some sampleMapF [2, 4, 6] [3, 5, 7]).mpr (by decide)

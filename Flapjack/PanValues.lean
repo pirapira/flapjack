@@ -551,9 +551,11 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨ihValue h1, ihValues h2⟩
 
-/-- Counterpart of Cake's `shape_of_val` (`panPropsScript.sml:14`) and
-    `shape_of_alt` (`pan_to_crepProofScript.sml:1906`): the shape of a scalar
-    value is `One`. -/
+/-- Flapjack's context-parameterized scalar-shape fact. Its extra
+    `StructContext` argument means it is not itself the exact HOL
+    `shape_of_alt` statement; the context-free `panSemShapeOf` port and exact
+    proof counterpart live in `Pancake/Semantics/PanSem.lean` and
+    `Pancake/Proofs/PanToCrep.lean`. -/
 theorem panValueShape_word (structs : StructContext) (value : α) :
     panValueShape structs (.word value) = .one := by
   simp [panValueShape]

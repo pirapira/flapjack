@@ -1,4 +1,5 @@
 import Flapjack.PanValues
+import Flapjack.Pancake.Semantics.PanSem
 
 /-!
 # `panSem$shape_of` parity
@@ -30,6 +31,10 @@ example :
   simp [panValueShape, originalWord]
 
 example :
+    panSemShapeOf (.word (3 : Nat)) = originalWord := by
+  simp [panSemShapeOf, originalWord]
+
+example :
     panValueShape shapeProbeContext (.rStruct [.word (3 : Nat), .word 5]) =
       originalRStruct := by
   simp [panValueShape, originalRStruct]
@@ -39,6 +44,15 @@ example :
         (.nStruct "Pair" [("left", .word (3 : Nat)), ("right", .word 5)]) =
       originalNStruct := by
   simp [panValueShape, originalNStruct]
+
+example :
+    panSemShapeOf (.rStruct [.word (3 : Nat), .word 5]) = originalRStruct := by
+  simp [panSemShapeOf, originalRStruct]
+
+example :
+    panSemShapeOf (.nStruct "Pair" [("left", .word (3 : Nat)), ("right", .word 5)]) =
+      originalNStruct := by
+  simp [panSemShapeOf, originalNStruct]
 
 theorem panValueShape_word_fixture :
     panValueShape shapeProbeContext (.word (3 : Nat)) = originalWord :=

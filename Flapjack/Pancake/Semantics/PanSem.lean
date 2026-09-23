@@ -20,6 +20,17 @@ the source clock and state transitions.
 
 namespace Flapjack
 
+/-- Faithful context-free port of Cake `panSem$shape_of`
+    (`cakeml/pancake/semantics/panSemScript.sml:80`). `PanValue.word`
+    represents `Val (Word w)`; the record cases retain Cake's structural and
+    named shapes. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+def panSemShapeOf : PanValue α → Shape
+  | .word _ => .one
+  | .rStruct values => .comb (values.map panSemShapeOf)
+  | .nStruct name _ => .named name
+termination_by value => sizeOf value
+
 structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   structs : StructContext
   functions : List (FunName × List VarName × Prog α)

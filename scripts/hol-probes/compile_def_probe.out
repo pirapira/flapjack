@@ -9,6 +9,10 @@ extra_names_local=Call (SOME ([4; 5],NONE)) «f» []
 missing_names_local=Call (SOME ([4],NONE)) «f» []
 valid_local=Call (SOME ([0; 1],NONE)) «f» []
 empty_struct_return=Return []
+finite_map_shadow_return=Return [Var 5]
+extcall_high_tail=Dec 101 (Var 4)
+  (Dec 102 (Var 5)
+     (Dec 103 (Var 6) (Dec 104 (Var 7) (ExtCall «f» 101 102 103 104))))
 pair_load=Return
   (Load (Var 0)::
      if n2w (dimindex (:word64) DIV 8 MOD dimword (:word64)) = 0w then

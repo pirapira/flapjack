@@ -317,18 +317,19 @@ def pipelineCrepeContext [BEq α] [Add α]
 
 def pipelineCrepeCompileContext [BEq α] [Add α]
     (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
-    PanToCrepCompileContext α :=
-  { vars := []
-    functions := []
-    exceptions := crepGetEidsFromDecls fromNat program.declarations
-    maxVar := 0 }
+    PanToCrepHOLContext α :=
+  { vars := FEMPTY
+    funcs := FEMPTY
+    eids := FUPDATE_LIST FEMPTY (crepGetEidsFromDecls fromNat program.declarations)
+    vmax := 0 }
 
 /-- The executed RV64 compiler context obtains Cake's fixed byte width from
     the word type, not a caller-controlled field. -/
 theorem pipelineCrepeCompileContext_riscv64
     (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64)) :
-    (pipelineCrepeCompileContext fromNat program).toExecutable.bytesInWord =
-      CrepBytesInWord.bytesInWord := rfl
+    compileExpHOL (pipelineCrepeCompileContext fromNat program) .bytesInWord =
+      ([.const CrepBytesInWord.bytesInWord], .one) := by
+  simp [compileExpHOL]
 
 /-- The production RV64 context lowers a structured load at Cake's fixed
     byte stride. -/
@@ -336,14 +337,14 @@ theorem compileExp_load_pipelineRiscv64
     (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64))
     (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
     (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
-    (hcompile : compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
+    (hcompile : compileExpHOL (pipelineCrepeCompileContext fromNat program)
       expression = (head :: rest, shape')) :
-    (compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
+    (compileExpHOL (pipelineCrepeCompileContext fromNat program)
         (.load shape expression)).1 =
       loadShapeBytes 0 (Shape.shapeSize shape) head :=
-  compileExp_load_riscv64 _
-    (by rfl)
-    shape expression head rest shape' hcompile
+  by
+    simp only [compileExpHOL, hcompile]
+    exact loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ rfl
 
 /-! Source-named ports of CakeML Pancake's `first_name_def` and
     `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable

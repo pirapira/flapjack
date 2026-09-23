@@ -15,6 +15,15 @@ OUTPUT = ROOT / "docs" / "PAN-TO-CREP-PARITY-COVERAGE.md"
 # captured output; Lean markers name the corresponding executable checks.
 FIXTURES = [
     {
+        "area": "Expression compiler finite maps",
+        "boundary": "compile_exp",
+        "probe": "compile_exp_probe",
+        "hol_labels": ["leaves", "struct_field", "loads_ops", "cmp_shift", "finite_map_shadow"],
+        "lean": "Flapjack/Test/CompileExpParity.lean",
+        "lean_markers": ["compileExpHOL", "finiteMapLookupOK", "parityGuard"],
+        "covers": "original expression cases plus duplicate-key FUPDATE lookup through the finite-map context",
+    },
+    {
         "area": "Program compiler",
         "boundary": "compile_prog",
         "probe": "compile_prog_probe",
@@ -74,15 +83,17 @@ FIXTURES = [
         "probe": "compile_def_probe",
         "hol_labels": ["missing_global", "empty_one_global", "extra_names_global",
                        "missing_names_global", "missing_local", "empty_one_local",
-                       "extra_names_local", "missing_names_local", "valid_local"],
+                       "extra_names_local", "missing_names_local", "valid_local",
+                       "empty_struct_return", "finite_map_shadow_return", "pair_load", "pair_store"],
         "lean": "Flapjack/Test/CompileDefParity.lean",
         "lean_markers": ["parityGuard", "missingGlobalCall", "emptyOneGlobalCall",
                          "extraNamesGlobalCall", "missingNamesGlobalCall",
                          "missingLocalCall", "emptyOneLocalCall", "extraNamesLocalCall",
-                         "missingNamesLocalCall", "validLocalCall"],
+                         "missingNamesLocalCall", "validLocalCall", "nativeProgramParityGuard",
+                         "finiteMapLoadStoreParityGuard", "finiteMapParityGuard"],
         "related_lean": "Flapjack/Test/StandaloneCallParity.lean",
         "related_markers": ["assigned call to an unknown local destination", "assigned call to a local whose shape"],
-        "covers": "missing/empty/malformed name lists for both Global and Local destination kinds, plus a valid Local pair destination; Cake ignores the kind tag and looks the destination up in ctxt.vars",
+        "covers": "finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; missing/empty/malformed Global and Local destination lists; valid Local pair destination",
     },
 ]
 

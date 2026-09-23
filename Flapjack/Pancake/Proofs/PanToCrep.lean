@@ -261,75 +261,16 @@ theorem localRelGtVmaxPreserved
     exact (Nat.not_lt_of_ge hle) habove
   simp [beq_eq_false_iff_ne.mpr hne]
 
-/-! Finite-map lookups needed by the extracted compiler are represented in its
-list-backed executable context.  Repeated keys are harmless: every projected
-entry carries the same finite-map lookup result, and first-match lookup thus
-agrees with `FLOOKUP` for every requested key. -/
-def projectFiniteMapToInfoMap [BEq String] (keys : List String)
-    (entries : FiniteMap String β) : InfoMap β :=
-  keys.filterMap fun key =>
-    (FLOOKUP entries key).map fun value => (key, value)
-
-def functionsUsedByProg : Prog α → List FunName
-  | .skip | .assign _ _ _ | .primitive _ _ _ | .store _ _ | .store32 _ _ |
-      .storeByte _ _ | .break | .continue | .extCall _ _ _ _ _ | .raise _ _ |
-      .return _ | .shMemLoad _ _ _ _ | .shMemStore _ _ _ | .tick | .annot _ _ => []
-  | .dec _ _ _ body => functionsUsedByProg body
-  | .seq first second => functionsUsedByProg first ++ functionsUsedByProg second
-  | .ite _ thenBranch elseBranch =>
-      functionsUsedByProg thenBranch ++ functionsUsedByProg elseBranch
-  | .while _ body => functionsUsedByProg body
-  | .call info function _ =>
-      function :: (match info with
-        | some (_, some (_, _, handler)) => functionsUsedByProg handler
-        | _ => [])
-  | .decCall _ _ function _ body => function :: functionsUsedByProg body
-termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
-
-/-! Flapjack-specific projection support, not a port of HOL `free_var_ids`.
-    HOL's `free_var_ids` intentionally omits Global call destinations, but
-    `pan_to_crep$compile` looks up a call destination in `ctxt.vars` regardless
-    of its kind. Keep `freeVarIds` faithful and additionally retain every name
-    the executable call compiler queries, including handler payload names. -/
-def callVarsUsedByProg : Prog α → List VarName
-  | .dec _ _ _ body => callVarsUsedByProg body
-  | .seq first second => callVarsUsedByProg first ++ callVarsUsedByProg second
-  | .ite _ thenBranch elseBranch =>
-      callVarsUsedByProg thenBranch ++ callVarsUsedByProg elseBranch
-  | .while _ body => callVarsUsedByProg body
-  | .call info _ _ =>
-      match info with
-      | none => []
-      | some (destination, handler) =>
-          (match destination with
-           | none => []
-           | some (_, name) => [name]) ++
-          (match handler with
-           | none => []
-           | some (_, name, body) => name :: callVarsUsedByProg body)
-  | .decCall _ _ _ _ body => callVarsUsedByProg body
-  | _ => []
-termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
-
-def compileCodeRelContext [BEq String] (context : PanToCrepProofContext α)
-    (program : Prog α) : PanToCrepCompileContext α :=
-  { vars := projectFiniteMapToInfoMap
-      (freeVarIds program ++ callVarsUsedByProg program) context.vars
-    functions := projectFiniteMapToInfoMap (functionsUsedByProg program) context.funcs
-    exceptions := projectFiniteMapToInfoMap (expIds program) context.eids
-    maxVar := context.vmax }
-
-/-! Execute the Pan-to-Crep compiler with the HOL proof context. The map
-projection is limited to names syntactically queried by `compileProg`, and the
-word stride comes from the fixed `CrepBytesInWord` instance, not a context
-field. -/
+/-! Execute the finite-map compiler with the HOL proof context. Every map is
+    passed directly to `compileProgHOL`; no queried-name projection to an
+    `InfoMap` is performed. -/
 def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
-    [CrepBytesInWord α]
-    [BEq String] (context : PanToCrepProofContext α) (program : Prog α) :
+    [CrepBytesInWord α] (context : PanToCrepProofContext α) (program : Prog α) :
     CrepProg α :=
-  compileProgFixed (compileCodeRelContext context program) program
+  compileProgHOL
+    { vars := context.vars, funcs := context.funcs, eids := context.eids,
+      vmax := context.vmax }
+    program
 
 /-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
     It quantifies over every source code entry, requires localisation and the
@@ -337,13 +278,12 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     slots from `GENLIST I (size_of_shape (Comb shs))`, constructs the target
     context with `ctxt_fc`, and relates that entry to its compiled body.
 
-    This is intentionally untagged: its body currently uses the list-backed
-    `compileProg` adapter. The source HOL definition concludes with exact HOL
-    `compile`, whose fixed byte-width behavior is tracked separately by bead
-    `flapjack-pxn.18.3.1.4`. -/
+    Its compiler conclusion routes to `compileProgHOL`, whose context is the
+    original finite-map record and whose definition is tagged to HOL
+    `compile_def`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
-    [BEq String]
     (context : PanToCrepProofContext α)
     (sourceCode : FiniteMap FunName
       (List (VarName × Shape) × Prog α × Shape))

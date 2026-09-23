@@ -609,6 +609,9 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
   zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
+run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
+  n2w_zero_word bit_high6 "$hol_dir/src/n-bit/wordsScript.sml" \
+  "$hol_dir/src/n-bit"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

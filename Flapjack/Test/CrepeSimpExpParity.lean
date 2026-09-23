@@ -15,6 +15,22 @@ def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
 #guard holWordBitsToBitVec (holBits4 + holBits4) == BitVec.ofNat 4 10
 #guard holWordBitsToBitVec (holBits4 * holBits4) == BitVec.ofNat 4 9
 
+/-! These kernel checks mirror the original HOL `n2w_def` probe for zero,
+    one, and the high set bit. Numeric FCP index 0 is the least-significant
+    bit, as stated generally by HOL `word_index_n2w`. -/
+#guard holWordBitsToBitVec (fun i : Fin 8 => Nat.testBit 0 i.val) ==
+  BitVec.ofNat 8 0
+#guard holWordBitsToBitVec (fun i : Fin 8 => Nat.testBit 1 i.val) ==
+  BitVec.ofNat 8 1
+#guard holWordBitsToBitVec (fun i : Fin 8 => Nat.testBit 128 i.val) ==
+  BitVec.ofNat 8 128
+
+example : Nat.testBit 0 0 = false := by decide
+example : Nat.testBit 1 0 = true := by decide
+example : Nat.testBit 1 1 = false := by decide
+example : Nat.testBit 128 7 = true := by decide
+example : Nat.testBit 128 6 = false := by decide
+
 example : bitVecToHolWordBits (holWordBitsToBitVec holBits4) = holBits4 :=
   bitVecToHolWordBits_holWordBitsToBitVec holBits4
 

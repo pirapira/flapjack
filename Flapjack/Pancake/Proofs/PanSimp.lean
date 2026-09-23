@@ -2329,22 +2329,4 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
     memoryAccess hall] at heval
   exact heval
 
-/-! Counterpart of Cake's `MAP_SOME_MEM_lemma`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`):
-
-    MAP f (FLAT xs) = MAP SOME (FLAT ys) /\ MEM zs xs /\ MEM z zs
-      ==> ?y. f z = SOME y /\ MEM y (FLAT ys)
-
-The unused existential of the original is dropped. -/
-theorem map_flatten_eq_map_some_flatten {α β : Type} (f : α → Option β)
-    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
-    (h : xs.flatten.map f = ys.flatten.map some)
-    (hzs : zs ∈ xs) (hz : z ∈ zs) :
-    ∃ y, f z = some y ∧ y ∈ ys.flatten := by
-  have hzflat : z ∈ xs.flatten := List.mem_flatten.mpr ⟨zs, hzs, hz⟩
-  have hzmap : f z ∈ xs.flatten.map f := List.mem_map.mpr ⟨z, hzflat, rfl⟩
-  rw [h] at hzmap
-  obtain ⟨y, hy, hfy⟩ := List.mem_map.mp hzmap
-  exact ⟨y, hfy.symm, hy⟩
-
 end Flapjack

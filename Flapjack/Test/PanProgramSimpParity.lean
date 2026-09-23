@@ -824,14 +824,6 @@ example : True := by
     ([] : StructContext) evalRelState resortDecls none hall
   trivial
 
-/-- Focused regression for the `MAP_SOME_MEM_lemma` counterpart. -/
-theorem map_flatten_eq_map_some_flatten_fixture :
-    ∃ y, (fun n : Nat => if n == 4 then none else some (n + 1)) 3 = some y ∧
-      y ∈ ([4, 6] : List Nat) :=
-  map_flatten_eq_map_some_flatten
-    (fun n : Nat => if n == 4 then none else some (n + 1))
-    [[3], [5]] [[4], [6]] [3] 3 (by decide) (by simp) (by simp)
-
 /-- `evaluate_decls_only_functions_SOME`
     (`pan_globalsProofScript.sml:2390`): a function-only declaration list with
     well-formed shapes evaluates successfully and installs exactly that table. -/

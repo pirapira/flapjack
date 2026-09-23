@@ -109,7 +109,7 @@
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "freeVarIds",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $≠; direct #guard parity in PanLangFreeVarIdsParity)."
+    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $\u2260; direct #guard parity in PanLangFreeVarIdsParity)."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -3123,7 +3123,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_decls_thm",
     "lean_name": "compile_decs_decls_thm_threaded"
   },
@@ -3131,7 +3131,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_name": "compile_decs_EVERY_is_function_threaded"
   },
@@ -3139,7 +3139,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
   },
@@ -3197,7 +3197,7 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "freshNameHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/∈ of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=«x», fresh_name_missing_empty=«», fresh_name_hit=«'''», fresh_name_seed=«vn''» match the Lean parity checks)."
+    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/\u2208 of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=\u00abx\u00bb, fresh_name_missing_empty=\u00ab\u00bb, fresh_name_hit=\u00ab'''\u00bb, fresh_name_seed=\u00abvn''\u00bb match the Lean parity checks)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3461,7 +3461,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcNoOverlapOfDistinctSlots",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem’s exact withShape partition; not tagged as a separate HOL theorem."
+    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem\u2019s exact withShape partition; not tagged as a separate HOL theorem."
   },
   {
     "hol_path": null,
@@ -3485,7 +3485,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlcWordLabWithShapeGetElemMapOfPanSem",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument’s flattened word_lab values; no HOL theorem tag."
+    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument\u2019s flattened word_lab values; no HOL theorem tag."
   },
   {
     "hol_path": null,
@@ -4837,24 +4837,24 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertValue",
     "statement_status": "reviewed_exact",
-"reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
-   },
-   {
-     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-     "hol_name": "v_flds_ok_def",
-     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-     "lean_name": "panValueFldsOk",
-"statement_status": "reviewed_exact",
-     "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL carrying struct_info fields and size only: scalar T, RStruct EVERY, NStruct per-field EVERY conjunction with lookupInfo as the first-match alist ALOOKUP under [LawfulBEq String], NONE => F, SOME info => MAP FST fields equality via List String == and MAP (panSemShapeOf o SND) equality via panStructShapeListEqBool, the structural HOL shape-list =; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match)"
-    },
-   {
-     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-     "hol_name": "is_wf_shape_v_def",
-     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-     "lean_name": "panIsWfShapeValueHOL",
-     "statement_status": "reviewed_exact",
-     "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
-    },
+    "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFldsOk",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL carrying struct_info fields and size only: scalar T, RStruct EVERY, NStruct per-field EVERY conjunction with lookupInfo as the first-match alist ALOOKUP under [LawfulBEq String], NONE => F, SOME info => MAP FST fields equality via List String == and MAP (panSemShapeOf o SND) equality via panStructShapeListEqBool, the structural HOL shape-list =; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
+  },
   {
     "hol_path": null,
     "hol_name": null,
@@ -5582,5 +5582,21 @@
     "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineCodeInlRel_of_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only introduction rule for the finite-map code_inl_rel relation over CrepInlineFmap; no HOL original (HOL code_inl_rel_def is the relation, ported untagged)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "not_crepInlineCodeInlRel_of_target_none",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
   }
 ]

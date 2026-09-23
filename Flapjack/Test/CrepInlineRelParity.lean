@@ -153,6 +153,38 @@ theorem not_localsExtRel_disagree : ¬ crepInlineLocalsExtRel extA extB extA' ex
   have hpoint := congrFun h 1
   simp [crepHolFdiff, crepHolFdom, extA, extA', extB, extBbad'] at hpoint
 
+/-- A finite inline map with one callee `f` whose body is `Skip`. -/
+def codeInlFmap : CrepInlineFmap Nat :=
+  .insert "f" ([7], CrepProg.skip) .empty
+
+def codeInlSource : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => some ([7], CrepProg.skip) }
+
+def codeInlTarget : CrepHolState Nat Unit :=
+  { baseState with
+    code := fun _ => some ([7], crepInlineProgFmap codeInlFmap CrepProg.skip) }
+
+def codeInlEmptyTarget : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => none }
+
+theorem codeInlRel_positive :
+    crepInlineCodeInlRel codeInlFmap codeInlSource codeInlTarget := by
+  apply crepInlineCodeInlRel_of_code
+  intro fname args prog hcode
+  simp [codeInlSource] at hcode
+  obtain ⟨rfl, rfl⟩ := hcode
+  simp [codeInlTarget]
+
+theorem codeInlRel_negative :
+    ¬ crepInlineCodeInlRel codeInlFmap codeInlSource codeInlEmptyTarget :=
+  not_crepInlineCodeInlRel_of_target_none codeInlFmap codeInlSource
+    codeInlEmptyTarget "f" [7] CrepProg.skip
+    (by simp [codeInlSource]) (by simp [codeInlEmptyTarget])
+
+def codeInlGuard : Bool :=
+  (codeInlSource.code "f").isSome && (codeInlTarget.code "f").isSome &&
+    (codeInlEmptyTarget.code "f").isNone
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -163,6 +195,13 @@ def runChecks : IO Bool := do
       pure false
   IO.println "PASS crep_inline locals_rel_dec_clock preservation"
   IO.println "PASS crep_inline locals_ext_rel/state_rel_code definitions"
-  pure relOk
+  let codeInlOk ←
+    if codeInlGuard then
+      IO.println "PASS crep_inline finite-map code_inl_rel relation"
+      pure true
+    else
+      IO.println "FAIL crep_inline finite-map code_inl_rel relation"
+      pure false
+  pure (relOk && codeInlOk)
 
 end Flapjack.Test.CrepInlineRelParity

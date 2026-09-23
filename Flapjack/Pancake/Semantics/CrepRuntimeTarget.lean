@@ -1212,12 +1212,12 @@ theorem crepRuntimeSharedStorePayload_eq
 
 /-! ## Configuration stability
 
-`isRiscV64CrepRuntimeTarget` is the canonical configuration. Every production
-Crep runtime transition only updates `locals`, `memory`, `globals`, `clock`, or
-`ffi`; none of them touches `bytesInWord`, `bigEndian`, `memoryModel`, or
-`shMemaddrs`, so the canonical configuration survives the whole executable
-evaluator. This is what lets the HOL-shaped memory and FFI bridges above be
-applied at every program point rather than only to a one-off fixture.
+`isRiscV64CrepRuntimeTarget` is the canonical configuration. The production
+transitions proved below update only `locals`, `memory`, `globals`, `clock`, or
+`ffi`, leaving the configuration fields unchanged. These lemmas make the
+HOL-shaped memory and FFI bridges reusable at the covered transition
+boundaries; preservation by the entire evaluator remains part of the
+correctness proof.
 
 The pinned values are exactly the HOL word-type values: on 64-bit words
 `byte$bytes_in_word = dimindex (:'a) DIV 8 = 8`

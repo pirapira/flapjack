@@ -1,0 +1,17 @@
+word_sh_definition=∀sh w n.
+  word_sh sh w n =
+  if n ≠ 0 ∧ n ≥ dimindex (:α) then NONE
+  else
+    case sh of
+      Lsl => SOME (w ≪ n)
+    | Lsr => SOME (w ⋙ n)
+    | Asr => SOME (w ≫ n)
+    | Ror => SOME (w ⇄ n)
+dimindex8=dimindex (:8) = 8
+lsl_zero=word_sh Lsl 3w 0 = SOME (3w ≪ 0)
+lsl_one=word_sh Lsl 3w 1 = SOME (3w ≪ 1)
+lsr_max_valid=word_sh Lsr 128w 7 = SOME (128w ⋙ 7)
+asr_one=word_sh Asr 128w 1 = SOME (128w ≫ 1)
+ror_one=word_sh Ror 3w 1 = SOME (3w ⇄ 1)
+lsl_width=word_sh Lsl 3w 8 = NONE
+lsl_above_width=word_sh Lsl 3w 9 = NONE

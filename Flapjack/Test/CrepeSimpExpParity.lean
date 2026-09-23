@@ -113,6 +113,22 @@ example (operator : BinOp) (values : List (Bool → Bool)) :
         (bitVecToHolWord boolWordDimension) :=
   holFiniteWord_wordOp_toBitVec boolWordDimension operator values
 
+/-! The source `word_sh` contract is width-generic. This theorem checks all
+    four operators for arbitrary Bool-index operands; the HOL-generated probe
+    below records the zero, maximum-valid, width, and above-width boundaries. -/
+example (operator : Shift) (left right : Bool → Bool) :
+    evalPanShiftFull operator left right =
+      (evalPanShiftFull operator (holWordToBitVec boolWordDimension left)
+        (holWordToBitVec boolWordDimension right)).map
+          (bitVecToHolWord boolWordDimension) :=
+  holFiniteWord_evalPanShift_toBitVec boolWordDimension operator left right
+
+def boolDimensionZero : Bool → Bool :=
+  bitVecToHolWord boolWordDimension (BitVec.ofNat 2 0)
+
+#guard (evalPanShiftFull .lsl boolDimensionWord boolDimensionZero).isSome
+#guard (evalPanShiftFull .lsl boolDimensionWord boolDimensionWord).isSome == false
+
 #guard holFiniteWordSBitSum boolWordDimension boolDimensionWord == 2
 
 example : holFiniteWordW2N boolWordDimension boolDimensionWord = 2 := by

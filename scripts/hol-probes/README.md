@@ -118,6 +118,16 @@ wordOp list behavior maps through the Fin-index/BitVec conversion for every
 operator and argument list; Bool-index checks are in
 `Flapjack.Test.CrepeSimpExpParity`. This remains untagged because the theorem
 uses explicit dimension data.
+`word_sh_finite_probe.out` records the original `wordLang$word_sh_def`, its
+`dimindex` guard, and zero, valid, width, and above-width examples. Its source
+is `cakeml/compiler/backend/wordLangScript.sml`; the direct Lean transport
+`holFiniteWord_evalPanShift_toBitVec` covers all four shift operators for every
+explicit finite dimension. A Bool-index instance is checked in
+`Flapjack.Test.CrepeSimpExpParity`. This is evaluator infrastructure and does
+not by itself establish the unrestricted HOL-polymorphic
+`simp_exp_correct1` statement. Regenerate against a read-only CakeML checkout
+with matching built theories by setting `CAKEML`; the checked output was
+generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

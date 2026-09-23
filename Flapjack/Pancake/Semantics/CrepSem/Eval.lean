@@ -5,10 +5,11 @@ import Flapjack.Pancake.Semantics.CrepSem
 
 Source reference: `cakeml/pancake/semantics/crepSemScript.sml:90-166`.
 
-The executable Crepe runtime already evaluates the same expression cases
+The executable Crepe runtime already evaluates the source expression cases
 against checked memory, globals, target word operations, comparisons, shifts,
-and base/top addresses.  This source-shaped name exposes that boundary for
-the source parity suite without introducing a second evaluator.
+and base/top addresses. This is the HOL-mirrored runtime boundary used by
+source parity proofs. It aliases `evalCrepRuntimeExp`; it does not use the
+legacy compatibility evaluator `evalCrepFullExpState` from `CrepeSemantics`.
 -/
 
 namespace Flapjack
@@ -21,8 +22,10 @@ def crepSemEvalExp
     (state : CrepRuntimeState α σ) : CrepExp α → Option α :=
   evalCrepRuntimeExp state
 
-/-- HOL `crepSem.eval s (Var v)` is `FLOOKUP s.locals v`.  The source-path
-Lean evaluator takes the same branch through the runtime state's local map. -/
+/-- HOL `crepSem.eval s (Var v)` is `FLOOKUP s.locals v`. The HOL-mirrored
+runtime evaluator takes the same branch through the runtime state's local map;
+this equation is the evaluator fact used by the tagged `lookup_locals_eq_map_vars`
+port. -/
 @[simp] theorem crepSemEvalExp_var
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

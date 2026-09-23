@@ -5086,5 +5086,21 @@
     "lean_name": "stateRel_riscv64CrepRuntimeTarget_iff",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "deepseek-two: Flapjack-only canonicalization lemma; riscv64CrepRuntimeTarget edits bytesInWord/memoryModel/ffiContext (not constrained by state_rel) and bigEndian, so stateRel source base and stateRel source (riscv64CrepRuntimeTarget base) coincide when base.bigEndian = false"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_globals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_name": "setCrepHolGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. The production 14-field CrepRuntimeState version is the separate untagged setCrepRuntimeGlobals, related by setCrepRuntimeGlobals_eq_FUPDATE and the untagged commutation setCrepHolGlobals_toRuntime. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "FLOOKUP_set_globals",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "flookup_setCrepHolGlobals_locals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n, using tagged setCrepHolGlobals. The production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

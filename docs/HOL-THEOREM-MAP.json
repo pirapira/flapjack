@@ -5515,6 +5515,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rField_eval_flatten_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only case composition with the inner compile_exp_val_rel IH, carrying state_rel/code_rel/locals_rel, source evaluation, a localised-expression condition, compiled tuple, and IH shape facts; the enclosing expression induction and full theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rField_eval_flatten_ofInnerIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-expression RField constructor step consuming the inner compiled-evaluation IH, shape alignment, and well-formedness facts; this helper does not prove the enclosing compile_exp_val_rel theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_rFieldLocal_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only local RField constructor bridge for arbitrary valid field indices, deriving the compiled inner-record evaluation from locals_rel; the general compile_exp_val_rel and Call argument theorem remain open."

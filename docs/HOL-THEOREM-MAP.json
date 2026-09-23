@@ -288,6 +288,14 @@
     "reviewer": "Untagged all-width RISC-V production evaluator support theorem; it does not state the arbitrary source word-carrier theorem."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectBitVec",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-positive-width BitVec specialization of the public some-value theorem, preserving successful evaluation, arbitrary code-map update, and full word_lab result; the arbitrary HOL word carrier theorem remains open."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -422,6 +430,14 @@
     "lean_name": "compileArgsHOL_constLocalStructAddress_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Call-argument evaluation result composing Const/Local/RStruct support with HOL baseAddr, topAddr, and bytesInWord expression cases under stateRel; it does not claim the complete eval_map_comp_exp_flat_eq theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_ofCodeRel_compiledArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving target code-map lookup from code_rel and the proved restricted source-to-target Call-argument evaluator cases; keeps the flattened parameter-length obligation explicit and does not claim the full Call theorem."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",

@@ -405,6 +405,20 @@ example :
   evalCrepRuntimeExp_toHolWordBits_eq holWordBitsState4
     (.load32 (.const holBits4))
 
+example :
+    (evalCrepRuntimeExp
+      (CrepHolState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 4))
+        (crepArithHolFiniteDimensionMapCode id holWordBitsState4))
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
+        (.const holBits4))).map PanWordLab.word =
+    (evalCrepRuntimeExp
+      (holWordBitsState4.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 4)))
+      (.const holBits4)).map PanWordLab.word := by
+  apply crepSimpExpCorrect1HolWordBitsSourceRuntime id holWordBitsState4 _
+  simp [evalCrepRuntimeExp]
+
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,
     constant-on-either-side multiplication, recursive children, and the

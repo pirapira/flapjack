@@ -496,6 +496,14 @@
     "reviewer": "All-positive-width source-state-shaped result over canonical Fin width -> Bool numeric bit positions, preserving the successful-evaluation premise, arbitrary code-map update, and full Option/word_lab result. It remains untagged because the source evaluator is transported through BitVec/RISC-V operations and byte loads; no proof identifies those operations with HOL FCP word operations for every dimindex."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBitsSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width canonical Fin width source-runtime instance preserving the simp_exp_correct1 result shape; it remains untagged because production evaluation still uses transported word operations and the source-shaped load adapter lacks a proved correspondence to HOL crepSem eval"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

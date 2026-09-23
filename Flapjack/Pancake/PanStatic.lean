@@ -32,16 +32,21 @@ structure StructInfo where
 abbrev StructContext := List (StructName × StructInfo)
 abbrev InfoMap (α : Type u) := List (String × α)
 
-def lookupInfo [BEq String] (name : String) : InfoMap α → Option α
+/-- Key-polymorphic first-match association-list lookup: the Lean counterpart
+    of HOL `alist$ALOOKUP`.  The association list may use any key type with
+    `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
+    the exact `ALOOKUP` operation (the production `InfoMap` is the
+    `κ = String` instance). -/
+def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
   | [] => none
   | (candidate, value) :: entries =>
-      if candidate == name then some value else lookupInfo name entries
+      if candidate == key then some value else lookupInfo key entries
 
 /-- Cake's `ALOOKUP_MAP3` (`pan_globalsProofScript.sml:2841`): mapping a
     function over the value component of every entry commutes with the
     lookup. -/
-theorem lookupInfo_map3 [BEq String] (f : γ → δ) (name : String)
-    (entries : InfoMap (β × γ)) :
+theorem lookupInfo_map3 [BEq κ] (f : γ → δ) (name : κ)
+    (entries : List (κ × (β × γ))) :
     lookupInfo name (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2))) =
       (lookupInfo name entries).map (fun value => (value.1, f value.2)) := by
   induction entries with
@@ -57,8 +62,8 @@ theorem lookupInfo_map3 [BEq String] (f : γ → δ) (name : String)
 /-- Cake's `ALOOKUP_MAP4` (`pan_globalsProofScript.sml:2851`): mapping a
     function over the middle component of every entry commutes with the
     lookup. -/
-theorem lookupInfo_map4 [BEq String] (f : γ → δ) (name : String)
-    (entries : InfoMap (β × γ × ε)) :
+theorem lookupInfo_map4 [BEq κ] (f : γ → δ) (name : κ)
+    (entries : List (κ × (β × γ × ε))) :
     lookupInfo name
         (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2.1, entry.2.2.2))) =
       (lookupInfo name entries).map (fun value => (value.1, f value.2.1, value.2.2)) := by

@@ -90,6 +90,19 @@ class ValidateInventoryTest(unittest.TestCase):
         )
         self.assertTrue(any("reviewer metadata is required" in error for error in errors))
 
+    def test_shape_adjusted_status_is_not_a_reviewed_hol_port(self):
+        errors = MAP["validate_inventory"](
+            [self.record(statement_status="reviewed_adjusted")],
+            {(self.path, "exampleTheorem")},
+            {
+                (self.path, "exampleTheorem"): (
+                    "cakeml/pancake/proofs/exampleProofScript.sml",
+                    "example_theorem",
+                )
+            },
+        )
+        self.assertTrue(any("invalid statement_status" in error for error in errors))
+
     def test_unmapped_helper_is_explicitly_recorded(self):
         record = self.record(
             hol_path=None,

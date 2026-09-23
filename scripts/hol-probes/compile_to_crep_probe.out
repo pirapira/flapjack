@@ -6,6 +6,14 @@ raise_pair=[(«f»,[],
        (Dec 2 (Const 9w)
           (Seq (StoreGlob 0w (Var 1)) (Seq (StoreGlob 1w (Var 2)) Skip))))
     (Raise 0w))]
+raise_pair_later=[(«f»,[],
+  Dec 1 (Const 3w)
+    (Dec 2 (Const 5w)
+       (Seq
+          (Dec 3 (Const 7w)
+             (Dec 4 (Const 9w)
+                (Seq (StoreGlob 0w (Var 3)) (Seq (StoreGlob 1w (Var 4)) Skip))))
+          (Raise 0w))))]
 handled_pair=[(«f»,[],
   Seq
     (Dec 1 (Const 7w)

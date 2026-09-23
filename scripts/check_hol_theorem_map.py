@@ -31,7 +31,6 @@ THEOREM_RE = re.compile(
 )
 VALID_STATUSES = {
     "reviewed_exact",
-    "reviewed_adjusted",
     "pending_statement_review",
     "no_hol_reference_pending_classification",
 }

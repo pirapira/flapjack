@@ -50,7 +50,7 @@ val _ = print_eval "ws_mem_load_miss"
 
 val _ = print_eval "ws_mem_store_update"
   ``case loopSem$mem_store (0w : 8 word) (Word 7w)
-      (^s with <| memory := (0w =+ Word 1w) (1w =+ Word 2w) (K (Word 0w));
+      (^s with <| memory := (0w =+ Word 1w) ((1w =+ Word 2w) (K (Word 0w)));
                   mdomain := {0w; 1w} |>) of
       SOME s' => (case s'.memory (1w : 8 word) of Word w => w | _ => 0w)
     | NONE => 0w ``

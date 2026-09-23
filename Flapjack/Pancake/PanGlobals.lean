@@ -1993,6 +1993,42 @@ termination_by program => sizeOf program
     (context : GlobalPassContext (BitVec width)) (key : String) :
     (cakeContextOfPass context).globals key = lookupInfo key context.globals := rfl
 
+/-- The `shMemLoad` clause of the production/canonical agreement, isolated so
+    the `FLOOKUP`/match on the global table reduces on both sides. -/
+theorem compileProgCake_shMemLoad_eq [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp (BitVec width)) :
+    compileProgCake (cakeContextOfPass context) (.shMemLoad size kind name address)
+      = globalCompileProg context (.shMemLoad size kind name address) := by
+  unfold compileProgCake globalCompileProg
+  simp only [FLOOKUP, FLOOKUP_cakeContextOfPass_globals]
+  cases h : lookupInfo name context.globals with
+  | none => cases kind <;> simp_all [compileExpCake_cakeContextOfPass context hcanonical]
+  | some pair =>
+      obtain ⟨shape, globalAddress⟩ := pair
+      cases shape <;> cases kind <;>
+        simp_all [compileExpCake_cakeContextOfPass context hcanonical, hcanonical.2]
+
+/-- Production `globalCompileProg` agrees with the tagged canonical
+    `compileProgCake` under the canonical word-context view. This is the
+    program half of the executed-path adapter for
+    `flapjack-pxn.18.5.2.20.2`. -/
+theorem globalCompileProg_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (program : Prog (BitVec width)) →
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program := by
+  apply globalCompileProg.induct context
+    (motive := fun program =>
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program)
+  all_goals
+    intros
+    simp_all [compileProgCake, globalCompileProg, FLOOKUP,
+      FLOOKUP_cakeContextOfPass_globals,
+      compileProgCake_shMemLoad_eq context hcanonical,
+      compileExpCake_cakeContextOfPass context hcanonical,
+      compileExpCakeArgs_cakeContextOfPass context hcanonical,
+      globalShapeVal_cakeShapeVal context hcanonical, hcanonical.2]
+
 /-- HOL-shaped output of `compile_decs`. -/
 structure CakeCompileDecsResult (width : Nat) where
   initializers : List (Prog (BitVec width))

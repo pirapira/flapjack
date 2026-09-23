@@ -809,6 +809,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "MEM_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "MEM_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "fperm_name_cancel",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_name_cancel",
@@ -4837,24 +4845,24 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertValue",
     "statement_status": "reviewed_exact",
-"reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
-   },
-   {
-     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-     "hol_name": "v_flds_ok_def",
-     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-     "lean_name": "panValueFldsOk",
-"statement_status": "reviewed_exact",
-     "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL carrying struct_info fields and size only: scalar T, RStruct EVERY, NStruct per-field EVERY conjunction with lookupInfo as the first-match alist ALOOKUP under [LawfulBEq String], NONE => F, SOME info => MAP FST fields equality via List String == and MAP (panSemShapeOf o SND) equality via panStructShapeListEqBool, the structural HOL shape-list =; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match)"
-    },
-   {
-     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-     "hol_name": "is_wf_shape_v_def",
-     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-     "lean_name": "panIsWfShapeValueHOL",
-     "statement_status": "reviewed_exact",
-     "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
-    },
+    "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFldsOk",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL carrying struct_info fields and size only: scalar T, RStruct EVERY, NStruct per-field EVERY conjunction with lookupInfo as the first-match alist ALOOKUP under [LawfulBEq String], NONE => F, SOME info => MAP FST fields equality via List String == and MAP (panSemShapeOf o SND) equality via panStructShapeListEqBool, the structural HOL shape-list =; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
+  },
   {
     "hol_path": null,
     "hol_name": null,

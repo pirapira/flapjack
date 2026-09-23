@@ -39,6 +39,24 @@ def functionsFilterNilGuard : Bool :=
 
 #guard functionsFilterNilGuard
 
+/-! Regression for Cake's `MEM_functions` (`pan_globalsProofScript.sml:2380`),
+    ported in `Flapjack.Pancake.Proofs.PanGlobals`: the unique function entry
+    of `declarations` comes from the source `.function` declaration. -/
+theorem memFunctionsFixture :
+    ∃ declaration : FunDecl Nat,
+      (.function declaration : Decl Nat) ∈ declarations ∧
+        ("f", [], (.skip : Prog Nat), .one) =
+          (declaration.name, declaration.params, declaration.body,
+            declaration.returnShape) :=
+  MEM_functions (declarations := declarations)
+    (entry := ("f", [], (.skip : Prog Nat), .one))
+    (by simp [declarations, functions, functionEntries])
+
+def memFunctionsGuard : Bool :=
+  (functions declarations).length = 1
+
+#guard memFunctionsGuard
+
 def runChecks : IO Bool := do
   let nilOk ←
     if functionsFilterNilGuard then
@@ -47,6 +65,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL pan_globals functions FILTER nil lemmas"
       pure false
-  pure nilOk
+  let memOk ←
+    if memFunctionsGuard then
+      IO.println "PASS pan_globals MEM_functions"
+      pure true
+    else
+      IO.println "FAIL pan_globals MEM_functions"
+      pure false
+  pure (nilOk && memOk)
 
 end Flapjack.Test.PanGlobalsFunctionsFilterNilParity

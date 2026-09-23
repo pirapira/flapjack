@@ -1485,7 +1485,7 @@ theorem crepArithHolFiniteDimensionMapCode_runtime {ι : Type}
     `HolFiniteDimension` enumeration and BitVec/RISC-V operations, so the
     unrestricted HOL word-carrier correspondence is still unproved. -/
 theorem crepSimpExpCorrect1HolFiniteDimensionSource {ι : Type} {σ : Type}
-    (dimension : HolFiniteDimension ι)
+    [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
     (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
     (h : evalCrepHolFiniteDimensionExpWordLab dimension state expression ≠ none) :

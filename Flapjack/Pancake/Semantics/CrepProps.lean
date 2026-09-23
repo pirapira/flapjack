@@ -33,6 +33,9 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
     `CrepSem` runtime evaluator, not the legacy compatibility evaluator
     `evalCrepFullExpState`; every expression evaluated by this theorem is a
     `Var`, so the explicit variable equation is the relevant semantic case.
+    The evaluator's implicit operation dictionaries are required by its
+    general expression type, but are not additional premises about the state
+    or local lookup used by this variable-only theorem.
     The representation translation erases HOL's sole `word_lab` constructor
     `Word`: a HOL lookup of `SOME (Word w)` corresponds to Lean's `some w`,
     and absent entries correspond to `none`. Thus a HOL finite `locals` map

@@ -597,7 +597,8 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
                     /- HOL's handled-call branch builds the handler body with
                        `exp_hdl` (`pan_to_crepScript.sml:238`) and never calls
                        `ret_hdl`/`ret_var`; see bead `flapjack-pxn.18.2.4.1`. -/
-                    let handlerSetup := expHdl context.vars handlerVar
+                    let handlerSetup :=
+                      expHdlFiniteMap (infoMapToFiniteMap context.vars) handlerVar
                     some (code, .seq handlerSetup (compileProg context handlerProgram))
           match destination with
           | none =>
@@ -844,12 +845,12 @@ theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] 
         ((allocatedNames context returnShape).map (fun _ => (.const 0 : CrepExp α)))
         (.call (some (allocatedNames context returnShape,
           some (exceptionCode,
-            .seq (expHdl context.vars handlerVar)
+            .seq (expHdlFiniteMap (infoMapToFiniteMap context.vars) handlerVar)
               (compileProg context handlerProgram))))
           function compiledArguments) := by
   rcases hhandler with ⟨shape, hhandler⟩
   simp [compileProg, hfunction, hexception, harguments,
-    functionReturnNames, allocatedNames]
+    functionReturnNames, allocatedNames, infoMapToFiniteMap, expHdlFiniteMap]
 
 /-! The `Call_Ret_Exception` branch of Cake's `pc_compile_correct` splits on
     whether the handler's exception identifier is present in the context's

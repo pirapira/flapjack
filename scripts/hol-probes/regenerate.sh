@@ -97,6 +97,10 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
   compile_correct_tick_positive_source compile_correct_tick_positive_converted \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
+  compile_exp_correct_local_var compile_exp_correct_global_var \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \
@@ -330,6 +334,11 @@ run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
 # and a one-iteration exit that clears the condition.
 run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
   while_bad_result while_one_iter_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The DecCall probe observes the successful continuation, the wrong-shape
+# rejection, the failing-callee rejection, and the unknown-function rejection.
+run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
+  deccall_ok_result deccall_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \

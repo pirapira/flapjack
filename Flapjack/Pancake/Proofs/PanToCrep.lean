@@ -35,6 +35,15 @@ private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
       simpa [panSemShapeOf, panValueShape] using ih
   | case3 _ _ => simp [panSemShapeOf, panValueShape]
 
+/-- HOL `flatten_nil_no_size[local]`: flattening a value of well-formed
+    empty-structure shape is empty exactly when its shape has size zero. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flatten_nil_no_size"]
+theorem flattenNilNoSize (value : PanValue α)
+    (hwf : isWfShape [] (panSemShapeOf value) = true) :
+    panValueFlatten value = [] ↔ Shape.shapeSize (panSemShapeOf value) = 0 := by
+  rw [panSemShapeOf_eq_panValueShape_nil] at hwf ⊢
+  exact panValueFlatten_eq_nil_iff_shapeSize_eq_zero value hwf
+
 /-- HOL `is_wf_shape_nil_length_flatten`: a word list chosen by the zero-size
     or positive-size branch has the size prescribed by the source value shape. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "is_wf_shape_nil_length_flatten"]

@@ -5,3 +5,4 @@ last=SOME 2
 missing=NONE
 duplicate_first=SOME 0
 wf_shape_drop=T
+dropWhile_MAP_helper=T

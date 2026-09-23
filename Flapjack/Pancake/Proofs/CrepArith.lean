@@ -50,6 +50,51 @@ private theorem crepDest2Exp_holWordBits {width : Nat}
     crepDest2ExpFuel (width + 1) start (holWordBitsToBitVec word)
   exact crepDest2ExpFuel_holWordBits (width + 1) start word
 
+/-! The recognizer transport now works for any explicitly enumerated HOL
+    finite dimension, rather than only the canonical `Fin width` presentation.
+    The enumeration record is the representation of HOL's finite nonempty
+    dimension type in Lean core. -/
+private theorem crepDest2ExpFuel_holFiniteDimension {ι : Type u}
+    [dimension : HolFiniteDimension ι] (fuel start : Nat) (word : ι → Bool) :
+    crepDest2ExpFuel fuel start word =
+      crepDest2ExpFuel fuel start (holWordToBitVec dimension word) := by
+  induction fuel generalizing start word with
+  | zero => simp [crepDest2ExpFuel]
+  | succ fuel ih =>
+      have hzero : (word == (0 : ι → Bool)) =
+          (holWordToBitVec dimension word == (0 : BitVec dimension.width)) := by
+        change (holWordToBitVec dimension word ==
+            holWordToBitVec dimension (0 : ι → Bool)) =
+          (holWordToBitVec dimension word == (0 : BitVec dimension.width))
+        rw [holFiniteWordToBitVec_zero]
+      have hone : (word == (1 : ι → Bool)) =
+          (holWordToBitVec dimension word == (1 : BitVec dimension.width)) := by
+        change (holWordToBitVec dimension word ==
+            holWordToBitVec dimension (1 : ι → Bool)) =
+          (holWordToBitVec dimension word == (1 : BitVec dimension.width))
+        rw [holFiniteWordToBitVec_one]
+      have hlow : (AndOp.and word 1 != (0 : ι → Bool)) =
+          (AndOp.and (holWordToBitVec dimension word) 1 !=
+            (0 : BitVec dimension.width)) := by
+        change (!(holWordToBitVec dimension (AndOp.and word 1) ==
+            holWordToBitVec dimension (0 : ι → Bool))) =
+          (!(AndOp.and (holWordToBitVec dimension word) 1 ==
+            (0 : BitVec dimension.width)))
+        rw [holFiniteWordToBitVec_and, holFiniteWordToBitVec_one,
+          holFiniteWordToBitVec_zero]
+      simp only [crepDest2ExpFuel, hzero, hone, hlow]
+      rw [ih (start + 1) (ShiftRight.shiftRight word 1)]
+      rw [holFiniteWordToBitVec_shiftRight, holFiniteWordToBitVec_one]
+
+private theorem crepDest2Exp_holFiniteDimension {ι : Type u}
+    [dimension : HolFiniteDimension ι] (start : Nat) (word : ι → Bool) :
+    crepDest2Exp start word =
+      crepDest2Exp start (holWordToBitVec dimension word) := by
+  change crepDest2ExpFuel (dimension.width + 1) start word =
+    crepDest2ExpFuel (dimension.width + 1) start (holWordToBitVec dimension word)
+  exact crepDest2ExpFuel_holFiniteDimension
+    (dimension.width + 1) start word
+
 /-! This adapter law keeps the arithmetic pass natural under the canonical
     representation of an arbitrary finite bit index. It is the remaining
     bridge needed to lift the source-shaped evaluator proof from BitVec to
@@ -83,6 +128,47 @@ private theorem crepMulConst_holWordBits {width : Nat} [NeZero width]
           exact congrArg (fun word => CrepExp.shift Shift.lsl
             (mapCrepExpWord holWordBitsToBitVec expression) (CrepExp.const word))
             (holWordBitsToBitVec_bitVecToHolWordBits _)
+
+private theorem crepMulConst_holFiniteDimension {ι : Type}
+    [dimension : HolFiniteDimension ι] (expression : CrepExp (ι → Bool))
+    (constant : ι → Bool) :
+    mapCrepExpWord (holWordToBitVec dimension)
+        (crepMulConst
+          (fun value => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width value)) expression constant) =
+      crepMulConst (BitVec.ofNat dimension.width)
+        (mapCrepExpWord (holWordToBitVec dimension) expression)
+        (holWordToBitVec dimension constant) := by
+  unfold crepMulConst
+  have hzero : (constant == (0 : ι → Bool)) =
+      (holWordToBitVec dimension constant == (0 : BitVec dimension.width)) := by
+    change (holWordToBitVec dimension constant ==
+        holWordToBitVec dimension (0 : ι → Bool)) =
+      (holWordToBitVec dimension constant == (0 : BitVec dimension.width))
+    rw [holFiniteWordToBitVec_zero]
+  have hone : (constant == (1 : ι → Bool)) =
+      (holWordToBitVec dimension constant == (1 : BitVec dimension.width)) := by
+    change (holWordToBitVec dimension constant ==
+        holWordToBitVec dimension (1 : ι → Bool)) =
+      (holWordToBitVec dimension constant == (1 : BitVec dimension.width))
+    rw [holFiniteWordToBitVec_one]
+  rw [hzero, hone]
+  by_cases hzero : holWordToBitVec dimension constant == 0
+  · have hzeroEq : holWordToBitVec dimension constant = 0 := of_decide_eq_true hzero
+    simp [hzeroEq, mapCrepExpWord, holFiniteWordToBitVec_zero]
+  · by_cases hone : holWordToBitVec dimension constant == 1
+    · have honeEq : holWordToBitVec dimension constant = 1 := of_decide_eq_true hone
+      simp [honeEq, NeZero.ne dimension.width]
+    · simp only [if_neg hzero, if_neg hone]
+      rw [crepDest2Exp_holFiniteDimension]
+      cases crepDest2Exp 0 (holWordToBitVec dimension constant) with
+      | none => simp [mapCrepExpWord]
+      | some exponent =>
+          simp only [mapCrepExpWord]
+          exact congrArg (fun word => CrepExp.shift Shift.lsl
+            (mapCrepExpWord (holWordToBitVec dimension) expression)
+            (CrepExp.const word))
+            (holWordToBitVec_bitVecToHolWord dimension _)
 
 /-- CakeML's `dest_const_thm`: a successful destination test identifies the
     expression as exactly that constant. -/

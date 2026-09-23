@@ -107,7 +107,7 @@ theorem skipCodeRuntime_relates :
 
 theorem skipCodeRelEmptyLocalsFixture :
     codeRel skipCodeContext (panEmptyLocals skipSourceState).code
-      (crepEmptyLocals skipCodeRuntime).code :=
+      (clearCrepRuntimeLocals skipCodeRuntime).code :=
   codeRelEmptyLocals skipCodeContext skipSourceState skipCodeRuntime
     skipCodeRelFixture
 

@@ -664,7 +664,7 @@ theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (target : CrepRuntimeState α σ)
     (hcode : codeRel context source.code target.code) :
     codeRel context (panEmptyLocals source).code
-      (crepEmptyLocals target).code := by
-  simpa [panEmptyLocals, crepEmptyLocals] using hcode
+      (clearCrepRuntimeLocals target).code := by
+  simpa [panEmptyLocals, clearCrepRuntimeLocals] using hcode
 
 end Flapjack

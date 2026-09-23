@@ -2528,12 +2528,28 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "clearCrepRuntimeLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "shape_of_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panSemShapeOf",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "panEmptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

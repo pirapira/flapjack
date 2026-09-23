@@ -1,5 +1,6 @@
 import Flapjack.CrepeSemantics
 import Flapjack.FiniteMap.Basic
+import Flapjack.HolRef
 import Flapjack.PanValueFfiSemantics
 
 /-!
@@ -92,16 +93,13 @@ def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
 /- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
    (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
    expose the caller's transient locals. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
 
-/-! HOL `empty_locals_def` clears locals and preserves the production state's
-code map and all other fields. -/
-def crepEmptyLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
-  { state with locals := fun _ => none }
-
-@[simp] theorem crepEmptyLocals_code (state : CrepRuntimeState α σ) :
-    (crepEmptyLocals state).code = state.code := rfl
+/-- Flapjack-only projection lemma for the production HOL empty-locals port. -/
+@[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).code = state.code := rfl
 
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :

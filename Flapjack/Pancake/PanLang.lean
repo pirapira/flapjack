@@ -240,6 +240,20 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
+/-! Direct source-shaped counterpart of `panLang$functions`
+    (`panLangScript.sml:319-328`): retain every function's metadata while
+    skipping value, exception, and struct declarations.  The tuple order
+    matches HOL exactly: name, params, body, return shape. -/
+@[hol "cakeml/pancake/panLangScript.sml" "functions_def"]
+def functionEntries : List (Decl α) →
+    List (FunName × List (VarName × Shape) × Prog α × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionEntries declarations
+  | _ :: declarations => functionEntries declarations
+termination_by declarations => sizeOf declarations
+
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)

@@ -4486,5 +4486,13 @@
     "lean_name": "compileArgsHOL_constLocalOrStruct_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Proves compiled results for argument lists whose members are Const, Local, or one-level RStruct with Const/Local fields; it remains a strict subset of HOL eval_map_comp_exp_flat_eq."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mk_ctxt_imp_locals_rel",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mkCtxtImpLocalsRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison with mk_ctxt_imp_locals_rel: empty variable map, slot bound zero, make_funcs table; proof mirrors rw[locals_rel_def,no_overlap_def,mk_ctxt_def,ctxt_max_def])"
   }
 ]

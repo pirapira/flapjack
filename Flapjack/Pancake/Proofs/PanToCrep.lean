@@ -607,6 +607,27 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
+/-- HOL `mk_ctxt_imp_locals_rel`: the initial compiler context built from the
+    source function table has an empty variable map and slot bound, so the
+    locals relation holds against any target locals for the empty source
+    locals map. The proof-context record mirrors Cake `mk_ctxt FEMPTY
+    (make_funcs pc) 0 es`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_imp_locals_rel"]
+theorem mkCtxtImpLocalsRel [BEq String]
+    (declarations : List (Decl α)) (eids : FiniteMap String α)
+    (locals : FiniteMap Nat (PanWordLab α)) :
+    localsRel
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := infoMapToFiniteMap (panToCrepMakeFuncs declarations)
+        eids := eids
+        vmax := 0 }
+      FEMPTY locals := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [noOverlap, FLOOKUP_empty]
+  · simp [ctxtMax]
+  · intro name value hlookup
+    simp [FLOOKUP_empty] at hlookup
+
 /-- The state-based 64-bit specialization of Cake
     `opt_mmap_eval_is_wf_shape_v`; its evaluator premise is derived solely
     from `PanSemState`, including its

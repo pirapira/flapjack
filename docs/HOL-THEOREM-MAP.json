@@ -244,16 +244,16 @@
     "hol_name": "dest_2exp_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_eq_shift",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison, arbitrary-width RISC-V proof, and direct HOL-EVAL fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_thm quantifies over its polymorphic word type. No @[hol] tag until the finite-index generic theorem is proved."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_2exp_bound'",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_lt_width",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison with dimindex specialized to RISC-V width)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_bound' is polymorphic and concludes against dimindex of its word carrier. No @[hol] tag until generalized."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -358,6 +358,30 @@
     "lean_name": "crepDest2Exp_holFiniteDimension",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only width-bounded recognizer transport for arbitrary explicitly enumerated finite dimensions"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_lt_width",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-dimension support for the polymorphic dest_2exp bound; remains untagged because HolFiniteDimension is an explicit Lean enumeration and is not yet identified with HOL finite_index"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstForModel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack support lemma parameterized by a target-model shift law; its explicit operation premise and RiscV.Word carrier make it no generic HOL eval_mul_const port"
   },
   {
     "hol_path": null,
@@ -627,6 +651,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual source and target Call-entry locals_rel derived from successful state-owned lookups, evaluator argument well-formedness, and exact tlcWordLab target locals; supplies one recursive Call IH boundary but not the full pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemCallCalleeEntryStateCodeExcpRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Call-entry preservation helper: derives state_rel across source/target local replacement and matching clock decrement, and carries the state-owned code_rel and source excp_rel into HOL's ctxt_fc function context. It does not derive the function-context locals_rel for bound arguments or prove the Call induction case."
@@ -646,6 +678,14 @@
     "lean_name": "panSemCodeArgumentsMatch_of_lookup_success",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only extraction of the shape-matching condition from successful state-owned source code lookup; no standalone HOL theorem statement is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "bindPanValueParameters_of_lookup_success",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack projection of successful state-owned code lookup to its actual source parameter binder result; feeds the callee-entry locals_rel bridge, not a standalone HOL theorem"
   },
   {
     "hol_path": null,
@@ -804,6 +844,14 @@
     "hol_name": "functions_FILTER_is_name",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "functions_FILTER_is_name",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "MEM_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "MEM_functions",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },
@@ -4642,6 +4690,38 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "updatePanValueMap_eq_FUPDATE",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack finite-map support equating one source-local update with HOL-shaped FUPDATE; no standalone HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "updatePanValueMap_fold_eq_FUPDATE_LIST",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack finite-map support equating folded source-local updates with FUPDATE_LIST; no standalone HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "bindPanValueParameters_eq_slc",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge from successful state evaluator parameter binding to HOL slc; supports Call argument locals_rel, not itself an exact HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "bindPanValueParametersLocalsRelOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only callee-entry locals_rel bridge from the successful source evaluator binder to actual target word_lab locals; derives the relation through slc, not the enclosing Call preservation theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "mapM_take_of_success",
     "statement_status": "no_hol_reference_pending_classification",
@@ -5070,6 +5150,70 @@
     "lean_name": "panValueShapeList_eq_panSemShapeOf",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "List form of the runtime/semantic shape correspondence; NField proof support only."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "boolAndRearr",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Bool rearrangement helper ((l && s && (n && m)) = ((l && n) && (s && m))); no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "string_beq_comm",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commutativity of String BEq used to align helper argument order; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeMatches_eq_panStructShapeEqBool",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter equating the production panShapeMatches with panStructShapeEqBool (decide of structural Shape equality) under lawful String equality; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeListMatches_eq_panStructShapeListEqBool",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-level companion of panShapeMatches_eq_panStructShapeEqBool; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter rewriting panValueFieldsHaveShapes as HOL v_flds_ok's MAP FST / MAP (shape_of o SND) equalities over the panSemShapeOf port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Clause-by-clause adapter from the exact HOL-shaped panValueFldsOk over StructContextHOL to the production panStructValueFieldsOkBool over the cache-augmented StructContext under StructContext.toHOL; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValuesFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "List-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panFieldsFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Field-list-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
   },
   {
     "hol_path": null,
@@ -5544,102 +5688,6 @@
     "reviewer": "Flapjack-only support showing successful panShapeMatches is exact structural shape equality; no separate HOL theorem declaration"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "panShapeListMatches_eq",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only list recursion supporting panShapeMatches_eq; no separate HOL theorem declaration"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "slcTlcWordLabLocalsRelOfIndexedPanSem_exact",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only literal localsRel wrapper for the indexed source-shape bridge; still untagged and not yet tied to the production source/target Call entry maps"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "panSemCodeArgumentsMatch_shapeMapEq",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only projection of the successful source argument matcher to a formal/argument shape map; no separate HOL theorem declaration"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "panSemCodeArgumentsMatch_length",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only list-length projection of the successful source argument matcher; no separate HOL theorem declaration"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineCodeInlRel_of_code",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only introduction rule for the finite-map code_inl_rel relation over CrepInlineFmap; no HOL original (HOL code_inl_rel_def is the relation, ported untagged)."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "not_crepInlineCodeInlRel_of_target_none",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-    "hol_name": "MEM_functions",
-    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
-    "lean_name": "MEM_functions",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "updatePanValueMap_eq_FUPDATE",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Private Flapjack finite-map support equating one source-local update with HOL-shaped FUPDATE; no standalone HOL theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "updatePanValueMap_fold_eq_FUPDATE_LIST",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Private Flapjack finite-map support equating folded source-local updates with FUPDATE_LIST; no standalone HOL theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "bindPanValueParameters_eq_slc",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only bridge from successful state evaluator parameter binding to HOL slc; supports Call argument locals_rel, not itself an exact HOL theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "bindPanValueParametersLocalsRelOfIndexedPanSem",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only callee-entry locals_rel bridge from the successful source evaluator binder to actual target word_lab locals; derives the relation through slc, not the enclosing Call preservation theorem"
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_compile_shape",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -5658,10 +5706,26 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panShapeListMatches_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list recursion supporting panShapeMatches_eq; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookupInfoWithRest_lookupInfo",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only lookup bridge helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "slcTlcWordLabLocalsRelOfIndexedPanSem_exact",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only literal localsRel wrapper for the indexed source-shape bridge; still untagged and not yet tied to the production source/target Call entry maps"
   },
   {
     "hol_path": null,
@@ -5674,10 +5738,26 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_shapeMapEq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection of the successful source argument matcher to a formal/argument shape map; no separate HOL theorem declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookupInfoWithRest_mem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only membership helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-length projection of the successful source argument matcher; no separate HOL theorem declaration"
   },
   {
     "hol_path": null,
@@ -5690,6 +5770,14 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_fold_drop",
     "statement_status": "no_hol_reference_pending_classification",
@@ -5698,113 +5786,17 @@
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
-    "lean_name": "crepDest2ExpHolFiniteDimension_lt_width",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineCodeInlRel_of_code",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Finite-dimension support for the polymorphic dest_2exp bound; remains untagged because HolFiniteDimension is an explicit Lean enumeration and is not yet identified with HOL finite_index"
+    "reviewer": "Flapjack-only introduction rule for the finite-map code_inl_rel relation over CrepInlineFmap; no HOL original (HOL code_inl_rel_def is the relation, ported untagged)."
   },
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
-    "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "not_crepInlineCodeInlRel_of_target_none",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
-    "lean_name": "crepEvalMulConstForModel",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack support lemma parameterized by a target-model shift law; its explicit operation premise and RiscV.Word carrier make it no generic HOL eval_mul_const port"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only actual source and target Call-entry locals_rel derived from successful state-owned lookups, evaluator argument well-formedness, and exact tlcWordLab target locals; supplies one recursive Call IH boundary but not the full pc_compile_correct case"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "bindPanValueParameters_of_lookup_success",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Private Flapjack projection of successful state-owned code lookup to its actual source parameter binder result; feeds the callee-entry locals_rel bridge, not a standalone HOL theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "bindPanValueParametersLocalsRelOfPanSem",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only callee-entry locals_rel bridge from the successful source evaluator binder to actual target word_lab locals; derives the relation through slc, not the enclosing Call preservation theorem"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "boolAndRearr",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only Bool rearrangement helper ((l && s && (n && m)) = ((l && n) && (s && m))); no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "string_beq_comm",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only commutativity of String BEq used to align helper argument order; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panShapeMatches_eq_panStructShapeEqBool",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only adapter equating the production panShapeMatches with panStructShapeEqBool (decide of structural Shape equality) under lawful String equality; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panShapeListMatches_eq_panStructShapeListEqBool",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only list-level companion of panShapeMatches_eq_panStructShapeEqBool; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFieldsHaveShapes_eq",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only adapter rewriting panValueFieldsHaveShapes as HOL v_flds_ok's MAP FST / MAP (shape_of o SND) equalities over the panSemShapeOf port; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFldsOk_toHOL",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Clause-by-clause adapter from the exact HOL-shaped panValueFldsOk over StructContextHOL to the production panStructValueFieldsOkBool over the cache-augmented StructContext under StructContext.toHOL; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValuesFldsOk_toHOL",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "List-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panFieldsFldsOk_toHOL",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Field-list-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
+    "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
   }
 ]

@@ -9,54 +9,6 @@ declaration-level proof ports now live under `Flapjack/Pancake`.
 
 namespace Flapjack
 
-/-! CakeML `pan_structsProofScript.sml` `is_wf_shape_drop`: dropping a prefix
-    of the struct context preserves well-formedness of a shape, because a name
-    found in the suffix is also found (at least as far left) in the whole
-    context. -/
-
-theorem lookupInfo_isSome_drop (name : String) (context : StructContext) (n : Nat) :
-    (lookupInfo name (context.drop n)).isSome = true →
-      (lookupInfo name context).isSome = true := by
-  induction context generalizing n with
-  | nil => cases n <;> simp [lookupInfo]
-  | cons entry rest ih =>
-      obtain ⟨candidate, value⟩ := entry
-      cases n with
-      | zero => simp
-      | succ m =>
-          simp only [List.drop_succ_cons]
-          intro h
-          have hrest := ih m h
-          by_cases hc : candidate == name
-          · simp [lookupInfo, hc]
-          · simp only [lookupInfo, hc]
-            exact hrest
-
-theorem isWfShape_drop (shape : Shape) (context : StructContext) (n : Nat) :
-    isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
-  (isWfShape.induct
-    (motive1 := fun shapes => ∀ (context : StructContext) (n : Nat),
-      isWfShape.isWfShapeList (context.drop n) shapes = true →
-        isWfShape.isWfShapeList context shapes = true)
-    (motive2 := fun shape => ∀ (context : StructContext) (n : Nat),
-      isWfShape (context.drop n) shape = true → isWfShape context shape = true)
-    (by intro context n _; simp [isWfShape.isWfShapeList])
-    (by
-      intro shape shapes ih1 ih2 context n h
-      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h ⊢
-      exact ⟨ih1 context n h.1, ih2 context n h.2⟩)
-    (by intro context n _; simp [isWfShape])
-    (by
-      intro shapes ih context n h
-      have h' : isWfShape.isWfShapeList (context.drop n) shapes = true := by
-        simpa [isWfShape] using h
-      simpa [isWfShape] using ih context n h')
-    (by
-      intro name context n h
-      simp only [isWfShape] at h ⊢
-      exact lookupInfo_isSome_drop name context n h))
-    shape context n
-
 /-- Cake `pan_structs` `map_uncurry_zip_again`: mapping an uncurried pair
 constructor over a `zip` equals the `zip` of the two maps. -/
 theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
@@ -385,7 +337,7 @@ theorem structInfosOk_drop (n : Nat) (context : StructContext)
           (info.fields.map Prod.snd) = true := by
         refine isWfShapeList_of_all (fun shape hmem => ?_)
         have hshape := h3 (n + i) name info hget shape hmem
-        exact isWfShape_drop shape (context.drop n) (i + 1)
+        exact isWfShape_drop (context.drop n) shape (i + 1)
           (hdrop_drop i shape hshape)
       simpa [isWfShape] using hlist
     have hsize := shapeSizeWithContext_drop n context
@@ -455,7 +407,7 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
         exact congrArg some heq
       have hlist : isWfShape.isWfShapeList xs (info'.fields.map Prod.snd) = true :=
         isWfShapeList_of_all (fun shape hmem =>
-          isWfShape_drop shape xs (i + 1) (h3 i name info' hget shape hmem))
+          isWfShape_drop xs shape (i + 1) (h3 i name info' hget shape hmem))
       have hwfComb : isWfShape xs (.comb (info'.fields.map Prod.snd)) = true := by
         simpa [isWfShape] using hlist
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]

@@ -78,6 +78,15 @@ and multiplication expression. Its Lean constructor checks live in
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean
 destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
+`hol_fcp_index_n2w_probe.out` records direct HOL EVAL of `n2w` plus concrete
+instances of `word_index_n2w` and the underlying `BIT` values for zero, one,
+and the highest bit of an 8-bit word; it also records `dimindex (:8) = 8` to
+show the sampled indices are valid. The original definition is HOL4
+`wordsTheory.n2w_def` (`$HOL/src/n-bit/wordsScript.sml:54-56`);
+`word_index_n2w` at lines 1765-1774 states the general numeric-index equation.
+The kernel-checked canonical `Fin width`/BitVec equation
+`holWordBitsToBitVec_n2w` is in `Flapjack.Pancake.Semantics.CrepSem.Eval`; its
+zero/one/high-bit examples are in `Flapjack.Test.CrepeSimpExpParity`.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

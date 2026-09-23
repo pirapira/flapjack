@@ -394,10 +394,10 @@ def quadProjectionGuard : Bool :=
 /-! Cake's `tuple_4_o` (`pan_globalsProofScript.sml:3003`). -/
 
 theorem tuple_4_o_fixture :
-    (fun p : Nat × Nat × Nat × Nat =>
-        (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2)) =
-      ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
-        (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2))) :=
+    ((fun q : Nat × Nat × Nat × Nat => (q.1 + 1, q.2.1, q.2.2.1, q.2.2.2)) ∘
+        (fun p : Nat × Nat × Nat × Nat => (p.1, p.2.1, p.2.2.1, p.2.2.2))) =
+      (fun p : Nat × Nat × Nat × Nat =>
+        (p.1 + 1, p.2.1, p.2.2.1, p.2.2.2)) :=
   tuple_4_o (fun x => x + 1) id id id id id id id
 
 def quadCompGuard : Bool :=

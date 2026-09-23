@@ -444,4 +444,27 @@ theorem dec_shapes_resort_decls_def (declarations : List (Decl α)) :
       globalDeclShapes declarations :=
   globalDeclShapes_globalResortDecls declarations
 
+/-! Exact-shaped port of Cake's `resort_decls_preserve_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2055`): resorting
+    declarations leaves the function table unchanged. `resort_decls` is the
+    production `globalResortDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "resort_decls_preserve_functions"]
+theorem resort_decls_preserve_functions (declarations : List (Decl α)) :
+    functions (globalResortDecls declarations) = functions declarations :=
+  functions_globalResortDecls declarations
+
+/-! Exact-shaped port of Cake's `fperm_decs_FILTER_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2032`): renaming commutes
+    with filtering to the function declarations. HOL `fperm_decs` is the
+    production `globalRenameDecls` and HOL `FILTER is_function` is Lean
+    `globalDeclsFilter globalDeclIsFunction`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_decs_FILTER_is_function"]
+theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalRenameDecls source target
+        (globalDeclsFilter globalDeclIsFunction declarations) =
+      globalDeclsFilter globalDeclIsFunction
+        (globalRenameDecls source target declarations) :=
+  globalRenameDecls_filter_function source target declarations
+
 end Flapjack

@@ -1691,11 +1691,10 @@ termination_by shape => sizeOf shape
 
 /-- Interpret a production `GlobalPassContext` over `BitVec width` as a
     canonical HOL-shaped `CakeContext`: the association-list `globals` become a
-    finite-map lookup through `lookupInfo`, keeping the size fields.  This
-    definition, together with `cakeAddress_ofPass` and `cakeContextOfPass_update`,
-    is intended to support a future production-to-canonical equivalence proof
-    (`flapjack-pxn.18.5.2.20.2`); it does not by itself establish that the
-    executed RISC-V path reduces to the tagged `compileDecsCake`. -/
+finite-map lookup through `lookupInfo`, keeping the size fields.  This is
+    the production-to-canonical direction of the adapter required by
+    `flapjack-pxn.18.5.2.20.2`. The complete equivalence between the executed
+    RISC-V path and tagged `compileDecsCake` remains to be proved. -/
 def cakeContextOfPass [BEq String] {width : Nat}
     (context : GlobalPassContext (BitVec width)) : CakeContext width :=
   { globals := fun key => lookupInfo key context.globals

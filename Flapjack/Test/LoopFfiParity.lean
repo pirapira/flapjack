@@ -62,15 +62,45 @@ def baseState (ffi : FfiState Unit) : LoopMachineState Word Unit :=
 /-- The successful returned call writes the oracle bytes at `8w` and `9w`
     (both align to `8w`), giving `0x2211`, and preserves the locals. -/
 def returnedResult : LoopMachineStep Word Unit :=
-  loopMachineExtCall (baseState returningState) "x" 0 1 2 3
+  loopMachineExtCall (baseState returningState) "x" (1 : Word) (0 : Word) (2 : Word) (8 : Word)
 
 /-- The terminal oracle result becomes `FinalFFI` and clears the locals. -/
 def finalResult : LoopMachineStep Word Unit :=
-  loopMachineExtCall (baseState finalState) "x" 0 1 2 3
+  loopMachineExtCall (baseState finalState) "x" (1 : Word) (0 : Word) (2 : Word) (8 : Word)
 
-/-- A configuration pointer that is not a live local yields `Error`. -/
-def missingLocalResult : LoopMachineStep Word Unit :=
-  loopMachineExtCall (baseState returningState) "x" 99 1 2 3
+/-- Source hooks whose `ffi` field is the 64-bit `loopMachineExtCall` boundary;
+    the other effect fields are unreachable fallbacks for these programs. -/
+def ffiHooks : LoopEvaluateHooks Word Unit where
+  eval := fun _ _ => none
+  primitive := fun _ _ => none
+  arith := fun state _ => some state
+  store := fun _ _ _ => none
+  setGlobal := fun state _ _ => state
+  load32 := fun _ _ => none
+  loadByte := fun _ _ => none
+  store32 := fun _ _ _ => none
+  storeByte := fun _ _ _ => none
+  compare := fun _ _ _ => false
+  shMem := fun _ _ _ state => (some .error, state)
+  ffi := loopMachineFfiHook
+
+/-- The four argument locals `0..3` are read from the PRE-cut state, so an
+    empty cutset still calls the oracle; the result locals are cut to `[]`. -/
+def emptyCutsetResult : LoopMachineStep Word Unit :=
+  evaluateLoop 100 ffiHooks (.ffi "x" 0 1 2 3 []) (baseState returningState)
+
+/-- With cutset `[1]` the call still succeeds and the result locals are
+    restricted to `1`. -/
+def partialCutsetResult : LoopMachineStep Word Unit :=
+  evaluateLoop 100 ffiHooks (.ffi "x" 0 1 2 3 [1]) (baseState returningState)
+
+/-- A live local absent from the pre-cut locals fails `cut_state`. -/
+def liveAbsentResult : LoopMachineStep Word Unit :=
+  evaluateLoop 100 ffiHooks (.ffi "x" 0 1 2 3 [7]) (baseState returningState)
+
+/-- A configuration pointer that is not a pre-cut local yields `Error`. -/
+def missingArgResult : LoopMachineStep Word Unit :=
+  evaluateLoop 100 ffiHooks (.ffi "x" 99 1 2 3 [1]) (baseState returningState)
 
 def returnedGuard : Bool :=
   match returnedResult.1 with
@@ -87,8 +117,31 @@ def finalGuard : Bool :=
   | _, _ => false
 
 def missingLocalGuard : Bool :=
-  match missingLocalResult.1 with
-  | some .error => true
+  match missingArgResult.1 with
+  | some .error => missingArgResult.2.locals 1 == some (.word (1 : Word))
+  | _ => false
+
+/-- Empty cutset: arguments read pre-cut, so the write-back still happens while
+    the result locals are cut to `[]`. -/
+def emptyCutsetGuard : Bool :=
+  match emptyCutsetResult.1 with
+  | none =>
+      emptyCutsetResult.2.memory (8 : Word) == some (.word (0x2211 : Word)) &&
+      (emptyCutsetResult.2.locals 1).isNone
+  | some _ => false
+
+/-- Partial cutset `[1]`: the call succeeds and only local `1` survives. -/
+def partialCutsetGuard : Bool :=
+  match partialCutsetResult.1 with
+  | none =>
+      partialCutsetResult.2.locals 1 == some (.word (1 : Word)) &&
+      (partialCutsetResult.2.locals 0).isNone
+  | some _ => false
+
+/-- A missing live local fails `cut_state` and leaves the pre-cut locals. -/
+def liveAbsentGuard : Bool :=
+  match liveAbsentResult.1 with
+  | some .error => liveAbsentResult.2.locals 1 == some (.word (1 : Word))
   | _ => false
 
 /-- `rv64_mem_load_byte_aux=(SOME 171w,SOME 205w,SOME 239w)`: the width-generic
@@ -141,6 +194,9 @@ def byteAlignGuard : Bool :=
 #guard returnedGuard
 #guard finalGuard
 #guard missingLocalGuard
+#guard emptyCutsetGuard
+#guard partialCutsetGuard
+#guard liveAbsentGuard
 #guard memLoadGuard
 #guard readBytearrayGuard
 #guard memStoreGuard
@@ -168,6 +224,27 @@ def runChecks : IO Bool := do
       pure true
     else
       IO.println "FAIL Loop ExtCall missing local errors"
+      pure false
+  let emptyCutsetOk ←
+    if emptyCutsetGuard then
+      IO.println "PASS Loop ExtCall args read before cut_state with empty cutset"
+      pure true
+    else
+      IO.println "FAIL Loop ExtCall args read before cut_state with empty cutset"
+      pure false
+  let partialCutsetOk ←
+    if partialCutsetGuard then
+      IO.println "PASS Loop ExtCall pre-cut args survive a partial cutset"
+      pure true
+    else
+      IO.println "FAIL Loop ExtCall pre-cut args survive a partial cutset"
+      pure false
+  let liveAbsentOk ←
+    if liveAbsentGuard then
+      IO.println "PASS Loop ExtCall absent live local fails cut_state"
+      pure true
+    else
+      IO.println "FAIL Loop ExtCall absent live local fails cut_state"
       pure false
   let memLoadOk ←
     if memLoadGuard then
@@ -204,7 +281,8 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop byte_align matches HOL LOG2(width/8) alignment"
       pure false
-  pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk &&
+  pure (returnedOk && finalOk && missingOk && emptyCutsetOk && partialCutsetOk &&
+    liveAbsentOk && memLoadOk && readBytearrayOk &&
     memStoreOk && writeBytearrayOk && byteAlignOk)
 
 end Flapjack.Test.LoopFfiParity

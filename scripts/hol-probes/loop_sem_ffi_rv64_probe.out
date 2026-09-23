@@ -5,3 +5,6 @@ rv64_extcall_returned=(NONE,Word 171w,Word 8721w,SOME (Word 1w))
 rv64_extcall_final=(SOME (FinalFFI (Final_event (ExtCall «x») [171w] [205w; 239w] FFI_failed)),
  NONE)
 rv64_extcall_missing_local=(SOME Error,SOME (Word 1w))
+rv64_extcall_precut_empty_cutset=(NONE,Word 8721w,NONE)
+rv64_extcall_precut_partial_cutset=(NONE,SOME (Word 1w),NONE)
+rv64_extcall_live_absent=(SOME Error,SOME (Word 1w))

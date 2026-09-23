@@ -52,7 +52,7 @@ structure LoopEvaluateHooks (W : Type := Nat) (F : Type := LoopWordLoc) where
   compare : Cmp → LoopValue W → LoopValue W → Bool
   shMem : CrepMemOp → Nat → LoopValue W → LoopMachineState W F →
     LoopMachineStep W F
-  ffi : FunName → Nat → Nat → Nat → Nat → List Nat →
+  ffi : FunName → W → W → W → W → List Nat →
     LoopMachineState W F → LoopMachineStep W F
 
 def loopMachineGetVars {W : Type} (locals : Nat → Option (LoopValue W)) :
@@ -242,10 +242,16 @@ mutual
     | .call returns target arguments handler =>
         evaluateLoopCall fuel hooks returns target arguments handler state
     | .ffi function configuration configurationLength array arrayLength live =>
-        match cutLoopState live state with
-        | none => (some .error, state)
-        | some state' =>
-            hooks.ffi function configuration configurationLength array arrayLength live state'
+        match state.locals configurationLength, state.locals configuration,
+            state.locals arrayLength, state.locals array with
+        | some (.word configurationSize), some (.word configurationAddress),
+          some (.word arraySize), some (.word arrayAddress) =>
+            match cutLoopState live state with
+            | none => (some .error, state)
+            | some state' =>
+                hooks.ffi function configurationSize configurationAddress arraySize arrayAddress
+                  live state'
+        | _, _, _, _ => (some .error, state)
   termination_by fuel _ _ _ => fuel
 
   def evaluateLoopCall {W F : Type} : Nat → LoopEvaluateHooks W F →
@@ -793,32 +799,29 @@ def loopWriteByteArray (state : LoopMachineState (RiscV.Word 64) F)
 
 /-! FLAPJACK-SPECIFIC (not an exact HOL port).  The `LoopEvaluateHooks.ffi`
     boundary for the source `ExtCall` case of `loopSem$evaluate_def`
-    (`loopSemScript.sml:427-440`).  `evaluateLoop` has already applied
-    `cut_state`, so the hook reads the four local pointers/lengths from the
-    incoming state.  The exact polymorphic port is tracked by the dependency
-    bead. -/
+    (`loopSemScript.sml:427-440`).  `evaluateLoop` reads the four argument
+    locals from the pre-cut state, then applies `cut_state`, so the hook
+    receives the argument word values together with the cut state.  The exact
+    polymorphic port is tracked by the dependency bead. -/
 def loopMachineExtCall (state : LoopMachineState (RiscV.Word 64) F)
-    (function : FunName) (configuration configurationLength array arrayLength : Nat) :
+    (function : FunName)
+    (configurationSize configurationAddress arraySize arrayAddress : RiscV.Word 64) :
     LoopMachineStep (RiscV.Word 64) F :=
-  match state.locals configurationLength, state.locals configuration,
-      state.locals arrayLength, state.locals array with
-  | some (.word configurationSize), some (.word configurationAddress),
-    some (.word arraySize), some (.word arrayAddress) =>
-      match loopReadByteArray state configurationAddress configurationSize.toNat,
-          loopReadByteArray state arrayAddress arraySize.toNat with
-      | some configurationBytes, some arrayBytes =>
-          match callFfi state.ffi (.extCall function) configurationBytes arrayBytes with
-          | .final event => (some (.finalFfi event), callEnv [] state)
-          | .returned newFfi newBytes =>
-              (none, { loopWriteByteArray state arrayAddress newBytes with ffi := newFfi })
-      | _, _ => (some .error, state)
-  | _, _, _, _ => (some .error, state)
+  match loopReadByteArray state configurationAddress configurationSize.toNat,
+      loopReadByteArray state arrayAddress arraySize.toNat with
+  | some configurationBytes, some arrayBytes =>
+      match callFfi state.ffi (.extCall function) configurationBytes arrayBytes with
+      | .final event => (some (.finalFfi event), callEnv [] state)
+      | .returned newFfi newBytes =>
+          (none, { loopWriteByteArray state arrayAddress newBytes with ffi := newFfi })
+  | _, _ => (some .error, state)
 
 /-- The `LoopEvaluateHooks.ffi` boundary.  The live set is ignored because
     `evaluateLoop` performs the `cut_state` before calling the hook. -/
-def loopMachineFfiHook (state : LoopMachineState (RiscV.Word 64) F)
-    (function : FunName) (configuration configurationLength array arrayLength : Nat)
-    (_live : List Nat) : LoopMachineStep (RiscV.Word 64) F :=
-  loopMachineExtCall state function configuration configurationLength array arrayLength
+def loopMachineFfiHook (function : FunName)
+    (configurationSize configurationAddress arraySize arrayAddress : RiscV.Word 64)
+    (_live : List Nat) (state : LoopMachineState (RiscV.Word 64) F) :
+    LoopMachineStep (RiscV.Word 64) F :=
+  loopMachineExtCall state function configurationSize configurationAddress arraySize arrayAddress
 
 end Flapjack

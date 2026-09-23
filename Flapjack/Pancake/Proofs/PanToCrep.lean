@@ -51,6 +51,32 @@ def ctxtFc
     eids := exceptionCodes
     vmax := maxList names }
 
+/-- HOL `ctxt_fc_funcs_eq`: constructing a function context preserves the
+    supplied function map. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_funcs_eq"]
+theorem ctxtFcFuncsEq
+    (functions : FiniteMap String (List (String × Shape) × Shape))
+    (codes : FiniteMap String α) (variables : List String)
+    (shapes : List Shape) (names : List Nat) :
+    (ctxtFc functions codes variables shapes names).funcs = functions := rfl
+
+/-- HOL `ctxt_fc_eids_eq`: constructing a function context preserves the
+    supplied exception-code map. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_eids_eq"]
+theorem ctxtFcEidsEq
+    (functions : FiniteMap String (List (String × Shape) × Shape))
+    (codes : FiniteMap String α) (variables : List String)
+    (shapes : List Shape) (names : List Nat) :
+    (ctxtFc functions codes variables shapes names).eids = codes := rfl
+
+/-- HOL `ctxt_fc_vmax`: the constructed context's maximum slot is the
+    maximum of the supplied slot list. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_vmax"]
+theorem ctxtFcVmax
+    (context : PanToCrepProofContext α) (codes : FiniteMap String α)
+    (variables : List String) (shapes : List Shape) (names : List Nat) :
+    (ctxtFc context.funcs codes variables shapes names).vmax = maxList names := rfl
+
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has

@@ -2,7 +2,8 @@ import Flapjack.Pancake.Semantics.PanSemStateEval
 
 /-! The expected values are recorded by direct HOL EVAL of the source
 `panSem$eval` probe. The Lean cases exercise the state-derived word and memory
-inputs against those checked-in results. -/
+inputs, including Cake's list-valued word operator arity, against those
+checked-in results. -/
 
 namespace Flapjack.Test.PanSemStateEvalParity
 
@@ -54,6 +55,57 @@ private def isNoneResult {α : Type} (result : Option α) : Bool :=
 def littleEndianState : PanSemState Word64 Unit := sourceState false true true
 def bigEndianState : PanSemState Word64 Unit := sourceState true true true
 
+def sourceFfiOracle : FfiOracle Unit := fun _ state _ bytes => .returned state bytes
+
+def sourceFfiState : FfiState Unit :=
+  { oracle := sourceFfiOracle, state := (), ioEvents := [] }
+
+def sourceCodeState (bigEndian inWordDomain : Bool) :
+    PanSemState Word64 (FfiState Unit) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := []
+    exceptionShapes := fun _ => none
+    memory := fun address =>
+      if address == 0 then some (.word sourceMemoryWord) else none
+    memaddrs := fun _ => inWordDomain
+    sharedMemaddrs := fun _ => false
+    clock := 0
+    be := bigEndian
+    ffi := sourceFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def sourceFfiContext : PanValueFfiContext Word64 :=
+  { sharedDomain := fun _ => false
+    byteAlign := RiscV.panRiscVByteAlign (BitVec.ofNat 64 8)
+    bigEndian := false
+    wordToBytes := fun _ _ => []
+    wordOfBytes := fun _ _ => 0
+    wordToByte := fun value => UInt8.ofNat value.toNat
+    byteToWord := fun value => BitVec.ofNat 64 value.toNat
+    valueToNat := fun value => value.toNat }
+
+def sourceFfiHandler : PanValueStatefulFfiHandler Word64 Unit :=
+  fun _ _ _ _ _ locals ffi => some (locals, ffi)
+
+def sourcePrimitive : PanPrimitiveHandler Word64 := fun _ _ => none
+
+private def observesReturnedWord
+    (result : Option (PanValueFfiClockResult Word64 Unit)) (expected : Word64) : Bool :=
+  match result with
+  | some (.control (.returned _ _ _ _ [.word value]), _) => value == expected
+  | _ => false
+
+#guard observesReturnedWord
+  (panSemEvaluateRiscV64CodeState sourceFfiContext sourcePrimitive sourceFfiHandler
+    (sourceCodeState false true) (.return (.loadByte (.const 0))))
+  (BitVec.ofNat 64 0x88)
+#guard isNoneResult
+  (panSemEvaluateRiscV64CodeState sourceFfiContext sourcePrimitive sourceFfiHandler
+    (sourceCodeState false false) (.return (.loadByte (.const 0))))
+
 #guard isWordResult
   (evalPanSemStateExp littleEndianState (.load .one (.const 0)))
   sourceMemoryWord
@@ -77,6 +129,12 @@ def bigEndianState : PanSemState Word64 Unit := sourceState true true true
 #guard isWordResult
   (evalPanSemStateExp bigEndianState (.load32 (.const 0)))
   (BitVec.ofNat 64 0x11223344)
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState
+    (.op .add [.const 1, .const 2, .const 3]))
+  (BitVec.ofNat 64 6)
+#guard isNoneResult
+  (evalPanSemStateExp littleEndianState (.op .sub [.const 1]))
 
 #guard isWordResult ((panSemBitVec64MemoryAccess littleEndianState).sharedRead
   littleEndianState.memory panSemBitVec64BytesInWord .opW 0)

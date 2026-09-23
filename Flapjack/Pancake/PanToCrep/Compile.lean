@@ -500,6 +500,7 @@ def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape
 /-! Source-named port of CakeML Pancake's `crep_vars_def`
     (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
     consecutive slot for every flattened parameter word. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "crep_vars_def"]
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
   List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 
@@ -721,6 +722,9 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 /-! HOL finite-map variants used by the RISC-V production path. The parameter
     and function tables are built with `FUPDATE_LIST`; body compilation then
     uses `compileProgHOL` without converting the context to `InfoMap`. -/
+/-- HOL `make_vmap_def`: allocate consecutive flattened parameter slots and
+    update the finite map in source order, so a later duplicate name wins. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "make_vmap_def"]
 def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
     FiniteMap VarName (Shape × List Nat) :=
   FUPDATE_LIST FEMPTY (compileParamVars params 0).1
@@ -737,10 +741,8 @@ def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
   let shapes := params.map Prod.snd
   let vmax := Shape.shapeSize (.comb shapes) - 1
   compileProgRiscV
-    { vars := panToCrepMakeVmapHOL params
-      funcs := context.funcs
-      eids := context.eids
-      vmax := vmax } body
+    (panToCrepMkCtxtHOL (panToCrepMakeVmapHOL params)
+      context.funcs vmax context.eids) body
 
 /-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
 order and turn their zero-based indices into words. HOL `alist_to_fmap` uses
@@ -766,7 +768,7 @@ def compileToCrepHOL
   let functionMap := functionInfosHOL declarations
   let exceptionMap := panToCrepGetEidsFromDeclsHOL declarations
   let context : PanToCrepHOLContext (BitVec width) :=
-    { vars := FEMPTY, funcs := functionMap, eids := exceptionMap, vmax := 0 }
+    panToCrepMkCtxtHOL FEMPTY functionMap 0 exceptionMap
   functions.map fun (name, parameters, body, _returnShape) =>
     (name, panToCrepVars parameters,
       panToCrepCompFuncRiscV context parameters body)

@@ -2641,6 +2641,30 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "mk_ctxt_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "panToCrepMkCtxtHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_vmap_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepMakeVmapHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "crep_vars_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "get_eids_from_decls_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
     "lean_name": "panToCrepGetEidsFromDeclsHOL",

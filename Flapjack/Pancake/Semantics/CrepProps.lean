@@ -25,26 +25,27 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
       else some (expressions.map (fun expression => expression.headD (.var 0)))
 
 /-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). HOL uses
-    `crepSem.eval`, whose `Var` case is `FLOOKUP s.locals v`. The Lean source-
-    path evaluator's variable equation is stated explicitly by
-    `crepSemEvalExp_var`; therefore HOL `OPT_MMAP` translates directly to
-    `List.mapM` over the same local lookup. This uses the HOL-mirrored
-    `CrepSem` runtime evaluator, not the legacy compatibility evaluator
-    `evalCrepFullExpState`; every expression evaluated by this theorem is a
-    `Var`, so the explicit variable equation is the relevant semantic case.
-    The evaluator's implicit operation dictionaries are required by its
-    general expression type, but are not additional premises about the state
-    or local lookup used by this variable-only theorem.
+    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). The HOL statement
+    applies `crepSem.eval` only to `Var` expressions. Its defining `Var`
+    equation is implemented directly by `crepSemEvalExp_var`; HOL
+    `OPT_MMAP` therefore translates to `List.mapM` over the same local
+    lookup. The theorem does not use the compatibility evaluator
+    `evalCrepFullExpState`, nor does it claim a whole-evaluator equivalence.
+
     The representation translation erases HOL's sole `word_lab` constructor
     `Word`: a HOL lookup of `SOME (Word w)` corresponds to Lean's `some w`,
     and absent entries correspond to `none`. Thus a HOL finite `locals` map
-    translates to the Lean lookup function `state.locals`. Under this
-    correspondence, HOL's left side is `names.mapM state.locals` and its right
-    side is exactly the mapped `Var` expression list evaluated by
-    `crepSemEvalExp` below. This argument uses only the `Var` equation; it does
-    not claim a separate whole-evaluator equivalence theorem for load or
-    operator cases. -/
+    translates to the Lean lookup function `state.locals`. The runtime type
+    carries extra evaluator dictionaries, but this theorem's only semantic
+    case is the direct HOL `Var` clause.
+
+    Scope boundary: this tag is for the variable-only theorem, not a claim that
+    `crepSemEvalExp` ports all of HOL `eval_def`. In particular, Lean stores
+    memory as `α → Option α` with a Boolean domain and globals as
+    `α → Option α`; HOL stores total word memory with a separate address set,
+    and globals keyed by fixed-width 5-bit words with `word_lab` values. The
+    Lean `loadGlob` AST index is also `α`, whereas HOL's is 5-bit. None of
+    those fields or constructors is observed by this theorem. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

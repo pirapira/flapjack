@@ -168,8 +168,7 @@ theorem evaluateReplicateConst
   induction count with
   | zero => rfl
   | succ count ih =>
-      simp only [crepSemEvalExp] at ih
-      simp [List.replicate_succ, crepSemEvalExp, evalCrepRuntimeExp, ih]
+      simp [List.replicate_succ, crepSemEvalExp, ih]
 
 /-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
     module. This drops the source theorem's unused Nat witness; the exact

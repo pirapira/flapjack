@@ -218,13 +218,33 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
-/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
-    order and receive consecutive slots. -/
+/-! Direct HOL `crep_vars_def` oracle (the `crep_vars_empty` and
+    `crep_vars_nested` lines in `compile_to_crep_probe.out`): nested parameter
+    shapes flatten in source order and receive consecutive slots. -/
 def crepVarsOracle : Bool :=
-  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
+  panToCrepVars [] == [] &&
+    panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
       ("right", .one)] == [0, 1, 2, 3]
 
 #guard crepVarsOracle
+
+/-! Direct HOL `mk_ctxt_fields` oracle in `compile_to_crep_probe.out`:
+    the constructor preserves all four fields in HOL's argument order. -/
+def mkCtxtOracle : Bool :=
+  let vars : FiniteMap VarName (Shape × List Nat) :=
+    FUPDATE FEMPTY ("x", (.one, [0]))
+  let funcs : FiniteMap FunName (List (VarName × Shape) × Shape) :=
+    FUPDATE FEMPTY ("f", ([("x", .one)], .one))
+  let eids : FiniteMap ExceptionId (BitVec 8) :=
+    FUPDATE FEMPTY ("E", 2)
+  let context := panToCrepMkCtxtHOL vars funcs 3 eids
+  context.vmax == 3 &&
+    (FLOOKUP context.vars "x").isSome &&
+    (FLOOKUP context.funcs "f").isSome &&
+    FLOOKUP context.eids "E" == some 2
+
+#guard mkCtxtOracle
+
 /-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
     flattened slots in source order. -/
 def makeVmapOracle : Bool :=
@@ -233,6 +253,21 @@ def makeVmapOracle : Bool :=
   | _ => false
 
 #guard makeVmapOracle
+
+/-! Direct HOL `make_vmap_shaped` and `make_vmap_duplicate_lookup` oracle:
+    the finite-map production path allocates consecutive slots and its later
+    duplicate parameter wins the lookup. -/
+def makeVmapHOLOracle : Bool :=
+  let shaped := panToCrepMakeVmapHOL
+    [("x", .one), ("pair", .comb [.one, .one])]
+  let duplicate := panToCrepMakeVmapHOL
+    [("x", .one), ("x", .comb [.one, .one])]
+  match FLOOKUP shaped "x", FLOOKUP shaped "pair", FLOOKUP duplicate "x" with
+  | some (.one, [0]), some (.comb [.one, .one], [1, 2]),
+      some (.comb [.one, .one], [1, 2]) => true
+  | _, _, _ => false
+
+#guard makeVmapHOLOracle
 
 /-! Cake's `FEMPTY |++ ZIP` gives the later duplicate parameter the result of
     lookup.  This is deliberately a malformed direct compiler input: the

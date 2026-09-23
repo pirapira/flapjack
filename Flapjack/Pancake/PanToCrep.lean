@@ -31,6 +31,14 @@ structure PanToCrepHOLContext (α : Type) where
   eids : FiniteMap ExceptionId α
   vmax : Nat
 
+/-- HOL `mk_ctxt_def` packages the parameter map, function map, maximum
+    temporary number, and exception map into the finite-map compiler context. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "mk_ctxt_def"]
+def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
+    (funcs : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
+  { vars, funcs, eids, vmax }
+
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
   | [] => some []

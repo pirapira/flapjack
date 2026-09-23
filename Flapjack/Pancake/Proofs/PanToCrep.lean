@@ -24,43 +24,6 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
-/-- Exact word-width port of Cake `load_shape_el_rel`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`). The index bound
-    is explicit because Lean total indexing requires its proof; `BitVec.ofNat`
-    is HOL's `n2w`, and the fixed `CrepBytesInWord` instance is
-    `byte$bytes_in_word`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "load_shape_el_rel"]
-theorem loadShapeBytesGetElem {width : Nat}
-    (count index : Nat) (address : BitVec width)
-    (value : CrepExp (BitVec width)) (hindex : index < count) :
-    (loadShapeBytes address count value)[index]'(by
-      simpa only [length_loadShape_eq_shape] using hindex) =
-      if address + (CrepBytesInWord.bytesInWord * BitVec.ofNat width index) = 0 then
-        .load value
-      else
-        .load (.op .add
-          [value, .const
-            (address + (CrepBytesInWord.bytesInWord * BitVec.ofNat width index))]) := by
-  induction count generalizing address index with
-  | zero => omega
-  | succ count ih =>
-      cases index with
-      | zero =>
-          simp [loadShapeBytes]
-      | succ index =>
-          have hlt : index < count := by omega
-          simp only [loadShapeBytes, List.getElem_cons_succ]
-          rw [ih (index := index)
-            (address := address + CrepBytesInWord.bytesInWord) hlt]
-          have hoffset :
-              (address + CrepBytesInWord.bytesInWord) +
-                  CrepBytesInWord.bytesInWord * BitVec.ofNat width index =
-                address + CrepBytesInWord.bytesInWord * BitVec.ofNat width (index + 1) := by
-            rw [BitVec.ofNat_add]
-            simp only [BitVec.mul_add, BitVec.mul_one]
-            ac_rfl
-          rw [hoffset]
-
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
     HOL has one `shape_of` function, so this bridge has no HOL original. -/
@@ -80,6 +43,66 @@ theorem flattenNilNoSize (value : PanValue α)
     panValueFlatten value = [] ↔ Shape.shapeSize (panSemShapeOf value) = 0 := by
   rw [panSemShapeOf_eq_panValueShape_nil] at hwf ⊢
   exact panValueFlatten_eq_nil_iff_shapeSize_eq_zero value hwf
+
+/-- Flapjack-only optional-indexing support for HOL `load_shape_el_rel`.
+    HOL's `EL` is stated without an Option because its index premise gives
+    the required bound; the exact tagged statement follows below. -/
+private theorem loadShapeBytes_getElemOpt_rel {width : Nat}
+    (address : BitVec width) (count index : Nat)
+    (value : CrepExp (BitVec width)) (hindex : index < count) :
+    (loadShapeBytes address count value)[index]? =
+      some (if address + CrepBytesInWord.bytesInWord *
+            BitVec.ofNat width index == 0 then .load value
+        else .load (.op .add [value, .const
+          (address + CrepBytesInWord.bytesInWord * BitVec.ofNat width index)])) := by
+  induction count generalizing address index with
+  | zero => omega
+  | succ count ih =>
+      cases index with
+      | zero => simp [loadShapeBytes]
+      | succ index =>
+          have htail : index < count := by omega
+          rw [loadShapeBytes]
+          simp only [List.getElem?_cons_succ]
+          rw [ih (address + CrepBytesInWord.bytesInWord) index htail]
+          have haddr :
+              (address + CrepBytesInWord.bytesInWord) +
+                  CrepBytesInWord.bytesInWord * BitVec.ofNat width index =
+                address + CrepBytesInWord.bytesInWord *
+                  BitVec.ofNat width (index + 1) := by
+            rw [BitVec.ofNat_add]
+            simp [BitVec.mul_add]
+            ac_rfl
+          simp [haddr]
+
+/-- The fixed-stride loader emits exactly one expression per requested word.
+    This is Flapjack-only support for converting optional indexing to HOL `EL`. -/
+private theorem loadShapeBytes_length {width : Nat}
+    (address : BitVec width) (count : Nat)
+    (value : CrepExp (BitVec width)) :
+    (loadShapeBytes address count value).length = count := by
+  induction count generalizing address with
+  | zero => rfl
+  | succ count ih => simp [loadShapeBytes, ih]
+
+/-- HOL `load_shape_el_rel`: the bounded `EL` of the fixed-stride loader uses
+    word offset `address + bytes_in_word * n2w index`. The dependent Lean index
+    carries the HOL premise `index < count` without an Option result. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "load_shape_el_rel"]
+theorem loadShapeBytes_getElem_rel {width : Nat}
+    (address : BitVec width) (count index : Nat)
+    (value : CrepExp (BitVec width)) (hindex : index < count) :
+    (loadShapeBytes address count value)[index]'(by
+      simpa [loadShapeBytes_length] using hindex) =
+      if address + CrepBytesInWord.bytesInWord * BitVec.ofNat width index == 0
+      then .load value
+      else .load (.op .add [value, .const
+        (address + CrepBytesInWord.bytesInWord * BitVec.ofNat width index)]) := by
+  have hopt := loadShapeBytes_getElemOpt_rel address count index value hindex
+  have hvalid : index < (loadShapeBytes address count value).length := by
+    simpa [loadShapeBytes_length] using hindex
+  rw [List.getElem?_eq_getElem hvalid] at hopt
+  exact Option.some.inj hopt
 
 /-- HOL `is_wf_shape_nil_length_flatten`: a word list chosen by the zero-size
     or positive-size branch has the size prescribed by the source value shape. -/

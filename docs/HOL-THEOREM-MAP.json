@@ -2656,10 +2656,26 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "loadShapeBytes_getElemOpt_rel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Lean indexing bridge)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "loadShapeBytes_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Lean indexing bridge)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "load_shape_el_rel",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "loadShapeBytesGetElem",
+    "lean_name": "loadShapeBytes_getElem_rel",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },

@@ -237,11 +237,9 @@ theorem riscvBytesInWord_eq : (8 : BitVec 64) = CrepBytesInWord.bytesInWord := r
     `byte$bytes_in_word = 4`. -/
 theorem probeBytesInWord_eq : (4 : BitVec 32) = CrepBytesInWord.bytesInWord := rfl
 
-/-- Flapjack-specific indexing helper for the original-domain, Nat-valued
-    variable-stride `loadShape`. This is not Cake's `load_shape_el_rel`: the
-    HOL definition fixes the stride to the machine byte width and uses word
-    arithmetic. The faithful fixed-width theorem lives in
-    `Flapjack.Pancake.Proofs.PanToCrep`. -/
+/-- Flapjack-specific Nat/variable-stride indexing helper. The exact HOL
+    `load_shape_el_rel` port uses word arithmetic and fixed machine-byte
+    stride in `Proofs/PanToCrep.lean`. -/
 theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
     (h : n < count) :
     (loadShape address stride count value)[n]? =

@@ -118,6 +118,16 @@ val _ = print_eval "extcall_high_tail"
         (panLang$Var panLang$Local «ptr2»)
         (panLang$Var panLang$Local «len2»))``;
 
+val _ = print_eval "extcall_shared_high_tail"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY |+ («x», (panLang$One, [1; 99]));
+         funcs := FEMPTY; eids := FEMPTY; vmax := 99 |>
+      (panLang$ExtCall «f»
+        (panLang$Var panLang$Local «x»)
+        (panLang$Var panLang$Local «x»)
+        (panLang$Var panLang$Local «x»)
+        (panLang$Var panLang$Local «x»))``;
+
 val _ = print_eval "pair_load"
   ``pan_to_crep$compile
       <| vars := FEMPTY |+ («p», (panLang$One, [0]));

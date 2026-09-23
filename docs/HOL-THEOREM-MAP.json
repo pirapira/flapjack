@@ -4094,5 +4094,21 @@
     "lean_name": "panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source-state Call exception dispatch helper: state-owned callee raises a one-word payload and a preexisting matching handler local returns it; induction support, not full pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlReturnOneWord",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only target handler-continuation execution: exp_hdl reads the one-word payload via loadGlob, then Return yields it; induction support, not the full Call_Ret_Exception correctness case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of target Call exception dispatch with actual exp_hdl/Return evaluation, given target code lookup and callee-body IH; full source/target state relation composition remains open"
   }
 ]

@@ -136,7 +136,7 @@ def wordSimpStripConst : List (WordExp α) → Option (List α)
 /-! Word instruction selection uses the shared `wordLang$word_op` definition. -/
 def wordSimpFoldOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [Complement α] [OfNat α 0] (operator : BinOp) (values : List α) : Option α :=
-  wordOpHOL operator values
+  wordOp operator values
 
 class WordSimpShift (α : Type u) where
   eval : Shift → α → α → Option α

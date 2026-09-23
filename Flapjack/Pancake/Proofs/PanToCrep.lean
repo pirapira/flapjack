@@ -473,7 +473,7 @@ theorem slcTlcRw
     (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
       tlc slots arguments) := ⟨rfl, rfl⟩
 
-/-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
+/-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has
     no struct context (`s.structs = []`) and no globals (`s.globals = FEMPTY`).
@@ -491,7 +491,7 @@ def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : P
     s.baseAddress = t.baseAddress ∧ s.topAddress = t.topAddress
 
 /-- HOL `state_rel_structs[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:54`). -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_structs"]
 theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.structs = [] := by
@@ -499,7 +499,7 @@ theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   exact hstructs
 
 /-- HOL `state_rel_globals[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:55`). -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_globals"]
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
@@ -818,8 +818,8 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     context with `ctxt_fc`, and relates that entry to its compiled body.
 
     Its compiler conclusion routes to `compileProgHOL`, whose context is the
-    original finite-map record and whose definition is tagged to HOL
-    `compile_def`. -/
+    original finite-map record. The `compile_def` tag is on the production
+    wrapper `compileProgRiscV`, not on this helper. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]

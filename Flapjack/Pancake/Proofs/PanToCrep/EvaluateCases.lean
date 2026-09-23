@@ -11,8 +11,8 @@ lemmas as standalone declarations.
 
 namespace Flapjack
 
-/-- HOL's `pc_compile_correct[Skip]` source-side evaluator equation, exposed
-for reuse in the main evaluation induction. -/
+/-- Flapjack-specific unfolding of the source evaluator for `Skip`, used in
+the `pc_compile_correct` induction; HOL has no standalone lemma with this statement. -/
 theorem panSkipEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -36,7 +36,7 @@ theorem panSkipEvaluationEquation
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
-/-- HOL's `pc_compile_correct[Skip]` target-side evaluator equation. -/
+/-- Flapjack-specific target evaluator unfolding for `Skip`; not a standalone HOL theorem. -/
 theorem crepSkipEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -49,14 +49,14 @@ theorem crepSkipEvaluationEquation
       some (.normal, state) := by
   exact evalCrepRuntimeResult_skip handler primitive fuel state
 
-/-- HOL's compiler leaves `Skip` unchanged. -/
+/-- Flapjack-specific unfolding showing that the compiler leaves `Skip` unchanged. -/
 theorem compileProgHOL_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) :
     compileProgHOL context .skip = .skip := rfl
 
-/-- HOL's `pc_compile_correct[Break]` source-side evaluator equation. -/
+/-- Flapjack-specific source evaluator unfolding for `Break`; not a standalone HOL theorem. -/
 theorem panBreakEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -80,7 +80,7 @@ theorem panBreakEvaluationEquation
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
-/-- HOL's `pc_compile_correct[Continue]` source-side evaluator equation. -/
+/-- Flapjack-specific source evaluator unfolding for `Continue`; not a standalone HOL theorem. -/
 theorem panContinueEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -104,7 +104,7 @@ theorem panContinueEvaluationEquation
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
-/-- HOL's `pc_compile_correct[Annot]` source-side evaluator equation. -/
+/-- Flapjack-specific source evaluator unfolding for `Annot`; not a standalone HOL theorem. -/
 theorem panAnnotEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -129,7 +129,7 @@ theorem panAnnotEvaluationEquation
   simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps]
 
-/-- HOL's `pc_compile_correct[Tick]` source-side evaluator equation. -/
+/-- Flapjack-specific source evaluator unfolding for `Tick`; not a standalone HOL theorem. -/
 theorem panTickEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -153,7 +153,7 @@ theorem panTickEvaluationEquation
       else some (.control (.normal locals globals memory ffi), decPanClock clock) := by
   simp [evalPanValueFfiClockProg, panValueFfiClockTimeout]
 
-/-- HOL's `pc_compile_correct[Tick]` target-side evaluator equation. -/
+/-- Flapjack-specific target evaluator unfolding for `Tick`; not a standalone HOL theorem. -/
 theorem crepTickEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -167,7 +167,7 @@ theorem crepTickEvaluationEquation
       else some (.normal, decCrepClock state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
 
-/-- HOL's `pc_compile_correct[Break]` target-side evaluator equation. -/
+/-- Flapjack-specific target evaluator unfolding for `Break`; not a standalone HOL theorem. -/
 theorem crepBreakEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -180,7 +180,7 @@ theorem crepBreakEvaluationEquation
       some (.broke 0, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
 
-/-- HOL's `pc_compile_correct[Continue]` target-side evaluator equation. -/
+/-- Flapjack-specific target evaluator unfolding for `Continue`; not a standalone HOL theorem. -/
 theorem crepContinueEvaluationEquation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

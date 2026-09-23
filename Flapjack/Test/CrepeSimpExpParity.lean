@@ -46,6 +46,20 @@ def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
     (.crepOp .mul [.const holBits4, .const holBits4]) ==
   some (bitVecToHolWordBits (BitVec.ofNat 4 9))
 
+example :
+    evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+        (.loadByte (.const holBits4)) =
+      evalCrepHolWordBitsExp holWordBitsState4 (.loadByte (.const holBits4)) :=
+  evalCrepRuntimeExp_toHolWordBits_eq holWordBitsState4
+    (.loadByte (.const holBits4))
+
+example :
+    evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+        (.load32 (.const holBits4)) =
+      evalCrepHolWordBitsExp holWordBitsState4 (.load32 (.const holBits4)) :=
+  evalCrepRuntimeExp_toHolWordBits_eq holWordBitsState4
+    (.load32 (.const holBits4))
+
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,
     constant-on-either-side multiplication, recursive children, and the

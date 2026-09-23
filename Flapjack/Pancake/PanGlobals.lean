@@ -375,6 +375,10 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
+/-- Exact-shaped port of Cake's `fperm_name_def`
+    (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
+    function names and leaves every other name unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"]
 def globalRenameFunctionName [BEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
@@ -403,6 +407,11 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
   · intro h
     rw [h]
 
+/-- Exact-shaped port of Cake's `fperm_def`
+    (`pan_globalsScript.sml:191`): rename `source` to `target` and vice versa
+    in every function occurrence and nested handler/body, leaving the other
+    program constructs structurally unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_def"]
 def globalRenameProg [BEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
@@ -428,6 +437,11 @@ def globalRenameProg [BEq String]
   | program => program
 termination_by program => sizeOf program
 
+/-- Exact-shaped port of Cake's `fperm_decs_def`
+    (`pan_globalsScript.sml:216`): rename `source`/`target` in each function
+    declaration's name and body; every other declaration passes through
+    unchanged. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_decs_def"]
 def globalRenameDecls [BEq String]
     (source target : FunName) : List (Decl α) → List (Decl α)
   | [] => []

@@ -725,8 +725,8 @@ def loopLocalsTouched : LoopExp α → List Nat
     loopLocalsTouched (α := α) (.var name) = [name] := by
   simp [loopLocalsTouched]
 
-@[simp] theorem loopLocalsTouched_lookup (address : α) :
-    loopLocalsTouched (.lookup address) = [] := by
+@[simp] theorem loopLocalsTouched_lookup {α : Type u} (address : BitVec 5) :
+    loopLocalsTouched (α := α) (.lookup address) = [] := by
   simp [loopLocalsTouched]
 
 @[simp] theorem loopLocalsTouched_load (address : LoopExp α) :

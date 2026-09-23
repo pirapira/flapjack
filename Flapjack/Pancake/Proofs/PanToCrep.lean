@@ -33,12 +33,12 @@ namespace Flapjack
     word offset and bounded total index have the same shape as HOL's `n2w` and
     `EL`; the proof reuses the primary semantics counterpart. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "EL_load_globals"]
-theorem elLoadGlobals {width : Nat}
-    (n count : Nat) (address : BitVec width) (h : n < count) :
-    (loadGlobals address count)[n]'(by
+theorem elLoadGlobals {α : Type u}
+    (n count : Nat) (address : BitVec 5) (h : n < count) :
+    (loadGlobals (α := α) address count)[n]'(by
       simpa only [loadGlobals_length] using h) =
-        .loadGlob (address + BitVec.ofNat width n) := by
-  exact loadGlobals_getElem address count n h
+        .loadGlob (address + BitVec.ofNat 5 n) := by
+  exact loadGlobals_getElem (α := α) address count n h
 
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
@@ -863,7 +863,7 @@ theorem compileExpNotMemLoadGlob [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α) (expression : Exp α)
     (source : PanSemState α (FfiState σ)) (target : CrepRuntimeState α σ)
-    (expressions : List (CrepExp α)) (shape : Shape) (address : α)
+    (expressions : List (CrepExp α)) (shape : Shape) (address : BitVec 5)
     (hcompile : compileExpHOL
       { vars := context.vars, funcs := context.funcs,
         eids := context.eids, vmax := context.vmax } expression = (expressions, shape))

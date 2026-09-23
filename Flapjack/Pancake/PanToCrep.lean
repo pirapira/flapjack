@@ -13,6 +13,8 @@ produce a zero constant.
 
 namespace Flapjack
 
+universe v w
+
 structure CompileContext (α : Type u) where
   vars : InfoMap (Shape × List Nat)
   functions : InfoMap (List (VarName × Shape) × Shape)
@@ -66,14 +68,14 @@ def compilePanOp : PanOp → CrepOp
     with the assignments nested in source order.  The second component of the
     stored pair is the flattened word list; the shape is not consulted. -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
-def expHdlFiniteMap [OfNat α 0] [OfNat α 1] [Add α]
+def expHdlFiniteMap {α : Type u}
     (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=
   match FLOOKUP fm v with
   | none => .skip
   | some (_, names) =>
       crepNestedSeq
         (panMap2 (fun destination source => .assign destination source)
-          names (loadGlobals (0 : α) names.length))
+          names (loadGlobals (0 : BitVec 5) names.length))
 
 /-! Flapjack-only representation bridge from the compiler's association-list
     `InfoMap` to the HOL finite map.  The compiler stores bindings
@@ -118,15 +120,15 @@ theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
-def expHdl [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+def expHdl {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
-  expHdlFiniteMap (infoMapToFiniteMap vars) name
+  expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name
 
 /-- The executable adapter computes the faithful finite-map definition on the
     bridged map. -/
-theorem expHdl_eq_expHdlFiniteMap_bridge [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
-    expHdl vars name = expHdlFiniteMap (infoMapToFiniteMap vars) name := rfl
+    expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.
@@ -203,7 +205,8 @@ Bead `flapjack-pxn.18.2.4.1`. -/
 
 /-- Cake's `MAP2` truncates like `List.zipWith`, so the finite-map return
     handler body and `assignRet` emit the same program. -/
-theorem panMap2_eq_zipWith {α β γ : Type u} (f : α → β → γ)
+theorem panMap2_eq_zipWith {α : Type u} {β : Type v} {γ : Type w}
+    (f : α → β → γ)
     (xs : List α) (ys : List β) : panMap2 f xs ys = xs.zipWith f ys := by
   induction xs generalizing ys with
   | nil => rfl
@@ -212,24 +215,29 @@ theorem panMap2_eq_zipWith {α β γ : Type u} (f : α → β → γ)
 /-- Known-variable form of `pan_to_crep$exp_hdl`: when `FLOOKUP` finds the
     name, the emitted handler setup is exactly the tagged `assign_ret`
     program that copies the global return slots into the flattened local. -/
-theorem expHdlFiniteMap_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]
+theorem expHdlFiniteMap_eq_assignRet
+    {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]
     {fm : FiniteMap VarName (Shape × List Nat)} {v : VarName}
     {shape : Shape} {names : List Nat} (h : FLOOKUP fm v = some (shape, names)) :
-    expHdlFiniteMap fm v = assignRet names := by
+    expHdlFiniteMap (α := α) fm v = assignRet (α := α) names := by
   unfold expHdlFiniteMap assignRet
-  simp only [h, panMap2_eq_zipWith]
+  simp only [h]
+  congr 1
+  exact panMap2_eq_zipWith (α := Nat) (β := CrepExp α)
+    (γ := CrepProg α) _ _ _
 
 /-- Executable-adapter form of the previous lemma: the association-list
     `expHdl` computes the tagged `assign_ret` whenever `lookupInfo` finds the
     variable. -/
-theorem expHdl_eq_assignRet_of_lookupInfo [BEq String] [LawfulBEq String]
+theorem expHdl_eq_assignRet_of_lookupInfo {α : Type u} [BEq String] [LawfulBEq String]
     [OfNat α 0] [OfNat α 1] [Add α]
     {vars : InfoMap (Shape × List Nat)} {name : VarName}
     {shape : Shape} {names : List Nat}
     (h : lookupInfo name vars = some (shape, names)) :
-    expHdl vars name = assignRet names := by
-  rw [expHdl_eq_expHdlFiniteMap_bridge]
-  exact expHdlFiniteMap_eq_assignRet (by simpa using h)
+    expHdl (α := α) vars name = assignRet names := by
+  rw [expHdl_eq_expHdlFiniteMap_bridge (α := α)]
+  exact expHdlFiniteMap_eq_assignRet (α := α)
+    (fm := infoMapToFiniteMap vars) (v := name) (by simpa using h)
 
 /-- `pan_to_crep$ret_hdl` on a multi-word `Comb` is the tagged `assign_ret`. -/
 theorem retHdl_comb_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]

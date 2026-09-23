@@ -767,7 +767,7 @@ theorem crepExpsList_eq_flatMap
 
 theorem cexpHeads_crepExps_mem
     (expressions : List (List (CrepExp α))) (heads : List (CrepExp α))
-    (hheads : cexpHeads expressions = some heads) (target : α)
+    (hheads : cexpHeads expressions = some heads) (target : BitVec 5)
     (hmem : CrepExp.loadGlob target ∈ heads.flatMap crepExps) :
     CrepExp.loadGlob target ∈ expressions.flatMap (List.flatMap crepExps) := by
   induction expressions generalizing heads with
@@ -798,7 +798,7 @@ theorem cexpHeads_crepExps_mem
 theorem compileField_crepExps_mem
     [OfNat α 0]
     (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
-    (target : α) (hmem : CrepExp.loadGlob target ∈
+    (target : BitVec 5) (hmem : CrepExp.loadGlob target ∈
       (compileField index shapes expressions).1.flatMap crepExps) :
     CrepExp.loadGlob target ∈ expressions.flatMap crepExps := by
   induction shapes generalizing index expressions with
@@ -824,7 +824,7 @@ theorem compileField_crepExps_mem
 
 theorem compileExp_not_mem_loadGlob
     [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (expression : Exp α) (target : α) :
+    (context : CompileContext α) (expression : Exp α) (target : BitVec 5) :
     CrepExp.loadGlob target ∉
       (compileExp context expression).1.flatMap crepExps := by
   have hmain : ∀ n (expression : Exp α), sizeOf expression = n →
@@ -995,7 +995,7 @@ theorem compileExp_not_mem_loadGlob
 
 theorem compileExpHOL_not_mem_loadGlob
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
-    (context : PanToCrepHOLContext α) (expression : Exp α) (target : α) :
+    (context : PanToCrepHOLContext α) (expression : Exp α) (target : BitVec 5) :
     CrepExp.loadGlob target ∉
       (compileExpHOL context expression).1.flatMap crepExps := by
   let listNoGlobal (expressions : List (Exp α)) :=

@@ -11,7 +11,7 @@ namespace Flapjack
 inductive LoopExp (α : Type u) where
   | const (value : α)
   | var (name : Nat)
-  | lookup (address : α)
+  | lookup (address : BitVec 5)
   | load (address : LoopExp α)
   | op (operator : BinOp) (args : List (LoopExp α))
   | crepOp (operator : CrepOp) (args : List (LoopExp α))
@@ -38,7 +38,7 @@ inductive LoopProg (α : Type u) where
   | primitive (destinations : List Nat) (operator : PrimOp) (arguments : List Nat)
   | arith (operation : LoopArith)
   | store (address : LoopExp α) (value : Nat)
-  | setGlobal (address : α) (value : LoopExp α)
+  | setGlobal (address : BitVec 5) (value : LoopExp α)
   | load32 (address destination : Nat)
   | loadByte (address destination : Nat)
   | store32 (address value : Nat)

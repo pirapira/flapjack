@@ -16,13 +16,14 @@ open Flapjack
 def sourceState : CrepState Nat where
   locals := fun name => if name == 1 then some 7 else none
   memory := fun address => if address == 8 then some 9 else none
-  globals := fun address => if address == 3 then some 5 else none
+  globals := fun address =>
+    if address == (3 : BitVec 5) then some (.word 5) else none
 
 def breakDecrements : Bool :=
   match crepExitLoop (some (.broke sourceState 3)) with
   | some (.broke state 2) =>
       state.locals 1 == some 7 && state.memory 8 == some 9 &&
-        state.globals 3 == some 5
+        state.globals (3 : BitVec 5) == some (.word 5)
   | _ => false
 
 def breakStopsAtZero : Bool :=
@@ -37,7 +38,7 @@ def continueDecrements : Bool :=
 
 def otherUnchanged : Bool :=
   match crepExitLoop (some (.normal sourceState)) with
-  | some (.normal state) => state.globals 3 == some 5
+  | some (.normal state) => state.globals (3 : BitVec 5) == some (.word 5)
   | _ => false
 
 def noneStaysNone : Bool :=

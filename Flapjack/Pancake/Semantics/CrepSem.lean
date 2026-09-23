@@ -68,7 +68,10 @@ def natCrepRuntimeFfiState : FfiState Unit :=
 
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
-  globals : α → Option α
+  /-- HOL `crepSem$state.globals` is a finite map from `5 word` to `word_lab`.
+      Lean's function representation is extensionally the same finite map;
+      `PanWordLab.word` retains the HOL cell wrapper. -/
+  globals : BitVec 5 → Option (PanWordLab α)
   /-- HOL `crepSem$state.code`: the code map used by runtime function calls. -/
   code : FunName → Option (List Nat × CrepProg α)
   memory : α → Option α
@@ -89,6 +92,10 @@ structure CrepRuntimeState (α σ : Type u) where
    (`crepSemScript.sml:145-148`).  The state is otherwise unchanged. -/
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
+
+def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
+    (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
+  fun candidate => if key == candidate then some value else globals candidate
 
 /- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
    (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
@@ -330,7 +337,7 @@ def evalCrepRuntimeExp
   | .loadByte address => do
       let address ← evalCrepRuntimeExp state address
       crepRuntimeLoadByte state address
-  | .loadGlob address => state.globals address
+  | .loadGlob address => (state.globals address).map panTheWord
   | .op operator expressions => do
       let values ← expressions.mapM (evalCrepRuntimeExp state)
       state.memoryModel.wordOp operator values
@@ -549,7 +556,8 @@ mutual
     | _fuel + 1, state, .storeGlob address value =>
         match evalCrepRuntimeExp state value with
         | some value =>
-            some (.normal, { state with globals := updateMemory state.globals address value })
+            let globals := updateCrepRuntimeGlobal state.globals address (.word value)
+            some (.normal, { state with globals := globals })
         | none => some (.error, state)
     | fuel + 1, state, .seq first second =>
         match evalCrepRuntimeProg handler primitive fuel state first with

@@ -1093,7 +1093,7 @@ def wordStackStoreName : WordStore α → Option StackStore
     outside the locations assigned to simultaneously live virtual names. -/
 
 def wordStackStoreNameNat : WordStore Nat → Option StackStore
-  | .temp address => some (.temp address)
+  | .temp address => some (.temp address.toNat)
   | .nextFree => some .nextFree
   | .endOfHeap => some .endOfHeap
   | .triggerGC => some .triggerGC

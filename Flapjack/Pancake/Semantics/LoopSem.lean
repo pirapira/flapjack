@@ -32,7 +32,7 @@ structure LoopEvaluateHooks where
     Option (LoopMachineState LoopWordLoc)
   store : LoopMachineState LoopWordLoc → LoopWordLoc → LoopWordLoc →
     Option (LoopMachineState LoopWordLoc)
-  setGlobal : LoopMachineState LoopWordLoc → LoopWordLoc → LoopWordLoc →
+  setGlobal : LoopMachineState LoopWordLoc → BitVec 5 → LoopWordLoc →
     LoopMachineState LoopWordLoc
   load32 : LoopMachineState LoopWordLoc → LoopWordLoc → Option LoopWordLoc
   loadByte : LoopMachineState LoopWordLoc → LoopWordLoc → Option LoopWordLoc
@@ -71,12 +71,9 @@ def loopIsLoad : CrepMemOp → Bool
   | .store | .store8 | .store16 | .store32 => false
 
 def loopSetGlobalMachine (state : LoopMachineState LoopWordLoc)
-    (address value : LoopWordLoc) : LoopMachineState LoopWordLoc :=
-  match address with
-  | .word address =>
-      { state with globals := fun current =>
-          if current == address then some value else state.globals current }
-  | .loc _ _ => state
+    (address : BitVec 5) (value : LoopWordLoc) : LoopMachineState LoopWordLoc :=
+  { state with globals := fun current =>
+      if current == address then some value else state.globals current }
 
 /-! Bridge the source-shaped `loop_arith` port into the exact machine-state
     evaluator.  Non-word locals remain untouched, while every word local

@@ -1,10 +1,8 @@
 import Flapjack.Pancake.PanToCrep.Compile
 
-/-! Genuine context invariants ported from Pancake's `pan_commonPropsScript.sml`.
-
-This file is temporary pending the HOL-shaped source-tree move.  It deliberately
-contains no evaluator boundary or compiler-correctness wrapper.
--/
+/-! Context invariants ported from Pancake's `pan_commonPropsScript.sml`.
+The executable evaluator boundary lives under the HOL-mirrored
+`Pancake.Proofs.PanToCrep` module to keep this helper import acyclic. -/
 
 namespace Flapjack
 

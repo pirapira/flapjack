@@ -449,6 +449,135 @@ private theorem panValueFlatContextFuel_lookup_ge
         simp only [panValueFlatContextFuel]
         omega
 
+mutual
+  def panShapeHasNoNamed : Shape → Bool
+    | .one => true
+    | .comb shapes => panShapeListHasNoNamed shapes
+    | .named _ => false
+
+  def panShapeListHasNoNamed : List Shape → Bool
+    | [] => true
+    | shape :: shapes => panShapeHasNoNamed shape && panShapeListHasNoNamed shapes
+end
+
+/-! One/Comb branch of HOL `mem_load_conversion` at
+    `pan_structsProofScript.sml:609`. This support theorem relates the
+    production fuel-indexed loader across `structCompileShapeWF`; it is
+    intentionally untagged because HOL's `mem_load` uses a finite address
+    domain and word-labelled state memory, while this helper is stated over
+    the production `readWord` callback. The no-named-shape premise isolates
+    precisely the One/Comb induction branches. `structCompileShapeWF_size`
+    supplies the address-step equality used by recursive Comb loads. -/
+mutual
+  theorem panValueFlatLoadFuel_convert_one_comb [BEq α] [Add α]
+      (context : StructContext) (hok : structInfosOk context)
+      (readWord : α → Option α) (bytesInWord : α) (shape : Shape) :
+      panShapeHasNoNamed shape = true →
+      isWfShape context shape = true →
+      ∀ (fuel : Nat) (address : α) (value : PanValue α),
+        panValueFlatLoadFuel context readWord bytesInWord fuel shape address = some value →
+        panValueFlatLoadFuel [] readWord bytesInWord fuel
+          (structCompileShapeWF context shape) address =
+          some (panStructConvertValue value) := by
+    intro hflat hwf fuel address value hload
+    cases shape with
+    | one =>
+        cases fuel with
+        | zero => simp [panValueFlatLoadFuel] at hload
+        | succ fuel =>
+            simp only [panValueFlatLoadFuel] at hload
+            cases hread : readWord address with
+            | none => simp [hread] at hload
+            | some word =>
+                have hvalue : .word word = value := by simpa [hread] using hload
+                cases hvalue
+                simp [panValueFlatLoadFuel, structCompileShapeWF, hread,
+                  panStructConvertValue]
+    | comb shapes =>
+        simp only [panShapeHasNoNamed] at hflat
+        simp only [isWfShape] at hwf
+        cases fuel with
+        | zero => simp [panValueFlatLoadFuel] at hload
+        | succ fuel =>
+            simp only [panValueFlatLoadFuel] at hload
+            cases hvalues : panValueFlatLoadListFuel context readWord bytesInWord fuel
+                shapes address with
+            | none => simp [hvalues] at hload
+            | some values =>
+                have hvalue : .rStruct values = value := by
+                  simpa [hvalues] using hload
+                cases hvalue
+                have hconverted := panValueFlatLoadListFuel_convert_one_comb
+                  context hok readWord bytesInWord shapes hflat hwf fuel address values hvalues
+                have hconverted' :
+                    panValueFlatLoadListFuel [] readWord bytesInWord fuel
+                      (structCompileShapeWF.structCompileShapesWF context shapes) address =
+                    some (panStructConvertValues values) := by
+                  simpa [panStructConvertValues_eq_map] using hconverted
+                simpa [panValueFlatLoadFuel, structCompileShapeWF.eq_def,
+                  structCompileShapes_eq_map, panStructConvertValue] using
+                  congrArg (Option.map PanValue.rStruct) hconverted'
+    | named name => simp [panShapeHasNoNamed] at hflat
+
+  theorem panValueFlatLoadListFuel_convert_one_comb [BEq α] [Add α]
+      (context : StructContext) (hok : structInfosOk context)
+      (readWord : α → Option α) (bytesInWord : α) (shapes : List Shape) :
+      panShapeListHasNoNamed shapes = true →
+      isWfShape.isWfShapeList context shapes = true →
+      ∀ (fuel : Nat) (address : α) (values : List (PanValue α)),
+        panValueFlatLoadListFuel context readWord bytesInWord fuel shapes address = some values →
+        panValueFlatLoadListFuel [] readWord bytesInWord fuel
+          (structCompileShapeWF.structCompileShapesWF context shapes) address =
+          some (values.map panStructConvertValue) := by
+    intro hflat hwf fuel address values hload
+    cases shapes with
+    | nil =>
+        simp only [panValueFlatLoadListFuel] at hload
+        cases hload
+        simp [panValueFlatLoadListFuel, structCompileShapeWF.structCompileShapesWF]
+    | cons shape shapes =>
+        cases fuel with
+        | zero => simp [panValueFlatLoadListFuel] at hload
+        | succ fuel =>
+            simp only [panShapeListHasNoNamed, Bool.and_eq_true] at hflat
+            simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at hwf
+            simp only [panValueFlatLoadListFuel] at hload
+            cases hhead : panValueFlatLoadFuel context readWord bytesInWord fuel shape address with
+            | none => simp [hhead] at hload
+            | some head =>
+                let nextAddress := panValueFlatOffset bytesInWord address
+                  (shapeSizeWithContext context shape)
+                cases htail : panValueFlatLoadListFuel context readWord bytesInWord fuel shapes
+                    nextAddress with
+                | none =>
+                    dsimp [nextAddress] at htail
+                    simp [hhead, htail] at hload
+                | some tail =>
+                    dsimp [nextAddress] at htail
+                    have hheadConverted := panValueFlatLoadFuel_convert_one_comb
+                      context hok readWord bytesInWord shape hflat.1 hwf.1 fuel address head hhead
+                    have htailConverted := panValueFlatLoadListFuel_convert_one_comb
+                      context hok readWord bytesInWord shapes hflat.2 hwf.2 fuel nextAddress tail htail
+                    have hsize := structCompileShapeWF_size context shape hwf.1 hok
+                    have hoffset : panValueFlatOffset bytesInWord address
+                        (shapeSizeWithContext [] (structCompileShapeWF context shape)) =
+                        nextAddress := by
+                      simp [nextAddress, hsize]
+                    have hvalues : values = head :: tail := by
+                      simp [Option.bind, hhead, htail] at hload
+                      exact hload.symm
+                    subst values
+                    have htailConverted' :
+                        panValueFlatLoadListFuel [] readWord bytesInWord fuel
+                          (List.map (structCompileShapeWF context) shapes) nextAddress =
+                        some (List.map panStructConvertValue tail) := by
+                      simpa only [structCompileShapes_eq_map] using htailConverted
+                    simp only [structCompileShapes_eq_map, List.map_cons,
+                      panValueFlatLoadListFuel]
+                    rw [hheadConverted, hoffset, htailConverted']
+                    simp
+end
+
 private theorem lookupInfoWithRest_suffix_drop_for_load
     (name : String) (context : StructContext) (info : StructInfo)
     (suffix : StructContext)

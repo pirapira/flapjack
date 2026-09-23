@@ -244,6 +244,11 @@ constructor case and the required memory-conversion induction remain open. The
 `size_of_compile_shape` prerequisite at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem
 and concrete fixture live in `Flapjack.Test.PanStructsCompileShapeParity`.
+`pan_structs_mem_load_conversion_probe.out` directly evaluates the HOL One
+branch and a nested three-word Comb branch of `mem_load_conversion` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:609`. The corresponding
+production fuel-loader conversion theorem is kept untagged and paired with a
+Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

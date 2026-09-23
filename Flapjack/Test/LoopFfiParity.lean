@@ -7,13 +7,11 @@ import Flapjack.HolRef
 Exercises `loopMachineExtCall`, the 64-bit RISC-V instance of the source
 `ExtCall` case of `loopSem$evaluate_def` (`loopSemScript.sml:427-440`).
 
-The control flow is compared with the direct HOL oracle
-`scripts/hol-probes/loop_sem_ffi_probe.out`, whose three rows cover the
-successful returned path, the terminal `FinalFFI` path, and a malformed local
-lookup.  That probe is stated at the 8-bit word (`(8,'ffi) loopSem$state`) and
-is the accepted cross-width control-flow reference; the byte codec here is the
-reviewed 64-bit `riscv64GetByte`/`riscv64PutBytes`, so the written word differs
-from the probe while the observed control flow and the `FinalFFI` event agree.
+The observations are compared with the direct 64-bit HOL oracle
+`scripts/hol-probes/loop_sem_ffi_rv64_probe.out`: it records intermediate
+lookups, byte loads and byte-array reads, plus returned, terminal `FinalFFI`,
+and malformed-local outcomes. The RV64 implementation remains untagged because
+HOL states the byte helpers and evaluator polymorphically.
 -/
 
 namespace Flapjack.Test.LoopFfiParity

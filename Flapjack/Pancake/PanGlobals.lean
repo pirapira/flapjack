@@ -1429,11 +1429,22 @@ theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
 
 /-- HOL-shaped context for `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:8-14`): the three HOL fields
-    `globals`/`globals_size`/`max_globals_size` over a `width`-bit word.  HOL
-    `globals` is an extensional finite map (`varname |-> shape # 'a word`); here
-    it is the repository's HOL-shaped `FiniteMap`.  As in HOL, `width : Nat`
-    admits `width = 0`; HOL `dimindex` is positive, so the canonical instance is
-    meant to be used at `width = 8`, `32`, or `64`. -/
+    `globals`/`globals_size`/`max_globals_size` over a `width`-bit word.
+
+    HOL `globals` is an extensional finite map (`varname |-> shape # 'a word`).
+    Here it is rendered by the repository's `FiniteMap` (`α → Option β`), whose
+    Lean type also admits lookups with infinite support.  For `compile_exp` this
+    is adequate without a finite-support invariant: the HOL `compile_exp` clauses
+    consult `globals` only through `FLOOKUP`, and every HOL finite map embeds as
+    one such lookup function; on those embedded (HOL-representable) contexts the
+    Lean clauses agree clause-for-clause, so the extra infinite-support lookup
+    functions do not alter the port.  No cross-system finite-map equivalence is
+    claimed beyond that local use.
+
+    HOL word types satisfy `dimindex > 0`; the Lean rendering therefore
+    restricts these canonical word defs with `[NeZero width]` rather than
+    admitting `width = 0`.  The canonical instances are `width = 8`, `32`, or
+    `64`. -/
 structure CakeContext (width : Nat) where
   globals : FiniteMap String (Shape × BitVec width)
   globalsSize : BitVec width
@@ -1464,7 +1475,7 @@ termination_by shape => sizeOf shape
     Clause review against the HOL definition is recorded on
     `flapjack-pxn.18.5.2.20.1.1`. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "compile_exp_def"]
-def compileExpCake {width : Nat} (context : CakeContext width) :
+def compileExpCake {width : Nat} [NeZero width] (context : CakeContext width) :
     Exp (BitVec width) → Exp (BitVec width)
   | .var .local name => .var .local name
   | .var .global name =>
@@ -1488,7 +1499,7 @@ def compileExpCake {width : Nat} (context : CakeContext width) :
   | expression => expression
 termination_by expression => sizeOf expression
 where
-  compileExpCakeList {width : Nat} (context : CakeContext width) :
+  compileExpCakeList {width : Nat} [NeZero width] (context : CakeContext width) :
       List (Exp (BitVec width)) → List (Exp (BitVec width))
     | [] => []
     | expression :: expressions =>
@@ -1498,7 +1509,7 @@ where
 
 /-- List counterpart of `compileExpCake` for external callers; mirrors HOL's
     `MAP (compile_exp ctxt)`. -/
-def compileExpCakeArgs {width : Nat} (context : CakeContext width) :
+def compileExpCakeArgs {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Exp (BitVec width)) → List (Exp (BitVec width))
   | [] => []
   | expression :: expressions =>
@@ -1514,7 +1525,7 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
     (`pan_globalsScript.sml:47-55`); the `@[hol]` tag is withheld until that
     fresh-name helper is ported exactly.  See bead
     `flapjack-pxn.18.5.2.20.1.1.2`. -/
-def compileProgCake [BEq String] {width : Nat} (context : CakeContext width) :
+def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>
       .dec name shape (compileExpCake context value) (compileProgCake context body)
@@ -1629,9 +1640,12 @@ structure CakeCompileDecsResult (width : Nat) where
     body is compiled under the context as of its own position, and a `Decl`
     extends the context for the declarations that follow.  The `@[hol]` tag is
     withheld because the program compiler used here (`compileProgCake`) still
-    calls the untagged `globalFreshName` in its handler case, and because
-    `width = 0` is admitted.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
-def compileDecsCake [BEq String] {width : Nat} (context : CakeContext width) :
+    calls the untagged `globalFreshName` in its handler case (exact HOL
+    `fresh_name` port tracked by bead `flapjack-pxn.18.5.2.20.1.1.1.1`), and
+    because `CakeContext.globals` is a `FiniteMap` lookup function without a
+    finite-support invariant.  `width` is restricted by `[NeZero width]`, as
+    HOL `dimindex` is positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
+def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }
   | .function declaration :: declarations =>
@@ -1658,7 +1672,7 @@ def compileDecsCake [BEq String] {width : Nat} (context : CakeContext width) :
         exceptions := rest.exceptions
         context := rest.context }
 
-theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat}
+theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (declarations : List (Decl (BitVec width))) :
     (compileDecsCake context declarations).functions.all globalDeclIsFunction = true := by
   induction declarations generalizing context with
@@ -1678,7 +1692,7 @@ theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat}
           simp only [compileDecsCake]
           exact ih context
 
-theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : Nat}
+theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) :
     ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
       (compileDecsCake context declarations).functions = [] := by
@@ -1702,7 +1716,7 @@ theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : N
           simp only [compileDecsCake]
           exact ih _ hnone.2
 
-theorem compileDecsCake_append [BEq String] {width : Nat} (context : CakeContext width)
+theorem compileDecsCake_append [BEq String] {width : Nat} [NeZero width] (context : CakeContext width)
     (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =
       let first := compileDecsCake context decs

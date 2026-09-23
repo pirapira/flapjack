@@ -26,7 +26,7 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `proofs/pan_structsProofScript.sml` | `Flapjack/Pancake/Proofs/PanStructs.lean` |
 | `pan_globalsScript.sml` | `Flapjack/Pancake/PanGlobals.lean` |
 | `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean`, `PanGlobals/ShapeInfrastructure.lean` |
-| `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean` |
+| `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean`, `PanToCrep/CompileExpVmax.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean` |
 | `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |

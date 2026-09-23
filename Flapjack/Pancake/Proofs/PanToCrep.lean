@@ -12,6 +12,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
 import Flapjack.PanToCrepMaxList
 
 /-!

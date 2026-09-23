@@ -1,4 +1,5 @@
 import Flapjack.LoopFindCode
+import Flapjack.Ffi
 
 /-!
 Faithful Loop state and result boundary.
@@ -11,26 +12,30 @@ existing proofs can migrate incrementally.
 
 As in HOL, the state is parameterized by the word type `W` (used for locals,
 globals, memory addresses, and the base/top addresses) and separately by the
-FFI state type `F`, so that the production word type can be instantiated
-without collapsing the FFI type onto it.
+oracle host-state type `F`, so that `ffi : FfiState F` is the source
+`'ffi ffi_state` (`ffiScript.sml:47-52`).  The result datatype is parameterized
+by `W` only: its `FinalFFI` constructor carries the fixed `final_event`
+(`ffiScript.sml:43`), which is independent of the FFI state type.
 -/
 
 namespace Flapjack
 
-/-- Original `loopSem` result datatype; result values use the word type `W`,
-    while `finalFfi` carries an event of the FFI type `F`. -/
-inductive LoopMachineResult (W : Type := Nat) (F : Type := Nat) where
+/-- Original `loopSem` result datatype (`loopSemScript.sml:30-37`); result
+    values use the word type `W`, while `finalFfi` carries the fixed
+    `final_event` (`ffiScript.sml:43`), independent of the FFI state type. -/
+inductive LoopMachineResult (W : Type := Nat) where
   | result (values : List (LoopValue W))
   | except (value : LoopValue W)
   | break (count : Nat)
   | continue (count : Nat)
   | timeOut
-  | finalFfi (event : F)
+  | finalFfi (event : FfiFinalEvent)
   | error
   deriving DecidableEq, Repr
 
-/-- Original `loopSem` state datatype; `W` is the word/address type and `F` the
-    FFI state type. -/
+/-- Original `loopSem` state datatype (`loopSemScript.sml:13-27`); `W` is the
+    word/address type and `F` the oracle host-state type, so `ffi : FfiState F`
+    is the source `'ffi ffi_state`. -/
 structure LoopMachineState (W : Type := Nat) (F : Type := Nat) where
   locals : Nat → Option (LoopValue W)
   globals : BitVec 5 → Option (LoopValue W)
@@ -40,16 +45,21 @@ structure LoopMachineState (W : Type := Nat) (F : Type := Nat) where
   clock : Nat
   code : LoopCode W
   be : Bool
-  ffi : F
+  ffi : FfiState F
   baseAddr : W
   topAddr : W
+
+/-- A canonical FFI state with a diverging oracle, for building machine states
+    in tests and probe harnesses. -/
+def trivialFfiState (F : Type) (state : F) : FfiState F :=
+  { oracle := fun _ _ _ _ => .final .failed, state := state, ioEvents := [] }
 
 /--
 Faithful port of `exit_loop` (`loopSemScript.sml:272-276`): `Break n` and
 `Continue n` decrement their counter with truncating subtraction, and every
 other result is unchanged.
 -/
-def exitLoop : Option (LoopMachineResult W F) → Option (LoopMachineResult W F)
+def exitLoop : Option (LoopMachineResult W) → Option (LoopMachineResult W)
   | none => none
   | some (.break count) => some (.break (count - 1))
   | some (.continue count) => some (.continue (count - 1))
@@ -80,8 +90,8 @@ def cutLoopState (live : List Nat) (state : LoopMachineState W F) :
 /-! Exact executable counterpart of CakeML's `cut_res_def`
     (`loopSemScript.sml:189-197`). -/
 def cutLoopResult (live : List Nat)
-    (step : Option (LoopMachineResult W F) × LoopMachineState W F) :
-    Option (LoopMachineResult W F) × LoopMachineState W F :=
+    (step : Option (LoopMachineResult W) × LoopMachineState W F) :
+    Option (LoopMachineResult W) × LoopMachineState W F :=
   let (result, state) := step
   if result.isSome then
     (result, state)
@@ -94,13 +104,15 @@ def cutLoopResult (live : List Nat)
         else
           (none, decrementLoopClock state)
 
-theorem exitLoop_none {W F : Type} :
-    exitLoop (none : Option (LoopMachineResult W F)) = none := rfl
+theorem exitLoop_none {W : Type} :
+    exitLoop (none : Option (LoopMachineResult W)) = none := rfl
 
-theorem exitLoop_break {W F : Type} (count : Nat) :
-    exitLoop (W := W) (F := F) (some (.break count)) = some (.break (count - 1)) := rfl
+theorem exitLoop_break {W : Type} (count : Nat) :
+    exitLoop (some (.break count) : Option (LoopMachineResult W)) =
+      some (.break (count - 1)) := rfl
 
-theorem exitLoop_continue {W F : Type} (count : Nat) :
-    exitLoop (W := W) (F := F) (some (.continue count)) = some (.continue (count - 1)) := rfl
+theorem exitLoop_continue {W : Type} (count : Nat) :
+    exitLoop (some (.continue count) : Option (LoopMachineResult W)) =
+      some (.continue (count - 1)) := rfl
 
 end Flapjack

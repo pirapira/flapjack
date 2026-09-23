@@ -24,7 +24,7 @@ def probeState : LoopMachineState Nat :=
     clock := 10
     code := []
     be := false
-    ffi := 0
+    ffi := trivialFfiState Nat 0
     baseAddr := 100
     topAddr := 200 }
 

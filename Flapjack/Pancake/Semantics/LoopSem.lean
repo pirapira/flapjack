@@ -24,11 +24,11 @@ type (`LoopProg W`, `LoopCode W`), exactly as in the source `'a loopLang$prog`.
 namespace Flapjack
 
 /-- One step of the loop machine, word-parametric: `W` is the underlying word
-    type (the payload of `LoopValue`) and `F` is the FFI-event type carried by
-    `finalFfi`.  The defaults recover the original `Nat`/`LoopWordLoc`
-    specialization used by the executable probe. -/
+    type (the payload of `LoopValue`) and `F` is the oracle host-state type of
+    `LoopMachineState.ffi : FfiState F`.  The defaults recover the original
+    `Nat`/`LoopWordLoc` specialization used by the executable probe. -/
 abbrev LoopMachineStep (W : Type := Nat) (F : Type := LoopWordLoc) :=
-  Option (LoopMachineResult W F) × LoopMachineState W F
+  Option (LoopMachineResult W) × LoopMachineState W F
 
 /-- Effectful operations of `loopSem$evaluate`, word-parametric in `W`/`F` so
     the same equation-level machine serves the source probe (`W = Nat`,

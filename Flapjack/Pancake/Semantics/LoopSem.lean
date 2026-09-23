@@ -431,6 +431,46 @@ def loopShMemHook (state : LoopMachineState (RiscV.Word 64) F)
   | .word address => loopShMemOp state operator name address
   | .loc _ _ => (some .error, state)
 
+/-- Width-generic exact port of HOL `read_bytearray_def` (`miscScript.sml:113`).
+    The byte reader is supplied as HOL's own `get_byte` argument, so no extra
+    codec parameter is introduced; the word type is a parameter as in HOL. -/
+@[hol "cakeml/misc/miscScript.sml" "read_bytearray_def"]
+def readBytearrayHOL {width : Nat} (getByte : RiscV.Word width → Option UInt8) :
+    RiscV.Word width → Nat → Option (List UInt8)
+  | _, 0 => some []
+  | address, length + 1 => do
+      let byte ← getByte address
+      let rest ← readBytearrayHOL getByte (address + 1) length
+      pure (byte :: rest)
+
+/-- Width-generic port of HOL `byte$get_byte` (`src/n-bit/byteScript.sml:21`).
+    That script is part of the HOL standard library rather than the CakeML
+    submodule, so this declaration carries no HOL tag.  The byte shift is
+    `8 * (w2n address MOD (dimindex DIV 8))`, reversed for big-endian words. -/
+def riscvGetByteHOL {width : Nat} [NeZero width] (bigEndian : Bool)
+    (address value : RiscV.Word width) : UInt8 :=
+  let bytesInWord := width / 8
+  let shift :=
+    if bigEndian then 8 * ((bytesInWord - 1) - (address.toNat % bytesInWord))
+    else 8 * (address.toNat % bytesInWord)
+  UInt8.ofNat ((value >>> shift).toNat % 256)
+
+/-- Width-generic exact port of HOL `mem_load_byte_aux_def`
+    (`wordSemScript.sml:159`).  The memory map and domain predicate are
+    parameters as in HOL, so no extra codec parameter is introduced. -/
+@[hol "cakeml/compiler/backend/semantics/wordSemScript.sml" "mem_load_byte_aux_def"]
+def memLoadByteAuxHOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → Option (LoopValue (RiscV.Word width)))
+    (domain : RiscV.Word width → Bool) (bigEndian : Bool)
+    (address : RiscV.Word width) : Option UInt8 :=
+  let bytesInWord : RiscV.Word width := BitVec.ofNat width (width / 8)
+  let aligned := RiscV.panRiscVByteAlign bytesInWord address
+  match memory aligned with
+  | some (.loc _ _) => none
+  | some (.word value) =>
+      if domain aligned then some (riscvGetByteHOL bigEndian address value) else none
+  | none => none
+
 /-! FLAPJACK-SPECIFIC (not an exact HOL port).  The following byte-array helpers
     are the 64-bit RISC-V instance of HOL's polymorphic word memory codec
     (`wordSemScript.sml` `mem_load_byte_aux_def`/`mem_store_byte_aux_def`/
@@ -438,19 +478,15 @@ def loopShMemHook (state : LoopMachineState (RiscV.Word 64) F)
     reviewed RV64 codec `riscv64GetByte`/`riscv64PutBytes` and
     `panRiscVByteAlign`.  HOL `get_byte`/`set_byte` are parametrised by a
     big-endian flag; the RV64 helpers are little-endian only, so only the
-    little-endian instance is exact.  The width-polymorphic exact port is tracked
-    by flapjack-s6a.3.3.1. -/
+    little-endian instance is exact.  The generic `read_bytearray` is ported
+    exactly as `readBytearrayHOL` above; the remaining width-polymorphic exact
+    ports (`mem_load_byte_aux`/`mem_store_byte_aux`/`write_bytearray`) are
+    tracked by flapjack-s6a.3.3.1. -/
 
 /-- 64-bit instance of HOL `mem_load_byte_aux_def` (`wordSemScript.sml:159`). -/
 def loopMemLoadByteAux (state : LoopMachineState (RiscV.Word 64) F)
     (address : RiscV.Word 64) : Option UInt8 :=
-  let aligned := RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address
-  match state.memory aligned with
-  | some (.loc _ _) => none
-  | some (.word value) =>
-      if state.mdomain aligned then some (riscv64GetByte (address.toNat % 8) value)
-      else none
-  | none => none
+  memLoadByteAuxHOL (width := 64) state.memory state.mdomain state.be address
 
 /-- 64-bit instance of HOL `mem_store_byte_aux_def` (`wordSemScript.sml:171`). -/
 def loopMemStoreByteAux (state : LoopMachineState (RiscV.Word 64) F)
@@ -469,12 +505,8 @@ def loopMemStoreByteAux (state : LoopMachineState (RiscV.Word 64) F)
 
 /-- 64-bit instance of HOL `read_bytearray_def` (`miscScript.sml:113`). -/
 def loopReadByteArray (state : LoopMachineState (RiscV.Word 64) F)
-    (address : RiscV.Word 64) : Nat → Option (List UInt8)
-  | 0 => some []
-  | length + 1 => do
-      let byte ← loopMemLoadByteAux state address
-      let rest ← loopReadByteArray state (address + 1) length
-      pure (byte :: rest)
+    (address : RiscV.Word 64) : Nat → Option (List UInt8) :=
+  readBytearrayHOL (loopMemLoadByteAux state) address
 
 /-- 64-bit instance of HOL `write_bytearray_def` (`wordSemScript.sml:178`).  As in
     HOL, a failed byte store leaves the original state unchanged. -/

@@ -10,8 +10,10 @@ Exercises `loopMachineExtCall`, the 64-bit RISC-V instance of the source
 The observations are compared with the direct 64-bit HOL oracle
 `scripts/hol-probes/loop_sem_ffi_rv64_probe.out`: it records intermediate
 lookups, byte loads and byte-array reads, plus returned, terminal `FinalFFI`,
-and malformed-local outcomes. The RV64 implementation remains untagged because
-HOL states the byte helpers and evaluator polymorphically.
+and malformed-local outcomes. The byte helpers `memLoadByteAuxHOL` and
+`readBytearrayHOL` (in `LoopSem`) are width-generic exact ports; the RV64
+`ExtCall` executable path remains untagged because HOL states the evaluator
+polymorphically.
 -/
 
 namespace Flapjack.Test.LoopFfiParity
@@ -89,9 +91,26 @@ def missingLocalGuard : Bool :=
   | some .error => true
   | _ => false
 
+/-- `rv64_mem_load_byte_aux=(SOME 171w,SOME 205w,SOME 239w)`: the width-generic
+    `memLoadByteAuxHOL` instance at 64 bits. -/
+def memLoadGuard : Bool :=
+  loopMemLoadByteAux (baseState returningState) 0 == some (0xAB : UInt8) &&
+  loopMemLoadByteAux (baseState returningState) 8 == some (0xCD : UInt8) &&
+  loopMemLoadByteAux (baseState returningState) 9 == some (0xEF : UInt8)
+
+/-- `rv64_read_bytearrays=(SOME [171w],SOME [205w; 239w])`: the width-generic
+    `readBytearrayHOL` fed by the 64-bit byte loader. -/
+def readBytearrayGuard : Bool :=
+  readBytearrayHOL (loopMemLoadByteAux (baseState returningState)) 0 1 ==
+      some [0xAB] &&
+  readBytearrayHOL (loopMemLoadByteAux (baseState returningState)) 8 2 ==
+      some [0xCD, 0xEF]
+
 #guard returnedGuard
 #guard finalGuard
 #guard missingLocalGuard
+#guard memLoadGuard
+#guard readBytearrayGuard
 
 def runChecks : IO Bool := do
   let returnedOk ←
@@ -115,6 +134,20 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop ExtCall missing local errors"
       pure false
-  pure (returnedOk && finalOk && missingOk)
+  let memLoadOk ←
+    if memLoadGuard then
+      IO.println "PASS Loop width-generic mem_load_byte_aux byte loads"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic mem_load_byte_aux byte loads"
+      pure false
+  let readBytearrayOk ←
+    if readBytearrayGuard then
+      IO.println "PASS Loop width-generic read_bytearray byte-array reads"
+      pure true
+    else
+      IO.println "FAIL Loop width-generic read_bytearray byte-array reads"
+      pure false
+  pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk)
 
 end Flapjack.Test.LoopFfiParity

@@ -120,6 +120,22 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "read_bytearray_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "readBytearrayHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; get_byte/word-width are HOL parameters, no extra codec)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+    "hol_name": "mem_load_byte_aux_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "memLoadByteAuxHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; memory/domain/word-width are HOL parameters, no extra codec)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",

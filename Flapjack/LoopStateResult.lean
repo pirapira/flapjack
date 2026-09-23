@@ -38,7 +38,7 @@ structure LoopMachineState (W : Type := Nat) (F : Type := Nat) where
   mdomain : W → Bool
   shMdomain : W → Bool
   clock : Nat
-  code : LoopCode (LoopValue W)
+  code : LoopCode W
   be : Bool
   ffi : F
   baseAddr : W

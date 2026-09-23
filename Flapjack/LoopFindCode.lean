@@ -60,10 +60,13 @@ def lookupLoopFunction : Nat → LoopCode α → Option (List Nat × LoopProg α
       if label == candidate then some (parameters, body)
       else lookupLoopFunction label functions
 
-/-- `find_code` from `loopSemScript.sml:147-163`. -/
+/-- `find_code` from `loopSemScript.sml:147-163`.  As in the source, the code
+    table holds programs over the raw word type `W` (`LoopCode W`) while the
+    returned local environment and inspected arguments are word-location values
+    (`LoopValue W`). -/
 def findLoopCode (label : Option Nat) (args : List (LoopValue α))
-    (code : LoopCode (LoopValue α)) :
-    Option ((Nat → Option (LoopValue α)) × LoopProg (LoopValue α)) :=
+    (code : LoopCode α) :
+    Option ((Nat → Option (LoopValue α)) × LoopProg α) :=
   match label with
   | some entry =>
       match lookupLoopFunction entry code with
@@ -86,12 +89,12 @@ def findLoopCode (label : Option Nat) (args : List (LoopValue α))
                 else none
         | _ => none
 
-theorem findLoopCode_none_empty (code : LoopCode (LoopValue α)) :
+theorem findLoopCode_none_empty (code : LoopCode α) :
     findLoopCode none [] code = none :=
   rfl
 
 theorem findLoopCode_entry_missing (entry : Nat) (args : List (LoopValue α))
-    (code : LoopCode (LoopValue α))
+    (code : LoopCode α)
     (missing : lookupLoopFunction entry code = none) :
     findLoopCode (some entry) args code = none := by
   simp [findLoopCode, missing]

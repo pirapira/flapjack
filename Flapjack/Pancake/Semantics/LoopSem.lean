@@ -16,51 +16,58 @@ and FFI each have their own already-tested source-shaped port.  The recursive
 control machine below is therefore the direct `evaluate_def` composition of
 those operations, rather than a second approximation of their internals.
 
-The executable probe uses the `LoopWordLoc` specialization.  This is the same
-word/location representation used by `LoopMachineState` and `findLoopCode`.
+The executable probe uses the `Nat` word specialization, so machine values are
+`LoopValue Nat = LoopWordLoc`; the program and code table carry the raw word
+type (`LoopProg W`, `LoopCode W`), exactly as in the source `'a loopLang$prog`.
 -/
 
 namespace Flapjack
 
-abbrev LoopMachineStep :=
-  Option (LoopMachineResult Nat LoopWordLoc) × LoopMachineState Nat LoopWordLoc
+/-- One step of the loop machine, word-parametric: `W` is the underlying word
+    type (the payload of `LoopValue`) and `F` is the FFI-event type carried by
+    `finalFfi`.  The defaults recover the original `Nat`/`LoopWordLoc`
+    specialization used by the executable probe. -/
+abbrev LoopMachineStep (W : Type := Nat) (F : Type := LoopWordLoc) :=
+  Option (LoopMachineResult W F) × LoopMachineState W F
 
-structure LoopEvaluateHooks where
-  eval : LoopMachineState Nat LoopWordLoc → LoopExp LoopWordLoc → Option LoopWordLoc
-  primitive : PrimOp → List LoopWordLoc → Option (List LoopWordLoc)
-  arith : LoopMachineState Nat LoopWordLoc → LoopArith →
-    Option (LoopMachineState Nat LoopWordLoc)
-  store : LoopMachineState Nat LoopWordLoc → LoopWordLoc → LoopWordLoc →
-    Option (LoopMachineState Nat LoopWordLoc)
-  setGlobal : LoopMachineState Nat LoopWordLoc → BitVec 5 → LoopWordLoc →
-    LoopMachineState Nat LoopWordLoc
-  load32 : LoopMachineState Nat LoopWordLoc → LoopWordLoc → Option LoopWordLoc
-  loadByte : LoopMachineState Nat LoopWordLoc → LoopWordLoc → Option LoopWordLoc
-  store32 : LoopMachineState Nat LoopWordLoc → LoopWordLoc → LoopWordLoc →
-    Option (LoopMachineState Nat LoopWordLoc)
-  storeByte : LoopMachineState Nat LoopWordLoc → LoopWordLoc → LoopWordLoc →
-    Option (LoopMachineState Nat LoopWordLoc)
-  compare : Cmp → LoopWordLoc → LoopWordLoc → Bool
-  shMem : CrepMemOp → Nat → LoopWordLoc → LoopMachineState Nat LoopWordLoc →
-    LoopMachineStep
+/-- Effectful operations of `loopSem$evaluate`, word-parametric in `W`/`F` so
+    the same equation-level machine serves the source probe (`W = Nat`,
+    `F = LoopWordLoc`) and the production `BitVec` IR. -/
+structure LoopEvaluateHooks (W : Type := Nat) (F : Type := LoopWordLoc) where
+  eval : LoopMachineState W F → LoopExp W → Option (LoopValue W)
+  primitive : PrimOp → List (LoopValue W) → Option (List (LoopValue W))
+  arith : LoopMachineState W F → LoopArith → Option (LoopMachineState W F)
+  store : LoopMachineState W F → LoopValue W → LoopValue W →
+    Option (LoopMachineState W F)
+  setGlobal : LoopMachineState W F → BitVec 5 → LoopValue W →
+    LoopMachineState W F
+  load32 : LoopMachineState W F → LoopValue W → Option (LoopValue W)
+  loadByte : LoopMachineState W F → LoopValue W → Option (LoopValue W)
+  store32 : LoopMachineState W F → LoopValue W → LoopValue W →
+    Option (LoopMachineState W F)
+  storeByte : LoopMachineState W F → LoopValue W → LoopValue W →
+    Option (LoopMachineState W F)
+  compare : Cmp → LoopValue W → LoopValue W → Bool
+  shMem : CrepMemOp → Nat → LoopValue W → LoopMachineState W F →
+    LoopMachineStep W F
   ffi : FunName → Nat → Nat → Nat → Nat → List Nat →
-    LoopMachineState Nat LoopWordLoc → LoopMachineStep
+    LoopMachineState W F → LoopMachineStep W F
 
-def loopMachineGetVars (locals : Nat → Option LoopWordLoc) :
-    List Nat → Option (List LoopWordLoc)
+def loopMachineGetVars {W : Type} (locals : Nat → Option (LoopValue W)) :
+    List Nat → Option (List (LoopValue W))
   | [] => some []
   | name :: names => do
       let value ← locals name
       let values ← loopMachineGetVars locals names
       pure (value :: values)
 
-def loopMachineSetVars (state : LoopMachineState Nat LoopWordLoc)
-    (names : List Nat) (values : List LoopWordLoc) :
-    LoopMachineState Nat LoopWordLoc :=
+def loopMachineSetVars {W F : Type} (state : LoopMachineState W F)
+    (names : List Nat) (values : List (LoopValue W)) :
+    LoopMachineState W F :=
   { state with locals := loopSetVars state.locals names values }
 
-def fixLoopMachineClock (oldState : LoopMachineState Nat LoopWordLoc)
-    (step : LoopMachineStep) : LoopMachineStep :=
+def fixLoopMachineClock {W F : Type} (oldState : LoopMachineState W F)
+    (step : LoopMachineStep W F) : LoopMachineStep W F :=
   let (result, newState) := step
   (result, { newState with
     clock := if oldState.clock < newState.clock then oldState.clock
@@ -70,17 +77,19 @@ def loopIsLoad : CrepMemOp → Bool
   | .load | .load8 | .load16 | .load32 => true
   | .store | .store8 | .store16 | .store32 => false
 
-def loopSetGlobalMachine (state : LoopMachineState Nat LoopWordLoc)
-    (address : BitVec 5) (value : LoopWordLoc) : LoopMachineState Nat LoopWordLoc :=
+def loopSetGlobalMachine {W F : Type} (state : LoopMachineState W F)
+    (address : BitVec 5) (value : LoopValue W) : LoopMachineState W F :=
   { state with globals := fun current =>
       if current == address then some value else state.globals current }
 
 /-! Bridge the source-shaped `loop_arith` port into the exact machine-state
-    evaluator.  Non-word locals remain untouched, while every word local
-    returned by `loopArith` is written back as a `Word`; a missing operand
-    therefore still produces the source `NONE` result. -/
-def loopArithMachine (width : Nat) (state : LoopMachineState Nat LoopWordLoc)
-    (operation : LoopArith) : Option (LoopMachineState Nat LoopWordLoc) :=
+    evaluator.  `loopArith` is defined on `Nat` words, so this helper is the
+    `W = Nat` instance; the FFI type stays free.  Non-word locals remain
+    untouched, while every word local returned by `loopArith` is written back
+    as a `Word`; a missing operand therefore still produces the source `NONE`
+    result. -/
+def loopArithMachine (width : Nat) (state : LoopMachineState Nat F)
+    (operation : LoopArith) : Option (LoopMachineState Nat F) :=
   let locals : Nat → Option Nat := fun name =>
     match state.locals name with
     | some (.word value) => some value
@@ -94,8 +103,8 @@ def loopArithMachine (width : Nat) (state : LoopMachineState Nat LoopWordLoc)
         | none => state.locals name) }
 
 mutual
-  def evaluateLoop : Nat → LoopEvaluateHooks → LoopProg LoopWordLoc →
-      LoopMachineState Nat LoopWordLoc → LoopMachineStep
+  def evaluateLoop {W F : Type} : Nat → LoopEvaluateHooks W F →
+      LoopProg W → LoopMachineState W F → LoopMachineStep W F
     | 0, _, _, state => (some .error, state)
     | fuel + 1, hooks, program, state => match program with
     | .skip => (none, state)
@@ -237,10 +246,10 @@ mutual
             hooks.ffi function configuration configurationLength array arrayLength live state'
   termination_by fuel _ _ _ => fuel
 
-  def evaluateLoopCall : Nat → LoopEvaluateHooks →
+  def evaluateLoopCall {W F : Type} : Nat → LoopEvaluateHooks W F →
       Option (List Nat × List Nat) → Option Nat → List Nat →
-      Option (Nat × LoopProg LoopWordLoc × LoopProg LoopWordLoc × List Nat) →
-      LoopMachineState Nat LoopWordLoc → LoopMachineStep
+      Option (Nat × LoopProg W × LoopProg W × List Nat) →
+      LoopMachineState W F → LoopMachineStep W F
     | 0, _, _, _, _, _, state => (some .error, state)
     | fuel + 1, hooks, returns, target, arguments, handler, state =>
       match loopMachineGetVars state.locals arguments with

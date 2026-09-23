@@ -94,6 +94,53 @@ def holInlineNestedParity : Bool :=
 
 #guard holInlineNestedParity
 
+/-! Direct `compile_prog_probe.out` parity at the new exact
+    `compile_prog` triple-list boundary. These declarations are word8 as in
+    the HOL EVAL query, and cover the complete empty, duplicate-first, and
+    nested-inline outputs rather than testing `compile_inl_top` in isolation. -/
+def compileProgTopEmptyParity : Bool :=
+  match compileProgTopHOL ([] : List (Decl (BitVec 8))) with
+  | [] => true
+  | _ => false
+
+def compileProgTopDuplicateParity : Bool :=
+  let declarations : List (Decl (BitVec 8)) :=
+    [.function
+       { name := "id", inline := true, exported := false, params := [],
+         body := .return (.const 7), returnShape := .one },
+     .function
+       { name := "id", inline := true, exported := false, params := [],
+         body := .return (.const 9), returnShape := .one },
+     .function
+       { name := "main", inline := false, exported := true, params := [],
+         body := .call none "id" [], returnShape := .one }]
+  match compileProgTopHOL declarations with
+  | [("id", [], .return [.const 7]),
+     ("id", [], .return [.const 9]),
+     ("main", [], .seq .tick (.return [.const 7]))] => true
+  | _ => false
+
+def compileProgTopNestedParity : Bool :=
+  let declarations : List (Decl (BitVec 8)) :=
+    [.function
+       { name := "leaf", inline := true, exported := false, params := [],
+         body := .return (.const 7), returnShape := .one },
+     .function
+       { name := "mid", inline := true, exported := false, params := [],
+         body := .call none "leaf" [], returnShape := .one },
+     .function
+       { name := "main", inline := false, exported := true, params := [],
+         body := .call none "mid" [], returnShape := .one }]
+  match compileProgTopHOL declarations with
+  | [("leaf", [], .return [.const 7]),
+     ("mid", [], .seq .tick (.return [.const 7])),
+     ("main", [], .seq .tick (.seq .tick (.return [.const 7])))] => true
+  | _ => false
+
+#guard compileProgTopEmptyParity
+#guard compileProgTopDuplicateParity
+#guard compileProgTopNestedParity
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_prog` on the same inline callee/caller pair. -/
 theorem compile_prog_inline_call_parity :

@@ -31,6 +31,23 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_compile_prog_exact_ports_are_in_review_inventory(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"):
+                "compile_prog_def",
+            ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"):
+                "first_compile_prog_all_distinct",
+        }
+        for key, hol_name in expected.items():
+            with self.subTest(key=key):
+                self.assertEqual(inventory[key]["hol_name"], hol_name)
+                self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
+                self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+
     def test_genlist_vmax_distinct_lists_port_is_in_review_inventory(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record

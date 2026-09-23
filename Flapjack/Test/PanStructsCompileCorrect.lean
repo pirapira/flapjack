@@ -51,6 +51,53 @@ def rstructCompileCaseExpressions : List (Exp Word64) :=
 def rstructCompileCaseValue : PanValue Word64 :=
   .rStruct [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)]
 
+/-! Paired concrete Load row for
+    `compile_exp_correct_load=(Comb [One; One],Comb [One; One],T,T,T)` in
+    `pan_structs_compile_exp_correct_probe.out`. -/
+def loadCompileCaseRuntime : PanSemState Word64 (FfiState Unit) :=
+  { finiteMapRuntime with
+    memory := fun address =>
+      if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 3))
+      else if address == BitVec.ofNat 64 1 then some (.word (BitVec.ofNat 64 5))
+      else none }
+
+def loadCompileCaseValue : PanValue Word64 :=
+  .rStruct [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)]
+
+def loadCompileCaseExpression : Exp Word64 :=
+  .load (.comb [.one, .one]) (.const (BitVec.ofNat 64 0))
+
+example :
+    structOldExpShape emptyStructCompileContext loadCompileCaseExpression =
+        .comb [.one, .one] ∧
+    panSemShapeOf loadCompileCaseValue = .comb [.one, .one] ∧
+    panStructValueFieldsOkBool loadCompileCaseRuntime.structs loadCompileCaseValue = true ∧
+    evalPanValueExp loadCompileCaseRuntime.structs loadCompileCaseRuntime.locals
+      loadCompileCaseRuntime.globals loadCompileCaseRuntime.memory
+      loadCompileCaseRuntime.baseAddress loadCompileCaseRuntime.topAddress
+      (BitVec.ofNat 64 1) loadCompileCaseExpression = some loadCompileCaseValue ∧
+    evalPanValueExp
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).structs
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).locals
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).globals
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).memory
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).topAddress
+      (BitVec.ofNat 64 1)
+        (structCompileExp emptyStructCompileContext loadCompileCaseExpression) =
+        some (panStructConvertValue loadCompileCaseValue) := by
+  simp [structOldExpShape, emptyStructCompileContext, loadCompileCaseExpression,
+    loadCompileCaseValue, loadCompileCaseRuntime, finiteMapRuntime,
+    panSemShapeOf, panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
+    evalPanValueExp,
+    panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadListFuel,
+    panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
+    panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+    shapeSizeWithContext, isWfShape, isWfShape.isWfShapeList, panStructConvertState,
+    panStructConvertValue, panStructConvertValues,
+    structCompileExp, structCompileShape, structCompileShapeWF,
+    structCompileShapeWF.structCompileShapesWF]
+
 example :
     structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =
         .comb [.one, .one] ∧

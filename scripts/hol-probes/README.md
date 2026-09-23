@@ -183,7 +183,7 @@ induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
 and Global variable-constructor instances and Const-, RStruct-, NStruct-,
-NField-, RField-, and Op-constructor instances of `compile_exp_correct`; each
+NField-, RField-, Op-, and Load-constructor instances of `compile_exp_correct`; each
 five-element tuple contains old shape, semantic value shape, field validity,
 source evaluation, and converted target evaluation. The production
 `structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,
@@ -200,7 +200,13 @@ row separately checks source `OPT_MMAP` success, pointwise compiled-expression
 correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
-The other expression constructors remain open.
+The Load row directly exercises an explicit two-word memory read and is paired
+with a Lean source/converted evaluation fixture. Its general constructor case
+and the required memory-conversion induction remain open. The
+`size_of_compile_shape_comb` row separately directly evaluates the HOL
+`size_of_compile_shape` prerequisite at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem
+and concrete fixture live in `Flapjack.Test.PanStructsCompileShapeParity`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

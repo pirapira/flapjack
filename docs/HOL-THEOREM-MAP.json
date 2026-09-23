@@ -5518,5 +5518,61 @@
     "lean_name": "crepInlineLocalsExtRel_self",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only helper for the extensional FDOM/FDIFF rendering used by the exact crepInlineLocalsExtRel port; no HOL declaration of this name"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "size_of_compile_shape",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapeWF_size",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source premises and size equality compared field-by-field; direct HOL EVAL row size_of_compile_shape_comb and Lean fixture in PanStructsCompileShapeParity)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_suffix_drop",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only suffix-extraction helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_lookupInfo",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only lookup bridge helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_none_lookupInfo_none",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only absent-lookup bridge helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only membership helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfoWithRest_fields_wf",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only field-well-formedness helper for the size_of_compile_shape proof"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "shapeSizeWithContext_fold_drop",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only fold-size context-suffix helper for the size_of_compile_shape proof"
   }
 ]

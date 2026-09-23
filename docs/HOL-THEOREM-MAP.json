@@ -4670,5 +4670,13 @@
     "lean_name": "fmEmptyZipAlist",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against fm_empty_zip_alist at pan_commonPropsScript.sml:426; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_exp_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compileExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor comparison against compile_exp_def pan_to_crepScript.sml:39-101; compileExpListHOL stands for MAP (compile_exp ctxt), CrepBytesInWord stride for implicit bytes_in_word; compile_exp_probe.out rows reproduced through compileExpHOL in Flapjack/Test/CompileExpParity.lean)"
   }
 ]

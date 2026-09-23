@@ -126,7 +126,8 @@ run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \
   is_wf_shape_v_word is_wf_shape_v_named_match \
-  is_wf_shape_v_named_missing value_validity_done \
+  is_wf_shape_v_named_missing v_flds_ok_append_nonempty_prefix_named \
+  value_validity_done \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \

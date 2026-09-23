@@ -919,13 +919,17 @@ def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
   let alignment := 2 ^ Nat.log2 (width / 8)
   BitVec.ofNat width ((address.toNat / alignment) * alignment)
 
-/-! Source-shaped finite-word memory adapter. Its byteAlign, getByte, aligned,
-    and four-byte wordOfBytes operations are written from the imported HOL
-    definitions through the finite-word/BitVec equivalence. The other target
-    operations (including setByte, wordOp, compare, and shift) still come from
-    the transported RISC-V model. This adapter is not yet the evaluator of the
-    theorem below: the remaining operations and evaluator bridge still need
-    direct HOL correspondence proofs before any theorem can carry a HOL tag. -/
+/-! Source-shaped finite-word memory adapter. Its byteAlign, getByte, and
+    aligned operations directly translate the imported HOL formulas through
+    the finite-word/BitVec equivalence. Its four-byte wordOfBytes formula is
+    the corresponding integer expansion, but is not yet proved equal to HOL's
+    recursive `word_of_bytes`/`set_byte` definition; setByte itself is still
+    transported from RISC-V. Word operators, comparisons, and shifts use the
+    generic source-level definitions (their finite-word/BitVec transport is
+    proved above). This runtime supports the untagged recursive preservation
+    theorem, but the memory-operation bridge and unrestricted HOL finite-word
+    carrier correspondence must still be proved before that theorem can carry
+    a HOL tag. -/
 def holFiniteWordSourceByteAlign {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool) : ι → Bool := by
   letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
@@ -948,6 +952,8 @@ def holFiniteWordSourceAligned {ι : Type u}
   let exponent := Nat.log2 alignment
   decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
 
+/-- Arithmetic expansion used for the four-byte `mem_load_32` result. Its
+equivalence to HOL's recursive `word_of_bytes` over `set_byte` is still open. -/
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
     (bytes : List (ι → Bool)) : ι → Bool := by
@@ -971,6 +977,8 @@ def holFiniteWordSourceWordOfBytes {ι : Type u}
 def holFiniteWordSourceMemoryModel {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool) :
     PanMemoryModel (ι → Bool) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
   let model := holFiniteWordRiscVMemoryModel dimension bigEndian
   exact { model with
     byteAlign := fun _ address => holFiniteWordSourceByteAlign dimension address
@@ -979,7 +987,10 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
     aligned := fun alignment address =>
       holFiniteWordSourceAligned dimension alignment address
     wordOfBytes := fun be bytes =>
-      holFiniteWordSourceWordOfBytes dimension be bytes }
+      holFiniteWordSourceWordOfBytes dimension be bytes
+    wordOp := wordOp
+    compare := evalPanCmp
+    shift := evalPanShiftFull }
 
 /-- A load model with HOL's dimension-derived byte alignment and the existing
     RISC-V byte extraction, alignment, and word-of-bytes operations. This is

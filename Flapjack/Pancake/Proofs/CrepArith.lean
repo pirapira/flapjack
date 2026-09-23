@@ -912,16 +912,13 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
       apply Nat.mod_eq_of_lt
       exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
         (Nat.pow_lt_pow_right (by decide) hbound)
-    have hruntimeShift : runtime.memoryModel.shift .lsl word amount =
-        ((state.toHolFiniteBitVecState dimension).toRuntime.memoryModel.shift .lsl
-          (holWordToBitVec dimension word) (holWordToBitVec dimension amount)).map
-          (bitVecToHolWord dimension) := by
-      change (state.toHolFiniteWordRuntime dimension).memoryModel.shift .lsl word amount = _
-      rw [crepHolFiniteDimension_shift_toBitVec]
-    rw [hruntimeShift]
-    simp [CrepHolState.toHolFiniteBitVecState, CrepHolState.toRuntime,
-      RiscV.panRiscVMemoryModelForEndian, RiscV.panRiscVShift,
-      hamount, hbound]
+    have hleftBits :
+        holWordToBitVec dimension (ShiftLeft.shiftLeft word amount) =
+          BitVec.shiftLeft (holWordToBitVec dimension word) exponent := by
+      rw [holFiniteWordToBitVec_shiftLeft]
+      change BitVec.shiftLeft (holWordToBitVec dimension word)
+        (holWordToBitVec dimension amount).toNat = _
+      rw [hamount]
     have hshiftWordBits :
         holWordToBitVec dimension
             (ShiftLeft.shiftLeft (1 : ι → Bool) amount) =
@@ -940,12 +937,31 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
       rw [holFiniteWordToBitVec_mul, hshiftWordBits]
       rw [BitVec.shiftLeft_eq_mul_twoPow]
       rw [← hpow]
-    change bitVecToHolWord dimension
-        ((holWordToBitVec dimension word) <<< exponent) =
-      word * ShiftLeft.shiftLeft (1 : ι → Bool)
-        (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent))
-    rw [← hmulBits]
-    rw [bitVecToHolWord_holWordToBitVec]
+    have hWordToBitVecInjective : Function.Injective (holWordToBitVec dimension) := by
+      intro left right heq
+      calc
+        left = bitVecToHolWord dimension (holWordToBitVec dimension left) := by
+          rw [bitVecToHolWord_holWordToBitVec]
+        _ = bitVecToHolWord dimension (holWordToBitVec dimension right) :=
+          congrArg (bitVecToHolWord dimension) heq
+        _ = right := bitVecToHolWord_holWordToBitVec dimension right
+    have hshiftMul : ShiftLeft.shiftLeft word amount =
+        word * ShiftLeft.shiftLeft (1 : ι → Bool) amount := by
+      apply hWordToBitVecInjective
+      rw [hleftBits, hmulBits]
+      simp [BitVec.shiftLeft_eq]
+    have hpanAmount : PanShiftWidth.amount (α := ι → Bool) amount = exponent := by
+      change (holWordToBitVec dimension amount).toNat = exponent
+      exact hamount
+    change evalPanShiftFull .lsl word amount = _
+    simp only [evalPanShiftFull, hpanAmount]
+    have hnotWidth : ¬ PanShiftWidth.width (α := ι → Bool) ≤ exponent :=
+      Nat.not_le_of_gt hbound
+    have hcondition : ¬ (exponent ≠ 0 ∧
+        PanShiftWidth.width (α := ι → Bool) ≤ exponent) :=
+      fun hcondition => hnotWidth hcondition.2
+    rw [if_neg hcondition]
+    exact congrArg some hshiftMul
   exact crepEvalMulConstFiniteWordForModel runtime
     (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
     expression constant value rfl hShift h

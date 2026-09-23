@@ -12,6 +12,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
 import Flapjack.PanToCrepMaxList
 
@@ -908,5 +909,24 @@ theorem firstCompileToCrepAllDistinct
     ((compileToCrepHOL declarations).map
       fun (name, _, _) => name).Nodup := by
   simpa [compileToCrepHOL, List.map_map, Function.comp_def] using hdistinct
+
+/-- Exact port of HOL `first_compile_prog_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original
+    premise is distinct names from `functions prog`; `compile_prog` preserves
+    those names while compiling each body and applying `compile_inl_top`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_prog_all_distinct"]
+theorem firstCompileProgAllDistinct {width : Nat}
+    (declarations : List (Decl (BitVec width)))
+    (hdistinct : ((functionEntries declarations).map
+      fun (name, _, _, _) => name).Nodup) :
+    ((compileProgTopHOL declarations).map
+      fun (name, _, _) => name).Nodup := by
+  have hnames :
+      ((compileProgTopHOL declarations).map fun (name, _, _) => name) =
+        ((compileToCrepHOL declarations).map fun (name, _, _) => name) := by
+    simp [compileProgTopHOL, compileInlTopHOL, List.map_map,
+      Function.comp_def]
+  rw [hnames]
+  exact firstCompileToCrepAllDistinct declarations hdistinct
 
 end Flapjack

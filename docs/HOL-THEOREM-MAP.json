@@ -2624,6 +2624,14 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_prog_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
+    "lean_name": "compileProgTopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -2982,6 +2990,14 @@
     "lean_name": "crepLocalsIdUpdate",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (production Crep state type review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "first_compile_prog_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "firstCompileProgAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

@@ -29,8 +29,8 @@ FIXTURES = [
         "probe": "compile_prog_probe",
         "hol_labels": ["empty", "inline_call", "global_dest", "handled_missing_dest", "duplicate_first", "nested_inline"],
         "lean": "Flapjack/Test/CompileProgParity.lean",
-        "lean_markers": ["compile_prog_inline_call_parity", "shMemStoreAddressTempParity", "holInlineDuplicateParity", "holInlineNestedParity"],
-        "covers": "empty input; inline calls including first duplicate binding and nested expansion; valid Global return destination; handled call with missing destination and a two-word payload",
+        "lean_markers": ["compile_prog_inline_call_parity", "compileProgTopEmptyParity", "compileProgTopDuplicateParity", "compileProgTopNestedParity", "shMemStoreAddressTempParity", "holInlineDuplicateParity", "holInlineNestedParity"],
+        "covers": "empty input; direct compile_prog triples for inline calls including first duplicate binding and nested expansion; valid Global return destination; handled call with missing destination and a two-word payload",
     },
     {
         "area": "Function and declaration lowering",

@@ -1,5 +1,6 @@
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepArith
@@ -611,9 +612,8 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let compiled := compileToCrepHOLWithMetadata cakeDeclarations
       let crepe := crepSimpFunctions fromNat
-        (compileInlTopHOLWithMetadata (pipelineInlineNames cakeDeclarations) compiled)
+        (compileProgTopHOLWithMetadata cakeDeclarations)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)

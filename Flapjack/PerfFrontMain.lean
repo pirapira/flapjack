@@ -417,18 +417,15 @@ def main : IO Unit := do
       | some _entry =>
           let globals := globalCompileTopCake structured entryName
           let t6 ← stage "globalCompileTop" t4 (countDecls globals)
-          let compiled := compileToCrepHOLWithMetadata globals
-          let t7 ← stage "compileToCrep" t6 (countCrepFunctions compiled)
-          let inlined := compileInlTopHOLWithMetadata
-            (pipelineInlineNames globals) compiled
-          let t8 ← stage "crepInline" t7 (countCrepFunctions inlined)
-          let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) inlined
-          let t9 ← stage "crepSimp" t8 (countCrepFunctions crepe)
+          let compiled := compileProgTopHOLWithMetadata globals
+          let t7 ← stage "compileProg" t6 (countCrepFunctions compiled)
+          let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) compiled
+          let t8 ← stage "crepSimp" t7 (countCrepFunctions crepe)
           let loop := pipelineLoopFunctionsSource .rv64i 1 crepe
-          let t10 ← stage "crepToLoop" t9
+          let t9 ← stage "crepToLoop" t8
             (loop.foldl (fun acc (_, _, body) => acc + countLoop body) 0)
           let word := pipelineWordFunctionsSource loop
-          let _ ← stage "loopToWord" t10
+          let _ ← stage "loopToWord" t9
             (word.foldl (fun acc (_, _, body) => acc + countWord body) 0)
           IO.println s!"PERF functions loop={loop.length} word={word.length}"
           if (← IO.getEnv "PERF_LOWERFAIL").isSome then

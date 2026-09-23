@@ -168,6 +168,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
     reviewed_exact = {
+        ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"),
         ("Flapjack/Pancake/Semantics/CrepProps.lean", "lookup_locals_eq_map_vars"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf_nil"),

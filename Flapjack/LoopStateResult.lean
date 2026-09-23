@@ -8,64 +8,71 @@ This mirrors the original CakeML Pancake `loopSem` state and result datatypes
 code environment, word-valued results, and control-result propagation.  It is
 independent of the legacy `Flapjack.LoopState`/`LoopResult` model so that the
 existing proofs can migrate incrementally.
+
+As in HOL, the state is parameterized by the word type `W` (used for locals,
+globals, memory addresses, and the base/top addresses) and separately by the
+FFI state type `F`, so that the production word type can be instantiated
+without collapsing the FFI type onto it.
 -/
 
 namespace Flapjack
 
-/-- Original `loopSem` result datatype; `α` is the FFI event type. -/
-inductive LoopMachineResult (α : Type) where
-  | result (values : List LoopWordLoc)
-  | except (value : LoopWordLoc)
+/-- Original `loopSem` result datatype; result values use the word type `W`,
+    while `finalFfi` carries an event of the FFI type `F`. -/
+inductive LoopMachineResult (W : Type := Nat) (F : Type := Nat) where
+  | result (values : List (LoopValue W))
+  | except (value : LoopValue W)
   | break (count : Nat)
   | continue (count : Nat)
   | timeOut
-  | finalFfi (event : α)
+  | finalFfi (event : F)
   | error
   deriving DecidableEq, Repr
 
-/-- Original `loopSem` state datatype; `α` is the address and FFI event type. -/
-structure LoopMachineState (α : Type) where
-  locals : Nat → Option LoopWordLoc
-  globals : BitVec 5 → Option LoopWordLoc
-  memory : α → Option LoopWordLoc
-  mdomain : α → Bool
-  shMdomain : α → Bool
+/-- Original `loopSem` state datatype; `W` is the word/address type and `F` the
+    FFI state type. -/
+structure LoopMachineState (W : Type := Nat) (F : Type := Nat) where
+  locals : Nat → Option (LoopValue W)
+  globals : BitVec 5 → Option (LoopValue W)
+  memory : W → Option (LoopValue W)
+  mdomain : W → Bool
+  shMdomain : W → Bool
   clock : Nat
-  code : LoopCode LoopWordLoc
+  code : LoopCode (LoopValue W)
   be : Bool
-  ffi : α
-  baseAddr : α
-  topAddr : α
+  ffi : F
+  baseAddr : W
+  topAddr : W
 
 /--
 Faithful port of `exit_loop` (`loopSemScript.sml:272-276`): `Break n` and
 `Continue n` decrement their counter with truncating subtraction, and every
 other result is unchanged.
 -/
-def exitLoop : Option (LoopMachineResult α) → Option (LoopMachineResult α)
+def exitLoop : Option (LoopMachineResult W F) → Option (LoopMachineResult W F)
   | none => none
   | some (.break count) => some (.break (count - 1))
   | some (.continue count) => some (.continue (count - 1))
   | some other => some other
 
 /-- Faithful port of `dec_clock` (`loopSemScript.sml:42`). -/
-def decrementLoopClock (state : LoopMachineState α) : LoopMachineState α :=
+def decrementLoopClock (state : LoopMachineState W F) : LoopMachineState W F :=
   { state with clock := state.clock - 1 }
 
 /-! Exact executable counterpart of CakeML's `cut_state_def`
     (`loopSemScript.sml:182-186`).  The source checks that every live local is
     present, then intersects the local map with the live set while preserving
     every other machine-state component. -/
-def loopLiveLocalsPresent (locals : Nat → Option LoopWordLoc) : List Nat → Bool
+def loopLiveLocalsPresent (locals : Nat → Option (LoopValue W)) : List Nat → Bool
   | [] => true
   | name :: names => (locals name).isSome && loopLiveLocalsPresent locals names
 
-def loopRestrictLocals (locals : Nat → Option LoopWordLoc) (live : List Nat) :
-    Nat → Option LoopWordLoc :=
+def loopRestrictLocals (locals : Nat → Option (LoopValue W)) (live : List Nat) :
+    Nat → Option (LoopValue W) :=
   fun name => if name ∈ live then locals name else none
 
-def cutLoopState (live : List Nat) (state : LoopMachineState α) :
-    Option (LoopMachineState α) :=
+def cutLoopState (live : List Nat) (state : LoopMachineState W F) :
+    Option (LoopMachineState W F) :=
   if loopLiveLocalsPresent state.locals live then
     some { state with locals := loopRestrictLocals state.locals live }
   else none
@@ -73,8 +80,8 @@ def cutLoopState (live : List Nat) (state : LoopMachineState α) :
 /-! Exact executable counterpart of CakeML's `cut_res_def`
     (`loopSemScript.sml:189-197`). -/
 def cutLoopResult (live : List Nat)
-    (step : Option (LoopMachineResult α) × LoopMachineState α) :
-    Option (LoopMachineResult α) × LoopMachineState α :=
+    (step : Option (LoopMachineResult W F) × LoopMachineState W F) :
+    Option (LoopMachineResult W F) × LoopMachineState W F :=
   let (result, state) := step
   if result.isSome then
     (result, state)
@@ -87,12 +94,13 @@ def cutLoopResult (live : List Nat)
         else
           (none, decrementLoopClock state)
 
-theorem exitLoop_none {α : Type} : exitLoop (none : Option (LoopMachineResult α)) = none := rfl
+theorem exitLoop_none {W F : Type} :
+    exitLoop (none : Option (LoopMachineResult W F)) = none := rfl
 
-theorem exitLoop_break {α : Type} (count : Nat) :
-    exitLoop (α := α) (some (.break count)) = some (.break (count - 1)) := rfl
+theorem exitLoop_break {W F : Type} (count : Nat) :
+    exitLoop (W := W) (F := F) (some (.break count)) = some (.break (count - 1)) := rfl
 
-theorem exitLoop_continue {α : Type} (count : Nat) :
-    exitLoop (α := α) (some (.continue count)) = some (.continue (count - 1)) := rfl
+theorem exitLoop_continue {W F : Type} (count : Nat) :
+    exitLoop (W := W) (F := F) (some (.continue count)) = some (.continue (count - 1)) := rfl
 
 end Flapjack

@@ -13,11 +13,64 @@ the source clock and FFI state are deliberately absent from the projection.
 
 namespace Flapjack
 
+/-- Finite, state-owned representation of Cake's `state.code` finite map.
+    `lookupInfo` is the observable HOL `FLOOKUP`; storing entries here, rather
+    than accepting an arbitrary function, makes the support available for
+    recursive source evaluation. -/
+abbrev PanSemCodeMap (α : Type u) :=
+  InfoMap (List (VarName × Shape) × Prog α × Shape)
+
+/-- HOL `FLOOKUP` view of the finite source code entries. -/
+def panSemCodeLookup [BEq String] (code : PanSemCodeMap α) (name : FunName) :=
+  lookupInfo name code
+
+/-- Function view used where existing HOL relations are stated over
+    `FLOOKUP` functions. The entries remain the authoritative finite map. -/
+def panSemCodeAsLookup [BEq String] (code : PanSemCodeMap α) :
+    FunName → Option (List (VarName × Shape) × Prog α × Shape) :=
+  fun name => panSemCodeLookup code name
+
+@[simp] theorem panSemCodeAsLookup_apply [BEq String]
+    (code : PanSemCodeMap α) (name : FunName) :
+    panSemCodeAsLookup code name = lookupInfo name code := rfl
+
+/-- Every present code binding is supported by a key stored in the state. -/
+theorem panSemCodeLookup_mem_support [BEq String] [LawfulBEq String]
+    (code : PanSemCodeMap α) (name : FunName)
+    (hlookup : panSemCodeLookup code name ≠ none) :
+    name ∈ code.map Prod.fst := by
+  induction code with
+  | nil => simp [panSemCodeLookup, lookupInfo] at hlookup
+  | cons entry entries ih =>
+      rcases entry with ⟨candidate, value⟩
+      by_cases hname : candidate == name
+      · have hkey : candidate = name := beq_iff_eq.mp hname
+        subst name
+        simp
+      · have htail : lookupInfo name entries ≠ none := by
+          simpa [panSemCodeLookup, lookupInfo, hname] using hlookup
+        have hmem := ih htail
+        simp only [List.map_cons, List.mem_cons]
+        exact Or.inr hmem
+
+/-! `panSemCodeUpdate` is the finite-support counterpart of Cake `FUPDATE`:
+    it removes old occurrences and stores the updated binding at the head. -/
+def panSemCodeUpdate [BEq String] (code : PanSemCodeMap α)
+    (name : FunName) (entry : List (VarName × Shape) × Prog α × Shape) :
+    PanSemCodeMap α :=
+  (name, entry) :: code.filter (fun binding => !(binding.1 == name))
+
+@[simp] theorem panSemCodeLookup_update [BEq String] [LawfulBEq String]
+    (code : PanSemCodeMap α) (name : FunName)
+    (entry : List (VarName × Shape) × Prog α × Shape) :
+    panSemCodeLookup (panSemCodeUpdate code name entry) name = some entry := by
+  simp [panSemCodeLookup, panSemCodeUpdate, lookupInfo]
+
 structure PanSemState (α : Type u) (ffi : Type v) where
   locals : VarName → Option (PanValue α)
   globals : VarName → Option (PanValue α)
   structs : StructContext
-  code : FunName → Option (List (VarName × Shape) × Prog α × Shape)
+  code : PanSemCodeMap α
   exceptionShapes : ExceptionId → Option Shape
   memory : α → Option (PanValue α)
   memaddrs : α → Bool
@@ -32,7 +85,7 @@ structure PanBState (α : Type u) where
   locals : VarName → Option (PanValue α)
   globals : VarName → Option (PanValue α)
   structs : StructContext
-  code : FunName → Option (List (VarName × Shape) × Prog α × Shape)
+  code : PanSemCodeMap α
   exceptionShapes : ExceptionId → Option Shape
   memory : α → Option (PanValue α)
   memaddrs : α → Bool

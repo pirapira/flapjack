@@ -28,7 +28,7 @@ def sourceState (bigEndian inWordDomain inSharedDomain : Bool) :
   { locals := fun _ => none
     globals := fun _ => none
     structs := []
-    code := fun _ => none
+    code := []
     exceptionShapes := fun _ => none
     memory := fun address =>
       if address == 0 then some (.word sourceMemoryWord) else none

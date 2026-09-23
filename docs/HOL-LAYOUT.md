@@ -41,7 +41,7 @@ fresh generated slots and variables occurring in `compileExpHOL` outputs.
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
-| `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean` |
+| `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
 | `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean` |
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |

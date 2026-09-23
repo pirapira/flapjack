@@ -16,7 +16,7 @@ def sourceState : PanSemState Nat String where
   locals := updatePanValueMap (fun _ => none) "x" (.word 3)
   globals := updatePanValueMap (fun _ => none) "g" (.word 5)
   structs := []
-  code := fun _ => none
+  code := []
   exceptionShapes := fun _ => none
   memory := fun address => if address == 7 then some (.word 9) else none
   memaddrs := fun address => address == 7

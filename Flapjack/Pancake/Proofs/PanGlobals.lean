@@ -652,4 +652,38 @@ theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
   simp only [h] at hinit hfuns hexns hctx
   simp [hinit, hfuns, hexns, hctx]
 
+/-- Exact-shaped port of Cake's `ALOOKUP_MAP3`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2841`): mapping a
+    function over the triple value component commutes with the lookup.  HOL
+    `ALOOKUP` is `lookupInfo` and `OPTION_MAP (I ## f)` is
+    `Option.map (fun value => (value.1, f value.2))`; the HOL statement is an
+    equality of functions, stated here with explicit `fun` binders.  The only
+    difference is that HOL's `ALOOKUP` is polymorphic in the association-list
+    key, while the reviewed production `lookupInfo`/`InfoMap` is specialized
+    to `String`; the lookup equations and the mapped value match exactly. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "ALOOKUP_MAP3"]
+theorem ALOOKUP_MAP3 [BEq String] (f : γ → δ) (entries : List (String × (β × γ))) :
+    (fun name => lookupInfo name (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2)))) =
+      (fun name => (lookupInfo name entries).map (fun value => (value.1, f value.2))) := by
+  funext name
+  exact lookupInfo_map3 f name entries
+
+/-- Exact-shaped port of Cake's `ALOOKUP_MAP4`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2851`): mapping a
+    function over the middle component of a quadruple value commutes with the
+    lookup.  HOL `OPTION_MAP (I ## (f ## I))` is
+    `Option.map (fun value => (value.1, f value.2.1, value.2.2))`; the HOL
+    statement is an equality of functions, stated here with explicit `fun`
+    binders.  As with `ALOOKUP_MAP3`, the only difference is the `String`
+    specialization of the reviewed production `lookupInfo`; the lookup
+    equations and the mapped value match exactly. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "ALOOKUP_MAP4"]
+theorem ALOOKUP_MAP4 [BEq String] (f : γ → δ)
+    (entries : List (String × (β × γ × ε))) :
+    (fun name => lookupInfo name
+        (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2.1, entry.2.2.2)))) =
+      (fun name => (lookupInfo name entries).map (fun value => (value.1, f value.2.1, value.2.2))) := by
+  funext name
+  exact lookupInfo_map4 f name entries
+
 end Flapjack

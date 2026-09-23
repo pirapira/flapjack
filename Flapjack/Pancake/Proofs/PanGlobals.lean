@@ -213,4 +213,26 @@ theorem exceptions_append (declarations rest : List (Decl α)) :
       exceptionEntries declarations ++ exceptionEntries rest :=
   exceptionEntries_append declarations rest
 
+/-! Exact-shaped port of Cake's `exceptions_FILTER_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2515`). The five
+    conjuncts assemble the production filter lemmas; `globalDeclIsFunction`,
+    `globalDeclIsException`, `globalDeclIsName`, and `globalDeclIsGlobal`
+    correspond to HOL `is_function`, `is_exn_decl`, `is_name`, and `is_decl`,
+    and `globalDeclsFilter` to HOL `FILTER`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "exceptions_FILTER_is_function"]
+theorem exceptions_FILTER_is_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] ∧
+    exceptionEntries
+        (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+          declarations) = exceptionEntries declarations ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsException declarations) =
+      exceptionEntries declarations ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsName declarations) = [] ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  ⟨exceptionEntries_filter_function declarations,
+    exceptionEntries_filter_not_function declarations,
+    exceptionEntries_filter_exception declarations,
+    exceptionEntries_filter_name declarations,
+    exceptionEntries_filter_global declarations⟩
+
 end Flapjack

@@ -664,6 +664,14 @@
     "reviewer": "Flapjack-only structural consequence of the recursive shape matcher; Named shapes are covered because each has size one. No standalone HOL theorem statement is claimed."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "decCrepHolClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact 11-field CrepHolState clock decrement, co-located with the crepSem counterpart and used by the tagged crep_inline locals_rel_dec_clock theorem. The executable CrepRuntimeState has extra configuration fields and retains its documented untagged decCrepClock adapter."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "cexp_heads_simp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",

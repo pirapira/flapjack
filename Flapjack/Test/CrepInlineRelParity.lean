@@ -71,16 +71,16 @@ theorem not_baseState_state_rel_other_clock :
   simp [baseState] at hcl
 
 theorem decClock_preserves :
-    crepInlineLocalsRel (crepInlineDecClock baseState) (crepInlineDecClock weakState) ∧
-    crepInlineStateRel (crepInlineDecClock baseState) (crepInlineDecClock weakState) :=
+    crepInlineLocalsRel (decCrepHolClock baseState) (decCrepHolClock weakState) ∧
+    crepInlineStateRel (decCrepHolClock baseState) (decCrepHolClock weakState) :=
   crepInlineLocalsRel_decClock baseState weakState baseState_submap_weak
     (by
       refine ⟨rfl, rfl, rfl, rfl, rfl, ?_, rfl, rfl, rfl, rfl⟩
       simp [baseState, weakState])
 
 def baseStateGuard : Bool :=
-  (crepInlineDecClock baseState).clock == 4 &&
-    (crepInlineDecClock weakState).clock == 4
+  (decCrepHolClock baseState).clock == 4 &&
+    (decCrepHolClock weakState).clock == 4
 
 #guard baseStateGuard
 

@@ -101,24 +101,17 @@ def crepInlineLocalsRel (s t : CrepHolState α σ) : Prop :=
 def crepInlineLocalsStrongRel (s t : CrepHolState α σ) : Prop :=
   s.locals = t.locals
 
-/-- Flapjack clock decrement on the 11-field `CrepHolState`, following
-    `crepSem$dec_clock_def` (`crepSemScript.sml:145`).  Untagged here: the
-    clock update itself is the state operation of `crepSem`, not a declaration
-    of `crep_inlineProofScript.sml`. -/
-def crepInlineDecClock (s : CrepHolState α σ) : CrepHolState α σ :=
-  { s with clock := s.clock - 1 }
-
 /-- CakeML's `locals_rel_dec_clock` (`crep_inlineProofScript.sml:167`): both
     relations are preserved by `dec_clock`, since only `clock` changes. -/
 @[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_dec_clock"]
 theorem crepInlineLocalsRel_decClock (s t : CrepHolState α σ)
     (hlocals : crepInlineLocalsRel s t) (hstate : crepInlineStateRel s t) :
-    crepInlineLocalsRel (crepInlineDecClock s) (crepInlineDecClock t) ∧
-    crepInlineStateRel (crepInlineDecClock s) (crepInlineDecClock t) := by
+    crepInlineLocalsRel (decCrepHolClock s) (decCrepHolClock t) ∧
+    crepInlineStateRel (decCrepHolClock s) (decCrepHolClock t) := by
   obtain ⟨hg, hc, hm, hma, hsm, hcl, hbe, hf, hba, hta⟩ := hstate
   refine ⟨?_, ?_⟩
-  · simpa only [crepInlineLocalsRel, crepInlineDecClock] using hlocals
-  · simp only [crepInlineStateRel, crepInlineDecClock]
+  · simpa only [crepInlineLocalsRel, decCrepHolClock] using hlocals
+  · simp only [crepInlineStateRel, decCrepHolClock]
     exact ⟨hg, hc, hm, hma, hsm, by rw [hcl], hbe, hf, hba, hta⟩
 
 end Flapjack

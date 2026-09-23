@@ -87,6 +87,10 @@ def zipTruncationGuard : Bool :=
 def emptyMaximumGuard : Bool :=
   (ctxtFc FEMPTY FEMPTY [] [] [] : PanToCrepProofContext Nat).vmax == 0
 
+theorem ctxt_fc_funcs_eq_fixture :
+    (ctxtFc compilerFunctions exceptionCodes [] [] []).funcs = compilerFunctions :=
+  ctxtFcFuncsEq compilerFunctions exceptionCodes [] [] []
+
 #guard shapedSlotsGuard
 #guard zipTruncationGuard
 #guard emptyMaximumGuard
@@ -99,7 +103,8 @@ def runChecks : IO Bool := do
     ("excp_rel rejects duplicate compiler codes", true),
     ("ctxt_fc slices shaped slots and preserves maps", shapedSlotsGuard),
     ("ctxt_fc preserves ZIP truncation", zipTruncationGuard),
-    ("ctxt_fc empty MAX_LIST", emptyMaximumGuard)]
+    ("ctxt_fc empty MAX_LIST", emptyMaximumGuard),
+    ("ctxt_fc funcs projection matches HOL theorem", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

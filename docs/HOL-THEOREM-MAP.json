@@ -2964,8 +2964,8 @@
     "hol_name": "ctxt_fc_vmax",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcVmax",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL MAX_LIST and Lean maxList slot projection match with no premises; direct HOL-EVAL empty and unsorted nonempty rows paired with kernel-checked Lean theorem instances)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

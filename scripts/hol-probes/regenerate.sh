@@ -373,6 +373,7 @@ run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
   none named "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_def_probeScript.sml compile_def_probe.out \
   return missing_global empty_one_global extra_names_global missing_names_global \
+  missing_local empty_one_local extra_names_local missing_names_local valid_local \
   empty_struct_return \
   pair_load pair_store fixed_stride64 \
   "$cake_dir/pancake/pan_to_crepScript.sml"

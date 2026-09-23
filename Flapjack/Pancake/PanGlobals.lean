@@ -1316,12 +1316,14 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
       (globalCompileDecls collected declarations)
     context := collected }
 
-/-! HOL-shaped `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`):
-    the pass context is threaded through the declaration list, so each function
-    body is compiled under the context as of its own position rather than the
-    final collected context.  This is an intermediate exact port; production
-    `globalCompileDecs` above still uses the collected-context shape and is
-    switched over in `flapjack-pxn.18.5.2.20.2`. -/
+/-! Flapjack-specific context-threading counterpart of HOL
+    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): each
+    function body is compiled using the context at its position in the list.
+    This declaration is not tagged as an exact port. Unlike HOL's fixed word
+    operations, it accepts arbitrary `bytesInWord`/`fromNat` context fields,
+    `[Add α]`/`[Mul α]`, and potentially non-lawful `[BEq String]`.
+    Bead `flapjack-pxn.18.5.2.20.1.1` tracks the canonical-word-context port;
+    production `globalCompileDecs` above remains separate until `.20.2`. -/
 def globalCompileDecsThreaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → GlobalCompileDecsResult α
   | [] => { initializers := [], functions := [], exceptions := [], context := context }

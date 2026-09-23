@@ -26,7 +26,7 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `proofs/pan_structsProofScript.sml` | `Flapjack/Pancake/Proofs/PanStructs.lean` |
 | `pan_globalsScript.sml` | `Flapjack/Pancake/PanGlobals.lean` |
 | `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean`, `PanGlobals/ShapeInfrastructure.lean` |
-| `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean`, `PanToCrep/CompileExpVmax.lean` |
+| `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean`, `PanToCrep/CompileExpVmax.lean`, `PanToCrep/Primop.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean`, `PanToCrep/CompileProg.lean` |
 | `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
@@ -36,9 +36,9 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
-| `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean` |
+| `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSem/Primop.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
-| `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean` |
+| `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean`, `CrepSem/Primop.lean` |
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |

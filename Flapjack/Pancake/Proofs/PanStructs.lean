@@ -16,7 +16,7 @@ namespace Flapjack
     production recursive helper used by `structCompileExp` maps the production
     single-expression compiler over the list. `List.map` represents HOL `MAP`;
     `[BEq String]` is the typeclass needed by the Lean implementation's lookup. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_exps_eq_map" 11]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_exps_eq_map"]
 theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassContext) :
     (structCompileExp.structCompileExps (α := α) context :
       List (Exp α) → List (Exp α)) =
@@ -46,7 +46,7 @@ theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
     (`pan_structsProofScript.sml:310`). The production mutually recursive
     compiler decreases on the HOL context-suffix/syntax-size measure, so this
     statement keeps the source theorem's context and list arguments unchanged. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_shapes_eq_map" 310]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_shapes_eq_map"]
 theorem structCompileShapes_eq_map (context : StructContext) :
     (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
       fun shapes => shapes.map (structCompileShapeWF context) := by
@@ -58,7 +58,7 @@ theorem structCompileShapes_eq_map (context : StructContext) :
 
 /-- Exact port of the local HOL `UNCURRY_EQ_o_SND`
     (`pan_structsProofScript.sml:552`). -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "UNCURRY_EQ_o_SND" 552]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "UNCURRY_EQ_o_SND"]
 theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
     Function.uncurry (fun _ : α => f) = f ∘ Prod.snd := by
   funext p
@@ -67,7 +67,7 @@ theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
 
 /-- Exact port of HOL `map_uncurry_zip_again`
     (`pan_structsProofScript.sml:900`). -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_uncurry_zip_again" 900]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_uncurry_zip_again"]
 theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
     (xs : List α) (ys : List β) (h : xs.length = ys.length) :
     (xs.zip ys).map (fun p => (f p.1, g p.2)) = (xs.map f).zip (ys.map g) := by
@@ -112,7 +112,7 @@ def structInfosOk (context : StructContext) : Prop :=
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in
     any outer structure context. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_compile_shape" 298]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_compile_shape"]
 theorem structCompileShapeWF_isWfShape [BEq String]
     (outer : StructContext) :
     (∀ (context : StructContext) (shape : Shape),
@@ -185,7 +185,7 @@ theorem lookupInfo_isSome_drop (name : String) (context : StructContext)
 /-- Exact API translation of HOL `is_wf_shape_drop`
     (`pan_structsProofScript.sml:114`): a shape well formed in a context
     suffix remains well formed in the full context. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_drop" 114]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_drop"]
 theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
     (n : Nat) :
     isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
@@ -288,7 +288,7 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
 /-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
     (`pan_structsProofScript.sml:99`): a well-formed shape has the same
     context-sensitive size in a distinct-key context and its suffix. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_sh_with_ctxt_drop" 99]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_sh_with_ctxt_drop"]
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)
@@ -334,7 +334,7 @@ theorem shapeSizeWithContext_drop (context : StructContext)
 /-- Exact API translation of HOL `struct_infos_ok_drop`
     (`pan_structsProofScript.sml:169`): dropping a context prefix preserves
     distinct field and structure names, suffix well-formedness, and sizes. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_drop" 169]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_drop"]
 theorem structInfosOk_drop (n : Nat) (context : StructContext)
     (h : structInfosOk context) : structInfosOk (context.drop n) := by
   obtain ⟨h1, h2, h3, h4⟩ := h
@@ -381,7 +381,7 @@ theorem structInfosOk_drop (n : Nat) (context : StructContext)
 /-- Exact API translation of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
     remains valid in its suffix. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_append" 198]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_append"]
 theorem structInfosOk_append (xs ys : StructContext)
     (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
@@ -391,7 +391,7 @@ theorem structInfosOk_append (xs ys : StructContext)
     (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
     fields, well-formed field shapes, and its computed size preserves the
     structure-context invariant. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_cons" 132]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_cons"]
 theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
     (hxs : structInfosOk xs)
     (hflds : (info.fields.map Prod.fst).Nodup)
@@ -454,7 +454,7 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
 /-- Exact translation of HOL's local `alookup_map_structs_ok`
     (`pan_structsProofScript.sml:243`): a found structure in a valid context
     has distinct field names. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok" 243]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok"]
 theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (context : StructContext) (info : StructInfo)
     (hlookup : lookupInfo name context = some info)
@@ -477,7 +477,7 @@ theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (`pan_structsProofScript.sml:218`): selecting fields from compiled
     expressions in the original field-name order yields the compiled source
     expressions. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "fields_in_order_reorder_noop" 218]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "fields_in_order_reorder_noop"]
 theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
     (context : StructPassContext) (eflds : List (FieldName × Exp α))
     (infoFields : List (FieldName × Shape))
@@ -564,7 +564,7 @@ theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
 /-- Exact translation of HOL `opt_mmap_eq_every`
     (`pan_structsProofScript.sml:255`): if production `List.mapM` succeeds,
     every successful image satisfying `P` makes the result satisfy `P`. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "opt_mmap_eq_every" 255]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "opt_mmap_eq_every"]
 theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → Bool)
     (xs : List α) (ys : List β) (h : xs.mapM f = some ys)
     (hf : ∀ x y, x ∈ xs → f x = some y → P y = true) :
@@ -593,7 +593,7 @@ theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → B
 /-- Exact port of HOL `dropWhile_MAP_helper`
     (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when
     the source and mapped predicates agree on every source element. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "dropWhile_MAP_helper" 542]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "dropWhile_MAP_helper"]
 theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
     (f : α → β) (xs : List α) (ys : List α)
     (h : xs.dropWhile P = ys)
@@ -622,7 +622,7 @@ theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production
     single-expression old-shape function, with no additional premises. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "old_exp_shapes_eq" 679]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "old_exp_shapes_eq"]
 theorem structOldExpShapes_eq_map {α : Type} (context : StructPassContext) :
     (structOldExpShape.structOldExpShapes (α := α) context :
       List (Exp α) → List Shape) =

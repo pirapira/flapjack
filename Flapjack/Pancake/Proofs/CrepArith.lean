@@ -627,9 +627,10 @@ private theorem crepDest2ExpFuel_sound {n : Nat} [NeZero n]
               _ = 2 ^ (result - start) % 2 ^ n := by
                 rw [hdiff, Nat.mod_eq_of_lt hpowlt]
 
-/- CakeML's `dest_2exp_thm`: every successful exponent destination is the
-   corresponding logical left shift of one. -/
-@[hol "cakeml/pancake/crep_arithScript.sml" "dest_2exp_thm"]
+/-- Fixed-width support instance of HOL `dest_2exp_thm`. The HOL theorem is
+    polymorphic in `'a word`; this declaration proves only the `RiscV.Word n`
+    representation and therefore has no HOL tag. A genuinely generic theorem
+    over the finite-index word carrier remains open. -/
 theorem crepDest2Exp_eq_shift {n : Nat} [NeZero n] (word : RiscV.Word n)
     (exponent : Nat) (h : crepDest2Exp 0 word = some exponent) :
     word = BitVec.shiftLeft (1 : RiscV.Word n) exponent := by
@@ -649,15 +650,142 @@ theorem crepDest2Exp_eq_shift {n : Nat} [NeZero n] (word : RiscV.Word n)
   rw [Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by decide) hbound)] at hword'
   simpa [Nat.shiftLeft_eq, Nat.one_mul] using hword'
 
-/- CakeML's `dest_2exp_bound'`: a successful exponent destination is below
-   the word width. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_2exp_bound'"]
+/-- Fixed-width support instance of HOL `dest_2exp_bound'`. The HOL result
+    quantifies over any word type and concludes `exponent < dimindex`; this
+    theorem fixes `RiscV.Word n` and is not a faithful tagged port. -/
 theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
     (exponent : Nat) (h : crepDest2Exp 0 word = some exponent) :
     exponent < n := by
   change crepDest2ExpFuel (n + 1) 0 word = some exponent at h
   have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
   exact (by simpa using hs.2.1)
+
+/-- Finite-dimension support for HOL `dest_2exp_bound'`. Unlike the
+    fixed-width helper, this ranges over every explicit finite index
+    enumeration, but remains untagged because the Lean enumeration witness
+    has not been identified with HOL's implicit `finite_index` choice. -/
+theorem crepDest2ExpHolFiniteDimension_lt_width {ι : Type}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool)
+    (exponent : Nat)
+    (h : crepDest2Exp 0 word = some exponent) :
+    exponent < dimension.width := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hBits : crepDest2Exp 0 (holWordToBitVec dimension word) =
+      some exponent := by
+    rw [← crepDest2Exp_holFiniteDimension 0 word]
+    exact h
+  exact crepDest2Exp_lt_width (holWordToBitVec dimension word) exponent hBits
+
+/-- Finite-dimension support for HOL `dest_2exp_thm`, retaining its exponent
+    result while translating `word_lsl` through the explicit bit-index
+    enumeration. It is not tagged until that enumeration is related to HOL's
+    implicit `finite_index` representation. -/
+theorem crepDest2ExpHolFiniteDimension_eq_shift {ι : Type}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool)
+    (exponent : Nat)
+    (h : crepDest2Exp 0 word = some exponent) :
+    word = ShiftLeft.shiftLeft (1 : ι → Bool)
+      (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent)) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hbound := crepDest2ExpHolFiniteDimension_lt_width dimension word exponent h
+  have hBits : crepDest2Exp 0 (holWordToBitVec dimension word) =
+      some exponent := by
+    rw [← crepDest2Exp_holFiniteDimension 0 word]
+    exact h
+  have hBitsPower := crepDest2Exp_eq_shift
+    (holWordToBitVec dimension word) exponent hBits
+  have hShiftMap : holWordToBitVec dimension
+      (ShiftLeft.shiftLeft (1 : ι → Bool)
+        (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent))) =
+      BitVec.shiftLeft (1 : BitVec dimension.width) exponent := by
+    rw [holFiniteWordToBitVec_shiftLeft, holFiniteWordToBitVec_one,
+      holWordToBitVec_bitVecToHolWord]
+    change BitVec.shiftLeft (1 : BitVec dimension.width)
+      (BitVec.ofNat dimension.width exponent).toNat = _
+    have hfromNat : (BitVec.ofNat dimension.width exponent).toNat = exponent := by
+      rw [BitVec.toNat_ofNat]
+      apply Nat.mod_eq_of_lt
+      exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
+        (Nat.pow_lt_pow_right (by decide) hbound)
+    simp [hfromNat]
+  calc
+    word = bitVecToHolWord dimension (holWordToBitVec dimension word) :=
+      (bitVecToHolWord_holWordToBitVec dimension word).symm
+    _ = bitVecToHolWord dimension
+        (holWordToBitVec dimension
+          (ShiftLeft.shiftLeft (1 : ι → Bool)
+            (bitVecToHolWord dimension
+              (BitVec.ofNat dimension.width exponent)))) := by
+          rw [hShiftMap, hBitsPower]
+    _ = ShiftLeft.shiftLeft (1 : ι → Bool)
+        (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent)) :=
+          bitVecToHolWord_holWordToBitVec dimension _
+
+/- The arithmetic half of `eval_mul_const` only needs the target model's
+left-shift operation to agree with the fixed-width word shift for amounts
+below the word width. Isolating that exact operation contract lets finite
+word models reuse the proof without assuming the complete canonical RISC-V
+target. This remains Flapjack support, not a HOL port: the contract is an
+explicit premise and must be proved from the chosen model's `word_sh` bridge. -/
+theorem crepEvalMulConstForModel {n : Nat} [NeZero n] {σ : Type}
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n))
+    (constant value : RiscV.Word n)
+    (hShift : ∀ word exponent, exponent < n →
+      state.memoryModel.shift .lsl word (BitVec.ofNat n exponent) =
+        some (word <<< exponent))
+    (h : evalCrepRuntimeExp state expression = some value) :
+    evalCrepRuntimeExp state
+      (crepMulConst (BitVec.ofNat n) expression constant) =
+        some (value * constant) := by
+  by_cases hzero : constant = (0 : RiscV.Word n)
+  · simp [crepMulConst, hzero, evalCrepRuntimeExp]
+  · by_cases hone : constant = (1 : RiscV.Word n)
+    · simp [crepMulConst, hone, h, NeZero.ne n]
+    · have hzeroCond : ¬((constant == 0) = true) := by
+        intro hb
+        have heq : constant = 0 := by simpa using hb
+        exact hzero heq
+      have honeCond : ¬((constant == 1) = true) := by
+        intro hb
+        have heq : constant = 1 := by simpa using hb
+        exact hone heq
+      cases hdest : crepDest2Exp 0 constant with
+      | none =>
+          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
+              .crepOp .mul [expression, .const constant] := by
+            unfold crepMulConst
+            simp only [if_neg hzeroCond, if_neg honeCond, hdest]
+          rw [hmul]
+          simp [evalCrepRuntimeExp, h]
+      | some exponent =>
+          have hbound : exponent < n :=
+            crepDest2Exp_lt_width constant exponent hdest
+          have hpower : constant = BitVec.twoPow n exponent := by
+            simpa [BitVec.twoPow, BitVec.shiftLeft_eq] using
+              crepDest2Exp_eq_shift constant exponent hdest
+          have hfromNat : (BitVec.ofNat n exponent).toNat = exponent := by
+            rw [BitVec.toNat_ofNat]
+            apply Nat.mod_eq_of_lt
+            exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
+              (Nat.pow_lt_pow_right (by decide) hbound)
+          have hmulShift : value <<< exponent = value * constant := by
+            calc
+              value <<< exponent = value * BitVec.twoPow n exponent :=
+                BitVec.shiftLeft_eq_mul_twoPow value exponent
+              _ = value * constant := by rw [← hpower]
+          have hmodelShift :
+              state.memoryModel.shift .lsl value (BitVec.ofNat n exponent) =
+                some (value * constant) := by
+            rw [hShift value exponent hbound, hmulShift]
+          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
+              .shift .lsl expression (.const (BitVec.ofNat n exponent)) := by
+            unfold crepMulConst
+            simp only [if_neg hzeroCond, if_neg honeCond, hdest]
+          rw [hmul]
+          simp [evalCrepRuntimeExp, h, hmodelShift]
 
 /-- Flapjack support lemma for HOL `eval_mul_const`, deliberately untagged.
     It proves preservation for production `evalCrepRuntimeExp` only after
@@ -667,7 +795,9 @@ theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
     is defined through HOL `eval_def` and `crep_op_def`/`word_sh`. No theorem
     currently relates those operations and every HOL state to this canonical
     production target. Width generality alone therefore does not establish the
-    required evaluator correspondence or justify an `@[hol]` tag. -/
+    required evaluator correspondence or justify an `@[hol]` tag. This
+    specialization discharges its shift case through the model-parametric
+    helper above. -/
 theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)
@@ -685,68 +815,22 @@ theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
       some value := by
     apply Option.map_injective hInjective
     simpa using h
-  change Option.map PanWordLab.word
-      (evalCrepRuntimeExp (riscvCrepWordTarget state)
-        (crepMulConst (BitVec.ofNat n) expression constant)) =
-    Option.map PanWordLab.word (some (value * constant))
-  apply congrArg (Option.map PanWordLab.word)
-  by_cases hzero : constant = (0 : RiscV.Word n)
-  · simp [crepMulConst, hzero, evalCrepRuntimeExp]
-  · by_cases hone : constant = (1 : RiscV.Word n)
-    · simp [crepMulConst, hone, hRaw, NeZero.ne n]
-    · have hzeroWord : constant ≠ (0 : RiscV.Word n) := by
-        intro hz
-        exact hzero hz
-      have honeWord : constant ≠ (1 : RiscV.Word n) := by
-        intro ho
-        exact hone ho
-      have hzeroCond : ¬((constant == 0) = true) := by
-        intro hb
-        have heq : constant = 0 := by simpa using hb
-        exact hzeroWord heq
-      have honeCond : ¬((constant == 1) = true) := by
-        intro hb
-        have heq : constant = 1 := by simpa using hb
-        exact honeWord heq
-      cases hdest : crepDest2Exp 0 constant with
-      | none =>
-          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
-              .crepOp .mul [expression, .const constant] := by
-            unfold crepMulConst
-            simp only [if_neg hzeroCond, if_neg honeCond, hdest]
-          rw [hmul]
-          simp [evalCrepRuntimeExp, hRaw]
-      | some exponent =>
-          have hbound : exponent < n :=
-            crepDest2Exp_lt_width constant exponent hdest
-          have hpower : constant = BitVec.twoPow n exponent := by
-            simpa [BitVec.twoPow, BitVec.shiftLeft_eq] using
-              crepDest2Exp_eq_shift constant exponent hdest
-          have hfromNat : (BitVec.ofNat n exponent).toNat = exponent := by
-            rw [BitVec.toNat_ofNat]
-            apply Nat.mod_eq_of_lt
-            exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
-              (Nat.pow_lt_pow_right (by decide) hbound)
-          have hmulShift : value <<< exponent = value * constant := by
-            calc
-              value <<< exponent = value * BitVec.twoPow n exponent :=
-                BitVec.shiftLeft_eq_mul_twoPow value exponent
-              _ = value * constant := by rw [← hpower]
-          have hshift :
-              RiscV.panRiscVShift .lsl value (BitVec.ofNat n exponent) =
-                some (value * constant) := by
-            unfold RiscV.panRiscVShift
-            rw [hfromNat]
-            simp only [if_pos hbound]
-            simp [hmulShift]
-          have hmul : crepMulConst (BitVec.ofNat n) expression constant =
-              .shift .lsl expression (.const (BitVec.ofNat n exponent)) := by
-            unfold crepMulConst
-            simp only [if_neg hzeroCond, if_neg honeCond, hdest]
-          rw [hmul]
-          simp only [evalCrepRuntimeExp]
-          rw [hRaw]
-          simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian, hshift]
+  have hShift : ∀ word exponent, exponent < n →
+      (riscvCrepWordTarget state).memoryModel.shift .lsl word
+          (BitVec.ofNat n exponent) = some (word <<< exponent) := by
+    intro word exponent hbound
+    change RiscV.panRiscVShift .lsl word (BitVec.ofNat n exponent) = _
+    have hfromNat : (BitVec.ofNat n exponent).toNat = exponent := by
+      rw [BitVec.toNat_ofNat]
+      apply Nat.mod_eq_of_lt
+      exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
+        (Nat.pow_lt_pow_right (by decide) hbound)
+    unfold RiscV.panRiscVShift
+    rw [hfromNat]
+    simp [hbound]
+  have hResult := crepEvalMulConstForModel (riscvCrepWordTarget state)
+    expression constant value hShift hRaw
+  simpa using congrArg (Option.map PanWordLab.word) hResult
 
 /-! Lean-only adapter from the explicit `PanWordLab.word` result shape to the
     raw production evaluator result used by the recursive simp proof. -/

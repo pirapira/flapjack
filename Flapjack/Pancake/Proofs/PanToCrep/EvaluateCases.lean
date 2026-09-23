@@ -3009,6 +3009,36 @@ private theorem panSemCodeArgumentsMatch_of_lookup_success [BEq String]
   | true => rfl
   | false => simp [lookupPanSemCodeCall, hentry, hargs] at hlookup
 
+/-! Successful state-owned `lookupPanSemCodeCall` exposes the same parameter
+map returned by the source evaluator's callee-entry setup. This projection
+connects its body lookup to the binder-to-`slc` locals relation in PanToCrep. -/
+private theorem bindPanValueParameters_of_lookup_success [BEq String]
+    (structs : StructContext) (code : PanSemCodeMap α) (function : String)
+    (parameters : List (String × Shape)) (values : List (PanValue α))
+    (body : Prog α) (returnShape : Shape)
+    (locals : String → Option (PanValue α))
+    (hentry : panSemCodeLookup code function = some (parameters, body, returnShape))
+    (hlookup : lookupPanSemCodeCall structs code function values =
+      some (body, returnShape, locals)) :
+    (parameters.map Prod.fst).Nodup ∧
+      bindPanValueParameters (parameters.map Prod.fst) values = some locals := by
+  have hmatch := panSemCodeArgumentsMatch_of_lookup_success structs code function
+    parameters values body returnShape locals hentry hlookup
+  have hnames : (parameters.map Prod.fst).Nodup := by
+    by_cases hnames : (parameters.map Prod.fst).Nodup
+    · exact hnames
+    · simp [lookupPanSemCodeCall, hentry, hnames] at hlookup
+  have hbind : bindPanValueParameters (parameters.map Prod.fst) values = some locals := by
+    have hlookup' := hlookup
+    simp [lookupPanSemCodeCall, hentry, hnames, hmatch] at hlookup'
+    cases hbind : bindPanValueParameters (parameters.map Prod.fst) values with
+    | none => simp [hbind] at hlookup'
+    | some bound =>
+        simp [hbind] at hlookup'
+        cases hlookup'
+        rfl
+  exact ⟨hnames, hbind⟩
+
 /-! Derive the production Crep callee lookup and parameter locals from the
 state-owned source/target code maps. The argument words are arbitrary; their
 length must match the flattened source parameter shapes. The HOL compiled
@@ -3168,6 +3198,93 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
           (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := rfl
   exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup,
     htargetMap⟩
+
+/-! Derive the actual Call-entry `locals_rel` premise from the successful
+state-owned source lookup and the production target code lookup. The source
+lookup exposes its real `bindPanValueParameters` result; the target lookup
+exposes the exact `tlcWordLab` map. This is the relation boundary for a
+recursive callee IH, with no detached locals assumption. -/
+theorem lookupCrepRuntimeCode_callEntryLocalsRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalStructAddress source expression)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length) :
+    ∃ targetCalleeLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetCalleeLocals) ∧
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceCalleeLocals targetCalleeLocals := by
+  have hmatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
+    source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  obtain ⟨hnames, hbind⟩ := bindPanValueParameters_of_lookup_success
+    source.structs source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  obtain ⟨targetCalleeLocals, _harguments, htargetLookup, htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source target function
+      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
+      hsupported hsourceArgs hentry hargumentLength
+  have hstateForWf := hstate
+  obtain ⟨_, _, _, hstructs, _, _, _, _, _, _⟩ := hstate
+  have hmatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
+    simpa [hstructs] using hmatch
+  have hshapeMapRaw := panSemCodeArgumentsMatch_shapeMapEq [] parameters arguments
+    hmatchEmpty
+  have hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf := by
+    calc
+      parameters.map Prod.snd = arguments.map (panValueShape []) := hshapeMapRaw
+      _ = arguments.map panSemShapeOf :=
+        (panSemShapeOfMapPanValueShapeNil arguments).symm
+  have hparameterLength := panSemCodeArgumentsMatch_length [] parameters arguments
+    hmatchEmpty
+  have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
+    target.locals expressions arguments hsourceArgs hstateForWf hlocals
+  have hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true := by
+    intro value hmem
+    obtain ⟨index, hindex, hvalue⟩ := List.mem_iff_getElem.mp hmem
+    have hget : arguments[index]? = some value := by
+      rw [List.getElem?_eq_getElem hindex, hvalue]
+    have hvalueWf := panValueIsWfValues_getElem? hvaluesWf hget
+    have hshapeWf := panValueIsWf_isWfShape_panValueShape [] value hvalueWf
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hshapeWf
+  have hslots :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).Nodup :=
+    List.nodup_range
+  have hslotsLength :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).length =
+        (arguments.flatMap panValueFlatten).length := by
+    simpa using hargumentLength
+  have hlocalsRel := bindPanValueParametersLocalsRelOfPanSem context parameters
+    arguments (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+    sourceCalleeLocals hnames hparameterLength hshapeMap hslots hslotsLength hwf hbind
+  refine ⟨targetCalleeLocals, htargetLookup, ?_⟩
+  simpa [htargetMap] using hlocalsRel
 
 /-! The caller's state, code, and exception relations survive Call's callee
 entry setup: the two evaluators replace only locals and decrement the related
@@ -3719,11 +3836,12 @@ now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
 callee-body and handler-body premises. The premise `hcalleeTargetBodyIH`
-assumes the target callee-body evaluator run and its target state, code,
-exception, and payload-global facts needed by `exp_hdl`; this theorem does not
-derive that target callee simulation. The relation-aware handler IH also
-supplies its target result and post-state relations. Both are still induction
-premises, so this is a Call-case composition step, not the complete
+assumes the target callee-body evaluator run and its post-state, code,
+exception, and payload-global facts needed by `exp_hdl`; this theorem supplies
+the exact `locals_rel` at callee entry from the two production code lookups.
+The relation-aware handler IH also supplies its target result and post-state
+relations. The recursive body simulations remain induction premises, so this
+is a Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
@@ -3798,6 +3916,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hcompiledHandlerBody : compileCodeRelProg context sourceHandlerBody = handlerBody)
     (hstate : stateRel source caller)
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hexcp : excpRel context.eids source.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
@@ -3827,6 +3946,25 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
           sourceBody, targetLocals) →
+      stateRel
+        ({ { source with locals := calleeLocals } with
+          clock := decPanClock source.clock })
+        (decCrepClock { caller with locals := targetLocals }) →
+      codeRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        (panSemCodeAsLookup source.code) caller.code →
+      excpRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))).eids
+        source.exceptionShapes →
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        calleeLocals targetLocals →
       evalCrepRuntimeProg handler primitive 4
         (decCrepClock { caller with locals := targetLocals })
         (compileCodeRelProg
@@ -3922,12 +4060,18 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
       with ffi := calleeFfi }
     with clock := min (decPanClock source.clock) calleeClock }
-  obtain ⟨targetLocals, _htargetArgs, htargetLookup, htargetMap⟩ :=
-    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
-      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
-      hsupported hsourceArgs hentry hargumentLength
+  obtain ⟨targetLocals, htargetLookup, hcalleeEntryLocals⟩ :=
+    lookupCrepRuntimeCode_callEntryLocalsRel context source caller function
+      parameters sourceBody returnShape expressions arguments calleeLocals
+      hsupported hstate hcode hlocals hsourceArgs hentry hsourceCallee
+      hargumentLength
+  obtain ⟨hcalleeStateEntry, hcalleeCodeEntry, hcalleeExcpEntry⟩ :=
+    panSemCallCalleeEntryStateCodeExcpRel context source caller parameters
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+      calleeLocals targetLocals hstate hcode hexcp
   obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp, hglobal⟩ :=
     hcalleeTargetBodyIH hsourceCalleeBody targetLocals htargetLookup
+      hcalleeStateEntry hcalleeCodeEntry hcalleeExcpEntry hcalleeEntryLocals
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -3936,8 +4080,17 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       expressions arguments handlerBody calleeState handlerResult hstate hcode
       hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
       hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
-      (fun targetLocals hlookup =>
-        (hcalleeTargetBodyIH hsourceCalleeBody targetLocals hlookup).1)
+      (fun targetLocals' hlookup' => by
+        have hsame : targetLocals' = targetLocals := by
+          have htuple := Option.some.inj (hlookup'.symm.trans htargetLookup)
+          exact congrArg Prod.snd htuple
+        obtain ⟨hstateEntry', hcodeEntry', hexcpEntry'⟩ :=
+          panSemCallCalleeEntryStateCodeExcpRel context source caller parameters
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+            calleeLocals targetLocals' hstate hcode hexcp
+        exact (hcalleeTargetBodyIH hsourceCalleeBody targetLocals' hlookup'
+          hstateEntry' hcodeEntry' hexcpEntry'
+          (by simpa [hsame] using hcalleeEntryLocals)).1)
       (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>
         hhandlerIH hsourceHandlerBodyRun hsourceExpressions hsourceExceptionCode

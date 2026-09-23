@@ -140,4 +140,47 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-! ## Adapter to the production cache-augmented struct context
+
+Clause-by-clause relation between the exact HOL-shaped `is_wf_shape_v` port
+over `StructContextHOL` and the production `panIsWfShapeValueBool` over the
+cache-augmented `StructContext`. The context adapter is the projection
+`StructContext.toHOL`, which drops the production-only `shapedFields` cache and
+preserves first-match lookup shadowing. -/
+mutual
+  theorem panIsWfShapeValueHOL_toHOL [LawfulBEq String] (context : StructContext)
+      (value : PanValue α) :
+      panIsWfShapeValueHOL context.toHOL value = panIsWfShapeValueBool context value := by
+    cases value with
+    | word word => simp [panIsWfShapeValueHOL, panIsWfShapeValueBool]
+    | rStruct values =>
+        simp only [panIsWfShapeValueHOL, panIsWfShapeValueBool]
+        exact panIsWfShapeValuesHOL_toHOL context values
+    | nStruct name fields =>
+        simp only [panIsWfShapeValueHOL, panIsWfShapeValueBool, lookupInfo_toHOL_isSome]
+        rw [panIsWfShapeValuesHOL_mapSnd_toHOL context fields]
+
+  theorem panIsWfShapeValuesHOL_toHOL [LawfulBEq String] (context : StructContext)
+      (values : List (PanValue α)) :
+      panIsWfShapeValuesHOL context.toHOL values = panIsWfShapeValuesBool context values := by
+    cases values with
+    | nil => simp [panIsWfShapeValuesHOL, panIsWfShapeValuesBool]
+    | cons value values =>
+        simp only [panIsWfShapeValuesHOL, panIsWfShapeValuesBool]
+        rw [panIsWfShapeValueHOL_toHOL context value,
+          panIsWfShapeValuesHOL_toHOL context values]
+
+  theorem panIsWfShapeValuesHOL_mapSnd_toHOL [LawfulBEq String] (context : StructContext)
+      (fields : List (FieldName × PanValue α)) :
+      panIsWfShapeValuesHOL context.toHOL (fields.map Prod.snd)
+        = panIsWfShapeValueFieldsBool context fields := by
+    cases fields with
+    | nil => simp [panIsWfShapeValuesHOL, panIsWfShapeValueFieldsBool]
+    | cons field fields =>
+        obtain ⟨fieldName, value⟩ := field
+        simp only [List.map_cons, panIsWfShapeValuesHOL, panIsWfShapeValueFieldsBool]
+        rw [panIsWfShapeValueHOL_toHOL context value,
+          panIsWfShapeValuesHOL_mapSnd_toHOL context fields]
+end
+
 end Flapjack

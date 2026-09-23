@@ -123,6 +123,27 @@ theorem afindi_dropWhile_fixture :
   rw [afindi_dropWhile]
   simp [afindi, entries]
 
+/-! Direct HOL-EVAL rows from `pan_structs_dropwhile_afindi_probe.out` check
+the first hit, a later hit and an absent key against HOL `DROP` and
+`dropWhile_afindi`. -/
+theorem afindi_dropWhile_first_fixture :
+    entries.dropWhile (fun entry => decide ("a" ≠ entry.1)) = entries := by
+  rw [afindi_dropWhile]
+  simp [afindi, entries]
+
+theorem afindi_dropWhile_missing_fixture :
+    entries.dropWhile (fun entry => decide ("z" ≠ entry.1)) = [] := by
+  rw [afindi_dropWhile]
+  simp [afindi, entries]
+
+def holAfIndiDropWhileGuard : Bool :=
+  entries.dropWhile (fun entry => decide ("a" ≠ entry.1)) == entries &&
+  entries.dropWhile (fun entry => decide ("b" ≠ entry.1)) == entries.drop 1 &&
+  entries.dropWhile (fun entry => decide ("z" ≠ entry.1)) == []
+
+#eval holAfIndiDropWhileGuard
+#guard holAfIndiDropWhileGuard
+
 theorem afindi_lookup_fixture :
     entries.lookup "b" = some 20 := by
   rw [afindi_lookup]

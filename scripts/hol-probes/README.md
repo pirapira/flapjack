@@ -100,6 +100,10 @@ regressions live in `Flapjack.Test.PanStructsAfindiParity`.
 shifted suffix-hit and missing-key rows for `afindi_append` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases
 live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_dropwhile_afindi_probe.out` records direct HOL EVAL of first-hit,
+later-hit and absent-key cases for `dropWhile_afindi` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:334`; matching Lean rows
+live in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

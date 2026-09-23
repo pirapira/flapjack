@@ -177,6 +177,21 @@ val _ = print_eval "call_record_middle_pair_7_8"
              panLang$Comb [panLang$One; panLang$One]));
          clock := 10 |>)))``
 
+val _ = print_eval "call_constructed_record_middle_pair_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RField 1
+          (panLang$RStruct [panLang$Const (3w:8 word);
+            panLang$RStruct [panLang$Const (7w:8 word);
+              panLang$Const (8w:8 word)];
+            panLang$Const (10w:8 word)])],
+       ((ARB:((8),unit) panSem$state) with <|
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One]));
+         clock := 10 |>)))``
+
 val _ = print_eval "call_zero_clock_timeout"
   ``FST (panSem$evaluate
       (panLang$Call NONE «callee» [],

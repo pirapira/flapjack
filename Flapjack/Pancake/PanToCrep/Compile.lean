@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.PanGlobals
 
 /-!
 Core statement lowering from Flapjack to Crepe.
@@ -726,7 +727,9 @@ def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
 
 def functionInfosHOL (declarations : List (Decl α)) :
     FiniteMap FunName (List (VarName × Shape) × Shape) :=
-  FUPDATE_LIST FEMPTY (panToCrepMakeFuncs declarations)
+  /- HOL `alist_to_fmap` is `FOLDR FUPDATE FEMPTY`, so the first duplicate
+     function name wins. `FUPDATE_LIST` is a left fold and needs reversal. -/
+  FUPDATE_LIST FEMPTY (panToCrepMakeFuncs declarations).reverse
 
 def panToCrepCompFuncFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
@@ -762,6 +765,46 @@ def compileToCrepFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     List (CompiledFunction α) :=
   let context := { context with funcs := functionInfosHOL declarations }
   compileFunctionsSourceFixed context declarations
+
+/-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
+order and turn their zero-based indices into words. HOL `alist_to_fmap` uses
+`FOLDR FUPDATE FEMPTY`, so the first duplicate exception name wins. The word
+type fixes the conversion, rather than taking a caller-supplied map. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "get_eids_from_decls_def"]
+def panToCrepGetEidsFromDeclsHOL
+    (declarations : List (Decl (BitVec width))) :
+    FiniteMap ExceptionId (BitVec width) :=
+  let names := (exceptionEntries declarations).map Prod.fst
+  FUPDATE_LIST FEMPTY
+    (names.zip ((List.range names.length).map (BitVec.ofNat width))).reverse
+
+/-! HOL `compile_to_crep_def` returns triples, not Flapjack's downstream
+`CompiledFunction` record (which additionally stores source return-shape
+metadata). Preserve that exact output boundary here and attach metadata only
+in the untagged adapter below. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_to_crep_def"]
+def compileToCrepHOL
+    (declarations : List (Decl (BitVec width))) :
+    List (FunName × List Nat × CrepProg (BitVec width)) :=
+  let functions := functionEntries declarations
+  let functionMap := functionInfosHOL declarations
+  let exceptionMap := panToCrepGetEidsFromDeclsHOL declarations
+  let context : PanToCrepHOLContext (BitVec width) :=
+    { vars := FEMPTY, funcs := functionMap, eids := exceptionMap, vmax := 0 }
+  functions.map fun (name, parameters, body, _returnShape) =>
+    (name, panToCrepVars parameters,
+      panToCrepCompFuncFixed context parameters body)
+
+/-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
+Cake's following Crep passes operate on triples; Flapjack retains the source
+return shape in `CompiledFunction` for its existing downstream interfaces. -/
+def compileToCrepHOLWithMetadata
+    (declarations : List (Decl (BitVec width))) :
+    List (CompiledFunction (BitVec width)) :=
+  (functionEntries declarations).zipWith
+    (fun (_, _, _, returnShape) (name, parameters, body) =>
+      { name, params := parameters, body, returnShape })
+    (compileToCrepHOL declarations)
 
 theorem compileProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by

@@ -2504,6 +2504,22 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "get_eids_from_decls_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepGetEidsFromDeclsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_to_crep_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compileToCrepHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

@@ -200,6 +200,14 @@
     "reviewer": "Codex (source comparison; whole-state port, Reg n = lookup n locals, Imm w = SOME (Word w))"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+    "hol_name": "loop_arith_def",
+    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+    "lean_name": "loopArithSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; whole-state port, LDiv/LLongMul/LLongDiv over word_loc locals with set_var, zero-divisor and long-div overflow checks)"
+  },
+  {
     "hol_path": "cakeml/misc/miscScript.sml",
     "hol_name": "read_bytearray_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

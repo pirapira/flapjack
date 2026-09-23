@@ -998,4 +998,48 @@ def getVarImmSemHOL (state : LoopSemState W F) : RegImm W → Option (LoopValue 
   | .reg name => state.locals name
   | .imm value => some (.word value)
 
+/-- Exact whole-state port of HOL `loop_arith_def` (`loopSemScript.sml:118-145`).
+
+`LDiv` divides the dividend by the divisor when the divisor is a nonzero word;
+`LLongMul` writes the high word of the full product to `destinationLeft` and the
+low word to `destinationRight` (the low write is outermost, as in HOL);
+`LLongDiv` combines `sourceLeft`/`sourceRight` into a double-width numerator,
+requires a nonzero divisor and a quotient that fits the word, and writes the
+quotient to `destinationLeft` and the remainder to `destinationRight`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "loop_arith_def"]
+def loopArithSemHOL {width : Nat} [NeZero width]
+    (state : LoopSemState (RiscV.Word width) F) :
+    LoopArith → Option (LoopSemState (RiscV.Word width) F)
+  | .div destination dividend divisor =>
+      match state.locals divisor, state.locals dividend with
+      | some (.word q), some (.word value) =>
+          if q ≠ 0 then
+            some (LoopSemState.setVar state destination (.word (value / q)))
+          else none
+      | _, _ => none
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      match state.locals sourceLeft, state.locals sourceRight with
+      | some (.word left), some (.word right) =>
+          let base := 2 ^ width
+          let product := left.toNat * right.toNat
+          let withHigh := LoopSemState.setVar state destinationLeft
+            (.word (BitVec.ofNat width (product / base)))
+          some (LoopSemState.setVar withHigh destinationRight
+            (.word (BitVec.ofNat width product)))
+      | _, _ => none
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      match state.locals sourceLeft, state.locals sourceRight,
+          state.locals quotient with
+      | some (.word high), some (.word low), some (.word divisor) =>
+          let base := 2 ^ width
+          let numerator := high.toNat * base + low.toNat
+          let result := numerator / divisor.toNat
+          if divisor ≠ 0 ∧ result < base then
+            let withRemainder := LoopSemState.setVar state destinationRight
+              (.word (BitVec.ofNat width (numerator % divisor.toNat)))
+            some (LoopSemState.setVar withRemainder destinationLeft
+              (.word (BitVec.ofNat width result)))
+          else none
+      | _, _, _ => none
+
 end Flapjack

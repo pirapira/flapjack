@@ -232,6 +232,55 @@ def probeFixturesGuard : Bool :=
 
 #guard probeFixturesGuard
 
+/-! ## Whole-state `loop_arith` fixtures
+
+Small width-8 state where every arithmetic result is checkable exactly:
+`dimword = 2 ^ 8 = 256`. Locals: `0 -> 1`, `1 -> 3`, `2 -> 8`, `3 -> 2`,
+`5 -> 255`, `6 -> 255`, `7 -> 1`, `8 -> 0`. -/
+
+abbrev arithState8 : LoopSemState Word8 Unit where
+  locals := fun name =>
+    if name = 0 then some (.word 1)
+    else if name = 1 then some (.word 3)
+    else if name = 2 then some (.word 8)
+    else if name = 3 then some (.word 2)
+    else if name = 5 then some (.word 255)
+    else if name = 6 then some (.word 255)
+    else if name = 7 then some (.word 1)
+    else if name = 8 then some (.word 0)
+    else none
+  globals := fun _ => none
+  memory := fun _ => .loc 0 0
+  mdomain := fun _ => False
+  shMdomain := fun _ => False
+  clock := 200
+  code := fun _ => none
+  be := false
+  ffi := trivialFfiState Unit ()
+  baseAddr := 0
+  topAddr := 100
+
+def loopArithGuard : Bool :=
+  -- LDiv: 8 / 3 = 2
+  decide ((loopArithSemHOL arithState8 (.div 4 2 1)).map
+      (fun (state : LoopSemState Word8 Unit) => state.locals 4) = some (some (.word 2))) &&
+    -- LDiv by a zero divisor fails
+    decide (loopArithSemHOL arithState8 (.div 4 2 8) = none) &&
+    -- LLongMul: 3 * 2 = 6 (high 0, low 6)
+    decide ((loopArithSemHOL arithState8 (.longMul 10 11 1 3)).map
+      (fun (state : LoopSemState Word8 Unit) => state.locals 10) = some (some (.word 0))) &&
+    decide ((loopArithSemHOL arithState8 (.longMul 10 11 1 3)).map
+      (fun (state : LoopSemState Word8 Unit) => state.locals 11) = some (some (.word 6))) &&
+    -- LLongDiv: (1 * 256 + 3) / 2 = 129, remainder 1
+    decide ((loopArithSemHOL arithState8 (.longDiv 10 11 0 1 3)).map
+      (fun (state : LoopSemState Word8 Unit) => state.locals 10) = some (some (.word 129))) &&
+    decide ((loopArithSemHOL arithState8 (.longDiv 10 11 0 1 3)).map
+      (fun (state : LoopSemState Word8 Unit) => state.locals 11) = some (some (.word 1))) &&
+    -- LLongDiv overflow: (255 * 256 + 255) / 1 does not fit 8 bits
+    decide (loopArithSemHOL arithState8 (.longDiv 10 11 5 6 7) = none)
+
+#guard loopArithGuard
+
 def runChecks : IO Bool := do
   let memoryOk ← if memoryPortsGuard then
       IO.println "PASS Loop whole-state mem_load/mem_store exact ports"
@@ -258,6 +307,12 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop whole-state direct HOL probe fixtures (mem/sh_mem)"
       pure false
-  pure (memoryOk && shMemOk && helpersOk && probeOk)
+  let arithOk ← if loopArithGuard then
+      IO.println "PASS Loop whole-state loop_arith exact port"
+      pure true
+    else
+      IO.println "FAIL Loop whole-state loop_arith exact port"
+      pure false
+  pure (memoryOk && shMemOk && helpersOk && probeOk && arithOk)
 
 end Flapjack.Test.LoopSemStateParity

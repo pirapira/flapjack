@@ -27,10 +27,10 @@ FIXTURES = [
         "area": "Function and declaration lowering",
         "boundary": "compile_to_crep",
         "probe": "compile_to_crep_probe",
-        "hol_labels": ["empty", "raise_const", "raise_pair"],
+        "hol_labels": ["empty", "raise_const", "raise_pair", "raise_pair_later", "handled_pair"],
         "lean": "Flapjack/Test/CompileToCrepeParity.lean",
-        "lean_markers": ["compile_to_crep_raise_const_parity", "pairRaiseOracle", "globalDestinationOracle", "handledMissingDestinationOracle"],
-        "covers": "empty input; one-word and two-word exception raises; flattened parameters",
+        "lean_markers": ["compile_to_crep_raise_const_parity", "pairRaiseOracle", "laterPairOracle", "handledPairOracle", "globalDestinationOracle", "handledMissingDestinationOracle"],
+        "covers": "empty input; one-word and two-word exception raises, including a two-word payload lowered after earlier declarations so its later Temp slots stay word-strided; handled two-word exception; flattened parameters",
     },
     {
         "area": "Expression handler setup",

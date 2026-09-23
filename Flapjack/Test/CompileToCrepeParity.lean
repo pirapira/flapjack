@@ -125,6 +125,36 @@ def pairRaiseOracle : Bool :=
 
 #guard pairRaiseOracle
 
+def laterPairDecls : List (Decl Nat) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .dec "a" .one (.const 3)
+         (.dec "b" .one (.const 5)
+           (.raise "E" (.rStruct [.const 7, .const 9]))),
+       returnShape := .one }]
+
+/-! Direct `raise_pair_later` result from `compile_to_crep_probe.out`.  Two
+    ordinary declarations first consume the word-strided slots 1 and 2, so a
+    two-word exception payload lowered afterwards must take the later,
+    contiguous Temp slots 3 and 4 and store them at the one-word Crep global
+    indices `0w`/`1w` (not byte-scaled), even at target byte width 8. -/
+def laterPairOracle : Bool :=
+  match compileToCrep compileToCrepePairContext laterPairDecls with
+  | [{ name := "f", params := [],
+       body := .dec 1 (.const 3)
+         (.dec 2 (.const 5)
+           (.seq
+             (.dec 3 (.const 7)
+               (.dec 4 (.const 9)
+                 (.seq (.storeGlob 0 (.var 3))
+                   (.seq (.storeGlob 1 (.var 4)) .skip))))
+             (.raise 0))),
+       returnShape := .one }] => true
+  | _ => false
+
+#guard laterPairOracle
+
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),
    .function
@@ -247,6 +277,7 @@ def runChecks : IO Bool := do
   let results := [
     ("raised constant", parityGuard),
     ("two-word exception", pairRaiseOracle),
+    ("later two-word exception", laterPairOracle),
     ("handled two-word exception", handledPairOracle),
     ("global call destination", globalDestinationOracle),
     ("handled call with missing destination", handledMissingDestinationOracle),

@@ -39,6 +39,24 @@ val _ = print_eval "raise_pair"
                 [panLang$Const (7w : 8 word); panLang$Const 9w]);
             return := panLang$One |>]``;
 
+(* A multiword exception payload lowered *after* earlier declarations: the
+   payload temporaries must receive the later, contiguous word-strided slots
+   (vmax+1, vmax+2) and `store_globals` must index the Crep Temp region by one
+   word (0w, 1w) rather than by the target byte width. *)
+val _ = print_eval "raise_pair_later"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Dec «a» panLang$One
+              (panLang$Const (3w : 8 word))
+              (panLang$Dec «b» panLang$One
+                (panLang$Const (5w : 8 word))
+                (panLang$Raise «E»
+                  (panLang$RStruct
+                    [panLang$Const (7w : 8 word); panLang$Const 9w])));
+            return := panLang$One |>]``;
+
 val _ = print_eval "handled_pair"
   ``pan_to_crep$compile_to_crep
       [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);

@@ -139,6 +139,17 @@ def evaluateSourceCallRaisesException :=
           if exception == "E" then some .one else none })
     (.call none "raiseE" [] : Prog Word64)
 
+def evaluateSourceCallHandlesException :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceRaiseExceptionCallCode with
+        locals := fun name =>
+          if name == "caught" then some (.word (BitVec.ofNat 64 0)) else none
+        exceptionShapes := fun exception =>
+          if exception == "E" then some .one else none })
+    (.call (some (none, some ("E", "caught",
+      .return (.var .local "caught")))) "raiseE" [] : Prog Word64)
+
 def evaluateSourceDecCallId :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -216,6 +227,10 @@ def observeSourceCallRaisesException : Bool :=
       value == BitVec.ofNat 64 7
   | _ => false
 
+def observeSourceCallHandlesException : Bool :=
+  isSourceReturnedWord evaluateSourceCallHandlesException
+    (BitVec.ofNat 64 7) 9
+
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
 
@@ -252,6 +267,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceCodeCall
 #guard observeSourceCallAssigned
 #guard observeSourceCallRaisesException
+#guard observeSourceCallHandlesException
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceCodePreservedAfterRecursion
@@ -511,6 +527,8 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned Call writes the existing local destination"
   if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
     IO.println "FAIL state-owned Call propagates the callee exception payload"
+  if observeSourceCallHandlesException then IO.println "PASS state-owned Call handler catches and binds the exception payload" else
+    IO.println "FAIL state-owned Call handler catches and binds the exception payload"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else

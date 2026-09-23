@@ -112,6 +112,30 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameFunctionName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameProg",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_decs_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameDecls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -142,6 +166,14 @@
     "lean_name": "crepEvalMulConst",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (width-generic RISC-V target specialization; no proved correspondence from HOL eval_def/crep_op_def and arbitrary HOL state to riscvCrepWordTarget)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstRaw",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only adapter removing the one-constructor PanWordLab wrapper from the untagged target-specific support lemma"
   },
   {
     "hol_path": null,
@@ -180,6 +212,14 @@
     "hol_name": "MORE_THEN_NOT_MAX_LIST",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "moreThenNotMaxList",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "max_list_genlist_add_suc_val",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "max_list_genlist_add_suc_val",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },
@@ -2628,7 +2668,7 @@
     "hol_name": "is_wf_shape_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "isWfShape_drop",
-"statement_status": "reviewed_exact",
+    "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },
   {

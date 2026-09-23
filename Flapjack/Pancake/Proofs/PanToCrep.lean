@@ -37,6 +37,20 @@ theorem cexpHeads_eq_cexpHeadsSimp (expressions : List (List (CrepExp α))) :
           simp only [cexpHeads, ih, cexpHeadsSimp]
           cases h : expressions.any List.isEmpty <;> simp [h]
 
+/-- HOL `MAX_LIST_APPEND`: the maximum of an appended list is the maximum
+    of the two constituent maxima. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MAX_LIST_APPEND"]
+theorem maxListAppendHol (first second : List Nat) :
+    maxList (first ++ second) = max (maxList first) (maxList second) :=
+  maxList_append first second
+
+/-- HOL `MAX_LIST_NOT_MEM`: a natural number above the list maximum is not
+    present in that list. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MAX_LIST_NOT_MEM"]
+theorem maxListNotMemHol (x : Nat) (values : List Nat)
+    (h : x > maxList values) : x ∉ values :=
+  maxList_not_mem x values h
+
 /-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
     input expression or produces the zero fallback. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]

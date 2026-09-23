@@ -348,14 +348,13 @@ end CrepInlineFmap
     `CrepInlineFmap.toFiniteMap` connects lookup and submap, `card` counts
     distinct keys, and `toFiniteMap_remove`/`lookup_insert` show the bridge
     commutes with `DOMSUB`/update. The universal theorem
-    `crepInlineProgFmap_congr` proves this pass depends on the inlineable map
-    only through its HOL `fmap` view, so the recursion corresponds to HOL
-    `inline_prog` on every input, not just the oracle fixtures. The tag is
-    withheld only because HOL's `inline_prog` is a literal recursion over an
-    sptree, so a definitional-identity tag would misrepresent the carrier;
-    the correspondence is instead carried by the universal lemmas. The direct
-    HOL oracle in `scripts/hol-probes/crep_inline_code_inl_probe.out` pins
-    representative cases. -/
+    `crepInlineProgFmap_congr` proves this Lean pass depends on the inlineable
+    map only through its finite-map lookup view, for every input program.
+    This does not prove equality with HOL's sptree-recursive `inline_prog`;
+    that cross-system correspondence is still open, so this definition has
+    no `@[hol]` tag. The direct HOL oracle in
+    `scripts/hol-probes/crep_inline_code_inl_probe.out` pins representative
+    cases only. -/
 def crepInlineProgFmap [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     (inlineable : CrepInlineFmap α) : CrepProg α → CrepProg α
@@ -421,11 +420,10 @@ decreasing_by
     | apply Prod.Lex.left
       exact CrepInlineFmap.card_remove_lt name inlineable _hlookup
 
-/-- Universal correspondence for the finite-map inline port: the pass depends
-    on the inlineable map only through its HOL `fmap` view `toFiniteMap`.
-    Together with `toFiniteMap_remove`/`lookup_insert` this pins lookup,
-    DOMSUB and update behaviour, so any two representations with the same
-    `FLOOKUP` view produce the same inlined program. -/
+/-- Representation independence within the Lean finite-map inline port: the
+    pass depends on the inlineable map only through `toFiniteMap`. Thus any
+    two Lean carriers with the same lookup view produce the same result for
+    every program. Equality with HOL `inline_prog` is not established here. -/
 theorem crepInlineProgFmap_congr [BEq FunName] [LawfulBEq FunName]
     [OfNat α 0] [OfNat α 1]
     {fs gs : CrepInlineFmap α}

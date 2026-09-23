@@ -2331,6 +2331,14 @@ theorem sizeOfEidsPanSimpDeclsEq (declarations : List (Decl α)) :
     sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
   rw [panSimpDecls_eq_map, sizeOfEids_map_panSimpDecl]
 
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "map_snd_f_eq"]
+theorem mapSndFEq {α β γ δ ε : Type} (entries : List (α × β × γ))
+    (f : γ → δ) (g : δ → ε) :
+    entries.map (fun entry => g (f entry.2.2)) =
+      (entries.map (fun entry => entry.2.2)).map (fun body => g (f body)) := by
+  rw [List.map_map]
+  congr 1
+
 @[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "functions_compile_prog"]
 theorem functionsCompileProg (declarations : List (Decl α)) :
     functions (panSimpDecls declarations) =

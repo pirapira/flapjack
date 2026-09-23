@@ -3222,5 +3222,13 @@
     "lean_name": "panToCrepPcCompileCorrectAnnotCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state Annot case specialization; untagged)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+    "hol_name": "map_snd_f_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "lean_name": "mapSndFEq",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

@@ -4862,5 +4862,13 @@
     "lean_name": "panValueFfiSharedStore_stateRel_final",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "deepseek-two: Flapjack-only source-to-target shared-memory FFI_final step; HOL sh_mem_store FFI_final maps to target FinalFFI with unchanged state; oracle row store_final in scripts/hol-probes/crep_runtime_shared_mem_probe.out"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "stateRel_riscv64CrepRuntimeTarget_iff",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "deepseek-two: Flapjack-only canonicalization lemma; riscv64CrepRuntimeTarget edits bytesInWord/memoryModel/ffiContext (not constrained by state_rel) and bigEndian, so stateRel source base and stateRel source (riscv64CrepRuntimeTarget base) coincide when base.bigEndian = false"
   }
 ]

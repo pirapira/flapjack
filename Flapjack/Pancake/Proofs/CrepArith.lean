@@ -1661,6 +1661,68 @@ theorem crepArithHolWordBitsMapCode_toBitVecState {width : Nat} [NeZero width] {
   cases state
   rfl
 
+/-! All-width `eval_mul_const` support in the canonical `Fin width` word
+    representation. This factors the arbitrary finite-enumeration adapter out
+    of the arithmetic step used by the simp proof. It remains untagged because
+    its source evaluator and word operations are transported through the
+    BitVec/RISC-V model; the HOL `eval_def`/`crep_op_def` correspondence is
+    still open. -/
+theorem crepEvalMulConstHolWordBits {width : Nat} [NeZero width]
+    {σ : Type} (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (constant value : Fin width → Bool)
+    (h : evalCrepHolWordBitsExp state expression = some value) :
+    evalCrepHolWordBitsExp state
+      (crepMulConst (fun n => bitVecToHolWordBits (BitVec.ofNat width n))
+        expression constant) = some (value * constant) := by
+  have hSource : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec expression) =
+        some (holWordBitsToBitVec value) := by
+    change (evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec expression)).map
+        bitVecToHolWordBits = some value at h
+    cases hEval : evalCrepHolExp state.toBitVecState
+        (mapCrepExpWord holWordBitsToBitVec expression) with
+    | none => simp [hEval] at h
+    | some bitVecValue =>
+        have hValue : bitVecToHolWordBits bitVecValue = value := by
+          simpa [hEval] using h
+        have hBitVecValue : bitVecValue = holWordBitsToBitVec value := by
+          calc
+            bitVecValue = holWordBitsToBitVec
+                (bitVecToHolWordBits bitVecValue) := by
+                  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+            _ = holWordBitsToBitVec value := congrArg holWordBitsToBitVec hValue
+        simp [hBitVecValue]
+  have hProduction :
+      evalCrepRuntimeExp
+          (riscvCrepWordTarget state.toBitVecState.toRuntime)
+          (mapCrepExpWord holWordBitsToBitVec expression) =
+        some (holWordBitsToBitVec value) := by
+    rw [evalCrepRuntimeExp_toRuntime_eq]
+    exact hSource
+  have hMul := crepEvalMulConstRaw state.toBitVecState.toRuntime
+    (mapCrepExpWord holWordBitsToBitVec expression)
+    (holWordBitsToBitVec constant) (holWordBitsToBitVec value) hProduction
+  have hSourceMul :
+      evalCrepHolExp state.toBitVecState
+          (crepMulConst (BitVec.ofNat width)
+            (mapCrepExpWord holWordBitsToBitVec expression)
+            (holWordBitsToBitVec constant)) =
+        some (holWordBitsToBitVec value * holWordBitsToBitVec constant) := by
+    rw [← evalCrepRuntimeExp_toRuntime_eq]
+    exact hMul
+  have hNatural := crepMulConst_holWordBits expression constant
+  unfold evalCrepHolWordBitsExp
+  rw [hNatural, hSourceMul]
+  apply congrArg some
+  calc
+    bitVecToHolWordBits
+        (holWordBitsToBitVec value * holWordBitsToBitVec constant) =
+        bitVecToHolWordBits (holWordBitsToBitVec (value * constant)) := by
+          rw [holWordBitsToBitVec_mul]
+    _ = value * constant := bitVecToHolWordBits_holWordBitsToBitVec _
+
 private theorem crepSimpExpEvalPreservesHolWordBits {width : Nat} [NeZero width]
     {σ : Type} (state : CrepHolState (Fin width → Bool) σ)
     (expression : CrepExp (Fin width → Bool))

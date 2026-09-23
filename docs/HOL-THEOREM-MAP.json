@@ -264,6 +264,14 @@
     "reviewer": "Codex (width-generic RISC-V target specialization; no proved correspondence from HOL eval_def/crep_op_def and arbitrary HOL state to riscvCrepWordTarget)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolWordBits",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width source-state support over canonical Fin width -> Bool words. It still interprets HOL eval_def/crep_op_def through BitVec/RISC-V operations and byte loads; no @[hol] tag until that evaluator correspondence is proved."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

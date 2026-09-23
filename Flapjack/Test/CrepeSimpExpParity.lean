@@ -276,6 +276,20 @@ def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
   some (bitVecToHolWordBits (BitVec.ofNat 4 9))
 
 example :
+    evalCrepHolWordBitsExp holWordBitsState4
+        (crepMulConst (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
+          (.const holBits4) holBits4) =
+      some (holBits4 * holBits4) := by
+  refine crepEvalMulConstHolWordBits (state := holWordBitsState4)
+    (expression := .const holBits4) (constant := holBits4)
+    (value := holBits4) ?_
+  change (evalCrepHolExp holWordBitsState4.toBitVecState
+    (mapCrepExpWord holWordBitsToBitVec (.const holBits4))).map
+      bitVecToHolWordBits = some holBits4
+  simp [evalCrepHolExp, mapCrepExpWord,
+    bitVecToHolWordBits_holWordBitsToBitVec]
+
+example :
     evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
         (.loadByte (.const holBits4)) =
       evalCrepHolWordBitsExp holWordBitsState4 (.loadByte (.const holBits4)) :=

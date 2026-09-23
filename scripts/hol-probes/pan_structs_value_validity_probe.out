@@ -6,3 +6,5 @@ v_flds_ok_duplicate_first=F
 is_wf_shape_v_word=T
 is_wf_shape_v_named_match=T
 is_wf_shape_v_named_missing=F
+is_wf_shape_v_named_mismatch=T
+value_validity_done=0

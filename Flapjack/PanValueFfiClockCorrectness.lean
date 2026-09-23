@@ -496,9 +496,9 @@ theorem evalPanValueFfiClockProg_decCall_returned
   simp [evalPanValueFfiClockProg, hcall, hshape, hbody]
 
 /-! A declaration call whose callee returns a value of the wrong shape is
-    rejected: the shape check fails and the whole program evaluates to none.
-    This is the `shape_of v ≠ return_sh` sub-case of Cake's `DecCall` proof,
-    which is vacuous precisely because the source evaluation is `NONE`. -/
+    rejected with an explicit Error while preserving the callee's post-call
+    state and clock.  This is the `shape_of v ≠ return_sh` sub-case of Cake's
+    `DecCall` proof. -/
 theorem evalPanValueFfiClockProg_decCall_shape_mismatch
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -525,7 +525,8 @@ theorem evalPanValueFfiClockProg_decCall_shape_mismatch
     (hshape : panShapeMatches (panValueShape structs value) shape = false) :
     evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
-      (.decCall name shape function arguments body) = none := by
+      (.decCall name shape function arguments body) =
+      some (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), callClock) := by
   simp [evalPanValueFfiClockProg, hcall, hshape]
 
 /-! An uncaught exception from a clocked `DecCall` bypasses its local
@@ -1501,7 +1502,8 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   have hb : bodyClock ≤ nextClock := hbodyIH nextClock g m f v bodyOutcome bodyClock hbody
                   simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                   obtain ⟨_, he⟩ := hrun; omega
-              · simp only [hmatch, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+              · simp only [hmatch, if_false, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                obtain ⟨_, he⟩ := hrun; omega
         | normal l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
         | broke l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
         | continued l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)

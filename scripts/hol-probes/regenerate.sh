@@ -472,6 +472,8 @@ run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
   empty duplicate_first "$cake_dir/pancake/pan_structsScript.sml"
+run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
+  rstruct list_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

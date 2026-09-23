@@ -12,6 +12,21 @@ translation limits are documented at the declarations.
 
 namespace Flapjack
 
+/-- HOL's local `compile_exps_eq_map` (`pan_structsProofScript.sml:11`): the
+    production recursive helper used by `structCompileExp` maps the production
+    single-expression compiler over the list. `List.map` represents HOL `MAP`;
+    `[BEq String]` is the typeclass needed by the Lean implementation's lookup. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_exps_eq_map" 11]
+theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassContext) :
+    (structCompileExp.structCompileExps (α := α) context :
+      List (Exp α) → List (Exp α)) =
+      fun expressions => expressions.map (structCompileExp context) := by
+  funext expressions
+  induction expressions with
+  | nil => simp [structCompileExp.structCompileExps]
+  | cons expression expressions ih =>
+      simp [structCompileExp.structCompileExps, ih]
+
 /-- Cake's `opt_mmap_eq_some_el`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:19`). The `getElem?`
     formulation is the total Lean translation of HOL's total `EL`: under the

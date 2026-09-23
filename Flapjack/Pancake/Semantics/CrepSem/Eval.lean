@@ -398,6 +398,124 @@ theorem holFiniteWordToBitVec_and {ι : Type u}
       (AndOp.and (holWordToBitVec dimension left) (holWordToBitVec dimension right))) = _
   rw [holWordToBitVec_bitVecToHolWord]
 
+theorem holFiniteWordToBitVec_or {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (OrOp.or left right) =
+      OrOp.or (holWordToBitVec dimension left) (holWordToBitVec dimension right) := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (OrOp.or (holWordToBitVec dimension left) (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_xor {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (HXor.hXor left right) =
+      HXor.hXor (holWordToBitVec dimension left) (holWordToBitVec dimension right) := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (HXor.hXor (holWordToBitVec dimension left) (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+theorem holFiniteWordToBitVec_sub {ι : Type u}
+    [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
+    holWordToBitVec dimension (left - right) =
+      holWordToBitVec dimension left - holWordToBitVec dimension right := by
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (holWordToBitVec dimension left - holWordToBitVec dimension right)) = _
+  rw [holWordToBitVec_bitVecToHolWord]
+
+private theorem mapFoldr {α : Type u} {β : Type v} (convert : α → β)
+    (combine : α → α → α) (combineTarget : β → β → β)
+    (hCombine : ∀ left right, convert (combine left right) =
+      combineTarget (convert left) (convert right))
+    (initial : α) (initialTarget : β) (hInitial : convert initial = initialTarget)
+    (values : List α) :
+    convert (values.foldr combine initial) =
+      (values.map convert).foldr combineTarget initialTarget := by
+  induction values with
+  | nil => simp [hInitial]
+  | cons head tail ih =>
+      simp only [List.foldr_cons, List.map_cons]
+      rw [hCombine, ih]
+
+theorem holFiniteWord_wordOp_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (operator : BinOp)
+    (values : List (ι → Bool)) :
+    wordOp operator values =
+      (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases operator with
+  | and =>
+      simp only [wordOpHOL, wordOp, Option.map_some]
+      apply congrArg some
+      let combine : (ι → Bool) → (ι → Bool) → (ι → Bool) := AndOp.and
+      let combineTarget : BitVec dimension.width → BitVec dimension.width →
+          BitVec dimension.width := AndOp.and
+      have hseed : holWordToBitVec dimension
+          (Complement.complement (0 : ι → Bool)) =
+            Complement.complement (0 : BitVec dimension.width) := by
+        change holWordToBitVec dimension
+          (bitVecToHolWord dimension
+            (Complement.complement (holWordToBitVec dimension (0 : ι → Bool)))) = _
+        rw [holWordToBitVec_bitVecToHolWord, holFiniteWordToBitVec_zero]
+      have hfold := mapFoldr (holWordToBitVec dimension) combine combineTarget
+        (by intro left right; exact holFiniteWordToBitVec_and left right)
+        (Complement.complement (0 : ι → Bool))
+        (Complement.complement (0 : BitVec dimension.width)) hseed values
+      exact (bitVecToHolWord_holWordToBitVec dimension _).symm.trans
+        (congrArg (bitVecToHolWord dimension) hfold)
+  | add =>
+      simp only [wordOpHOL, wordOp, Option.map_some]
+      apply congrArg some
+      let combine : (ι → Bool) → (ι → Bool) → (ι → Bool) := fun left right => left + right
+      let combineTarget : BitVec dimension.width → BitVec dimension.width →
+          BitVec dimension.width := fun left right => left + right
+      have hfold := mapFoldr (holWordToBitVec dimension) combine combineTarget
+        (by intro left right; exact holFiniteWordToBitVec_add left right)
+        (0 : ι → Bool) (0 : BitVec dimension.width) holFiniteWordToBitVec_zero values
+      exact (bitVecToHolWord_holWordToBitVec dimension _).symm.trans
+        (congrArg (bitVecToHolWord dimension) hfold)
+  | or =>
+      simp only [wordOpHOL, wordOp, Option.map_some]
+      apply congrArg some
+      let combine : (ι → Bool) → (ι → Bool) → (ι → Bool) := OrOp.or
+      let combineTarget : BitVec dimension.width → BitVec dimension.width →
+          BitVec dimension.width := OrOp.or
+      have hfold := mapFoldr (holWordToBitVec dimension) combine combineTarget
+        (by intro left right; exact holFiniteWordToBitVec_or left right)
+        (0 : ι → Bool) (0 : BitVec dimension.width) holFiniteWordToBitVec_zero values
+      exact (bitVecToHolWord_holWordToBitVec dimension _).symm.trans
+        (congrArg (bitVecToHolWord dimension) hfold)
+  | xor =>
+      simp only [wordOpHOL, wordOp, Option.map_some]
+      apply congrArg some
+      let combine : (ι → Bool) → (ι → Bool) → (ι → Bool) := HXor.hXor
+      let combineTarget : BitVec dimension.width → BitVec dimension.width →
+          BitVec dimension.width := HXor.hXor
+      have hfold := mapFoldr (holWordToBitVec dimension) combine combineTarget
+        (by intro left right; exact holFiniteWordToBitVec_xor left right)
+        (0 : ι → Bool) (0 : BitVec dimension.width) holFiniteWordToBitVec_zero values
+      exact (bitVecToHolWord_holWordToBitVec dimension _).symm.trans
+        (congrArg (bitVecToHolWord dimension) hfold)
+  | sub =>
+      cases values with
+      | nil => rfl
+      | cons left tail =>
+          cases tail with
+          | nil => rfl
+          | cons right rest =>
+              cases rest with
+              | nil =>
+                  simp only [wordOpHOL, wordOp]
+                  apply congrArg some
+                  exact (bitVecToHolWord_holWordToBitVec dimension (left - right)).symm.trans
+                    (congrArg (bitVecToHolWord dimension)
+                      (holFiniteWordToBitVec_sub left right))
+              | cons extra rest => rfl
+
 theorem holFiniteWordToBitVec_shiftRight {ι : Type u}
     [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
     holWordToBitVec dimension (ShiftRight.shiftRight left right) =

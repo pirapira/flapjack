@@ -100,6 +100,19 @@ example :
 
 def boolDimensionWord : Bool → Bool := id
 
+#guard wordOp .add [] == some (0 : Bool → Bool)
+#guard wordOp .and [] == some (Complement.complement (0 : Bool → Bool))
+#guard wordOp .or [] == some (0 : Bool → Bool)
+#guard wordOp .xor [] == some (0 : Bool → Bool)
+#guard wordOp .sub [boolDimensionWord] == none
+#guard wordOp .sub [boolDimensionWord, boolDimensionWord, boolDimensionWord] == none
+
+example (operator : BinOp) (values : List (Bool → Bool)) :
+    wordOp operator values =
+      (wordOpHOL operator (values.map (holWordToBitVec boolWordDimension))).map
+        (bitVecToHolWord boolWordDimension) :=
+  holFiniteWord_wordOp_toBitVec boolWordDimension operator values
+
 #guard holFiniteWordSBitSum boolWordDimension boolDimensionWord == 2
 
 example : holFiniteWordW2N boolWordDimension boolDimensionWord = 2 := by

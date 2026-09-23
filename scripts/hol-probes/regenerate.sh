@@ -615,6 +615,10 @@ run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
 run_probe hol_word_arithmetic_probeScript.sml hol_word_arithmetic_probe.out \
   word_add_definition sub_3_5_8 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"
+run_probe word_op_finite_probeScript.sml word_op_finite_probe.out \
+  word_op_definition sub_three \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

@@ -305,11 +305,11 @@ def laterPairOracle : Bool :=
 
 #guard laterPairOracle
 
-/-! The original `compile_to_crep` fixture above stores the later payload
-words at `StoreGlob 0` and `StoreGlob 1`. Cake `loop_to_word` represents those
-as `Set (Temp 0)` and `Set (Temp 1)`, and `word_to_stack` must retain the same
-Temp region indices instead of scaling them by target bytes-per-word. The
-original rules are `loop_to_wordScript.sml:93` and
+/-! The `compile_to_crep` fixture above separately checks `StoreGlob 0/1`.
+This boundary check starts from a representative Word program containing
+`Set (Temp 0/1)` and checks that `word_to_stack` preserves those indices; it
+does not establish an end-to-end link between the two fixtures. The original
+rules are `loop_to_wordScript.sml:93` and
 `compiler/backend/word_to_stackScript.sml:491`. -/
 def laterPairStackTempRegionOracle : Bool :=
   let config : RiscV.WordStackConfig :=
@@ -323,11 +323,6 @@ def laterPairStackTempRegionOracle : Bool :=
   | _ => false
 
 #guard laterPairStackTempRegionOracle
-
-def laterPairEndToEndTempRegionOracle : Bool :=
-  laterPairOracle && laterPairStackTempRegionOracle
-
-#guard laterPairEndToEndTempRegionOracle
 
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),

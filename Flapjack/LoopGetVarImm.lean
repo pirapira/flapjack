@@ -11,16 +11,16 @@ operands are returned directly.  The source uses `Word`/`word_loc`, modeled by
 
 namespace Flapjack
 
-def getVarImm (state : LoopMachineState W F) : RegImm (LoopValue W) → Option (LoopValue W)
+def getVarImm (state : LoopMachineState W F) : RegImm W → Option (LoopValue W)
   | .reg name => state.locals name
-  | .imm value => some value
+  | .imm value => some (.word value)
 
 @[simp] theorem getVarImm_reg (state : LoopMachineState W F) (name : Nat) :
     getVarImm state (.reg name) = state.locals name := by
   rfl
 
-@[simp] theorem getVarImm_imm (state : LoopMachineState W F) (value : LoopValue W) :
-    getVarImm state (.imm value) = some value := by
+@[simp] theorem getVarImm_imm (state : LoopMachineState W F) (value : W) :
+    getVarImm state (.imm value) = some (.word value) := by
   rfl
 
 end Flapjack

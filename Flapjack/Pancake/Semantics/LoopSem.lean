@@ -16,8 +16,9 @@ and FFI each have their own already-tested source-shaped port.  The recursive
 control machine below is therefore the direct `evaluate_def` composition of
 those operations, rather than a second approximation of their internals.
 
-The executable probe uses the `LoopWordLoc` specialization.  This is the same
-word/location representation used by `LoopMachineState` and `findLoopCode`.
+The executable probe uses the `Nat` word specialization, so machine values are
+`LoopValue Nat = LoopWordLoc`; the program and code table carry the raw word
+type (`LoopProg W`, `LoopCode W`), exactly as in the source `'a loopLang$prog`.
 -/
 
 namespace Flapjack
@@ -33,7 +34,7 @@ abbrev LoopMachineStep (W : Type := Nat) (F : Type := LoopWordLoc) :=
     the same equation-level machine serves the source probe (`W = Nat`,
     `F = LoopWordLoc`) and the production `BitVec` IR. -/
 structure LoopEvaluateHooks (W : Type := Nat) (F : Type := LoopWordLoc) where
-  eval : LoopMachineState W F → LoopExp (LoopValue W) → Option (LoopValue W)
+  eval : LoopMachineState W F → LoopExp W → Option (LoopValue W)
   primitive : PrimOp → List (LoopValue W) → Option (List (LoopValue W))
   arith : LoopMachineState W F → LoopArith → Option (LoopMachineState W F)
   store : LoopMachineState W F → LoopValue W → LoopValue W →
@@ -103,7 +104,7 @@ def loopArithMachine (width : Nat) (state : LoopMachineState Nat F)
 
 mutual
   def evaluateLoop {W F : Type} : Nat → LoopEvaluateHooks W F →
-      LoopProg (LoopValue W) → LoopMachineState W F → LoopMachineStep W F
+      LoopProg W → LoopMachineState W F → LoopMachineStep W F
     | 0, _, _, state => (some .error, state)
     | fuel + 1, hooks, program, state => match program with
     | .skip => (none, state)
@@ -247,7 +248,7 @@ mutual
 
   def evaluateLoopCall {W F : Type} : Nat → LoopEvaluateHooks W F →
       Option (List Nat × List Nat) → Option Nat → List Nat →
-      Option (Nat × LoopProg (LoopValue W) × LoopProg (LoopValue W) × List Nat) →
+      Option (Nat × LoopProg W × LoopProg W × List Nat) →
       LoopMachineState W F → LoopMachineStep W F
     | 0, _, _, _, _, _, state => (some .error, state)
     | fuel + 1, hooks, returns, target, arguments, handler, state =>

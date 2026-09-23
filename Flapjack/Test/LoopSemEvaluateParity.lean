@@ -29,7 +29,7 @@ example {W F : Type} (fuel : Nat) (hooks : LoopEvaluateHooks W F)
   simp [evaluateLoop]
 
 example {W F : Type} (hooks : LoopEvaluateHooks W F)
-    (program : LoopProg (LoopValue W)) (state : LoopMachineState W F) :
+    (program : LoopProg W) (state : LoopMachineState W F) :
     evaluateLoop 0 hooks program state = (some .error, state) := by
   simp [evaluateLoop]
 
@@ -52,7 +52,7 @@ example {W F : Type} (fuel label : Nat) (hooks : LoopEvaluateHooks W F)
 
 example {W F : Type} (fuel : Nat) (hooks : LoopEvaluateHooks W F)
     (state : LoopMachineState W F) (name : Nat)
-    (expression : LoopExp (LoopValue W)) :
+    (expression : LoopExp W) :
     evaluateLoop (fuel + 1) hooks (.assign name expression) state =
       (match hooks.eval state expression with
        | none => (some .error, state)

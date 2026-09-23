@@ -92,8 +92,8 @@ structure CrepRuntimeState (α σ : Type u) where
   topAddress : α
 
 /- Flapjack clock update. Its field operation follows CakeML Pancake's
-   `dec_clock_def`; with locals cells now `word_lab`-shaped this is also the
-   HOL state update. -/
+   `dec_clock_def`, but this runtime state still carries extra memory-model
+   and FFI-context fields, so this is not tagged as an exact HOL definition. -/
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
 
@@ -101,8 +101,9 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- Fixed-width `set_globals` cell update on the emitted `word_lab` cells
-    (HOL `crepSem$set_globals_def`). -/
+/-- Flapjack runtime adaptation of HOL `set_globals`: the 5-bit key and
+    `word_lab` cell update agree, but the enclosing state still carries extra
+    runtime fields, so this declaration is not an exact HOL port. -/
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with globals := updateCrepRuntimeGlobal state.globals key value }
@@ -111,9 +112,10 @@ def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=
   fun candidate => if name == candidate then some value else locals candidate
 
-/- Flapjack local-clear operation, matching CakeML's `empty_locals_def`
-   (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
-   expose the caller's transient locals. -/
+/- Flapjack local-clear operation. Its locals projection matches CakeML's
+   `empty_locals_def` (`crepSemScript.sml:71`), but the enclosing state type
+   still differs. Terminal timeout and exception boundaries do not expose
+   the caller's transient locals. -/
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
 

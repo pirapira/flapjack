@@ -309,7 +309,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteDimension",
     "statement_status": "documented_mismatch",
-    "reviewer": "Generic finite-dimension production support with HOL's premise and code-map update, but still interprets words through explicit HolFiniteDimension/BitVec and returns only word-valued expression results; not the unrestricted crepSem word_lab theorem"
+    "reviewer": "Generic finite-dimension production support preserves HOL's full optional word_lab result (both HOL word_lab and PanWordLab have only Word), the successful premise, and arbitrary code-map update. It remains untagged because it interprets the polymorphic word carrier through explicit HolFiniteDimension enumeration and the RISC-V/BitVec operation model; unrestricted HOL word-type/operation correspondence is not proved."
   },
   {
     "hol_path": null,

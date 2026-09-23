@@ -43,6 +43,13 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
+The exact `compile_exp_not_mem_load_glob` port is in
+`Flapjack/Pancake/Proofs/PanToCrep.lean`. It keeps the HOL `state_rel`,
+`code_rel`, and `locals_rel` premises and states absence over the nested Crepe
+expression traversal. Its compiler-only support theorem follows
+`compileExpHOL`; the older list-backed `compileExp` theorem is not used as its
+proof.
+
 Placement under `Proofs` does not imply that a whole pass correctness theorem
 has been established. For declaration-level provenance, use
 `scripts/check-hol-refs.py --mapping`; CI validates the review inventory with

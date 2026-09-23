@@ -1070,4 +1070,144 @@ theorem panValueFfiReadBytes_view_eq_riscv
         crepRuntimeMemoryView, riscv64PanValueFfiContext, RiscV.panRiscVReadByte,
         RiscV.panRiscVMemoryModel, panModelReadByte]
 
+/-! ## Shared-memory FFI dispatch
+
+HOL `panSem$sh_mem_load`/`sh_mem_store` (and the `crepSem$sh_mem_load`/`sh_mem_store`
+counterparts) dispatch a shared-memory access through
+`call_FFI s.ffi (SharedMem MappedRead/MappedWrite) [n2w width] payload`, where the
+width is the operation size and the payload is the address (reads) or the value
+bytes followed by the address bytes (writes). The canonical RISC-V 64 target
+below installs the matching request handler and the address/width lemmas, so the
+production `crepRuntimeSharedMem` step is the HOL rule once the source outcome is
+fixed. Direct oracle: `scripts/hol-probes/crep_runtime_shared_mem_probe.out`. -/
+
+/-- The `FfiShmemOp` selected by a Crep shared-memory operator (HOL `sh_mem_op`). -/
+def crepSharedMemOperator : CrepMemOp → FfiShmemOp
+  | .load | .load8 | .load16 | .load32 => .mappedRead
+  | .store | .store8 | .store16 | .store32 => .mappedWrite
+
+/-- HOL `sh_mem_op` read case: an `OpSize` becomes the Crep load operator. -/
+def opSizeToCrepLoadOp : OpSize → CrepMemOp
+  | .opW => .load
+  | .op8 => .load8
+  | .op16 => .load16
+  | .op32 => .load32
+
+/-- HOL `sh_mem_op` store case: an `OpSize` becomes the Crep store operator. -/
+def opSizeToCrepStoreOp : OpSize → CrepMemOp
+  | .opW => .store
+  | .op8 => .store8
+  | .op16 => .store16
+  | .op32 => .store32
+
+@[simp] theorem crepRuntimeMemWidth_opSizeToCrepLoadOp (size : OpSize) :
+    crepRuntimeMemWidth (opSizeToCrepLoadOp size) = panValueFfiWidth size := by
+  cases size <;> rfl
+
+@[simp] theorem crepRuntimeMemWidth_opSizeToCrepStoreOp (size : OpSize) :
+    crepRuntimeMemWidth (opSizeToCrepStoreOp size) = panValueFfiWidth size := by
+  cases size <;> rfl
+
+/-- The canonical target aligns a shared-memory read exactly as the HOL source
+    side does (`sh_mem_op`/`byte_align`). -/
+theorem crepRuntimeSharedAddress_opSizeToCrepLoadOp
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (size : OpSize)
+    (address : RiscV.Word 64) :
+    crepRuntimeSharedAddress (riscv64CrepRuntimeTarget base)
+        (opSizeToCrepLoadOp size) address =
+      panValueFfiSharedAddress (riscv64PanValueFfiContext base.shMemaddrs)
+        size address := by
+  unfold crepRuntimeSharedAddress panValueFfiSharedAddress
+  rw [crepRuntimeMemWidth_opSizeToCrepLoadOp]
+  by_cases h : panValueFfiWidth size = 0 <;>
+    simp [h, riscv64CrepRuntimeTarget, riscv64PanValueFfiContext, RiscV.panRiscVMemoryModel]
+
+/-- Canonical target alignment for the shared-memory store operators. -/
+theorem crepRuntimeSharedAddress_opSizeToCrepStoreOp
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (size : OpSize)
+    (address : RiscV.Word 64) :
+    crepRuntimeSharedAddress (riscv64CrepRuntimeTarget base)
+        (opSizeToCrepStoreOp size) address =
+      panValueFfiSharedAddress (riscv64PanValueFfiContext base.shMemaddrs)
+        size address := by
+  unfold crepRuntimeSharedAddress panValueFfiSharedAddress
+  rw [crepRuntimeMemWidth_opSizeToCrepStoreOp]
+  by_cases h : panValueFfiWidth size = 0 <;>
+    simp [h, riscv64CrepRuntimeTarget, riscv64PanValueFfiContext, RiscV.panRiscVMemoryModel]
+
+/-- The canonical shared-memory request handler: a `sharedMem` request dispatches
+    to the Lean `callFfi` (the `call_FFI` port) with the HOL `SharedMem` name, the
+    width byte, and the payload, mapping its `FfiResult` to the Crep handler
+    response. The `extCall` case is dead for the shared-memory relation and just
+    returns the unchanged ffi. -/
+def riscv64SharedMemCallFfiHandler :
+    CrepRuntimeFfiHandler α σ FfiFinalEvent
+  | .sharedMem operator _name _address payload, ffi =>
+      match callFfi ffi (.sharedMem (crepSharedMemOperator operator))
+          [UInt8.ofNat (crepRuntimeMemWidth operator)] payload with
+      | .returned nextFfi bytes => .returned nextFfi bytes
+      | .final event => .final event
+  | .extCall _ _ _, ffi => .returned ffi []
+
+/-- The canonical shared-memory handler characterises the `sharedMem` request
+    exactly as HOL `call_FFI (SharedMem ...)`. -/
+theorem riscv64SharedMemCallFfiHandler_sharedMem
+    (operator : CrepMemOp) (name : Nat) (address : RiscV.Word 64)
+    (payload : List UInt8) (ffi : FfiState σ) :
+    riscv64SharedMemCallFfiHandler
+        (.sharedMem operator name address payload :
+          CrepRuntimeRequest (RiscV.Word 64)) ffi =
+      (match callFfi ffi (.sharedMem (crepSharedMemOperator operator))
+          [UInt8.ofNat (crepRuntimeMemWidth operator)] payload with
+       | .returned nextFfi bytes => .returned nextFfi bytes
+       | .final event => .final event) := rfl
+
+/-- The canonical target accepts exactly the HOL source shared-memory domain:
+    the `memaddrs`-style validity bit is the source `sharedDomain` of the
+    aligned address. -/
+theorem crepRuntimeSharedAddressValid_opSizeToCrepLoadOp
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (size : OpSize)
+    (address : RiscV.Word 64) :
+    crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+        (opSizeToCrepLoadOp size) address =
+      (riscv64PanValueFfiContext base.shMemaddrs).sharedDomain
+        (panValueFfiSharedAddress (riscv64PanValueFfiContext base.shMemaddrs)
+          size address) := by
+  unfold crepRuntimeSharedAddressValid
+  rw [crepRuntimeSharedAddress_opSizeToCrepLoadOp]
+  rfl
+
+/-- Store-operator form of the canonical shared-memory validity bridge. -/
+theorem crepRuntimeSharedAddressValid_opSizeToCrepStoreOp
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (size : OpSize)
+    (address : RiscV.Word 64) :
+    crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+        (opSizeToCrepStoreOp size) address =
+      (riscv64PanValueFfiContext base.shMemaddrs).sharedDomain
+        (panValueFfiSharedAddress (riscv64PanValueFfiContext base.shMemaddrs)
+          size address) := by
+  unfold crepRuntimeSharedAddressValid
+  rw [crepRuntimeSharedAddress_opSizeToCrepStoreOp]
+  rfl
+
+/-- The target shared-memory store payload for the canonical target is the
+    source `panValueFfiSharedStore` payload, so the `callFfi` request coincides:
+    the width byte and the value/address byte concatenation agree. -/
+theorem crepRuntimeSharedStorePayload_eq
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (value address : RiscV.Word 64) (size : OpSize) :
+    (if crepRuntimeMemWidth (opSizeToCrepStoreOp size) = 0 then
+        context.wordToBytes value false ++ context.wordToBytes address false
+      else
+        (context.wordToBytes value false).take
+            (crepRuntimeMemWidth (opSizeToCrepStoreOp size)) ++
+          context.wordToBytes address false)
+      =
+    (if panValueFfiWidth size = 0 then
+        context.wordToBytes value false ++ context.wordToBytes address false
+      else
+        (context.wordToBytes value false).take (panValueFfiWidth size) ++
+          context.wordToBytes address false) := by
+  cases size <;> simp [crepRuntimeMemWidth, opSizeToCrepStoreOp, panValueFfiWidth]
+
 end Flapjack

@@ -93,6 +93,354 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+private theorem crepDestConst_mapCrepExpWord {α β : Type}
+    (convert : α → β) (expression : CrepExp α) :
+    crepDestConst (mapCrepExpWord convert expression) =
+      (crepDestConst expression).map convert := by
+  cases expression <;> simp [crepDestConst, mapCrepExpWord]
+
+/-! The binary multiply case of simplifier naturality across the canonical
+    finite-word representation. -/
+private theorem crepSimpMul_holWordBits {width : Nat} [NeZero width]
+    (left right : CrepExp (Fin width → Bool))
+    (hleft : mapCrepExpWord holWordBitsToBitVec
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) left) =
+      crepSimpExp (BitVec.ofNat width) (mapCrepExpWord holWordBitsToBitVec left))
+    (hright : mapCrepExpWord holWordBitsToBitVec
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) right) =
+      crepSimpExp (BitVec.ofNat width) (mapCrepExpWord holWordBitsToBitVec right)) :
+    mapCrepExpWord holWordBitsToBitVec
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+          (.crepOp .mul [left, right])) =
+      crepSimpExp (BitVec.ofNat width)
+        (.crepOp .mul [mapCrepExpWord holWordBitsToBitVec left,
+          mapCrepExpWord holWordBitsToBitVec right]) := by
+  let simpFin := fun expression => crepSimpExp
+    (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) expression
+  let simpBV := fun expression => crepSimpExp (BitVec.ofNat width) expression
+  change mapCrepExpWord holWordBitsToBitVec (simpFin (.crepOp .mul [left, right])) =
+    simpBV (.crepOp .mul [mapCrepExpWord holWordBitsToBitVec left,
+      mapCrepExpWord holWordBitsToBitVec right])
+  cases hL : crepDestConst (simpFin left) with
+  | some leftConstant =>
+    have hLshape := crepDestConst_eq_const (simpFin left) leftConstant hL
+    have hLtarget : simpBV (mapCrepExpWord holWordBitsToBitVec left) =
+        .const (holWordBitsToBitVec leftConstant) := by
+      calc
+        simpBV (mapCrepExpWord holWordBitsToBitVec left) =
+            mapCrepExpWord holWordBitsToBitVec (simpFin left) := hleft.symm
+        _ = .const (holWordBitsToBitVec leftConstant) := by
+          rw [hLshape]
+          simp [mapCrepExpWord]
+    cases hR : crepDestConst (simpFin right) with
+    | some rightConstant =>
+      have hRshape := crepDestConst_eq_const (simpFin right) rightConstant hR
+      have hRtarget : simpBV (mapCrepExpWord holWordBitsToBitVec right) =
+          .const (holWordBitsToBitVec rightConstant) := by
+        calc
+          simpBV (mapCrepExpWord holWordBitsToBitVec right) =
+              mapCrepExpWord holWordBitsToBitVec (simpFin right) := hright.symm
+          _ = .const (holWordBitsToBitVec rightConstant) := by
+            rw [hRshape]
+            simp [mapCrepExpWord]
+      have hsource := crepSimpExp.eq_5
+        (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        [left, right] leftConstant rightConstant (by simp [simpFin, hLshape, hRshape])
+      have htarget := crepSimpExp.eq_5 (BitVec.ofNat width)
+        [mapCrepExpWord holWordBitsToBitVec left,
+          mapCrepExpWord holWordBitsToBitVec right]
+        (holWordBitsToBitVec leftConstant) (holWordBitsToBitVec rightConstant)
+        (by simp [simpBV, hLtarget, hRtarget])
+      dsimp [simpFin, simpBV] at hsource htarget ⊢
+      rw [hsource, htarget]
+      simp only [mapCrepExpWord]
+      exact congrArg CrepExp.const (holWordBitsToBitVec_mul leftConstant rightConstant)
+    | none =>
+      have hRtargetNone : crepDestConst (simpBV
+          (mapCrepExpWord holWordBitsToBitVec right)) = none := by
+        change crepDestConst (crepSimpExp (BitVec.ofNat width)
+          (mapCrepExpWord holWordBitsToBitVec right)) = none
+        rw [← hright, crepDestConst_mapCrepExpWord]
+        change Option.map holWordBitsToBitVec (crepDestConst (simpFin right)) = none
+        rw [hR]
+        rfl
+      have hRnotConst : ∀ value, simpFin right = .const value → False := by
+        intro value heq
+        simp [heq, crepDestConst] at hR
+      have hRtargetNotConst : ∀ value,
+          simpBV (mapCrepExpWord holWordBitsToBitVec right) = .const value → False := by
+        intro value heq
+        simp [heq, crepDestConst] at hRtargetNone
+      have hsource := crepSimpExp.eq_6
+        (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        [left, right] leftConstant (simpFin right) hRnotConst
+        (by simp [simpFin, hLshape])
+      have htarget := crepSimpExp.eq_6 (BitVec.ofNat width)
+        [mapCrepExpWord holWordBitsToBitVec left,
+          mapCrepExpWord holWordBitsToBitVec right]
+        (holWordBitsToBitVec leftConstant)
+        (simpBV (mapCrepExpWord holWordBitsToBitVec right)) hRtargetNotConst
+        (by simp [simpBV, hLtarget])
+      dsimp [simpFin, simpBV] at hsource htarget ⊢
+      rw [hsource, htarget]
+      calc
+        mapCrepExpWord holWordBitsToBitVec
+            (crepMulConst (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+              (simpFin right) leftConstant) =
+            crepMulConst (BitVec.ofNat width)
+              (mapCrepExpWord holWordBitsToBitVec (simpFin right))
+              (holWordBitsToBitVec leftConstant) :=
+          crepMulConst_holWordBits (simpFin right) leftConstant
+        _ = crepMulConst (BitVec.ofNat width) (simpBV
+              (mapCrepExpWord holWordBitsToBitVec right))
+              (holWordBitsToBitVec leftConstant) := by rw [hright]
+  | none =>
+    have hLtargetNone : crepDestConst (simpBV
+        (mapCrepExpWord holWordBitsToBitVec left)) = none := by
+      change crepDestConst (crepSimpExp (BitVec.ofNat width)
+        (mapCrepExpWord holWordBitsToBitVec left)) = none
+      rw [← hleft, crepDestConst_mapCrepExpWord]
+      change Option.map holWordBitsToBitVec (crepDestConst (simpFin left)) = none
+      rw [hL]
+      rfl
+    have hLnotConst : ∀ value, simpFin left = .const value → False := by
+      intro value heq
+      simp [heq, crepDestConst] at hL
+    have hLtargetNotConst : ∀ value,
+        simpBV (mapCrepExpWord holWordBitsToBitVec left) = .const value → False := by
+      intro value heq
+      simp [heq, crepDestConst] at hLtargetNone
+    cases hR : crepDestConst (simpFin right) with
+    | some rightConstant =>
+      have hRshape := crepDestConst_eq_const (simpFin right) rightConstant hR
+      have hRtarget : simpBV (mapCrepExpWord holWordBitsToBitVec right) =
+          .const (holWordBitsToBitVec rightConstant) := by
+        calc
+          simpBV (mapCrepExpWord holWordBitsToBitVec right) =
+              mapCrepExpWord holWordBitsToBitVec (simpFin right) := hright.symm
+          _ = .const (holWordBitsToBitVec rightConstant) := by
+            rw [hRshape]
+            simp [mapCrepExpWord]
+      have hsource := crepSimpExp.eq_7
+        (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        [left, right] (simpFin left) rightConstant hLnotConst
+        (by simp [simpFin, hRshape])
+      have htarget := crepSimpExp.eq_7 (BitVec.ofNat width)
+        [mapCrepExpWord holWordBitsToBitVec left,
+          mapCrepExpWord holWordBitsToBitVec right]
+        (simpBV (mapCrepExpWord holWordBitsToBitVec left))
+        (holWordBitsToBitVec rightConstant) hLtargetNotConst
+        (by simp [simpBV, hRtarget])
+      dsimp [simpFin, simpBV] at hsource htarget ⊢
+      rw [hsource, htarget]
+      calc
+        mapCrepExpWord holWordBitsToBitVec
+            (crepMulConst (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+              (simpFin left) rightConstant) =
+            crepMulConst (BitVec.ofNat width)
+              (mapCrepExpWord holWordBitsToBitVec (simpFin left))
+              (holWordBitsToBitVec rightConstant) :=
+          crepMulConst_holWordBits (simpFin left) rightConstant
+        _ = crepMulConst (BitVec.ofNat width)
+              (simpBV (mapCrepExpWord holWordBitsToBitVec left))
+              (holWordBitsToBitVec rightConstant) := by rw [hleft]
+    | none =>
+      have hRtargetNone : crepDestConst (simpBV
+          (mapCrepExpWord holWordBitsToBitVec right)) = none := by
+        change crepDestConst (crepSimpExp (BitVec.ofNat width)
+          (mapCrepExpWord holWordBitsToBitVec right)) = none
+        rw [← hright, crepDestConst_mapCrepExpWord]
+        change Option.map holWordBitsToBitVec (crepDestConst (simpFin right)) = none
+        rw [hR]
+        rfl
+      have hRnotConst : ∀ value, simpFin right = .const value → False := by
+        intro value heq
+        simp [heq, crepDestConst] at hR
+      have hRtargetNotConst : ∀ value,
+          simpBV (mapCrepExpWord holWordBitsToBitVec right) = .const value → False := by
+        intro value heq
+        simp [heq, crepDestConst] at hRtargetNone
+      have hnotConstConst : ∀ a b, CrepOp.mul = CrepOp.mul →
+          List.map simpFin [left, right] = [.const a, .const b] → False := by
+        intro a b _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hLnotConst a hmap.1
+      have hnotLeftConst : ∀ c expression, CrepOp.mul = CrepOp.mul →
+          List.map simpFin [left, right] = [.const c, expression] → False := by
+        intro c expression _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hLnotConst c hmap.1
+      have hnotRightConst : ∀ expression c, CrepOp.mul = CrepOp.mul →
+          List.map simpFin [left, right] = [expression, .const c] → False := by
+        intro expression c _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hRnotConst c hmap.2.1
+      have hsource := crepSimpExp.eq_8
+        (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        [left, right] CrepOp.mul hnotConstConst hnotLeftConst hnotRightConst
+      have hnotConstConstTarget : ∀ a b, CrepOp.mul = CrepOp.mul →
+          List.map (simpBV ∘ mapCrepExpWord holWordBitsToBitVec) [left, right] =
+            [.const a, .const b] → False := by
+        intro a b _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hLtargetNotConst a hmap.1
+      have hnotLeftConstTarget : ∀ c expression, CrepOp.mul = CrepOp.mul →
+          List.map (simpBV ∘ mapCrepExpWord holWordBitsToBitVec) [left, right] =
+            [.const c, expression] → False := by
+        intro c expression _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hLtargetNotConst c hmap.1
+      have hnotRightConstTarget : ∀ expression c, CrepOp.mul = CrepOp.mul →
+          List.map (simpBV ∘ mapCrepExpWord holWordBitsToBitVec) [left, right] =
+            [expression, .const c] → False := by
+        intro expression c _ hmap
+        simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+        exact hRtargetNotConst c hmap.2.1
+      have htarget := crepSimpExp.eq_8 (BitVec.ofNat width)
+        [mapCrepExpWord holWordBitsToBitVec left,
+          mapCrepExpWord holWordBitsToBitVec right]
+        CrepOp.mul hnotConstConstTarget hnotLeftConstTarget hnotRightConstTarget
+      dsimp [simpFin, simpBV] at hsource htarget ⊢
+      rw [hsource, htarget]
+      simp [mapCrepExpWord, hleft, hright]
+
+/-! The full bottom-up simplifier is natural under the finite-index/BitVec
+    word isomorphism at every positive width. -/
+private theorem crepSimpExp_holWordBits {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool)) :
+    mapCrepExpWord holWordBitsToBitVec
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+          expression) =
+      crepSimpExp (BitVec.ofNat width)
+        (mapCrepExpWord holWordBitsToBitVec expression) := by
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        (∀ e, e ∈ expressions →
+          mapCrepExpWord holWordBitsToBitVec
+              (crepSimpExp
+                (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) e) =
+            crepSimpExp (BitVec.ofNat width)
+              (mapCrepExpWord holWordBitsToBitVec e)) ∧
+        List.map (mapCrepExpWord holWordBitsToBitVec)
+            (List.map (crepSimpExp
+              (fun value => bitVecToHolWordBits (BitVec.ofNat width value))) expressions) =
+          List.map (crepSimpExp (BitVec.ofNat width))
+            (List.map (mapCrepExpWord holWordBitsToBitVec) expressions)))
+  case const value => simp [crepSimpExp, mapCrepExpWord]
+  case var name => simp [crepSimpExp, mapCrepExpWord]
+  case load address ih => simp [crepSimpExp, mapCrepExpWord, ih]
+  case load32 address ih => simp [crepSimpExp, mapCrepExpWord, ih]
+  case loadByte address ih => simp [crepSimpExp, mapCrepExpWord, ih]
+  case loadGlob address => simp [crepSimpExp, mapCrepExpWord]
+  case op operator expressions ih =>
+    simp only [crepSimpExp, mapCrepExpWord, ih.2]
+  case crepOp operator expressions ih =>
+    cases operator
+    cases expressions with
+    | nil => simp [crepSimpExp, mapCrepExpWord]
+    | cons first tail =>
+      have hfirst := ih.1 first (by simp)
+      cases tail with
+      | nil => simp [crepSimpExp, mapCrepExpWord, hfirst]
+      | cons second tail =>
+        have hsecond := ih.1 second (by simp)
+        cases tail with
+        | nil =>
+          simpa [mapCrepExpWord] using crepSimpMul_holWordBits first second hfirst hsecond
+        | cons extra rest =>
+          have hnotConstConst : ∀ a b, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp
+                (fun value => bitVecToHolWordBits (BitVec.ofNat width value)))
+                (first :: second :: extra :: rest) = [.const a, .const b] → False := by
+            intro a b _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have hnotLeftConst : ∀ c e, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp
+                (fun value => bitVecToHolWordBits (BitVec.ofNat width value)))
+                (first :: second :: extra :: rest) = [.const c, e] → False := by
+            intro c e _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have hnotRightConst : ∀ e c, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp
+                (fun value => bitVecToHolWordBits (BitVec.ofNat width value)))
+                (first :: second :: extra :: rest) = [e, .const c] → False := by
+            intro e c _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have hsource := crepSimpExp.eq_8
+            (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+            (first :: second :: extra :: rest) CrepOp.mul
+            hnotConstConst hnotLeftConst hnotRightConst
+          have hnotConstConstTarget : ∀ a b, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat width))
+                (List.map (mapCrepExpWord holWordBitsToBitVec)
+                  (first :: second :: extra :: rest)) = [.const a, .const b] → False := by
+            intro a b _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have hnotLeftConstTarget : ∀ c e, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat width))
+                (List.map (mapCrepExpWord holWordBitsToBitVec)
+                  (first :: second :: extra :: rest)) = [.const c, e] → False := by
+            intro c e _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have hnotRightConstTarget : ∀ e c, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat width))
+                (List.map (mapCrepExpWord holWordBitsToBitVec)
+                  (first :: second :: extra :: rest)) = [e, .const c] → False := by
+            intro e c _ hmap
+            have hlen := congrArg List.length hmap
+            simp at hlen
+          have htarget := crepSimpExp.eq_8 (BitVec.ofNat width)
+            (List.map (mapCrepExpWord holWordBitsToBitVec)
+              (first :: second :: extra :: rest)) CrepOp.mul
+            hnotConstConstTarget hnotLeftConstTarget hnotRightConstTarget
+          rw [hsource]
+          rw [mapCrepExpWord.eq_8 holWordBitsToBitVec CrepOp.mul
+            (List.map (crepSimpExp
+              (fun value => bitVecToHolWordBits (BitVec.ofNat width value)))
+              (first :: second :: extra :: rest))]
+          rw [mapCrepExpWord.eq_8 holWordBitsToBitVec CrepOp.mul
+            (first :: second :: extra :: rest)]
+          rw [htarget]
+          exact congrArg (CrepExp.crepOp CrepOp.mul) ih.2
+  case cmp operator left right ihLeft ihRight =>
+    rw [crepSimpExp.eq_9 (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+      operator left right]
+    rw [mapCrepExpWord.eq_9 holWordBitsToBitVec operator
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) left)
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) right)]
+    rw [mapCrepExpWord.eq_9 holWordBitsToBitVec operator left right]
+    rw [crepSimpExp.eq_9 (BitVec.ofNat width) operator
+      (mapCrepExpWord holWordBitsToBitVec left) (mapCrepExpWord holWordBitsToBitVec right)]
+    rw [ihLeft, ihRight]
+  case shift operator left right ihLeft ihRight =>
+    rw [crepSimpExp.eq_10 (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+      operator left right]
+    rw [mapCrepExpWord.eq_10 holWordBitsToBitVec operator
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) left)
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) right)]
+    rw [mapCrepExpWord.eq_10 holWordBitsToBitVec operator left right]
+    rw [crepSimpExp.eq_10 (BitVec.ofNat width) operator
+      (mapCrepExpWord holWordBitsToBitVec left) (mapCrepExpWord holWordBitsToBitVec right)]
+    rw [ihLeft, ihRight]
+  case baseAddr => simp [crepSimpExp.eq_11, mapCrepExpWord]
+  case topAddr => simp [crepSimpExp.eq_11, mapCrepExpWord]
+  case nil => constructor <;> simp
+  case cons head tail ihHead ihTail =>
+    constructor
+    · intro e he
+      simp only [List.mem_cons] at he
+      rcases he with he | he
+      · subst e
+        exact ihHead
+      · exact ihTail.1 e he
+    · simp only [List.map_cons]
+      rw [ihHead, ihTail.2]
+
 /-! The following private BitVec arithmetic lemmas support the RISC-V
     specialization of HOL's destination facts. They are generic Lean helpers
     and have no declaration in the CakeML HOL development. -/
@@ -750,6 +1098,102 @@ theorem crepSimpExpCorrectBitVec {n : Nat} [NeZero n] {σ : Type}
         evalCrepHolExpWordLab state expression :=
           crepSimpExpCorrect1BitVec f state expression hsuccess
     _ = some (.word value) := h
+
+/-! Fin-index source states can now use the all-width simplifier naturality
+    theorem above to transfer evaluator preservation through BitVec. This
+    remains untagged because HOL ranges over arbitrary finite dimension types. -/
+def crepArithHolWordBitsMapCode {width : Nat} {σ : Type}
+    (f : (List Nat × CrepProg (Fin width → Bool)) →
+      (List Nat × CrepProg (Fin width → Bool)))
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepHolState (Fin width → Bool) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+theorem crepArithHolWordBitsMapCode_toBitVecState {width : Nat} [NeZero width] {σ : Type}
+    (f : (List Nat × CrepProg (Fin width → Bool)) →
+      (List Nat × CrepProg (Fin width → Bool)))
+    (state : CrepHolState (Fin width → Bool) σ) :
+    (crepArithHolWordBitsMapCode f state).toBitVecState = state.toBitVecState := by
+  cases state
+  rfl
+
+private theorem crepSimpExpEvalPreservesHolWordBits {width : Nat} [NeZero width]
+    {σ : Type} (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (h : evalCrepHolWordBitsExp state expression ≠ none) :
+    evalCrepHolWordBitsExp state
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+          expression) = evalCrepHolWordBitsExp state expression := by
+  have hBitVecSource : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec expression) ≠ none := by
+    intro hnone
+    simp [evalCrepHolWordBitsExp, hnone] at h
+  have hBitVecRuntime :
+      evalCrepRuntimeExp (riscvCrepWordTarget state.toBitVecState.toRuntime)
+        (mapCrepExpWord holWordBitsToBitVec expression) ≠ none := by
+    rw [evalCrepRuntimeExp_toRuntime_eq]
+    exact hBitVecSource
+  have hpres := crepSimpExpEvalPreserves state.toBitVecState.toRuntime
+    (mapCrepExpWord holWordBitsToBitVec expression) hBitVecRuntime
+  have hpresSource :
+      evalCrepHolExp state.toBitVecState
+          (crepSimpExp (BitVec.ofNat width)
+            (mapCrepExpWord holWordBitsToBitVec expression)) =
+        evalCrepHolExp state.toBitVecState
+          (mapCrepExpWord holWordBitsToBitVec expression) := by
+    rw [← evalCrepRuntimeExp_toRuntime_eq, ← evalCrepRuntimeExp_toRuntime_eq]
+    exact hpres
+  unfold evalCrepHolWordBitsExp
+  rw [crepSimpExp_holWordBits]
+  exact congrArg (Option.map bitVecToHolWordBits) hpresSource
+
+private theorem crepSimpExpEvalPreservesHolWordBitsWordLab
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (h : evalCrepHolWordBitsExpWordLab state expression ≠ none) :
+    evalCrepHolWordBitsExpWordLab state
+        (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+          expression) = evalCrepHolWordBitsExpWordLab state expression := by
+  have hraw : evalCrepHolWordBitsExp state expression ≠ none := by
+    intro hnone
+    simp [evalCrepHolWordBitsExpWordLab, hnone] at h
+  exact congrArg (Option.map PanWordLab.word)
+    (crepSimpExpEvalPreservesHolWordBits state expression hraw)
+
+/-- All-width production evaluator support over the canonical finite-index
+    HOL word representation. It retains mapc's arbitrary code-map update and
+    Option/word_lab result shape. It is untagged because it fixes the dimension
+    carrier to Fin width; reindexing from every HOL finite dimension type is
+    tracked separately. -/
+theorem crepSimpExpCorrect1HolWordBits {width : Nat} [NeZero width]
+    {σ : Type}
+    (f : (List Nat × CrepProg (Fin width → Bool)) →
+      (List Nat × CrepProg (Fin width → Bool)))
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (h : (evalCrepRuntimeExp state.toHolWordBitsRuntime expression).map
+      PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      (crepArithHolWordBitsMapCode f state).toHolWordBitsRuntime
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value))
+        expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp state.toHolWordBitsRuntime expression).map PanWordLab.word := by
+  have hSource : evalCrepHolWordBitsExpWordLab state expression ≠ none := by
+    have h' := h
+    rw [evalCrepRuntimeExp_toHolWordBits_eq] at h'
+    exact h'
+  have hpresSource := crepSimpExpEvalPreservesHolWordBitsWordLab state expression hSource
+  have hstate := crepArithHolWordBitsMapCode_toBitVecState f state
+  rw [evalCrepRuntimeExp_toHolWordBits_eq
+    (crepArithHolWordBitsMapCode f state)
+    (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) expression)]
+  rw [evalCrepRuntimeExp_toHolWordBits_eq state expression]
+  change evalCrepHolWordBitsExpWordLab (crepArithHolWordBitsMapCode f state)
+      (crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat width value)) expression) =
+    evalCrepHolWordBitsExpWordLab state expression
+  simpa only [evalCrepHolWordBitsExpWordLab, evalCrepHolWordBitsExp, hstate]
+    using hpresSource
 
 
 end Flapjack

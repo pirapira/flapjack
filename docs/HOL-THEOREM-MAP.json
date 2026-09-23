@@ -141,7 +141,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConst",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (Lean support lemma fixes RiscV.Word 64 and canonical target; HOL theorem is polymorphic)"
+    "reviewer": "Codex (width-generic RISC-V target specialization; no proved correspondence from HOL eval_def/crep_op_def and arbitrary HOL state to riscvCrepWordTarget)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalCodeMapIrrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only evaluator infrastructure; supports the local mapc update in simp_exp_correct1)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -920,12 +928,12 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "opt_mmap_eq_every",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "list_mapM_all_of_mem",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL OPT_MMAP/EVERY translated to List.mapM/List.all; source premises and direct oracle matched)"
   },
   {
     "hol_path": null,
@@ -2620,8 +2628,56 @@
     "hol_name": "is_wf_shape_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "isWfShape_drop",
+"statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_EVERY_is_function",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source premise/conclusion comparison with direct HOL-EVAL and Lean suffix fixture)"
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_decls_thm",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_exns_are_exns",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_exns_are_exns",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_preserve_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_preserve_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "EVERY_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "EVERY_fperm_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_FILTER_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_FILTER_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,
@@ -2796,8 +2852,8 @@
     "hol_name": "alookup_drop_helper",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookup_drop_helper",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (ALOOKUP/List.lookup and ALL_DISTINCT/Nodup premise and both conjunction outputs matched; direct HOL-EVAL premise/conclusion fixture)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -1,10 +1,12 @@
 (* Direct HOL-EVAL fixture for pan_structs$afindi_def. *)
 load "bossLib";
 load "preamble";
+load "pan_commonPropsTheory";
 load "pan_structsProofTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
+open pan_commonPropsTheory;
 open pan_structsProofTheory;
 
 fun print_eval label q =
@@ -105,3 +107,21 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl fields_in_order_reorder_noop)));
 val _ = print "\n";
+val opt_mmap_eq_every_oracle = prove(
+  ``!f xs ys P. OPT_MMAP f xs = SOME ys /\
+      (!x y. MEM x xs /\ f x = SOME y ==> P y) ==> EVERY P ys``,
+  rw [EVERY_EL] >>
+  imp_res_tac opt_mmap_length_eq >> fs [] >>
+  imp_res_tac opt_mmap_el >> fs [] >>
+  gs [] >> res_tac >>
+  metis_tac [EL_MEM]);
+val _ = print "opt_mmap_eq_every=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl opt_mmap_eq_every_oracle)));
+val _ = print "\n";
+val _ = print_eval "alookup_drop_helper"
+  ``ALOOKUP (DROP 1 [(strlit "a", 10); (strlit "b", 20)]) (strlit "b") = SOME 20 /\
+    ALL_DISTINCT (MAP FST [(strlit "a", 10); (strlit "b", 20)]) ==>
+    ~MEM (strlit "b") (MAP FST (TAKE 1 [(strlit "a", 10); (strlit "b", 20)])) /\
+    ALOOKUP [(strlit "a", 10); (strlit "b", 20)] (strlit "b") = SOME 20``;

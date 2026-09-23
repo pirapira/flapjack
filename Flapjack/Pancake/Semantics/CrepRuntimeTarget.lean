@@ -45,6 +45,19 @@ Direct HOL oracle: `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`
 
 namespace Flapjack
 
+/-! The expression evaluator needs the word cell operations that HOL derives
+    from the word width. This target fixes those operations for any positive
+    BitVec width; unlike `riscv64CrepRuntimeTarget`, its purpose is the
+    width-polymorphic expression semantics, so FFI fields are left untouched
+    (expression evaluation never reads them). -/
+def riscvCrepWordTarget [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ) :
+    CrepRuntimeState (RiscV.Word width) σ :=
+  { base with
+    bytesInWord := BitVec.ofNat width (width / 8)
+    bigEndian := false
+    memoryModel := RiscV.panRiscVMemoryModel }
+
 /-! ## Canonical FFI byte codec
 
 `CrepRuntimeState.ffiContext` is unconstrained, yet `crepRuntimeReadBytes`,

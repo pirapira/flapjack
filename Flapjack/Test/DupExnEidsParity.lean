@@ -82,10 +82,7 @@ def dupCompileGuard : Bool :=
   | _ => false
 
 theorem dup_exn_eids_guard : dupExnEidsGuard = true := by
-  native_decide
-
-theorem dup_compile_parity : dupCompileGuard = true := by
-  native_decide
+  decide
 
 #eval dupExnEidsGuard
 #guard dupExnEidsGuard

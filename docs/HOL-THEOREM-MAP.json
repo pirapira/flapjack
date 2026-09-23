@@ -16,6 +16,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/crep_inlineScript.sml",
+    "hol_name": "compile_inl_top_def",
+    "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
+    "lean_name": "compileInlTopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (triple-list boundary, finite-map duplicate order, and direct HOL probes)"
+  },
+  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",

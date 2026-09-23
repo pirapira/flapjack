@@ -613,7 +613,7 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let globals := { metadata with declarations := cakeDeclarations }
       let compiled := compileToCrepHOLWithMetadata cakeDeclarations
       let crepe := crepSimpFunctions fromNat
-        (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
+        (compileInlTopHOLWithMetadata (pipelineInlineNames cakeDeclarations) compiled)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)

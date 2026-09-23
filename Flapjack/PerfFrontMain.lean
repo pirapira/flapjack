@@ -419,7 +419,7 @@ def main : IO Unit := do
           let t6 ← stage "globalCompileTop" t4 (countDecls globals)
           let compiled := compileToCrepHOLWithMetadata globals
           let t7 ← stage "compileToCrep" t6 (countCrepFunctions compiled)
-          let inlined := crepInlineTopRecursiveByNames
+          let inlined := compileInlTopHOLWithMetadata
             (pipelineInlineNames globals) compiled
           let t8 ← stage "crepInline" t7 (countCrepFunctions inlined)
           let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) inlined

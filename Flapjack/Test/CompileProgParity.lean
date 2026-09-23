@@ -59,6 +59,41 @@ def compileInlTopOracle : Bool :=
 
 #guard compileInlTopOracle
 
+/-! Direct HOL `compile_prog_probe.out` cases for the production triple-list
+    `compile_inl_top` boundary. The first duplicate `id` definition wins in
+    HOL's `alist_to_fmap`, while nested inline calls expand recursively. -/
+def holInlineDuplicateInput : List (FunName × List Nat × CrepProg (BitVec 8)) :=
+  [("id", [], .return [.const 7]),
+   ("id", [], .return [.const 9]),
+   ("main", [], .call none "id" [])]
+
+def holInlineDuplicateParity : Bool :=
+  match compileInlTopHOL ["id"] holInlineDuplicateInput with
+  | [(first, [], .return [.const firstValue]),
+     (second, [], .return [.const secondValue]),
+     (main, [], .seq .tick (.return [.const returned]))] =>
+      first == "id" && second == "id" && main == "main" &&
+        firstValue == 7 && secondValue == 9 && returned == 7
+  | _ => false
+
+#guard holInlineDuplicateParity
+
+def holInlineNestedInput : List (FunName × List Nat × CrepProg (BitVec 8)) :=
+  [("leaf", [], .return [.const 7]),
+   ("mid", [], .call none "leaf" []),
+   ("main", [], .call none "mid" [])]
+
+def holInlineNestedParity : Bool :=
+  match compileInlTopHOL ["leaf", "mid"] holInlineNestedInput with
+  | [(leaf, [], .return [.const leafValue]),
+     (mid, [], .seq .tick (.return [.const midValue])),
+     (main, [], .seq .tick (.seq .tick (.return [.const mainValue])))] =>
+      leaf == "leaf" && mid == "mid" && main == "main" &&
+        leafValue == 7 && midValue == 7 && mainValue == 7
+  | _ => false
+
+#guard holInlineNestedParity
+
 /-! The fixture is the direct HOL evaluation of
     `pan_to_crep$compile_prog` on the same inline callee/caller pair. -/
 theorem compile_prog_inline_call_parity :

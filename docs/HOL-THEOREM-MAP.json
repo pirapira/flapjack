@@ -2718,5 +2718,13 @@
     "lean_name": "panToCrepConcreteEvaluationGoal_tick",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepCodeStateSkipBoundary",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (runtime state boundary review)"
   }
 ]

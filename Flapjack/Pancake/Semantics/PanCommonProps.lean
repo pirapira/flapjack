@@ -81,4 +81,40 @@ theorem noOverlap_empty :
   · intro x y a b xs ys hx hy hinter
     simp at hx
 
+/-- Rendering of HOL `alist_to_fmap` (`FOLDR (λ(k,v) m. FUPDATE m (k,v)) FEMPTY`).
+    The HOL definition lives in HOL's `alistTheory`, outside the CakeML tree, so
+    this helper is untagged here. -/
+def alistToFmap [BEq α] (entries : List (α × β)) : FiniteMap α β :=
+  entries.foldr (fun entry map => FUPDATE map entry) FEMPTY
+
+/-- Exact port of HOL `fm_empty_zip_alist`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:426`): zipping two
+    equal-length lists with duplicate-free keys makes the list fold and the
+    right fold of `FUPDATE` agree. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_empty_zip_alist"]
+theorem fmEmptyZipAlist [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
+    (hlen : xs.length = ys.length) (hdistinct : xs.Nodup) :
+    FUPDATE_LIST FEMPTY (xs.zip ys) = alistToFmap (xs.zip ys) := by
+  induction xs generalizing ys with
+  | nil =>
+      cases ys with
+      | nil => simp [FUPDATE_LIST, alistToFmap]
+      | cons y ys => simp at hlen
+  | cons x xs ih =>
+      cases ys with
+      | nil => simp at hlen
+      | cons y ys =>
+          have hlen' : xs.length = ys.length := Nat.succ.inj hlen
+          have hmem : x ∉ xs := (List.nodup_cons.mp hdistinct).1
+          have hnodup : xs.Nodup := (List.nodup_cons.mp hdistinct).2
+          rw [List.zip_cons_cons, FUPDATE_LIST_cons]
+          change FUPDATE_LIST (FUPDATE FEMPTY (x, y)) (xs.zip ys) =
+            FUPDATE (alistToFmap (xs.zip ys)) (x, y)
+          rw [← ih ys hlen' hnodup]
+          have hkeys : (xs.zip ys).map Prod.fst = xs :=
+            List.map_fst_zip (Nat.le_of_eq hlen')
+          have hnotin : x ∉ (xs.zip ys).map Prod.fst := by
+            rw [hkeys]; exact hmem
+          exact (FUPDATE_FUPDATE_LIST_commutes FEMPTY x y (xs.zip ys) hnotin).symm
+
 end Flapjack

@@ -613,7 +613,7 @@ theorem localsRelWfShape
     locals map. The proof-context record mirrors Cake `mk_ctxt FEMPTY
     (make_funcs pc) 0 es`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_imp_locals_rel"]
-theorem mkCtxtImpLocalsRel [BEq String]
+theorem mkCtxtImpLocalsRel [LawfulBEq String]
     (declarations : List (Decl α)) (eids : FiniteMap String α)
     (locals : FiniteMap Nat (PanWordLab α)) :
     localsRel

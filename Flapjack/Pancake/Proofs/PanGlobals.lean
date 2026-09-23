@@ -721,8 +721,9 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
     is withheld pending an exactness review of the underlying representation:
     `compileDecsCake` also composes `compileProgCake`, which is not yet proved
     to implement every HOL `pan_globals$compile` clause (its global-handler
-    case still uses a fuel-based `globalFreshName` instead of an exact HOL
-    `fresh_name` port; tracked by bead `flapjack-pxn.18.5.2.20.1.1.1.1`), and
+    case now uses the exact tagged `freshNameHOL`, but the program compiler
+    still awaits clause/side-condition review; tracked by bead
+    `flapjack-pxn.18.5.2.20.1.1.1`), and
     `CakeContext.globals` renders HOL's extensional finite map by a
     `FiniteMap` lookup function that need not have finite support.  `width` is
     restricted by `[NeZero width]` as HOL `dimindex` is positive.  The

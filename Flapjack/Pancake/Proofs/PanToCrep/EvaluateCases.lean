@@ -3394,10 +3394,10 @@ dispatcher. The post-state relation required by the target handler-body IH is
 now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
-callee-body and handler-body premises. The target callee and relation-aware
-handler induction hypotheses each consume the corresponding source evaluator
-run before producing their target result and post-state relations. Those
-cross-evaluator induction hypotheses are still premises, so this is a
+callee-body and handler-body premises. The target callee IH returns its raised
+result with the target state, code, exception, and payload-global facts needed
+by `exp_hdl`; the relation-aware handler IH supplies its target result and
+post-state relations. Both are still induction premises, so this is a
 Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
@@ -3478,7 +3478,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
       some (Shape.one, [slot]))
     (hslot : ∃ current, caller.locals slot = some current)
-    (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
     (hsupported : ∀ expression, expression ∈ expressions →
       compileArgConstLocalStructAddress expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
@@ -3515,7 +3514,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
           sourceBody) = some (.raised exceptionCode, calleeState) ∧
       stateRel sourceAfterCallee calleeState ∧
       codeRel context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
-      excpRel context.eids sourceAfterCallee.exceptionShapes)
+      excpRel context.eids sourceAfterCallee.exceptionShapes ∧
+      calleeState.globals (0 : BitVec 5) = some (.word value))
     (hhandlerIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel
@@ -3590,7 +3590,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength
-  obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp⟩ :=
+  obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp, hglobal⟩ :=
     hcalleeIH hsourceCalleeBody targetLocals htargetLookup
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations

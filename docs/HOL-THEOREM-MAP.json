@@ -2688,6 +2688,14 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "genlistVmaxDistinctListsCompiledExps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",

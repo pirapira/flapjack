@@ -176,6 +176,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "memCompileExpVmax"),
+        ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExps"),
     }
     for key in reviewed_exact:
         if key in inventory:

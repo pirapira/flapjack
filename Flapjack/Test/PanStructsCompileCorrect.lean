@@ -47,6 +47,11 @@ def finiteMapState : PanStructFiniteState Word64 (FfiState Unit) :=
     [("f", ([], .skip, .one))]
     (by simp) (by simp) (by simp) (by simp)
 
+def finiteMapStateAtClock (clock : Nat) :
+    PanStructFiniteState Word64 (FfiState Unit) :=
+  { finiteMapState with
+    runtime := { finiteMapState.runtime with clock := clock } }
+
 example : finiteMapState.runtime.locals "local" =
     some (.word (BitVec.ofNat 64 7)) := by
   rfl
@@ -217,5 +222,90 @@ example : True := by
             panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
             panPropsALookupEq, panSemShapeOf])
   trivial
+
+private theorem finiteMapTickCaseRegression (clock : Nat) : True := by
+  let state := finiteMapStateAtClock clock
+  have _hcase := panStructCompileCorrectTickCase finiteMapContext statefulTestContext
+      statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8) state
+      (by rfl)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "local"
+        · subst name
+          simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panStructValueFieldsOkBool]
+        · simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "global"
+        · subst name
+          simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panStructValueFieldsOkBool]
+        · simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "local"
+        · subst name
+          simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panIsWfShapeValueBool]
+        · simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "global"
+        · subst name
+          simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panIsWfShapeValueBool]
+        · simp [state, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by simp [structInfosOk, state, finiteMapStateAtClock, finiteMapState,
+        panStructFiniteStateFromMaps, finiteMapRuntime])
+      (by
+        intro name
+        by_cases hname : name = "local"
+        · subst name
+          simp [state, finiteMapContext, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf]
+        · simp [state, finiteMapContext, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf])
+      (by
+        intro name
+        by_cases hname : name = "global"
+        · subst name
+          simp [state, finiteMapContext, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf]
+        · simp [state, finiteMapContext, finiteMapStateAtClock, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf])
+  trivial
+
+example : True := finiteMapTickCaseRegression 0
+
+example : True := finiteMapTickCaseRegression 3
 
 end Flapjack.Test

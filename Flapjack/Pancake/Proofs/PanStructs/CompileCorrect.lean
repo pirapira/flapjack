@@ -667,4 +667,67 @@ theorem panStructTickEvaluatorSupport
       panStructConvertClockOutcome, hclock]
     congr 1 <;> funext name <;> rfl
 
+/-- Full Tick specialization of HOL `compile_correct` over finite-map state.
+    The evaluator projection handles both HOL branches: timeout clears source
+    locals at clock zero, while the continuing branch decrements the clock.
+    Every compile_correct postcondition is stated: converted evaluation/state,
+    field validity of post locals/globals, global shape-map preservation, the
+    continuation-local shape map, and the empty result-value validity/WF
+    obligations. The finite-map state wrapper supplies support and lookup
+    relations; no target result is assumed. This remains untagged because HOL
+    has no separate named Tick case and encodes its result/state pair with
+    `TimeOut`/`NONE`, while Lean uses clock outcomes. -/
+theorem panStructCompileCorrectTickCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanStructFiniteState α (FfiState σ))
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.runtime.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.globals)
+    (_hlocalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.locals)
+    (_hglobalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.globals)
+    (_hstructInfos : structInfosOk state.runtime.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.runtime.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.runtime.globals) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertFiniteState context state).runtime
+        (structCompileProg context (.tick : Prog α)) =
+      (panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state.runtime (.tick : Prog α)).map
+        (fun (result, postState) =>
+          (panStructConvertClockResult result,
+            panStructConvertState context postState)) ∧
+    (if state.runtime.clock = 0 then
+      panStructEveryValueFieldsOkBool state.runtime.structs
+        (fun _ => none : VarName → Option (PanValue α))
+     else
+      panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.locals) ∧
+    panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.globals ∧
+    panStructShapeMapEq context.globals state.runtime.globals ∧
+    (state.runtime.clock ≠ 0 →
+      panStructShapeMapEq context.locals state.runtime.locals) ∧
+    panStructValuesFieldsOkBool (α := α) state.runtime.structs [] = true ∧
+    panIsWfShapeValuesBool (α := α) state.runtime.structs [] = true := by
+  have heval := panStructTickEvaluatorSupport context evaluationContext
+    primitive handler bytesInWord state.runtime
+  refine ⟨?_, ?_, hglobalsFields, hglobalsMap, ?_, ?_, ?_⟩
+  · simpa [panStructConvertFiniteState] using heval
+  · by_cases hzero : state.runtime.clock = 0
+    · simp [hzero, panStructEveryValueFieldsOkBool]
+    · simpa [hzero] using hlocalsFields
+  · intro hcontinue
+    exact hlocalsMap
+  · simp [panStructValuesFieldsOkBool]
+  · simp [panIsWfShapeValuesBool]
+
 end Flapjack

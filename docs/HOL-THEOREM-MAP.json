@@ -4331,6 +4331,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileCorrectTickCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Full translated Tick specialization with zero-clock timeout and positive-clock continuation, all compile_correct invariant premises and postconditions, production evaluator and finite-map state. Kept untagged: HOL has one quantified compile_correct theorem rather than a named Tick case, and represents outcomes as TimeOut/NONE plus state while Lean uses clock outcomes."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileSkip_eq_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production compiler support equation; no standalone HOL declaration."

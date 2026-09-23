@@ -140,8 +140,8 @@
     "hol_name": "eval_mul_const",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (generic positive BitVec width, production expression target, wrapped Word result)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (width-generic RISC-V target specialization; no proved correspondence from HOL eval_def/crep_op_def and arbitrary HOL state to riscvCrepWordTarget)"
   },
   {
     "hol_path": null,

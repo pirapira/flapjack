@@ -149,11 +149,15 @@ theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
   have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
   exact (by simpa using hs.2.1)
 
-/-! Exact width-generic counterpart of CakeML's `eval_mul_const`. `Word n`
-    represents HOL's polymorphic word type and `[NeZero n]` records its
-    positive dimension. `riscvCrepWordTarget` fixes the generic word-cell
-    operations to the width-derived values used by HOL. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "eval_mul_const"]
+/-- Flapjack support lemma for HOL `eval_mul_const`, deliberately untagged.
+    It proves preservation for production `evalCrepRuntimeExp` only after
+    specializing values to `RiscV.Word n` and replacing the state's target
+    operations with `riscvCrepWordTarget`. The HOL theorem instead quantifies
+    over its polymorphic word type and arbitrary `crepSem` state; its evaluator
+    is defined through HOL `eval_def` and `crep_op_def`/`word_sh`. No theorem
+    currently relates those operations and every HOL state to this canonical
+    production target. Width generality alone therefore does not establish the
+    required evaluator correspondence or justify an `@[hol]` tag. -/
 theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)
@@ -296,5 +300,6 @@ private theorem crepEvalCodeMapIrrel {n : Nat} [NeZero n] {σ : Type}
           rw [ih state f |>.1 left (by simp)]
           rw [ih state f |>.1 right (by simp)]
         | cons _ _ => simp [evalCrepRuntimeExp]
+
 
 end Flapjack

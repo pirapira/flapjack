@@ -10,9 +10,11 @@ declaration and every theorem or lemma under `Flapjack/Pancake/Proofs` has an
 entry, its HOL tag matches the entry, and reviewer and statement-status fields
 are present. `pending_statement_review` and
 `no_hol_reference_pending_classification` entries are open review work, not
-claims of HOL correspondence. The inventory recognizes `theorem` and `lemma`
-declarations only; `#check` commands and comments do not count as theorem
-entries or tests. Correctness claims are described in
+claims of HOL correspondence. `documented_mismatch` records a known source
+candidate whose Lean analogue remains untagged because its statement differs;
+the mismatch must be explained beside the Lean declaration. The inventory
+recognizes `theorem` and `lemma` declarations only; `#check` commands and
+comments do not count as theorem entries or tests. Correctness claims are described in
 [`SOUNDNESS.md`](SOUNDNESS.md).
 
 | HOL script | Lean counterpart |

@@ -1281,6 +1281,65 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
     evalPanValueExpCounted, evalPanValueExp, hargs, hcallee,
     hexception, hclock, panValueShape, panShapeMatches, decPanClock]
 
+/-! One-word state-owned Call exception dispatch to a handler that returns its
+local. The preexisting local is explicit because HOL's handler path validates
+it before replacing it with the payload. -/
+theorem panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (handler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (function exception handlerVariable : String) (oldValue value : RiscV.Word 64)
+    (hentry : panSemCodeLookup state.code function =
+      some ([], .raise exception (.const value), .one))
+    (hexception : state.exceptionShapes exception = some .one)
+    (hhandlerLocal : state.locals handlerVariable = some (.word oldValue))
+    (hclock : state.clock ≠ 0) :
+    let program : Prog (RiscV.Word 64) :=
+      .call (some (none, some (exception, handlerVariable,
+        .return (.var .local handlerVariable)))) function []
+    panSemEvaluateRiscV64CodeState context primitive handler state program =
+      some (.control (.returned (fun _ => none) state.globals state.memory
+        state.ffi [.word value]), decPanClock state.clock) := by
+  change panSemEvaluateRiscV64CodeState context primitive handler state
+      (.call (some (none, some (exception, handlerVariable,
+        .return (.var .local handlerVariable)))) function []) = _
+  let program : Prog (RiscV.Word 64) :=
+    .call (some (none, some (exception, handlerVariable,
+      .return (.var .local handlerVariable)))) function []
+  have hprogramFuel : 1 ≤ panSemProgFuel program := by
+    simp [program, panSemProgFuel, panSemCallInfoFuel, panSemExpListFuel]
+  have hclockLower : 2 ≤ state.clock + 1 := by omega
+  have hbodyLower : 2 ≤ max (panSemProgFuel program)
+      (panSemCodeBodyFuel state.code) + 1 := by omega
+  have hfuelLower : 5 ≤ panSemCodeEvaluateFuel state program := by
+    unfold panSemCodeEvaluateFuel
+    have hmul := Nat.mul_le_mul hclockLower hbodyLower
+    omega
+  obtain ⟨tail, hfuelLeft⟩ := Nat.exists_eq_add_of_le hfuelLower
+  have hfuel : panSemCodeEvaluateFuel state program = tail + 5 := by
+    rw [hfuelLeft]
+    omega
+  have hargs : evalPanValueExps state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress panSemBitVec64BytesInWord
+      ([] : List (Exp (RiscV.Word 64)))
+      (memoryAccess := some (panValueMemoryAccessOfModel
+        panSemBitVec64WordModel state.memaddrs state.sharedMemaddrs state.be)) = some [] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps]
+  have hcallee : lookupPanSemCodeCall state.structs state.code function [] =
+      some (.raise exception (.const value), .one, fun _ => none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters]
+  unfold panSemEvaluateRiscV64CodeState panSemEvaluateCodeStateWithMemoryModel
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+    evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hexception,
+    hhandlerLocal, hclock, panValueShape, panShapeMatches, panValueAssignmentValid,
+    updatePanValueMap, decPanClock]
+
 
 /-! Actual-state fixed-RV64 Call simulation for a nonempty source code map.
 The callee's parameter slot and returned body are derived from `code_rel`;

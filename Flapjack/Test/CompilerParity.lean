@@ -117,6 +117,7 @@ import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
+import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.PanToCrepGlobalsLookupParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
@@ -741,7 +742,8 @@ def main : IO Unit := do
     Flapjack.Test.RiscVAbiParity.runChecks,
     Flapjack.Test.RiscVAbiAdapterParity.runChecks,
     Flapjack.Test.LoopToWordBoundaryParity.runChecks,
-    Flapjack.Test.SptreeOrderParity.runChecks
+    Flapjack.Test.SptreeOrderParity.runChecks,
+    Flapjack.Test.CrepLocalsWordLabParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

@@ -1,0 +1,6 @@
+locals_set_var_cell=SOME (Word 7w)
+locals_set_var_other_absent=NONE
+locals_eval_var=SOME (Word 7w)
+locals_eval_var_missing=NONE
+locals_upd_locals_cells=(SOME (Word 5w),SOME (Word 7w))
+locals_set_var_overwrite=SOME (Word 9w)

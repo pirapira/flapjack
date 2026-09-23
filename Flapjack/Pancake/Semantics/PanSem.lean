@@ -451,6 +451,43 @@ theorem panSemEvaluateCodeStateWithPostState_assign
     evalPanValueExpCounted, hvalue] <;>
   split <;> simp
 
+/-- Production source-state `Dec` equation. When the initialiser evaluates to a
+    value whose shape matches the declared shape, the body runs with the
+    declaration bound in the local map and, on completion, the declared local is
+    restored to its previous binding; a shape mismatch or a failing initialiser
+    yields `none`. The equation is stated over the explicit-fuel evaluator
+    because the recursive body call reuses the predecessor fuel, so it cannot be
+    phrased against the finite-map-derived entry point. This is an untagged
+    boundary equation because the structured result is reduced rather than HOL's
+    `(prog_result, state)` pair. Reference:
+    cakeml/pancake/semantics/panSemScript.sml:558-565 (`Dec`). -/
+theorem panSemEvaluateCodeStateWithFuel_dec
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.dec name shape value body : Prog α) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value with
+      | some evaluated =>
+          if panShapeMatches (panValueShape state.structs evaluated) shape then
+            (panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+                { state with
+                  locals := updatePanValueMap state.locals name evaluated } body).map
+              (fun result =>
+                (panValueFfiClockRestoreLocal name (state.locals name) result.1, result.2))
+          else none
+      | none => none := by
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value <;>
+  simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg, hvalue] <;>
+  split <;> simp only [Option.map_eq_bind] <;> rfl
+
 /-!
   Exact source-memory entry point.
 

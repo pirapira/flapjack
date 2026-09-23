@@ -100,8 +100,6 @@ def assignGuard : Bool :=
 
 #guard assignGuard
 
-theorem assignGuard_true : assignGuard = true := by native_decide
-
 def runChecks : IO Bool := do
   if assignLocalOkGuard then
     IO.println "PASS panSem Assign accepted local write preserves clock and locals"

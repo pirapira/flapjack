@@ -254,6 +254,11 @@ run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
 run_probe pan_sem_assign_e2e_probeScript.sml pan_sem_assign_e2e_probe.out \
   assign_local_ok_result assign_eval_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Dec probe observes the accepted declaration with local restoration, the
+# shape-mismatch rejection, and the initialiser-evaluation-failure rejection.
+run_probe pan_sem_dec_e2e_probeScript.sml pan_sem_dec_e2e_probe.out \
+  dec_ok_result dec_eval_missing_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"

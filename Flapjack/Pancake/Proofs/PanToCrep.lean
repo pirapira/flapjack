@@ -849,4 +849,16 @@ theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
   cases target
   rfl
 
+/-- HOL `first_compile_to_crep_all_distinct`: lowering function declarations
+    changes bodies and parameter slots but preserves every function name in
+    source order, so distinct source names stay distinct. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_to_crep_all_distinct"]
+theorem firstCompileToCrepAllDistinct
+    (declarations : List (Decl (BitVec width)))
+    (hdistinct : ((functionEntries declarations).map
+      fun (name, _, _, _) => name).Nodup) :
+    ((compileToCrepHOL declarations).map
+      fun (name, _, _) => name).Nodup := by
+  simpa [compileToCrepHOL, List.map_map, Function.comp_def] using hdistinct
+
 end Flapjack

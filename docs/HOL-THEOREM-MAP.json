@@ -2958,5 +2958,13 @@
     "lean_name": "crepLocalsIdUpdate",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (production Crep state type review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "first_compile_to_crep_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "firstCompileToCrepAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and production compiler projection comparison)"
   }
 ]

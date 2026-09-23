@@ -912,6 +912,84 @@ def holFiniteWordRiscVMemoryModel {ι : Type u}
     (holWordToBitVec dimension)
     (RiscV.panRiscVMemoryModelForEndian bigEndian)
 
+/-! HOL `byte_align_def` clears the low bits selected by
+    `LOG2 (dimindex DIV 8)`. This differs from target rounding when a word has
+    a non-power-of-two number of bytes. -/
+def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
+  let alignment := 2 ^ Nat.log2 (width / 8)
+  BitVec.ofNat width ((address.toNat / alignment) * alignment)
+
+/-! Source-shaped finite-word memory adapter. Its byteAlign, getByte, aligned,
+    and four-byte wordOfBytes operations are written from the imported HOL
+    definitions through the finite-word/BitVec equivalence. The other target
+    operations (including setByte, wordOp, compare, and shift) still come from
+    the transported RISC-V model. This adapter is not yet the evaluator of the
+    theorem below: the remaining operations and evaluator bridge still need
+    direct HOL correspondence proofs before any theorem can carry a HOL tag. -/
+def holFiniteWordSourceByteAlign {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address : ι → Bool) : ι → Bool := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  exact bitVecToHolWord dimension
+    (holByteAlignBitVec (holWordToBitVec dimension address))
+
+def holFiniteWordSourceGetByte {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address value : ι → Bool)
+    (bigEndian : Bool) : ι → Bool := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  let bytesPerWord := dimension.width / 8
+  let byteIndex := (holWordToBitVec dimension address).toNat % bytesPerWord
+  let byteIndex := if bigEndian then bytesPerWord - 1 - byteIndex else byteIndex
+  exact bitVecToHolWord dimension <| BitVec.ofNat dimension.width
+    (((holWordToBitVec dimension value).toNat / (256 ^ byteIndex)) % 256)
+
+def holFiniteWordSourceAligned {ι : Type u}
+    (dimension : HolFiniteDimension ι) (alignment : Nat) (address : ι → Bool) :
+    Bool :=
+  let exponent := Nat.log2 alignment
+  decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
+
+def holFiniteWordSourceWordOfBytes {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (bytes : List (ι → Bool)) : ι → Bool := by
+  let byte0 := bytes[0]?.getD
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
+  let byte1 := bytes[1]?.getD
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
+  let byte2 := bytes[2]?.getD
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
+  let byte3 := bytes[3]?.getD
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
+  let b0 := (holWordToBitVec dimension byte0).toNat % 256
+  let b1 := (holWordToBitVec dimension byte1).toNat % 256
+  let b2 := (holWordToBitVec dimension byte2).toNat % 256
+  let b3 := (holWordToBitVec dimension byte3).toNat % 256
+  let little := b0 + 256 * b1 + 256 ^ 2 * b2 + 256 ^ 3 * b3
+  let big := b3 + 256 * b2 + 256 ^ 2 * b1 + 256 ^ 3 * b0
+  exact bitVecToHolWord dimension (BitVec.ofNat dimension.width
+    (if bigEndian then big else little))
+
+def holFiniteWordSourceMemoryModel {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool) :
+    PanMemoryModel (ι → Bool) := by
+  let model := holFiniteWordRiscVMemoryModel dimension bigEndian
+  exact { model with
+    byteAlign := fun _ address => holFiniteWordSourceByteAlign dimension address
+    getByte := fun _ address value be =>
+      holFiniteWordSourceGetByte dimension address value be
+    aligned := fun alignment address =>
+      holFiniteWordSourceAligned dimension alignment address
+    wordOfBytes := fun be bytes =>
+      holFiniteWordSourceWordOfBytes dimension be bytes }
+
+/-- A load model with HOL's dimension-derived byte alignment and the existing
+    RISC-V byte extraction, alignment, and word-of-bytes operations. This is
+    only the first operation-level bridge: the remaining imported word
+    primitives still require a generic correspondence proof. -/
+def holByteAlignedRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
+    PanMemoryModel (RiscV.Word width) :=
+  let model := RiscV.panRiscVMemoryModelForEndian bigEndian
+  { model with byteAlign := fun _ address => holByteAlignBitVec address }
+
 def CrepHolState.toHolFiniteBitVecState {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) :
@@ -950,6 +1028,20 @@ def CrepHolState.toHolFiniteWordRuntime {ι : Type u}
     ffi := state.ffi
     baseAddress := state.baseAddress
     topAddress := state.topAddress }
+
+/-- Runtime adapter for proofs that need HOL's generic finite-word byte-load
+    primitives. It retains the state fields and word-size value of
+    `toHolFiniteWordRuntime` while selecting the source-shaped memory model.
+    The recursive `simp_exp_correct1` proof has not yet been moved to this
+    evaluator; the remaining word-operator correspondence is tracked locally
+    beside `holFiniteWordSourceMemoryModel`. -/
+def CrepHolState.toHolFiniteWordSourceRuntime {ι : Type u}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) :
+    CrepRuntimeState (ι → Bool) σ :=
+  let runtime := state.toHolFiniteWordRuntime dimension
+  { runtime with
+    memoryModel := holFiniteWordSourceMemoryModel dimension state.bigEndian }
 
 theorem crepHolFiniteDimension_local_toBitVec {ι : Type}
     (dimension : HolFiniteDimension ι) (state : CrepHolState (ι → Bool) σ)

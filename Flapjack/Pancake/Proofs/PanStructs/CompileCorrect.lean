@@ -1987,8 +1987,9 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- Mismatch note for the Var-case theorem immediately below:
-    `panStructCompileExpCorrectVarCase` is a derived Local/Global
+/-- This mismatch note documents only the immediately following
+    `panStructCompileExpCorrectVarCase` theorem; it does not document the
+    preceding private lookup helper. The Var case is a derived Local/Global
     Var-constructor specialization of HOL `compile_exp_correct`;
     intentionally untagged because HOL has only the
     universally quantified theorem, not a separately named Var-case

@@ -731,7 +731,7 @@ run_probe loop_sem_ffi_probeScript.sml loop_sem_ffi_probe.out \
   extcall_returned extcall_missing_local \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_ffi_rv64_probeScript.sml loop_sem_ffi_rv64_probe.out \
-  rv64_lookups rv64_extcall_missing_local \
+  rv64_lookups rv64_extcall_live_absent \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe byte_align_probeScript.sml byte_align_probe.out \
   ba24_5 ba8_7 "$cake_dir/pancake/semantics/loopSemScript.sml"

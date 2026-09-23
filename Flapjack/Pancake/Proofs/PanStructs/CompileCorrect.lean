@@ -588,6 +588,121 @@ theorem panStructCompileCorrectBreakCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
+@[simp] theorem panStructCompileContinue_eq_continue [BEq String]
+    (context : StructPassContext) :
+    structCompileProg context (.continue : Prog α) = .continue := by
+  simp [structCompileProg]
+
+/-- Production source evaluator equation corresponding to HOL
+    `evaluate (Continue,s) = (SOME Continue,s)`. -/
+theorem panStructSourceContinueEvaluation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state (.continue : Prog α) =
+      some ((.control (.continued state.locals state.globals state.memory state.ffi),
+          state.clock), state) := by
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+
+/-- Source/converted evaluator projection for production Continue states. -/
+theorem panStructContinueEvaluatorProjection
+    [BEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertState context state)
+        (structCompileProg context (.continue : Prog α)) =
+      (panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state (.continue : Prog α)).map
+    (fun (result, postState) =>
+          (panStructConvertClockResult result,
+            panStructConvertState context postState)) := by
+  rw [panStructCompileContinue_eq_continue,
+    panStructSourceContinueEvaluation evaluationContext primitive handler bytesInWord state,
+    panStructSourceContinueEvaluation evaluationContext primitive handler bytesInWord
+      (panStructConvertState context state)]
+  simp [panStructConvertClockResult, panStructConvertClockOutcome,
+    panStructConvertControlResult, panStructConvertState]
+  constructor <;> rfl
+
+/-- Full Continue specialization of HOL `compile_correct` over finite-map
+    state. The unchanged source state preserves both field-validity clauses
+    and both shape maps, and the result-value obligations are empty. It uses
+    the source evaluation equation and proves target evaluation itself. This
+    stays untagged because HOL has only the quantified theorem and encodes
+    `SOME Continue` as Lean's `.continued` clock outcome. -/
+theorem panStructCompileCorrectContinueCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanStructFiniteState α (FfiState σ))
+    (hsourceContinue : panSemEvaluateCodeStateWithPostState evaluationContext
+      primitive handler bytesInWord state.runtime (.continue : Prog α) =
+        some ((.control (.continued state.runtime.locals state.runtime.globals
+          state.runtime.memory state.runtime.ffi), state.runtime.clock), state.runtime))
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.runtime.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool
+      state.runtime.structs state.runtime.globals)
+    (_hlocalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.locals)
+    (_hglobalsShape : panStructEveryValueShapeWfBool
+      state.runtime.structs state.runtime.globals)
+    (_hstructInfos : structInfosOk state.runtime.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.runtime.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.runtime.globals) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertFiniteState context state).runtime
+        (structCompileProg context (.continue : Prog α)) =
+      some ((.control (.continued
+        (panStructConvertFiniteState context state).runtime.locals
+        (panStructConvertFiniteState context state).runtime.globals
+        (panStructConvertFiniteState context state).runtime.memory
+        (panStructConvertFiniteState context state).runtime.ffi),
+        (panStructConvertFiniteState context state).runtime.clock),
+        (panStructConvertFiniteState context state).runtime) ∧
+    panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.locals ∧
+    panStructEveryValueFieldsOkBool state.runtime.structs state.runtime.globals ∧
+    panStructShapeMapEq context.globals state.runtime.globals ∧
+    panStructShapeMapEq context.locals state.runtime.locals ∧
+    panStructValuesFieldsOkBool (α := α) state.runtime.structs [] = true ∧
+    panIsWfShapeValuesBool (α := α) state.runtime.structs [] = true := by
+  have hprojection := panStructContinueEvaluatorProjection context evaluationContext
+    primitive handler bytesInWord state.runtime
+  rw [hsourceContinue] at hprojection
+  have htarget :
+      panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+          bytesInWord (panStructConvertFiniteState context state).runtime
+          (structCompileProg context (.continue : Prog α)) =
+        some ((.control (.continued
+          (panStructConvertFiniteState context state).runtime.locals
+          (panStructConvertFiniteState context state).runtime.globals
+          (panStructConvertFiniteState context state).runtime.memory
+          (panStructConvertFiniteState context state).runtime.ffi),
+          (panStructConvertFiniteState context state).runtime.clock),
+          (panStructConvertFiniteState context state).runtime) := by
+    exact hprojection
+  exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
+    by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
+
 /-- Evaluator-equation support for a future HOL `compile_correct` Skip case:
     this proves only the two source/converted outcomes and omits the HOL
     theorem's premises and value/shape-map postconditions, so it is not an

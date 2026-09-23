@@ -52,6 +52,15 @@ val _ = print_eval "compile_correct_break_converted"
      SND (panSem$evaluate (panLang$Break,
       pan_structsProof$convert_s (ARB:pan_structs$context) ^state)) =
         pan_structsProof$convert_s (ARB:pan_structs$context) ^state)``;
+val _ = print_eval "compile_correct_continue_source"
+  ``(FST (panSem$evaluate (panLang$Continue, ^state)),
+     SND (panSem$evaluate (panLang$Continue, ^state)) = ^state)``;
+val _ = print_eval "compile_correct_continue_converted"
+  ``(FST (panSem$evaluate (panLang$Continue,
+      pan_structsProof$convert_s (ARB:pan_structs$context) ^state)),
+     SND (panSem$evaluate (panLang$Continue,
+      pan_structsProof$convert_s (ARB:pan_structs$context) ^state)) =
+        pan_structsProof$convert_s (ARB:pan_structs$context) ^state)``;
 
 val finite_map_state = ``^state with <|
     locals := FUPDATE FEMPTY (strlit "local", ValWord 7w);

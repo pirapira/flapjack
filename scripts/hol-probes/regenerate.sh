@@ -113,7 +113,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
-  compile_exp_correct_rfield \
+  compile_exp_correct_rfield compile_exp_correct_op \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -254,7 +254,7 @@ run_probe word_alloc_cost_probeScript.sml word_alloc_cost_probe.out \
   spill_all1_tail coal_empty coal_x_in coal_y_in coal_both_in coal_pri2_both_in \
   "$cake_dir/compiler/backend/word_allocScript.sml" "$cake_dir/compiler/backend"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
-  empty dec_call "$cake_dir/pancake/panLangScript.sml"
+  empty global_in_handler "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_inlinable_probeScript.sml pan_lang_inlinable_probe.out \
   inline_true non_function "$cake_dir/pancake/panLangScript.sml"
 run_probe get_forced_probeScript.sml get_forced_probe.out \
@@ -612,6 +612,13 @@ run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
 run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
   n2w_zero_word bit_high6 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"
+run_probe hol_word_arithmetic_probeScript.sml hol_word_arithmetic_probe.out \
+  word_add_definition sub_3_5_8 "$hol_dir/src/n-bit/wordsScript.sml" \
+  "$hol_dir/src/n-bit"
+run_probe word_op_finite_probeScript.sml word_op_finite_probe.out \
+  word_op_definition sub_three \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

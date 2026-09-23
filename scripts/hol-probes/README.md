@@ -87,6 +87,37 @@ show the sampled indices are valid. The original definition is HOL4
 The kernel-checked canonical `Fin width`/BitVec equation
 `holWordBitsToBitVec_n2w` is in `Flapjack.Pancake.Semantics.CrepSem.Eval`; its
 zero/one/high-bit examples are in `Flapjack.Test.CrepeSimpExpParity`.
+For any explicit `HolFiniteDimension`, `holFiniteWordN2W_at_index` proves that
+the arbitrary-index adapter returns `Nat.testBit value (encode index)`, which
+is the pointwise FCP `BIT` equation under the chosen finite-index encoding;
+the Bool carrier test exercises this at multiple indices.
+`hol_word_arithmetic_probe.out` records the direct HOL4 definitions
+`word_add_def`, `word_mul_def`, and `word_sub_def` from the same external
+`wordsScript.sml`, along with the general `word_add_n2w` and `word_mul_n2w`
+theorems and 8-bit simplification examples. Lean's
+`holFiniteWordSourceAdd`/`holFiniteWordSourceMul` encode the source `n2w` of
+natural arithmetic on `w2n` values, with generic Fin-index transport theorems
+and focused 4-bit checks in `CrepeSimpExpParity`. The pointwise `n2w`/`BIT`
+equation is proved for explicit finite dimensions. The recursive
+`finWordSBitSum` follows the numeric `Fin` indices and proves the `w2n`
+weighted `SBIT` sum equals BitVec `toNat`; the operation adapters are also
+rewritten to expose their `n2w`-of-SBitSum source shape. `holFiniteWordSourceSub`
+uses the corresponding two's-complement natural formula and its transport
+theorem; the test checks wraparound subtraction. The remaining representation
+gap is identifying a Lean `HolFiniteDimension` witness with HOL's implicit
+`finite_index` choice; the full Crep evaluator correspondence is still open.
+`word_op_finite_probe.out` records the original CakeML
+`wordLangTheory.word_op_def` list folds (And/Add/Or/Xor/Sub), including empty
+fold values and malformed subtraction arities. This worktree's CakeML submodule
+has no compiled `wordLangTheory.ui`, so regenerate this probe against a
+read-only CakeML checkout with matching source and built theories by setting
+`CAKEML` (the checked output was generated from matching CakeML source commit
+`857f0d98da8f8a3580f3442338e697809308ede`).
+`holFiniteWord_wordOp_toBitVec` proves that the explicit finite-dimension
+wordOp list behavior maps through the Fin-index/BitVec conversion for every
+operator and argument list; Bool-index checks are in
+`Flapjack.Test.CrepeSimpExpParity`. This remains untagged because the theorem
+uses explicit dimension data.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
@@ -142,7 +173,7 @@ induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
 and Global variable-constructor instances and Const-, RStruct-, NStruct-,
-NField-, and RField-constructor instances of `compile_exp_correct`; each
+NField-, RField-, and Op-constructor instances of `compile_exp_correct`; each
 five-element tuple contains old shape, semantic value shape, field validity,
 source evaluation, and converted target evaluation. The production
 `structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,
@@ -150,8 +181,11 @@ NField, and RField are proved in their corresponding `panStructCompileExpCorrect
 lemmas and exercised by finite-map regressions in
 `Flapjack.Test.PanStructsCompileCorrect`. These are constructor specializations
 of the universal HOL theorem, not a complete induction port, and remain
-untagged where the Lean state/evaluator interfaces differ. The RStruct row uses
-two constants and validates all three constructor conclusions. Its nonempty-list
+untagged where the Lean state/evaluator interfaces differ. The RStruct and Op
+rows use nonempty expressions: the former checks aggregate construction, while
+the latter checks that a binary Op retains exactly its two word operands after
+value conversion. Both validate all three constructor conclusions. The
+nonempty-list
 row separately checks source `OPT_MMAP` success, pointwise compiled-expression
 correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production

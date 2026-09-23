@@ -198,3 +198,23 @@ val _ = print_simp "compile_exp_correct_rfield"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^rfield_expression) =
        SOME (pan_structsProof$convert_v ^rfield_value))``;
+
+val op_value = ``ValWord (8w:8 word)``;
+val op_expression = ``(panLang$Op Add
+  [panLang$Const (3w:8 word); panLang$Const (5w:8 word)] : 8 panLang$exp)``;
+val _ = print_simp "compile_exp_correct_op"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsTheory.compile_exp_def,
+   pan_structsTheory.old_exp_shape_def,
+   panSemTheory.eval_def,
+   panSemTheory.shape_of_def,
+   pan_structsProofTheory.v_flds_ok_def,
+   wordLangTheory.word_op_def]
+  ``(pan_structs$old_exp_shape ^ctxt ^op_expression,
+     panSem$shape_of ^op_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^op_value,
+     panSem$eval ^local_state ^op_expression = SOME ^op_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^op_expression) =
+       SOME (pan_structsProof$convert_v ^op_value))``;

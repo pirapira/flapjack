@@ -96,6 +96,28 @@ theorem afindi_lookup_fixture :
     entries.lookup "b" = some 20 := by
   rw [afindi_lookup]
   simp [afindi, entries]
+
+/-! Direct HOL-EVAL rows from `pan_structs_alookup_afindi_probe.out` exercise
+present, missing and duplicate lookups for `ALOOKUP_eq_afindi`. -/
+def duplicateEntries : List (String × Nat) := [("x", 1), ("x", 2)]
+
+theorem afindi_lookup_missing_fixture :
+    entries.lookup "z" = none := by
+  rw [afindi_lookup]
+  simp [afindi, entries]
+
+theorem afindi_lookup_duplicate_fixture :
+    duplicateEntries.lookup "x" = some 1 := by
+  rw [afindi_lookup]
+  simp [afindi, duplicateEntries]
+
+def holALookupAfIndiGuard : Bool :=
+  entries.lookup "b" == some 20 &&
+  entries.lookup "z" == none &&
+  duplicateEntries.lookup "x" == some 1
+
+#eval holALookupAfIndiGuard
+#guard holALookupAfIndiGuard
 /-! Focused regressions for the ported Cake `pan_structs` `is_wf_shape_drop`
     lemma and its `lookupInfo` helper. -/
 

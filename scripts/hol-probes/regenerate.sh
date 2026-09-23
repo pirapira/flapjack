@@ -102,6 +102,10 @@ run_probe pan_structs_afindi_el_probeScript.sml pan_structs_afindi_el_probe.out 
   first_match_fst middle_match_fst last_match_fst \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_alookup_afindi_probeScript.sml pan_structs_alookup_afindi_probe.out \
+  present_lookup_projection missing_lookup_projection duplicate_key_first_value \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only

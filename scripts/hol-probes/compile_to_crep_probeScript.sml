@@ -57,6 +57,20 @@ val _ = print_eval "raise_pair_later"
                     [panLang$Const (7w : 8 word); panLang$Const 9w])));
             return := panLang$One |>]``;
 
+val _ = print_eval "raise_pair_later_64"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Dec «a» panLang$One
+              (panLang$Const (3w : 64 word))
+              (panLang$Dec «b» panLang$One
+                (panLang$Const (5w : 64 word))
+                (panLang$Raise «E»
+                  (panLang$RStruct
+                    [panLang$Const (7w : 64 word); panLang$Const 9w])));
+            return := panLang$One |>]``;
+
 val _ = print_eval "handled_pair"
   ``pan_to_crep$compile_to_crep
       [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);

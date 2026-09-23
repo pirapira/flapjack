@@ -1,4 +1,6 @@
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopToWord
 import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
@@ -347,22 +349,69 @@ def laterPairOracle : Bool :=
 
 #guard laterPairOracle
 
-/-! The `compile_to_crep` fixture above separately checks `StoreGlob 0/1`.
-This boundary check starts from a representative Word program containing
-`Set (Temp 0/1)` and checks that `word_to_stack` preserves those indices; it
-does not establish an end-to-end link between the two fixtures. The original
-rules are `loop_to_wordScript.sml:93` and
+/-! Follow the actual 64-bit declaration-only HOL compiler result through
+`crep_to_loop`, `loop_to_word`, and `word_to_stack`. This checks that the
+one-word Crep global indices from `raise_pair_later` survive as Stack Temp 0
+and Temp 1. The original pass rules are `loop_to_wordScript.sml:93` and
 `compiler/backend/word_to_stackScript.sml:491`. -/
-def laterPairStackTempRegionOracle : Bool :=
-  let config : RiscV.WordStackConfig :=
-    { locations := [], scratch := 31, stackBase := 0 }
-  let program : WordProg Nat :=
-    .seq (.set (.temp 0) (.const 7)) (.set (.temp 1) (.const 9))
-  match RiscV.wordToStackProgNat config program with
-  | some (.seq
-      (.seq (.const 31 7) (.set (.temp 0) 31))
-      (.seq (.const 31 9) (.set (.temp 1) 31))) => true
+def holLaterPairRaiseProbe64 : List (Decl (BitVec 64)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .dec "a" .one (.const 3)
+         (.dec "b" .one (.const 5)
+           (.raise "E" (.rStruct [.const 7, .const 9]))),
+       returnShape := .one }]
+
+/-! Exact `raise_pair_later_64` row from the direct HOL probe: the ordinary
+declarations use slots 1 and 2, the later two-word payload uses slots 3 and 4,
+and its global return area uses the unscaled Temp-region indices 0 and 1. -/
+def holLaterPairRaiseProductionOracle64 : Bool :=
+  match compileToCrepHOL holLaterPairRaiseProbe64 with
+  | [("f", [],
+      .dec 1 (.const three)
+        (.dec 2 (.const five)
+          (.seq
+            (.dec 3 (.const seven)
+              (.dec 4 (.const nine)
+                (.seq (.storeGlob first (.var 3))
+                  (.seq (.storeGlob second (.var 4)) .skip))))
+            (.raise code))))] =>
+      three == (3 : BitVec 64) && five == (5 : BitVec 64) &&
+        seven == (7 : BitVec 64) && nine == (9 : BitVec 64) &&
+        first == (0 : BitVec 64) && second == (1 : BitVec 64) &&
+        code == (0 : BitVec 64)
   | _ => false
+
+#guard holLaterPairRaiseProductionOracle64
+
+def laterPairTempLoop : Option (LoopProg (BitVec 64)) := do
+  let [(_, _, crep)] := compileToCrepHOL holLaterPairRaiseProbe64 | none
+  let loopContext : LoopContext (BitVec 64) :=
+    { vars := [], functions := [], maxVar := 0, target := .rv64i }
+  some (compileCrepToLoop loopContext [] crep)
+
+def laterPairTempWord : Option (WordProg (BitVec 64)) := do
+  let loop ← laterPairTempLoop
+  some (LoopToWord.loopToWordCompFunc 0 [] loop)
+
+def laterPairTempPipelineStack : Option (StackProg Nat) := do
+  let word ← laterPairTempWord
+  let stackConfig : RiscV.WordStackConfig :=
+    { locations := (List.range 31).map fun register =>
+        (register, .register register),
+      scratch := 31, stackBase := 0 }
+  RiscV.wordToStackProgNat stackConfig (RiscV.wordProgToNat word)
+
+def stackTempWrites : StackProg Nat → List Nat
+  | .set (.temp written) _ => [written]
+  | .seq first second => stackTempWrites first ++ stackTempWrites second
+  | _ => []
+
+def laterPairStackTempRegionOracle : Bool :=
+  match laterPairTempPipelineStack with
+  | some stack => stackTempWrites stack == [0, 1]
+  | none => false
 
 #guard laterPairStackTempRegionOracle
 

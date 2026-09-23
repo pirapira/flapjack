@@ -15,12 +15,6 @@ open Flapjack
 def context : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 1 }
 
-def fixedWidthContext : PanToCrepCompileContext Nat :=
-  { vars := [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
-    functions := []
-    exceptions := []
-    maxVar := 2 }
-
 def finiteMapContext : PanToCrepHOLContext Nat :=
   { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
     funcs := FEMPTY
@@ -93,6 +87,34 @@ def riscv64PairLoad : Prog (BitVec 64) :=
 def riscv64PairStore : Prog (BitVec 64) :=
   .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
 
+def riscv64EmptyStructReturn : Prog (BitVec 64) :=
+  .return (.rStruct [])
+
+def riscv64EmptyHOLContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FEMPTY, funcs := FEMPTY, eids := FEMPTY, vmax := 0 }
+
+def riscv64ShadowContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def riscv64ShadowReturn : Prog (BitVec 64) :=
+  .return (.var .local "p")
+
+def isEmptyRiscv64Return : CrepProg (BitVec 64) → Bool
+  | .return [] => true
+  | _ => false
+
+def isRiscv64ShadowReturn : CrepProg (BitVec 64) → Bool
+  | .return [.var 5] => true
+  | _ => false
+
+#guard isEmptyRiscv64Return
+  (compileProgRiscV riscv64EmptyHOLContext riscv64EmptyStructReturn)
+#guard isRiscv64ShadowReturn
+  (compileProgRiscV riscv64ShadowContext riscv64ShadowReturn)
+
 
 def isRiscv64PairLoad : CrepProg (BitVec 64) → Bool
   | .return [.load (.var 0), .load (.op .add [.var 0, .const stride])] =>
@@ -125,10 +147,6 @@ def isFixedPairStore8 : CrepProg Nat → Bool
       (.seq (.store (.var 3) (.var 4))
         (.seq (.store (.op .add [.var 3, .const 8]) (.var 5)) .skip)))) => true
   | _ => false
-
-def fixedWidthParityGuard : Bool :=
-  isFixedPairLoad8 (compileProgFixed fixedWidthContext pairLoad) &&
-  isFixedPairStore8 (compileProgFixed fixedWidthContext pairStore)
 
 def finiteMapParityGuard : Bool :=
   match compileProgHOL finiteMapContext (.return (.var .local "p")) with
@@ -275,7 +293,7 @@ def parityGuard : Bool :=
   isExtraNamesCallToF (compileProg extraNamesLocalContext extraNamesLocalCall) &&
   isMissingNamesCallToF (compileProg missingNamesLocalContext missingNamesLocalCall) &&
   isValidPairCallToF (compileProg validLocalContext validLocalCall) &&
-  fixedWidthParityGuard && finiteMapParityGuard && nativeProgramParityGuard &&
+  finiteMapParityGuard && nativeProgramParityGuard &&
     finiteMapLoadStoreParityGuard
 
 example : compileProg context missingGlobalCall = .call none "f" [] := by
@@ -336,7 +354,6 @@ example :
 
 #eval parityGuard
 #guard parityGuard
-#guard fixedWidthParityGuard
 #guard finiteMapParityGuard
 #guard nativeProgramParityGuard
 #guard finiteMapLoadStoreParityGuard

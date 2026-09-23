@@ -504,12 +504,12 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "filter_not_mem_self",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "filter_not_mem_self",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,
@@ -2534,6 +2534,14 @@
     "lean_name": "codeRel",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_imp",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelImp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,

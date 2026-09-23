@@ -2329,18 +2329,6 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
     memoryAccess hall] at heval
   exact heval
 
-/-! Counterpart of Cake's `filter_not_mem_self`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1407`):
-
-    FILTER (\x. ~MEM x l) l = []
-
-Filtering a list by its own complement of membership removes every element. -/
-theorem filter_not_mem_self {α : Type} [DecidableEq α] (l : List α) :
-    l.filter (fun x => decide (x ∉ l)) = [] := by
-  rw [List.filter_eq_nil_iff]
-  intro x hx
-  simp [hx]
-
 /-! Counterpart of Cake's `MAP_SOME_MEM_lemma`
 (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`):
 

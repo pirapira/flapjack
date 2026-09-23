@@ -23,6 +23,7 @@ open preamble;
 open loopSemTheory;
 
 val s = ``(s:(8,unit) loopSem$state)``;
+val s32 = ``(s:(32,unit) loopSem$state)``;
 val returning_ffi =
   ``<| oracle := (λname. λst. λconf. λbytes.
         case name of
@@ -62,34 +63,36 @@ val _ = print_eval "ws_mem_store_update"
       SOME s' => (s'.memory (0w : 8 word), s'.memory (1w : 8 word))
     | NONE => (Word 0w, Word 0w)``
 
-(* Returning MappedRead: result NONE, local 1 set to Word 3w, one io_event.
-   The loaded word is printed through `w2n` because EVAL leaves
-   `word_of_bytes F 0w [3w]` as an unreduced `set_byte` term; `w2n` forces the
-   concrete value, as in loop_sem_sh_mem_load_probe.out. *)
+(* Returning MappedRead: result NONE, local 1 set to the loaded word (3), one
+   io_event.  A 32-bit word is used because EVAL reduces `word_of_bytes F 0w
+   (word_to_bytes (3w:32 word) F)` to the concrete word, whereas for an 8-bit
+   word the same term stays as an unreduced `set_byte` (see
+   loop_sem_sh_mem_load_probe.out). *)
 val _ = print_eval "ws_sh_mem_load_return"
-  ``case loopSem$sh_mem_load 1 (3w : 8 word) 0
-      (^s with <| locals := insert 1 (Word (0w : 8 word)) LN;
-                  sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
+  ``case loopSem$sh_mem_load 1 (3w : 32 word) 0
+      (^s32 with <| locals := insert 1 (Word (0w : 32 word)) LN;
+                    sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
       (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w2n w | _ => 0),
                    LENGTH s'.ffi.io_events)``
 
 (* Final MappedRead: FinalFFI, locals cleared. *)
 val _ = print_eval "ws_sh_mem_load_final"
-  ``case loopSem$sh_mem_load 1 (3w : 8 word) 0
-      (^s with <| locals := insert 1 (Word (0w : 8 word)) LN;
-                  sh_mdomain := {3w}; ffi := ^final_ffi |>) of
+  ``case loopSem$sh_mem_load 1 (3w : 32 word) 0
+      (^s32 with <| locals := insert 1 (Word (0w : 32 word)) LN;
+                    sh_mdomain := {3w}; ffi := ^final_ffi |>) of
       (res,s') => (res, (case lookup 1 s'.locals of NONE => T | _ => F))``
 
-(* Returning MappedWrite: result NONE, stored local 1 kept as Word 7w. *)
+(* Returning MappedWrite: result NONE, stored local 1 kept as 7. *)
 val _ = print_eval "ws_sh_mem_store_return"
-  ``case loopSem$sh_mem_store 1 (3w : 8 word) 0
-      (^s with <| locals := insert 1 (Word (7w : 8 word)) LN;
-                  sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
+  ``case loopSem$sh_mem_store 1 (3w : 32 word) 0
+      (^s32 with <| locals := insert 1 (Word (7w : 32 word)) LN;
+                    sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
       (res,s') => (res, (case lookup 1 s'.locals of SOME (Word w) => w2n w | _ => 0))``
 
-(* Final MappedWrite: FinalFFI, locals cleared. *)
+(* Final MappedWrite: a final event is produced and locals are cleared; the
+   event term is long, so print only whether a result was produced. *)
 val _ = print_eval "ws_sh_mem_store_final"
-  ``case loopSem$sh_mem_store 1 (3w : 8 word) 0
-      (^s with <| locals := insert 1 (Word (7w : 8 word)) LN;
-                  sh_mdomain := {3w}; ffi := ^final_ffi |>) of
-      (res,s') => (res, (case lookup 1 s'.locals of NONE => T | _ => F))``
+  ``case loopSem$sh_mem_store 1 (3w : 32 word) 0
+      (^s32 with <| locals := insert 1 (Word (7w : 32 word)) LN;
+                    sh_mdomain := {3w}; ffi := ^final_ffi |>) of
+      (res,s') => (IS_SOME res, (case lookup 1 s'.locals of NONE => T | _ => F))``

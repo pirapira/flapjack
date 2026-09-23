@@ -1,0 +1,10 @@
+ws_mem_load_hit=SOME (Word 7w)
+ws_mem_load_miss=NONE
+ws_mem_store_update=(Word 7w,Word 2w)
+ws_sh_mem_load_return=(NONE,3,1)
+ws_sh_mem_load_final=(SOME
+   (FinalFFI
+      (Final_event (SharedMem MappedRead) [0w] [3w; 0w; 0w; 0w] FFI_failed)),
+ T)
+ws_sh_mem_store_return=(NONE,7)
+ws_sh_mem_store_final=(T,T)

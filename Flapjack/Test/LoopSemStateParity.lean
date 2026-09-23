@@ -205,11 +205,15 @@ def returningRead : FfiState Unit where
   state := ()
   ioEvents := []
 
-abbrev sharedState8 : LoopSemState Word8 Unit where
+abbrev Word32 := RiscV.Word 32
+
+/-- Shared-memory fixture at width 32, matching the width-32 rows of the direct
+    HOL probe (`EVAL` reduces `word_of_bytes` for 32-bit words, unlike 8-bit). -/
+abbrev sharedState32 : LoopSemState Word32 Unit where
   locals := fun name => if name = 1 then some (.word 0) else none
   globals := fun _ => none
-  memory := memory8
-  mdomain := domain8
+  memory := fun _ => .loc 0 0
+  mdomain := fun _ => False
   shMdomain := fun address => address = 3
   clock := 200
   code := fun _ => none
@@ -218,17 +222,17 @@ abbrev sharedState8 : LoopSemState Word8 Unit where
   baseAddr := 0
   topAddr := 100
 
-/-- `return_zero_width=(NONE, …, 1)`: the returned bytes set local `1` to `3`
+/-- `ws_sh_mem_load_return=(NONE,3,1)`: the returned bytes set local `1` to `3`
     and one FFI event is appended. -/
 def probeShMemReturnGuard : Bool :=
-  decide ((shMemLoadSemHOL (width := 8) 1 3 0 sharedState8).1 = none) &&
-    decide ((shMemLoadSemHOL (width := 8) 1 3 0 sharedState8).2.locals 1 =
+  decide ((shMemLoadSemHOL (width := 32) 1 3 0 sharedState32).1 = none) &&
+    decide ((shMemLoadSemHOL (width := 32) 1 3 0 sharedState32).2.locals 1 =
       some (.word 3)) &&
-    decide ((shMemLoadSemHOL (width := 8) 1 3 0 sharedState8).2.ffi.ioEvents.length = 1)
+    decide ((shMemLoadSemHOL (width := 32) 1 3 0 sharedState32).2.ffi.ioEvents.length = 1)
 
-/-- `domain_error=(SOME Error, …)`. -/
+/-- `domain_error=(SOME Error, …)` (address not in `sh_mdomain`). -/
 def probeShMemDomainErrorGuard : Bool :=
-  decide ((shMemLoadSemHOL (width := 8) 1 4 0 sharedState8).1 = some .error)
+  decide ((shMemLoadSemHOL (width := 32) 1 4 0 sharedState32).1 = some .error)
 
 /-- Oracle that always finalizes, matching the direct HOL probe. -/
 def finalRead : FfiState Unit where
@@ -237,11 +241,11 @@ def finalRead : FfiState Unit where
   ioEvents := []
 
 /-- State with local `1` holding `Word 7w` for the store probes. -/
-abbrev storingState8 : LoopSemState Word8 Unit where
+abbrev storingState32 : LoopSemState Word32 Unit where
   locals := fun name => if name = 1 then some (.word 7) else none
   globals := fun _ => none
-  memory := memory8
-  mdomain := domain8
+  memory := fun _ => .loc 0 0
+  mdomain := fun _ => False
   shMdomain := fun address => address = 3
   clock := 200
   code := fun _ => none
@@ -250,24 +254,31 @@ abbrev storingState8 : LoopSemState Word8 Unit where
   baseAddr := 0
   topAddr := 100
 
-/-- `store_return=(NONE, 7w)`: only the ffi is updated, the stored local stays. -/
+/-- `ws_sh_mem_store_return=(NONE,7)`: only the ffi is updated, the stored local stays. -/
 def probeShMemStoreReturnGuard : Bool :=
-  decide ((shMemStoreSemHOL (width := 8) 1 3 0 storingState8).1 = none) &&
-    decide ((shMemStoreSemHOL (width := 8) 1 3 0 storingState8).2.locals 1 = some (.word 7))
+  decide ((shMemStoreSemHOL (width := 32) 1 3 0 storingState32).1 = none) &&
+    decide ((shMemStoreSemHOL (width := 32) 1 3 0 storingState32).2.locals 1 = some (.word 7))
 
-/-- `load_final`: a final event is produced and locals are cleared. -/
+/-- The exact `FinalFFI` event the width-32 HOL probe reports for a final read. -/
+def loadFinalEvent : FfiFinalEvent where
+  name := .sharedMem .mappedRead
+  configuration := [0]
+  bytes := [3, 0, 0, 0]
+  outcome := .failed
+
+/-- `ws_sh_mem_load_final`: the exact `FinalFFI` event is produced and locals are cleared. -/
 def probeShMemLoadFinalGuard : Bool :=
-  decide (shMemLoadSemHOL (width := 8) 1 3 0
-      { sharedState8 with ffi := finalRead }).1.isSome &&
-    decide ((shMemLoadSemHOL (width := 8) 1 3 0
-      { sharedState8 with ffi := finalRead }).2.locals 1 = none)
+  decide ((shMemLoadSemHOL (width := 32) 1 3 0
+      { sharedState32 with ffi := finalRead }).1 = some (.finalFfi loadFinalEvent)) &&
+    decide ((shMemLoadSemHOL (width := 32) 1 3 0
+      { sharedState32 with ffi := finalRead }).2.locals 1 = none)
 
-/-- `store_final`: a final event is produced and locals are cleared. -/
+/-- `ws_sh_mem_store_final=(T,T)`: a final event is produced and locals are cleared. -/
 def probeShMemStoreFinalGuard : Bool :=
-  decide (shMemStoreSemHOL (width := 8) 1 3 0
-      { storingState8 with ffi := finalRead }).1.isSome &&
-    decide ((shMemStoreSemHOL (width := 8) 1 3 0
-      { storingState8 with ffi := finalRead }).2.locals 1 = none)
+  decide (shMemStoreSemHOL (width := 32) 1 3 0
+      { storingState32 with ffi := finalRead }).1.isSome &&
+    decide ((shMemStoreSemHOL (width := 32) 1 3 0
+      { storingState32 with ffi := finalRead }).2.locals 1 = none)
 
 #guard probeShMemReturnGuard
 #guard probeShMemDomainErrorGuard

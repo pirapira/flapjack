@@ -27,10 +27,12 @@ FIXTURES = [
         "area": "Program compiler",
         "boundary": "compile_prog",
         "probe": "compile_prog_probe",
-        "hol_labels": ["empty", "inline_call", "global_dest", "handled_missing_dest", "duplicate_first", "nested_inline"],
+        "hol_labels": ["empty", "inline_call", "global_dest", "handled_missing_dest", "duplicate_first", "nested_inline", "params_two_words"],
         "lean": "Flapjack/Test/CompileProgParity.lean",
         "lean_markers": ["compile_prog_inline_call_parity", "compileProgTopEmptyParity", "compileProgTopDuplicateParity", "compileProgTopNestedParity", "shMemStoreAddressTempParity", "holInlineDuplicateParity", "holInlineNestedParity"],
-        "covers": "empty input; direct compile_prog triples for inline calls including first duplicate binding and nested expansion; valid Global return destination; handled call with missing destination and a two-word payload",
+        "related_lean": "Flapjack/Test/CompileProgParamsParity.lean",
+        "related_markers": ["twoWordParamParity", "twoWordParamNodup"],
+        "covers": "empty input; direct compile_prog triples for inline calls including first duplicate binding and nested expansion; two-word function parameters; valid Global return destination; handled call with missing destination and a two-word payload",
     },
     {
         "area": "Function and declaration lowering",
@@ -134,6 +136,9 @@ def render() -> str:
 
         probe_link = f"[`{probe}.out`](../scripts/hol-probes/{probe}.out)"
         lean_link = f"[`{lean_path.name}`](../{fixture['lean']})"
+        if "related_lean" in fixture:
+            related = Path(fixture["related_lean"])
+            lean_link += f", [`{related.name}`](../{fixture['related_lean']})"
         lines.append(
             f"| `{fixture['boundary']}` | {probe_link} | {lean_link} | {fixture['covers']} |"
         )

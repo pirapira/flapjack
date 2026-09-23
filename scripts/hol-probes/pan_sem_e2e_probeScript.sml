@@ -61,3 +61,28 @@ val _ = print_eval "recursive_call_code_map_7"
                (panLang$Return (panLang$Var panLang$Local «nested»)),
              panLang$One)) |+
            («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
+val _ = print_eval "deccall_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «id»
+        [panLang$Const (7w:8 word)]
+        (panLang$Return (panLang$Var panLang$Local «answer»)),
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («id», ([(«x», panLang$One)],
+             panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
+
+val _ = print_eval "recursive_call_timeout"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «loop» [],
+       (((ARB:((8),unit) panSem$state) with clock := 2) with
+         code := FEMPTY |+
+           («loop», ([], panLang$Call NONE «loop» [], panLang$One)))))``
+
+val _ = print_eval "recursive_deccall_timeout"
+  ``FST (panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «loop» [] panLang$Skip,
+       (((ARB:((8),unit) panSem$state) with clock := 2) with
+         code := FEMPTY |+
+           («loop», ([], panLang$DecCall «nested» panLang$One «loop» []
+             panLang$Skip, panLang$One)))))``

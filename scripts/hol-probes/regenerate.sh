@@ -85,6 +85,8 @@ run_probe() {
 run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
   ordinary carry_overflow "$cake_dir/compiler/backend/backend_commonScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
+  pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -214,7 +216,8 @@ run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
-  return_41 call_code_map_7 recursive_call_code_map_7 \
+  return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
+  recursive_call_timeout recursive_deccall_timeout \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
   return_add_6_7 return_add_6_7 "$cake_dir/pancake/semantics/panSemScript.sml"

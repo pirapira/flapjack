@@ -8,13 +8,14 @@ import Flapjack.PanValueFfiClockSemantics
 Source reference: `cakeml/pancake/semantics/panSemScript.sml:556-736`
 (`evaluate_def`). The HOL source evaluates one `panLang$prog` against a state
 whose `code` field is a finite map. `PanSemEvaluateState` is the existing
-list-backed executable compatibility boundary; its `functions` field is not
-the source `PanSemState.code` map. Its clocked evaluator covers calls against
-that list, but it is not the exact recursive source code-map evaluator.
+list-backed executable compatibility boundary. `panSemEvaluateCodeState` is
+the production source-state entry point: it resolves every recursive Call and
+DecCall from the finite-support `PanSemState.code` map.
 
-The fuel is only Lean's termination guard.  It is derived from the complete
-program/function tree and source clock, while the observable semantics remain
-the source clock and state transitions.
+The fuel is only Lean's termination guard. The compatibility entry point uses
+its legacy function list; the source-state entry point derives fuel from the
+code map and source clock. Observable clock transitions remain those of the
+source semantics.
 -/
 
 namespace Flapjack
@@ -173,6 +174,160 @@ def panSemEvaluate
     Option (PanValueFfiClockResult α σ) :=
   panSemEvaluateWithFuel context primitive handler
     (panSemEvaluateFuel state program) state program
+
+/-- Maximum structural evaluation cost of a body stored in the finite source
+    code map. The evaluator's internal fuel is derived from the state-owned
+    map, never from a detached function list. -/
+def panSemCodeBodyFuel (code : PanSemCodeMap α) : Nat :=
+  code.foldl (fun fuel binding => max fuel (panSemProgFuel binding.2.2.1)) 0
+
+/-- Conservative structural bound for source-state evaluation. Every executed
+    source call and every repeated while iteration consumes source clock, so at
+    most `state.clock` such phases execute; each phase is bounded by the larger
+    of the entry program and every state-owned function body. -/
+def panSemCodeEvaluateFuel (state : PanSemState α ffi)
+    (program : Prog α) : Nat :=
+  (state.clock + 1) * (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) + 1
+
+theorem panSemCodeEvaluateFuel_covers_clocked_bodies
+    (state : PanSemState α ffi) (program : Prog α) :
+    state.clock * panSemCodeBodyFuel state.code + panSemProgFuel program <
+      panSemCodeEvaluateFuel state program := by
+  unfold panSemCodeEvaluateFuel
+  have hbody := Nat.le_max_right (panSemProgFuel program)
+    (panSemCodeBodyFuel state.code)
+  have hprogram := Nat.le_max_left (panSemProgFuel program)
+    (panSemCodeBodyFuel state.code)
+  calc
+    state.clock * panSemCodeBodyFuel state.code + panSemProgFuel program ≤
+        state.clock * max (panSemProgFuel program) (panSemCodeBodyFuel state.code) +
+          max (panSemProgFuel program) (panSemCodeBodyFuel state.code) := by
+      exact Nat.add_le_add (Nat.mul_le_mul_left _ hbody) hprogram
+    _ < state.clock * max (panSemProgFuel program) (panSemCodeBodyFuel state.code) +
+          state.clock + max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 2 := by
+      omega
+    _ = (state.clock + 1) *
+          (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) + 1 := by
+      simp only [Nat.add_mul, Nat.mul_add, Nat.one_mul]
+      omega
+
+/-- Clocked production evaluator whose recursive Call and DecCall clauses read
+    each callee from `state.code`. The compatibility function list is empty;
+    code lookup and the fuel bound both remain tied to the source state. -/
+def panSemEvaluateCodeStateWithFuel
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat)
+    (state : PanSemState α (FfiState σ)) (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiClockResult α σ) :=
+  evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+    state.exceptionShapes
+    state.baseAddress state.topAddress bytesInWord fuel state.locals state.globals
+    state.memory state.ffi state.clock program
+    (memoryAccess := memoryAccess) (contracts := contracts)
+    (memoryHandler := memoryHandler)
+
+/-- Production source-state entry point with a finite-map-derived fuel bound. -/
+def panSemEvaluateCodeState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord
+    (panSemCodeEvaluateFuel state program) state program
+    (memoryAccess := memoryAccess) (contracts := contracts)
+    (memoryHandler := memoryHandler)
+
+/-- Materialise the observable post-state of code-map evaluation. The source
+    semantics never updates `state.code`; it is carried verbatim while the
+    evaluator updates locals, globals, memory, FFI state, and clock. -/
+def panSemCodeStateAfter (state : PanSemState α (FfiState σ))
+    (result : PanValueFfiClockResult α σ) : PanSemState α (FfiState σ) :=
+  let update (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat) :=
+    { state with
+      locals := locals
+      globals := globals
+      memory := memory
+      ffi := ffi
+      clock := clock }
+  match result with
+  | (.timeout locals globals memory ffi, clock) => update locals globals memory ffi clock
+  | (.control control, clock) =>
+      match control with
+      | .normal locals globals memory ffi
+      | .returned locals globals memory ffi _
+      | .raised locals globals memory ffi _ _
+      | .broke locals globals memory ffi
+      | .continued locals globals memory ffi
+      | .finalFfi locals globals memory ffi _ => update locals globals memory ffi clock
+
+theorem panSemCodeStateAfter_preserves_code
+    (state : PanSemState α (FfiState σ)) (result : PanValueFfiClockResult α σ) :
+    (panSemCodeStateAfter state result).code = state.code := by
+  cases result with
+  | mk outcome clock =>
+    cases outcome with
+    | timeout _ _ _ _ => rfl
+    | control control => cases control <;> rfl
+
+/-- Source-state entry point paired with its post-state projection. -/
+def panSemEvaluateCodeStateWithPostState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiClockResult α σ × PanSemState α (FfiState σ)) := do
+  let result ← panSemEvaluateCodeState context primitive handler bytesInWord state program
+    (memoryAccess := memoryAccess) (contracts := contracts)
+    (memoryHandler := memoryHandler)
+  pure (result, panSemCodeStateAfter state result)
+
+theorem panSemEvaluateCodeStateWithPostState_eq_map
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (program : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state program
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      (panSemEvaluateCodeState context primitive handler bytesInWord state program
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler)).map
+      (fun result => (result, panSemCodeStateAfter state result)) := by
+  cases hresult : panSemEvaluateCodeState context primitive handler bytesInWord state
+      program (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) <;>
+    simp [panSemEvaluateCodeStateWithPostState, hresult]
 
 /-!
   Exact source-memory entry point.

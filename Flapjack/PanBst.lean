@@ -66,6 +66,29 @@ def panSemCodeUpdate [BEq String] (code : PanSemCodeMap α)
     panSemCodeLookup (panSemCodeUpdate code name entry) name = some entry := by
   simp [panSemCodeLookup, panSemCodeUpdate, lookupInfo]
 
+/-- HOL `lookup_code` argument-shape check over the finite state code map. -/
+def panSemCodeArgumentsMatch :
+    StructContext → List (VarName × Shape) → List (PanValue α) → Bool
+  | _, [], [] => true
+  | structs, (_, shape) :: parameters, value :: values =>
+      panShapeMatches (panValueShape structs value) shape &&
+        panSemCodeArgumentsMatch structs parameters values
+  | _, _, _ => false
+
+/-- State-owned counterpart of HOL `lookup_code`: require distinct formal
+    names and shape-matched arguments, then build the fresh callee locals from
+    the same finite-map entry that supplies the body and return shape. -/
+def lookupPanSemCodeCall [BEq String] (structs : StructContext)
+    (code : PanSemCodeMap α)
+    (function : FunName) (values : List (PanValue α)) :
+    Option (Prog α × Shape × (VarName → Option (PanValue α))) := do
+  let (parameters, body, returnShape) ← panSemCodeLookup code function
+  if decide (parameters.map Prod.fst).Nodup &&
+      panSemCodeArgumentsMatch structs parameters values then
+    let locals ← bindPanValueParameters (parameters.map Prod.fst) values
+    pure (body, returnShape, locals)
+  else none
+
 structure PanSemState (α : Type u) (ffi : Type v) where
   locals : VarName → Option (PanValue α)
   globals : VarName → Option (PanValue α)

@@ -61,6 +61,14 @@ val _ = print_eval "nested_inline"
             params := []; body := panLang$Call NONE «mid» [];
             return := panLang$One |>]``;
 
+val _ = print_eval "params_two_words"
+  ``pan_to_crep$compile_prog
+      [panLang$Function
+         <| name := «pair»; inline := F; export := F;
+            params := [(«p», panLang$Comb [panLang$One; panLang$One])];
+            body := panLang$Skip;
+            return := panLang$One |>]``;
+
 val _ = print_eval "global_dest"
   ``pan_to_crep$compile_to_crep
       ([panLang$Function

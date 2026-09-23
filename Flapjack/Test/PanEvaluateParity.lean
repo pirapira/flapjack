@@ -8,9 +8,8 @@ The source oracle is `scripts/hol-probes/pan_sem_e2e_probe.out`, generated
 from `panSemScript.sml:556-736`.  Its `return_41`, `return_mul_42`, and
 `return_if_13` observations are direct HOL evaluations of
 `FST (panSem$evaluate ...)`; the call, memory, and FFI fixtures use the same
-source boundary.  These checks exercise the source-shaped wrapper on a
-constant return, an intermediate clocked sequence, a zero-clock timeout, and
-a function call with argument transfer and return-shape contracts.
+source boundary. State-owned Call and DecCall fixtures exercise nonempty code
+maps, nested calls, recursive calls, return shapes, and source-clock timeout.
 
 The fixed-width memory oracle is `scripts/hol-probes/
 pan_sem_evaluate_fixed_load_probe.out`, generated from
@@ -74,6 +73,122 @@ def evaluateCall :=
         contracts := some idContracts }
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
+
+private abbrev Word64 := Word 64
+
+def emptyPanSourceState (clock : Nat)
+    (code : PanSemCodeMap Word64) : PanSemState Word64 (FfiState Unit) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := code
+    exceptionShapes := fun _ => none
+    memory := fun _ => none
+    memaddrs := fun _ => false
+    sharedMemaddrs := fun _ => false
+    clock := clock
+    be := false
+    ffi := statefulTestFfiState
+    baseAddress := BitVec.ofNat 64 0
+    topAddress := BitVec.ofNat 64 100 }
+
+def sourceIdCode : PanSemCodeMap Word64 :=
+  [("id", ([ ("x", .one) ], .return (.var .local "x"), .one))]
+
+def sourceRecursiveCode : PanSemCodeMap Word64 :=
+  [("f", ([], .decCall "nested" .one "g" []
+      (.return (.var .local "nested")), .one)),
+    ("g", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
+def sourceCallSelfCode : PanSemCodeMap Word64 :=
+  [("loop", ([], .call none "loop" [], .one))]
+
+def sourceDecCallSelfCode : PanSemCodeMap Word64 :=
+  [("loop", ([], .decCall "nested" .one "loop" [] .skip, .one))]
+
+def evaluateSourceCallId :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceIdCode)
+    (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
+
+def evaluateSourceDecCallId :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceIdCode)
+    (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
+      (.return (.var .local "answer")) : Prog Word64)
+
+def evaluateSourceNestedCall :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceRecursiveCode)
+    (.call none "f" [] : Prog Word64)
+
+def evaluateSourceNestedCallWithPostState :=
+  panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceRecursiveCode)
+    (.call none "f" [] : Prog Word64)
+
+def evaluateSourceRecursiveCallTimeout :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 2 sourceCallSelfCode)
+    (.call none "loop" [] : Prog Word64)
+
+def evaluateSourceRecursiveDecCallTimeout :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 2 sourceDecCallSelfCode)
+    (.decCall "answer" .one "loop" [] .skip : Prog Word64)
+
+private def isSourceReturnedWord
+    (result : Option (PanValueFfiClockResult Word64 Unit))
+    (expected : Word64) (expectedClock : Nat) : Bool :=
+  match result with
+  | some (.control (.returned _ _ _ _ [(.word value)]), clock) =>
+      value == expected && clock == expectedClock
+  | _ => false
+
+private def isSourceTimeoutAt
+    (result : Option (PanValueFfiClockResult Word64 Unit))
+    (expectedClock : Nat) : Bool :=
+  match result with
+  | some (.timeout _ _ _ _, clock) => clock == expectedClock
+  | _ => false
+
+def observeSourceCodeCall := isSourceReturnedWord evaluateSourceCallId
+  (BitVec.ofNat 64 7) 9
+
+def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
+  (BitVec.ofNat 64 7) 9
+
+def observeSourceNestedCodeCall := isSourceReturnedWord evaluateSourceNestedCall
+  (BitVec.ofNat 64 7) 8
+
+def observeSourceCodePreservedAfterRecursion : Bool :=
+  match evaluateSourceNestedCallWithPostState with
+  | some (_, postState) =>
+      match panSemCodeLookup postState.code "f", panSemCodeLookup postState.code "g" with
+      | some (_, .decCall "nested" .one "g" [] _, .one),
+          some ([], .return (.const value), .one) =>
+          value == BitVec.ofNat 64 7
+      | _, _ => false
+  | none => false
+
+def observeSourceRecursiveCallTimeout :=
+  isSourceTimeoutAt evaluateSourceRecursiveCallTimeout 0
+
+def observeSourceRecursiveDecCallTimeout :=
+  isSourceTimeoutAt evaluateSourceRecursiveDecCallTimeout 0
+
+#guard observeSourceCodeCall
+#guard observeSourceCodeDecCall
+#guard observeSourceNestedCodeCall
+#guard observeSourceCodePreservedAfterRecursion
+#guard observeSourceRecursiveCallTimeout
+#guard observeSourceRecursiveDecCallTimeout
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -320,6 +435,18 @@ def runChecks : IO Bool := do
   if observeSequence then IO.println "PASS evaluate sequence" else IO.println "FAIL evaluate sequence"
   if observeTickAtZero then IO.println "PASS evaluate timeout" else IO.println "FAIL evaluate timeout"
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
+  if observeSourceCodeCall then IO.println "PASS state-owned code Call matches HOL call_code_map_7" else
+    IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
+  if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
+    IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
+  if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
+    IO.println "FAIL state-owned nested Call and DecCall match HOL recursive oracle"
+  if observeSourceCodePreservedAfterRecursion then IO.println "PASS recursive code-map evaluation preserves source code" else
+    IO.println "FAIL recursive code-map evaluation preserves source code"
+  if observeSourceRecursiveCallTimeout then IO.println "PASS recursive state-owned Call times out at source clock zero" else
+    IO.println "FAIL recursive state-owned Call times out at source clock zero"
+  if observeSourceRecursiveDecCallTimeout then IO.println "PASS recursive state-owned DecCall times out at source clock zero" else
+    IO.println "FAIL recursive state-owned DecCall times out at source clock zero"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -339,6 +466,9 @@ def runChecks : IO Bool := do
   if observeFixedStoreFailures then IO.println "PASS evaluate explicit store failures" else
     IO.println "FAIL evaluate explicit store failures"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
+    observeSourceCodeCall && observeSourceCodeDecCall && observeSourceNestedCodeCall &&
+    observeSourceCodePreservedAfterRecursion &&
+    observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

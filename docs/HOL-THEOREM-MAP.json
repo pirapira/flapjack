@@ -16,6 +16,30 @@
     "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "flatten_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+    "lean_name": "panSemFlattenHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison with one-constructor word_lab)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+    "lean_name": "panPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source cases and direct HOL-EVAL oracle)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean",
+    "lean_name": "crepPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (target cases and direct HOL-EVAL oracle)"
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
@@ -2689,6 +2713,22 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "pan_primop_crep_primop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean",
+    "lean_name": "panPrimopCrepPrimop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (original premise/conclusion shape and shared word_add_carry cases)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "compile_prog_distinct_params",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean",
+    "lean_name": "compileProgTopHOL_params_nodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (premise-free HOL EVERY/ALL_DISTINCT shape over exact compile_prog triples)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "MAX_LIST_APPEND",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "maxListAppendHol",
@@ -2900,6 +2940,22 @@
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileProgHOL_controlLeaves",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectSkipCodeState",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
   },

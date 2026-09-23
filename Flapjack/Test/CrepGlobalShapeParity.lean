@@ -1,5 +1,4 @@
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Direct runtime checks against `scripts/hol-probes/crep_eval_probe.out` and
@@ -53,12 +52,9 @@ def directUpdateState : CrepRuntimeState Nat Unit :=
 /- HOL crep_eval_probe: eval_global_hit=SOME (Word 11w). -/
 #guard evalCrepRuntimeExp globalState (.loadGlob (4 : BitVec 5)) == some 11
 #guard evalCrepRuntimeExp globalState (.loadGlob (36 : BitVec 5)) == some 11
-#guard crepSemEvalExp globalState (.loadGlob (4 : BitVec 5)) == some 11
-#guard crepSemEvalExp globalState (.loadGlob (36 : BitVec 5)) == some 11
 
 /- HOL crep_eval_probe: eval_global_miss=NONE. -/
 #guard (evalCrepRuntimeExp globalState (.loadGlob (12 : BitVec 5))).isNone
-#guard (crepSemEvalExp globalState (.loadGlob (12 : BitVec 5))).isNone
 
 /- HOL crep_store_global_probe: StoreGlob inserts the wrapped cell and leaves
    the unrelated global at address eight unchanged. -/

@@ -2833,14 +2833,6 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "evaluate_replicate_const",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "evaluateReplicateConst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (HOL evaluator result-type comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "flatten_nil_no_size",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "flattenNilNoSize",

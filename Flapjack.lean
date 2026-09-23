@@ -30,12 +30,10 @@ import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
 import Flapjack.CrepExitLoop
 import Flapjack.CrepFixClock
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore
 import Flapjack.CrepMemLoad
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
 import Flapjack.PanBStateEmptyLocals

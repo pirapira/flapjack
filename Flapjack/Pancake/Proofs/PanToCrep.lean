@@ -7,7 +7,6 @@ import Flapjack.PanValueFlatten
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
@@ -161,24 +160,6 @@ theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
   · have hpos : 0 < Shape.shapeSize (panValueShape [] value) := Nat.pos_of_ne_zero hz
     rw [hpositive hpos]
     exact panValueFlatten_length_eq_shapeSize value hwf
-
-/-- HOL `evaluate_replicate_const` uses `crepSem$eval`: its result is
-    `Word 0w`, whereas `panSem$eval (Const 0w)` returns `ValWord 0w`
-    (`crepSemScript.sml:90-92`, `panSemScript.sml:209-211`). HOL's sole
-    `Word` wrapper is erased in the Lean Crep word-value representation. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "evaluate_replicate_const"]
-theorem evaluateReplicateConst
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (count : Nat) (state : CrepRuntimeState α σ) :
-    (List.replicate count (CrepExp.const (0 : α))).mapM
-      (crepSemEvalExp state) = some (List.replicate count (0 : α)) := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      simp [List.replicate_succ, crepSemEvalExp, ih]
 
 /-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
     module. This drops the source theorem's unused Nat witness; the exact

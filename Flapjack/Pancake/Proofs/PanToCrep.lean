@@ -23,6 +23,33 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
+/-- Flapjack-specific bridge: the source-semantics shape function agrees with
+    the pre-existing value shape function at the empty structure context.
+    HOL has one `shape_of` function, so this bridge has no HOL original. -/
+private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
+    panSemShapeOf value = panValueShape [] value := by
+  induction value using panSemShapeOf.induct with
+  | case1 _ => simp [panSemShapeOf, panValueShape]
+  | case2 values ih =>
+      simpa [panSemShapeOf, panValueShape] using ih
+  | case3 _ _ => simp [panSemShapeOf, panValueShape]
+
+/-- HOL `is_wf_shape_nil_length_flatten`: a word list chosen by the zero-size
+    or positive-size branch has the size prescribed by the source value shape. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "is_wf_shape_nil_length_flatten"]
+theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
+    (hwf : isWfShape [] (panSemShapeOf value) = true)
+    (hzero : Shape.shapeSize (panSemShapeOf value) = 0 → words = [])
+    (hpositive : 0 < Shape.shapeSize (panSemShapeOf value) →
+      words = panValueFlatten value) :
+    words.length = Shape.shapeSize (panSemShapeOf value) := by
+  rw [panSemShapeOf_eq_panValueShape_nil] at hwf hzero hpositive ⊢
+  by_cases hz : Shape.shapeSize (panValueShape [] value) = 0
+  · simp [hzero hz, hz]
+  · have hpos : 0 < Shape.shapeSize (panValueShape [] value) := Nat.pos_of_ne_zero hz
+    rw [hpositive hpos]
+    exact panValueFlatten_length_eq_shapeSize value hwf
+
 /-- Faithful port of Cake `pan_to_crepProof$shape_of_alt`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1906`). HOL's
     `Val (Word w)` is represented by `PanValue.word w`, and the context-free

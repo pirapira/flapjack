@@ -56,4 +56,102 @@ theorem compileProgHOL_skip
     (context : PanToCrepHOLContext α) :
     compileProgHOL context .skip = .skip := rfl
 
+/-- HOL's `pc_compile_correct[Break]` source-side evaluator equation. -/
+theorem panBreakEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      .break memoryAccess contracts memoryHandler =
+      some (.control (.broke locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps]
+
+/-- HOL's `pc_compile_correct[Continue]` source-side evaluator equation. -/
+theorem panContinueEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      .continue memoryAccess contracts memoryHandler =
+      some (.control (.continued locals globals memory ffi), clock) := by
+  simp [evalPanValueFfiClockProg, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps]
+
+/-- HOL's `pc_compile_correct[Tick]` source-side evaluator equation. -/
+theorem panTickEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      .tick memoryAccess contracts memoryHandler =
+      if clock = 0 then some (panValueFfiClockTimeout globals memory ffi clock)
+      else some (.control (.normal locals globals memory ffi), decPanClock clock) := by
+  simp [evalPanValueFfiClockProg, panValueFfiClockTimeout]
+
+/-- HOL's `pc_compile_correct[Tick]` target-side evaluator equation. -/
+theorem crepTickEvaluationEquation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeResult handler primitive (fuel + 1) state .tick =
+      if state.clock = 0 then some (.timeout, clearCrepRuntimeLocals state)
+      else some (.normal, decCrepClock state) := by
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
+
+/-- The compiler's control-flow leaf equations correspond to HOL's
+`pc_compile_correct[Break]`, `[Continue]`, `[Annot]`, and `[Tick]` cases. -/
+theorem compileProgHOL_controlLeaves
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepHOLContext α)
+    (tag text : String) :
+    compileProgHOL context .break = .break 0 ∧
+    compileProgHOL context .continue = .continue 0 ∧
+    compileProgHOL context (.annot tag text) = .skip ∧
+    compileProgHOL context .tick = .tick := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
 end Flapjack

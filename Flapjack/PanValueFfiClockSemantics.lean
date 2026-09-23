@@ -127,6 +127,9 @@ mutual
           | .control result =>
               match result with
               | .normal _ _ _ _ | .broke _ _ _ _ | .continued _ _ _ _ => none
+              | .error _ calleeGlobals calleeMemory calleeFfi =>
+                  pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                    calleeClock)
               | .returned _ calleeGlobals calleeMemory calleeFfi values =>
                   if panValueReturnValid structs contracts function values &&
                       panValueValuesWithinLimit structs values then
@@ -253,6 +256,8 @@ mutual
         | .control (.returned _ _ _ _ _) => none
         | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
             .control (.continued _ _ _ _) => none
+        | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
         memoryAccess, contracts, memoryHandler => do
         let condition ← evalPanValueExp structs locals globals memory
@@ -343,6 +348,9 @@ mutual
           | .control result =>
               match result with
               | .normal _ _ _ _ | .broke _ _ _ _ | .continued _ _ _ _ => none
+              | .error _ calleeGlobals calleeMemory calleeFfi =>
+                  pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                    calleeClock)
               | .returned _ calleeGlobals calleeMemory calleeFfi values =>
                   let sourceReturnValid := match values with
                     | [value] => panShapeMatches (panValueShape structs value) returnShape
@@ -480,6 +488,8 @@ mutual
         | .control (.returned _ _ _ _ _) => none
         | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
             .control (.continued _ _ _ _) => none
+        | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
         memoryAccess, contracts, memoryHandler => do
         let condition ← evalPanValueExp structs locals globals memory

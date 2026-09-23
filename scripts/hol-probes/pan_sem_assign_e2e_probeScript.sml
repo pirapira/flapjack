@@ -62,3 +62,25 @@ val _ = print_eval "assign_eval_missing_result"
       (panLang$Assign Local (strlit "x") (panLang$Var Local (strlit "z")),
         (^s with <| clock := 5;
           locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))``;
+val _ = print_eval "assign_fresh_invalid_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Assign Local (strlit "y") (panLang$Const (7w:8 word)),
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).locals
+      (strlit "x")``;
+val _ = print_eval "assign_fresh_invalid_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Assign Local (strlit "y") (panLang$Const (7w:8 word)),
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).clock``;
+val _ = print_eval "assign_eval_missing_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Assign Local (strlit "x") (panLang$Var Local (strlit "z")),
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).locals
+      (strlit "x")``;
+val _ = print_eval "assign_eval_missing_clock"
+  ``(SND (panSem$evaluate
+      (panLang$Assign Local (strlit "x") (panLang$Var Local (strlit "z")),
+        (^s with <| clock := 5;
+          locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)) |>)))).clock``;

@@ -250,9 +250,10 @@ run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
   skip_result skip_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Assign probe observes the accepted, fresh-destination, and
-# source-evaluation-failure branches.
+# source-evaluation-failure branches, including the unchanged post-state on the
+# two Error branches.
 run_probe pan_sem_assign_e2e_probeScript.sml pan_sem_assign_e2e_probe.out \
-  assign_local_ok_result assign_eval_missing_result \
+  assign_local_ok_result assign_eval_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Dec probe observes the accepted declaration with local restoration, the
 # shape-mismatch rejection, and the initialiser-evaluation-failure rejection.

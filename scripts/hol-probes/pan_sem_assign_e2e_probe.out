@@ -4,3 +4,7 @@ assign_local_ok_locals=SOME (ValWord 7w)
 assign_local_ok_other=NONE
 assign_fresh_invalid_result=SOME Error
 assign_eval_missing_result=SOME Error
+assign_fresh_invalid_locals=SOME (ValWord 3w)
+assign_fresh_invalid_clock=5
+assign_eval_missing_locals=SOME (ValWord 3w)
+assign_eval_missing_clock=5

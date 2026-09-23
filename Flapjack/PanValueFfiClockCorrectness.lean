@@ -1366,6 +1366,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   | finalFfi l g m f ev =>
                     simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                     obtain ⟨_, hc⟩ := hrun; omega
+                  | error l g m f =>
+                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                    obtain ⟨_, hc⟩ := hrun; omega
         · simp only [hparams, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
   · -- case3: Prog fuel 0
     intro memoryAccess contracts memoryHandler locals globals memory ffi clock program outcome resultClock hrun
@@ -1435,6 +1438,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
         | finalFfi l g m f ev =>
           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, hc⟩ := hrun; omega
+        | error l g m f =>
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, hc⟩ := hrun; omega
   · -- case6: Prog ite
     intro fuel locals globals memory ffi clock condition thenBranch elseBranch memoryAccess contracts memoryHandler hthenIH outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun
@@ -1498,6 +1504,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, he⟩ := hrun; omega
         | finalFfi l g m f ev =>
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, he⟩ := hrun; omega
+        | error l g m f =>
           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, he⟩ := hrun; omega
   · -- case9: Prog while
@@ -1565,6 +1574,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                   obtain ⟨_, hc⟩ := hrun; omega
                 | finalFfi l g m f ev =>
+                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                  obtain ⟨_, hc⟩ := hrun; omega
+                | error nl ng nm nf =>
                   simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                   obtain ⟨_, hc⟩ := hrun; omega
       | rStruct fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)

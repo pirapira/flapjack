@@ -299,6 +299,7 @@ def panSemCodeStateAfter (state : PanSemState α (FfiState σ))
   | (.control control, clock) =>
       match control with
       | .normal locals globals memory ffi
+      | .error locals globals memory ffi
       | .returned locals globals memory ffi _
       | .raised locals globals memory ffi _ _
       | .broke locals globals memory ffi
@@ -412,20 +413,24 @@ theorem panSemEvaluateCodeStateWithPostState_skip
     source-state evaluator: the source expression is evaluated, the assignment
     is accepted exactly when `is_valid_value` holds, and the accepted value is
     written to the local or global map with the clock and every other state
-    component carried verbatim. This is an untagged boundary equation because
+    component carried verbatim. When the source expression does not evaluate or
+    `is_valid_value` rejects the value, the result is an explicit `.error`
+    control result with the unchanged state, matching HOL's `(SOME Error, s)`
+    (distinct from Lean `none`, which now denotes a missing evaluation result).
+    This is an untagged boundary equation because
     the structured result is reduced rather than HOL's `(prog_result, state)`
     pair. -/
-theorem panSemEvaluateCodeStateWithPostState_assign
+theorem panSemEvaluateCodeStateWithFuel_assign
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
-    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
     (vk : VarKind) (name : VarName) (value : Exp α) :
-    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
-        (.assign vk name value : Prog α) =
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.assign vk name value : Prog α) =
       match evalPanValueExp state.structs state.locals state.globals state.memory
           state.baseAddress state.topAddress bytesInWord value with
       | some evaluated =>
@@ -433,23 +438,30 @@ theorem panSemEvaluateCodeStateWithPostState_assign
             match vk with
             | .local =>
                 some ((.control (.normal (updatePanValueMap state.locals name evaluated)
-                    state.globals state.memory state.ffi), state.clock),
-                  { state with locals := updatePanValueMap state.locals name evaluated })
+                    state.globals state.memory state.ffi), state.clock))
             | .global =>
                 some ((.control (.normal state.locals
                     (updatePanValueMap state.globals name evaluated)
-                    state.memory state.ffi), state.clock),
-                  { state with globals := updatePanValueMap state.globals name evaluated })
-          else none
-      | none => none := by
+                    state.memory state.ffi), state.clock))
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
   cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord value <;>
-  cases vk <;>
-  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
-    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
-    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, hvalue] <;>
-  split <;> simp
+      state.baseAddress state.topAddress bytesInWord value with
+  | none =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue]
+  | some evaluated =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue] <;>
+      split <;> simp
 
 /-- Production source-state `Dec` equation. When the initialiser evaluates to a
     value whose shape matches the declared shape, the body runs with the

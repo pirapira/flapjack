@@ -153,6 +153,8 @@ theorem panValueFfiExtCall_returned_ioEvents_prefix
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+  | error (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ)
   | returned (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)
       (values : List (PanValue α))
@@ -192,6 +194,8 @@ def restorePanValueFfiLocal [BEq String]
     PanValueFfiControlResult α σ → PanValueFfiControlResult α σ
   | .normal locals globals memory ffi =>
       .normal (restorePanValueLocal locals name oldValue) globals memory ffi
+  | .error locals globals memory ffi =>
+      .error (restorePanValueLocal locals name oldValue) globals memory ffi
   | .returned locals globals memory ffi values =>
       .returned (restorePanValueLocal locals name oldValue) globals memory ffi values
   | .raised locals globals memory ffi exception value =>
@@ -202,6 +206,43 @@ def restorePanValueFfiLocal [BEq String]
       .continued (restorePanValueLocal locals name oldValue) globals memory ffi
   | .finalFfi locals globals memory ffi event =>
       .finalFfi (restorePanValueLocal locals name oldValue) globals memory ffi event
+
+/-- Result of a `local` assignment leaf.  HOL's `Assign` returns `SOME Error`
+with the unchanged state both when the source expression does not evaluate and
+when `is_valid_value` rejects the evaluated value; this helper returns the
+explicit `.error` control result in both cases. -/
+def panValueAssignLocalResult
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (ffi : FfiState σ) (name : VarName) (value : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) : Option (PanValueFfiSteppedResult α σ) :=
+  match evalPanValueExpCounted structs locals globals memory baseAddress topAddress bytesInWord
+      value (memoryAccess := memoryAccess) with
+  | none => some (.error locals globals memory ffi, 0)
+  | some (value, valueSteps) =>
+      if panValueAssignmentValid structs locals globals .local name value then
+        some (.normal (updatePanValueMap locals name value) globals memory ffi, valueSteps + 1)
+      else some (.error locals globals memory ffi, valueSteps + 1)
+
+/-- Result of a `global` assignment leaf; see `panValueAssignLocalResult`. -/
+def panValueAssignGlobalResult
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (ffi : FfiState σ) (name : VarName) (value : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α)) : Option (PanValueFfiSteppedResult α σ) :=
+  match evalPanValueExpCounted structs locals globals memory baseAddress topAddress bytesInWord
+      value (memoryAccess := memoryAccess) with
+  | none => some (.error locals globals memory ffi, 0)
+  | some (value, valueSteps) =>
+      if panValueAssignmentValid structs locals globals .global name value then
+        some (.normal locals (updatePanValueMap globals name value) memory ffi, valueSteps + 1)
+      else some (.error locals globals memory ffi, valueSteps + 1)
 
 mutual
   def evalPanValueFfiCallSteps
@@ -272,6 +313,9 @@ mutual
                   argumentSteps + steps)
             else none
         | .broke _ _ _ _ | .continued _ _ _ _ => none
+        | .error _ calleeGlobals calleeMemory calleeFfi =>
+            pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
+              argumentSteps + steps)
         | .finalFfi _ calleeGlobals calleeMemory calleeFfi event =>
             pure (.finalFfi (fun _ => none) calleeGlobals calleeMemory calleeFfi event,
               argumentSteps + steps)
@@ -311,21 +355,13 @@ mutual
           pure (restorePanValueFfiLocal name oldValue result, valueSteps + steps + 1)
         else none
     | _fuel + 1, locals, globals, memory, ffi,
-        .assign .local name value, memoryAccess, _contracts, _memoryHandler => do
-        let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
-          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panValueAssignmentValid structs locals globals .local name value then
-          pure (.normal (updatePanValueMap locals name value) globals memory ffi,
-            valueSteps + 1)
-        else none
+        .assign .local name value, memoryAccess, _contracts, _memoryHandler =>
+        panValueAssignLocalResult structs baseAddress topAddress bytesInWord locals globals
+          memory ffi name value memoryAccess
     | _fuel + 1, locals, globals, memory, ffi,
-        .assign .global name value, memoryAccess, _contracts, _memoryHandler => do
-        let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
-          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panValueAssignmentValid structs locals globals .global name value then
-          pure (.normal locals (updatePanValueMap globals name value) memory ffi,
-            valueSteps + 1)
-        else none
+        .assign .global name value, memoryAccess, _contracts, _memoryHandler =>
+        panValueAssignGlobalResult structs baseAddress topAddress bytesInWord locals globals
+          memory ffi name value memoryAccess
     | _fuel + 1, locals, globals, memory, ffi,
         .primitive name operator arguments, memoryAccess, _contracts, _memoryHandler => do
         let (values, valueSteps) ← evalPanValueExpsCounted structs locals globals memory
@@ -841,6 +877,8 @@ theorem evalPanValueFfiProgramStepped_fst
               | some shape =>
                   cases control with
                   | normal locals globals memory ffi =>
+                      simp [hcall, hlookup]
+                  | error locals globals memory ffi =>
                       simp [hcall, hlookup]
                   | returned locals globals memory ffi values =>
                       cases values with

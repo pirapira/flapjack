@@ -153,6 +153,7 @@ theorem call_clock_succ_mono
                 | continued l cg cm cf => exact h
                 | returned l cg cm cf vs => exact h
                 | finalFfi l cg cm cf ev => exact h
+                | error l cg cm cf => exact h
                 | raised l cg cm cf e v =>
                   dsimp only at h ⊢
                   by_cases hev :
@@ -266,6 +267,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
         | raised l g m f e v => exact h
         | broke l g m f => exact h
         | continued l g m f => exact h
+        | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h
   | case6 fuel locals globals memory ffi clock condition thenBranch elseBranch ma c mh
@@ -335,6 +337,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
         | normal l g m f => simp at h
         | broke l g m f => simp at h
         | continued l g m f => simp at h
+        | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h
   | case9 fuel locals globals memory ffi clock conditionExp body ma c mh ihBody ihLoop =>
@@ -393,6 +396,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
                 | raised l g m f e v => exact h
                 | broke l g m f => exact h
                 | finalFfi l g m f ev => exact h
+                | error l g m f => exact h
               | timeout l g m f => exact h
       | rStruct fields => simp at h
       | nStruct nm fields => simp at h

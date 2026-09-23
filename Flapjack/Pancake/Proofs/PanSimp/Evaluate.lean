@@ -4674,6 +4674,7 @@ theorem evalPanValueFfiClockProg_seq_terminal_some
       | broke l g m f => rfl
       | continued l g m f => rfl
       | finalFfi l g m f event => rfl
+      | error l g m f => rfl
   | timeout l g m f => rfl
 
 

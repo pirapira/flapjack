@@ -144,6 +144,7 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
           | broke l cg cm cf => exact h
           | continued l cg cm cf => exact h
           | finalFfi l cg cm cf ev => exact h
+          | error l cg cm cf => exact h
           | raised l cg cm cf e v =>
             dsimp only at h ⊢
             by_cases hvalid :
@@ -300,6 +301,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
       | broke l g m f => exact h
       | continued l g m f => exact h
       | finalFfi l g m f ev => exact h
+      | error l g m f => exact h
   | case13 fuel locals globals memory ffi condition thenBranch elseBranch ma c mh ihThen ihElse =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -390,6 +392,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
       | broke l g m f => simp at h
       | continued l g m f => simp at h
       | finalFfi l g m f ev => exact h
+      | error l g m f => exact h
   | case16 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -448,6 +451,7 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
             | raised l g m f e v => exact h
             | broke l g m f => exact h
             | finalFfi l g m f ev => exact h
+            | error l g m f => exact h
       | _ => simp at h
   | case18 =>
     intro fuel' result hle h

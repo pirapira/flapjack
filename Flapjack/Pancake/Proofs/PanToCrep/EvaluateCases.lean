@@ -233,7 +233,9 @@ of HOL `pc_compile_correct`.  Both code relations use the code fields owned
 by their real runtime states; the source post-state is `panSemCodeStateAfter`
 and the target post-state is the result returned by the Crep evaluator.  This
 is local case infrastructure and is deliberately untagged: the complete
-`pc_compile_correct` induction and its other constructors remain open. -/
+`pc_compile_correct` induction and its other constructors remain open. The
+target side chooses its own fuel existentially, rather than forcing the source
+evaluation's fuel or a fixed cutoff onto the target run. -/
 theorem panToCrepPcCompileCorrectSkipCodeState
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -244,7 +246,7 @@ theorem panToCrepPcCompileCorrectSkipCodeState
     (sourcePrimitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueStatefulFfiHandler α σ)
     (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
-    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (targetPrimitive : CrepPrimitiveHandler α)
     (sourceState : PanSemState α (FfiState σ))
     (targetState : CrepRuntimeState α σ)
     (hstate : stateRel sourceState targetState)
@@ -255,8 +257,8 @@ theorem panToCrepPcCompileCorrectSkipCodeState
       targetState.bytesInWord sourceState .skip =
         some (.control (.normal sourceState.locals sourceState.globals
           sourceState.memory sourceState.ffi), sourceState.clock) ∧
-    ∃ targetResult targetPost,
-      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetState
+    ∃ targetFuel targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive targetFuel targetState
         (compileCodeRelProg context .skip) = some (targetResult, targetPost) ∧
       stateRel (panSemCodeStateAfter sourceState
         (.control (.normal sourceState.locals sourceState.globals
@@ -283,9 +285,9 @@ theorem panToCrepPcCompileCorrectSkipCodeState
         sourceState.memory sourceState.ffi), sourceState.clock) = sourceState := by
     cases sourceState
     rfl
-  refine ⟨.normal, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
-  · simpa [compileCodeRelProg, compileProgHOL] using
-      (crepSkipEvaluationEquation targetHandler targetPrimitive fuel targetState)
+  refine ⟨1, .normal, targetState, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · simp [compileCodeRelProg, compileProgHOL, evalCrepRuntimeResult,
+      evalCrepRuntimeProg]
   · simpa [hsourcePost] using hstate
   · simpa [hsourcePost] using hcode
   · simpa [hsourcePost] using hexcp
@@ -777,7 +779,7 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
       some (.skip, fun _ => none) := by
     unfold lookupCrepRuntimeCode
     rw [htargetCodeLookup]
-    simp [assignCrepValues]
+    simp [assignCrepRuntimeLocals]
   have htargetCallRun : evalCrepRuntimeCall targetHandler targetPrimitive
       (fuel + 1) targetState none function [] =
       some (.timeout, clearCrepRuntimeLocals targetState) := by

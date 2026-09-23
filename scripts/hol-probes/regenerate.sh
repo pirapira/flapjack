@@ -325,6 +325,12 @@ run_probe pan_sem_error_prop_e2e_probeScript.sml pan_sem_error_prop_e2e_probe.ou
 run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
   if_ok_result shmemstore_domain_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The While probe observes the explicit `SOME Error` for a non-word condition,
+# the same-clock normal exit for a zero condition, clock-exhaustion timeout,
+# and a one-iteration exit that clears the condition.
+run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
+  while_bad_result while_one_iter_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"

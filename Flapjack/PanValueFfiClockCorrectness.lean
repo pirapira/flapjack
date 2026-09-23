@@ -84,7 +84,7 @@ theorem evalPanValueFfiClockProg_while_zero_timeout
       (.while condition body) (memoryAccess := memoryAccess)
       (contracts := contracts) =
       some (.timeout (fun _ => none) globals memory ffi, 0) := by
-  simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero,
+  simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero,
     panValueFfiClockTimeout]
 
 theorem evalPanValueFfiClockLeaf_clock
@@ -948,7 +948,7 @@ theorem evalPanValueFfiClockProg_while_normal_iteration
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
       (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
       some (outcome, finalClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+  simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclock,
     hbody, hrest]
 
 /-! The top-level clocked evaluator preserves an explicitly raised call result.
@@ -1517,75 +1517,74 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
   · -- case9: Prog while
     intro fuel locals globals memory ffi clock conditionExp body memoryAccess contracts memoryHandler hbodyIH hrecIH outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun
-    cases hcond : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord conditionExp
-        (memoryAccess := memoryAccess) with
-    | none => simp only [hcond, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-    | some condValue =>
-      simp only [hcond, Option.bind_eq_bind, Option.bind_some] at hrun
-      cases condValue with
-      | word w =>
-        by_cases hz : (w == 0) = true
-        · simp only [hz, if_true, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+    cases hv : panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+        memory conditionExp (memoryAccess := memoryAccess) with
+    | none =>
+      simp only [hv, Option.elim_none] at hrun
+      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨_, hc⟩ := hrun; omega
+    | some w =>
+      simp only [hv, Option.elim_some] at hrun
+      by_cases hz : (w == 0) = true
+      · simp only [hz, if_true, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+        obtain ⟨_, hc⟩ := hrun; omega
+      · simp only [hz, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
+        by_cases hclock : (clock == 0) = true
+        · simp only [hclock, if_true, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, hc⟩ := hrun; omega
-        · simp only [hz, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
-          by_cases hclock : (clock == 0) = true
-          · simp only [hclock, if_true, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-            obtain ⟨_, hc⟩ := hrun; omega
-          · simp only [hclock, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
-            cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
-                bytesInWord fuel locals globals memory ffi (decPanClock clock) body
-                (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
-            | none => simp only [hbody, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-            | some pair =>
-              obtain ⟨bodyOutcome, bodyClock⟩ := pair
-              simp only [hbody, Option.bind_eq_bind, Option.bind_some] at hrun
-              have hb : bodyClock ≤ decPanClock clock := hbodyIH bodyOutcome bodyClock hbody
-              have hdc : decPanClock clock ≤ clock := Nat.sub_le clock 1
-              cases bodyOutcome with
-              | timeout l g m f =>
+        · simp only [hclock, if_false, Option.bind_eq_bind, Option.bind_some] at hrun
+          cases hbody : evalPanValueFfiClockProg context primitive handler structs functions baseAddress topAddress
+              bytesInWord fuel locals globals memory ffi (decPanClock clock) body
+              (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+          | none => simp only [hbody, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+          | some pair =>
+            obtain ⟨bodyOutcome, bodyClock⟩ := pair
+            simp only [hbody, Option.bind_eq_bind, Option.bind_some] at hrun
+            have hb : bodyClock ≤ decPanClock clock := hbodyIH bodyOutcome bodyClock hbody
+            have hdc : decPanClock clock ≤ clock := Nat.sub_le clock 1
+            cases bodyOutcome with
+            | timeout l g m f =>
+              simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+              obtain ⟨_, hc⟩ := hrun; omega
+            | control result =>
+              cases result with
+              | normal nl ng nm nf =>
+                cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
+                    topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+                | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                | some pair2 =>
+                  obtain ⟨recOutcome, recClock⟩ := pair2
+                  simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
+                  have hr : recClock ≤ bodyClock := hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
+                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                  obtain ⟨_, hc⟩ := hrun; omega
+              | continued nl ng nm nf =>
+                cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
+                    topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+                | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                | some pair2 =>
+                  obtain ⟨recOutcome, recClock⟩ := pair2
+                  simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
+                  have hr : recClock ≤ bodyClock := hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
+                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                  obtain ⟨_, hc⟩ := hrun; omega
+              | broke nl ng nm nf =>
                 simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                 obtain ⟨_, hc⟩ := hrun; omega
-              | control result =>
-                cases result with
-                | normal nl ng nm nf =>
-                  cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
-                      topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
-                      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
-                  | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-                  | some pair2 =>
-                    obtain ⟨recOutcome, recClock⟩ := pair2
-                    simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
-                    have hr : recClock ≤ bodyClock := hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
-                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                    obtain ⟨_, hc⟩ := hrun; omega
-                | continued nl ng nm nf =>
-                  cases hrec : evalPanValueFfiClockProg context primitive handler structs functions baseAddress
-                      topAddress bytesInWord fuel nl ng nm nf bodyClock (.while conditionExp body)
-                      (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
-                  | none => simp only [hrec, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-                  | some pair2 =>
-                    obtain ⟨recOutcome, recClock⟩ := pair2
-                    simp only [hrec, Option.bind_eq_bind, Option.bind_some] at hrun
-                    have hr : recClock ≤ bodyClock := hrecIH bodyClock nl ng nm nf recOutcome recClock hrec
-                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                    obtain ⟨_, hc⟩ := hrun; omega
-                | broke nl ng nm nf =>
-                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                  obtain ⟨_, hc⟩ := hrun; omega
-                | returned l g m f vs =>
-                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                  obtain ⟨_, hc⟩ := hrun; omega
-                | raised l g m f ex v =>
-                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                  obtain ⟨_, hc⟩ := hrun; omega
-                | finalFfi l g m f ev =>
-                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                  obtain ⟨_, hc⟩ := hrun; omega
-                | error nl ng nm nf =>
-                  simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                  obtain ⟨_, hc⟩ := hrun; omega
-      | rStruct fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-      | nStruct nm fields => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+              | returned l g m f vs =>
+                simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                obtain ⟨_, hc⟩ := hrun; omega
+              | raised l g m f ex v =>
+                simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                obtain ⟨_, hc⟩ := hrun; omega
+              | finalFfi l g m f ev =>
+                simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                obtain ⟨_, hc⟩ := hrun; omega
+              | error nl ng nm nf =>
+                simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                obtain ⟨_, hc⟩ := hrun; omega
   · -- case10: Prog tick clock 0
     intro memoryAccess contracts memoryHandler _fuel locals globals memory ffi outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun

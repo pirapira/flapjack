@@ -218,32 +218,28 @@ theorem evalPanValueFfiClockProg_while_body_same
     | zero => simp [evalPanValueFfiClockProg]
     | succ f =>
       simp only [evalPanValueFfiClockProg]
-      cases hc : evalPanValueExp structs locals globals memory baseAddress topAddress
-          bytesInWord condition ma with
+      cases hv : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+          locals globals memory condition ma with
       | none => rfl
-      | some cv =>
-        cases cv with
-        | word w =>
-          simp only [Option.bind_eq_bind, Option.bind_some]
-          by_cases hz : (w == 0) = true
-          · simp [hz]
-          · simp only [if_neg hz]
-            by_cases hclock : (clock == 0) = true
-            · simp [hclock]
-            · simp only [if_neg hclock]
-              rw [hbody f (clock - 1) locals globals memory ffi ma c mh]
-              have hloop : ∀ (cl : Nat) (l g : VarName → Option (PanValue α))
-                  (m : α → Option (PanValue α)) (ff : FfiState σ),
-                  evalPanValueFfiClockProg context primitive handler structs functions
-                    baseAddress topAddress bytesInWord f l g m ff cl (.while condition body)
-                    ma c mh =
-                  evalPanValueFfiClockProg context primitive handler structs functions
-                    baseAddress topAddress bytesInWord f l g m ff cl (.while condition body')
-                    ma c mh :=
-                fun cl l g m ff => ih f (by omega) cl l g m ff ma c mh
-              simp only [hloop]
-        | rStruct fields => simp
-        | nStruct nm fields => simp
+      | some w =>
+        simp only [Option.elim_some]
+        by_cases hz : (w == 0) = true
+        · simp [hz]
+        · simp only [if_neg hz]
+          by_cases hclock : (clock == 0) = true
+          · simp [hclock]
+          · simp only [if_neg hclock]
+            rw [hbody f (clock - 1) locals globals memory ffi ma c mh]
+            have hloop : ∀ (cl : Nat) (l g : VarName → Option (PanValue α))
+                (m : α → Option (PanValue α)) (ff : FfiState σ),
+                evalPanValueFfiClockProg context primitive handler structs functions
+                  baseAddress topAddress bytesInWord f l g m ff cl (.while condition body)
+                  ma c mh =
+                evalPanValueFfiClockProg context primitive handler structs functions
+                  baseAddress topAddress bytesInWord f l g m ff cl (.while condition body')
+                  ma c mh :=
+              fun cl l g m ff => ih f (by omega) cl l g m ff ma c mh
+            simp only [hloop]
 
 /-! Clocked counterpart of Cake's `evaluate_while_no_error_imp`
     (`pan_simpProofScript.sml:89-103`).  When the condition is a nonzero word,
@@ -286,7 +282,10 @@ theorem evalPanValueFfiClockProg_while_some_implies_body_some
       (decPanClock clock) body (memoryAccess := memoryAccess)
       (contracts := contracts) (memoryHandler := memoryHandler) with
   | none =>
-      simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero,
+      have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+          locals globals memory condition memoryAccess = some conditionValue := by
+        simp [panValueIteConditionValue, hcondition]
+      simp [evalPanValueFfiClockProg, hcond, hconditionNonzero,
         hclockNonzero, hbody] at hresult
   | some bodyResult =>
       exact ⟨bodyResult, rfl⟩
@@ -380,7 +379,10 @@ theorem evalPanValueFfiClockProg_while_no_none
       (clock - 1) body ma c mh ≠ none := by
   intro hbody
   apply h
-  simp [evalPanValueFfiClockProg, hcond, hw, hclock, hbody]
+  have hcond' : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some w := by
+    simp [panValueIteConditionValue, hcond]
+  simp [evalPanValueFfiClockProg, hcond', hw, hclock, hbody]
 
 /-- Congruence of the clocked evaluator under the first component of a `Seq`.
     This is the fuel-compatible building block needed to reassociate sequences:
@@ -1756,7 +1758,10 @@ theorem evalPanValueFfiClockProg_while_zero_some
         baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
         (.while condition body) ma c mh =
       some (.control (.normal locals globals memory ffi), clock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hw]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory condition ma = some w := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, hw]
 
 /-! ### Declaration and conditional success equations
 
@@ -4580,7 +4585,10 @@ theorem evalPanValueFfiClockProg_while_normal_some
       evalPanValueFfiClockProg context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
         bodyClock (.while conditionExp body) ma c mh := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock, hbody]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory conditionExp ma = some conditionValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody]
 
 theorem evalPanValueFfiClockProg_while_continued_some
     (context : PanValueFfiContext α)
@@ -4612,7 +4620,10 @@ theorem evalPanValueFfiClockProg_while_continued_some
       evalPanValueFfiClockProg context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel nextLocals nextGlobals nextMemory nextFfi
         bodyClock (.while conditionExp body) ma c mh := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock, hbody]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory conditionExp ma = some conditionValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody]
 
 theorem evalPanValueFfiClockProg_while_broke_some
     (context : PanValueFfiContext α)
@@ -4642,7 +4653,10 @@ theorem evalPanValueFfiClockProg_while_broke_some
         baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
         (.while conditionExp body) ma c mh =
       some (.control (.normal nextLocals nextGlobals nextMemory nextFfi), bodyClock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock, hbody]
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory conditionExp ma = some conditionValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody]
 
 /-! ## Terminal propagation through `Seq`
 
@@ -4743,7 +4757,10 @@ theorem evalPanValueFfiClockProg_while_timeout_some
         baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
         (.while conditionExp body) ma c mh =
       some (.timeout (fun _ => none) globals memory ffi, clock) := by
-  simp [evalPanValueFfiClockProg, hcondition, hnonzero, hclock,
+  have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+      locals globals memory conditionExp ma = some conditionValue := by
+    simp [panValueIteConditionValue, hcondition]
+  simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock,
     panValueFfiClockTimeout]
 
 /-! ### `progSize`-indexed adequacy for the `While` terminal cases
@@ -6561,18 +6578,27 @@ theorem evalPanValueFfiClockProg_while_of_exitsNormally
       simp only [PanValueFfiClockWhileExitsNormally] at h
       rcases h with hzero | hnormal | hbroke
       · obtain ⟨w, hcond, hw⟩ := hzero
+        have hcond' : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+            locals globals memory condition ma = some w := by
+          simp [panValueIteConditionValue, hcond]
         exact ⟨locals, globals, memory, ffi, clock, by
-          simp [evalPanValueFfiClockProg, hcond, hw]⟩
+          simp [evalPanValueFfiClockProg, hcond', hw]⟩
       · obtain ⟨w, hcond, hnonzero, hclock, nextLocals, nextGlobals, nextMemory,
           nextFfi, bodyClock, hbody, hrec⟩ := hnormal
         obtain ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock,
           hfinal⟩ := ih nextLocals nextGlobals nextMemory nextFfi bodyClock hrec
+        have hcond' : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+            locals globals memory condition ma = some w := by
+          simp [panValueIteConditionValue, hcond]
         exact ⟨finalLocals, finalGlobals, finalMemory, finalFfi, finalClock, by
-          simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody, hfinal]⟩
+          simp [evalPanValueFfiClockProg, hcond', hnonzero, hclock, hbody, hfinal]⟩
       · obtain ⟨w, hcond, hnonzero, hclock, nextLocals, nextGlobals, nextMemory,
           nextFfi, bodyClock, hbody⟩ := hbroke
+        have hcond' : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+            locals globals memory condition ma = some w := by
+          simp [panValueIteConditionValue, hcond]
         exact ⟨nextLocals, nextGlobals, nextMemory, nextFfi, bodyClock, by
-          simp [evalPanValueFfiClockProg, hcond, hnonzero, hclock, hbody]⟩
+          simp [evalPanValueFfiClockProg, hcond', hnonzero, hclock, hbody]⟩
 
 /-- A lower-bounded adequate nonzero-condition `While`, given a fuel-indexed
     exit certificate: the loop must leave the condition or `break` before the

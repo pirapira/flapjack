@@ -667,4 +667,12 @@ theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       (clearCrepRuntimeLocals target).code := by
   simpa [panEmptyLocals, clearCrepRuntimeLocals] using hcode
 
+/-- HOL `locals_id_update[local]`: writing the existing locals map into the
+    production Crep state leaves that entire state unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_id_update"]
+theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
+    { target with locals := target.locals } = target := by
+  cases target
+  rfl
+
 end Flapjack

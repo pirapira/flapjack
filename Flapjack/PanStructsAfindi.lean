@@ -27,14 +27,6 @@ theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
           have h' : xs.length = ys.length := by omega
           rw [ih ys h']
 
-/-- Cake `pan_structs` `UNCURRY_EQ_o_SND`: an uncurried constant pair
-function is the constant composed with `SND`. -/
-theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
-    Function.uncurry (fun _ : α => f) = f ∘ Prod.snd := by
-  funext p
-  cases p
-  rfl
-
 /-! These helpers and the exact shape-size theorem now live in the Pancake
     proof counterpart. -/
 

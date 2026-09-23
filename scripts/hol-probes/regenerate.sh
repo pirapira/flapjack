@@ -494,7 +494,7 @@ run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
-  empty duplicate_first wf_shape_drop dropWhile_MAP_helper \
+  empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
   "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"

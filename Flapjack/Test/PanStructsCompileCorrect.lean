@@ -37,8 +37,8 @@ def finiteMapRuntime : PanSemState Word64 (FfiState Unit) where
 
 def finiteMapContext : StructPassContext where
   structs := []
-  locals := []
-  globals := []
+  locals := [("local", .one)]
+  globals := [("global", .one)]
 
 def finiteMapState : PanStructFiniteState Word64 (FfiState Unit) :=
   panStructFiniteStateFromMaps finiteMapRuntime
@@ -142,5 +142,80 @@ example :
   exact panStructFiniteMapSkipEvaluationProjection finiteMapContext
     statefulTestContext statefulTestPrimitive statefulTestHandler
     (BitVec.ofNat 64 8) finiteMapState
+
+example : True := by
+  have _hcase := panStructCompileCorrectSkipCase finiteMapContext statefulTestContext
+      statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8) finiteMapState
+      (panSemEvaluateCodeStateWithPostState_skip statefulTestContext
+        statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8)
+        finiteMapState.runtime)
+      rfl
+      (by
+        intro name value hvalue
+        by_cases hname : name = "local"
+        · subst name
+          simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panStructValueFieldsOkBool]
+        · simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "global"
+        · subst name
+          simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panStructValueFieldsOkBool]
+        · simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "local"
+        · subst name
+          simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panIsWfShapeValueBool]
+        · simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by
+        intro name value hvalue
+        by_cases hname : name = "global"
+        · subst name
+          simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          subst value
+          simp [panIsWfShapeValueBool]
+        · simp [finiteMapState, panStructFiniteStateFromMaps, finiteMapRuntime,
+            panPropsALookupEq] at hvalue
+          exact (hname hvalue.1.symm).elim)
+      (by simp [structInfosOk, finiteMapState, panStructFiniteStateFromMaps,
+        finiteMapRuntime])
+      (by
+        intro name
+        by_cases hname : name = "local"
+        · subst name
+          simp [finiteMapContext, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf]
+        · simp [finiteMapContext, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf])
+      (by
+        intro name
+        by_cases hname : name = "global"
+        · subst name
+          simp [finiteMapContext, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf]
+        · simp [finiteMapContext, finiteMapState,
+            panStructFiniteStateFromMaps, finiteMapRuntime, lookupInfo,
+            panPropsALookupEq, panSemShapeOf])
+  trivial
 
 end Flapjack.Test

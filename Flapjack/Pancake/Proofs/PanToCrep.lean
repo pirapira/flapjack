@@ -150,6 +150,21 @@ def localsRel (context : PanToCrepProofContext α)
         ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
         isWfShape [] (panValueShape [] v) = true
 
+/-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
+    relation is a well-formed value in the empty struct context. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape"]
+theorem localsRelWfShape
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hlookup : FLOOKUP sourceLocals name = some value) :
+    panValueIsWf [] value = true := by
+  obtain ⟨_, _, hmembers⟩ := hrel
+  obtain ⟨_, _, _, _, _, hshape⟩ := hmembers name value hlookup
+  rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
+  exact hshape
+
 /-! Finite-map lookups needed by the extracted compiler are represented in its
 list-backed executable context.  Repeated keys are harmless: every projected
 entry carries the same finite-map lookup result, and first-match lookup thus

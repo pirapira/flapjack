@@ -3,6 +3,7 @@ missing_global=Call NONE «f» []
 empty_one_global=Call NONE «f» []
 extra_names_global=Call (SOME ([4; 5],NONE)) «f» []
 missing_names_global=Call (SOME ([4],NONE)) «f» []
+empty_struct_return=Return []
 pair_load=Return
   (Load (Var 0)::
      if n2w (dimindex (:word64) DIV 8 MOD dimword (:word64)) = 0w then

@@ -476,7 +476,7 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero max "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

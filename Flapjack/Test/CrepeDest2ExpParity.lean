@@ -1,5 +1,4 @@
-import Flapjack.Pancake.CrepArith
-import Flapjack.RiscV.Model
+import Flapjack.Pancake.Proofs.CrepArith
 
 namespace Flapjack.Test.CrepeDest2ExpParity
 
@@ -23,5 +22,17 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+example : word 1 = BitVec.shiftLeft (1 : RiscV.Word 8) 0 :=
+  crepDest2Exp_eq_shift (word 1) 0 (by native_decide)
+
+example : word 2 = BitVec.shiftLeft (1 : RiscV.Word 8) 1 :=
+  crepDest2Exp_eq_shift (word 2) 1 (by native_decide)
+
+example : word 8 = BitVec.shiftLeft (1 : RiscV.Word 8) 3 :=
+  crepDest2Exp_eq_shift (word 8) 3 (by native_decide)
+
+example : 3 < 8 :=
+  crepDest2Exp_lt_width (word 8) 3 (by native_decide)
 
 end Flapjack.Test.CrepeDest2ExpParity

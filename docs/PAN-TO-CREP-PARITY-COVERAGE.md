@@ -15,7 +15,7 @@ the inventory and this report.
 | `ret_hdl` | [`ret_hdl_probe.out`](../scripts/hol-probes/ret_hdl_probe.out) | [`RetHdlParity.lean`](../Flapjack/Test/RetHdlParity.lean) | One, empty/single/two-word Comb, and Named shapes |
 | `ret_var` | [`ret_var_probe.out`](../scripts/hol-probes/ret_var_probe.out) | [`RetVarParity.lean`](../Flapjack/Test/RetVarParity.lean) | empty and populated One, single and multiword Comb, and Named shapes |
 | `wrap_rt` | [`wrap_rt_probe.out`](../scripts/hol-probes/wrap_rt_probe.out) | [`WrapRtParity.lean`](../Flapjack/Test/WrapRtParity.lean) | absent, empty/single One, empty Comb, and Named destinations |
-| `compile` | [`compile_def_probe.out`](../scripts/hol-probes/compile_def_probe.out) | [`CompileDefParity.lean`](../Flapjack/Test/CompileDefParity.lean) | finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; missing/empty/malformed Global and Local destination lists; valid Local pair destination |
+| `compile` | [`compile_def_probe.out`](../scripts/hol-probes/compile_def_probe.out) | [`CompileDefParity.lean`](../Flapjack/Test/CompileDefParity.lean) | finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; 64-bit RISC-V specialization against HOL word64 stride; missing/empty/malformed Global and Local destination lists; valid Local pair destination |
 
 ## Scope
 

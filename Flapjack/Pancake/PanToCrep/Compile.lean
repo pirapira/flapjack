@@ -139,11 +139,10 @@ def storeMemOpHOL : OpSize → CrepMemOp
   | .op32 => .store32
   | .op16 => .store16
 
-/-! `compileProgHOL` is the finite-map-context port of CakeML's active
-    `compile_def`. It updates local bindings with HOL `FUPDATE` and performs
-    every lookup with `FLOOKUP`; unlike `compileProgFixed`, it has no
-    list-backed context conversion. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_def"]
+/-! Generic finite-map implementation used to share the compile equations
+    with non-word fixtures. This helper takes the target word's byte stride as
+    an instance parameter, so the HOL reference belongs to the RISC-V
+    specialization below rather than this generic adapter. -/
 def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
     (program : Prog α) : CrepProg α :=
@@ -297,6 +296,15 @@ def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | .tick => .tick
   | .annot _ _ => .skip
 termination_by structural program
+
+/-! Exact RISC-V word specialization of CakeML's `compile_def`: the word type
+    fixes `bytes_in_word` to `BitVec width / 8`, and the source context retains
+    the HOL finite-map fields directly. No caller-supplied stride or
+    list-backed map conversion appears in the tagged definition. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_def"]
+def compileProgRiscV (context : PanToCrepHOLContext (BitVec width))
+    (program : Prog (BitVec width)) : CrepProg (BitVec width) :=
+  compileProgHOL context program
 
 def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
   (List.range (Shape.shapeSize shape)).map (fun offset => context.maxVar + 1 + offset)
@@ -742,6 +750,17 @@ def panToCrepCompFuncFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       eids := context.eids
       vmax := vmax } body
 
+def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
+    (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
+    CrepProg (BitVec width) :=
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProgRiscV
+    { vars := panToCrepMakeVmapHOL params
+      funcs := context.funcs
+      eids := context.eids
+      vmax := vmax } body
+
 def compileFunDeclSourceFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
     (declaration : FunDecl α) : CompiledFunction α :=
@@ -793,7 +812,7 @@ def compileToCrepHOL
     { vars := FEMPTY, funcs := functionMap, eids := exceptionMap, vmax := 0 }
   functions.map fun (name, parameters, body, _returnShape) =>
     (name, panToCrepVars parameters,
-      panToCrepCompFuncFixed context parameters body)
+      panToCrepCompFuncRiscV context parameters body)
 
 /-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
 Cake's following Crep passes operate on triples; Flapjack retains the source

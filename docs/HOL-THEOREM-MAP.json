@@ -2499,9 +2499,9 @@
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileProgHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "compileProgRiscV",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (RISC-V statement review)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",

@@ -90,10 +90,11 @@ FIXTURES = [
                          "extraNamesGlobalCall", "missingNamesGlobalCall",
                          "missingLocalCall", "emptyOneLocalCall", "extraNamesLocalCall",
                          "missingNamesLocalCall", "validLocalCall", "nativeProgramParityGuard",
-                         "finiteMapLoadStoreParityGuard", "finiteMapParityGuard"],
+                         "finiteMapLoadStoreParityGuard", "finiteMapParityGuard",
+                         "riscv64PairLoad", "riscv64PairStore"],
         "related_lean": "Flapjack/Test/StandaloneCallParity.lean",
         "related_markers": ["assigned call to an unknown local destination", "assigned call to a local whose shape"],
-        "covers": "finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; missing/empty/malformed Global and Local destination lists; valid Local pair destination",
+        "covers": "finite-map duplicate updates; empty-shape Return; fixed-stride structured Load/Store; 64-bit RISC-V specialization against HOL word64 stride; missing/empty/malformed Global and Local destination lists; valid Local pair destination",
     },
 ]
 

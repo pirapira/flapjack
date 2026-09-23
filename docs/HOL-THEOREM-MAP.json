@@ -244,16 +244,16 @@
     "hol_name": "dest_2exp_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_eq_shift",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison, arbitrary-width RISC-V proof, and direct HOL-EVAL fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_thm quantifies over its polymorphic word type. No @[hol] tag until the finite-index generic theorem is proved."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_2exp_bound'",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_lt_width",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison with dimindex specialized to RISC-V width)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_bound' is polymorphic and concludes against dimindex of its word carrier. No @[hol] tag until generalized."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -358,6 +358,30 @@
     "lean_name": "crepDest2Exp_holFiniteDimension",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only width-bounded recognizer transport for arbitrary explicitly enumerated finite dimensions"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_lt_width",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-dimension support for the polymorphic dest_2exp bound; remains untagged because HolFiniteDimension is an explicit Lean enumeration and is not yet identified with HOL finite_index"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstForModel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack support lemma parameterized by a target-model shift law; its explicit operation premise and RiscV.Word carrier make it no generic HOL eval_mul_const port"
   },
   {
     "hol_path": null,

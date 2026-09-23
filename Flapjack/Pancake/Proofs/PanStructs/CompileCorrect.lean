@@ -521,6 +521,32 @@ theorem panStructSkipFiniteMapEvaluatorSupport
     (panStructSkipEvaluatorSupport context evaluationContext primitive handler
       bytesInWord state.runtime)
 
+/-- Exact production-evaluator projection for HOL-shaped finite-map state on
+    Skip. Converting the source execution's clock result and post-state yields
+    the execution of the converted state and compiled program. The state
+    wrapper carries finite support and lookup agreement, so the projection does
+    not assume a separate finite-support premise. -/
+theorem panStructFiniteMapSkipEvaluationProjection
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext)
+    (evaluationContext : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanStructFiniteState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord (panStructConvertFiniteState context state).runtime
+        (structCompileProg context (.skip : Prog α)) =
+      (panSemEvaluateCodeStateWithPostState evaluationContext primitive handler
+        bytesInWord state.runtime (.skip : Prog α)).map
+        (fun (result, postState) =>
+          (panStructConvertClockResult result, panStructConvertState context postState)) := by
+  simp [panSemEvaluateCodeStateWithPostState_skip,
+    panStructConvertFiniteState, panStructConvertState, panStructConvertClockResult,
+    panStructConvertClockOutcome, panStructConvertControlResult]
+  constructor <;> rfl
+
 @[simp] theorem panStructCompileTick_eq_tick [BEq String]
     (context : StructPassContext) :
     structCompileProg context (.tick : Prog α) = .tick := by

@@ -407,6 +407,50 @@ theorem panSemEvaluateCodeStateWithPostState_skip
     panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
     evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
 
+/-! Exact HOL `evaluate_def` Assign equation
+    (`cakeml/pancake/semantics/panSemScript.sml:566-572`) over the production
+    source-state evaluator: the source expression is evaluated, the assignment
+    is accepted exactly when `is_valid_value` holds, and the accepted value is
+    written to the local or global map with the clock and every other state
+    component carried verbatim. This is an untagged boundary equation because
+    the structured result is reduced rather than HOL's `(prog_result, state)`
+    pair. -/
+theorem panSemEvaluateCodeStateWithPostState_assign
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (vk : VarKind) (name : VarName) (value : Exp α) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.assign vk name value : Prog α) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value with
+      | some evaluated =>
+          if panValueAssignmentValid state.structs state.locals state.globals vk name evaluated then
+            match vk with
+            | .local =>
+                some ((.control (.normal (updatePanValueMap state.locals name evaluated)
+                    state.globals state.memory state.ffi), state.clock),
+                  { state with locals := updatePanValueMap state.locals name evaluated })
+            | .global =>
+                some ((.control (.normal state.locals
+                    (updatePanValueMap state.globals name evaluated)
+                    state.memory state.ffi), state.clock),
+                  { state with globals := updatePanValueMap state.globals name evaluated })
+          else none
+      | none => none := by
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value <;>
+  cases vk <;>
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+    evalPanValueExpCounted, hvalue] <;>
+  split <;> simp
+
 /-!
   Exact source-memory entry point.
 

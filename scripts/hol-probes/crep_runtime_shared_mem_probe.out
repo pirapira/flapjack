@@ -1,11 +1,7 @@
 load_returned=(NONE,SOME (ValWord (set_byte 0w 66w 0w F)),1)
-
 load_out_of_domain=(SOME Error,NONE,0)
-
 load_final=(SOME (FinalFFI (Final_event (SharedMem MappedRead) [0w] [8w] FFI_failed)),
  NONE)
-
 store_returned=(NONE,1)
-
 store_out_of_domain=(SOME Error,0)
-
+store_final=(T,0)

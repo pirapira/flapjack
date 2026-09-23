@@ -214,7 +214,7 @@ theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
 
 /-! Lean list-lookup adaptation of Cake's local `alookup_drop_helper`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:78`). -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper"]
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_drop_helper" 78]
 theorem lookup_drop_helper [BEq α] [LawfulBEq α]
     (n : Nat) (xs : List (α × β)) (key : α) (value : β)
     (hlookup : List.lookup key (xs.drop n) = some value)

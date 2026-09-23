@@ -217,6 +217,16 @@ theorem loadShape_eq_loadShapeBytes_of_stride_eq [BEq α] [OfNat α 0] [Add α]
   | zero => rfl
   | succ count ih => simp [loadShape, loadShapeBytes, ih]
 
+/-- The machine byte width the executable RV64 entry point (`Flapjack.compileMain`)
+    passes to the pipeline.  This is the concrete fixed stride on the executed
+    path; `riscv64BytesInWord_eq` certifies it is Cake's `byte$bytes_in_word`. -/
+def riscv64BytesInWord : BitVec 64 := BitVec.ofNat 64 8
+
+/-- The RISC-V compile context byte width is the fixed machine byte width: the
+    pipeline entry points supply `riscv64BytesInWord` for the 64-bit word, which
+    is exactly `byte$bytes_in_word` (`n2w (dimindex (:'a) DIV 8)`). -/
+theorem riscv64BytesInWord_eq : riscv64BytesInWord = CrepBytesInWord.bytesInWord := rfl
+
 /-- The RISC-V compile context byte width is the fixed machine byte width: the
     pipeline entry points supply `8` for the 64-bit word, which is exactly
     `byte$bytes_in_word` (`n2w (dimindex (:'a) DIV 8)`). -/

@@ -303,4 +303,20 @@ theorem compileExp_load_eq_loadShapeBytes [BEq α] [OfNat α 0] [Add α]
   simp only [hcompile]
   rw [loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ hbytes]
 
+/-- The executable RV64 entry point supplies `riscv64BytesInWord` as the context's
+    `bytesInWord` (`Flapjack.compileMain`), so the production `.load` lowering is
+    exactly Cake's fixed-stride `load_shape`.  This discharges the `hbytes`
+    invariant of `compileExp_load_eq_loadShapeBytes` at the value the executable
+    path actually uses, rather than in a hand-built test context. -/
+theorem compileExp_load_riscv64
+    (context : CompileContext (BitVec 64))
+    (hbytes : context.bytesInWord = riscv64BytesInWord)
+    (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
+    (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
+    (hcompile : compileExp context expression = (head :: rest, shape')) :
+    (compileExp context (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head :=
+  compileExp_load_eq_loadShapeBytes context (by rw [hbytes, riscv64BytesInWord_eq])
+    shape expression head rest shape' hcompile
+
 end Flapjack

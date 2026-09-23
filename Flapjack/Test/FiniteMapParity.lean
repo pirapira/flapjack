@@ -52,8 +52,8 @@ theorem opt_mmap_disj_zip_flookup_fixture :
 #check @FUPDATE_FUPDATE_LIST_commutes
 #check @opt_mmap_some_eq_zip_flookup
 #check @opt_mmap_disj_zip_flookup
-#check @localsRel
-#check @localsRel_lookup_ctxt
+#check @executableLocalsRel
+#check @executableLocalsRel_lookup_ctxt
 #check @localRel_le_zip_update_preserved
 #check @listDisjoint_range_add
 #check @listDisjoint_range_add_shift
@@ -68,20 +68,20 @@ theorem listDisjoint_range_add_shift_fixture :
     ListDisjoint (((List.range 3).map (fun x => x + 1 + (4 + 5))) : List Nat) [0, 1, 2, 4] :=
   listDisjoint_range_add_shift 3 4 5 [0, 1, 2, 4] (by intro y hy; simp [List.mem_cons] at hy; omega)
 
-#check @localsRel_extend_new_var
+#check @executableLocalsRel_extend_new_var
 #check @panValueNoOverlap_cons_of
 #check @panValueCtxtMax_mono
 
 /-- Cake `locals_rel_extend_new_var` on a concrete fresh variable. -/
-theorem localsRel_extend_new_var_fixture :
-    localsRel ([("x", (Shape.one, [1]))] : InfoMap (Shape × List Nat)) 1
+theorem executableLocalsRel_extend_new_var_fixture :
+    executableLocalsRel ([("x", (Shape.one, [1]))] : InfoMap (Shape × List Nat)) 1
       (FUPDATE (FEMPTY : FiniteMap String (PanValue Nat)) ("x", PanValue.word 5))
       (FUPDATE_LIST (FEMPTY : FiniteMap Nat Nat) (([1] : List Nat).zip ([5] : List Nat))) := by
-  have hbase : localsRel ([] : InfoMap (Shape × List Nat)) 0
+  have hbase : executableLocalsRel ([] : InfoMap (Shape × List Nat)) 0
       (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat) :=
     ⟨panValueNoOverlap_empty, panValueCtxtMax_empty 0 (by omega),
       by intro vname v h; simp [FLOOKUP_empty] at h⟩
-  have h := localsRel_extend_new_var ([] : InfoMap (Shape × List Nat)) 0
+  have h := executableLocalsRel_extend_new_var ([] : InfoMap (Shape × List Nat)) 0
     (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat)
     "x" (PanValue.word 5) [1] hbase (by simp [panValueShape, isWfShape]) (by decide)
     (by
@@ -130,13 +130,13 @@ theorem resVar_commutes_fixture :
   exact resVar_commutes resVarBase (FUPDATE_LIST FEMPTY [(2, 20), (3, 30)]) 3 2 (by decide)
 
 /-- Cake `mk_ctxt_imp_locals_rel` at the empty context. -/
-theorem localsRel_empty_fixture :
-    localsRel ([] : InfoMap (Shape × List Nat)) 0
+theorem executableLocalsRel_empty_fixture :
+    executableLocalsRel ([] : InfoMap (Shape × List Nat)) 0
       (FEMPTY : FiniteMap String (PanValue Nat)) (FEMPTY : FiniteMap Nat Nat) :=
-  localsRel_empty 0 (FEMPTY : FiniteMap Nat Nat)
+  executableLocalsRel_empty 0 (FEMPTY : FiniteMap Nat Nat)
 
-#check @localsRel_empty
-#check @localsRel_of_empty_source
+#check @executableLocalsRel_empty
+#check @executableLocalsRel_of_empty_source
 
 /-- Cake `flookup_res_var_distinct_eq` on a concrete fold. -/
 theorem FLOOKUP_foldl_resVar_not_mem_fixture :

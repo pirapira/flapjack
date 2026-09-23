@@ -1,5 +1,6 @@
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanToCrep
+import Flapjack.Pipeline
 
 /-!
 # Original-domain parity for `crepLang$load_shape`
@@ -79,14 +80,42 @@ def word64ParityGuard : Bool :=
 #eval word64ParityGuard
 #guard word64ParityGuard
 
-/-- The production compile context as the RV64 CLI builds it: the value type is
-    `BitVec 64` and `bytesInWord` is `8` (`byte$bytes_in_word`). -/
+/-- The production compile context as the RV64 CLI builds it, through the real
+    `pipelineCrepeContext` constructor with the entry width `riscv64BytesInWord`
+    (`Flapjack.compileMain`).  This is not a hand-built record: it is the actual
+    production context-construction path. -/
+def emptyProgram : GlobalCompiledProgram (BitVec 64) :=
+  { initializers := []
+    declarations := []
+    context :=
+      { globals := []
+        globalsSize := BitVec.ofNat 64 0
+        maxGlobalsSize := BitVec.ofNat 64 0
+        bytesInWord := riscv64BytesInWord
+        fromNat := fun value => BitVec.ofNat 64 value } }
+
 def productionContext : CompileContext (BitVec 64) :=
-  { vars := [], functions := [], exceptions := [], maxVar := 0,
-    bytesInWord := BitVec.ofNat 64 8 }
+  pipelineCrepeContext riscv64BytesInWord (fun value => BitVec.ofNat 64 value) emptyProgram
 
 /-- A Pan expression for the same source constant, fed through production. -/
 def panWord64ProbeValue : Exp (BitVec 64) := .const (BitVec.ofNat 64 7)
+
+/-- The production context's byte width is Cake's fixed `byte$bytes_in_word`, and
+    the executable `.load` lowering through it is exactly `loadShapeBytes`. -/
+example : productionContext.bytesInWord = CrepBytesInWord.bytesInWord :=
+  pipelineCrepeContext_riscv64 _ _
+
+example :
+    (compileExp productionContext
+        (.load (Shape.comb [Shape.one, Shape.one]) panWord64ProbeValue)).1 =
+      loadShapeBytes 0 (Shape.shapeSize (Shape.comb [Shape.one, Shape.one]))
+        (.const (BitVec.ofNat 64 7)) := by
+  unfold productionContext
+  refine compileExp_load_pipelineRiscv64
+    (fun value => BitVec.ofNat 64 value) emptyProgram
+    (Shape.comb [Shape.one, Shape.one]) panWord64ProbeValue
+    (.const (BitVec.ofNat 64 7)) [] .one ?_
+  simp [compileExp, panWord64ProbeValue]
 
 /-- The production `.load` lowering at the RV64 context agrees with the 64-bit
     HOL oracle; `compileExp_load_eq_loadShapeBytes` proves this for all such
@@ -117,6 +146,8 @@ def runChecks : IO Bool := do
       (isNonzeroTwo (loadShape 4 4 2 probeValue)) true,
     check "crep load_shape fixed byte width" fixedParityGuard true,
     check "crep load_shape word64 oracle" word64ParityGuard true,
+    check "production context fixed byte width"
+      (productionContext.bytesInWord == CrepBytesInWord.bytesInWord) true,
     check "production load_shape RV64 fixed stride" productionLoadGuard true ].mapM id
   pure (results.all id)
 

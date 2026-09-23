@@ -36,6 +36,7 @@ import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.PanGlobalsCompileTopShapeWfParity
 import Flapjack.Test.PanGlobalsExceptionsAppendParity
 import Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity
+import Flapjack.Test.PanGlobalsDeclPredicateParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
 import Flapjack.Test.CrepeMulConstParity
@@ -632,6 +633,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepInlineGenlistParity.runChecks,
     Flapjack.Test.PanGlobalsExceptionsAppendParity.runChecks,
     Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity.runChecks,
+    Flapjack.Test.PanGlobalsDeclPredicateParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
     Flapjack.Test.LoopCallParity.runChecks,

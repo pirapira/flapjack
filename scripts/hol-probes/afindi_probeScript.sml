@@ -36,3 +36,5 @@ val dropwhile_source = ``[0; 1; 2; 3]``;
 val _ = print_eval "dropWhile_MAP_helper"
   ``dropWhile (\n:num. n < 3) (MAP SUC ^dropwhile_source) =
     MAP SUC (dropWhile (\n:num. n < 2) ^dropwhile_source)``;
+val _ = print_eval "UNCURRY_EQ_o_SND_pair"
+  ``UNCURRY (\x. SUC) (0, 4) = SUC 4``;

@@ -2805,6 +2805,69 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandler
           locals := updateCrepRuntimeLocal caller.locals slot (.word value) })
     harguments hlookup hinfoValid hclock (by simp) hcalleeBody hhandlerBody
 
+/-! Generalize target Call exception dispatch to an arbitrary compiled handler
+body. The payload setup and handler-body evaluator hypotheses are explicit so
+the enclosing induction can derive them from the one-word `exp_hdl` step and
+the recursive body case. This proves target dispatch only; body-state
+relations with the source evaluator remain separate obligations. -/
+theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (caller : CrepRuntimeState (RiscV.Word 64) σ)
+    (destinations : List Nat) (caught exception : RiscV.Word 64)
+    (function handlerVariable : String)
+    (arguments : List (CrepExp (RiscV.Word 64))) (values : List (RiscV.Word 64))
+    (body handlerBody : CrepProg (RiscV.Word 64))
+    (calleeLocals : Nat → Option (PanWordLab (RiscV.Word 64)))
+    (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
+    (payloadState : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
+    (fuel : Nat)
+    (harguments : evalCrepRuntimeExps caller arguments = some values)
+    (hlookup : lookupCrepRuntimeCode function values caller.code =
+      some (body, calleeLocals))
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exception) = true)
+    (hcalleeBody : evalCrepRuntimeProg handler primitive (fuel + 1)
+      (decCrepClock { caller with locals := calleeLocals }) body =
+        some (.raised exception, calleeState))
+    (hpayload : evalCrepRuntimeProg handler primitive fuel
+      { crepRuntimeCallerState caller calleeState with locals := caller.locals }
+      (expHdlFiniteMap context.vars handlerVariable) =
+        some (.normal, payloadState))
+    (hhandlerBody : evalCrepRuntimeProg handler primitive fuel
+      (fixCrepRuntimeClock (ε := FfiFinalEvent)
+        { crepRuntimeCallerState caller calleeState with locals := caller.locals }
+        (.normal, payloadState)).2 handlerBody =
+        some handlerResult) :
+    evalCrepRuntimeCall handler primitive (fuel + 2) caller
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody)))
+      function arguments = some handlerResult := by
+  have hhandlerRun : evalCrepRuntimeProg handler primitive (fuel + 1)
+      { crepRuntimeCallerState caller calleeState with locals := caller.locals }
+      (.seq (expHdlFiniteMap context.vars handlerVariable) handlerBody) =
+        some handlerResult := by
+    have hhandlerBody' : evalCrepRuntimeProg handler primitive fuel
+        { payloadState with
+          clock := min (crepRuntimeCallerState caller calleeState).clock
+            payloadState.clock } handlerBody = some handlerResult := by
+      simpa [fixCrepRuntimeClock] using hhandlerBody
+    simp only [evalCrepRuntimeProg]
+    rw [hpayload]
+    simp only [fixCrepRuntimeClock]
+    rw [hhandlerBody']
+  have hresult := evalCrepRuntimeCall_handlesRaisedBody handler primitive
+    (fuel + 1) caller destinations caught exception
+    (.seq (expHdlFiniteMap context.vars handlerVariable) handlerBody)
+    body function arguments values calleeLocals calleeState handlerResult
+    harguments hlookup hinfoValid hclock hmatch hcalleeBody hhandlerRun
+  exact hresult
+
 /-! Target-side Call_Ret_Exception composition with the actual source and
 target code maps. The source argument evaluator and code_rel derive the
 production Crep argument result and callee lookup; the target callee-body

@@ -39,4 +39,6 @@ handled_pair=[(«f»,[],
                 (Seq (Assign 1 (LoadGlob 1w)) Skip)) Skip))) «f» [])]
 duplicate_exceptions=[(«f»,[],Seq (Dec 1 (Const 7w) (Seq (StoreGlob 0w (Var 1)) Skip)) (Raise 0w));
  («g»,[],Seq (Dec 1 (Const 9w) (Seq (StoreGlob 0w (Var 1)) Skip)) (Raise 1w))]
+crep_vars_empty=[]
+crep_vars_nested=[0; 1; 2; 3]
 done=T

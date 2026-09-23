@@ -106,4 +106,13 @@ val _ = print_eval "duplicate_exceptions"
             body := panLang$Raise «F» (panLang$Const (9w : 8 word));
             return := panLang$One |>]``;
 
+val _ = print_eval "crep_vars_empty"
+  ``pan_to_crep$crep_vars ([] : (mlstring # panLang$shape) list)``;
+
+val _ = print_eval "crep_vars_nested"
+  ``pan_to_crep$crep_vars
+      [(«left», panLang$One);
+       («pair», panLang$Comb [panLang$One; panLang$One]);
+       («right», panLang$One)]``;
+
 val _ = print_eval "done" ``T``;

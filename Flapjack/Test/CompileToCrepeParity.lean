@@ -218,10 +218,12 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
-/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
-    order and receive consecutive slots. -/
+/-! Direct HOL `crep_vars_def` oracle (the `crep_vars_empty` and
+    `crep_vars_nested` lines in `compile_to_crep_probe.out`): nested parameter
+    shapes flatten in source order and receive consecutive slots. -/
 def crepVarsOracle : Bool :=
-  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
+  panToCrepVars [] == [] &&
+    panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
       ("right", .one)] == [0, 1, 2, 3]
 
 #guard crepVarsOracle

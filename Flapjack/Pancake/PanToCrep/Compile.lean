@@ -500,6 +500,7 @@ def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape
 /-! Source-named port of CakeML Pancake's `crep_vars_def`
     (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
     consecutive slot for every flattened parameter word. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "crep_vars_def"]
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
   List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 

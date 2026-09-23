@@ -7,3 +7,4 @@ load32=Load32 (Const 0w)
 loadbyte=LoadByte (Const 0w)
 fallback=Const 0w
 list_map=T
+old_shapes_map=T

@@ -283,15 +283,6 @@ def structCompileTop (declarations : List (Decl α)) : List (Decl α) :=
     structCompileExp context (.const value) = .const value := by
   simp [structCompileExp]
 
-theorem structOldExpShapes_eq_map (context : StructPassContext)
-    (expressions : List (Exp α)) :
-    structOldExpShape.structOldExpShapes context expressions =
-      expressions.map (structOldExpShape context) := by
-  induction expressions with
-  | nil => simp [structOldExpShape.structOldExpShapes]
-  | cons expression expressions ih =>
-      simp [structOldExpShape.structOldExpShapes, ih]
-
 theorem structCompileProg_seq [BEq String] (context : StructPassContext)
     (first second : Prog α) :
     structCompileProg context (.seq first second) =

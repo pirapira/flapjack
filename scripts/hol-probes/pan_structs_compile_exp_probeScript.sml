@@ -60,3 +60,20 @@ val _ = print_eval "list_map"
         [(«right», panLang$Const (2w : 8 word));
          («left», panLang$Const (1w : 8 word))];
        panLang$Const (3w : 8 word)]``;
+val _ = print_eval "old_shapes_map"
+  ``pan_structs$old_exp_shapes ^ctxt
+      [panLang$Var Local «local»;
+       panLang$Var Global «global»;
+       panLang$NStruct «Pair» [];
+       panLang$RStruct
+         [panLang$Const (2w : 8 word);
+          panLang$Var Global «global»;
+          panLang$Var Local «local»]] =
+    MAP (pan_structs$old_exp_shape ^ctxt)
+      [panLang$Var Local «local»;
+       panLang$Var Global «global»;
+       panLang$NStruct «Pair» [];
+       panLang$RStruct
+         [panLang$Const (2w : 8 word);
+          panLang$Var Global «global»;
+          panLang$Var Local «local»]]``;

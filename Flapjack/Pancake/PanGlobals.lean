@@ -381,7 +381,7 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
     function names and leaves every other name unchanged. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"]
-def globalRenameFunctionName [BEq String]
+def globalRenameFunctionName [LawfulBEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
 
@@ -414,7 +414,7 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
     in every function occurrence and nested handler/body, leaving the other
     program constructs structurally unchanged. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_def"]
-def globalRenameProg [BEq String]
+def globalRenameProg [LawfulBEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
       .dec name shape value (globalRenameProg source target body)
@@ -444,7 +444,7 @@ termination_by program => sizeOf program
     declaration's name and body; every other declaration passes through
     unchanged. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_decs_def"]
-def globalRenameDecls [BEq String]
+def globalRenameDecls [LawfulBEq String]
     (source target : FunName) : List (Decl α) → List (Decl α)
   | [] => []
   | .function declaration :: declarations =>
@@ -757,13 +757,13 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
     the synthesized entry-point name is `fresh_name "main"` over the current
     function names (`globalFunctionNames` is `MAP FST` of the function table). -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"]
-def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
+def globalNewMainName [LawfulBEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `new_main_name_correct`
     (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
     is never one of the program's existing function names. -/
-theorem globalNewMainName_not_mem [BEq String] [LawfulBEq String]
+theorem globalNewMainName_not_mem [LawfulBEq String]
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   globalFreshName_not_mem "main" (globalFunctionNames declarations)

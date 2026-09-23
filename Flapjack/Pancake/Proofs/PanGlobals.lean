@@ -261,4 +261,32 @@ theorem decl_distinct (declaration : Decl α) :
     (isDecl declaration && isExnDecl declaration) = false := by
   cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
 
+/-! Exact-shaped port of Cake's `functions_filter_nil`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2967`): filtering out
+    function declarations leaves an empty function table. `globalDeclsFilter`
+    is the source-shaped `FILTER` and `globalDeclIsFunction` the
+    pass-facing `is_function`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "functions_filter_nil"]
+theorem functions_filter_nil (declarations : List (Decl α)) :
+    functions
+      (globalDeclsFilter
+        (fun declaration => !globalDeclIsFunction declaration) declarations) = [] :=
+  functions_globalDeclsFilter_not_function declarations
+
+/-! Exact-shaped port of Cake's `functions_FILTER_exn_decl`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2042`): keeping only
+    exception declarations leaves an empty function table. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "functions_FILTER_exn_decl"]
+theorem functions_FILTER_exn_decl (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isExnDecl declarations) = [] :=
+  functions_globalDeclsFilter_exnDecl declarations
+
+/-! Exact-shaped port of Cake's `functions_FILTER_is_name`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2049`): keeping only
+    name declarations leaves an empty function table. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "functions_FILTER_is_name"]
+theorem functions_FILTER_is_name (declarations : List (Decl α)) :
+    functions (globalDeclsFilter isName declarations) = [] :=
+  functions_globalDeclsFilter_isName declarations
+
 end Flapjack

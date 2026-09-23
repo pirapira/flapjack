@@ -27,6 +27,8 @@ def pairLoad : Prog Nat :=
 def pairStore : Prog Nat :=
   .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
 
+def emptyStructReturn : Prog Nat := .return (.rStruct [])
+
 def isFixedPairLoad8 : CrepProg Nat → Bool
   | .return [.load (.var 0), .load (.op .add [.var 0, .const 8])] => true
   | _ => false
@@ -85,6 +87,10 @@ def isReturnSeven : CrepProg Nat → Bool
   | .return [.const 7] => true
   | _ => false
 
+def isEmptyReturn : CrepProg Nat → Bool
+  | .return [] => true
+  | _ => false
+
 def isBreak : CrepProg Nat → Bool
   | .break 0 => true
   | _ => false
@@ -100,6 +106,7 @@ def isSeqSkipTick : CrepProg Nat → Bool
 def parityGuard : Bool :=
   isSkip (compileProg context (.skip : Prog Nat)) &&
   isReturnSeven (compileProg context (.return (.const 7))) &&
+  isEmptyReturn (compileProg context emptyStructReturn) &&
   isBreak (compileProg context (.break : Prog Nat)) &&
   isContinue (compileProg context (.continue : Prog Nat)) &&
   isSeqSkipTick (compileProg context (.seq .skip (.tick : Prog Nat))) &&
@@ -112,6 +119,10 @@ def parityGuard : Bool :=
 example : compileProg context missingGlobalCall = .call none "f" [] := by
   simp [missingGlobalCall, compileProg, compileArgs, callDestinationNames,
     wrapRt, context, lookupInfo]
+
+example : compileProg context emptyStructReturn = .return [] := by
+  simp [emptyStructReturn, compileProg, compileExp, compileExp.compileExpList,
+    Shape.shapeSize]
 
 example :
     compileProg emptyOneGlobalContext emptyOneGlobalCall = .call none "f" [] := by

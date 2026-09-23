@@ -363,6 +363,12 @@ run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out 
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
   call_arg_fail_result call_arg_fail_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Return/Raise probe observes evaluation failure and shape/size rejection
+# with `SOME Error` and the unchanged state, plus the successful results with
+# cleared locals.
+run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_probe.out \
+  ret_eval_fail_result raise_ok_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"

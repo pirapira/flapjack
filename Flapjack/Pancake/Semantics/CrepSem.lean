@@ -788,6 +788,45 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-! General target Call exception-dispatch step.  `hcalleeBody` and
+`hhandlerBody` are the recursive-evaluation induction hypotheses for the
+callee and compiled handler continuation.  Callee code, argument values,
+destinations, exception code, and both programs are arbitrary.  The statement
+exposes `crepRuntimeCallerState` and the exact callee clock clamp, and assumes
+no execution result for the enclosing Call. -/
+theorem evalCrepRuntimeCall_handlesRaisedBody
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (caller : CrepRuntimeState α σ)
+    (destinations : List Nat) (caught exception : α)
+    (continuation body : CrepProg α) (function : FunName)
+    (arguments : List (CrepExp α)) (values : List α)
+    (calleeLocals : Nat → Option (PanWordLab α))
+    (calleeState : CrepRuntimeState α σ)
+    (handlerResult : CrepRuntimeStep α σ ε)
+    (harguments : evalCrepRuntimeExps caller arguments = some values)
+    (hlookup : lookupCrepRuntimeCode function values caller.code =
+      some (body, calleeLocals))
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught, continuation))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exception) = true)
+    (hcalleeBody : evalCrepRuntimeProg handler primitive fuel
+      (decCrepClock { caller with locals := calleeLocals }) body =
+        some (.raised exception, calleeState))
+    (hhandlerBody : evalCrepRuntimeProg handler primitive fuel
+      { crepRuntimeCallerState caller calleeState with
+        locals := caller.locals } continuation = some handlerResult) :
+    evalCrepRuntimeCall handler primitive (fuel + 1) caller
+      (some (destinations, some (caught, continuation))) function arguments =
+        some handlerResult := by
+  simp [evalCrepRuntimeCall, harguments, hlookup, hinfoValid, hclock,
+    fixCrepRuntimeClock, hmatch, hcalleeBody, hhandlerBody]
+
 /-! `evalCrepRuntimeResult` is fuel bounded: `none` means the supplied target
 fuel was exhausted. Semantic `Error` is returned as `some (.error, state)`, so
 correctness arguments can choose a sufficient fuel without treating a cutoff

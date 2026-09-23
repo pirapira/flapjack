@@ -639,6 +639,179 @@ theorem withShape_mapPanValueFlattenOfPanSem
   intro value hmem
   simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
 
+/-! These list facts support the generated `ctxtFc` invariants: each
+`withShape` slot group inherits duplicate-freedom and membership from its flat
+source slot list. -/
+theorem withShapeGetElemNodupOfSlotsNodup (shapes : List Shape) (slots : List Nat)
+    (index : Nat) (hslots : slots.Nodup)
+    (hsize : slots.length = Shape.shapeSize (.comb shapes))
+    (hindex : index < shapes.length) :
+    ((withShape shapes slots)[index]'(by rw [withShape_length]; exact hindex)).Nodup := by
+  rw [withShape_getElem_eq_take_drop shapes slots index hsize hindex]
+  exact (List.take_sublist _ _).nodup ((List.drop_sublist _ _).nodup hslots)
+
+theorem withShapeGetElemMemOfSlotsMem (shapes : List Shape) (slots : List Nat)
+    (index slot : Nat) (hsize : slots.length = Shape.shapeSize (.comb shapes))
+    (hindex : index < shapes.length)
+    (hmem : slot ∈ (withShape shapes slots)[index]'
+      (by rw [withShape_length]; exact hindex)) :
+    slot ∈ slots := by
+  rw [withShape_getElem_eq_take_drop shapes slots index hsize hindex] at hmem
+  exact (List.drop_sublist _ _).subset ((List.take_sublist _ _).subset hmem)
+
+/-- The generated `ctxtFc` variable map has HOL `no_overlap` when its flat
+target slot list is duplicate-free. This is untagged support for
+`call_preserve_state_code_locals_rel`. -/
+theorem ctxtFcNoOverlapOfDistinctSlots
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (slots : List Nat) (hslots : slots.Nodup)
+    (hsize : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd))) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars := by
+  let names := parameters.map Prod.fst
+  let shapes := parameters.map Prod.snd
+  let groups := withShape shapes slots
+  let entries := names.zip (shapes.zip groups)
+  have hnamesShape : names.length = shapes.length := by simp [names, shapes]
+  have hshapeGroups : shapes.length = groups.length := by
+    simp [groups, withShape_length]
+  have hvars :
+      (ctxtFc context.funcs context.eids names shapes slots).vars =
+        FUPDATE_LIST FEMPTY entries := by
+    simp [ctxtFc, entries, names, shapes, groups]
+  have hsourceSize : slots.length = Shape.shapeSize (.comb shapes) := by
+    simpa [shapes] using hsize
+  unfold noOverlap
+  constructor
+  · intro name shape ns hlookup
+    rw [hvars] at hlookup
+    dsimp only [entries] at hlookup
+    rcases flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) name (shape, ns) hlookup with hmem | hbase
+    · rcases hmem with ⟨entry, hentry, hname, hvalue⟩
+      rcases entry with ⟨entryName, entryValue⟩
+      rcases entryValue with ⟨entryShape, entrySlots⟩
+      have hentryEq : (entryName, (entryShape, entrySlots)) = (name, (shape, ns)) := by
+        cases hname
+        cases hvalue
+        rfl
+      rw [hentryEq] at hentry
+      have hzipMem : (name, (shape, ns)) ∈ names.zip (shapes.zip groups) := by
+        simpa using hentry
+      obtain ⟨index, hindexName, hindexPair, hnameAt, hpairAt⟩ :=
+        mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hzipMem
+      have hindexZip : index < (shapes.zip groups).length := hindexPair
+      rw [List.length_zip] at hindexZip
+      have hindexShape : index < shapes.length := by omega
+      have hindexGroup : index < groups.length := by omega
+      have hpairAt' :
+          (shapes[index]'hindexShape, groups[index]'hindexGroup) = (shape, ns) := by
+        simpa using hpairAt
+      have hslotsAt : groups[index]'hindexGroup = ns := congrArg Prod.snd hpairAt'
+      rw [← hslotsAt]
+      exact withShapeGetElemNodupOfSlotsNodup shapes slots index hslots hsourceSize hindexShape
+    · simp at hbase
+  · intro name other shape otherShape ns otherSlots hnameLookup hotherLookup ⟨slot, hslot, hotherSlot⟩
+    by_cases hnamesEq : name = other
+    · exact hnamesEq
+    rw [hvars] at hnameLookup hotherLookup
+    dsimp only [entries] at hnameLookup hotherLookup
+    have hiLookup := flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) name (shape, ns) hnameLookup
+    have hjLookup := flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) other (otherShape, otherSlots) hotherLookup
+    rcases hiLookup with ⟨iEntry, hnameEntry, hnameKey, hnameValue⟩ | hbase
+    · rcases hjLookup with ⟨jEntry, hotherEntry, hotherKey, hotherValue⟩ | hotherBase
+      · rcases iEntry with ⟨iName, iPair⟩
+        rcases iPair with ⟨iShape, iSlots⟩
+        rcases jEntry with ⟨jName, jPair⟩
+        rcases jPair with ⟨jShape, jSlots⟩
+        have hiEntryEq : (iName, (iShape, iSlots)) = (name, (shape, ns)) := by
+          cases hnameKey
+          cases hnameValue
+          rfl
+        have hjEntryEq : (jName, (jShape, jSlots)) = (other, (otherShape, otherSlots)) := by
+          cases hotherKey
+          cases hotherValue
+          rfl
+        rw [hiEntryEq] at hnameEntry
+        rw [hjEntryEq] at hotherEntry
+        obtain ⟨i, hiName, hiPair, hiNameAt, hiPairAt⟩ :=
+          mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hnameEntry
+        obtain ⟨j, hjName, hjPair, hjNameAt, hjPairAt⟩ :=
+          mem_zip_getElem names (shapes.zip groups) (other, (otherShape, otherSlots)) hotherEntry
+        have hiPairBound : i < min shapes.length groups.length := by
+          simpa [List.length_zip] using hiPair
+        have hjPairBound : j < min shapes.length groups.length := by
+          simpa [List.length_zip] using hjPair
+        have hiShape : i < shapes.length := Nat.lt_of_lt_of_le hiPairBound (Nat.min_le_left ..)
+        have hjShape : j < shapes.length := Nat.lt_of_lt_of_le hjPairBound (Nat.min_le_left ..)
+        have hiGroup : i < groups.length := Nat.lt_of_lt_of_le hiPairBound (Nat.min_le_right ..)
+        have hjGroup : j < groups.length := Nat.lt_of_lt_of_le hjPairBound (Nat.min_le_right ..)
+        have hiPair' : (shapes[i]'hiShape, groups[i]'hiGroup) = (shape, ns) := by
+          simpa using hiPairAt
+        have hjPair' : (shapes[j]'hjShape, groups[j]'hjGroup) = (otherShape, otherSlots) := by
+          simpa using hjPairAt
+        have hns : groups[i]'hiGroup = ns := congrArg Prod.snd hiPair'
+        have hotherNs : groups[j]'hjGroup = otherSlots := congrArg Prod.snd hjPair'
+        have hindexNe : i ≠ j := by
+          intro heq
+          subst j
+          exact hnamesEq (calc
+            name = names[i]'hiName := hiNameAt.symm
+            _ = other := hjNameAt)
+        have hdisjoint := listDisjoint_withShape_getElem shapes slots i j hslots
+          hiShape hjShape hindexNe hsourceSize
+        exact False.elim (hdisjoint slot (hns.symm ▸ hslot) (hotherNs.symm ▸ hotherSlot))
+      · simp at hotherBase
+    · simp at hbase
+
+/-- The `ctxt_fc` slot bound is `MAX_LIST slots`, as in HOL `ctxt_fc_vmax`;
+every generated component is a slice of that flat slot list. -/
+theorem ctxtFcCtxtMaxOfSlots
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (slots : List Nat)
+    (hsize : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd))) :
+    ctxtMax (maxList slots)
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars := by
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro name shape ns hlookup slot hslot
+  let names := parameters.map Prod.fst
+  let shapes := parameters.map Prod.snd
+  let groups := withShape shapes slots
+  let entries := names.zip (shapes.zip groups)
+  have hsourceSize : slots.length = Shape.shapeSize (.comb shapes) := by
+    simpa [shapes] using hsize
+  have hlookup' : FLOOKUP (FUPDATE_LIST FEMPTY entries) name = some (shape, ns) := by
+    simpa [ctxtFc, names, shapes, groups, entries] using hlookup
+  rcases flookupFupdateList_mem_or_base FEMPTY entries name (shape, ns) hlookup' with
+      ⟨entry, hentry, hname, hvalue⟩ | hbase
+  · rcases entry with ⟨entryName, entryValue⟩
+    rcases entryValue with ⟨entryShape, entrySlots⟩
+    have hentryEq : (entryName, (entryShape, entrySlots)) = (name, (shape, ns)) := by
+      cases hname
+      cases hvalue
+      rfl
+    rw [hentryEq] at hentry
+    obtain ⟨index, hindexName, hindexPair, hnameAt, hpairAt⟩ :=
+      mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hentry
+    have hpairBound : index < min shapes.length groups.length := by
+      simpa [List.length_zip] using hindexPair
+    have hindexShape : index < shapes.length :=
+      Nat.lt_of_lt_of_le hpairBound (Nat.min_le_left ..)
+    have hindexGroup : index < groups.length :=
+      Nat.lt_of_lt_of_le hpairBound (Nat.min_le_right ..)
+    have hpairAt' :
+        (shapes[index]'hindexShape, groups[index]'hindexGroup) = (shape, ns) := by
+      simpa using hpairAt
+    have hslotsAt : groups[index]'hindexGroup = ns := congrArg Prod.snd hpairAt'
+    have hslotGroup : slot ∈ groups[index]'hindexGroup := hslotsAt.symm ▸ hslot
+    have hslotFlat := withShapeGetElemMemOfSlotsMem shapes slots index slot
+      hsourceSize hindexShape hslotGroup
+    exact maxList_ge_of_mem slots slot hslotFlat
+  · simp at hbase
+
 /-! The target `tlc` map returns exactly the flattened words in the slot window
 assigned by `withShape` to a given well-formed argument. This is the target
 half of the Call formal/flattened `locals_rel` proof. -/

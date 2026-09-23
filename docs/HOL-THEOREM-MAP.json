@@ -3443,6 +3443,38 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeGetElemNodupOfSlotsNodup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack finite-list support: each withShape component inherits Nodup from the flat target slot list; used for generated ctxtFc no_overlap."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeGetElemMemOfSlotsMem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack finite-list support: each withShape component contains only slots from the flat target slot list; used for generated ctxtFc ctxt_max."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtFcNoOverlapOfDistinctSlots",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem’s exact withShape partition; not tagged as a separate HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtFcCtxtMaxOfSlots",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack proof support deriving the HOL ctxt_max bound for ctxtFc from maxList slots and exact withShape slices; not tagged as a separate HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcVarsLookupGetElem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only indexed lookup into the ctxtFc formal parameter slots, exposing the matching withShape slot group; support for the full Call locals_rel proof, not an independent HOL theorem."

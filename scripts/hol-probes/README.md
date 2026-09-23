@@ -112,6 +112,8 @@ regressions live in `Flapjack.Test.PanStructsAfindiParity`.
 `pan_structs_compile_correct_probe.out` records direct HOL EVAL of
 `convert_v_def` on a named record, source/converted `Skip` evaluator equations,
 and zero-clock timeout / positive-clock decrement `Tick` evaluator equations,
+plus HOL simplifier reduction of `convert_s_def` over nonempty local, global,
+and exception-shape finite maps using the finite-map lookup rules. These are
 used in `compile_correct` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows cover
 evaluator support only; the full theorem's finite-map premises and invariant,

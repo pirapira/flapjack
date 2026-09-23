@@ -18,6 +18,15 @@ fun print_eval label q =
     print "\n"
   end
 
+fun print_simp label rewrites q =
+  let
+    val th = SIMP_CONV (srw_ss()) rewrites q
+  in
+    print (label ^ "=");
+    print_term (rconc th);
+    print "\n"
+  end
+
 val _ = print_eval "convert_named_record"
   ``pan_structsProof$convert_v
       (panSem$NStruct (strlit "Pair")
@@ -34,6 +43,24 @@ val _ = print_eval "compile_correct_skip_converted"
      SND (panSem$evaluate (panLang$Skip,
       pan_structsProof$convert_s (ARB:pan_structs$context) ^state)) =
         pan_structsProof$convert_s (ARB:pan_structs$context) ^state)``;
+
+val finite_map_state = ``^state with <|
+    locals := FUPDATE FEMPTY (strlit "local", ValWord 7w);
+    globals := FUPDATE FEMPTY (strlit "global", ValWord 11w);
+    eshapes := FUPDATE FEMPTY (strlit "E", panLang$One)
+  |>``;
+val _ = print_simp "convert_s_finite_maps"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsProofTheory.convert_eshapes_def,
+   pan_structsTheory.compile_shape_def,
+   FLOOKUP_FMAP_MAP2, FLOOKUP_UPDATE]
+  ``(FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
+       ^finite_map_state).locals (strlit "local"),
+     FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
+       ^finite_map_state).globals (strlit "global"),
+     FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
+       ^finite_map_state).eshapes (strlit "E"))``;
 
 val zero_state = ``(^state with clock := 0)``;
 val positive_state = ``(^state with clock := 1)``;

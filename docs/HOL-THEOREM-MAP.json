@@ -4131,6 +4131,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_mapValues",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-map lookup adapter lemma used to connect HOL FMAP_MAP2 results with explicit InfoMap entries; it is support for the still-open convert_s/compile_correct port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStruct_mapKeys_preserved",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic key-preservation lemma for list-backed finite-map entries; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipFiniteMapEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Skip evaluator support for a finite-map-backed source-state wrapper; still omits the full compile_correct premises and invariant/shape-map/result postconditions."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileSkip_eq_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production compiler support equation; no standalone HOL declaration."
@@ -4158,6 +4182,38 @@
     "lean_name": "panStructTickEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelUpdateExistingValue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "General locals_rel update support for replacing an existing source value with a shape-preserving value and updating its flattened target slots; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Fixed-width source evaluator helper for a state-owned one-word callee raising into an existing matching handler local; induction support, not a full pc_compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Target exp_hdl execution support: load the one-word payload from global slot zero and update an existing handler local; used by the Call_Ret_Exception proof but not a standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Composes target exp_hdl execution with locals_rel preservation for the source handler-body induction hypothesis; the enclosing Call_Ret_Exception theorem remains open."
   },
   {
     "hol_path": null,

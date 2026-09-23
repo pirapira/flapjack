@@ -4291,6 +4291,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFiniteMapSkipEvaluationProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Kernel-checked production-evaluator projection for finite-map state under Skip; supports, but is not, the HOL compile_correct induction case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileSkip_eq_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production compiler support equation; no standalone HOL declaration."
@@ -4414,5 +4422,29 @@
     "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rStruct_constOrLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves the RStruct constructor case of compiled expression evaluation when every field is Const or Local, by composing the nested compile_args result. Nested structs and other expression constructors remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalOrStruct_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves compiled results for argument lists whose members are Const, Local, or one-level RStruct with Const/Local fields; it remains a strict subset of HOL eval_map_comp_exp_flat_eq."
   }
 ]

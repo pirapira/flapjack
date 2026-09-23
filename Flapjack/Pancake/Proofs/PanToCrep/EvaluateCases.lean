@@ -2459,6 +2459,103 @@ theorem compileArgsHOL_constOrLocal_eval_flatten
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach
 
+/-! One additional `compile_exp_val_rel` constructor: an `RStruct` whose
+fields are each constants or local variables. Its nested argument list is
+proved with the leaf cases above; this does not cover nested structs or other
+compound expressions. -/
+private theorem compileExpListHOL_flatMap_eq_compileArgsHOL
+    (compilerContext : PanToCrepHOLContext (RiscV.Word 64))
+    (fields : List (Exp (RiscV.Word 64))) :
+    (compileExpHOL.compileExpListHOL compilerContext fields).flatMap Prod.fst =
+      compileArgsHOL compilerContext fields := by
+  induction fields with
+  | nil => simp [compileExpHOL.compileExpListHOL, compileArgsHOL]
+  | cons field fields ih =>
+      simp [compileExpHOL.compileExpListHOL, compileArgsHOL, ih]
+
+theorem compileExpHOL_rStruct_constOrLocal_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (fields : List (Exp (RiscV.Word 64)))
+    (fieldValues : List (PanValue (RiscV.Word 64)))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ fields →
+      compileArgConstOrLocal expression)
+    (hsource : evalPanSemStateExp source (.rStruct fields) =
+      some (.rStruct fieldValues)) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rStruct fields)).1 =
+      some (panValueFlatten (.rStruct fieldValues)) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hsourceFields : evalPanSemStateExps source fields = some fieldValues := by
+    simpa [evalPanSemStateExp, evalPanSemStateExps, evalPanValueExp,
+      evalPanValueExps] using hsource
+  have hcompiled := compileArgsHOL_constOrLocal_eval_flatten context source target
+    fields fieldValues hlocals hsupported hsourceFields
+  simpa [compilerContext, compileExpHOL,
+    compileExpListHOL_flatMap_eq_compileArgsHOL,
+    panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap] using hcompiled
+
+inductive compileArgConstLocalOrStruct : Exp (RiscV.Word 64) → Prop where
+  | const (value : RiscV.Word 64) : compileArgConstLocalOrStruct (.const value)
+  | localVar (name : String) : compileArgConstLocalOrStruct (.var .local name)
+  | rStruct (fields : List (Exp (RiscV.Word 64)))
+      (hsupported : ∀ expression, expression ∈ fields →
+        compileArgConstOrLocal expression) :
+      compileArgConstLocalOrStruct (.rStruct fields)
+
+/-! The Call argument list theorem with top-level `RStruct` arguments whose
+fields are constants or locals. It remains a restricted subset of HOL's
+`eval_map_comp_exp_flat_eq`; nested structures and other constructors remain
+open. -/
+theorem compileArgsHOL_constLocalOrStruct_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalOrStruct expression)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value) := by
+    intro expression hmem value heval
+    cases hsupported expression hmem with
+    | const word =>
+        exact compileExpHOL_const_eval_flatten context source target word value heval
+    | localVar name =>
+        exact compileExpHOL_local_eval_flatten context source target name value
+          hlocals heval
+    | rStruct fields hfields =>
+        cases value with
+        | word word =>
+            simp [evalPanSemStateExp, evalPanValueExp] at heval
+        | rStruct fieldValues =>
+            exact compileExpHOL_rStruct_constOrLocal_eval_flatten context source
+              target fields fieldValues hlocals hfields heval
+        | nStruct name fields =>
+            simp [evalPanSemStateExp, evalPanValueExp] at heval
+  simpa [compilerContext] using
+    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+      hsource heach
+
 /-! Derive the production Crep callee lookup and parameter locals from the
 state-owned source/target code maps. The argument words are arbitrary; their
 length must match the flattened source parameter shapes. The HOL compiled

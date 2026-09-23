@@ -37,7 +37,15 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
     and absent entries correspond to `none`. Thus a HOL finite `locals` map
     translates to the Lean lookup function `state.locals`. The runtime type
     carries extra evaluator dictionaries, but this theorem's only semantic
-    case is the direct HOL `Var` clause. -/
+    case is the direct HOL `Var` clause.
+
+    Scope boundary: this tag is for the variable-only theorem, not a claim that
+    `crepSemEvalExp` ports all of HOL `eval_def`. In particular, Lean stores
+    memory as `α → Option α` with a Boolean domain and globals as
+    `α → Option α`; HOL stores total word memory with a separate address set,
+    and globals keyed by fixed-width 5-bit words with `word_lab` values. The
+    Lean `loadGlob` AST index is also `α`, whereas HOL's is 5-bit. None of
+    those fields or constructors is observed by this theorem. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

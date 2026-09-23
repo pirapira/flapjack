@@ -9,10 +9,15 @@ This module gives a direct recursive interpretation of the Crepe expression
 constructors over the runtime state's word-valued representation. Its `Var`
 equation is exactly HOL `crepSem.eval`'s `FLOOKUP s.locals v` clause and is the
 only evaluator case used by `lookup_locals_eq_map_vars`. The runtime state
-stores memory as a partial map rather than HOL's total memory plus domain, so
-this evaluator is not tagged as a whole-definition port of `eval_def`. It is
-independent of both `evalCrepRuntimeExp` and the legacy compatibility
-evaluator `evalCrepFullExpState` from `CrepeSemantics`.
+stores memory as `α → Option α` plus an `α → Bool` domain, rather than HOL's
+total word memory plus a separate address set. Lean globals use
+`α → Option α`, while HOL globals are keyed by fixed-width 5-bit words and
+store `word_lab` cells; the Lean `loadGlob` index is also `α`. Consequently
+this evaluator is not tagged as a whole-definition port of `eval_def`. Those
+representation gaps do not affect the tagged `lookup_locals_eq_map_vars`
+theorem, which applies the evaluator only to `Var`. This evaluator is
+independent of both `evalCrepRuntimeExp` and the legacy compatibility evaluator
+`evalCrepFullExpState` from `CrepeSemantics`.
 -/
 
 namespace Flapjack

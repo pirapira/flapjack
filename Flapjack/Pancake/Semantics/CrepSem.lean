@@ -510,14 +510,15 @@ def evalCrepRuntimeExp
   | _ => none
 termination_by expression => sizeOf expression
 
-/-! ### Word-result constructor slice
+/-! ### Word-result constructor equations
 
-The equations below cover evaluator cases whose result shape does not depend
-on HOL's `word_op`, `word_sh`, or byte-memory helpers, including the explicit
-`crep_op Mul` multiplication case. They are polymorphic in the word carrier
-`α` and do not choose a RISC-V target. These are Flapjack-only projection
-facts: `CrepRuntimeState` still has target fields absent from HOL's
-`crepSem$state`, so they do not establish full evaluator correspondence. -/
+The equations below expose the production evaluator's complete wrapped result
+for each expression constructor. They are polymorphic in the word carrier and
+do not choose a RISC-V target. Equations for `Op`, `Cmp`, `Shift`, and byte
+loads deliberately expose the operation fields from `CrepRuntimeState`; they
+do not assert that those extra runtime fields equal HOL's word and byte
+operations. These remain Flapjack-only projection facts until the source-state
+adapter proves that relation. -/
 
 /-- Projection equation for the `Const` case. This is Flapjack-only adapter
 infrastructure: it wraps the raw production result as HOL's `word_lab`
@@ -579,6 +580,75 @@ theorem evalCrepRuntimeExp_load_wordLab
     · cases hmem : state.memory value with
       | word word => simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain, hmem, panTheWord]
     · simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain]
+
+/-- Production `LoadByte` projection. The target byte decoder remains visible
+in the equation, so this does not claim a HOL `mem_load_byte` correspondence. -/
+theorem evalCrepRuntimeExp_loadByte_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (address : CrepExp α) :
+    (evalCrepRuntimeExp state (.loadByte address)).map PanWordLab.word =
+      (evalCrepRuntimeExp state address).bind fun value =>
+        (crepRuntimeLoadByte state value).map PanWordLab.word := by
+  simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+
+/-- Production `Load32` projection. Alignment, byte order, and byte decoding
+remain the target model's operations, not HOL premises. -/
+theorem evalCrepRuntimeExp_load32_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (address : CrepExp α) :
+    (evalCrepRuntimeExp state (.load32 address)).map PanWordLab.word =
+      (evalCrepRuntimeExp state address).bind fun value =>
+        (crepRuntimeLoad32 state value).map PanWordLab.word := by
+  simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+
+/-- Production list-valued `Op` projection, with the target's word operation
+left explicit. This is not a port of HOL `word_op_def` until a target bridge is
+proved. -/
+theorem evalCrepRuntimeExp_op_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : BinOp)
+    (expressions : List (CrepExp α)) :
+    (evalCrepRuntimeExp state (.op operator expressions)).map PanWordLab.word =
+      (expressions.mapM (evalCrepRuntimeExp state)).bind fun values =>
+        (state.memoryModel.wordOp operator values).map PanWordLab.word := by
+  simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+
+/-- Production `Cmp` projection, exposing the target comparison operation. -/
+theorem evalCrepRuntimeExp_cmp_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Cmp)
+    (left right : CrepExp α) :
+    (evalCrepRuntimeExp state (.cmp operator left right)).map PanWordLab.word = (do
+      let leftValue ← evalCrepRuntimeExp state left
+      let rightValue ← evalCrepRuntimeExp state right
+      pure (.word (state.memoryModel.compare operator leftValue rightValue))) := by
+  simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+
+/-- Production `Shift` projection, exposing the target shift operation. -/
+theorem evalCrepRuntimeExp_shift_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Shift)
+    (left right : CrepExp α) :
+    (evalCrepRuntimeExp state (.shift operator left right)).map PanWordLab.word = (do
+      let leftValue ← evalCrepRuntimeExp state left
+      let rightValue ← evalCrepRuntimeExp state right
+      (state.memoryModel.shift operator leftValue rightValue).map PanWordLab.word) := by
+  simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
 
 /-- The production `CrepOp.mul` equation for every argument-list shape,
 expressed with HOL's complete wrapped result type. This is generic in `α` and

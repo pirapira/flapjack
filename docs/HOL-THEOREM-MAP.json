@@ -4776,6 +4776,78 @@
     "reviewer": "Kernel-checked RStruct constructor specialization of HOL compile_exp_correct. It retains the translated successful-evaluation, context-view equality, pointwise field-validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions. The per-field induction hypotheses carry those same premises and are assembled as a list-indexed induction family. This is intentionally untagged because HOL has one universally quantified theorem with no named RStruct theorem/case, and the Lean interface uses PanSemState total lookup functions plus explicit bytesInWord rather than HOL finite maps and fixed-width eval."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectNFieldCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked NField constructor specialization over production structCompileExp/evalPanValueExp. It retains successful evaluation, projected struct-context equality, pointwise Bool field validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions; its recursive receiver hypothesis carries the same premises and conclusions. The field result is aligned between HOL ALOOKUP and production structFindFieldIndex by the validated field-name order. It is intentionally untagged because HOL has only the universal compile_exp_correct theorem. Lean uses PanSemState total lookups, Bool/list-backed finite-map adapters, and explicit bytesInWord; structInfosOk is retained but unused in this case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueShape_matches_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Bool shape-match reflection helper for nested PanValue shapes; NField proof support only, with no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueShapeList_matches_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "List form of the shape-match reflection helper; supports field-shape lookup and is not a standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupPanValueField_eq_lookupInfo",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lawful-BEq adapter identifying named-value field lookup with InfoMap lookup; NField proof support only."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projects field shape matching to the selected field's declared shape; helper for the NField case, with no separate HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structFindFieldIndex_lookupAligned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Connects the production first-match structFindFieldIndex to the selected value at the same list index; helper for the NField proof, not a HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFieldValuesFieldsOkBool_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projects Bool field-validity across a named record to the value selected by lookupPanValueField; NField proof support only."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueShape_eq_panSemShapeOf",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Relates runtime matching shapes to the context-free semantic shape function; helper for NField shape preservation, not a separate HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueShapeList_eq_panSemShapeOf",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "List form of the runtime/semantic shape correspondence; NField proof support only."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

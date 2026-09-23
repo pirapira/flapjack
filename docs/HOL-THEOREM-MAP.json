@@ -2323,7 +2323,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "opt_mmap_eval_is_wf_shape_v",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "evalPanValueExpsWfShapeOfStateRel",
+    "lean_name": "evalPanSemStateExpsWfShapeOfStateRel",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (source comparison)"
   },

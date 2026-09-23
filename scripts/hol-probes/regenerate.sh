@@ -91,6 +91,8 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_state_eval_probeScript.sml pan_sem_state_eval_probe.out \
+  word_load_hit word32_big "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_evaluate_decls_probeScript.sml pan_evaluate_decls_probe.out \

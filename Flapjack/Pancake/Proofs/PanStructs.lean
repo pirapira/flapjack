@@ -56,6 +56,15 @@ theorem structCompileShapes_eq_map (context : StructContext) :
   | cons shape shapes ih =>
       simp [structCompileShapeWF.structCompileShapesWF, ih]
 
+/-- Exact port of the local HOL `UNCURRY_EQ_o_SND`
+    (`pan_structsProofScript.sml:552`). -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "UNCURRY_EQ_o_SND" 552]
+theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
+    Function.uncurry (fun _ : α => f) = f ∘ Prod.snd := by
+  funext p
+  cases p
+  rfl
+
 /-- HOL's mutual `is_wf_shape_compile_shape`
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in

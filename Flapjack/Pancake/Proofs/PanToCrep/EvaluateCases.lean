@@ -1166,6 +1166,73 @@ theorem panSemEvaluateRiscV64CodeState_callReturnParameter_ofEntry
         handler panSemBitVec64BytesInWord state function value hentry hclock
         (some (panSemBitVec64MemoryAccess state))
 
+theorem panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (handler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (function name : FunName) (value oldValue : RiscV.Word 64)
+    (hentry : panSemCodeLookup state.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hdestination : state.locals name = some (.word oldValue))
+    (hclock : state.clock ≠ 0) :
+    panSemEvaluateRiscV64CodeState context primitive handler state
+      (.call (some (some (.local, name), none)) function [.const value] :
+        Prog (RiscV.Word 64)) =
+      some (.control (.normal
+        (updatePanValueMap state.locals name (.word value))
+        state.globals state.memory state.ffi), decPanClock state.clock) := by
+  let program : Prog (RiscV.Word 64) :=
+    .call (some (some (.local, name), none)) function [.const value]
+  have hprogramFuel : panSemProgFuel program = 2 := by
+    simp [program, panSemProgFuel, panSemCallInfoFuel,
+      panSemExpFuel, panSemExpListFuel]
+  have hclockLower : 2 ≤ state.clock + 1 := by omega
+  have hbodyLower : 3 ≤ max (panSemProgFuel program)
+      (panSemCodeBodyFuel state.code) + 1 := by
+    rw [hprogramFuel]
+    omega
+  have hfuelLower : 5 ≤ panSemCodeEvaluateFuel state program := by
+    unfold panSemCodeEvaluateFuel
+    have hmul := Nat.mul_le_mul hclockLower hbodyLower
+    omega
+  obtain ⟨tail, hfuelLeft⟩ := Nat.exists_eq_add_of_le hfuelLower
+  have hfuel : panSemCodeEvaluateFuel state program = tail + 5 := by
+    rw [hfuelLeft]
+    omega
+  have hargs : evalPanValueExps state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress panSemBitVec64BytesInWord
+      [.const value] (memoryAccess := some (panValueMemoryAccessOfModel
+        panSemBitVec64WordModel state.memaddrs state.sharedMemaddrs state.be)) =
+        some [.word value] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+      evalPanValueExp]
+  have hcallee : lookupPanSemCodeCall state.structs state.code function
+      [.word value] = some
+        (.return (.var .local "parameter"), .one,
+          fun key => if key == "parameter" then some (.word value) else none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters, panValueShape,
+      panShapeMatches]
+    all_goals
+      funext key
+      simp [updatePanValueMap, beq_iff_eq]
+  have hassignment : assignPanValueCallResult state.locals state.globals
+      (some (.local, name)) [.word value] state.structs =
+        some (updatePanValueMap state.locals name (.word value), state.globals) := by
+    simp [assignPanValueCallResult, panValueAssignmentValid, hdestination,
+      panValueShape, panShapeMatches]
+  unfold panSemEvaluateRiscV64CodeState panSemEvaluateCodeStateWithMemoryModel
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  have hfuelConcrete : panSemCodeEvaluateFuel state program = tail + 5 := hfuel
+  rw [hfuelConcrete]
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+    evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    hassignment, panValueShape, panShapeMatches, decPanClock]
+
 
 /-! Actual-state fixed-RV64 Call simulation for a nonempty source code map.
 The callee's parameter slot and returned body are derived from `code_rel`;
@@ -1268,6 +1335,183 @@ theorem panToCrepPcCompileCorrectCallReturnParameterCodeStateRiscV64
   · simpa [panSemCodeStateAfter, sourceResult, targetPost,
       clearCrepRuntimeLocals, decCrepClock] using hcode
   · simpa [panSemCodeStateAfter, sourceResult] using hexcp
+
+/-! Actual-state fixed-RV64 Call simulation for an existing local destination.
+The destination slot comes from the related proof context, while the callee
+body and parameter slot come from code_rel. This remains untagged induction
+support. -/
+theorem panToCrepPcCompileCorrectCallAssignParameterCodeStateRiscV64
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (function name : FunName) (value oldValue : RiscV.Word 64)
+    (targetSlot : Nat)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals)
+    (_hlocalized : localisedProg
+      (.call (some (some (.local, name), none)) function [.const value] :
+        Prog (RiscV.Word 64)))
+    (hdestination : sourceState.locals name = some (.word oldValue))
+    (hcontextDestination : FLOOKUP context.vars name = some (.one, [targetSlot]))
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hclock : sourceState.clock ≠ 0) :
+    let program : Prog (RiscV.Word 64) :=
+      .call (some (some (.local, name), none)) function [.const value]
+    let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
+      (.control (.normal (updatePanValueMap sourceState.locals name (.word value))
+        sourceState.globals sourceState.memory sourceState.ffi),
+        decPanClock sourceState.clock)
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState program = some sourceResult ∧
+    ∃ targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
+        (compileCodeRelProg context program) = some (.normal, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState sourceResult) targetPost ∧
+      codeRel context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState sourceResult).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState sourceResult).exceptionShapes ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState sourceResult).locals targetPost.locals ∧
+      decPanClock sourceState.clock = targetPost.clock := by
+  let program : Prog (RiscV.Word 64) :=
+    .call (some (some (.local, name), none)) function [.const value]
+  let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
+    (.control (.normal (updatePanValueMap sourceState.locals name (.word value))
+      sourceState.globals sourceState.memory sourceState.ffi),
+      decPanClock sourceState.clock)
+  let targetLocals := updateCrepRuntimeLocal targetState.locals targetSlot (.word value)
+  let targetPost : CrepRuntimeState (RiscV.Word 64) σ :=
+    { decCrepClock targetState with locals := targetLocals }
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals,
+    hclockRel, hbe, hffi, hbase, htop⟩
+  have hsource : panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive
+      sourceHandler sourceState program = some sourceResult := by
+    simpa [program, sourceResult] using
+      panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry
+        sourceContext sourcePrimitive sourceHandler sourceState function name
+        value oldValue hentry hdestination hclock
+  have hsourceDestinationLookup : FLOOKUP sourceState.locals name =
+      some (.word oldValue) := by
+    simpa [FLOOKUP] using hdestination
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one) := by
+    change panSemCodeLookup sourceState.code function = _
+    exact hentry
+  have hcodeEntry := codeRelImp context
+    (panSemCodeAsLookup sourceState.code) targetState.code hcode function
+    [("parameter", .one)] (.return (.var .local "parameter")) .one hsourceLookup
+  rcases hcodeEntry with ⟨_hbodyLocalized, _hfunc, htargetLookup⟩
+  have htargetCodeLookup : FLOOKUP targetState.code function =
+      some ([0], .return [.var 0]) := by
+    simpa [Shape.shapeSize, ctxtFc, withShape, FUPDATE_LIST, FUPDATE,
+      FLOOKUP_update, compileCodeRelProg, compileProgHOL, compileExpHOL] using
+        htargetLookup
+  have htargetCallLookup : lookupCrepRuntimeCode function [value]
+      targetState.code =
+        some (.return [.var 0], fun key =>
+          if key == 0 then some (.word value) else none) := by
+    unfold lookupCrepRuntimeCode
+    rw [htargetCodeLookup]
+    simp [assignCrepRuntimeLocals]
+    constructor
+    · rfl
+    · funext key
+      by_cases hkey : key = 0
+      · simp [updateCrepRuntimeLocal, hkey]
+      · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
+        simp [updateCrepRuntimeLocal, hzero, hkey]
+  obtain ⟨slots, hsourceContextSlots, hslotLength, hsourceWords, _hwf⟩ :=
+    localsRelLookupCtxt context sourceState.locals targetState.locals name
+      (.word oldValue) hlocals (by simpa [FLOOKUP] using hdestination)
+  have hslots : slots = [targetSlot] := by
+    have hpairs : (panValueShape [] (.word oldValue), slots) =
+        (.one, [targetSlot]) := by
+      apply Option.some.inj
+      rw [← hsourceContextSlots, hcontextDestination]
+    exact congrArg Prod.snd hpairs
+  have htargetOld : targetState.locals targetSlot = some (.word oldValue) := by
+    have hmapProp := (optMmapEqSome slots (FLOOKUP targetState.locals)
+      ((panValueFlatten (.word oldValue)).map PanWordLab.word)).mp hsourceWords
+    rw [hslots] at hmapProp
+    simpa [panValueFlatten, FLOOKUP] using hmapProp
+  have hcallNames : ([targetSlot].eraseDups).length = 1 := by
+    simp [List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
+  have htargetCallAssign : crepRuntimeAssignExisting targetState.locals
+      [targetSlot] [value] = some targetLocals := by
+    simp [targetLocals, crepRuntimeAssignExisting, htargetOld, hcallNames]
+  have hcallInfo : crepRuntimeCallInfoValid
+      (some ([targetSlot], none) : Option (List Nat ×
+        Option ((RiscV.Word 64) × CrepProg (RiscV.Word 64)))) = true := by
+    simp [crepRuntimeCallInfoValid, hcallNames]
+  have htargetClock : targetState.clock ≠ 0 := by omega
+  have hcompiled : compileCodeRelProg context program =
+      .call (some ([targetSlot], none)) function [.const value] := by
+    simp [program, compileCodeRelProg, compileProgHOL, compileArgsHOL,
+      compileExpHOL, callDestinationNamesHOL, wrapRt, hcontextDestination]
+  have htargetRun : evalCrepRuntimeResult targetHandler targetPrimitive 3
+      targetState (compileCodeRelProg context program) =
+        some (.normal, targetPost) := by
+    simp [targetPost, targetLocals, hcompiled, evalCrepRuntimeResult,
+      evalCrepRuntimeProg, evalCrepRuntimeCall, evalCrepRuntimeExps,
+      evalCrepRuntimeExp, htargetCallLookup, htargetCallAssign,
+      hcallInfo, htargetClock, decCrepClock,
+      fixCrepRuntimeClock, crepRuntimeCallerState,
+      clearCrepRuntimeLocals, panTheWord]
+  have hlocalsPost : localsRel context
+      (updatePanValueMap sourceState.locals name (.word value)) targetLocals := by
+    have hupdated := localRelLeZipUpdatePreserved context sourceState.locals
+      targetState.locals name (.word oldValue) (.word value) .one [targetSlot]
+      hlocals hsourceDestinationLookup hcontextDestination
+      (by simp [panValueShape]) (by simp)
+    have hsourceMap : FUPDATE sourceState.locals (name, .word value) =
+        updatePanValueMap sourceState.locals name (.word value) := by
+      funext key
+      by_cases hkey : name = key
+      · subst key
+        simp [FUPDATE, updatePanValueMap]
+      · have hforward : (name == key) = false :=
+          beq_eq_false_iff_ne.mpr hkey
+        have hbackward : (key == name) = false :=
+          beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+        simp [FUPDATE, updatePanValueMap, hforward, hbackward]
+    have htargetListMap : FUPDATE_LIST targetState.locals
+        ([targetSlot].zip ((panValueFlatten (.word value)).map PanWordLab.word)) =
+        updateCrepRuntimeLocal targetState.locals targetSlot (.word value) := by
+      calc
+        FUPDATE_LIST targetState.locals
+            ([targetSlot].zip ((panValueFlatten (.word value)).map PanWordLab.word)) =
+              FUPDATE targetState.locals (targetSlot, .word value) := by
+                simp [FUPDATE_LIST, panValueFlatten]
+        _ = updateCrepRuntimeLocal targetState.locals targetSlot (.word value) := by
+          funext key
+          by_cases hkey : targetSlot = key
+          · subst key
+            simp [FUPDATE, updateCrepRuntimeLocal]
+          · have hforward : (targetSlot == key) = false :=
+              beq_eq_false_iff_ne.mpr hkey
+            simp [FUPDATE, updateCrepRuntimeLocal, hforward]
+    rw [hsourceMap, htargetListMap] at hupdated
+    simpa [targetLocals] using hupdated
+  refine ⟨hsource, targetPost, htargetRun, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [stateRel, panSemCodeStateAfter, targetPost,
+      decCrepClock, decPanClock, hmem, hmemaddrs, hshared, hstructs,
+      hglobals, hclockRel, hbe, hffi, hbase, htop]
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost, decCrepClock] using hcode
+  · simpa [panSemCodeStateAfter, sourceResult] using hexcp
+  · simpa [panSemCodeStateAfter, sourceResult, targetPost, decCrepClock] using hlocalsPost
+  · simp [targetPost, decPanClock, decCrepClock, hclockRel]
 
 theorem panToCrepPcCompileCorrectSkipCodeStateRiscV64
     (context : PanToCrepProofContext (RiscV.Word 64))

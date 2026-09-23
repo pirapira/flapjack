@@ -15,14 +15,123 @@ open Flapjack
 def context : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 1 }
 
-def fixedWidthContext : PanToCrepCompileContext Nat :=
-  { vars := [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
-    functions := []
-    exceptions := []
-    maxVar := 2 }
+def finiteMapContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def fixedWidthHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 2 }
+
+def emptyHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FEMPTY, funcs := FEMPTY, eids := FEMPTY, vmax := 0 }
+
+def emptyOneHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("empty_one", (.one, []))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 0 }
+
+def highTailHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("ptr1", (.one, [4, 100])), ("len1", (.one, [5])),
+       ("ptr2", (.one, [6])), ("len2", (.one, [7]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 100 }
+
+def highTailExtCall : Prog Nat :=
+  .extCall "f" (.var .local "ptr1") (.var .local "len1")
+    (.var .local "ptr2") (.var .local "len2")
+
+def sharedHighTailHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("x", (.one, [1, 99]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 99 }
+
+def sharedHighTailExtCall : Prog Nat :=
+  .extCall "f" (.var .local "x") (.var .local "x")
+    (.var .local "x") (.var .local "x")
+
+def extraNamesHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("extra_names", (.one, [4, 5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def missingNamesHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("missing_names", (.comb [.one, .one], [4]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 4 }
 
 def pairLoad : Prog Nat :=
   .return (.load (.comb [.one, .one]) (.var .local "p"))
+
+def riscv64PairContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FUPDATE_LIST FEMPTY
+      [("p", (.one, [0])), ("x", (.one, [1])), ("y", (.one, [2]))]
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 2 }
+
+def riscv64PairLoad : Prog (BitVec 64) :=
+  .return (.load (.comb [.one, .one]) (.var .local "p"))
+
+def riscv64PairStore : Prog (BitVec 64) :=
+  .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
+
+def riscv64EmptyStructReturn : Prog (BitVec 64) :=
+  .return (.rStruct [])
+
+def riscv64EmptyHOLContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FEMPTY, funcs := FEMPTY, eids := FEMPTY, vmax := 0 }
+
+def riscv64ShadowContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def riscv64ShadowReturn : Prog (BitVec 64) :=
+  .return (.var .local "p")
+
+def isEmptyRiscv64Return : CrepProg (BitVec 64) → Bool
+  | .return [] => true
+  | _ => false
+
+def isRiscv64ShadowReturn : CrepProg (BitVec 64) → Bool
+  | .return [.var 5] => true
+  | _ => false
+
+#guard isEmptyRiscv64Return
+  (compileProgRiscV riscv64EmptyHOLContext riscv64EmptyStructReturn)
+#guard isRiscv64ShadowReturn
+  (compileProgRiscV riscv64ShadowContext riscv64ShadowReturn)
+
+
+def isRiscv64PairLoad : CrepProg (BitVec 64) → Bool
+  | .return [.load (.var 0), .load (.op .add [.var 0, .const stride])] =>
+      stride == (8 : BitVec 64)
+  | _ => false
+
+#guard isRiscv64PairLoad (compileProgRiscV riscv64PairContext riscv64PairLoad)
+
+def isRiscv64PairStore : CrepProg (BitVec 64) → Bool
+  | .dec 3 (.var 0) (.dec 4 (.var 1) (.dec 5 (.var 2)
+      (.seq (.store (.var 3) (.var 4))
+        (.seq (.store (.op .add [.var 3, .const stride]) (.var 5)) .skip)))) =>
+      stride == (8 : BitVec 64)
+  | _ => false
+
+#guard isRiscv64PairStore
+  (compileProgRiscV riscv64PairContext riscv64PairStore)
 
 def pairStore : Prog Nat :=
   .store (.var .local "p") (.rStruct [.var .local "x", .var .local "y"])
@@ -39,9 +148,10 @@ def isFixedPairStore8 : CrepProg Nat → Bool
         (.seq (.store (.op .add [.var 3, .const 8]) (.var 5)) .skip)))) => true
   | _ => false
 
-def fixedWidthParityGuard : Bool :=
-  isFixedPairLoad8 (compileProgFixed fixedWidthContext pairLoad) &&
-  isFixedPairStore8 (compileProgFixed fixedWidthContext pairStore)
+def finiteMapParityGuard : Bool :=
+  match compileProgHOL finiteMapContext (.return (.var .local "p")) with
+  | .return [.var 5] => true
+  | _ => false
 
 def emptyOneGlobalContext : CompileContext Nat :=
   { vars := [("empty_one", (.one, []))], functions := [], exceptions := [],
@@ -118,6 +228,16 @@ def isSkip : CrepProg Nat → Bool
   | .skip => true
   | _ => false
 
+def isHighTailExtCall : CrepProg Nat → Bool
+  | .dec 101 (.var 4) (.dec 102 (.var 5) (.dec 103 (.var 6)
+      (.dec 104 (.var 7) (.extCall "f" 101 102 103 104)))) => true
+  | _ => false
+
+def isSharedHighTailExtCall : CrepProg Nat → Bool
+  | .dec 100 (.var 1) (.dec 101 (.var 1) (.dec 102 (.var 1)
+      (.dec 103 (.var 1) (.extCall "f" 100 101 102 103)))) => true
+  | _ => false
+
 def isReturnSeven : CrepProg Nat → Bool
   | .return [.const 7] => true
   | _ => false
@@ -138,6 +258,25 @@ def isSeqSkipTick : CrepProg Nat → Bool
   | .seq .skip .tick => true
   | _ => false
 
+def nativeProgramParityGuard : Bool :=
+  isSkip (compileProgHOL emptyHOLContext (.skip : Prog Nat)) &&
+  isReturnSeven (compileProgHOL emptyHOLContext (.return (.const 7))) &&
+  isEmptyReturn (compileProgHOL emptyHOLContext emptyStructReturn) &&
+  isBreak (compileProgHOL emptyHOLContext (.break : Prog Nat)) &&
+  isContinue (compileProgHOL emptyHOLContext (.continue : Prog Nat)) &&
+  isSeqSkipTick (compileProgHOL emptyHOLContext (.seq .skip (.tick : Prog Nat))) &&
+  isHighTailExtCall (compileProgHOL highTailHOLContext highTailExtCall) &&
+  isSharedHighTailExtCall
+    (compileProgHOL sharedHighTailHOLContext sharedHighTailExtCall) &&
+  isTailCallToF (compileProgHOL emptyHOLContext missingGlobalCall) &&
+  isTailCallToF (compileProgHOL emptyOneHOLContext emptyOneGlobalCall) &&
+  isExtraNamesCallToF (compileProgHOL extraNamesHOLContext extraNamesGlobalCall) &&
+  isMissingNamesCallToF (compileProgHOL missingNamesHOLContext missingNamesGlobalCall)
+
+def finiteMapLoadStoreParityGuard : Bool :=
+  isFixedPairLoad8 (compileProgHOL fixedWidthHOLContext pairLoad) &&
+  isFixedPairStore8 (compileProgHOL fixedWidthHOLContext pairStore)
+
 def parityGuard : Bool :=
   isSkip (compileProg context (.skip : Prog Nat)) &&
   isReturnSeven (compileProg context (.return (.const 7))) &&
@@ -154,7 +293,8 @@ def parityGuard : Bool :=
   isExtraNamesCallToF (compileProg extraNamesLocalContext extraNamesLocalCall) &&
   isMissingNamesCallToF (compileProg missingNamesLocalContext missingNamesLocalCall) &&
   isValidPairCallToF (compileProg validLocalContext validLocalCall) &&
-  fixedWidthParityGuard
+  finiteMapParityGuard && nativeProgramParityGuard &&
+    finiteMapLoadStoreParityGuard
 
 example : compileProg context missingGlobalCall = .call none "f" [] := by
   simp [missingGlobalCall, compileProg, compileArgs, callDestinationNames,
@@ -214,7 +354,9 @@ example :
 
 #eval parityGuard
 #guard parityGuard
-#guard fixedWidthParityGuard
+#guard finiteMapParityGuard
+#guard nativeProgramParityGuard
+#guard finiteMapLoadStoreParityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then

@@ -57,6 +57,20 @@ val _ = print_eval "raise_pair_later"
                     [panLang$Const (7w : 8 word); panLang$Const 9w])));
             return := panLang$One |>]``;
 
+val _ = print_eval "raise_pair_later_64"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Dec «a» panLang$One
+              (panLang$Const (3w : 64 word))
+              (panLang$Dec «b» panLang$One
+                (panLang$Const (5w : 64 word))
+                (panLang$Raise «E»
+                  (panLang$RStruct
+                    [panLang$Const (7w : 64 word); panLang$Const 9w])));
+            return := panLang$One |>]``;
+
 val _ = print_eval "handled_pair"
   ``pan_to_crep$compile_to_crep
       [panLang$ExnDecl «E» (panLang$Comb [panLang$One; panLang$One]);
@@ -75,5 +89,53 @@ val _ = print_eval "handled_pair"
                   SOME («E», «pair», panLang$Skip)))
                «f» [];
              return := panLang$One |>]``;
+
+(* HOL alist_to_fmap right-folds exception declarations: the first E keeps
+   code 0w even after a later E, while intervening F keeps code 1w. *)
+val _ = print_eval "duplicate_exceptions"
+  ``pan_to_crep$compile_to_crep
+      [panLang$ExnDecl «E» panLang$One;
+       panLang$ExnDecl «F» panLang$One;
+       panLang$ExnDecl «E» panLang$One;
+       panLang$Function
+         <| name := «f»; inline := F; export := F; params := [];
+            body := panLang$Raise «E» (panLang$Const (7w : 8 word));
+            return := panLang$One |>;
+       panLang$Function
+         <| name := «g»; inline := F; export := F; params := [];
+            body := panLang$Raise «F» (panLang$Const (9w : 8 word));
+            return := panLang$One |>]``;
+
+val _ = print_eval "crep_vars_empty"
+  ``pan_to_crep$crep_vars ([] : (mlstring # panLang$shape) list)``;
+
+val _ = print_eval "crep_vars_nested"
+  ``pan_to_crep$crep_vars
+      [(«left», panLang$One);
+       («pair», panLang$Comb [panLang$One; panLang$One]);
+       («right», panLang$One)]``;
+
+val _ = print_eval "mk_ctxt_fields"
+  ``pan_to_crep$mk_ctxt
+      (FEMPTY |+ («x», (panLang$One, [0])))
+      (FEMPTY |+ («f», ([(«x», panLang$One)], panLang$One)))
+      3
+      (FEMPTY |+ («E», (2w : 8 word)))``;
+
+val _ = print_eval "make_vmap_shaped"
+  ``pan_to_crep$make_vmap
+      [(«x», panLang$One);
+       («pair», panLang$Comb [panLang$One; panLang$One])]``;
+
+val _ = print_eval "make_vmap_duplicate"
+  ``pan_to_crep$make_vmap
+      [(«x», panLang$One);
+       («x», panLang$Comb [panLang$One; panLang$One])]``;
+
+val _ = print_eval "make_vmap_duplicate_lookup"
+  ``FLOOKUP
+      (pan_to_crep$make_vmap
+        [(«x», panLang$One);
+         («x», panLang$Comb [panLang$One; panLang$One])]) «x»``;
 
 val _ = print_eval "done" ``T``;

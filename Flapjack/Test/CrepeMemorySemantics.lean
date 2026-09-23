@@ -64,7 +64,7 @@ def checkedWord32Store : Option (CrepMemoryState (RiscV.Word 64)) :=
 #guard checkedWord32Store.isSome
 
 def checkedExpLocals : Nat → Option (RiscV.Word 64) := fun _ => none
-def checkedExpGlobals : RiscV.Word 64 → Option (RiscV.Word 64) := fun _ => none
+def checkedExpGlobals : BitVec 5 → Option (PanWordLab (RiscV.Word 64)) := fun _ => none
 
 def checkedExpressionWordLoad : Option (RiscV.Word 64) :=
   evalCrepCheckedExpStateFull checkedExpLocals checkedExpGlobals

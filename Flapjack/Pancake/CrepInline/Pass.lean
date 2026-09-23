@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.CrepInline
 import Std.Data.HashSet.Lemmas
@@ -189,6 +190,37 @@ def crepInlineTopRecursiveByNames [BEq FunName] [LawfulBEq FunName]
       inlineNames.contains function.name)).map (fun function =>
         (function.name, (function.params, function.body)))
   crepInlineTopRecursive inlineable functions
+
+/-- HOL `crep_inline$compile_inl_top`: filter the compiled Crep function
+    triples by the source inline-name set, then inline each body with its own
+    name removed from the finite active set. The source finite map's first
+    duplicate binding is represented by `crepInlineLookup`'s first-match
+    lookup on the filtered list. -/
+@[hol "cakeml/pancake/crep_inlineScript.sml" "compile_inl_top_def"]
+def compileInlTopHOL [BEq FunName] [LawfulBEq FunName]
+    [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName)
+    (functions : List (FunName × List Nat × CrepProg α)) :
+    List (FunName × List Nat × CrepProg α) :=
+  let inlineable : List (CrepInlineEntry α) :=
+    (functions.filter (fun function => inlineNames.contains function.1)).map
+      fun (name, parameters, body) => (name, (parameters, body))
+  let active := crepInlineActiveNames inlineable
+  functions.map fun (name, parameters, body) =>
+    (name, parameters,
+      crepInlineProgRecursive inlineable (active.erase name) body)
+
+/-- Flapjack-only downstream adapter: run HOL's triple-list inline pass, then
+    reattach the source return-shape metadata needed by later executable
+    passes. This adapter has no HOL original because HOL keeps triples. -/
+def compileInlTopHOLWithMetadata [BEq FunName] [LawfulBEq FunName]
+    [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
+    (inlineNames : List FunName)
+    (functions : List (CompiledFunction α)) : List (CompiledFunction α) :=
+  let triples := functions.map fun function =>
+    (function.name, function.params, function.body)
+  let inlined := compileInlTopHOL inlineNames triples
+  functions.zipWith (fun original (_, _, body) => { original with body }) inlined
 
 /-! Source-named port of CakeML Pancake's `compile_inl_top_def`
     (`crep_inlineScript.sml:264`).  The production recursive traversal is the

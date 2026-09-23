@@ -22,11 +22,8 @@ HOL4=/home/zksecurity/HOL CAKEMLDIR=$PWD/cakeml \
   bash scripts/hol-probes/regenerate.sh
 ```
 
-The homogeneous Lean counterpart models the finite map as `Nat → Option Nat`;
-the probe's 5-bit word keys `3w`/`4w` are transcribed as `3`/`4` and the
-stored `Word nw` values as the numeral `n`.  Only the observed lookup result is
-compared, since the finite-map representation is an implementation detail of
-the original state.
+The Lean counterpart models the finite map extensionally with `BitVec 5`
+keys and a `LoopWordLoc` cell wrapper, matching the source key and cell shapes.
 -/
 
 namespace Flapjack.Test.LoopSetGlobalsParity
@@ -34,48 +31,48 @@ namespace Flapjack.Test.LoopSetGlobalsParity
 open Flapjack
 
 /-- Transcribed from `set_globals_new=SOME (Word 5w)`. -/
-def originalNew : Option Nat :=
-  some 5
+def originalNew : Option (LoopStateCell Nat) :=
+  some (.word 5)
 
 /-- Transcribed from `set_globals_overwrite=SOME (Word 5w)`. -/
-def originalOverwrite : Option Nat :=
-  some 5
+def originalOverwrite : Option (LoopStateCell Nat) :=
+  some (.word 5)
 
 /-- Transcribed from `set_globals_miss=NONE`. -/
-def originalMiss : Option Nat :=
+def originalMiss : Option (LoopStateCell Nat) :=
   none
 
 /-- Transcribed from `set_globals_sibling=SOME (Word 1w)`. -/
-def originalSibling : Option Nat :=
-  some 1
+def originalSibling : Option (LoopStateCell Nat) :=
+  some (.word 1)
 
-def emptyGlobals : Nat → Option Nat :=
+def emptyGlobals : BitVec 5 → Option (LoopStateCell Nat) :=
   fun _ => none
 
-def oneGlobal : Nat → Option Nat
-  | 3 => some 1
+def oneGlobal : BitVec 5 → Option (LoopStateCell Nat)
+  | 3 => some (.word 1)
   | _ => none
 
-def twoGlobals : Nat → Option Nat
-  | 3 => some 1
-  | 4 => some 7
+def twoGlobals : BitVec 5 → Option (LoopStateCell Nat)
+  | 3 => some (.word 1)
+  | 4 => some (.word 7)
   | _ => none
 
-#guard updateLoopGlobal emptyGlobals 3 5 3 == originalNew
-#guard updateLoopGlobal oneGlobal 3 5 3 == originalOverwrite
-#guard updateLoopGlobal emptyGlobals 3 5 4 == originalMiss
-#guard updateLoopGlobal twoGlobals 4 7 3 == originalSibling
+#guard updateLoopGlobal emptyGlobals (3 : BitVec 5) (.word 5) (3 : BitVec 5) == originalNew
+#guard updateLoopGlobal oneGlobal (3 : BitVec 5) (.word 5) (3 : BitVec 5) == originalOverwrite
+#guard updateLoopGlobal emptyGlobals (3 : BitVec 5) (.word 5) (4 : BitVec 5) == originalMiss
+#guard updateLoopGlobal twoGlobals (4 : BitVec 5) (.word 7) (3 : BitVec 5) == originalSibling
 
 def runChecks : IO Bool := do
   let checks :=
     [ ("Loop set_globals inserts new global",
-        updateLoopGlobal emptyGlobals 3 5 3 == originalNew),
+        updateLoopGlobal emptyGlobals (3 : BitVec 5) (.word 5) (3 : BitVec 5) == originalNew),
       ("Loop set_globals overwrites existing global",
-        updateLoopGlobal oneGlobal 3 5 3 == originalOverwrite),
+        updateLoopGlobal oneGlobal (3 : BitVec 5) (.word 5) (3 : BitVec 5) == originalOverwrite),
       ("Loop set_globals leaves missing key absent",
-        updateLoopGlobal emptyGlobals 3 5 4 == originalMiss),
+        updateLoopGlobal emptyGlobals (3 : BitVec 5) (.word 5) (4 : BitVec 5) == originalMiss),
       ("Loop set_globals leaves sibling global untouched",
-        updateLoopGlobal twoGlobals 4 7 3 == originalSibling) ]
+        updateLoopGlobal twoGlobals (4 : BitVec 5) (.word 7) (3 : BitVec 5) == originalSibling) ]
   let results ← checks.mapM fun (name, ok) => do
     if ok then
       IO.println s!"PASS {name}"

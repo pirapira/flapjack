@@ -19,9 +19,16 @@ explicit. Division follows the HOL rule and fails on a zero divisor.
 
 namespace Flapjack
 
+/-! HOL `loopSem` stores global slots as `word_loc` cells. This lightweight
+    wrapper preserves that constructor at the fixed-width map boundary. -/
+inductive LoopStateCell (α : Type u) where
+  | word (value : α)
+  | loc (identifier offset : Nat)
+  deriving BEq, Repr
+
 structure LoopState (α : Type u) where
   locals : Nat → Option α
-  globals : α → Option α
+  globals : BitVec 5 → Option (LoopStateCell α)
   memory : α → Option α
 inductive LoopResult (α : Type u) where
   | normal (state : LoopState α)
@@ -39,7 +46,7 @@ def loopResultState : LoopResult α → LoopState α
 
 theorem option_bind_result_state_globals
     (values : Option β) (continuation : β → Option (LoopResult α))
-    (global : α → Option α)
+    (global : BitVec 5 → Option (LoopStateCell α))
     (hcontinuation : ∀ value result,
       continuation value = some result → (loopResultState result).globals = global)
     (result : LoopResult α)
@@ -111,8 +118,8 @@ def updateLoopMemory [BEq α] (memory : α → Option α) (address value : α) :
     α → Option α :=
   fun current => if address == current then some value else memory current
 
-def updateLoopGlobal [BEq α] (globals : α → Option α) (address value : α) :
-    α → Option α :=
+def updateLoopGlobal (globals : BitVec 5 → Option (LoopStateCell α))
+    (address : BitVec 5) (value : LoopStateCell α) : BitVec 5 → Option (LoopStateCell α) :=
   fun current => if address == current then some value else globals current
 
 def loopReadLocals (locals : Nat → Option α) : List Nat → Option (List α)
@@ -207,7 +214,9 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   match expression with
   | .const value => some value
   | .var name => state.locals name
-  | .lookup address => state.globals address
+  | .lookup address => do
+      let .word value ← state.globals address | none
+      pure value
   | .load address => do
       let address ← evalLoopExp state address
       state.memory address
@@ -237,7 +246,9 @@ def evalLoopExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (state : LoopState α) : LoopExp α → Option α
   | .const value => some value
   | .var name => state.locals name
-  | .lookup address => state.globals address
+  | .lookup address => do
+      let .word value ← state.globals address | none
+      pure value
   | .load address => do
       let address ← evalLoopExpFull state address
       state.memory address
@@ -283,7 +294,9 @@ def evalLoopExpSource [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (state : LoopState α) (baseAddr topAddr : α) : LoopExp α → Option α
   | .const value => some value
   | .var name => state.locals name
-  | .lookup address => state.globals address
+  | .lookup address => do
+      let .word value ← state.globals address | none
+      pure value
   | .load address => do
       let address ← evalLoopExpSource state baseAddr topAddr address
       state.memory address

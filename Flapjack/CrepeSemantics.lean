@@ -1,6 +1,7 @@
 import Flapjack.Semantics
 import Flapjack.Ffi
 import Flapjack.PanMemoryModel
+import Flapjack.PanValues
 
 /-!
 Fuel-bounded executable semantics for the full scalar Crepe control fragment.
@@ -14,6 +15,9 @@ changing semantic representations between individual constructors.
 
 namespace Flapjack
 
+/-- Compact expression evaluator without a globals argument. It returns `none`
+    for `LoadGlob`; callers that need Cake's fixed-width global map should use
+    the state-aware Crep evaluator below. -/
 def evalCrepFullExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -24,7 +28,7 @@ def evalCrepFullExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .load address | .load32 address | .loadByte address => do
       let address ← evalCrepFullExp locals memory baseAddress topAddress address
       memory address
-  | .loadGlob address => memory address
+  | .loadGlob _ => none
   | .op operator [left, right] => do
       let left ← evalCrepFullExp locals memory baseAddress topAddress left
       let right ← evalCrepFullExp locals memory baseAddress topAddress right
@@ -64,7 +68,7 @@ structure CrepState (α : Type u) where
   /-- Global words are kept separate from ordinary memory, as in CakeML's
       `crepSem` state.  The default preserves the compact-state API for
       localized programs. -/
-  globals : α → Option α := fun _ => none
+  globals : BitVec 5 → Option (PanWordLab α) := fun _ => none
 
 /-! Canonical checked word-cell memory boundary.
 
@@ -197,7 +201,7 @@ def evalCrepFullExpState [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .load address | .load32 address | .loadByte address => do
       let address ← evalCrepFullExpState state baseAddress topAddress address
       state.memory address
-  | .loadGlob address => state.globals address
+  | .loadGlob address => (state.globals address).map panTheWord
   | .op operator [left, right] => do
       let left ← evalCrepFullExpState state baseAddress topAddress left
       let right ← evalCrepFullExpState state baseAddress topAddress right
@@ -235,7 +239,7 @@ def evalCrepFullExpStateFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
   | .load address | .load32 address | .loadByte address => do
       let address ← evalCrepFullExpStateFull state baseAddress topAddress address
       state.memory address
-  | .loadGlob address => state.globals address
+  | .loadGlob address => (state.globals address).map panTheWord
   | .op operator [left, right] => do
       let left ← evalCrepFullExpStateFull state baseAddress topAddress left
       let right ← evalCrepFullExpStateFull state baseAddress topAddress right
@@ -267,7 +271,7 @@ def evalCrepCheckedExpStateFull
     [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
     [OfNat α 2] [OfNat α 3]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (locals : Nat → Option α) (globals : α → Option α)
+    (locals : Nat → Option α) (globals : BitVec 5 → Option (PanWordLab α))
     (memoryState : CrepMemoryState α)
     (baseAddress topAddress : α) : CrepExp α → Option α
   | .const value => some value
@@ -284,7 +288,7 @@ def evalCrepCheckedExpStateFull
       let address ← evalCrepCheckedExpStateFull locals globals memoryState
         baseAddress topAddress address
       crepMemLoadByte memoryState address
-  | .loadGlob address => globals address
+  | .loadGlob address => (globals address).map panTheWord
   | .op operator [left, right] => do
       let left ← evalCrepCheckedExpStateFull locals globals memoryState
         baseAddress topAddress left

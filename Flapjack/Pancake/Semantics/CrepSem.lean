@@ -1,4 +1,6 @@
 import Flapjack.CrepeSemantics
+import Flapjack.FiniteMap.Basic
+import Flapjack.HolRef
 import Flapjack.PanValueFfiSemantics
 
 /-!
@@ -66,8 +68,12 @@ def natCrepRuntimeFfiState : FfiState Unit :=
 
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
-  globals : α → Option α
-  functions : List (CompiledFunction α)
+  /-- HOL `crepSem$state.globals` is a finite map from `5 word` to `word_lab`.
+      Lean's function representation is extensionally the same finite map;
+      `PanWordLab.word` retains the HOL cell wrapper. -/
+  globals : BitVec 5 → Option (PanWordLab α)
+  /-- HOL `crepSem$state.code`: the code map used by runtime function calls. -/
+  code : FunName → Option (List Nat × CrepProg α)
   memory : α → Option α
   memaddrs : α → Bool
   shMemaddrs : α → Bool
@@ -84,14 +90,37 @@ structure CrepRuntimeState (α σ : Type u) where
 
 /- Exact executable counterpart of CakeML Pancake's `dec_clock_def`
    (`crepSemScript.sml:145-148`).  The state is otherwise unchanged. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
+
+def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
+    (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
+  fun candidate => if key == candidate then some value else globals candidate
 
 /- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
    (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
    expose the caller's transient locals. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
+
+/-- Flapjack-only projection lemma for the production HOL empty-locals port. -/
+@[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).code = state.code := rfl
+
+def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    Option (CrepProg α × (Nat → Option α)) :=
+  match FLOOKUP code name with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length == values.length &&
+          parameters.eraseDups.length == parameters.length then
+        match assignCrepValues (fun _ => none) parameters values with
+        | some locals => some (body, locals)
+        | none => none
+      else none
 
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
@@ -309,7 +338,7 @@ def evalCrepRuntimeExp
   | .loadByte address => do
       let address ← evalCrepRuntimeExp state address
       crepRuntimeLoadByte state address
-  | .loadGlob address => state.globals address
+  | .loadGlob address => (state.globals address).map panTheWord
   | .op operator expressions => do
       let values ← expressions.mapM (evalCrepRuntimeExp state)
       state.memoryModel.wordOp operator values
@@ -382,7 +411,7 @@ def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=
   { caller with
     globals := callee.globals
-    functions := callee.functions
+    code := callee.code
     memory := callee.memory
     memaddrs := callee.memaddrs
     shMemaddrs := callee.shMemaddrs
@@ -423,7 +452,7 @@ mutual
         match evalCrepRuntimeExps caller arguments with
         | none => some (.error, caller)
         | some values =>
-            match lookupCrepCode function values caller.functions with
+            match lookupCrepRuntimeCode function values caller.code with
             | none => some (.error, caller)
             | some (body, calleeLocals) =>
                 if !crepRuntimeCallInfoValid info then
@@ -528,7 +557,8 @@ mutual
     | _fuel + 1, state, .storeGlob address value =>
         match evalCrepRuntimeExp state value with
         | some value =>
-            some (.normal, { state with globals := updateMemory state.globals address value })
+            let globals := updateCrepRuntimeGlobal state.globals address (.word value)
+            some (.normal, { state with globals := globals })
         | none => some (.error, state)
     | fuel + 1, state, .seq first second =>
         match evalCrepRuntimeProg handler primitive fuel state first with

@@ -29,7 +29,7 @@ def p1WordBoundaries :
     Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
   let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
     | Except.ok declarations => some declarations | Except.error _ => none
-  let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+  let pipeline ← compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
       (fun value => BitVec.ofNat 64 value) "main"
       (panTargetDeclarationsWithDefaultMain declarations)
   some (pipelineWordFunctionsSource pipeline.loop)
@@ -73,7 +73,7 @@ def p9WordBoundaries :
     Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
   let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p9Source with
     | Except.ok declarations => some declarations | Except.error _ => none
-  let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+  let pipeline ← compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
       (fun value => BitVec.ofNat 64 value) "main"
       (panTargetDeclarationsWithDefaultMain declarations)
   some (pipelineWordFunctionsSource pipeline.loop)
@@ -119,7 +119,7 @@ def p1EntryUsesSourceLoop : Bool :=
   match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
   | Except.error _ => false
   | Except.ok declarations =>
-      match compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+      match compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
           (fun value => BitVec.ofNat 64 value) "main"
           (panTargetDeclarationsWithDefaultMain declarations) with
       | none => false

@@ -72,38 +72,10 @@ def compiledGlobalDestinationMatchesHolOracle : Bool :=
   | .call (some ([0, 1], none)) "f" [] => true
   | _ => false
 
-def compilerContext : PanToCrepCompileContext Nat :=
-  compileCodeRelContext proofContext sourceBody
-
-theorem sourceBodyFreeVariables : freeVarIds sourceBody = ["x"] := by
-  simp [freeVarIds, expLocalVars, sourceBody]
-
-theorem parameterVariableProjection :
-    projectFiniteMapToInfoMap ["x"] proofContext.vars = [("x", (.one, [0]))] := by
-  simp [proofContext, compilerFunctions, ctxtFc, projectFiniteMapToInfoMap,
-    FUPDATE, FUPDATE_LIST, FEMPTY, FLOOKUP, withShape]
-
-theorem compilerContextVariables :
-    compilerContext.vars = [("x", (.one, [0]))] := by
-  have hcalls : callVarsUsedByProg sourceBody = [] := by
-    simp [sourceBody, callVarsUsedByProg]
-  simp [compilerContext, compileCodeRelContext, sourceBodyFreeVariables, hcalls,
-    parameterVariableProjection]
-
 theorem compiledReturnMatchesHolOracle :
     compileCodeRelProg proofContext sourceBody = .return [.var 0] := by
-  rw [compileCodeRelProg, compileProgFixed, sourceBody, compileProg_return]
-  let context : CompileContext Nat :=
-    (compileCodeRelContext proofContext (.return (.var .local "x"))).toExecutable
-  have hvars : context.vars = [("x", (.one, [0]))] := by
-    simpa [context, compilerContext, sourceBody,
-      PanToCrepCompileContext.toExecutable] using compilerContextVariables
-  have hcompiled : compileExp context (.var .local "x") = ([.var 0], .one) := by
-    simp [compileExp, hvars, lookupInfo]
-  change (let compiled := compileExp context (.var .local "x")
-    if Shape.shapeSize compiled.2 = 0 then CrepProg.return []
-      else CrepProg.return compiled.1) = CrepProg.return [.var 0]
-  simp [hcompiled]
+  simp [compileCodeRelProg, compileProgHOL, compileExpHOL, sourceBody,
+    proofContext, ctxtFc, FUPDATE_LIST, FUPDATE, FLOOKUP, withShape]
 
 theorem matchingCodeRel : codeRel proofContext sourceCode matchingTargetCode := by
   intro function variableShapes program returnShape hsource

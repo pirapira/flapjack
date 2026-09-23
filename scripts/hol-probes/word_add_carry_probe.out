@@ -1,0 +1,4 @@
+ordinary=(7,0)
+wrap=(0,1)
+nonzero_carry=(8,0)
+carry_overflow=(0,1)

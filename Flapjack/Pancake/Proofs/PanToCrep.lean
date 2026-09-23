@@ -24,6 +24,18 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
+/-- Exact port of the duplicate Cake `EL_load_globals` theorem
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4102`). The finite
+    word offset and bounded total index have the same shape as HOL's `n2w` and
+    `EL`; the proof reuses the primary semantics counterpart. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "EL_load_globals"]
+theorem elLoadGlobals {width : Nat}
+    (n count : Nat) (address : BitVec width) (h : n < count) :
+    (loadGlobals address count)[n]'(by
+      simpa only [loadGlobals_length] using h) =
+        .loadGlob (address + BitVec.ofNat width n) := by
+  exact loadGlobals_getElem address count n h
+
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
     HOL has one `shape_of` function, so this bridge has no HOL original. -/

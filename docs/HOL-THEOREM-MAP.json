@@ -2484,8 +2484,8 @@
     "hol_name": "el_load_globals_elem",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadGlobals_getElem",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -2676,6 +2676,14 @@
     "hol_name": "load_shape_el_rel",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "loadShapeBytes_getElem_rel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "EL_load_globals",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "elLoadGlobals",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },

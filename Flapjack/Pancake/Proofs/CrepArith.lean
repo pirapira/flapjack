@@ -240,7 +240,7 @@ theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
 
 /-! Lean-only adapter from the explicit `PanWordLab.word` result shape to the
     raw production evaluator result used by the recursive simp proof. -/
-private theorem crepEvalMulConstRaw {n : Nat} [NeZero n] {σ : Type}
+theorem crepEvalMulConstRaw {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)
     (h : evalCrepRuntimeExp (riscvCrepWordTarget state) expression = some value) :
@@ -258,6 +258,252 @@ private theorem crepEvalMulConstRaw {n : Nat} [NeZero n] {σ : Type}
   have hResult := crepEvalMulConst state expression constant value hWrapped
   apply Option.map_injective wordInjective
   simpa using hResult
+
+/-! This target-specific helper proves the hard `CrepOp.mul` case of the
+    recursive `simp_exp` preservation argument. It uses the generated
+    `crepSimpExp` equations and the untagged RISC-V multiplication support;
+    the HOL evaluator correspondence gap documented above remains open. -/
+theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (left right : CrepExp (RiscV.Word n)) (leftValue rightValue : RiscV.Word n)
+    (hleft : evalCrepRuntimeExp (riscvCrepWordTarget state)
+      (crepSimpExp (BitVec.ofNat n) left) = some leftValue)
+    (hright : evalCrepRuntimeExp (riscvCrepWordTarget state)
+      (crepSimpExp (BitVec.ofNat n) right) = some rightValue) :
+    evalCrepRuntimeExp (riscvCrepWordTarget state)
+      (crepSimpExp (BitVec.ofNat n) (.crepOp .mul [left, right])) =
+        some (leftValue * rightValue) := by
+  cases hL : crepDestConst (crepSimpExp (BitVec.ofNat n) left) with
+  | some leftConstant =>
+      have hLshape := crepDestConst_eq_const
+        (crepSimpExp (BitVec.ofNat n) left) leftConstant hL
+      cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
+      | some rightConstant =>
+          have hRshape := crepDestConst_eq_const
+            (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
+          have hmulShape := crepSimpExp.eq_5 (BitVec.ofNat n) [left, right]
+            leftConstant rightConstant (by simp [hLshape, hRshape])
+          rw [hmulShape]
+          have hleftValue : leftConstant = leftValue := by
+            simpa [hLshape, evalCrepRuntimeExp] using hleft
+          have hrightValue : rightConstant = rightValue := by
+            simpa [hRshape, evalCrepRuntimeExp] using hright
+          simp [evalCrepRuntimeExp, hleftValue, hrightValue]
+      | none =>
+          have hRnotConst : ∀ value,
+              crepSimpExp (BitVec.ofNat n) right = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hR
+          have hmulShape := crepSimpExp.eq_6 (BitVec.ofNat n) [left, right]
+            leftConstant (crepSimpExp (BitVec.ofNat n) right) hRnotConst
+            (by simp [hLshape])
+          rw [hmulShape]
+          have hleftValue : leftConstant = leftValue := by
+            simpa [hLshape, evalCrepRuntimeExp] using hleft
+          have hmul := crepEvalMulConstRaw state (crepSimpExp (BitVec.ofNat n) right)
+            leftConstant rightValue hright
+          simpa [hleftValue, BitVec.mul_comm] using hmul
+  | none =>
+      cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
+      | some rightConstant =>
+          have hRshape := crepDestConst_eq_const
+            (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
+          have hLnotConst : ∀ value,
+              crepSimpExp (BitVec.ofNat n) left = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hL
+          have hmulShape := crepSimpExp.eq_7 (BitVec.ofNat n) [left, right]
+            (crepSimpExp (BitVec.ofNat n) left) rightConstant hLnotConst
+            (by simp [hRshape])
+          rw [hmulShape]
+          have hrightValue : rightConstant = rightValue := by
+            simpa [hRshape, evalCrepRuntimeExp] using hright
+          have hmul := crepEvalMulConstRaw state (crepSimpExp (BitVec.ofNat n) left)
+            rightConstant leftValue (by simpa [hRshape] using hleft)
+          simpa [hrightValue] using hmul
+      | none =>
+          have hLnotConst : ∀ value,
+              crepSimpExp (BitVec.ofNat n) left = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hL
+          have hRnotConst : ∀ value,
+              crepSimpExp (BitVec.ofNat n) right = .const value → False := by
+            intro value heq
+            simp [heq, crepDestConst] at hR
+          have hnotConstConst : ∀ a b, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat n)) [left, right] =
+                [.const a, .const b] → False := by
+            intro a b _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hLnotConst a hmap.1
+          have hnotLeftConst : ∀ c expression, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat n)) [left, right] =
+                [.const c, expression] → False := by
+            intro c expression _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hLnotConst c hmap.1
+          have hnotRightConst : ∀ expression c, CrepOp.mul = CrepOp.mul →
+              List.map (crepSimpExp (BitVec.ofNat n)) [left, right] =
+                [expression, .const c] → False := by
+            intro expression c _ hmap
+            simp only [List.map_cons, List.map_nil, List.cons.injEq] at hmap
+            exact hRnotConst c hmap.2.1
+          have hmulShape := crepSimpExp.eq_8 (BitVec.ofNat n) [left, right]
+            CrepOp.mul hnotConstConst hnotLeftConst hnotRightConst
+          rw [hmulShape]
+          simp [evalCrepRuntimeExp, hleft, hright]
+
+/-! This width-generic preservation lemma follows the successful-evaluation
+    induction for HOL simp_exp_correct1, but its evaluator remains the
+    RISC-V-specialized production evalCrepRuntimeExp; it is not tagged as a
+    HOL theorem. -/
+theorem crepSimpExpEvalPreserves {n : Nat} [NeZero n] {σ : Type}
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n))
+    (h : evalCrepRuntimeExp (riscvCrepWordTarget state) expression ≠ none) :
+    evalCrepRuntimeExp (riscvCrepWordTarget state)
+      (crepSimpExp (BitVec.ofNat n) expression) =
+    evalCrepRuntimeExp (riscvCrepWordTarget state) expression := by
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        (∀ e, e ∈ expressions → ∀ (state : CrepRuntimeState (RiscV.Word n) σ),
+          evalCrepRuntimeExp (riscvCrepWordTarget state) e ≠ none →
+            evalCrepRuntimeExp (riscvCrepWordTarget state) (crepSimpExp (BitVec.ofNat n) e) =
+              evalCrepRuntimeExp (riscvCrepWordTarget state) e) ∧
+        (∀ (state : CrepRuntimeState (RiscV.Word n) σ),
+          evalCrepRuntimeExps (riscvCrepWordTarget state) expressions ≠ none →
+            evalCrepRuntimeExps (riscvCrepWordTarget state)
+              (expressions.map (crepSimpExp (BitVec.ofNat n))) =
+            evalCrepRuntimeExps (riscvCrepWordTarget state) expressions)))
+      generalizing state
+  case const value => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case var name => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case load address ih =>
+    rw [crepSimpExp.eq_1]
+    simp only [evalCrepRuntimeExp]
+    cases hx : evalCrepRuntimeExp (riscvCrepWordTarget state) address with
+    | none => simp [hx, evalCrepRuntimeExp] at h
+    | some value =>
+      have hi := ih state (by simp [hx])
+      rw [hi, hx]
+  case load32 address ih =>
+    rw [crepSimpExp.eq_2]
+    simp only [evalCrepRuntimeExp]
+    cases hx : evalCrepRuntimeExp (riscvCrepWordTarget state) address with
+    | none => simp [hx, evalCrepRuntimeExp] at h
+    | some value =>
+      have hi := ih state (by simp [hx])
+      rw [hi, hx]
+  case loadByte address ih =>
+    rw [crepSimpExp.eq_3]
+    simp only [evalCrepRuntimeExp]
+    cases hx : evalCrepRuntimeExp (riscvCrepWordTarget state) address with
+    | none => simp [hx, evalCrepRuntimeExp] at h
+    | some value =>
+      have hi := ih state (by simp [hx])
+      rw [hi, hx]
+  case loadGlob address => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case op operator expressions ih =>
+    have evalExpsMapM (targetState : CrepRuntimeState (RiscV.Word n) σ) :
+        ∀ expressions,
+          evalCrepRuntimeExps (riscvCrepWordTarget targetState) expressions =
+            expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget targetState)) := by
+      intro xs
+      induction xs with
+      | nil => simp [evalCrepRuntimeExps]
+      | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+    rw [crepSimpExp.eq_4]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    rw [← evalExpsMapM state expressions] at h
+    cases hx : evalCrepRuntimeExps (riscvCrepWordTarget state) expressions with
+    | none => simp [hx] at h
+    | some values =>
+      have hi := ih.2 state (by simp [hx])
+      rw [← evalExpsMapM state (expressions.map (crepSimpExp (BitVec.ofNat n))),
+        ← evalExpsMapM state expressions, hi]
+  case crepOp operator expressions ih =>
+    cases operator
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExp] at h
+    | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp] at h
+      | cons right rest =>
+        cases rest with
+        | cons extra tail => simp [evalCrepRuntimeExp] at h
+        | nil =>
+          have hleft : evalCrepRuntimeExp (riscvCrepWordTarget state) left ≠ none := by
+            intro hn
+            simp [evalCrepRuntimeExp, hn] at h
+          have hright : evalCrepRuntimeExp (riscvCrepWordTarget state) right ≠ none := by
+            intro hn
+            simp [evalCrepRuntimeExp, hn] at h
+          have hleftSimp := ih.1 left (by simp) state hleft
+          have hrightSimp := ih.1 right (by simp) state hright
+          have hleftSimpNe : evalCrepRuntimeExp (riscvCrepWordTarget state)
+              (crepSimpExp (BitVec.ofNat n) left) ≠ none := by
+            rw [hleftSimp]
+            exact hleft
+          have hrightSimpNe : evalCrepRuntimeExp (riscvCrepWordTarget state)
+              (crepSimpExp (BitVec.ofNat n) right) ≠ none := by
+            rw [hrightSimp]
+            exact hright
+          obtain ⟨leftValue, hleftValue⟩ := Option.ne_none_iff_exists'.mp hleftSimpNe
+          obtain ⟨rightValue, hrightValue⟩ := Option.ne_none_iff_exists'.mp hrightSimpNe
+          have hmul := crepSimpMulEval state left right leftValue rightValue
+            hleftValue hrightValue
+          calc
+            evalCrepRuntimeExp (riscvCrepWordTarget state)
+                (crepSimpExp (BitVec.ofNat n) (.crepOp .mul [left, right])) =
+                some (leftValue * rightValue) := hmul
+            _ = evalCrepRuntimeExp (riscvCrepWordTarget state) (.crepOp .mul [left, right]) := by
+              simp [evalCrepRuntimeExp, ← hleftSimp, ← hrightSimp, hleftValue, hrightValue]
+  case cmp operator left right ihl ihr =>
+    rw [crepSimpExp.eq_9]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (riscvCrepWordTarget state) left with
+    | none => simp [hx] at h
+    | some leftValue =>
+      cases hy : evalCrepRuntimeExp (riscvCrepWordTarget state) right with
+      | none => simp [hx, hy] at h
+      | some rightValue =>
+        have hleft := ihl state (by simp [hx])
+        have hright := ihr state (by simp [hy])
+        rw [hleft, hright, hx, hy]
+  case shift operator left right ihl ihr =>
+    rw [crepSimpExp.eq_10]
+    simp only [evalCrepRuntimeExp] at h ⊢
+    cases hx : evalCrepRuntimeExp (riscvCrepWordTarget state) left with
+    | none => simp [hx] at h
+    | some leftValue =>
+      cases hy : evalCrepRuntimeExp (riscvCrepWordTarget state) right with
+      | none => simp [hx, hy] at h
+      | some rightValue =>
+        have hleft := ihl state (by simp [hx])
+        have hright := ihr state (by simp [hy])
+        rw [hleft, hright, hx, hy]
+  case baseAddr => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case topAddr => simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+  case nil => simp [evalCrepRuntimeExps]
+  case cons head tail ihHead ihTail =>
+    constructor
+    · intro e he state heval
+      simp only [List.mem_cons] at he
+      rcases he with he | he
+      · subst e
+        exact ihHead state heval
+      · exact ihTail.1 e he state heval
+    · intro state hxs
+      cases hh : evalCrepRuntimeExp (riscvCrepWordTarget state) head with
+      | none => simp [evalCrepRuntimeExps, hh] at hxs
+      | some headValue =>
+        have htail : evalCrepRuntimeExps (riscvCrepWordTarget state) tail ≠ none := by
+          intro ht
+          simp [evalCrepRuntimeExps, hh, ht] at hxs
+        have hheadSimp := ihHead state (by simp [hh])
+        have htailSimp := ihTail.2 state htail
+        simp [evalCrepRuntimeExps, hh, hheadSimp, htailSimp]
+
 
 /-- Flapjack representation of HOL's local `mapc f` state update: apply `f`
     to each present code-map entry and leave every other runtime field alone. -/
@@ -321,6 +567,32 @@ private theorem crepEvalCodeMapIrrel {n : Nat} [NeZero n] {σ : Type}
           rw [ih state f |>.1 left (by simp)]
           rw [ih state f |>.1 right (by simp)]
         | cons _ _ => simp [evalCrepRuntimeExp]
+
+
+
+/-- Flapjack's RISC-V specialization of HOL simp_exp_correct1.
+    It keeps the HOL theorem's successful-evaluation premise, arbitrary local
+    mapc f code-map update, and complete Option (PanWordLab.word ...)
+    result. The value type is a positive-width RISC-V word and evaluation fixes
+    riscvCrepWordTarget; HOL instead quantifies over its polymorphic word
+    type and arbitrary crepSem state. The evaluator correspondence remains
+    open, so this faithful-shape specialization is deliberately untagged. -/
+theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepRuntimeState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n))
+    (h : (evalCrepRuntimeExp (riscvCrepWordTarget state) expression).map
+      PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget (crepArithMapCode f state))
+      (crepSimpExp (BitVec.ofNat n) expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp (riscvCrepWordTarget state) expression).map
+      PanWordLab.word := by
+  have hraw : evalCrepRuntimeExp (riscvCrepWordTarget state) expression ≠ none := by
+    simpa using h
+  have hsimp := crepSimpExpEvalPreserves state expression hraw
+  rw [crepEvalCodeMapIrrel f state (crepSimpExp (BitVec.ofNat n) expression)]
+  rw [hsimp]
 
 
 end Flapjack

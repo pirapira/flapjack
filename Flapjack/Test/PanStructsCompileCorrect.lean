@@ -98,6 +98,95 @@ example :
     structCompileExp, structCompileShape, structCompileShapeWF,
     structCompileShapeWF.structCompileShapesWF]
 
+/-! A nested named shape compiles to a nested `Comb`. This checks that the
+    target loader's structural fuel covers every list element after alias
+    expansion, while the source load walks the same three memory words. -/
+def nestedLoadStructContext : StructContext :=
+  [ ("Pair", {
+      fields := [("inner", .named "Inner"), ("last", .one)]
+      size := 3
+    }),
+    ("Inner", {
+      fields := [("left", .one), ("right", .one)]
+      size := 2
+    }) ]
+
+def nestedLoadCompileContext : StructPassContext :=
+  { structs := nestedLoadStructContext, locals := [], globals := [] }
+
+def nestedLoadRuntime : PanSemState Word64 (FfiState Unit) :=
+  { finiteMapRuntime with
+    structs := nestedLoadStructContext
+    memory := fun address =>
+      if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 7))
+      else if address == BitVec.ofNat 64 1 then some (.word (BitVec.ofNat 64 11))
+      else if address == BitVec.ofNat 64 2 then some (.word (BitVec.ofNat 64 13))
+      else none }
+
+def nestedLoadExpression : Exp Word64 :=
+  .load (.named "Pair") (.const (BitVec.ofNat 64 0))
+
+def nestedLoadSourceValue : PanValue Word64 :=
+  .nStruct "Pair"
+    [("inner", .nStruct "Inner"
+      [("left", .word (BitVec.ofNat 64 7)), ("right", .word (BitVec.ofNat 64 11))]),
+     ("last", .word (BitVec.ofNat 64 13))]
+
+def nestedLoadConvertedValue : PanValue Word64 :=
+  .rStruct [
+    .rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 11)],
+    .word (BitVec.ofNat 64 13)]
+
+example :
+    structOldExpShape nestedLoadCompileContext nestedLoadExpression = .named "Pair" ∧
+    panSemShapeOf nestedLoadSourceValue = .named "Pair" ∧
+    panStructValueFieldsOkBool nestedLoadRuntime.structs nestedLoadSourceValue = true ∧
+    structCompileShapeWF nestedLoadStructContext (.named "Pair") =
+      .comb [.comb [.one, .one], .one] ∧
+    evalPanValueExp nestedLoadRuntime.structs nestedLoadRuntime.locals
+      nestedLoadRuntime.globals nestedLoadRuntime.memory nestedLoadRuntime.baseAddress
+      nestedLoadRuntime.topAddress (BitVec.ofNat 64 1) nestedLoadExpression =
+      some nestedLoadSourceValue ∧
+    evalPanValueExp [] nestedLoadRuntime.locals nestedLoadRuntime.globals
+      nestedLoadRuntime.memory nestedLoadRuntime.baseAddress nestedLoadRuntime.topAddress
+      (BitVec.ofNat 64 1)
+      (structCompileExp nestedLoadCompileContext nestedLoadExpression) =
+      some nestedLoadConvertedValue := by
+  have hcompiled : structCompileShapeWF nestedLoadStructContext (.named "Pair") =
+      .comb [.comb [.one, .one], .one] := by
+    simp [structCompileShapeWF, structCompileShapeWF.structCompileShapesWF,
+      nestedLoadStructContext, lookupInfoWithRest]
+  constructor
+  · simp [structOldExpShape, nestedLoadCompileContext, nestedLoadExpression]
+  constructor
+  · simp [panSemShapeOf, nestedLoadSourceValue]
+  constructor
+  · simp [panStructValueFieldsOkBool, panStructFieldValuesFieldsOkBool,
+      nestedLoadRuntime, nestedLoadStructContext, nestedLoadSourceValue,
+      panValueFieldsHaveShapes, panValueShape, panShapeMatches, lookupInfo]
+  constructor
+  · exact hcompiled
+  constructor
+  · simp [nestedLoadRuntime, nestedLoadStructContext, nestedLoadExpression,
+      nestedLoadSourceValue, finiteMapRuntime, evalPanValueExp,
+      panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadFieldsFuel,
+      panValueFlatReadWord, panValueFlatOffset,
+      panValueFlatContextFuel, panValueFlatShapeFuel,
+      panValueFlatFieldsFuel,
+      shapeSizeWithContext, isWfShape, lookupInfoWithRest, lookupInfo]
+  · have hcompiledExpression :
+        structCompileExp nestedLoadCompileContext nestedLoadExpression =
+          .load (.comb [.comb [.one, .one], .one]) (.const (BitVec.ofNat 64 0)) := by
+      simp [structCompileExp, structCompileShape, nestedLoadCompileContext,
+        nestedLoadExpression, hcompiled]
+    rw [hcompiledExpression]
+    simp [nestedLoadRuntime, nestedLoadStructContext, nestedLoadConvertedValue,
+      finiteMapRuntime, evalPanValueExp, panValueFlatLoad, panValueFlatLoadFuel,
+      panValueFlatLoadListFuel, panValueFlatReadWord, panValueFlatOffset,
+      panValueFlatContextFuel, panValueFlatShapeFuel,
+      panValueFlatShapeFuel.panValueFlatShapeListFuel, shapeSizeWithContext,
+      isWfShape, isWfShape.isWfShapeList]
+
 example :
     structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =
         .comb [.one, .one] ∧

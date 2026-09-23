@@ -26,6 +26,105 @@ def holDeclarationOnlyOracle : Bool :=
 
 #guard holDeclarationOnlyOracle
 
+/-! These declaration-only fixtures replay the `raise_pair` and
+`handled_pair` rows from the direct HOL `compile_to_crep_probe.out` at its
+concrete 8-bit word instantiation. They exercise the exact finite-map
+`compileToCrepHOL` path used by `compileFlapjackEntryCake`, rather than the
+older caller-context compatibility helper below. -/
+def holPairRaiseProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .one }]
+
+def holPairRaiseProductionOracle : Bool :=
+  match compileToCrepHOL holPairRaiseProbe with
+  | [("f", [], .seq
+      (.dec 1 (.const seven)
+        (.dec 2 (.const nine)
+          (.seq (.storeGlob first (.var 1))
+            (.seq (.storeGlob second (.var 2)) .skip))))
+      (.raise code))] =>
+      seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        code == (0 : BitVec 8)
+  | _ => false
+
+#guard holPairRaiseProductionOracle
+
+def holLaterPairRaiseProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .dec "a" .one (.const 3)
+         (.dec "b" .one (.const 5)
+           (.raise "E" (.rStruct [.const 7, .const 9]))),
+       returnShape := .one }]
+
+def holLaterPairRaiseProductionOracle : Bool :=
+  match compileToCrepHOL holLaterPairRaiseProbe with
+  | [("f", [],
+      .dec 1 (.const three)
+        (.dec 2 (.const five)
+          (.seq
+            (.dec 3 (.const seven)
+              (.dec 4 (.const nine)
+                (.seq
+                  (.storeGlob first (.var 3))
+                  (.seq (.storeGlob second (.var 4)) .skip))))
+            (.raise code))))] =>
+      three == (3 : BitVec 8) && five == (5 : BitVec 8) &&
+        seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        code == (0 : BitVec 8)
+  | _ => false
+
+#guard holLaterPairRaiseProductionOracle
+
+def holHandledPairProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .comb [.one, .one] },
+   .function
+     { name := "g", inline := false, exported := false,
+       params := [("pair", .comb [.one, .one])],
+       body := .call
+         (some (some (.local, "pair"), some ("E", "pair", .skip))) "f" [],
+       returnShape := .one }]
+
+def holHandledPairProductionOracle : Bool :=
+  match compileToCrepHOL holHandledPairProbe with
+  | [("f", [], .seq
+        (.dec 1 (.const seven)
+          (.dec 2 (.const nine)
+            (.seq (.storeGlob first (.var 1))
+              (.seq (.storeGlob second (.var 2)) .skip))))
+        (.raise raiseCode)),
+     ("g", [0, 1], .call
+        (some ([0, 1], some (handlerCode,
+          .seq
+            (.seq (.assign 0 (.loadGlob loadFirst))
+              (.seq (.assign 1 (.loadGlob loadSecond)) .skip))
+            .skip))) "f" [])] =>
+      seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        raiseCode == (0 : BitVec 8) && handlerCode == (0 : BitVec 8) &&
+        loadFirst == (0 : BitVec 8) && loadSecond == (1 : BitVec 8)
+  | _ => false
+
+#guard holHandledPairProductionOracle
+
+def holHandledPairMetadataAdapterOracle : Bool :=
+  match compileToCrepHOLWithMetadata holHandledPairProbe with
+  | [{ name := "f", params := [], returnShape := .comb [.one, .one], .. },
+     { name := "g", params := [0, 1], returnShape := .one, .. }] => true
+  | _ => false
+
+#guard holHandledPairMetadataAdapterOracle
+
 def holMetadataAdapterOracle : Bool :=
   match compileToCrepHOLWithMetadata holDeclarationOnlyProbe with
   | [{ name := "f", params := [0], returnShape := .one, .. }] => true
@@ -326,6 +425,10 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     ("raised constant", parityGuard),
+    ("declaration-only two-word exception", holPairRaiseProductionOracle),
+    ("declaration-only later two-word exception", holLaterPairRaiseProductionOracle),
+    ("declaration-only handled two-word exception", holHandledPairProductionOracle),
+    ("handled-call production metadata adapter", holHandledPairMetadataAdapterOracle),
     ("two-word exception", pairRaiseOracle),
     ("later two-word exception", laterPairOracle),
     ("handled two-word exception", handledPairOracle),

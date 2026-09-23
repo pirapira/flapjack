@@ -82,6 +82,9 @@ run_probe() {
 # Run from the local HOL object directory when Holmake has populated it, so
 # HOL's ordinary theory loader finds compiled CakeML theories. Fall back to
 # the source directory for checkouts whose Holmake places objects there.
+run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
+  ordinary carry_overflow "$cake_dir/compiler/backend/backend_commonScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only

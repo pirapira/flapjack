@@ -336,8 +336,8 @@ def loopShMemByteCount (width : Nat) : List UInt8 := [UInt8.ofNat width]
     `RiscV.Word 64` and the RV64 little-endian codec (`riscv64GetByte` /
     `riscv64PutBytes`).  The zero-width case checks the raw address and omits
     HOL's unreachable FFI fallback; the nonzero case checks `byte_align address`
-    and keeps that fallback.  The exact polymorphic port is tracked by the
-    dependency bead and recorded as a documented mismatch. -/
+    and keeps that fallback.  The exact polymorphic port is tracked by
+    flapjack-s6a.3.2.1 and recorded as a documented mismatch. -/
 def loopShMemLoad (state : LoopMachineState (RiscV.Word 64) F)
     (name : Nat) (address : RiscV.Word 64) (width : Nat) :
     LoopMachineStep (RiscV.Word 64) F :=
@@ -430,5 +430,91 @@ def loopShMemHook (state : LoopMachineState (RiscV.Word 64) F)
     LoopMachineStep (RiscV.Word 64) F
   | .word address => loopShMemOp state operator name address
   | .loc _ _ => (some .error, state)
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  The following byte-array helpers
+    are the 64-bit RISC-V instance of HOL's polymorphic word memory codec
+    (`wordSemScript.sml` `mem_load_byte_aux_def`/`mem_store_byte_aux_def`/
+    `write_bytearray_def`, `miscScript.sml` `read_bytearray_def`), using the
+    reviewed RV64 codec `riscv64GetByte`/`riscv64PutBytes` and
+    `panRiscVByteAlign`.  HOL `get_byte`/`set_byte` are parametrised by a
+    big-endian flag; the RV64 helpers are little-endian only, so only the
+    little-endian instance is exact.  The width-polymorphic exact port is tracked
+    by flapjack-s6a.3.3.1. -/
+
+/-- 64-bit instance of HOL `mem_load_byte_aux_def` (`wordSemScript.sml:159`). -/
+def loopMemLoadByteAux (state : LoopMachineState (RiscV.Word 64) F)
+    (address : RiscV.Word 64) : Option UInt8 :=
+  let aligned := RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address
+  match state.memory aligned with
+  | some (.loc _ _) => none
+  | some (.word value) =>
+      if state.mdomain aligned then some (riscv64GetByte (address.toNat % 8) value)
+      else none
+  | none => none
+
+/-- 64-bit instance of HOL `mem_store_byte_aux_def` (`wordSemScript.sml:171`). -/
+def loopMemStoreByteAux (state : LoopMachineState (RiscV.Word 64) F)
+    (address : RiscV.Word 64) (byte : UInt8) :
+    Option (LoopMachineState (RiscV.Word 64) F) :=
+  let aligned := RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address
+  match state.memory aligned with
+  | some (.word value) =>
+      if state.mdomain aligned then
+        let updated := riscv64PutBytes false (address.toNat % 8) [byte] value
+        some { state with
+          memory := fun current =>
+            if current = aligned then some (.word updated) else state.memory current }
+      else none
+  | _ => none
+
+/-- 64-bit instance of HOL `read_bytearray_def` (`miscScript.sml:113`). -/
+def loopReadByteArray (state : LoopMachineState (RiscV.Word 64) F)
+    (address : RiscV.Word 64) : Nat → Option (List UInt8)
+  | 0 => some []
+  | length + 1 => do
+      let byte ← loopMemLoadByteAux state address
+      let rest ← loopReadByteArray state (address + 1) length
+      pure (byte :: rest)
+
+/-- 64-bit instance of HOL `write_bytearray_def` (`wordSemScript.sml:178`).  As in
+    HOL, a failed byte store leaves the original state unchanged. -/
+def loopWriteByteArray (state : LoopMachineState (RiscV.Word 64) F)
+    (address : RiscV.Word 64) : List UInt8 → LoopMachineState (RiscV.Word 64) F
+  | [] => state
+  | byte :: bytes =>
+      match loopMemStoreByteAux (loopWriteByteArray state (address + 1) bytes)
+          address byte with
+      | some updated => updated
+      | none => state
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port).  The `LoopEvaluateHooks.ffi`
+    boundary for the source `ExtCall` case of `loopSem$evaluate_def`
+    (`loopSemScript.sml:427-440`).  `evaluateLoop` has already applied
+    `cut_state`, so the hook reads the four local pointers/lengths from the
+    incoming state.  The exact polymorphic port is tracked by the dependency
+    bead. -/
+def loopMachineExtCall (state : LoopMachineState (RiscV.Word 64) F)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat) :
+    LoopMachineStep (RiscV.Word 64) F :=
+  match state.locals configurationLength, state.locals configuration,
+      state.locals arrayLength, state.locals array with
+  | some (.word configurationSize), some (.word configurationAddress),
+    some (.word arraySize), some (.word arrayAddress) =>
+      match loopReadByteArray state configurationAddress configurationSize.toNat,
+          loopReadByteArray state arrayAddress arraySize.toNat with
+      | some configurationBytes, some arrayBytes =>
+          match callFfi state.ffi (.extCall function) configurationBytes arrayBytes with
+          | .final event => (some (.finalFfi event), callEnv [] state)
+          | .returned newFfi newBytes =>
+              (none, { loopWriteByteArray state arrayAddress newBytes with ffi := newFfi })
+      | _, _ => (some .error, state)
+  | _, _, _, _ => (some .error, state)
+
+/-- The `LoopEvaluateHooks.ffi` boundary.  The live set is ignored because
+    `evaluateLoop` performs the `cut_state` before calling the hook. -/
+def loopMachineFfiHook (state : LoopMachineState (RiscV.Word 64) F)
+    (function : FunName) (configuration configurationLength array arrayLength : Nat)
+    (_live : List Nat) : LoopMachineStep (RiscV.Word 64) F :=
+  loopMachineExtCall state function configuration configurationLength array arrayLength
 
 end Flapjack

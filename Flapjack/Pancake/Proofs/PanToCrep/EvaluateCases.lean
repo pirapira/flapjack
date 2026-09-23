@@ -801,7 +801,7 @@ theorem panSemEvaluateCodeState_call_return_const_of_entry
               | succ fuel =>
                   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
                     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-                    evalPanValueExpCounted, evalPanValueExp,
+                    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
                     panValueShape, panShapeMatches,
                     hargs, hlookupCall, hclock]
 
@@ -1142,7 +1142,7 @@ theorem panSemEvaluateCodeState_callReturnParameter_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, decPanClock]
 
 theorem panSemEvaluateRiscV64CodeState_callReturnParameter_ofEntry
@@ -1230,7 +1230,7 @@ theorem panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     hassignment, panValueShape, panShapeMatches, decPanClock]
 
 
@@ -1278,8 +1278,9 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee,
-    hexception, hclock, panValueShape, panShapeMatches, decPanClock]
+    panValueRaiseResult, evalPanValueExpCounted, evalPanValueExp,
+    hargs, hcallee, hexception, hclock, panValueShape, panShapeMatches,
+    decPanClock]
 
 /-! One-word state-owned Call exception dispatch to a handler that returns its
 local. The preexisting local is explicit because HOL's handler path validates
@@ -1336,7 +1337,8 @@ theorem panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hexception,
+    panValueRaiseResult, panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
+    hargs, hcallee, hexception,
     hhandlerLocal, hclock, panValueShape, panShapeMatches, panValueAssignmentValid,
     updatePanValueMap, decPanClock]
 
@@ -2049,7 +2051,7 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
   rw [hfuelConcrete]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,
     panValueExpStepCost, restorePanValueFfiLocal, decPanClock]
   all_goals
@@ -3093,13 +3095,14 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
 /-! The caller's state, code, and exception relations survive Call's callee
 entry setup: the two evaluators replace only locals and decrement the related
 clocks, while both state-owned code maps and the source exception-shape map
-remain unchanged. This supplies three callee-entry relations; the formal- and
-flattened-argument `localsRel` in the function context is a separate remaining
-obligation for full Call induction. -/
+remain unchanged. `codeRel` and `excpRel` are carried into HOL's function
+context `ctxtFc`; the formal- and flattened-argument `localsRel` in that
+context is a separate remaining obligation for full Call induction. -/
 theorem panSemCallCalleeEntryStateCodeExcpRel
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (parameters : List (String × Shape)) (slots : List Nat)
     (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
     (targetCalleeLocals : Nat → Option (PanWordLab (RiscV.Word 64)))
     (hstate : stateRel source target)
@@ -3109,12 +3112,16 @@ theorem panSemCallCalleeEntryStateCodeExcpRel
         { { source with locals := sourceCalleeLocals } with
           clock := decPanClock source.clock }
         (decCrepClock { target with locals := targetCalleeLocals }) ∧
-      codeRel context
+      codeRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots)
         (panSemCodeAsLookup
           ({ { source with locals := sourceCalleeLocals } with
             clock := decPanClock source.clock }).code)
         (decCrepClock { target with locals := targetCalleeLocals }).code ∧
-      excpRel context.eids
+      excpRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots).eids
         ({ { source with locals := sourceCalleeLocals } with
           clock := decPanClock source.clock }).exceptionShapes := by
   obtain ⟨hmemory, hmemaddrs, hshared, hstructs, hglobals, hclock, hbe, hffi,
@@ -3125,8 +3132,10 @@ theorem panSemCallCalleeEntryStateCodeExcpRel
     exact ⟨hmemory, hmemaddrs, hshared, hstructs, hglobals,
       congrArg (fun clock : Nat => clock - 1) hclock,
       hbe, hffi, hbase, htop⟩
-  · simpa [decCrepClock] using hcode
-  · simpa using hexcp
+  · change codeRel context (panSemCodeAsLookup source.code) target.code
+    exact hcode
+  · change excpRel context.eids source.exceptionShapes
+    exact hexcp
 
 /-! Compose the actual target exp_hdl/Return execution with the generic Crep
 Call exception-dispatch induction step. The callee lookup and body execution

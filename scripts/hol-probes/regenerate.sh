@@ -113,6 +113,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
+  compile_exp_correct_rfield \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -356,6 +357,9 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
   deccall_ok_result deccall_missing_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
+  call_terminal_skip_result call_terminal_continue_param_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \

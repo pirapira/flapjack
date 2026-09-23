@@ -513,6 +513,31 @@ theorem slcTlcRw
     (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
       tlc slots arguments) := ⟨rfl, rfl⟩
 
+/-! A successful source-local lookup after `slc` comes from one of the zipped
+formal/argument pairs. This Flapjack finite-map support lemma is used to expose
+the source-side parameter index in the Call-entry `locals_rel` proof; it does
+not claim the full HOL `call_preserve_state_code_locals_rel` theorem. -/
+theorem slcLookupGetElem
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (name : String) (value : PanValue α)
+    (hlookup : FLOOKUP (slc parameters arguments) name = some value) :
+    ∃ i, ∃ (hi : i < (parameters.map Prod.fst).length),
+      ∃ (harg : i < arguments.length),
+      (parameters.map Prod.fst)[i]'hi = name ∧ arguments[i]'harg = value := by
+  have hsource := flookupFupdateList_mem_or_base
+    (FEMPTY : FiniteMap String (PanValue α))
+    ((parameters.map Prod.fst).zip arguments) name value (by
+      simpa [slc] using hlookup)
+  rcases hsource with hentry | hempty
+  · obtain ⟨entry, hmem, hname, hvalue⟩ := hentry
+    obtain ⟨i, hi, harg, hnameIndex, hvalueIndex⟩ :=
+      mem_zip_getElem (parameters.map Prod.fst) arguments entry hmem
+    refine ⟨i, ⟨hi, ⟨harg, ?_⟩⟩⟩
+    constructor
+    · simpa [hname] using hnameIndex
+    · simpa [hvalue] using hvalueIndex
+  · simp [FLOOKUP_empty] at hempty
+
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has

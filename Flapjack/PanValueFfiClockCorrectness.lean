@@ -276,9 +276,11 @@ theorem evalPanValueFfiClockCall_zero_timeout
       (contracts := contracts) =
       if panValueParametersValid structs contracts function values then
         some (.timeout (fun _ => none) globals memory ffi, 0)
-      else none := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind,
-    panValueFfiClockTimeout]
+      else some (.control (.error locals globals memory ffi), 0) := by
+  by_cases hvalid : panValueParametersValid structs contracts function values = true
+  · simp [evalPanValueFfiClockCall, panValueCallTarget, hvalid, hargs, hlookup, hbind,
+      panValueFfiClockTimeout]
+  · simp [evalPanValueFfiClockCall, panValueCallTarget, hvalid, hargs, hlookup]
 
 /-! A successful nonzero-clock call returns the callee's final globals,
 memory, FFI state, and remaining clock, while clearing the callee locals at
@@ -316,7 +318,7 @@ theorem evalPanValueFfiClockCall_returned_no_destination
       none function arguments (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
         finalClock) := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
+  simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody, hwithin]
 
 /-! An uncaught exception from a successful nonzero-clock call preserves the
 callee's state and clock while clearing the callee locals at the caller
@@ -356,7 +358,7 @@ theorem evalPanValueFfiClockCall_raised_no_handler
       none function arguments (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception value),
         finalClock) := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
+  simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody, hwithin]
 
 /-! Cake's `pc_compile_correct[Call_Ret_TimeOut]` propagates a callee
 timeout through a direct call.  The caller-local environment is cleared, but
@@ -398,7 +400,7 @@ theorem evalPanValueFfiClockCall_timeout
       none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) =
       some (.timeout (fun _ => none) finalGlobals finalMemory finalFfi, finalClock) := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hbody]
+  simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
 
 /-! A declaration call propagates the callee's terminal outcomes.  Cake's
     `panSem` does not turn a callee timeout or FinalFFI into an evaluator
@@ -866,7 +868,7 @@ theorem evalPanValueFfiClockCall_caught_handler
       (some (none, some (caught, handlerVariable, handlerProgram))) function arguments
       (memoryAccess := memoryAccess) (contracts := none) =
       some (outcome, finalClock) := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody,
+  simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody,
     hcaught, hhandler, hwithin]
 
 /-! A successful returned value may be assigned to a caller local or global.
@@ -909,7 +911,7 @@ theorem evalPanValueFfiClockCall_returned_destination
       (some (destination, none)) function arguments
       (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi), finalClock) := by
-  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin,
+  simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody, hwithin,
     hassign]
 
 /-! One true loop iteration consumes one clock unit before evaluating the body
@@ -1281,23 +1283,29 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
     exact absurd hrun (by simp)
   · -- case2: Call fuel+1
     intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler hbodyIH hhandlerIH outcome resultClock hrun
-    simp only [evalPanValueFfiClockCall] at hrun
+    simp only [evalPanValueFfiClockCall, panValueCallTarget] at hrun
     cases hvalues : evalPanValueExps structs locals globals memory baseAddress topAddress bytesInWord arguments
         (memoryAccess := memoryAccess) with
     | none => simp only [hvalues, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
     | some values =>
       simp only [hvalues, Option.bind_eq_bind, Option.bind_some] at hrun
       cases hlookup : lookupPanFunction function functions with
-      | none => simp only [hlookup, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+      | none =>
+        simp only [hlookup, Option.elim_none] at hrun
+        simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+        obtain ⟨_, hc⟩ := hrun; omega
       | some pair =>
         obtain ⟨parameters, body⟩ := pair
         simp only [hlookup, Option.bind_eq_bind, Option.bind_some] at hrun
         by_cases hparams : panValueParametersValid structs contracts function values = true
         · simp only [hparams, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
           cases hbind : bindPanValueParameters parameters values with
-          | none => simp only [hbind, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+          | none =>
+            simp only [hbind, Option.elim_none] at hrun
+            simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+            obtain ⟨_, hc⟩ := hrun; omega
           | some calleeLocals =>
-            simp only [hbind, Option.bind_eq_bind, Option.bind_some] at hrun
+            simp only [hbind, Option.elim_some] at hrun
             by_cases hclock : clock = 0
             · simp only [hclock, if_true, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
               obtain ⟨_, hc⟩ := hrun
@@ -1318,9 +1326,15 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   obtain ⟨_, hc⟩ := hrun; omega
                 | control result =>
                   cases result with
-                  | normal l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-                  | broke l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-                  | continued l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                  | normal l g m f =>
+                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                    obtain ⟨_, hc⟩ := hrun; omega
+                  | broke l g m f =>
+                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                    obtain ⟨_, hc⟩ := hrun; omega
+                  | continued l g m f =>
+                    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                    obtain ⟨_, hc⟩ := hrun; omega
                   | returned l g m f vs =>
                     by_cases hret : (panValueReturnValid structs contracts function vs && panValueValuesWithinLimit structs vs) = true
                     · simp only [hret, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
@@ -1370,7 +1384,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   | error l g m f =>
                     simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                     obtain ⟨_, hc⟩ := hrun; omega
-        · simp only [hparams, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        · simp only [hparams, if_false, Option.elim_none] at hrun
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, hc⟩ := hrun; omega
   · -- case3: Prog fuel 0
     intro memoryAccess contracts memoryHandler locals globals memory ffi clock program outcome resultClock hrun
     simp only [evalPanValueFfiClockProg] at hrun

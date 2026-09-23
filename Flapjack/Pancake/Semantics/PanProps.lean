@@ -18,6 +18,29 @@ def panPropsALookupEq [DecidableEq κ] (key : κ) : List (κ × α) → Option �
   | (candidate, value) :: entries =>
       if decide (candidate = key) then some value else panPropsALookupEq key entries
 
+theorem panPropsALookupEq_mapValues [DecidableEq κ] (key : κ)
+    (entries : List (κ × α)) (convert : α → β) :
+    panPropsALookupEq key (entries.map fun (name, value) => (name, convert value)) =
+      (panPropsALookupEq key entries).map convert := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      rcases entry with ⟨name, value⟩
+      by_cases hname : name = key
+      · simp [panPropsALookupEq, hname]
+      · simp [panPropsALookupEq, hname, ih]
+
+theorem lookupInfo_eq_panPropsALookupEq [BEq κ] [LawfulBEq κ] [DecidableEq κ] (key : κ)
+    (entries : List (κ × α)) :
+    lookupInfo key entries = panPropsALookupEq key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      rcases entry with ⟨name, value⟩
+      by_cases hname : name = key
+      · simp [lookupInfo, panPropsALookupEq, hname]
+      · simp [lookupInfo, panPropsALookupEq, hname, ih]
+
 mutual
   /-- Exact Bool-valued counterpart of HOL `is_wf_shape_v_def`. It preserves
       the word, recursive struct, and named struct equations and uses

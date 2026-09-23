@@ -491,6 +491,10 @@ run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
   locals_set_var_cell locals_set_var_overwrite \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
+  replicate_const_one replicate_const_nonzero \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

@@ -4710,5 +4710,13 @@
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only assembly: packages the returned/final/error four-local stateRel branches; source post-state built, no HOL original)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panValueFfiExtCall_stateRel_target",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only: derives the target Crep ExtCall dispatch and post-state stateRel from a source panValueFfiExtCall returned-evaluator outcome plus stateRel, using the source/target read-write bridges; hypothesis is the source evaluator result, not the target result or post-relation)"
   }
 ]

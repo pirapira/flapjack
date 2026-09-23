@@ -2,3 +2,7 @@ flookup_f=SOME ([7],Dec 1 (Const 1w) Skip)
 inlined_call=Seq Tick Skip
 no_match_call=Call NONE «g» []
 handler_call_untouched=Call (SOME ([1],SOME (2w,Skip))) «f» []
+lookup_dup_f=SOME ([9],Dec 9 (Const 3w) Skip)
+inline_dup_call=Seq Tick Skip
+inline_nested_call=Seq Tick (Call NONE «f» [])
+inline_arg_call=Seq Tick (Dec 8 (Const 5w) (Dec 7 (Var 8) (Dec 1 (Const 1w) Skip)))

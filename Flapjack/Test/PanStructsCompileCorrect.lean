@@ -98,6 +98,45 @@ example :
     structCompileExp, structCompileShape, structCompileShapeWF,
     structCompileShapeWF.structCompileShapesWF]
 
+/-! Direct Lean counterpart of the One and multiword Comb rows in
+`pan_structs_mem_load_conversion_probe.out`. The conversion proof below uses
+the same production fuel loader and the checked `size_of_compile_shape`
+prerequisite used to preserve the second word's address. -/
+def oneCombLoadShape : Shape := .comb [.one, .comb [.one, .one]]
+
+def oneCombLoadReadWord (address : Word64) : Option Word64 :=
+  if address == BitVec.ofNat 64 0 then some (BitVec.ofNat 64 7)
+  else if address == BitVec.ofNat 64 1 then some (BitVec.ofNat 64 11)
+  else if address == BitVec.ofNat 64 2 then some (BitVec.ofNat 64 13)
+  else none
+
+def oneCombLoadValue : PanValue Word64 :=
+  .rStruct [.word (BitVec.ofNat 64 7),
+    .rStruct [.word (BitVec.ofNat 64 11), .word (BitVec.ofNat 64 13)]]
+
+example :
+    panShapeHasNoNamed oneCombLoadShape = true ∧
+    isWfShape [] oneCombLoadShape = true ∧
+    panValueFlatLoadFuel [] oneCombLoadReadWord (BitVec.ofNat 64 1) 20
+      oneCombLoadShape (BitVec.ofNat 64 0) = some oneCombLoadValue ∧
+    panValueFlatLoadFuel [] oneCombLoadReadWord (BitVec.ofNat 64 1) 20
+      (structCompileShapeWF [] oneCombLoadShape) (BitVec.ofNat 64 0) =
+      some (panStructConvertValue oneCombLoadValue) := by
+  have hshapeNames : panShapeHasNoNamed oneCombLoadShape = true := by
+    rfl
+  have hwf : isWfShape [] oneCombLoadShape = true := by
+    simp [isWfShape, isWfShape.isWfShapeList, oneCombLoadShape]
+  have hsource :
+      panValueFlatLoadFuel [] oneCombLoadReadWord (BitVec.ofNat 64 1) 20
+        oneCombLoadShape (BitVec.ofNat 64 0) = some oneCombLoadValue := by
+    simp [panValueFlatLoadFuel, panValueFlatLoadListFuel, oneCombLoadShape,
+      oneCombLoadReadWord, oneCombLoadValue, panValueFlatOffset,
+      shapeSizeWithContext]
+  have hconverted := panValueFlatLoadFuel_convert_one_comb
+    [] (by simp [structInfosOk]) oneCombLoadReadWord (BitVec.ofNat 64 1)
+    oneCombLoadShape hshapeNames hwf 20 (BitVec.ofNat 64 0) oneCombLoadValue hsource
+  exact ⟨hshapeNames, hwf, hsource, hconverted⟩
+
 /-! A nested named shape compiles to a nested `Comb`. This checks that the
     target loader's structural fuel covers every list element after alias
     expansion, while the source load walks the same three memory words. -/

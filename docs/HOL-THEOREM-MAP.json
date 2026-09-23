@@ -496,6 +496,14 @@
     "reviewer": "All-positive-width source-state-shaped result over canonical Fin width -> Bool numeric bit positions, preserving the successful-evaluation premise, arbitrary code-map update, and full Option/word_lab result. It remains untagged because the source evaluator is transported through BitVec/RISC-V operations and byte loads; no proof identifies those operations with HOL FCP word operations for every dimindex."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBitsSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width canonical Fin width source-runtime instance preserving the simp_exp_correct1 result shape; it remains untagged because production evaluation still uses transported word operations and the source-shaped load adapter lacks a proved correspondence to HOL crepSem eval"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -5326,6 +5334,22 @@
     "lean_name": "panValueFlatContextFuel_lookup_ge",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fuel bound showing a context suffix plus the selected declaration's fields fits within the original context fuel; support for named Load conversion, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadFuel_convert_one_comb",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked One/Comb branch support for HOL mem_load_conversion. It relates production panValueFlatLoadFuel across structCompileShapeWF and uses the exact structCompileShapeWF_size prerequisite for recursive addresses. It is intentionally untagged: Lean takes an explicit fuel and readWord callback, while HOL mem_load uses a finite address domain and word-labelled state memory; the no-named-shape premise isolates only the One/Comb branches of the named HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadListFuel_convert_one_comb",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked list induction support used by the One/Comb branches of HOL mem_load_conversion. It aligns the production recursive list loader after mapping shapes through structCompileShapeWF and converts each loaded value. It is intentionally untagged: the statement uses fuel-indexed readWord callbacks and a restricted no-named-shape premise rather than HOL's finite-domain memory state and full theorem conclusion."
   },
   {
     "hol_path": null,

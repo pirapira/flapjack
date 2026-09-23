@@ -25,6 +25,7 @@ fun print_eval label q =
   end;
 
 val body = ``(Dec 1 (Const (1w:8 word)) Skip) : 8 crepLang$prog``;
+val bodyB = ``(Dec 9 (Const (3w:8 word)) Skip) : 8 crepLang$prog``;
 val inl_fs =
   ``((FEMPTY |+ («f», ([7], ^body))) :
       (mlstring, num list # 8 crepLang$prog) fmap)``;
@@ -37,3 +38,32 @@ val _ = print_eval "no_match_call"
 val _ = print_eval "handler_call_untouched"
   ``inline_prog ^inl_fs
       ((Call (SOME ([1], SOME ((2w:8 word), Skip))) «f» []) : 8 crepLang$prog)``;
+
+(* Representative finite-map cases, mirroring the unique-key Lean
+   `CrepInlineFmap` representation (flapjack-pxn.18.5.5.7). *)
+
+(* Duplicate key: HOL `|+` overwrites, so `FLOOKUP` returns the last binding
+   `([9], bodyB)` and `inline_prog` inlines `bodyB`, never `body`. *)
+val inl_fs_dup =
+  ``((FEMPTY |+ («f», ([7], ^body)) |+ («f», ([9], ^bodyB))) :
+      (mlstring, num list # 8 crepLang$prog) fmap)``;
+val _ = print_eval "lookup_dup_f" ``FLOOKUP ^inl_fs_dup «f»``;
+val _ = print_eval "inline_dup_call"
+  ``inline_prog ^inl_fs_dup ((Call NONE «f» []) : 8 crepLang$prog)``;
+
+(* DOMSUB: the callee body calls `f` again, and inline_prog removes `f` from
+   the map before recursing, so the nested call is left untouched. *)
+val inl_fs_nested =
+  ``((FEMPTY |+ («f», ([], (Call NONE «f» [])))) :
+      (mlstring, num list # 8 crepLang$prog) fmap)``;
+val _ = print_eval "inline_nested_call"
+  ``inline_prog ^inl_fs_nested ((Call NONE «f» []) : 8 crepLang$prog)``;
+
+(* Argument loading: `arg_load` with `args = [Const 5w]` and
+   `args_vname = [7]` produces temporary variables via GENLIST. *)
+val inl_fs_arg =
+  ``((FEMPTY |+ («f», ([7], ^body))) :
+      (mlstring, num list # 8 crepLang$prog) fmap)``;
+val _ = print_eval "inline_arg_call"
+  ``inline_prog ^inl_fs_arg
+      ((Call NONE «f» [Const (5w:8 word)]) : 8 crepLang$prog)``;

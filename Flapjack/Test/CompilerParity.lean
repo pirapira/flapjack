@@ -744,7 +744,8 @@ def main : IO Unit := do
     Flapjack.Test.RiscVAbiAdapterParity.runChecks,
     Flapjack.Test.LoopToWordBoundaryParity.runChecks,
     Flapjack.Test.SptreeOrderParity.runChecks,
-    Flapjack.Test.CrepLocalsWordLabParity.runChecks
+    Flapjack.Test.CrepLocalsWordLabParity.runChecks,
+    Flapjack.Test.CrepFuelCutoffParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

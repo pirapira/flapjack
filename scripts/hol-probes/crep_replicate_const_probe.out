@@ -1,0 +1,4 @@
+replicate_const_one=SOME [Word 0w]
+replicate_const_three=SOME [Word 0w; Word 0w; Word 0w]
+replicate_const_empty=SOME []
+replicate_const_nonzero=SOME [Word 9w; Word 9w]

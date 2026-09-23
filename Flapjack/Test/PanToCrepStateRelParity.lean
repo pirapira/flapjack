@@ -134,6 +134,26 @@ theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals 
       · simp [panValueShape, isWfShape]
     · simp [FEMPTY] at hlookup
 
+/-- The exact lookup theorem recovers the concrete slot, flattened word, and
+    well-formed shape for the one-word local in `localsRel_satisfied`. -/
+theorem localsRelLookupCtxt_fixture :
+    ∃ slots,
+      FLOOKUP oneVarContext.vars "x" = some (.one, slots) ∧
+      slots.length = 1 ∧
+      slots.mapM (FLOOKUP targetLocals) = some [5] ∧
+      isWfShape [] .one = true := by
+  obtain ⟨slots, hcontext, _, hmap, hwf⟩ :=
+    localsRelLookupCtxt oneVarContext sourceLocals targetLocals "x" (.word 5)
+      localsRel_satisfied (by simp [sourceLocals, FLOOKUP, FUPDATE])
+  have hslots : slots = [0] := by
+    simpa [oneVarContext, FLOOKUP, FUPDATE, panValueShape] using hcontext.symm
+  subst slots
+  refine ⟨[0], ?_, ?_, ?_, ?_⟩
+  · simp [oneVarContext, FLOOKUP, FUPDATE]
+  · simp
+  · simpa only [panValueFlatten_word] using hmap
+  · simpa [panValueShape] using hwf
+
 theorem rejectsUnmappedLocal :
     ¬ localsRel { oneVarContext with vars := FEMPTY } sourceLocals targetLocals := by
   intro hrel
@@ -150,6 +170,13 @@ def localMapGuard : Bool :=
   ([0].mapM (FLOOKUP targetLocals) == some [5]) &&
     (panValueFlatten (.word 5) == [5])
 
+def localsRelLookupCtxtGuard : Bool :=
+  match FLOOKUP oneVarContext.vars "x" with
+  | some (.one, slots) =>
+      (slots == [0]) && slots.length == 1 &&
+        ([0].mapM (FLOOKUP targetLocals) == some [5]) && isWfShape [] .one
+  | _ => false
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL state_rel satisfying fixture", true),
@@ -157,6 +184,8 @@ def runChecks : IO Bool := do
     ("HOL state_rel rejects nonempty globals", true),
     ("HOL state_rel rejects struct-valued memory", true),
     ("HOL locals_rel satisfying fixture", contextVarGuard && localMapGuard),
+    ("HOL locals_rel_lookup_ctxt exact slot, flattened value, and shape",
+      localsRelLookupCtxtGuard),
     ("HOL locals_rel rejects unmapped local", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

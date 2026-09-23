@@ -82,6 +82,11 @@ run_probe() {
 # Run from the local HOL object directory when Holmake has populated it, so
 # HOL's ordinary theory loader finds compiled CakeML theories. Fall back to
 # the source directory for checkouts whose Holmake places objects there.
+run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
+  ordinary carry_overflow "$cake_dir/compiler/backend/backend_commonScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
+  pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -91,6 +96,8 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_state_eval_probeScript.sml pan_sem_state_eval_probe.out \
+  word_load_hit word32_big "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_evaluate_decls_probeScript.sml pan_evaluate_decls_probe.out \
@@ -211,7 +218,9 @@ run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
-  return_41 return_if_13 "$cake_dir/pancake/semantics/panSemScript.sml"
+  return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
+  recursive_call_timeout recursive_deccall_timeout \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
   return_add_6_7 return_add_6_7 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_e2e_probeScript.sml pan_sem_call_e2e_probe.out \
@@ -364,7 +373,8 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
+  leaves struct_field loads_ops cmp_shift finite_map_shadow \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
   missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe ret_var_probeScript.sml ret_var_probe.out \
@@ -376,11 +386,13 @@ run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
 run_probe compile_def_probeScript.sml compile_def_probe.out \
   return missing_global empty_one_global extra_names_global missing_names_global \
   missing_local empty_one_local extra_names_local missing_names_local valid_local \
-  empty_struct_return \
+  empty_struct_return finite_map_shadow_return extcall_high_tail \
+  extcall_shared_high_tail \
   pair_load pair_store fixed_stride64 \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
-  empty raise_const raise_pair raise_pair_later handled_pair done "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty raise_const raise_pair raise_pair_later raise_pair_later_64 handled_pair done \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

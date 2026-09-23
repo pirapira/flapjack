@@ -13,12 +13,39 @@ namespace Flapjack
 
 universe u
 
+/-- Faithful port of Cake `crepProps$cexp_heads_simp_def`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:11`). HOL rejects the
+    argument when any inner list is empty, then maps total `HD` over the lists.
+    The Lean default `.var 0` gives `headD` a total empty-list value; the guard
+    makes that value unreachable in the result. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
+  | expressions =>
+      if expressions.any List.isEmpty then none
+      else some (expressions.map (fun expression => expression.headD (.var 0)))
+
 /-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). HOL uses
-    `crepSem.eval`; this port uses its source-path Lean counterpart
-    `crepSemEvalExp`, whose variable case reads the runtime state's local
-    lookup. Lean represents `FLOOKUP state.locals name` directly as
-    `state.locals name`. -/
+    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). The HOL statement
+    applies `crepSem.eval` only to `Var` expressions. Its defining `Var`
+    equation is implemented directly by `crepSemEvalExp_var`; HOL
+    `OPT_MMAP` therefore translates to `List.mapM` over the same local
+    lookup. The theorem does not use the compatibility evaluator
+    `evalCrepFullExpState`, nor does it claim a whole-evaluator equivalence.
+
+    The representation translation erases HOL's sole `word_lab` constructor
+    `Word`: a HOL lookup of `SOME (Word w)` corresponds to Lean's `some w`,
+    and absent entries correspond to `none`. Thus a HOL finite `locals` map
+    translates to the Lean lookup function `state.locals`. The runtime type
+    carries extra evaluator dictionaries, but this theorem's only semantic
+    case is the direct HOL `Var` clause.
+
+    Scope boundary: this tag is for the variable-only theorem, not a claim that
+    `crepSemEvalExp` ports all of HOL `eval_def`. Lean stores memory as
+    `α → Option α` with a Boolean domain, while HOL stores total word memory
+    with a separate address set. Global keys and cells use HOL's fixed 5-bit
+    and `word_lab` shapes; Lean represents their finite-map lookup as a
+    function. This theorem observes only the exact `Var` clause, not the
+    remaining memory representation gap. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -32,7 +59,47 @@ theorem lookup_locals_eq_map_vars
   induction names with
   | nil => rfl
   | cons name names ih =>
-      simp [crepSemEvalExp, evalCrepRuntimeExp, ih]
+      simp only [List.mapM_cons, List.map_cons, crepSemEvalExp_var, ih]
+
+/-- Exact port of Cake `crepProps$dec_clock_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:267`). It states every
+    unchanged field listed by HOL: locals, globals, code, memory, both memory
+    domains, endianness (`be`), FFI, and both address bounds. HOL omits `clock`
+    because `dec_clock` changes it; Lean's `bigEndian` is the corresponding
+    field for HOL's `be`. No extra premises are needed. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
+theorem dec_clock_simp (state : CrepRuntimeState α σ) :
+    (decCrepClock state).locals = state.locals ∧
+    (decCrepClock state).globals = state.globals ∧
+    (decCrepClock state).code = state.code ∧
+    (decCrepClock state).memory = state.memory ∧
+    (decCrepClock state).memaddrs = state.memaddrs ∧
+    (decCrepClock state).shMemaddrs = state.shMemaddrs ∧
+    (decCrepClock state).bigEndian = state.bigEndian ∧
+    (decCrepClock state).ffi = state.ffi ∧
+    (decCrepClock state).baseAddress = state.baseAddress ∧
+    (decCrepClock state).topAddress = state.topAddress := by
+  simp [decCrepClock]
+
+/-- Exact port of Cake `crepProps$empty_locals_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:282`). It states every
+    unchanged field listed by HOL: globals, code, memory, both memory domains,
+    clock, endianness (`be`), FFI, and both address bounds. HOL omits `locals`
+    because `empty_locals` clears that field. Lean's `bigEndian` is the
+    corresponding field for HOL's `be`; no extra premises are needed. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
+theorem empty_locals_simp (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).globals = state.globals ∧
+    (clearCrepRuntimeLocals state).code = state.code ∧
+    (clearCrepRuntimeLocals state).memory = state.memory ∧
+    (clearCrepRuntimeLocals state).memaddrs = state.memaddrs ∧
+    (clearCrepRuntimeLocals state).shMemaddrs = state.shMemaddrs ∧
+    (clearCrepRuntimeLocals state).clock = state.clock ∧
+    (clearCrepRuntimeLocals state).bigEndian = state.bigEndian ∧
+    (clearCrepRuntimeLocals state).ffi = state.ffi ∧
+    (clearCrepRuntimeLocals state).baseAddress = state.baseAddress ∧
+    (clearCrepRuntimeLocals state).topAddress = state.topAddress := by
+  simp [clearCrepRuntimeLocals]
 
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/
@@ -68,36 +135,48 @@ theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWor
 /-! Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
     (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]
-theorem loadGlobals_length {α : Type u} [OfNat α 1] [Add α]
-    (address : α) (count : Nat) :
-    (loadGlobals address count).length = count := by
+theorem loadGlobals_length {α : Type u}
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobals (α := α) address count).length = count := by
   induction count generalizing address with
   | zero => rfl
   | succ count ih => simp [loadGlobals, ih]
 
-/-! Faithful port of Cake `crepProps$el_load_globals_elem`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:474`). -/
+/-! Faithful port of Cake
+    `crepProps$el_load_globals_elem`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:474`). The Lean `BitVec`
+    specializes HOL's polymorphic word, `BitVec.ofNat` represents `n2w`, and
+    the bound lets Lean use total list indexing just as HOL's `EL` does. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "el_load_globals_elem"]
-theorem loadGlobals_getElem (address count n : Nat) (h : n < count) :
-    (loadGlobals address count)[n]? = some (.loadGlob (address + n)) := by
+theorem loadGlobals_getElem
+    (address : BitVec 5) (count n : Nat) (h : n < count) :
+    (loadGlobals (α := α) address count)[n]'(by
+      simpa only [loadGlobals_length] using h) =
+        .loadGlob (address + BitVec.ofNat 5 n) := by
   induction count generalizing address n with
-  | zero => simp at h
+  | zero => omega
   | succ count ih =>
       cases n with
       | zero => simp [loadGlobals]
-      | succ k =>
-          simp only [loadGlobals, List.getElem?_cons_succ]
-          rw [ih (address + 1) k (by omega)]
-          congr 1
-          simp [Nat.add_comm, Nat.add_left_comm]
+      | succ n =>
+          have hlt : n < count := by omega
+          simp only [loadGlobals, List.getElem_cons_succ]
+          rw [ih (address := address + 1) (n := n) hlt]
+          have haddr :
+              (address + 1) + BitVec.ofNat 5 n =
+                address + BitVec.ofNat 5 (n + 1) := by
+            rw [BitVec.ofNat_add]
+            simp
+            ac_rfl
+          rw [haddr]
 
 /-- Faithful port of Cake `crepProps$var_cexp_load_globals_empty`
     (`cakeml/pancake/semantics/crepPropsScript.sml:698`): the loads generated by
     `load_globals` contain no local variables. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "var_cexp_load_globals_empty"]
-theorem loadGlobals_crepExpVars_empty {α : Type u} [OfNat α 1] [Add α]
-    (address : α) (count : Nat) :
-    (loadGlobals address count).flatMap crepExpVars = [] := by
+theorem loadGlobals_crepExpVars_empty {α : Type u}
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobals (α := α) address count).flatMap crepExpVars = [] := by
   induction count generalizing address with
   | zero => simp [loadGlobals]
   | succ count ih => simp [loadGlobals, ih, crepExpVars]
@@ -106,9 +185,8 @@ theorem loadGlobals_crepExpVars_empty {α : Type u} [OfNat α 1] [Add α]
     (`cakeml/pancake/semantics/crepPropsScript.sml:458`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_store_globals_empty"]
 theorem crepAssignedFreeVars_nestedSeq_storeGlobals {α : Type u}
-    [OfNat α 1] [Add α]
-    (address : α) (values : List (CrepExp α)) :
-    crepAssignedFreeVars (crepNestedSeq (storeGlobals address values)) = [] := by
+    (address : BitVec 5) (values : List (CrepExp α)) :
+    crepAssignedFreeVars (crepNestedSeq (storeGlobals (α := α) address values)) = [] := by
   induction values generalizing address with
   | nil => simp [storeGlobals, crepNestedSeq, crepAssignedFreeVars]
   | cons value values ih =>
@@ -118,9 +196,8 @@ theorem crepAssignedFreeVars_nestedSeq_storeGlobals {α : Type u}
     (`cakeml/pancake/semantics/crepPropsScript.sml:449`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_store_globals_empty"]
 theorem crepAssignedVars_nestedSeq_storeGlobals {α : Type u}
-    [OfNat α 1] [Add α]
-    (address : α) (values : List (CrepExp α)) :
-    crepAssignedVars (crepNestedSeq (storeGlobals address values)) = [] := by
+    (address : BitVec 5) (values : List (CrepExp α)) :
+    crepAssignedVars (crepNestedSeq (storeGlobals (α := α) address values)) = [] := by
   induction values generalizing address with
   | nil => simp [storeGlobals, crepNestedSeq, crepAssignedVars]
   | cons value values ih =>

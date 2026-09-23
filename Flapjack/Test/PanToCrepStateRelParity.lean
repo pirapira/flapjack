@@ -5,7 +5,8 @@ import Flapjack.Pancake.Semantics.PanCommonProps
 /-! Nonvacuous checks for the HOL `state_rel_def`, `state_rel_structs`,
 `state_rel_globals`, and `locals_rel_def` ports in
 `Flapjack/Pancake/Proofs/PanToCrep.lean`.  Each relation has a satisfying
-fixture and a rejected fixture. -/
+fixture and a rejected fixture. A nonempty target code map is also tied to the
+runtime function list and carried through target Skip evaluation. -/
 
 namespace Flapjack.Test.PanToCrepStateRelParity
 
@@ -19,7 +20,7 @@ def sourceState : PanSemState Nat (FfiState Unit) :=
   { locals := fun _ => none
     globals := fun _ => none
     structs := []
-    code := fun _ => none
+    code := []
     exceptionShapes := fun _ => none
     memory := noPanValueCells
     memaddrs := noMemaddrs
@@ -33,7 +34,7 @@ def sourceState : PanSemState Nat (FfiState Unit) :=
 def targetState : CrepRuntimeState Nat Unit :=
   { locals := fun _ => none
     globals := fun _ => none
-    functions := []
+    code := FEMPTY
     memory := noNatCells
     memaddrs := noMemaddrs
     shMemaddrs := noMemaddrs
@@ -46,6 +47,50 @@ def targetState : CrepRuntimeState Nat Unit :=
     baseAddress := 0
     topAddress := 0 }
 
+def skipCodeMap : FiniteMap String (List Nat × CrepProg Nat) :=
+  FUPDATE_LIST FEMPTY [("id", ([], .skip))]
+
+def skipCodeRuntime : CrepRuntimeState Nat Unit :=
+  { targetState with code := skipCodeMap }
+
+theorem skipCodeMap_has_runtime_entry :
+    FLOOKUP skipCodeRuntime.code "id" = some ([], (CrepProg.skip : CrepProg Nat)) ∧
+    lookupCrepRuntimeCode "id" [] skipCodeRuntime.code = some (.skip, fun _ => none) := by
+  constructor
+  · simp [skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
+  · simp [lookupCrepRuntimeCode, skipCodeRuntime, skipCodeMap,
+      FUPDATE_LIST, FUPDATE, FLOOKUP, assignCrepValues]
+
+def skipCodeContext : PanToCrepProofContext Nat :=
+  { vars := FEMPTY
+    funcs := FUPDATE FEMPTY ("id", ([], Shape.one))
+    eids := FEMPTY
+    vmax := 0 }
+
+def skipSourceCode : PanSemCodeMap Nat :=
+  [("id", ([], .skip, Shape.one))]
+
+def skipSourceState : PanSemState Nat (FfiState Unit) :=
+  { sourceState with code := skipSourceCode }
+
+theorem skipCodeRelFixture :
+    codeRel skipCodeContext (panSemCodeAsLookup skipSourceState.code)
+      skipCodeRuntime.code := by
+  intro function variableShapes program returnShape hlookup
+  by_cases hname : function = "id"
+  · subst function
+    have hvalues : ([], Prog.skip, Shape.one) =
+        (variableShapes, program, returnShape) := by
+      simpa [skipSourceState, skipSourceCode, panSemCodeAsLookup,
+        panSemCodeLookup, lookupInfo, FLOOKUP] using hlookup
+    rcases hvalues with ⟨rfl, rfl, rfl⟩
+    simp [skipCodeContext, skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE,
+      FLOOKUP, compileCodeRelProg, compileProgHOL, localisedProg,
+      Shape.shapeSize]
+  · have hid : ("id" : String) ≠ function := fun heq => hname heq.symm
+    simp [skipSourceState, skipSourceCode, panSemCodeAsLookup,
+      panSemCodeLookup, lookupInfo, FLOOKUP, hid] at hlookup
+
 def nonEmptyGlobalsSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with globals := fun _ => some (.word 0) }
 
@@ -56,6 +101,22 @@ theorem stateRel_satisfied : stateRel sourceState targetState := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   funext address
   simp [sourceState, targetState, noPanValueCells, noNatCells]
+
+theorem skipCodeRuntime_relates :
+    stateRel sourceState skipCodeRuntime := by
+  simpa [stateRel, skipCodeRuntime, targetState] using
+    stateRel_satisfied
+
+theorem skipCodeRelEmptyLocalsFixture :
+    codeRel skipCodeContext
+      (panSemCodeAsLookup (panEmptyLocals skipSourceState).code)
+      (clearCrepRuntimeLocals skipCodeRuntime).code :=
+  codeRelEmptyLocals skipCodeContext skipSourceState skipCodeRuntime
+    skipCodeRelFixture
+
+def skipCodeLookupGuard : Bool :=
+  (FLOOKUP skipCodeRuntime.code "id").isSome &&
+    (lookupCrepRuntimeCode "id" [] skipCodeRuntime.code).isSome
 
 theorem stateRel_structs_fixture : sourceState.structs = [] :=
   stateRel_structs sourceState targetState stateRel_satisfied
@@ -134,6 +195,54 @@ theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals 
       · simp [panValueShape, isWfShape]
     · simp [FEMPTY] at hlookup
 
+def compileExpNotMemSourceState : PanSemState Nat (FfiState Unit) :=
+  { sourceState with locals := sourceLocals }
+
+def compileExpNotMemTargetState : CrepRuntimeState Nat Unit :=
+  { targetState with locals := targetLocals }
+
+def compileExpNotMemExpression : Exp Nat :=
+  .op .add [.var .local "x", .const 7]
+
+/-- The fixture exercises a nested `exps` traversal through an operation and
+    supplies the actual HOL-shaped local, state, code, and locals relations. -/
+theorem compileExpNotMemLoadGlob_fixture :
+    CrepExp.loadGlob 17 ∉
+      ([.op .add [.var 0, .const 7]] : List (CrepExp Nat)).flatMap crepExps := by
+  apply compileExpNotMemLoadGlob oneVarContext compileExpNotMemExpression
+    compileExpNotMemSourceState compileExpNotMemTargetState
+    [.op .add [.var 0, .const 7]] .one 17
+  · simp [compileExpNotMemExpression,
+      compileExpHOL, oneVarContext, FLOOKUP, FUPDATE, compileExpHOL.compileExpListHOL,
+      cexpHeads]
+  · simpa [stateRel, compileExpNotMemSourceState, compileExpNotMemTargetState,
+      sourceState, targetState] using
+      stateRel_satisfied
+  · intro function variableShapes program returnShape hlookup
+    simp [compileExpNotMemSourceState, sourceState, panSemCodeAsLookup, panSemCodeLookup, lookupInfo,
+      FLOOKUP] at hlookup
+  · exact localsRel_satisfied
+
+/-- The exact lookup theorem recovers the concrete slot, flattened word, and
+    well-formed shape for the one-word local in `localsRel_satisfied`. -/
+theorem localsRelLookupCtxt_fixture :
+    ∃ slots,
+      FLOOKUP oneVarContext.vars "x" = some (.one, slots) ∧
+      slots.length = 1 ∧
+      slots.mapM (FLOOKUP targetLocals) = some [5] ∧
+      isWfShape [] .one = true := by
+  obtain ⟨slots, hcontext, _, hmap, hwf⟩ :=
+    localsRelLookupCtxt oneVarContext sourceLocals targetLocals "x" (.word 5)
+      localsRel_satisfied (by simp [sourceLocals, FLOOKUP, FUPDATE])
+  have hslots : slots = [0] := by
+    simpa [oneVarContext, FLOOKUP, FUPDATE, panValueShape] using hcontext.symm
+  subst slots
+  refine ⟨[0], ?_, ?_, ?_, ?_⟩
+  · simp [oneVarContext, FLOOKUP, FUPDATE]
+  · simp
+  · simpa only [panValueFlatten_word] using hmap
+  · simpa [panValueShape] using hwf
+
 theorem rejectsUnmappedLocal :
     ¬ localsRel { oneVarContext with vars := FEMPTY } sourceLocals targetLocals := by
   intro hrel
@@ -150,6 +259,13 @@ def localMapGuard : Bool :=
   ([0].mapM (FLOOKUP targetLocals) == some [5]) &&
     (panValueFlatten (.word 5) == [5])
 
+def localsRelLookupCtxtGuard : Bool :=
+  match FLOOKUP oneVarContext.vars "x" with
+  | some (.one, slots) =>
+      (slots == [0]) && slots.length == 1 &&
+        ([0].mapM (FLOOKUP targetLocals) == some [5]) && isWfShape [] .one
+  | _ => false
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL state_rel satisfying fixture", true),
@@ -157,6 +273,10 @@ def runChecks : IO Bool := do
     ("HOL state_rel rejects nonempty globals", true),
     ("HOL state_rel rejects struct-valued memory", true),
     ("HOL locals_rel satisfying fixture", contextVarGuard && localMapGuard),
+    ("HOL locals_rel_lookup_ctxt exact slot, flattened value, and shape",
+      localsRelLookupCtxtGuard),
+    ("HOL Crep code field matches a nonempty runtime function and survives Skip",
+      skipCodeLookupGuard),
     ("HOL locals_rel rejects unmapped local", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

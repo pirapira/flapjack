@@ -322,8 +322,11 @@ def dumpSource (source : String) (target : Option Nat := none)
          runtime section.  Use the target-facing entry point here, just as the
          artifact compiler does, so those witnesses still get a complete
          diagnostic dump with Pancake's synthetic `main = return 0` fallback. -/
-      let pipeline := compileFlapjackTarget .rv64i (BitVec.ofNat 64 8)
-        (fun value => BitVec.ofNat 64 value) declarations
+      let some pipeline := compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) "main"
+        (panTargetDeclarationsWithDefaultMain declarations)
+        | emit "stage=entry_error" ("main not found" : String)
+          return 1
       match target, targetName with
       | some target, _ => dumpPipelineTarget pipeline target
       | none, some targetName => dumpPipelineNamed pipeline targetName
@@ -336,8 +339,11 @@ def dumpLabSource (source : String) (target : Nat) : IO UInt32 := do
       emit "stage=parse_error" errors
       return 1
   | .ok declarations =>
-      let pipeline := compileFlapjackTarget .rv64i (BitVec.ofNat 64 8)
-        (fun value => BitVec.ofNat 64 value) declarations
+      let some pipeline := compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) "main"
+        (panTargetDeclarationsWithDefaultMain declarations)
+        | emit "stage=entry_error" ("main not found" : String)
+          return 1
       dumpLinkedLab pipeline target 0 (Nat.succ 1000000000)
       return 0
 

@@ -8,6 +8,54 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
+    "hol_name": "word_add_carry_def",
+    "lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean",
+    "lean_name": "wordAddCarryHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "flatten_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+    "lean_name": "panSemFlattenHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison with one-constructor word_lab)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+    "lean_name": "panPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source cases and direct HOL-EVAL oracle)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean",
+    "lean_name": "crepPrimopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (target cases and direct HOL-EVAL oracle)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "var_exp_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "expLocalVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_inlineScript.sml",
+    "hol_name": "compile_inl_top_def",
+    "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
+    "lean_name": "compileInlTopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (triple-list boundary, finite-map duplicate order, and direct HOL probes)"
+  },
+  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
@@ -62,6 +110,14 @@
     "lean_name": "cexpHeads",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "cexp_heads_simp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "cexpHeadsSimp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -504,12 +560,12 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "filter_not_mem_self",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "filter_not_mem_self",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,
@@ -698,10 +754,18 @@
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "map_flatten_eq_map_some_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mapFlattenMemSomeSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MAP_SOME_MEM_lemma",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mapSomeMemLemma",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,
@@ -731,23 +795,7 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "mod_eq_of_lt_eq",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "not_mem_map_flatten",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "option_ne_none_iff_exists",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
   },
@@ -876,14 +924,6 @@
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "panValueProgramStateRel_lookupPanFunction",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "prod_mk_pair_eq_id",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
   },
@@ -2281,6 +2321,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "cexp_heads_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "cexpHeads_eq_cexpHeadsSimp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "ctxt_fc_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFc",
@@ -2337,6 +2385,30 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "local_rel_le_zip_update_preserved",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localRelLeZipUpdatePreserved",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_rel_extend_new_var",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelExtendNewVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "filter_not_mem_self",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "filterNotMemSelf",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "locals_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRel",
@@ -2345,11 +2417,59 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "opt_mmap_eval_is_wf_shape_v",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "evalPanSemStateExpsWfShapeOfStateRel",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "locals_rel_wf_shape",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelWfShape",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_rel_lookup_ctxt",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelLookupCtxt",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mod_eq_lt_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mod_eq_of_lt_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "not_none_then_some",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "option_ne_none_iff_exists",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "pair_map_I",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "prod_mk_pair_eq_id",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "shape_of_alt",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panSemShapeOf_word",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -2436,8 +2556,8 @@
     "hol_name": "el_load_globals_elem",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadGlobals_getElem",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -2452,6 +2572,22 @@
     "hol_name": "lookup_locals_eq_map_vars",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "lookup_locals_eq_map_vars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "dec_clock_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "dec_clock_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "empty_locals_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "empty_locals_simp",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
   },
@@ -2480,11 +2616,587 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_eq_some",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "optMmapEqSome",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "decCrepClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "clearCrepRuntimeLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "shape_of_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "panSemShapeOf",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "panEmptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production state update comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "evaluate_decls_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "evaluateDecls",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compileProgRiscV",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (RISC-V statement review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "mk_ctxt_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "panToCrepMkCtxtHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_vmap_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepMakeVmapHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "crep_vars_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and direct HOL oracle comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "get_eids_from_decls_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "panToCrepGetEidsFromDeclsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_to_crep_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compileToCrepHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_prog_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
+    "lean_name": "compileProgTopHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRel",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_imp",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelImp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "compile_exp_not_mem_load_glob",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileExpNotMemLoadGlob",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mem_comp_field_lem",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileField_mem_or_zero",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileField_mem_of_index_lt",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack support: excludes unreachable zero fallback for valid field index)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mem_comp_field",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileField_mem_of_record_shape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement and pair-valued compileField comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "pan_primop_crep_primop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean",
+    "lean_name": "panPrimopCrepPrimop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (original premise/conclusion shape and shared word_add_carry cases)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "compile_prog_distinct_params",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean",
+    "lean_name": "compileProgTopHOL_params_nodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (premise-free HOL EVERY/ALL_DISTINCT shape over exact compile_prog triples)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MAX_LIST_APPEND",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "maxListAppendHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MAX_LIST_NOT_MEM",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "maxListNotMemHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "flookup_res_var_thm_quant",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "flookupResVarQuant",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "no_overlap_wrap_rt_some_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "noOverlapWrapRtNodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MEM_compile_exp_vmax",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "memCompileExpVmax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "genlistVmaxDistinctListsCompiledExps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "compileExpHOL_outputs_vars_bounded",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "compileField_output_mem_or_input_or_zero",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "crepExpVarsList_mem_iff",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "cexpHeads_mem_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panSemShapeOf_eq_panValueShape_nil",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "is_wf_shape_nil_length_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "isWfShapeNil_length_flatten",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "evaluate_replicate_const",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "evaluateReplicateConst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL evaluator result-type comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "flatten_nil_no_size",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "flattenNilNoSize",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "loadShapeBytes_getElemOpt_rel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Lean indexing bridge)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "loadShapeBytes_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Lean indexing bridge)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "load_shape_el_rel",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "loadShapeBytes_getElem_rel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "res_var_commutes'",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "resVarCommutesPrime",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (finite-map equation comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "EL_load_globals",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "elLoadGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSkipEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepSkipEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileProgHOL_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panBreakEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panContinueEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panTickEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepTickEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileProgHOL_controlLeaves",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectSkipCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_break",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectBreakCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_continue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectContinueCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectTickCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_annot",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectAnnotCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panAnnotEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepBreakEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepContinueEvaluationEquation",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_returnConst",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_returnEmptyStruct",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_returnOneWordStruct",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_break",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_continue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_annot",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepConcreteEvaluationGoal_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_empty_locals",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelEmptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL state field review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_id_update",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepLocalsIdUpdate",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production Crep state type review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "first_compile_prog_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "firstCompileProgAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "first_compile_to_crep_all_distinct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "firstCompileToCrepAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source and production compiler projection comparison)"
   }
 ]

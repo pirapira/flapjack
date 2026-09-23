@@ -1,4 +1,4 @@
-import Flapjack.PanBst
+import Flapjack.Pancake.Semantics.PanSem
 
 /-!
 # Pancake `empty_locals_def`
@@ -11,9 +11,6 @@ and address metadata are preserved by the record update.
 -/
 
 namespace Flapjack
-
-def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
-  { state with locals := fun _ => none }
 
 @[simp] theorem panEmptyLocals_locals (state : PanSemState α ffi) :
     (panEmptyLocals state).locals = (fun _ => none) := by rfl

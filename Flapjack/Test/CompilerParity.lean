@@ -84,6 +84,11 @@ import Flapjack.Test.PanValueFfiClockLe
 import Flapjack.Test.PanValueEvaluatorStability
 import Flapjack.Test.PanToCrepMaxListParity
 import Flapjack.Test.PanToCrepRelationsParity
+import Flapjack.Test.PanToCrepEvaluatorBoundary
+import Flapjack.Test.PanToCrepUtilitiesParity
+import Flapjack.Test.BackendCommonCarryParity
+import Flapjack.Test.PanCrepPrimopParity
+import Flapjack.Test.CompileProgParamsParity
 import Flapjack.Test.PanToCrepCodeRelParity
 import Flapjack.Test.PanToCrepStateRelParity
 import Flapjack.Test.PanHProgExtCallParity
@@ -112,6 +117,7 @@ import Flapjack.Test.CrepeNestedSeqParity
 import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
+import Flapjack.Test.CrepGlobalShapeParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity

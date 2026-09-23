@@ -13,6 +13,8 @@ produce a zero constant.
 
 namespace Flapjack
 
+universe v w
+
 structure CompileContext (α : Type u) where
   vars : InfoMap (Shape × List Nat)
   functions : InfoMap (List (VarName × Shape) × Shape)
@@ -21,22 +23,21 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
-/-! The HOL `ctxt` shape used by `compile_def`: it has the variable, function,
-    and exception maps plus `vmax`. The machine byte width comes from the word
-    type (`CrepBytesInWord`), not a caller-provided context field. -/
-structure PanToCrepCompileContext (α : Type u) where
-  vars : InfoMap (Shape × List Nat)
-  functions : InfoMap (List (VarName × Shape) × Shape)
-  exceptions : InfoMap α
-  maxVar : Nat
+/-! HOL's `context` record in `pan_to_crepScript.sml` uses finite maps, not
+    `InfoMap` lists. This context preserves that representation directly. -/
+structure PanToCrepHOLContext (α : Type) where
+  vars : FiniteMap VarName (Shape × List Nat)
+  funcs : FiniteMap FunName (List (VarName × Shape) × Shape)
+  eids : FiniteMap ExceptionId α
+  vmax : Nat
 
-def PanToCrepCompileContext.toExecutable [CrepBytesInWord α]
-    (context : PanToCrepCompileContext α) : CompileContext α :=
-  { vars := context.vars
-    functions := context.functions
-    exceptions := context.exceptions
-    maxVar := context.maxVar
-    bytesInWord := CrepBytesInWord.bytesInWord }
+/-- HOL `mk_ctxt_def` packages the parameter map, function map, maximum
+    temporary number, and exception map into the finite-map compiler context. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "mk_ctxt_def"]
+def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
+    (funcs : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
+  { vars, funcs, eids, vmax }
 
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
@@ -46,29 +47,6 @@ def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
       | [], _ => none
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
-
-/-- Cake's simplified `cexp_heads_simp` (`crepPropsScript.sml:11`): reject when
-    some argument list is empty, otherwise keep every list's head.  The explicit
-    `fallback` replaces Cake's total `HD`. -/
-def cexpHeadsSimp (fallback : CrepExp α) :
-    List (List (CrepExp α)) → Option (List (CrepExp α))
-  | expressions =>
-      if expressions.any (fun expression => expression.isEmpty) then none
-      else some (expressions.map (fun expression => expression.headD fallback))
-
-/-- Cake's `cexp_heads_eq` (`pan_to_crepProofScript.sml:104`): the case-shaped
-    head collector agrees with the simplified one. -/
-theorem cexpHeads_eq_cexpHeadsSimp (fallback : CrepExp α)
-    (expressions : List (List (CrepExp α))) :
-    cexpHeads expressions = cexpHeadsSimp fallback expressions := by
-  induction expressions with
-  | nil => rfl
-  | cons expression expressions ih =>
-      cases expression with
-      | nil => simp [cexpHeads, cexpHeadsSimp]
-      | cons head tail =>
-          simp only [cexpHeads, ih, cexpHeadsSimp]
-          split <;> simp_all
 
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
 def compileField [OfNat α 0] (index : Nat) :
@@ -90,14 +68,14 @@ def compilePanOp : PanOp → CrepOp
     with the assignments nested in source order.  The second component of the
     stored pair is the flattened word list; the shape is not consulted. -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
-def expHdlFiniteMap [OfNat α 0] [OfNat α 1] [Add α]
+def expHdlFiniteMap {α : Type u}
     (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=
   match FLOOKUP fm v with
   | none => .skip
   | some (_, names) =>
       crepNestedSeq
         (panMap2 (fun destination source => .assign destination source)
-          names (loadGlobals (0 : α) names.length))
+          names (loadGlobals (0 : BitVec 5) names.length))
 
 /-! Flapjack-only representation bridge from the compiler's association-list
     `InfoMap` to the HOL finite map.  The compiler stores bindings
@@ -142,15 +120,15 @@ theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
-def expHdl [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+def expHdl {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
-  expHdlFiniteMap (infoMapToFiniteMap vars) name
+  expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name
 
 /-- The executable adapter computes the faithful finite-map definition on the
     bridged map. -/
-theorem expHdl_eq_expHdlFiniteMap_bridge [BEq String] [OfNat α 0] [OfNat α 1] [Add α]
+theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
-    expHdl vars name = expHdlFiniteMap (infoMapToFiniteMap vars) name := rfl
+    expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
 /-! Faithful port of `pan_to_crep$ret_var` from
     `cakeml/pancake/pan_to_crepScript.sml:114-119`.
@@ -227,7 +205,8 @@ Bead `flapjack-pxn.18.2.4.1`. -/
 
 /-- Cake's `MAP2` truncates like `List.zipWith`, so the finite-map return
     handler body and `assignRet` emit the same program. -/
-theorem panMap2_eq_zipWith {α β γ : Type u} (f : α → β → γ)
+theorem panMap2_eq_zipWith {α : Type u} {β : Type v} {γ : Type w}
+    (f : α → β → γ)
     (xs : List α) (ys : List β) : panMap2 f xs ys = xs.zipWith f ys := by
   induction xs generalizing ys with
   | nil => rfl
@@ -236,24 +215,29 @@ theorem panMap2_eq_zipWith {α β γ : Type u} (f : α → β → γ)
 /-- Known-variable form of `pan_to_crep$exp_hdl`: when `FLOOKUP` finds the
     name, the emitted handler setup is exactly the tagged `assign_ret`
     program that copies the global return slots into the flattened local. -/
-theorem expHdlFiniteMap_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]
+theorem expHdlFiniteMap_eq_assignRet
+    {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]
     {fm : FiniteMap VarName (Shape × List Nat)} {v : VarName}
     {shape : Shape} {names : List Nat} (h : FLOOKUP fm v = some (shape, names)) :
-    expHdlFiniteMap fm v = assignRet names := by
+    expHdlFiniteMap (α := α) fm v = assignRet (α := α) names := by
   unfold expHdlFiniteMap assignRet
-  simp only [h, panMap2_eq_zipWith]
+  simp only [h]
+  congr 1
+  exact panMap2_eq_zipWith (α := Nat) (β := CrepExp α)
+    (γ := CrepProg α) _ _ _
 
 /-- Executable-adapter form of the previous lemma: the association-list
     `expHdl` computes the tagged `assign_ret` whenever `lookupInfo` finds the
     variable. -/
-theorem expHdl_eq_assignRet_of_lookupInfo [BEq String] [LawfulBEq String]
+theorem expHdl_eq_assignRet_of_lookupInfo {α : Type u} [BEq String] [LawfulBEq String]
     [OfNat α 0] [OfNat α 1] [Add α]
     {vars : InfoMap (Shape × List Nat)} {name : VarName}
     {shape : Shape} {names : List Nat}
     (h : lookupInfo name vars = some (shape, names)) :
-    expHdl vars name = assignRet names := by
-  rw [expHdl_eq_expHdlFiniteMap_bridge]
-  exact expHdlFiniteMap_eq_assignRet (by simpa using h)
+    expHdl (α := α) vars name = assignRet names := by
+  rw [expHdl_eq_expHdlFiniteMap_bridge (α := α)]
+  exact expHdlFiniteMap_eq_assignRet (α := α)
+    (fm := infoMapToFiniteMap vars) (v := name) (by simpa using h)
 
 /-- `pan_to_crep$ret_hdl` on a multi-word `Comb` is the tagged `assign_ret`. -/
 theorem retHdl_comb_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]

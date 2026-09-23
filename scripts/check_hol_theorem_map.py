@@ -32,6 +32,7 @@ THEOREM_RE = re.compile(
 VALID_STATUSES = {
     "reviewed_exact",
     "pending_statement_review",
+    "documented_mismatch",
     "no_hol_reference_pending_classification",
 }
 FIELDS = {
@@ -167,9 +168,21 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
     reviewed_exact = {
+        ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"),
         ("Flapjack/Pancake/Semantics/CrepProps.lean", "lookup_locals_eq_map_vars"),
+        ("Flapjack/Pancake/Semantics/CrepProps.lean", "dec_clock_simp"),
+        ("Flapjack/Pancake/Semantics/CrepProps.lean", "empty_locals_simp"),
+        ("Flapjack/Pancake/Semantics/CrepSem.lean", "decCrepClock"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "globalCompileTopCake_shapes_wf_nil"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt"),
+        ("Flapjack/Pancake/Proofs/PanToCrep.lean", "compileExpNotMemLoadGlob"),
+        ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "memCompileExpVmax"),
+        ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExps"),
     }
     for key in reviewed_exact:
         if key in inventory:
@@ -206,6 +219,13 @@ def validate_inventory(
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         if (hol_path is None) != (hol_name is None):
             errors.append(f"{key[0]}:{key[1]}: HOL path and name must both be set or null")
+        elif status == "documented_mismatch":
+            if hol_path is None:
+                errors.append(f"{key[0]}:{key[1]}: documented mismatch needs its HOL candidate")
+            elif not isinstance(hol_path, str) or not isinstance(hol_name, str):
+                errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
+            if key in tagged:
+                errors.append(f"{key[0]}:{key[1]}: documented mismatch must not carry an @[hol] tag")
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")

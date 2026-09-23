@@ -1,8 +1,202 @@
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.LoopToWord
+import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
 
 open Flapjack
+
+/-! Direct `raise_const` result from `compile_to_crep_probe.out`, now checked
+at the exact HOL declaration-only boundary over a 64-bit word. The exception
+declaration determines code zero internally; no compiler context is supplied. -/
+def holDeclarationOnlyProbe : List (Decl (BitVec 64)) :=
+  [.exnDecl "E" .one,
+   .function
+     { name := "f", inline := false, exported := false,
+       params := [("x", .one)],
+       body := .raise "E" (.const 7), returnShape := .one }]
+
+def holDeclarationOnlyOracle : Bool :=
+  match compileToCrepHOL holDeclarationOnlyProbe with
+  | [("f", [0],
+      .seq (.dec 1 (.const seven)
+        (.seq (.storeGlob address (.var 1)) .skip))
+        (.raise code))] =>
+      seven == (7 : BitVec 64) && address == (0 : BitVec 5) &&
+        code == (0 : BitVec 64)
+  | _ => false
+
+#guard holDeclarationOnlyOracle
+
+/-! These declaration-only fixtures replay the `raise_pair` and
+`handled_pair` rows from the direct HOL `compile_to_crep_probe.out` at its
+concrete 8-bit word instantiation. They exercise the exact finite-map
+`compileToCrepHOL` path used by `compileFlapjackEntryCake`, rather than the
+older caller-context compatibility helper below. -/
+def holPairRaiseProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .one }]
+
+def holPairRaiseProductionOracle : Bool :=
+  match compileToCrepHOL holPairRaiseProbe with
+  | [("f", [], .seq
+      (.dec 1 (.const seven)
+        (.dec 2 (.const nine)
+          (.seq (.storeGlob first (.var 1))
+            (.seq (.storeGlob second (.var 2)) .skip))))
+      (.raise code))] =>
+      seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
+        code == (0 : BitVec 8)
+  | _ => false
+
+#guard holPairRaiseProductionOracle
+
+def holLaterPairRaiseProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .dec "a" .one (.const 3)
+         (.dec "b" .one (.const 5)
+           (.raise "E" (.rStruct [.const 7, .const 9]))),
+       returnShape := .one }]
+
+def holLaterPairRaiseProductionOracle : Bool :=
+  match compileToCrepHOL holLaterPairRaiseProbe with
+  | [("f", [],
+      .dec 1 (.const three)
+        (.dec 2 (.const five)
+          (.seq
+            (.dec 3 (.const seven)
+              (.dec 4 (.const nine)
+                (.seq
+                  (.storeGlob first (.var 3))
+                  (.seq (.storeGlob second (.var 4)) .skip))))
+            (.raise code))))] =>
+      three == (3 : BitVec 8) && five == (5 : BitVec 8) &&
+        seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
+        code == (0 : BitVec 8)
+  | _ => false
+
+#guard holLaterPairRaiseProductionOracle
+
+def holHandledPairProbe : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.rStruct [.const 7, .const 9]),
+       returnShape := .comb [.one, .one] },
+   .function
+     { name := "g", inline := false, exported := false,
+       params := [("pair", .comb [.one, .one])],
+       body := .call
+         (some (some (.local, "pair"), some ("E", "pair", .skip))) "f" [],
+       returnShape := .one }]
+
+def holHandledPairProductionOracle : Bool :=
+  match compileToCrepHOL holHandledPairProbe with
+  | [("f", [], .seq
+        (.dec 1 (.const seven)
+          (.dec 2 (.const nine)
+            (.seq (.storeGlob first (.var 1))
+              (.seq (.storeGlob second (.var 2)) .skip))))
+        (.raise raiseCode)),
+     ("g", [0, 1], .call
+        (some ([0, 1], some (handlerCode,
+          .seq
+            (.seq (.assign 0 (.loadGlob loadFirst))
+              (.seq (.assign 1 (.loadGlob loadSecond)) .skip))
+            .skip))) "f" [])] =>
+      seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
+        raiseCode == (0 : BitVec 8) && handlerCode == (0 : BitVec 8) &&
+        loadFirst == (0 : BitVec 5) && loadSecond == (1 : BitVec 5)
+  | _ => false
+
+#guard holHandledPairProductionOracle
+
+def holHandledPairMetadataAdapterOracle : Bool :=
+  match compileToCrepHOLWithMetadata holHandledPairProbe with
+  | [{ name := "f", params := [], returnShape := .comb [.one, .one], .. },
+     { name := "g", params := [0, 1], returnShape := .one, .. }] => true
+  | _ => false
+
+#guard holHandledPairMetadataAdapterOracle
+
+def holMetadataAdapterOracle : Bool :=
+  match compileToCrepHOLWithMetadata holDeclarationOnlyProbe with
+  | [{ name := "f", params := [0], returnShape := .one, .. }] => true
+  | _ => false
+
+#guard holMetadataAdapterOracle
+
+/-! HOL `alist_to_fmap` is a right fold: the first repeated name wins even
+though `compile_to_crep` still emits both function declarations in order. -/
+def holDuplicateMapOracle : Bool :=
+  let declarations : List (Decl (BitVec 64)) :=
+    [.exnDecl "E" .one, .exnDecl "E" .one,
+     .function
+       { name := "f", inline := false, exported := false,
+         params := [], body := .skip, returnShape := .one },
+     .function
+       { name := "f", inline := false, exported := false,
+         params := [("x", .one)], body := .skip,
+         returnShape := .comb [.one, .one] }]
+  FLOOKUP (panToCrepGetEidsFromDeclsHOL declarations) "E" ==
+      some (0 : BitVec 64) &&
+    (match FLOOKUP (functionInfosHOL declarations) "f" with
+     | some ([], .one) => true
+     | _ => false) &&
+    (compileToCrepHOL declarations).length == 2
+
+#guard holDuplicateMapOracle
+
+/-! Exact `duplicate_exceptions` row from the direct HOL
+`compile_to_crep_probe.out`: the first repeated `E` keeps code zero, `F`
+keeps code one, and both compiled Raise bodies use those codes. -/
+def holDuplicateExceptionDecls : List (Decl (BitVec 8)) :=
+  [.exnDecl "E" .one, .exnDecl "F" .one, .exnDecl "E" .one,
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .raise "E" (.const 7), returnShape := .one },
+   .function
+     { name := "g", inline := false, exported := false, params := [],
+       body := .raise "F" (.const 9), returnShape := .one }]
+
+def holDuplicateExceptionProductionOracle : Bool :=
+  FLOOKUP (panToCrepGetEidsFromDeclsHOL holDuplicateExceptionDecls) "E" ==
+      some (0 : BitVec 8) &&
+    FLOOKUP (panToCrepGetEidsFromDeclsHOL holDuplicateExceptionDecls) "F" ==
+      some (1 : BitVec 8) &&
+    (match compileToCrepHOL holDuplicateExceptionDecls with
+     | [("f", [], .seq
+          (.dec 1 (.const seven)
+            (.seq (.storeGlob first (.var 1)) .skip)) (.raise ecode)),
+        ("g", [], .seq
+          (.dec 1 (.const nine)
+            (.seq (.storeGlob second (.var 1)) .skip)) (.raise fcode))] =>
+          seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
+            first == (0 : BitVec 5) && second == (0 : BitVec 5) &&
+            ecode == (0 : BitVec 8) && fcode == (1 : BitVec 8)
+     | _ => false)
+
+#guard holDuplicateExceptionProductionOracle
+
+def holDuplicateExceptionMetadataOracle : Bool :=
+  match compileToCrepHOLWithMetadata holDuplicateExceptionDecls with
+  | [{ name := "f", params := [], returnShape := .one,
+       body := .seq _ (.raise ecode) },
+     { name := "g", params := [], returnShape := .one,
+       body := .seq _ (.raise fcode) }] =>
+      ecode == (0 : BitVec 8) && fcode == (1 : BitVec 8)
+  | _ => false
+
+#guard holDuplicateExceptionMetadataOracle
 
 def compileToCrepeProbeContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [("E", 0)],
@@ -24,13 +218,33 @@ def makeFuncsOracle : Bool :=
 
 #guard makeFuncsOracle
 
-/-! Direct `crep_vars_def` oracle: nested parameter shapes flatten in source
-    order and receive consecutive slots. -/
+/-! Direct HOL `crep_vars_def` oracle (the `crep_vars_empty` and
+    `crep_vars_nested` lines in `compile_to_crep_probe.out`): nested parameter
+    shapes flatten in source order and receive consecutive slots. -/
 def crepVarsOracle : Bool :=
-  panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
+  panToCrepVars [] == [] &&
+    panToCrepVars [("left", .one), ("pair", .comb [.one, .one]),
       ("right", .one)] == [0, 1, 2, 3]
 
 #guard crepVarsOracle
+
+/-! Direct HOL `mk_ctxt_fields` oracle in `compile_to_crep_probe.out`:
+    the constructor preserves all four fields in HOL's argument order. -/
+def mkCtxtOracle : Bool :=
+  let vars : FiniteMap VarName (Shape × List Nat) :=
+    FUPDATE FEMPTY ("x", (.one, [0]))
+  let funcs : FiniteMap FunName (List (VarName × Shape) × Shape) :=
+    FUPDATE FEMPTY ("f", ([("x", .one)], .one))
+  let eids : FiniteMap ExceptionId (BitVec 8) :=
+    FUPDATE FEMPTY ("E", 2)
+  let context := panToCrepMkCtxtHOL vars funcs 3 eids
+  context.vmax == 3 &&
+    (FLOOKUP context.vars "x").isSome &&
+    (FLOOKUP context.funcs "f").isSome &&
+    FLOOKUP context.eids "E" == some 2
+
+#guard mkCtxtOracle
+
 /-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
     flattened slots in source order. -/
 def makeVmapOracle : Bool :=
@@ -39,6 +253,21 @@ def makeVmapOracle : Bool :=
   | _ => false
 
 #guard makeVmapOracle
+
+/-! Direct HOL `make_vmap_shaped` and `make_vmap_duplicate_lookup` oracle:
+    the finite-map production path allocates consecutive slots and its later
+    duplicate parameter wins the lookup. -/
+def makeVmapHOLOracle : Bool :=
+  let shaped := panToCrepMakeVmapHOL
+    [("x", .one), ("pair", .comb [.one, .one])]
+  let duplicate := panToCrepMakeVmapHOL
+    [("x", .one), ("x", .comb [.one, .one])]
+  match FLOOKUP shaped "x", FLOOKUP shaped "pair", FLOOKUP duplicate "x" with
+  | some (.one, [0]), some (.comb [.one, .one], [1, 2]),
+      some (.comb [.one, .one], [1, 2]) => true
+  | _, _, _ => false
+
+#guard makeVmapHOLOracle
 
 /-! Cake's `FEMPTY |++ ZIP` gives the later duplicate parameter the result of
     lookup.  This is deliberately a malformed direct compiler input: the
@@ -154,6 +383,72 @@ def laterPairOracle : Bool :=
   | _ => false
 
 #guard laterPairOracle
+
+/-! Follow the actual 64-bit declaration-only HOL compiler result through
+`crep_to_loop`, `loop_to_word`, and `word_to_stack`. This checks that the
+one-word Crep global indices from `raise_pair_later` survive as Stack Temp 0
+and Temp 1. The original pass rules are `loop_to_wordScript.sml:93` and
+`compiler/backend/word_to_stackScript.sml:491`. -/
+def holLaterPairRaiseProbe64 : List (Decl (BitVec 64)) :=
+  [.exnDecl "E" (.comb [.one, .one]),
+   .function
+     { name := "f", inline := false, exported := false, params := [],
+       body := .dec "a" .one (.const 3)
+         (.dec "b" .one (.const 5)
+           (.raise "E" (.rStruct [.const 7, .const 9]))),
+       returnShape := .one }]
+
+/-! Exact `raise_pair_later_64` row from the direct HOL probe: the ordinary
+declarations use slots 1 and 2, the later two-word payload uses slots 3 and 4,
+and its global return area uses the unscaled Temp-region indices 0 and 1. -/
+def holLaterPairRaiseProductionOracle64 : Bool :=
+  match compileToCrepHOL holLaterPairRaiseProbe64 with
+  | [("f", [],
+      .dec 1 (.const three)
+        (.dec 2 (.const five)
+          (.seq
+            (.dec 3 (.const seven)
+              (.dec 4 (.const nine)
+                (.seq (.storeGlob first (.var 3))
+                  (.seq (.storeGlob second (.var 4)) .skip))))
+            (.raise code))))] =>
+      three == (3 : BitVec 64) && five == (5 : BitVec 64) &&
+        seven == (7 : BitVec 64) && nine == (9 : BitVec 64) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
+        code == (0 : BitVec 64)
+  | _ => false
+
+#guard holLaterPairRaiseProductionOracle64
+
+def laterPairTempLoop : Option (LoopProg (BitVec 64)) := do
+  let [(_, _, crep)] := compileToCrepHOL holLaterPairRaiseProbe64 | none
+  let loopContext : LoopContext (BitVec 64) :=
+    { vars := [], functions := [], maxVar := 0, target := .rv64i }
+  some (compileCrepToLoop loopContext [] crep)
+
+def laterPairTempWord : Option (WordProg (BitVec 64)) := do
+  let loop ← laterPairTempLoop
+  some (LoopToWord.loopToWordCompFunc 0 [] loop)
+
+def laterPairTempPipelineStack : Option (StackProg Nat) := do
+  let word ← laterPairTempWord
+  let stackConfig : RiscV.WordStackConfig :=
+    { locations := (List.range 31).map fun register =>
+        (register, .register register),
+      scratch := 31, stackBase := 0 }
+  RiscV.wordToStackProgNat stackConfig (RiscV.wordProgToNat word)
+
+def stackTempWrites : StackProg Nat → List Nat
+  | .set (.temp written) _ => [written]
+  | .seq first second => stackTempWrites first ++ stackTempWrites second
+  | _ => []
+
+def laterPairStackTempRegionOracle : Bool :=
+  match laterPairTempPipelineStack with
+  | some stack => stackTempWrites stack == [0, 1]
+  | none => false
+
+#guard laterPairStackTempRegionOracle
 
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),
@@ -276,6 +571,12 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   let results := [
     ("raised constant", parityGuard),
+    ("duplicate exception names through HOL compiler", holDuplicateExceptionProductionOracle),
+    ("duplicate exception names through production metadata", holDuplicateExceptionMetadataOracle),
+    ("declaration-only two-word exception", holPairRaiseProductionOracle),
+    ("declaration-only later two-word exception", holLaterPairRaiseProductionOracle),
+    ("declaration-only handled two-word exception", holHandledPairProductionOracle),
+    ("handled-call production metadata adapter", holHandledPairMetadataAdapterOracle),
     ("two-word exception", pairRaiseOracle),
     ("later two-word exception", laterPairOracle),
     ("handled two-word exception", handledPairOracle),

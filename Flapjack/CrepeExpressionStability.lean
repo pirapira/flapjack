@@ -56,7 +56,7 @@ theorem evalCrepFullExp_update_of_not_mem
             have haddress' := go address addressValue
               (by simpa [crepExpVars] using hnot) haddress
             simpa [evalCrepFullExp, haddress, haddress'] using heval
-    | .loadGlob address => by simpa [evalCrepFullExp] using heval
+    | .loadGlob address => by simp [evalCrepFullExp] at heval
     | .op operator expressions => by
         cases expressions with
         | nil => simp [evalCrepFullExp] at heval
@@ -568,4 +568,3 @@ theorem evalCrepFullExpsState_local_lookup_of_mem
     expression value name hvalue hmemExpression
 
 end Flapjack
-

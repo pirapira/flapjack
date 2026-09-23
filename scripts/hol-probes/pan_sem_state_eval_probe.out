@@ -1,0 +1,8 @@
+word_load_hit=SOME (ValWord 0x1122334455667788w)
+word_load_miss=NONE
+byte_little_first=SOME (ValWord 136w)
+byte_little_last=SOME (ValWord 17w)
+word32_little=SOME (ValWord 0x55667788w)
+byte_big_first=SOME (ValWord 17w)
+byte_big_last=SOME (ValWord 136w)
+word32_big=SOME (ValWord 0x11223344w)

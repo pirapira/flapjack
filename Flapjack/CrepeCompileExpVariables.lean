@@ -103,34 +103,6 @@ theorem compileField_vars_mem
           exact flatMap_crepExpVars_mem_drop expressions (Shape.shapeSize shape)
             varName htail
 
-/-! Cake's `mem_comp_field_lem` (`pan_to_crepProofScript.sml:397-408`):
-    selecting a compiled record field can only retain an input expression, or
-    produce the zero fallback used when the shape list is exhausted. -/
-theorem compileField_mem_or_zero
-    [OfNat α 0]
-    (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
-    (expression : CrepExp α)
-    (hmem : expression ∈ (compileField index shapes expressions).1) :
-    expression ∈ expressions ∨ expression = .const 0 := by
-  induction shapes generalizing index expressions with
-  | nil =>
-      simp [compileField] at hmem
-      exact Or.inr hmem
-  | cons shape shapes ih =>
-      cases index with
-      | zero =>
-          left
-          exact List.mem_of_mem_take hmem
-      | succ index =>
-          have hdrop : expression ∈
-              (compileField index shapes
-                (expressions.drop (Shape.shapeSize shape))).1 := by
-            simpa [compileField] using hmem
-          rcases ih index (expressions.drop (Shape.shapeSize shape)) hdrop with
-            hinput | hzero
-          · exact Or.inl (List.mem_of_mem_drop hinput)
-          · exact Or.inr hzero
-
 theorem flatMap_crepExpVars_map_var_mem
     {α : Type u}
     (names : List Nat) (varName : Nat)
@@ -795,7 +767,7 @@ theorem crepExpsList_eq_flatMap
 
 theorem cexpHeads_crepExps_mem
     (expressions : List (List (CrepExp α))) (heads : List (CrepExp α))
-    (hheads : cexpHeads expressions = some heads) (target : α)
+    (hheads : cexpHeads expressions = some heads) (target : BitVec 5)
     (hmem : CrepExp.loadGlob target ∈ heads.flatMap crepExps) :
     CrepExp.loadGlob target ∈ expressions.flatMap (List.flatMap crepExps) := by
   induction expressions generalizing heads with
@@ -826,7 +798,7 @@ theorem cexpHeads_crepExps_mem
 theorem compileField_crepExps_mem
     [OfNat α 0]
     (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
-    (target : α) (hmem : CrepExp.loadGlob target ∈
+    (target : BitVec 5) (hmem : CrepExp.loadGlob target ∈
       (compileField index shapes expressions).1.flatMap crepExps) :
     CrepExp.loadGlob target ∈ expressions.flatMap crepExps := by
   induction shapes generalizing index expressions with
@@ -852,7 +824,7 @@ theorem compileField_crepExps_mem
 
 theorem compileExp_not_mem_loadGlob
     [BEq α] [OfNat α 0] [Add α]
-    (context : CompileContext α) (expression : Exp α) (target : α) :
+    (context : CompileContext α) (expression : Exp α) (target : BitVec 5) :
     CrepExp.loadGlob target ∉
       (compileExp context expression).1.flatMap crepExps := by
   have hmain : ∀ n (expression : Exp α), sizeOf expression = n →
@@ -1015,6 +987,86 @@ theorem compileExp_not_mem_loadGlob
         | topAddr => simp [compileExp, crepExps]
         | bytesInWord => simp [compileExp, crepExps]
   exact hmain (sizeOf expression) expression rfl
+
+/-! Compiler-only support for the exact HOL proof below. This variant follows
+    the finite-map, HOL-shaped `compileExpHOL` implementation; the earlier
+    `compileExp_not_mem_loadGlob` above is about the separate list-backed
+    compatibility compiler and is not used as the tagged theorem's proof. -/
+
+theorem compileExpHOL_not_mem_loadGlob
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (expression : Exp α) (target : BitVec 5) :
+    CrepExp.loadGlob target ∉
+      (compileExpHOL context expression).1.flatMap crepExps := by
+  let listNoGlobal (expressions : List (Exp α)) :=
+    ∀ target, CrepExp.loadGlob target ∉
+      (compileExpHOL.compileExpListHOL context expressions).flatMap
+        (fun entry => entry.1.flatMap crepExps)
+  let expNoGlobal (expression : Exp α) :=
+    ∀ target, CrepExp.loadGlob target ∉
+      (compileExpHOL context expression).1.flatMap crepExps
+  apply compileExpHOL.induct (context := context)
+    (motive1 := listNoGlobal) (motive2 := expNoGlobal)
+  all_goals try simp_all [compileExpHOL, compileExpHOL.compileExpListHOL,
+    listNoGlobal, expNoGlobal, crepExps]
+  case case2 =>
+    intro expression expressions ihExpression ihExpressions target output shape hpair
+      compiledOutput hcompiledOutput
+    rcases hpair with hhead | htail
+    · have hmem : compiledOutput ∈ (compileExpHOL context expression).1 := by
+        rw [← hhead]
+        exact hcompiledOutput
+      exact ihExpression target compiledOutput hmem
+    · exact ihExpressions target output shape htail compiledOutput hcompiledOutput
+  case case7 =>
+    intro expressions ihExpressions target output compiledOutputs shape hpair compiledOutput
+      hcompiledOutput
+    exact (ihExpressions target compiledOutputs shape hpair output compiledOutput) hcompiledOutput
+  case case8 =>
+    intro index expression shapes hshape ihExpression target output houtput
+    intro hmem
+    have hfield : CrepExp.loadGlob target ∈
+        (compileField index shapes (compileExpHOL context expression).1).1.flatMap crepExps :=
+      List.mem_flatMap.mpr ⟨output, houtput, hmem⟩
+    have hinput := compileField_crepExps_mem index shapes
+      (compileExpHOL context expression).1 target hfield
+    rcases List.mem_flatMap.mp hinput with ⟨source, hsource, hmem⟩
+    exact ihExpression target source hsource hmem
+  case case12 =>
+    intro shape expression head tail outputShape hcompile ihExpression target output houtput
+    have hheadNo : CrepExp.loadGlob target ∉ crepExps head :=
+      (ihExpression target).1
+    have hload := crepExps_loadShape_not_mem_loadGlob
+      (0 : α) CrepBytesInWord.bytesInWord (Shape.shapeSize shape) head target hheadNo
+    intro hmem
+    apply hload
+    exact List.mem_flatMap.mpr ⟨output, houtput, hmem⟩
+  case case18 =>
+    intro operator expressions heads hheads ihExpressions target
+    intro hmem
+    have hheadsMem : CrepExp.loadGlob target ∈ heads.flatMap crepExps := by
+      simpa [crepExpsList_eq_flatMap] using hmem
+    have hinputs := cexpHeads_crepExps_mem
+      ((compileExpHOL.compileExpListHOL context expressions).map Prod.fst)
+      heads hheads target hheadsMem
+    rcases List.mem_flatMap.mp hinputs with ⟨outputs, houtputs, hmem⟩
+    rcases List.mem_map.mp houtputs with ⟨entry, hentry, rfl⟩
+    rcases entry with ⟨outputs, shape⟩
+    rcases List.mem_flatMap.mp hmem with ⟨compiledOutput, hcompiledOutput, hmem⟩
+    exact ihExpressions target outputs shape hentry compiledOutput hcompiledOutput hmem
+  case case20 =>
+    intro operator expressions heads hheads ihExpressions target
+    intro hmem
+    have hheadsMem : CrepExp.loadGlob target ∈ heads.flatMap crepExps := by
+      simpa [crepExpsList_eq_flatMap] using hmem
+    have hinputs := cexpHeads_crepExps_mem
+      ((compileExpHOL.compileExpListHOL context expressions).map Prod.fst)
+      heads hheads target hheadsMem
+    rcases List.mem_flatMap.mp hinputs with ⟨outputs, houtputs, hmem⟩
+    rcases List.mem_map.mp houtputs with ⟨entry, hentry, rfl⟩
+    rcases entry with ⟨outputs, shape⟩
+    rcases List.mem_flatMap.mp hmem with ⟨compiledOutput, hcompiledOutput, hmem⟩
+    exact ihExpressions target outputs shape hentry compiledOutput hcompiledOutput hmem
 
 /-! Cake's `genlist_vmax_distinct_lists_compiled_exps`
     (`pan_to_crepProofScript.sml:3094`): compiler temporaries allocated strictly

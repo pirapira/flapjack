@@ -194,7 +194,7 @@ def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64)
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
   | .error _ => none
   | .ok declarations =>
-      match compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+      match compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
           (fun value => BitVec.ofNat 64 value) "main"
           (panTargetDeclarationsWithDefaultMain declarations) with
       | none => none

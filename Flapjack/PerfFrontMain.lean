@@ -414,38 +414,18 @@ def main : IO Unit := do
       let t4 ← stage "structCompileTop" t3 (countDecls structured)
       match pipelineFindFunction entryName structured with
       | none => IO.println "PERF entry NOT FOUND"
-      | some entry =>
-          let renamed := globalNewMainName structured
-          let prepared := globalRenameDecls entryName renamed (globalResortDecls structured)
-          let t5 ← stage "globalRename" t4 (countDecls prepared)
-          let globals0 := globalCompileTop (BitVec.ofNat 64 8)
-            (fun value => BitVec.ofNat 64 value) prepared
-          let t6 ← stage "globalCompileTop" t5 (countDecls globals0.declarations)
-          let entryArguments := entry.params.map (fun parameter =>
-            Exp.var .local parameter.1)
-          let wrapper : Decl (BitVec 64) := .function
-            { name := entryName
-              inline := false
-              exported := false
-              params := entry.params
-              body := .seq (nestedSeq globals0.initializers)
-                (.call none renamed entryArguments)
-              returnShape := entry.returnShape }
-          let globals := { globals0 with declarations := wrapper :: globals0.declarations }
-          let crepeContext := pipelineCrepeCompileContext
-            (fun value => BitVec.ofNat 64 value) globals
-          let compiled := compileToCrepFixed crepeContext globals.declarations
-          let t7 ← stage "compileToCrep" t6 (countCrepFunctions compiled)
-          let inlined := crepInlineTopRecursiveByNames
-            (pipelineInlineNames globals.declarations) compiled
-          let t8 ← stage "crepInline" t7 (countCrepFunctions inlined)
-          let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) inlined
-          let t9 ← stage "crepSimp" t8 (countCrepFunctions crepe)
+      | some _entry =>
+          let globals := globalCompileTopCake structured entryName
+          let t6 ← stage "globalCompileTop" t4 (countDecls globals)
+          let compiled := compileProgTopHOLWithMetadata globals
+          let t7 ← stage "compileProg" t6 (countCrepFunctions compiled)
+          let crepe := crepSimpFunctions (fun value => BitVec.ofNat 64 value) compiled
+          let t8 ← stage "crepSimp" t7 (countCrepFunctions crepe)
           let loop := pipelineLoopFunctionsSource .rv64i 1 crepe
-          let t10 ← stage "crepToLoop" t9
+          let t9 ← stage "crepToLoop" t8
             (loop.foldl (fun acc (_, _, body) => acc + countLoop body) 0)
           let word := pipelineWordFunctionsSource loop
-          let _ ← stage "loopToWord" t10
+          let _ ← stage "loopToWord" t9
             (word.foldl (fun acc (_, _, body) => acc + countWord body) 0)
           IO.println s!"PERF functions loop={loop.length} word={word.length}"
           if (← IO.getEnv "PERF_LOWERFAIL").isSome then

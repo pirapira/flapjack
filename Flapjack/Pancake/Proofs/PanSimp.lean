@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanGlobals
 import Flapjack.PanProgramSemantics
 import Flapjack.Pancake.PanSimp
@@ -431,40 +432,12 @@ theorem list_mapM_map {α β γ : Type} (f : α → Option β) (xs : List α)
     rw [show (fun x => (f x).map g) = (Option.map g ∘ f) from rfl]
     rw [← Option.map_bind, hpoint]
 
-/-- Cake's `opt_mmap_eq_some` (`pan_commonPropsScript.sml:28`): a successful
-    `OPT_MMAP` is exactly a pointwise `SOME`-mapping. -/
+/-- Compatibility name for the exact HOL `opt_mmap_eq_some` theorem now in
+    `PanCommonProps`; retained for existing PanSimp consumers. -/
 theorem list_mapM_eq_some_map_some {α β : Type} (f : α → Option β)
     (xs : List α) (ys : List β) :
-    xs.mapM f = some ys ↔ xs.map f = ys.map some := by
-  constructor
-  · intro h
-    obtain ⟨hlen, hpoint⟩ := (list_mapM_eq_some_iff f xs ys).mp h
-    apply List.ext_getElem?
-    intro n
-    by_cases hn : n < ys.length
-    · have hb := hpoint n hn
-      have hyn : ys[n]? = some ys[n] := List.getElem?_eq_getElem hn
-      rw [hyn] at hb
-      rw [List.getElem?_map, List.getElem?_map, hyn]
-      cases hx : xs[n]? with
-      | none =>
-          rw [hx, Option.bind_none] at hb
-          exact absurd hb (by simp)
-      | some a =>
-          rw [hx, Option.bind_some] at hb
-          simp only [Option.map_some]
-          rw [hb]
-    · rw [List.getElem?_eq_none (by rw [List.length_map]; omega),
-          List.getElem?_eq_none (by rw [List.length_map]; omega)]
-  · intro h
-    have hmapid : xs.mapM f = (xs.map f).mapM id := by
-      rw [List.mapM_map]
-      congr 1
-    have hmapid' : (ys.map some).mapM id = ys.mapM some := by
-      rw [List.mapM_map]
-      congr 1
-    rw [hmapid, h, hmapid']
-    simpa using (List.mapM_pure (m := Option) (l := ys) (f := id))
+    xs.mapM f = some ys ↔ xs.map f = ys.map some :=
+  optMmapEqSome xs f ys
 
 /-- Cake's `map_some_the_map` (`pan_commonPropsScript.sml:615`): if mapping `f`
     over `xs` yields `ys` tagged with `some`, then recovering the payload with a
@@ -2328,72 +2301,5 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
   rw [evalPanValueDeclarationsWithStructs_resortDecls structs state declarations
     memoryAccess hall] at heval
   exact heval
-
-/-! Counterpart of Cake's `filter_not_mem_self`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1407`):
-
-    FILTER (\x. ~MEM x l) l = []
-
-Filtering a list by its own complement of membership removes every element. -/
-theorem filter_not_mem_self {α : Type} [DecidableEq α] (l : List α) :
-    l.filter (fun x => decide (x ∉ l)) = [] := by
-  rw [List.filter_eq_nil_iff]
-  intro x hx
-  simp [hx]
-
-/-! Counterpart of Cake's `MAP_SOME_MEM_lemma`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`):
-
-    MAP f (FLAT xs) = MAP SOME (FLAT ys) /\ MEM zs xs /\ MEM z zs
-      ==> ?y. f z = SOME y /\ MEM y (FLAT ys)
-
-The unused existential of the original is dropped. -/
-theorem map_flatten_eq_map_some_flatten {α β : Type} (f : α → Option β)
-    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
-    (h : xs.flatten.map f = ys.flatten.map some)
-    (hzs : zs ∈ xs) (hz : z ∈ zs) :
-    ∃ y, f z = some y ∧ y ∈ ys.flatten := by
-  have hzflat : z ∈ xs.flatten := List.mem_flatten.mpr ⟨zs, hzs, hz⟩
-  have hzmap : f z ∈ xs.flatten.map f := List.mem_map.mpr ⟨z, hzflat, rfl⟩
-  rw [h] at hzmap
-  obtain ⟨y, hy, hfy⟩ := List.mem_map.mp hzmap
-  exact ⟨y, hfy.symm, hy⟩
-
-/-! Counterpart of Cake's `mod_eq_lt_eq`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4621`):
-
-    !n x m. n < x /\ m < x /\ n MOD x = m MOD x ==> n = m
-
-Below the modulus, reduction is the identity. -/
-theorem mod_eq_of_lt_eq {n x m : Nat} (hn : n < x) (hm : m < x)
-    (h : n % x = m % x) : n = m := by
-  rw [Nat.mod_eq_of_lt hn, Nat.mod_eq_of_lt hm] at h
-  exact h
-
-/-! Counterpart of Cake's `pair_map_I`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4630`):
-
-    (λ(x,y). (x,y)) = I
-
-The anonymous pair constructor is the identity on pairs. -/
-theorem prod_mk_pair_eq_id {α β : Type} :
-    (fun p : α × β => (p.1, p.2)) = id := by
-  funext p
-  cases p
-  rfl
-
-/-! Counterpart of Cake's `not_none_then_some`
-(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3593`):
-
-    x <> NONE <=> ?a. x = SOME a -/
-theorem option_ne_none_iff_exists {α : Type} (x : Option α) :
-    x ≠ none ↔ ∃ a, x = some a := by
-  constructor
-  · intro h
-    cases x with
-    | none => exact absurd rfl h
-    | some a => exact ⟨a, rfl⟩
-  · rintro ⟨a, rfl⟩
-    exact Option.some_ne_none a
 
 end Flapjack

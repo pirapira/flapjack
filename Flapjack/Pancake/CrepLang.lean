@@ -23,7 +23,7 @@ inductive CrepExp (α : Type u) where
   | load (address : CrepExp α)
   | load32 (address : CrepExp α)
   | loadByte (address : CrepExp α)
-  | loadGlob (address : α)
+  | loadGlob (address : BitVec 5)
   | op (operator : BinOp) (args : List (CrepExp α))
   | crepOp (operator : CrepOp) (args : List (CrepExp α))
   | cmp (operator : Cmp) (left right : CrepExp α)
@@ -51,7 +51,7 @@ inductive CrepProg (α : Type u) where
   | store (address value : CrepExp α)
   | store32 (address value : CrepExp α)
   | storeByte (address value : CrepExp α)
-  | storeGlob (address : α) (value : CrepExp α)
+  | storeGlob (address : BitVec 5) (value : CrepExp α)
   | seq (first second : CrepProg α)
   | ite (condition : CrepExp α) (thenBranch elseBranch : CrepProg α)
   | while (condition : CrepExp α) (body : CrepProg α)
@@ -237,9 +237,9 @@ theorem riscvBytesInWord_eq : (8 : BitVec 64) = CrepBytesInWord.bytesInWord := r
     `byte$bytes_in_word = 4`. -/
 theorem probeBytesInWord_eq : (4 : BitVec 32) = CrepBytesInWord.bytesInWord := rfl
 
-/-- Original-domain counterpart of Cake's `load_shape_el_rel`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
-    loaded word reads from `address + n * stride`. -/
+/-- Flapjack-specific Nat/variable-stride indexing helper. The exact HOL
+    `load_shape_el_rel` port uses word arithmetic and fixed machine-byte
+    stride in `Proofs/PanToCrep.lean`. -/
 theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
     (h : n < count) :
     (loadShape address stride count value)[n]? =
@@ -265,7 +265,7 @@ theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
     from an expression's expression list stays absent from every expression
     produced by `loadShape`. -/
 theorem crepExps_loadShape_not_mem_loadGlob [BEq α] [OfNat α 0] [Add α]
-    (address stride : α) (count : Nat) (value : CrepExp α) (target : α)
+    (address stride : α) (count : Nat) (value : CrepExp α) (target : BitVec 5)
     (h : CrepExp.loadGlob target ∉ crepExps value) :
     CrepExp.loadGlob target ∉ (loadShape address stride count value).flatMap crepExps := by
   induction count generalizing address with
@@ -428,14 +428,14 @@ theorem crepExpsOf_argLoad (tmpVars : List Nat) (args : List (CrepExp α))
     · exact Or.inr (Or.inr hbody)
 
 @[hol "cakeml/pancake/crepLangScript.sml" "store_globals_def"]
-def storeGlobals {α : Type u} [OfNat α 1] [Add α]
-    (address : α) : List (CrepExp α) → List (CrepProg α)
+def storeGlobals {α : Type u}
+    (address : BitVec 5) : List (CrepExp α) → List (CrepProg α)
   | [] => []
   | value :: values => .storeGlob address value :: storeGlobals (address + 1) values
 
 @[hol "cakeml/pancake/crepLangScript.sml" "load_globals_def"]
-def loadGlobals {α : Type u} [OfNat α 1] [Add α]
-    (address : α) (count : Nat) : List (CrepExp α) :=
+def loadGlobals {α : Type u}
+    (address : BitVec 5) (count : Nat) : List (CrepExp α) :=
   match count with
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobals (address + 1) count
@@ -607,7 +607,7 @@ theorem crepAssignedVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
 def assignRet {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]
     (names : List Nat) : CrepProg α :=
   crepNestedSeq (names.zipWith (fun name value => .assign name value)
-    (loadGlobals (0 : α) names.length))
+    (loadGlobals (0 : BitVec 5) names.length))
 
 /-- The assignments emitted by `assignRet` assign exactly `names`, so their
     free-variable set is `names`.  Used by the call-handler branch of Cake's
@@ -617,10 +617,10 @@ theorem crepAssignedFreeVars_assignRet {α : Type u}
     (names : List Nat) :
     crepAssignedFreeVars (assignRet (α := α) names) = names := by
   unfold assignRet
-  have aux : ∀ (names : List Nat) (address : α),
+  have aux : ∀ (names : List Nat) (address : BitVec 5),
       crepAssignedFreeVars
           (crepNestedSeq (names.zipWith (fun name value => .assign name value)
-            (loadGlobals address names.length))) = names := by
+            (loadGlobals (α := α) address names.length))) = names := by
     intro names
     induction names with
     | nil => intro address; simp [loadGlobals, crepNestedSeq, crepAssignedFreeVars]

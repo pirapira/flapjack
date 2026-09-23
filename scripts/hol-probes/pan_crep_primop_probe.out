@@ -1,0 +1,6 @@
+pan_valid=SOME [8; 0]
+pan_overflow=SOME [0; 1]
+pan_invalid=NONE
+crep_valid=SOME [8; 0]
+crep_overflow=SOME [0; 1]
+crep_invalid=NONE

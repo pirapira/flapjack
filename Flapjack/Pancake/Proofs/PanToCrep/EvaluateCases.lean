@@ -3594,11 +3594,12 @@ dispatcher. The post-state relation required by the target handler-body IH is
 now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
-callee-body and handler-body premises. The target callee IH returns its raised
-result with the target state, code, exception, and payload-global facts needed
-by `exp_hdl`; the relation-aware handler IH supplies its target result and
-post-state relations. Both are still induction premises, so this is a
-Call-case composition step, not the complete
+callee-body and handler-body premises. The premise `hcalleeTargetBodyIH`
+assumes the target callee-body evaluator run and its target state, code,
+exception, and payload-global facts needed by `exp_hdl`; this theorem does not
+derive that target callee simulation. The relation-aware handler IH also
+supplies its target result and post-state relations. Both are still induction
+premises, so this is a Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
@@ -3688,7 +3689,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
         .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
-    (hcalleeIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
+    (hcalleeTargetBodyIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel calleeLocals source.globals
       source.memory source.ffi (decPanClock source.clock) sourceBody
@@ -3802,7 +3803,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength
   obtain ⟨_hcalleeTargetRun, hcalleeState, hcalleeCode, hexcp, hglobal⟩ :=
-    hcalleeIH hsourceCalleeBody targetLocals htargetLookup
+    hcalleeTargetBodyIH hsourceCalleeBody targetLocals htargetLookup
   obtain ⟨htarget, hstatePost, hcodePost, hexcpPost, hlocalsPost⟩ :=
     evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations
       context handler primitive source sourceAfterCallee
@@ -3812,7 +3813,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
       hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
       (fun targetLocals hlookup =>
-        (hcalleeIH hsourceCalleeBody targetLocals hlookup).1)
+        (hcalleeTargetBodyIH hsourceCalleeBody targetLocals hlookup).1)
       (fun payloadState hpayload hpayloadState hpayloadCode hpayloadExcp
           hpayloadLocals =>
         hhandlerIH hsourceHandlerBodyRun hsourceExpressions hsourceExceptionCode

@@ -36,6 +36,14 @@ example :
 
 local instance : HolFiniteDimension Bool := boolWordDimension
 
+@[instance_reducible] def boolWordDimensionSwapped : HolFiniteDimension Bool where
+  width := 2
+  width_pos := by decide
+  encode := fun index => if index then 0 else 1
+  decode := fun index => index.val == 0
+  encode_decode := by decide
+  decode_encode := by decide
+
 def boolDimensionWord : Bool → Bool := id
 
 example : bitVecToHolWord boolWordDimension
@@ -146,6 +154,87 @@ example :
         (.load32 (.const boolDimensionWord)) := by
   exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
     boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (crepMulConst
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.const boolDimensionWord) boolDimensionWord) =
+      some (boolDimensionWord * boolDimensionWord) := by
+  exact crepEvalMulConstHolFiniteDimension boolWordDimension boolDimensionHolState
+    (.const boolDimensionWord) boolDimensionWord boolDimensionWord
+    (by simp [evalCrepRuntimeExp])
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])) =
+      evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+  exact crepSimpExpEvalPreservesHolFiniteDimension boolWordDimension
+    boolDimensionHolState _ (by simp [evalCrepRuntimeExp])
+
+example :
+    (evalCrepRuntimeExp
+      (crepArithMapCode id
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension))
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]))).map
+        PanWordLab.word =
+      (evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+        PanWordLab.word := by
+  exact crepSimpExpCorrect1HolFiniteDimension id boolDimensionHolState _
+    (by simp [evalCrepRuntimeExp])
+
+example :
+    evalCrepHolFiniteDimensionExpWordLab boolWordDimension
+        (crepArithHolFiniteDimensionMapCode id boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])) =
+      evalCrepHolFiniteDimensionExpWordLab boolWordDimension boolDimensionHolState
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+  apply crepSimpExpCorrect1HolFiniteDimensionSource id
+    boolDimensionHolState _
+  have hEval := evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState
+      (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])
+  change (evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+    (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+      PanWordLab.word ≠ none
+  rw [← hEval]
+  simp [evalCrepRuntimeExp]
+
+example : True := by
+  letI : HolFiniteDimension Bool := boolWordDimensionSwapped
+  have hresult :
+      evalCrepHolFiniteDimensionExpWordLab boolWordDimensionSwapped
+          (crepArithHolFiniteDimensionMapCode id boolDimensionHolState)
+          (crepSimpExp
+            (fun n => bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 n))
+            (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])) =
+        evalCrepHolFiniteDimensionExpWordLab boolWordDimensionSwapped
+          boolDimensionHolState
+          (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+    apply crepSimpExpCorrect1HolFiniteDimensionSource id
+      boolDimensionHolState _
+    have hEval := evalCrepRuntimeExp_finiteDimension_eq boolWordDimensionSwapped
+      boolDimensionHolState
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])
+    change (evalCrepHolFiniteDimensionExp boolWordDimensionSwapped
+      boolDimensionHolState
+      (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+        PanWordLab.word ≠ none
+    rw [← hEval]
+    simp [evalCrepRuntimeExp]
+  exact True.intro
 
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
     (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==

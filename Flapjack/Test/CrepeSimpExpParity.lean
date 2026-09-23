@@ -115,4 +115,12 @@ example :
   simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
     updateCrepRuntimeLocal]
 
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) holExpression8) =
+      some (.word (word8 56)) := by
+  apply crepSimpExpCorrectBitVec
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
+    updateCrepRuntimeLocal, panTheWord, word8]
+
 end Flapjack.Test.CrepeSimpExpParity

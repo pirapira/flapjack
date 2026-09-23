@@ -2585,6 +2585,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "alookup_map_structs_ok",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfo_fields_nodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (ALOOKUP translated by lawful List.lookup; HOL local helper proof reproduced in direct oracle)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",

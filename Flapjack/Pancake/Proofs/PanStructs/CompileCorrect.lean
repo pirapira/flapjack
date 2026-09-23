@@ -2057,11 +2057,11 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- This mismatch note documents only the immediately following
-    `panStructCompileExpCorrectVarCase` theorem; it does not document the
+/-- This documentation belongs only to the immediately following
+    `panStructCompileExpCorrectVarCase` theorem; it does not describe the
     preceding private lookup helper. The Var case is a derived Local/Global
-    Var-constructor specialization of HOL `compile_exp_correct`;
-    intentionally untagged because HOL has only the
+    Var-constructor specialization of HOL `compile_exp_correct`, so it is
+    intentionally untagged: HOL has only the
     universally quantified theorem, not a separately named Var-case
     declaration. This Lean statement is not an exact statement port. It keeps
     successful source evaluation, but re-encodes the HOL premises: the direct

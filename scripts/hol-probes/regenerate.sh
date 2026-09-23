@@ -73,7 +73,19 @@ run_probe() {
     if [[ ${#labels[@]} -eq 0 ]]; then
       cp "$tmp" "$output"
     else
-      sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+      awk -v first="$first_label" -v last="$last_label" '
+        BEGIN { started = 0; ended = 0 }
+        {
+          if (!started) {
+            if (index($0, first "=") != 1) next
+            started = 1
+          } else if (ended && $0 ~ /^[[:alnum:]_]+=/) {
+            exit
+          }
+          if (index($0, last "=") == 1) ended = 1
+          print
+        }
+      ' "$tmp" \
         | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d; /^$/d' > "$output"
     fi
   fi
@@ -98,7 +110,9 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
-  compile_exp_correct_local_var compile_exp_correct_global_var \
+  compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
+  compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
+  compile_exp_correct_nstruct \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -177,6 +191,9 @@ run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_prob
   "$cake_dir/pancake/semantics"
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_shared_mem_probeScript.sml crep_runtime_shared_mem_probe.out \
+  load_returned store_final "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
   const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
@@ -550,6 +567,8 @@ run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
   missing_start global_present present_start "$cake_dir/pancake/pan_globalsScript.sml"
+run_probe pan_globals_compile_decs_probeScript.sml pan_globals_compile_decs_probe.out \
+  empty compile_decs_probe_done "$cake_dir/pancake/pan_globalsScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
 run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \

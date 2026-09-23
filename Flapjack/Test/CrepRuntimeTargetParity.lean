@@ -134,6 +134,45 @@ example : (crepRuntimeStore32 (riscv64CrepRuntimeTarget probeBaseState)
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64) :=
   crepRuntimeStore32_target_eq_riscv probeBaseState 8 (0xAABBCCDD : RiscV.Word 64)
 
+/-! ## Configuration stability through production transitions -/
+
+example : isRiscV64CrepRuntimeTarget (riscv64CrepRuntimeTarget probeBaseState) :=
+  riscv64CrepRuntimeTarget_isTarget probeBaseState
+
+example : isRiscV64CrepRuntimeTarget
+    (clearCrepRuntimeLocals (riscv64CrepRuntimeTarget probeBaseState)) :=
+  isRiscV64CrepRuntimeTarget_clearCrepRuntimeLocals
+    (riscv64CrepRuntimeTarget_isTarget probeBaseState)
+
+example : isRiscV64CrepRuntimeTarget
+    (decCrepClock (riscv64CrepRuntimeTarget probeBaseState)) :=
+  isRiscV64CrepRuntimeTarget_decCrepClock
+    (riscv64CrepRuntimeTarget_isTarget probeBaseState)
+
+example : isRiscV64CrepRuntimeTarget
+    (riscv64WriteState probeBaseState (8 : RiscV.Word 64) [1, 2]) :=
+  isRiscV64CrepRuntimeTarget_riscv64WriteState probeBaseState 8 [1, 2]
+
+example : isRiscV64CrepRuntimeTarget
+    (crepRuntimeSharedMem
+      (riscv64SharedMemCallFfiHandler :
+        CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent)
+      (riscv64CrepRuntimeTarget probeBaseState) .load 0 (8 : RiscV.Word 64)).2 :=
+  isRiscV64CrepRuntimeTarget_crepRuntimeSharedMem
+    (riscv64SharedMemCallFfiHandler :
+      CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent)
+    .load 0 (8 : RiscV.Word 64) (riscv64CrepRuntimeTarget_isTarget probeBaseState)
+
+example : isRiscV64CrepRuntimeTarget
+    (crepRuntimeExtCall
+      (riscv64SharedMemCallFfiHandler :
+        CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent)
+      (riscv64CrepRuntimeTarget probeBaseState) "f" 0 1 2 3).2 :=
+  isRiscV64CrepRuntimeTarget_crepRuntimeExtCall
+    (riscv64SharedMemCallFfiHandler :
+      CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent)
+    "f" 0 1 2 3 (riscv64CrepRuntimeTarget_isTarget probeBaseState)
+
 #guard wordBoundaryGuard
 #guard storeRoundTripGuard
 

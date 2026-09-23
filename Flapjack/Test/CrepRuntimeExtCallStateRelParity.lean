@@ -54,6 +54,11 @@ theorem callStateRel : stateRel callSource (riscv64CrepRuntimeTarget callBase) :
   funext address
   rfl
 
+/-- Canonicalizing the target does not change the relation, because `callBase`
+    is already little-endian. -/
+example : stateRel callSource callBase :=
+  (stateRel_riscv64CrepRuntimeTarget_iff callSource callBase rfl).1 callStateRel
+
 /-- The two argument reads succeed with the little-endian probe bytes. -/
 theorem callReadConfiguration :
     riscv64ReadByteArray callBase (8 : RiscV.Word 64) 4 =
@@ -339,6 +344,301 @@ def oneShotGuard : Bool :=
         (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64)
   | _ => false
 
+/-- The assembled four-local wrapper dispatch: one statement covering the
+    returned/final/error branches selected from the two reads and `callFfi`. -/
+example :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+      (match riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4,
+             riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi wrapperBase.ffi (.extCall "") configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { wrapperBase with ffi := ffi }
+                  (8 : RiscV.Word 64) bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget wrapperBase))
+       | _, _ => (.error, riscv64CrepRuntimeTarget wrapperBase)) :=
+  crepRuntimeExtCall_dispatch wrapperBase "" 0 1 2 3 (8 : RiscV.Word 64) 4
+    (8 : RiscV.Word 64) 4 rfl rfl rfl rfl
+
+/-- The assembled dispatch also carries the branch-selected source/target
+    `stateRel` post-state. -/
+example :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+      (match riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4,
+             riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi wrapperBase.ffi (.extCall "") configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { wrapperBase with ffi := ffi }
+                  (8 : RiscV.Word 64) bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget wrapperBase))
+       | _, _ => (.error, riscv64CrepRuntimeTarget wrapperBase)) :=
+  (crepRuntimeExtCall_stateRel_dispatch callSource wrapperBase "" 0 1 2 3
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 rfl rfl rfl rfl wrapperStateRel).1
+
+/-- The source `panValueFfiExtCall` evaluator outcome for the fixture: the
+    configuration and array reads return `[1,2,3,4]`, and the identity oracle of
+    `natCrepRuntimeFfiState` returns the array bytes on the unchanged ffi, so the
+    source writes those bytes back with `panValueFfiWriteBytes`. -/
+def wrapperSourceMemory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)) :=
+  panValueFfiWriteBytes
+    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+    (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+    (8 : RiscV.Word 64) (8 : RiscV.Word 64) [(1 : UInt8), 2, 3, 4]
+
+theorem wrapperReadConfigurationBytes :
+    panValueFfiReadBytes
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64)
+        ((riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+          (4 : RiscV.Word 64)) =
+      some [(1 : UInt8), 2, 3, 4] := by
+  have hmem : callSource.memory = panValueMemoryView wrapperBase.memory :=
+    wrapperStateRel.1
+  rw [hmem]
+  rw [show (riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+      (4 : RiscV.Word 64) = 4 from by decide]
+  rw [panValueFfiReadBytes_view_eq_riscv]
+  decide
+
+theorem wrapperReadArrayBytes :
+    panValueFfiReadBytes
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64)
+        ((riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+          (4 : RiscV.Word 64)) =
+      some [(1 : UInt8), 2, 3, 4] := by
+  have hmem : callSource.memory = panValueMemoryView wrapperBase.memory :=
+    wrapperStateRel.1
+  rw [hmem]
+  rw [show (riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+      (4 : RiscV.Word 64) = 4 from by decide]
+  rw [panValueFfiReadBytes_view_eq_riscv]
+  decide
+
+theorem wrapperSourceExtCall :
+    panValueFfiExtCall
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) callSource.ffi "" (8 : RiscV.Word 64) 4
+        (8 : RiscV.Word 64) 4 =
+      some (.returned wrapperSourceMemory callSource.ffi) := by
+  unfold panValueFfiExtCall
+  erw [wrapperReadConfigurationBytes]
+  simp only [callFfi_empty_extCall]
+  rfl
+
+/-- The source evaluator outcome drives the target dispatch: `panValueFfiExtCall`
+    returning the written-back source memory yields the `Normal` target step and
+    the related post-states, with the returned bytes derived (not assumed). -/
+example :
+    ∃ arrayBytes bytes,
+      riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 = some arrayBytes ∧
+      crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+          (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+        (.normal, riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+          (8 : RiscV.Word 64) bytes) ∧
+      wrapperSourceMemory =
+        panValueMemoryView
+          (riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+            (8 : RiscV.Word 64) bytes).memory ∧
+      stateRel { callSource with memory := wrapperSourceMemory, ffi := callSource.ffi }
+        (riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+          (8 : RiscV.Word 64) bytes) :=
+  panValueFfiExtCall_stateRel_target callSource wrapperBase "" 0 1 2 3
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 rfl rfl rfl rfl
+    wrapperSourceMemory callSource.ffi wrapperStateRel wrapperSourceExtCall
+
+/-- Executes the source ExtCall evaluator and checks the written-back memory. -/
+def sourceOutcomeGuard : Bool :=
+  match panValueFfiExtCall
+      (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+      (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+      (8 : RiscV.Word 64) callSource.ffi "" (8 : RiscV.Word 64) 4
+      (8 : RiscV.Word 64) 4 with
+  | some (.returned memory _) =>
+      match memory (8 : RiscV.Word 64) with
+      | some (.word value) =>
+          RiscV.panRiscVGetByte (8 : RiscV.Word 64) (8 : RiscV.Word 64) value ==
+            (1 : RiscV.Word 64)
+      | _ => false
+  | _ => false
+
+/-- An oracle whose mapped reads return the low byte `0x42` and whose mapped
+    writes echo a zero-filled payload of the same length. -/
+def sharedOracle : FfiOracle Unit := fun name state _ bytes =>
+  match name with
+  | .sharedMem .mappedRead => .returned state [(0x42 : UInt8), 0, 0, 0, 0, 0, 0, 0]
+  | .sharedMem .mappedWrite => .returned state (bytes.map (fun _ => 0))
+  | _ => .final .failed
+
+def sharedFfi : FfiState Unit :=
+  { oracle := sharedOracle, state := (), ioEvents := [] }
+
+/-- The target local 0 holds the word 7 for the mapped-write fixture. -/
+def sharedLocals : Nat → Option (PanWordLab (RiscV.Word 64))
+  | 0 => some (.word 7)
+  | _ => none
+
+/-- A target where only the aligned address 8 is a shared-memory address. -/
+def sharedBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { callBase with
+    shMemaddrs := fun address => address == (8 : RiscV.Word 64)
+    locals := sharedLocals
+    ffi := sharedFfi }
+
+def sharedSource : PanSemState (RiscV.Word 64) (FfiState Unit) :=
+  { callSource with
+    sharedMemaddrs := fun address => address == (8 : RiscV.Word 64)
+    ffi := sharedFfi }
+
+theorem sharedStateRel :
+    stateRel sharedSource (riscv64CrepRuntimeTarget sharedBase) := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact callStateRel.1
+
+/-- A successful mapped read of one byte: the byte `0x42` returned by the
+    oracle is loaded (HOL `sh_mem_load`, `word_of_bytes`). -/
+def sharedLoadGuard : Bool :=
+  match panValueFfiSharedLoad (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+      sharedFfi .op8 (8 : RiscV.Word 64) with
+  | some (.loaded _ value) => value == (0x42 : RiscV.Word 64)
+  | _ => false
+
+/-- A read outside the shared-memory domain is rejected. -/
+def sharedLoadErrorGuard : Bool :=
+  (panValueFfiSharedLoad (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+    sharedFfi .op8 (16 : RiscV.Word 64)).isNone
+
+/-- A successful mapped write of one byte reaches `callFfi`. -/
+def sharedStoreGuard : Bool :=
+  match panValueFfiSharedStore (riscv64PanValueFfiContext sharedBase.shMemaddrs)
+      sharedFfi .op8 (8 : RiscV.Word 64) (7 : RiscV.Word 64) with
+  | some (.stored _) => true
+  | _ => false
+
+/-- The production target shared-memory `load` dispatch reaches `Normal`. -/
+def sharedTargetLoadGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedBase) (opSizeToCrepLoadOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .normal => true
+  | _ => false
+
+/-- The production target shared-memory `store` dispatch reaches `Normal`. -/
+def sharedTargetStoreGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedBase) (opSizeToCrepStoreOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .normal => true
+  | _ => false
+
+/-- An oracle that reports a `final` event for shared-memory operations
+    (HOL `Oracle_final`, i.e. the `FFI_final` branch). -/
+def sharedFinalOracle : FfiOracle Unit := fun name _ _ _ =>
+  match name with
+  | .sharedMem _ => .final .failed
+  | _ => .final .failed
+
+def sharedFinalFfi : FfiState Unit :=
+  { oracle := sharedFinalOracle, state := (), ioEvents := [] }
+
+def sharedFinalBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { sharedBase with ffi := sharedFinalFfi }
+
+def sharedFinalSource : PanSemState (RiscV.Word 64) (FfiState Unit) :=
+  { sharedSource with ffi := sharedFinalFfi }
+
+theorem sharedFinalStateRel :
+    stateRel sharedFinalSource (riscv64CrepRuntimeTarget sharedFinalBase) := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  exact sharedStateRel.1
+
+/-- The production target shared-memory `load` on a final oracle reports
+    `FinalFFI` (HOL `sh_mem_load` `FFI_final`). -/
+def sharedFinalLoadGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepLoadOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .finalFfi _ => true
+  | _ => false
+
+/-- The production target shared-memory `store` on a final oracle reports
+    `FinalFFI` (HOL `sh_mem_store` `FFI_final`). -/
+def sharedFinalStoreGuard : Bool :=
+  match (crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+      (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepStoreOp .op8) 0
+      (8 : RiscV.Word 64)).1 with
+  | .finalFfi _ => true
+  | _ => false
+
+/-- The source `sh_mem_load` `FFI_final` outcome on the final oracle. -/
+def sharedFinalLoadEvent : FfiFinalEvent :=
+  { name := .sharedMem .mappedRead
+    configuration := [1]
+    bytes := (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+      (8 : RiscV.Word 64) false
+    outcome := .failed }
+
+theorem sharedFinalLoadOutcome :
+    panValueFfiSharedLoad (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs)
+        sharedFinalFfi .op8 (8 : RiscV.Word 64) =
+      some (.final sharedFinalFfi sharedFinalLoadEvent) := by
+  simp [panValueFfiSharedLoad, sharedFinalFfi, sharedFinalOracle, callFfi,
+    sharedFinalLoadEvent, riscv64PanValueFfiContext] <;> decide
+
+/-- The source `sh_mem_store` `FFI_final` outcome on the final oracle. -/
+def sharedFinalStoreEvent : FfiFinalEvent :=
+  { name := .sharedMem .mappedWrite
+    configuration := [1]
+    bytes := ((riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+        (7 : RiscV.Word 64) false).take 1
+      ++ (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs).wordToBytes
+        (8 : RiscV.Word 64) false
+    outcome := .failed }
+
+theorem sharedFinalStoreOutcome :
+    panValueFfiSharedStore (riscv64PanValueFfiContext sharedFinalBase.shMemaddrs)
+        sharedFinalFfi .op8 (8 : RiscV.Word 64) (7 : RiscV.Word 64) =
+      some (.final sharedFinalFfi sharedFinalStoreEvent) := by
+  simp [panValueFfiSharedStore, sharedFinalFfi, sharedFinalOracle, callFfi,
+    sharedFinalStoreEvent, riscv64PanValueFfiContext] <;> decide
+
+/-- A source `sh_mem_load` `FFI_final` outcome drives the target `FinalFFI`
+    dispatch with the cleared-locals post-state. -/
+example :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepLoadOp .op8) 0
+        (8 : RiscV.Word 64) =
+      (.finalFfi sharedFinalLoadEvent,
+        clearCrepRuntimeLocals (riscv64CrepRuntimeTarget sharedFinalBase)) :=
+  (panValueFfiSharedLoad_stateRel_final sharedFinalSource sharedFinalBase
+    .op8 0 (8 : RiscV.Word 64) sharedFinalFfi sharedFinalLoadEvent
+    sharedFinalStateRel sharedFinalLoadOutcome).1
+
+/-- A source `sh_mem_store` `FFI_final` outcome drives the target `FinalFFI`
+    dispatch with the unchanged post-state. -/
+example :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget sharedFinalBase) (opSizeToCrepStoreOp .op8) 0
+        (8 : RiscV.Word 64) =
+      (.finalFfi sharedFinalStoreEvent, riscv64CrepRuntimeTarget sharedFinalBase) :=
+  (panValueFfiSharedStore_stateRel_final sharedFinalSource sharedFinalBase
+    .op8 0 (8 : RiscV.Word 64) (7 : RiscV.Word 64) rfl sharedFinalFfi
+    sharedFinalStoreEvent sharedFinalStateRel sharedFinalStoreOutcome).1
+
+#eval sharedLoadGuard
+#eval sharedLoadErrorGuard
+#eval sharedStoreGuard
+#eval sharedTargetLoadGuard
+#eval sharedTargetStoreGuard
+#eval sharedFinalLoadGuard
+#eval sharedFinalStoreGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
@@ -353,6 +653,18 @@ def runChecks : IO Bool := do
       errorGuard),
     ("Crep ExtCall one-shot production dispatch matches call_FFI shape",
       oneShotGuard),
+    ("Crep ExtCall source panValueFfiExtCall outcome drives target dispatch",
+      sourceOutcomeGuard),
+    ("Crep shared-memory mapped read follows source sh_mem_load",
+      sharedLoadGuard),
+    ("Crep shared-memory read outside domain is rejected", sharedLoadErrorGuard),
+    ("Crep shared-memory mapped write reaches call_FFI", sharedStoreGuard),
+    ("Crep shared-memory target load dispatch is normal", sharedTargetLoadGuard),
+    ("Crep shared-memory target store dispatch is normal", sharedTargetStoreGuard),
+    ("Crep shared-memory FFI_final load dispatch returns FinalFFI",
+      sharedFinalLoadGuard),
+    ("Crep shared-memory FFI_final store dispatch returns FinalFFI",
+      sharedFinalStoreGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

@@ -130,13 +130,20 @@ shape-map, and result-value postconditions remain open in
 `flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL simplifier evaluations
-of both Local and Global variable-constructor instances of
-`compile_exp_correct`; each tuple contains old shape, semantic value shape,
-field validity, source evaluation, and converted target evaluation. The
-production `structCompileExp`/`evalPanValueExp` cases are proved in
-`panStructCompileExpCorrectVarCase` and exercised by nonempty local/global
-finite-map regressions in `Flapjack.Test.PanStructsCompileCorrect`. The other
-expression constructors remain open.
+of Local and Global variable-constructor instances, and Const-, RStruct-, and
+NStruct-constructor instances of `compile_exp_correct`; each tuple contains
+old shape, semantic value shape, field validity, source evaluation, and
+converted target evaluation. The production `structCompileExp`/`evalPanValueExp` cases are
+proved in `panStructCompileExpCorrectVarCase` and
+`panStructCompileExpCorrectConstCase` and
+`panStructCompileExpCorrectRStructCase` and exercised by finite-map regressions
+in `Flapjack.Test.PanStructsCompileCorrect`. The RStruct row uses two constants
+and validates all three constructor conclusions. Its nonempty-list row separately
+checks source `OPT_MMAP` success, pointwise compiled-expression correctness,
+and the converted `compile_exps` result for the local HOL helper
+`compile_exp_correct_mmap_helper`; Lean proves the corresponding production
+list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
+The other expression constructors remain open.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

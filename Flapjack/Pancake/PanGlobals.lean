@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanSimp
 
@@ -249,6 +250,39 @@ theorem globalFreshName_not_mem_of_subset [BEq String] [LawfulBEq String]
     globalFreshName name names ∉ names' := by
   intro hmem
   exact globalFreshName_not_mem name names (hsubset _ hmem)
+/-- Maximum `String.length` over a list of names; used only to justify
+    termination of the exact `fresh_name` port below. -/
+def maxNameLength : List String → Nat
+  | [] => 0
+  | name :: names => max name.length (maxNameLength names)
+
+theorem length_le_maxNameLength {name : String} {names : List String}
+    (hmem : name ∈ names) : name.length ≤ maxNameLength names := by
+  induction names with
+  | nil => cases hmem
+  | cons head tail ih =>
+      rw [maxNameLength]
+      rcases List.mem_cons.mp hmem with hhead | htail
+      · subst hhead
+        exact Nat.le_max_left _ _
+      · exact Nat.le_trans (ih htail) (Nat.le_max_right _ _)
+
+/-- Exact clause-for-clause port of Cake's `fresh_name`
+    (`pan_globalsScript.sml:55`): while the candidate is already a member of
+    `names`, append one apostrophe and retry.  Termination follows HOL's own
+    measure: appending a character strictly increases the length, bounded above
+    by the maximum name length. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fresh_name_def"]
+def freshNameHOL (name : String) (names : List String) : String :=
+  if name ∈ names then freshNameHOL (name ++ "'") names else name
+termination_by 1 + maxNameLength names - name.length
+decreasing_by
+  simp_wf
+  have hmem : name ∈ names := ‹name ∈ names›
+  have hle := length_le_maxNameLength hmem
+  have hone : ("'" : String).length = 1 := rfl
+  rw [hone]
+  omega
 
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
@@ -1315,6 +1349,433 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
     exceptions := globalDeclsFilter globalDeclIsException
       (globalCompileDecls collected declarations)
     context := collected }
+
+/-! Flapjack-specific context-threading counterpart of HOL
+    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): each
+    function body is compiled using the context at its position in the list.
+    This declaration is not tagged as an exact port. Unlike HOL's fixed word
+    operations, it accepts arbitrary `bytesInWord`/`fromNat` context fields,
+    `[Add α]`/`[Mul α]`, and potentially non-lawful `[BEq String]`.
+    Bead `flapjack-pxn.18.5.2.20.1.1` tracks the canonical-word-context port;
+    production `globalCompileDecs` above remains separate until `.20.2`. -/
+def globalCompileDecsThreaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) : List (Decl α) → GlobalCompileDecsResult α
+  | [] => { initializers := [], functions := [], exceptions := [], context := context }
+  | .function declaration :: declarations =>
+      let rest := globalCompileDecsThreaded context declarations
+      { initializers := rest.initializers
+        functions := .function { declaration with
+            body := globalCompileProg context declaration.body } :: rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+  | .exnDecl exception shape :: declarations =>
+      let rest := globalCompileDecsThreaded context declarations
+      { rest with exceptions := .exnDecl exception shape :: rest.exceptions }
+  | .name _ _ :: declarations => globalCompileDecsThreaded context declarations
+  | .decl shape name value :: declarations =>
+      let address := globalAddress context shape
+      let nextContext := { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      let rest := globalCompileDecsThreaded nextContext declarations
+      { initializers :=
+          .store (.op .sub [.topAddr, .const address])
+            (globalCompileExp context value) :: rest.initializers
+        functions := rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+
+theorem globalCompileDecsThreaded_functions_all_isFunction [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (globalCompileDecsThreaded context declarations).functions.all globalDeclIsFunction =
+      true := by
+  induction declarations generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecsThreaded, List.all_cons, globalDeclIsFunction,
+            Bool.true_and]
+          exact ih context
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+
+theorem globalCompileDecsThreaded_functions_eq_nil_of_no_functions
+    [BEq String] [Add α] [Mul α] (declarations : List (Decl α)) :
+    ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
+      (globalCompileDecsThreaded context declarations).functions = [] := by
+  induction declarations with
+  | nil => intro context _; rfl
+  | cons declaration declarations ih =>
+      intro context hnone
+      cases declaration with
+      | function function =>
+          simp [List.all_cons, globalDeclIsFunction] at hnone
+      | decl shape name value =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+      | exnDecl exception shape =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+      | name struct fields =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+
+/-- Flapjack-specific (untagged) append law for the context-threading pass:
+    appending two declaration lists appends the three output lists and runs the
+    second list under the context reached by the first. -/
+theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (decs rest : List (Decl α)) :
+    globalCompileDecsThreaded context (decs ++ rest) =
+      let first := globalCompileDecsThreaded context decs
+      let second := globalCompileDecsThreaded first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } := by
+  induction decs generalizing context with
+  | nil => simp [globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+      | decl shape name value =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | exnDecl exception shape =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | name struct fields =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+
+/-- HOL-shaped context for `pan_globals$compile_decs_def`
+    (`pan_globalsScript.sml:8-14`): the three HOL fields
+    `globals`/`globals_size`/`max_globals_size` over a `width`-bit word.
+
+    HOL `globals` is an extensional finite map (`varname |-> shape # 'a word`).
+    Here it is rendered by the repository's `FiniteMap` (`α → Option β`), whose
+    Lean type also admits lookups with infinite support.  For `compile_exp` this
+    is adequate without a finite-support invariant: the HOL `compile_exp` clauses
+    consult `globals` only through `FLOOKUP`, and every HOL finite map embeds as
+    one such lookup function; on those embedded (HOL-representable) contexts the
+    Lean clauses agree clause-for-clause, so the extra infinite-support lookup
+    functions do not alter the port.  No cross-system finite-map equivalence is
+    claimed beyond that local use.
+
+    HOL word types satisfy `dimindex > 0`; the Lean rendering therefore
+    restricts these canonical word defs with `[NeZero width]` rather than
+    admitting `width = 0`.  The canonical instances are `width = 8`, `32`, or
+    `64`. -/
+structure CakeContext (width : Nat) where
+  globals : FiniteMap String (Shape × BitVec width)
+  globalsSize : BitVec width
+  maxGlobalsSize : BitVec width
+
+/-- HOL `bytes_in_word` for `width`-bit words: `n2w (dimindex DIV 8)`. -/
+def cakeBytesInWord (width : Nat) : BitVec width := BitVec.ofNat width (width / 8)
+
+/-- The address HOL `compile_decs` assigns to a freshly declared global
+    (`pan_globalsScript.sml:162`):
+    `globals_size + bytes_in_word * n2w (size_of_shape sh)`. -/
+def cakeAddress {width : Nat} (context : CakeContext width) (shape : Shape) :
+    BitVec width :=
+  context.globalsSize + cakeBytesInWord width * BitVec.ofNat width (Shape.shapeSize shape)
+
+/-- HOL `shape_val` (`panLangScript.sml:190-196`). -/
+def cakeShapeVal {width : Nat} (context : CakeContext width) : Shape → Exp (BitVec width)
+  | .one => .const (BitVec.ofNat width 0)
+  | .named _ => .const (BitVec.ofNat width 0)
+  | .comb shapes => .rStruct (shapes.map (cakeShapeVal context))
+termination_by shape => sizeOf shape
+
+/-- Exact clause-structured port of HOL `pan_globals$compile_exp_def`
+    (`pan_globalsScript.sml:18-46`) over the canonical word context
+    `CakeContext`.  Each clause matches HOL directly: `Var Global` uses
+    `FLOOKUP` (with `Const 0w` on a missing name), `NStruct`/`NField` produce
+    `Const 0w`, and `TopAddr` becomes `Op Sub [TopAddr; Const max_globals_size]`.
+    Clause review against the HOL definition is recorded on
+    `flapjack-pxn.18.5.2.20.1.1`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_exp_def"]
+def compileExpCake {width : Nat} [NeZero width] (context : CakeContext width) :
+    Exp (BitVec width) → Exp (BitVec width)
+  | .var .local name => .var .local name
+  | .var .global name =>
+      match FLOOKUP context.globals name with
+      | some (shape, address) => .load shape (.op .sub [.topAddr, .const address])
+      | none => .const (BitVec.ofNat width 0)
+  | .rStruct expressions => .rStruct (compileExpCakeList context expressions)
+  | .rField index expression => .rField index (compileExpCake context expression)
+  | .nStruct _ _ => .const (BitVec.ofNat width 0)
+  | .nField _ _ => .const (BitVec.ofNat width 0)
+  | .load shape address => .load shape (compileExpCake context address)
+  | .load32 address => .load32 (compileExpCake context address)
+  | .loadByte address => .loadByte (compileExpCake context address)
+  | .op operator expressions => .op operator (compileExpCakeList context expressions)
+  | .panOp operator expressions => .panOp operator (compileExpCakeList context expressions)
+  | .cmp operator left right =>
+      .cmp operator (compileExpCake context left) (compileExpCake context right)
+  | .shift operator left right =>
+      .shift operator (compileExpCake context left) (compileExpCake context right)
+  | .topAddr => .op .sub [.topAddr, .const context.maxGlobalsSize]
+  | expression => expression
+termination_by expression => sizeOf expression
+where
+  compileExpCakeList {width : Nat} [NeZero width] (context : CakeContext width) :
+      List (Exp (BitVec width)) → List (Exp (BitVec width))
+    | [] => []
+    | expression :: expressions =>
+        compileExpCake context expression :: compileExpCakeList context expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- List counterpart of `compileExpCake` for external callers; mirrors HOL's
+    `MAP (compile_exp ctxt)`. -/
+def compileExpCakeArgs {width : Nat} [NeZero width] (context : CakeContext width) :
+    List (Exp (BitVec width)) → List (Exp (BitVec width))
+  | [] => []
+  | expression :: expressions =>
+      compileExpCake context expression :: compileExpCakeArgs context expressions
+termination_by expressions => sizeOf expressions
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- Exact clause-structured port of HOL `pan_globals$compile_def`
+    (`pan_globalsScript.sml:69-149`) over the canonical word context
+    `CakeContext`.  Each clause matches HOL directly; the global-return-handler
+    case uses the exact `freshNameHOL` port of HOL `fresh_name`
+    (`pan_globalsScript.sml:55`) and the exact `freeVarIds`/`expLocalVars`
+    ports of HOL `free_var_ids`/`var_exp` (`panLangScript.sml:347`/`:253`).
+    String equality is lawful, so the `==`/`!=` comparisons implement HOL `=`.
+    The finite-map `globals` is consulted only through `FLOOKUP`, as in HOL.
+    See beads `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_def"]
+def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+    Prog (BitVec width) → Prog (BitVec width)
+  | .dec name shape value body =>
+      .dec name shape (compileExpCake context value) (compileProgCake context body)
+  | .assign .global name value =>
+      match FLOOKUP context.globals name with
+      | some (_, address) =>
+          .store (.op .sub [.topAddr, .const address]) (compileExpCake context value)
+      | none => .skip
+  | .assign .local name value => .assign .local name (compileExpCake context value)
+  | .primitive name operator arguments =>
+      .primitive name operator (compileExpCakeArgs context arguments)
+  | .store address value =>
+      .store (compileExpCake context address) (compileExpCake context value)
+  | .store32 address value =>
+      .store32 (compileExpCake context address) (compileExpCake context value)
+  | .storeByte address value =>
+      .storeByte (compileExpCake context address) (compileExpCake context value)
+  | .seq first second =>
+      .seq (compileProgCake context first) (compileProgCake context second)
+  | .ite condition thenBranch elseBranch =>
+      .ite (compileExpCake context condition)
+        (compileProgCake context thenBranch) (compileProgCake context elseBranch)
+  | .while condition body =>
+      .while (compileExpCake context condition) (compileProgCake context body)
+  | .call info function arguments =>
+      let compiledArguments := compileExpCakeArgs context arguments
+      match info with
+        | none => .call none function compiledArguments
+        | some (none, none) =>
+            .call (some (none, none)) function compiledArguments
+        | some (none, some (exception, handlerVar, handler)) =>
+            .call (some (none, some (exception, handlerVar,
+              compileProgCake context handler))) function compiledArguments
+        | some (some (.local, name), none) =>
+            .call (some (some (.local, name), none)) function compiledArguments
+        | some (some (.local, name), some (exception, handlerVar, handler)) =>
+            .call (some (some (.local, name), some (exception, handlerVar,
+              compileProgCake context handler))) function compiledArguments
+        | some (some (.global, name), none) =>
+            match FLOOKUP context.globals name with
+            | some (shape, address) =>
+                .decCall "" shape function compiledArguments
+                  (.store (.op .sub [.topAddr, .const address])
+                    (.var .local ""))
+            | none =>
+                .call (some (none, none)) function compiledArguments
+        | some (some (.global, name), some (exception, handlerVar, handler)) =>
+            match FLOOKUP context.globals name with
+            | some (shape, address) =>
+                let compiledHandlerProgram := compileProgCake context handler
+                let names := handlerVar :: freeVarIds compiledHandlerProgram ++
+                  compiledArguments.flatMap expLocalVars
+                let resultName := freshNameHOL "" names
+                /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
+                   handler flag, independently of the fresh result name. -/
+                let flagName := freshNameHOL "vn'" (resultName :: names)
+                let handlerBody :=
+                  .seq compiledHandlerProgram
+                    (.assign .local flagName (.const (BitVec.ofNat width 1)))
+                let callInfo := some (some (.local, resultName),
+                  some (exception, handlerVar, handlerBody))
+                let callProgram : Prog (BitVec width) :=
+                  .call callInfo function compiledArguments
+                let storeAddress : Exp (BitVec width) :=
+                  .op .sub [.topAddr, .const address]
+                .dec resultName shape (cakeShapeVal context shape)
+                  (.dec flagName .one (.const (BitVec.ofNat width 0))
+                    (.seq callProgram
+                      (.ite (.var .local flagName) .skip
+                        (.store storeAddress
+                          (.var .local resultName)))))
+            | none =>
+                .call (some (none, some (exception, handlerVar,
+                  compileProgCake context handler))) function compiledArguments
+  | .decCall name shape function arguments body =>
+      .decCall name shape function (compileExpCakeArgs context arguments)
+        (compileProgCake context body)
+  | .extCall function configuration configurationLength array arrayLength =>
+      .extCall function (compileExpCake context configuration)
+        (compileExpCake context configurationLength) (compileExpCake context array)
+        (compileExpCake context arrayLength)
+  | .raise exception value => .raise exception (compileExpCake context value)
+  | .return value => .return (compileExpCake context value)
+  | .shMemLoad size kind name address =>
+      match kind, FLOOKUP context.globals name with
+      | .local, _ =>
+          .shMemLoad size .local name (compileExpCake context address)
+      | .global, some (.one, globalAddress) =>
+          let localName := name ++ globalApostrophes 1
+          .dec name .one (compileExpCake context address)
+            (.dec localName .one (.const (BitVec.ofNat width 0))
+              (.seq
+                (.shMemLoad size .local localName (.var .local name))
+                (.store (.op .sub [.topAddr, .const globalAddress])
+                  (.var .local localName))))
+      | .global, _ => .skip
+  | .shMemStore size address value =>
+      .shMemStore size (compileExpCake context address) (compileExpCake context value)
+  | program => program
+termination_by program => sizeOf program
+
+/-- HOL-shaped output of `compile_decs`. -/
+structure CakeCompileDecsResult (width : Nat) where
+  initializers : List (Prog (BitVec width))
+  functions : List (Decl (BitVec width))
+  exceptions : List (Decl (BitVec width))
+  context : CakeContext width
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port).  Structural context-threading
+    `compile_decs` over `CakeContext`, with the clause shapes of HOL
+    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): a function
+    body is compiled under the context as of its own position, and a `Decl`
+    extends the context for the declarations that follow.  The program compiler
+    `compileProgCake` is now the reviewed exact `compile_def` port.  The
+    `@[hol]` tag is still withheld because `CakeContext.globals` is a
+    `FiniteMap` lookup function without a finite-support invariant; the
+    per-declaration `FUPDATE`/`globalAddress` clauses are clause-identical to
+    HOL.  `width` is restricted by `[NeZero width]`, as HOL `dimindex` is
+    positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
+def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+    List (Decl (BitVec width)) → CakeCompileDecsResult width
+  | [] => { initializers := [], functions := [], exceptions := [], context := context }
+  | .function declaration :: declarations =>
+      let rest := compileDecsCake context declarations
+      { initializers := rest.initializers
+        functions := .function { declaration with
+            body := compileProgCake context declaration.body } :: rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+  | .exnDecl exception shape :: declarations =>
+      let rest := compileDecsCake context declarations
+      { rest with exceptions := .exnDecl exception shape :: rest.exceptions }
+  | .name _ _ :: declarations => compileDecsCake context declarations
+  | .decl shape name value :: declarations =>
+      let address := cakeAddress context shape
+      let nextContext := { context with
+        globals := FUPDATE context.globals (name, (shape, address))
+        globalsSize := address }
+      let rest := compileDecsCake nextContext declarations
+      { initializers :=
+          .store (.op .sub [.topAddr, .const address])
+            (compileExpCake context value) :: rest.initializers
+        functions := rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+
+theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZero width]
+    (context : CakeContext width) (declarations : List (Decl (BitVec width))) :
+    (compileDecsCake context declarations).functions.all globalDeclIsFunction = true := by
+  induction declarations generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [compileDecsCake, List.all_cons, globalDeclIsFunction, Bool.true_and]
+          exact ih context
+      | decl shape name value =>
+          simp only [compileDecsCake]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [compileDecsCake]
+          exact ih context
+      | name struct fields =>
+          simp only [compileDecsCake]
+          exact ih context
+
+theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) :
+    ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
+      (compileDecsCake context declarations).functions = [] := by
+  induction declarations with
+  | nil => intro context _; rfl
+  | cons declaration declarations ih =>
+      intro context hnone
+      cases declaration with
+      | function function =>
+          simp [List.all_cons, globalDeclIsFunction] at hnone
+      | decl shape name value =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+      | exnDecl exception shape =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+      | name struct fields =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [compileDecsCake]
+          exact ih _ hnone.2
+
+theorem compileDecsCake_append [BEq String] {width : Nat} [NeZero width] (context : CakeContext width)
+    (decs rest : List (Decl (BitVec width))) :
+    compileDecsCake context (decs ++ rest) =
+      let first := compileDecsCake context decs
+      let second := compileDecsCake first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } := by
+  induction decs generalizing context with
+  | nil => simp [compileDecsCake]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih context]
+      | decl shape name value =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih _]
+      | exnDecl exception shape =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih _]
+      | name struct fields =>
+          simp only [List.cons_append, compileDecsCake]
+          rw [ih context]
 
 /-! Counterpart of Cake's `compile_decs_preserve_functions`
     (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the

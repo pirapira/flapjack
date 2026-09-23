@@ -65,6 +65,41 @@ private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
       simpa [panSemShapeOf, panValueShape] using ih
   | case3 _ _ => simp [panSemShapeOf, panValueShape]
 
+/-! A successful `globalsLookup` exposes each state-owned return-global cell.
+This generic projection is useful when `exp_hdl` copies a multiword exception
+payload into its handler local. -/
+theorem globalsLookup_wordCell {state : CrepRuntimeState (RiscV.Word 64) σ}
+    {value : PanValue (RiscV.Word 64)}
+    (hwf : isWfShape [] (panSemShapeOf value) = true)
+    (hlookup : globalsLookup state value =
+      some ((panValueFlatten value).map PanWordLab.word))
+    (index : Nat) (hindex : index < (panValueFlatten value).length) :
+    state.globals (BitVec.ofNat 5 index) =
+      some (.word ((panValueFlatten value)[index]'hindex)) := by
+  have hwf' : isWfShape [] (panValueShape [] value) = true := by
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf
+  have hshape : Shape.shapeSize (panSemShapeOf value) =
+      (panValueFlatten value).length := by
+    rw [panSemShapeOf_eq_panValueShape_nil]
+    exact (panValueFlatten_length_eq_shapeSize value hwf').symm
+  have hindexShape : index < Shape.shapeSize (panSemShapeOf value) := by
+    omega
+  have hpoint := list_mapM_getElem?
+    (fun cellIndex => state.globals (BitVec.ofNat 5 cellIndex))
+    (List.range (Shape.shapeSize (panSemShapeOf value)))
+    ((panValueFlatten value).map PanWordLab.word) (by simpa [globalsLookup] using hlookup)
+    index
+  have hrange :
+      (List.range (Shape.shapeSize (panSemShapeOf value)))[index]? = some index := by
+    simp [hindexShape]
+  have houtput : ((panValueFlatten value).map PanWordLab.word)[index]? =
+      some (.word ((panValueFlatten value)[index]'hindex)) := by
+    simp [hindex]
+  rw [hrange] at hpoint
+  simp only [Option.bind_some] at hpoint
+  rw [houtput] at hpoint
+  exact hpoint
+
 /-- HOL `flatten_nil_no_size[local]`: flattening a value of well-formed
     empty-structure shape is empty exactly when its shape has size zero. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flatten_nil_no_size"]
@@ -511,6 +546,25 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
   exact hglobals
 
+/-- Canonicalizing the target with `riscv64CrepRuntimeTarget` does not change
+    the state relation: it only edits fields (`bytesInWord`, `memoryModel`,
+    `ffiContext`) that `stateRel` does not constrain, together with `bigEndian`,
+    which agrees with the source once the source is little-endian. Flapjack-only
+    convenience for the canonical RISC-V 64 target; no HOL original. -/
+theorem stateRel_riscv64CrepRuntimeTarget_iff
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (hbe : base.bigEndian = false) :
+    stateRel source (riscv64CrepRuntimeTarget base) ↔ stateRel source base := by
+  constructor
+  · intro hrel
+    unfold stateRel at hrel ⊢
+    obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe', hffi, hba, hta⟩ := hrel
+    exact ⟨hm, hma, hsm, hst, hg, hcl, hbe'.trans hbe.symm, hffi, hba, hta⟩
+  · intro hrel
+    unfold stateRel at hrel ⊢
+    obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe', hffi, hba, hta⟩ := hrel
+    exact ⟨hm, hma, hsm, hst, hg, hcl, hbe'.trans hbe, hffi, hba, hta⟩
+
 /-- Flapjack-specific bridge for the target memory representation. HOL
     `crepSem$state.memory` and executable `CrepRuntimeState.memory` are both
     total `word → word_lab` functions; the separate `memaddrs` set guards
@@ -796,15 +850,14 @@ theorem localRelLeZipUpdatePreserved
       ((panValueFlatten newValue).map PanWordLab.word) hdisjoint hlenNew]
     exact hmap
 
-/-! General matched-Call handler pre-state relation. Once the callee-body IH
-supplies the exception payload and the source assignment check gives shape
-preservation, `locals_rel` identifies the handler's existing slots. Writing
-the flattened payload into those slots yields the relation expected by the
-handler-body IH. The target `exp_hdl` load and update for a one-word payload
-is already proved in `EvaluateCases.crepRuntimeExpHdlOneWord`, and its result
-is composed with the `locals_rel` update by
-`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. General payload widths and
-the enclosing Call relation remain open. -/
+/-! `localsRelUpdateExistingValue` proves the local-map relation after a
+shape-preserving source update, using the slots recorded in `context.vars`.
+For the one-word Call exception case, the production target `exp_hdl` execution
+and its `locals_rel` postcondition are already proved by
+`EvaluateCases.crepRuntimeExpHdlOneWord` and
+`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. This lemma supplies the
+map-level update used by that reasoning. The enclosing HOL Call relation and
+payloads wider than one word remain to be proved. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1418,5 +1471,398 @@ theorem crepRuntimeExtCall_stateRel_dispatch_final
   exact crepRuntimeExtCallValues_stateRel_dispatch_final source base function
     configurationValue configurationLengthValue arrayValue arrayLengthValue
     configurationBytes arrayBytes event hstate hc ha hf
+
+/-- One-shot dispatch of the four-local production `crepRuntimeExtCall` wrapper on
+    the canonical RISC-V 64 target.  This is the four-local companion of
+    `crepRuntimeExtCallValues_target_dispatch_any`: after resolving the four source
+    locals it reduces to `crepRuntimeExtCallValues`, so its result is the Lean
+    `callFfi` (HOL `call_FFI`) match over the two `read_bytearray`s: `FFI_return`
+    yields `Normal` with the returned bytes written back and the returned ffi
+    installed, `FFI_final` yields `FinalFFI`, and a failed read yields `Error`.
+    Flapjack-only bridge (no HOL original); it assembles the branch lemmas
+    `crepRuntimeExtCall_stateRel_dispatch_returned`,
+    `crepRuntimeExtCall_stateRel_dispatch_final` and `crepRuntimeExtCall_stateRel_error`. -/
+theorem crepRuntimeExtCall_dispatch
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue)) :
+    crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { base with ffi := ffi } arrayValue bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base))
+       | _, _ => (.error, riscv64CrepRuntimeTarget base)) := by
+  have hlocals : (riscv64CrepRuntimeTarget base).locals = base.locals := rfl
+  simp only [crepRuntimeExtCall, hlocals]
+  rw [hconfiguration, hconfigurationLength, harray, harrayLength]
+  exact crepRuntimeExtCallValues_target_dispatch_any base function configurationValue
+    configurationLengthValue arrayValue arrayLengthValue
+
+/-- Assembled four-local `ExtCall` dispatch with source/target post-state relation:
+    the wrapper's one-shot dispatch matches the `call_FFI`-shaped branch selection,
+    and the corresponding post-states remain related (`stateRel`).  The source
+    post-state is built by the theorem (the `write_bytearray`-based memory update on
+    `FFI_return`, otherwise unchanged), never assumed; there is no target-run or
+    post-state premise.  This packages every branch of
+    `crepRuntimeExtCall_stateRel_dispatch_returned`/`_dispatch_final`/`_error` into a
+    single case-split.  Flapjack-only bridge (no HOL original). -/
+theorem crepRuntimeExtCall_stateRel_dispatch
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue))
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base)) :
+    (crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { base with ffi := ffi } arrayValue bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base))
+       | _, _ => (.error, riscv64CrepRuntimeTarget base))) ∧
+    stateRel
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                { source with
+                  memory := panSemWriteBytearray
+                    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+                    (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+                    (8 : RiscV.Word 64) arrayValue bytes,
+                  ffi := ffi }
+            | .final _event => source)
+       | _, _ => source)
+      (match riscv64ReadByteArray base configurationValue configurationLengthValue.toNat,
+             riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                riscv64WriteState { base with ffi := ffi } arrayValue bytes
+            | .final _event => riscv64CrepRuntimeTarget base)
+       | _, _ => riscv64CrepRuntimeTarget base) := by
+  constructor
+  · exact crepRuntimeExtCall_dispatch base function configuration configurationLength
+      array arrayLength configurationValue configurationLengthValue arrayValue
+      arrayLengthValue hconfiguration hconfigurationLength harray harrayLength
+  · cases hc : riscv64ReadByteArray base configurationValue configurationLengthValue.toNat with
+    | none => simpa only [hc] using hstate
+    | some configurationBytes =>
+        cases ha : riscv64ReadByteArray base arrayValue arrayLengthValue.toNat with
+        | none => simpa only [hc, ha] using hstate
+        | some arrayBytes =>
+            cases hf : callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | returned ffi bytes =>
+                simpa only [hc, ha, hf] using
+                  crepRuntimeExtCallValues_stateRel_returned source base arrayValue bytes ffi
+                    hstate
+            | final _event => simpa only [hc, ha, hf] using hstate
+
+/-- Source-evaluator ExtCall step: from a genuine `panValueFfiExtCall` outcome
+    (`FFI_return` write-back) on a source state related to the canonical RISC-V
+    64 target, derive the target `crepRuntimeExtCall` result and the post-state
+    `stateRel`.  No hypothesis states the target result or the post-relation;
+    the returned bytes are derived from the source `call_FFI` outcome. -/
+theorem panValueFfiExtCall_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue))
+    (nextMemory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (nextFfi : FfiState σ)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiExtCall
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+        (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+        (8 : RiscV.Word 64) source.ffi function
+        configurationValue configurationLengthValue arrayValue arrayLengthValue =
+      some (.returned nextMemory nextFfi)) :
+    ∃ arrayBytes bytes,
+      riscv64ReadByteArray base arrayValue arrayLengthValue.toNat = some arrayBytes ∧
+      crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+          (riscv64CrepRuntimeTarget base) function
+          configuration configurationLength array arrayLength =
+        (.normal, riscv64WriteState { base with ffi := nextFfi } arrayValue bytes) ∧
+      nextMemory =
+        panValueMemoryView
+          (riscv64WriteState { base with ffi := nextFfi } arrayValue bytes).memory ∧
+      stateRel { source with memory := nextMemory, ffi := nextFfi }
+        (riscv64WriteState { base with ffi := nextFfi } arrayValue bytes) := by
+  obtain ⟨configurationBytes, arrayBytes, bytes, hcr, har, hffiR, hmem⟩ :=
+    panValueFfiExtCall_returned_inv
+      (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+      (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+      (8 : RiscV.Word 64) source.ffi function
+      configurationValue configurationLengthValue arrayValue arrayLengthValue
+      nextMemory nextFfi hsource
+  have hmemView : source.memory = panValueMemoryView base.memory := hstate.1
+  rw [hmemView] at hcr har
+  rw [riscv64PanValueFfiContext_valueToNat_eq_riscv] at hcr har
+  rw [panValueFfiReadBytes_view_eq_riscv] at hcr har
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hfBase : callFfi base.ffi (.extCall function)
+      configurationBytes arrayBytes = .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hffiR
+  have hdispatch := crepRuntimeExtCall_stateRel_dispatch source base
+    function configuration configurationLength array arrayLength
+    configurationValue configurationLengthValue arrayValue arrayLengthValue
+    hconfiguration hconfigurationLength harray harrayLength hstate
+  refine ⟨arrayBytes, bytes, har, ?_, ?_, ?_⟩
+  · rw [hdispatch.1]
+    simp only [hcr, har, hfBase]
+  · rw [hmem, panValueFfiWriteBytes_eq_panSemWriteBytearray, hmemView,
+      panSemWriteBytearray_target_eq_riscv]
+    conv => rhs; rw [riscv64WriteState_withFfi]
+  · rw [hmem, panValueFfiWriteBytes_eq_panSemWriteBytearray]
+    simpa only [hcr, har, hfBase] using hdispatch.2
+
+/-- A successful source `sh_mem_load` outcome drives the target shared-memory
+    `load` dispatch: the mapped read reaches `callFfi` with the HOL `SharedMem
+    MappedRead` name and width byte, the loaded word is installed into the named
+    local, and the ffi-only source update is a `stateRel` post-state.  The target
+    dispatch and post-state are derived from the source evaluator outcome, not
+    assumed.  HOL `sh_mem_load` (`panSemScript.sml:510`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out`. -/
+theorem panValueFfiSharedLoad_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (nextFfi : FfiState σ) (value : RiscV.Word 64)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedLoad (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address = some (.loaded nextFfi value)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepLoadOp size) name address =
+      (.normal, { riscv64CrepRuntimeTarget base with
+        ffi := nextFfi,
+        locals := updateCrepRuntimeLocal (riscv64CrepRuntimeTarget base).locals
+          name (.word value) }) ∧
+    stateRel { source with ffi := nextFfi }
+      { riscv64CrepRuntimeTarget base with
+        ffi := nextFfi,
+        locals := updateCrepRuntimeLocal (riscv64CrepRuntimeTarget base).locals
+          name (.word value) } := by
+  obtain ⟨hdom, bytes, hcall, hvalue⟩ :=
+    panValueFfiSharedLoad_loaded_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address nextFfi value hsource
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedRead)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepLoadOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepLoadOp]; exact hdom
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepLoadOp] at hvalid
+       simp only [panValueFfiWidth] at hcallBase
+       simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hvalid, if_true, hcallBase, ← hvalue])
+  · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
+      nextFfi hstate
+
+/-- A successful source `sh_mem_store` outcome drives the target shared-memory
+    `store` dispatch: the mapped write reaches `callFfi` with the HOL `SharedMem
+    MappedWrite` name, the width byte, and the HOL payload, and the ffi-only
+    result is a `stateRel` post-state.  HOL `sh_mem_store`
+    (`panSemScript.sml:527`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out`. -/
+theorem panValueFfiSharedStore_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (value : RiscV.Word 64)
+    (hname : (riscv64CrepRuntimeTarget base).locals name = some (.word value))
+    (nextFfi : FfiState σ)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedStore (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address value = some (.stored nextFfi)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepStoreOp size) name address =
+      (.normal, { riscv64CrepRuntimeTarget base with ffi := nextFfi }) ∧
+    stateRel { source with ffi := nextFfi }
+      { riscv64CrepRuntimeTarget base with ffi := nextFfi } := by
+  obtain ⟨hdom, bytes, hcall⟩ :=
+    panValueFfiSharedStore_stored_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address value nextFfi hsource
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      (if panValueFfiWidth size = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (panValueFfiWidth size) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepStoreOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepStoreOp]; exact hdom
+  have hcallGoal : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (crepRuntimeMemWidth (opSizeToCrepStoreOp size))]
+      (if crepRuntimeMemWidth (opSizeToCrepStoreOp size) = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (crepRuntimeMemWidth (opSizeToCrepStoreOp size)) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .returned nextFfi bytes := by
+    rw [crepRuntimeSharedStorePayload_eq (riscv64PanValueFfiContext base.shMemaddrs)
+      value address size]
+    rw [crepRuntimeMemWidth_opSizeToCrepStoreOp]
+    exact hcallBase
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepStoreOp] at hvalid
+       simp only [opSizeToCrepStoreOp,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
+       erw [hcallGoal])
+  · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
+      nextFfi hstate
+
+/-- The source `sh_mem_load` `FFI_final` outcome drives the target shared-memory
+    `load` dispatch to `FinalFFI` with the locals cleared and the pre-state
+    relation (HOL `(SOME FinalFFI, empty_locals s)`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out` (`load_final`). -/
+theorem panValueFfiSharedLoad_stateRel_final
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedLoad (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address = some (.final nextFfi event)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepLoadOp size) name address =
+      (.finalFfi event,
+        clearCrepRuntimeLocals (riscv64CrepRuntimeTarget base)) ∧
+    stateRel { source with ffi := nextFfi }
+      (clearCrepRuntimeLocals (riscv64CrepRuntimeTarget base)) := by
+  obtain ⟨hdom, hffi, hcall⟩ :=
+    panValueFfiSharedLoad_final_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address nextFfi event hsource
+  subst hffi
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedRead)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepLoadOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepLoadOp]; exact hdom
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepLoadOp] at hvalid
+       simp only [panValueFfiWidth] at hcallBase
+       simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
+         riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, clearCrepRuntimeLocals, hvalid, if_true,
+         hcallBase])
+  · simpa only [stateRel, clearCrepRuntimeLocals] using hstate
+
+/-- The source `sh_mem_store` `FFI_final` outcome drives the target
+    shared-memory `store` dispatch to `FinalFFI` with the pre-state relation
+    (HOL `(SOME FinalFFI, s)`).  Direct oracle:
+    `scripts/hol-probes/crep_runtime_shared_mem_probe.out` (`store_final`). -/
+theorem panValueFfiSharedStore_stateRel_final
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (size : OpSize) (name : Nat) (address : RiscV.Word 64)
+    (value : RiscV.Word 64)
+    (hname : (riscv64CrepRuntimeTarget base).locals name = some (.word value))
+    (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiSharedStore (riscv64PanValueFfiContext base.shMemaddrs)
+        source.ffi size address value = some (.final nextFfi event)) :
+    crepRuntimeSharedMem riscv64SharedMemCallFfiHandler
+        (riscv64CrepRuntimeTarget base) (opSizeToCrepStoreOp size) name address =
+      (.finalFfi event, riscv64CrepRuntimeTarget base) ∧
+    stateRel { source with ffi := nextFfi }
+      (riscv64CrepRuntimeTarget base) := by
+  obtain ⟨hdom, hffi, hcall⟩ :=
+    panValueFfiSharedStore_final_inv (riscv64PanValueFfiContext base.shMemaddrs)
+      source.ffi size address value nextFfi event hsource
+  subst hffi
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hcallBase : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (panValueFfiWidth size)]
+      (if panValueFfiWidth size = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (panValueFfiWidth size) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [hbaseffi]; exact hcall
+  have hvalid : crepRuntimeSharedAddressValid (riscv64CrepRuntimeTarget base)
+      (opSizeToCrepStoreOp size) address = true := by
+    rw [crepRuntimeSharedAddressValid_opSizeToCrepStoreOp]; exact hdom
+  have hcallGoal : callFfi base.ffi (.sharedMem .mappedWrite)
+      [UInt8.ofNat (crepRuntimeMemWidth (opSizeToCrepStoreOp size))]
+      (if crepRuntimeMemWidth (opSizeToCrepStoreOp size) = 0 then
+          (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false
+        else
+          ((riscv64PanValueFfiContext base.shMemaddrs).wordToBytes value false).take
+              (crepRuntimeMemWidth (opSizeToCrepStoreOp size)) ++
+            (riscv64PanValueFfiContext base.shMemaddrs).wordToBytes address false) =
+        .final event := by
+    rw [crepRuntimeSharedStorePayload_eq (riscv64PanValueFfiContext base.shMemaddrs)
+      value address size]
+    rw [crepRuntimeMemWidth_opSizeToCrepStoreOp]
+    exact hcallBase
+  constructor
+  · cases size <;>
+      (simp only [opSizeToCrepStoreOp] at hvalid
+       simp only [opSizeToCrepStoreOp, riscv64CrepRuntimeTarget_ffi,
+         riscv64CrepRuntimeTarget_ffiContext,
+         riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
+         crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
+       erw [hcallGoal])
+  · simpa only [stateRel] using hstate
 
 end Flapjack

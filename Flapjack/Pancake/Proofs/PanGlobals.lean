@@ -657,6 +657,155 @@ theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
   simp only [h] at hinit hfuns hexns hctx
   simp [hinit, hfuns, hexns, hctx]
 
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decs_decls_thm` (`pan_globalsProofScript.sml:1967`) for the
+    context-threading `globalCompileDecsThreaded`, but the quantifiers are not
+    HOL's: the context exposes arbitrary `bytesInWord`/`fromNat`
+    (`GlobalPassContext` generalizes HOL's fixed `bytes_in_word` and `n2w`), the
+    word type carries arbitrary `[Add α] [Mul α]` rather than HOL's word
+    operations, and `[BEq String]` is not required to be lawful.  An exact port
+    over a canonical HOL word context is tracked by the dependency bead. -/
+theorem compile_decs_decls_thm_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecsThreaded context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' })
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    funs = [] := by
+  have hfuns : funs = (globalCompileDecsThreaded context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact globalCompileDecsThreaded_functions_eq_nil_of_no_functions code context hnone
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decs_EVERY_is_function` (`pan_globalsProofScript.sml:1977`) for the
+    context-threading `globalCompileDecsThreaded`, but the context exposes
+    arbitrary `bytesInWord`/`fromNat`, the word type carries arbitrary
+    `[Add α] [Mul α]`, and `[BEq String]` need not be lawful; see the exact-port
+    dependency bead. -/
+theorem compile_decs_EVERY_is_function_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecsThreaded context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    funs.all globalDeclIsFunction = true := by
+  have hfuns : funs = (globalCompileDecsThreaded context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact globalCompileDecsThreaded_functions_all_isFunction context code
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decls_append` (`pan_globalsProofScript.sml:1997`) for the
+    context-threading `globalCompileDecsThreaded`, with the same quantifier gap as
+    the two theorems above: arbitrary `bytesInWord`/`fromNat`, arbitrary
+    `[Add α] [Mul α]`, and possibly non-lawful `[BEq String]`; see the
+    exact-port dependency bead. -/
+theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (decs rest : List (Decl α)) :
+    globalCompileDecsThreaded context (decs ++ rest) =
+      let first := globalCompileDecsThreaded context decs
+      let second := globalCompileDecsThreaded first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } :=
+  globalCompileDecsThreaded_append context decs rest
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `funs = []` result for
+    `compileDecsCake`, with the shape of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`).  The `@[hol]` tag
+    is withheld pending an exactness review of the underlying representation:
+    `CakeContext.globals` renders HOL's extensional finite map by a `FiniteMap`
+    lookup function that need not have finite support.  The program compiler
+    `compileProgCake` is now the reviewed exact `compile_def` port (using the
+    exact `freshNameHOL`/`freeVarIds`/`expLocalVars` helpers), and `width` is
+    restricted by `[NeZero width]` as HOL `dimindex` is positive.  The
+    `compile_exp` half is the exact tagged port `compileExpCake`
+    (`reviewed_exact`).  Tracked by bead `flapjack-pxn.18.5.2.20.1.1`. -/
+theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero width]
+    (context : CakeContext width) (code : List (Decl (BitVec width)))
+    (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
+    (ctxt' : CakeContext width)
+    (hcompile : compileDecsCake context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' })
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    funs = [] := by
+  have hfuns : funs = (compileDecsCake context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact compileDecsCake_functions_eq_nil_of_no_functions code context hnone
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `EVERY is_function` result
+    for `compileDecsCake`, with the shape of Cake's
+    `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`).      Untagged for the
+    same finite-support representation reason as `compile_decs_decls_thm_cake`;
+    see bead `flapjack-pxn.18.5.2.20.1.1`. -/
+theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [NeZero width]
+    (context : CakeContext width) (code : List (Decl (BitVec width)))
+    (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
+    (ctxt' : CakeContext width)
+    (hcompile : compileDecsCake context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    funs.all globalDeclIsFunction = true := by
+  have hfuns : funs = (compileDecsCake context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact compileDecsCake_functions_all_isFunction context code
+
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). The append/context-threading law
+    for `compileDecsCake`, with the shape of Cake's `compile_decls_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`): the second list
+    runs under the context reached by the first and the output lists append.
+    Untagged for the same finite-support representation reason as
+    `compile_decs_decls_thm_cake`; see bead `flapjack-pxn.18.5.2.20.1.1`. -/
+theorem compile_decls_append_cake [LawfulBEq String] {width : Nat} [NeZero width]
+    (context : CakeContext width) (decs rest : List (Decl (BitVec width))) :
+    compileDecsCake context (decs ++ rest) =
+      let first := compileDecsCake context decs
+      let second := compileDecsCake first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } :=
+  compileDecsCake_append context decs rest
+
+/-- Flapjack-only (untagged) counterpart of Cake's `compile_decs_functions_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1951`) for
+    `globalCompileDecsThreaded`, for a program consisting only of functions:
+    the function table is the source list with each body compiled under the
+    running context.  HOL's statement maps with an `ARB` fallback for
+    non-function declarations; here the fallback is the identity declaration,
+    which coincides with HOL exactly under the `EVERY is_function` premise, so
+    this carries no `@[hol]` tag until the ARB rendering is reviewed. -/
+theorem compile_decs_functions_thm_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (hall : code.all globalDeclIsFunction = true) :
+    (globalCompileDecsThreaded context code).functions =
+      code.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with body := globalCompileProg context function.body }
+        | other => other) := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.all_cons, globalDeclIsFunction, Bool.true_and] at hall
+          simp only [globalCompileDecsThreaded, List.map_cons, ih context hall]
+      | decl shape name value =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+      | exnDecl exception shape =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+      | name struct fields =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+
 /-- Exact-shaped port of Cake's `ALOOKUP_MAP3`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2841`). HOL's `ALOOKUP`
     is key-polymorphic; the reviewed `lookupInfo` is likewise key-polymorphic

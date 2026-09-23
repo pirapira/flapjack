@@ -116,22 +116,23 @@ theorem globalCompileTopForStart_shapes_wf
           (panDeclShapesWellFormed state.runtime.structs) = true := by
         change renamed.all (panDeclShapesWellFormed state.runtime.structs) = true
         exact hrenamedShapes
-      have hcompiledBodies : renamed.all (fun declaration =>
+      have hcompiledBodies : ∀ context, renamed.all (fun declaration =>
           match declaration with
           | .function function =>
               panDeclShapesWellFormed state.runtime.structs
                 (.function { function with
-                  body := globalCompileProg (globalCollect initial renamed) function.body })
+                  body := globalCompileProg context function.body })
           | _ => true) = true := by
+        intro context
         change (globalRenameDecls start newName sorted).all (fun declaration =>
           match declaration with
           | .function function =>
               panDeclShapesWellFormed state.runtime.structs
                 (.function { function with
-                  body := globalCompileProg (globalCollect initial renamed) function.body })
+                  body := globalCompileProg context function.body })
           | _ => true) = true
         exact globalRenameDecls_all_of_body_compiled state.runtime.structs
-          (globalCollect initial renamed) start newName sorted hrenamedShapes'
+          context start newName sorted hrenamedShapes'
       have hcompiledShapes := globalCompileDecs_result_shapes_wf
         state.runtime.structs initial renamed mainDeclaration hmainShapes hcompiledBodies
       have hresult : (globalCompileTopForStart bytesInWord fromNat declarations start).all

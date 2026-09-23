@@ -625,7 +625,7 @@ def compileAssembly (source : String) : Option String :=
       (fun value => BitVec.ofInt 64 value) source with
   | .error _ => none
   | .ok declarations =>
-      match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
+      match compileFlapjackEntryCake .rv64i
           (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
           "main" (panTargetDeclarationsWithDefaultMain declarations) with
       | none => none

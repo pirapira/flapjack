@@ -60,6 +60,9 @@ val nested_value =
             [(strlit "left", ValWord 2w);
              (strlit "right", panSem$RStruct [])]);
        (strlit "tag", ValWord 3w)]``;
+val append_prefix =
+  ``[(strlit "PrefixOnly",
+      <| fields := [(strlit "marker", panLang$One)]; size := 1 |>)]``;
 
 val _ = print_eval "v_flds_ok_word"
   ``pan_structsProof$v_flds_ok ^context (ValWord 1w)``;
@@ -88,4 +91,8 @@ val _ = print_eval "v_flds_ok_nested_match"
   ``pan_structsProof$v_flds_ok ^nested_context ^nested_value``;
 val _ = print_eval "is_wf_shape_v_nested_match"
   ``panProps$is_wf_shape_v ^nested_context ^nested_value``;
+val _ = print_eval "v_flds_ok_append_nonempty_prefix_named"
+  ``(pan_structsProof$v_flds_ok ^nested_context ^nested_value /\
+     ALL_DISTINCT (MAP FST ^append_prefix ++ MAP FST ^nested_context)) ==>
+    pan_structsProof$v_flds_ok (^append_prefix ++ ^nested_context) ^nested_value``;
 val _ = print_eval "value_validity_done" ``0``;

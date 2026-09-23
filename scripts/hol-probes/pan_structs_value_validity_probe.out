@@ -11,4 +11,5 @@ v_flds_ok_duplicate_second=T
 is_wf_shape_v_duplicate_second=T
 v_flds_ok_nested_match=T
 is_wf_shape_v_nested_match=T
+v_flds_ok_append_nonempty_prefix_named=T
 value_validity_done=0

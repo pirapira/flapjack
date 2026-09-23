@@ -36,7 +36,7 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
-| `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean` |
+| `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
 | `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean` |
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |

@@ -4,6 +4,7 @@ import Flapjack.PanBst
 import Flapjack.PanLocalised
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.PanToCrepMaxList
@@ -209,27 +210,30 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
-/-- Flapjack-only analogue of Cake `opt_mmap_eval_is_wf_shape_v`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2328`). The HOL theorem
-    assumes `OPT_MMAP (eval s) expressions = SOME values`; this model does not
-    yet define that state-based evaluator on `PanSemState`. The available
-    `evalPanValueExps` instead takes explicit `bytesInWord` and
-    `PanValueMemoryAccess`, so this lemma is deliberately untagged until a
-    faithful bridge from `panSem$eval` to those evaluator inputs is proved.
-    Given that Lean evaluator premise, `state_rel` and `locals_rel` derive the
-    local/global well-formedness facts needed by the existing evaluator lemma. -/
-theorem evalPanValueExpsWfShapeOfStateRel
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (source : PanSemState α (FfiState σ)) (target : CrepRuntimeState α σ)
-    (context : PanToCrepProofContext α) (targetLocals : FiniteMap Nat α)
-    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
-    (expressions : List (Exp α)) (values : List (PanValue α))
-    (heval : evalPanValueExps source.structs source.locals source.globals
-      source.memory source.baseAddress source.topAddress bytesInWord expressions
-      (memoryAccess := some memoryAccess) = some values)
+/-- The state-based 64-bit specialization of Cake
+    `opt_mmap_eval_is_wf_shape_v`; its evaluator premise is derived solely
+    from `PanSemState`, including its
+    word-memory domain, shared-memory domain, and endianness. This remains
+    untagged because the HOL theorem is polymorphic over word widths while
+    this evaluator uses the RISC-V `BitVec 64` model. -/
+theorem evalPanSemStateExpsWfShapeOfStateRel
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)]
+    [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (targetLocals : FiniteMap Nat (RiscV.Word 64))
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (heval : evalPanSemStateExps source expressions = some values)
     (hstate : stateRel source target)
     (hlocals : localsRel context source.locals targetLocals) :
     panValueIsWfValues ([] : StructContext) values = true := by
@@ -246,11 +250,14 @@ theorem evalPanValueExpsWfShapeOfStateRel
     simp at hlookup
   have heval' : evalPanValueExps ([] : StructContext) source.locals
       source.globals source.memory source.baseAddress source.topAddress
-      bytesInWord expressions (memoryAccess := some memoryAccess) = some values := by
-    simpa [hstructs] using heval
+      panSemBitVec64BytesInWord expressions
+      (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some values := by
+    simpa [evalPanSemStateExps, evalPanSemStateExp, evalPanValueExps,
+      panSemBitVec64BytesInWord, hstructs] using heval
   exact evalPanValueExps_isWfShape ([] : StructContext) source.locals
-    source.globals source.memory source.baseAddress source.topAddress bytesInWord
-    hlocalsWf hglobalsWf expressions (some memoryAccess) values heval'
+    source.globals source.memory source.baseAddress source.topAddress
+    panSemBitVec64BytesInWord hlocalsWf hglobalsWf expressions
+    (some (panSemBitVec64MemoryAccess source)) values heval'
 
 /-- Faithful port of Cake `locals_rel_lookup_ctxt`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:527`). The HOL

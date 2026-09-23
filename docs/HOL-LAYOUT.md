@@ -36,7 +36,7 @@ comments do not count as theorem entries or tests. Correctness claims are descri
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
-| `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean`, `PanSemCodeCall.lean` |
+| `semantics/panSemScript.sml` | `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
 | `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean` |
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
@@ -50,3 +50,11 @@ has been established. For declaration-level provenance, use
 `scripts/next-hol-port.py`. Track individual gaps and progress in
 [GitHub issues](https://github.com/pirapira/flapjack/issues), not in this
 layout guide.
+
+The recursive HOL `Call`/`DecCall` evaluator is not yet ported over
+`PanSemState.code`. Lean currently models that field as an unrestricted
+function `FunName → Option ...`, while `panSemEvaluateFuel` derives its bound
+by traversing a finite list of function bodies. A recursive source evaluator
+needs either a finite-support code representation with a proof that lookup is
+preserved, or an explicit fuel bound with an adequacy argument. The direct
+nonempty-code HOL oracle remains in `scripts/hol-probes/pan_sem_e2e_probe*`.

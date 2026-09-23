@@ -2870,5 +2870,13 @@
     "lean_name": "codeRelEmptyLocals",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (HOL state field review)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_id_update",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepLocalsIdUpdate",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (production Crep state type review)"
   }
 ]

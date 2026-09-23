@@ -1525,4 +1525,69 @@ theorem crepRuntimeExtCall_stateRel_dispatch
                     hstate
             | final _event => simpa only [hc, ha, hf] using hstate
 
+/-- Source-evaluator ExtCall step: from a genuine `panValueFfiExtCall` outcome
+    (`FFI_return` write-back) on a source state related to the canonical RISC-V
+    64 target, derive the target `crepRuntimeExtCall` result and the post-state
+    `stateRel`.  No hypothesis states the target result or the post-relation;
+    the returned bytes are derived from the source `call_FFI` outcome. -/
+theorem panValueFfiExtCall_stateRel_target
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue :
+      RiscV.Word 64)
+    (hconfiguration : base.locals configuration = some (.word configurationValue))
+    (hconfigurationLength : base.locals configurationLength =
+      some (.word configurationLengthValue))
+    (harray : base.locals array = some (.word arrayValue))
+    (harrayLength : base.locals arrayLength = some (.word arrayLengthValue))
+    (nextMemory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (nextFfi : FfiState σ)
+    (hstate : stateRel source (riscv64CrepRuntimeTarget base))
+    (hsource : panValueFfiExtCall
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+        (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+        (8 : RiscV.Word 64) source.ffi function
+        configurationValue configurationLengthValue arrayValue arrayLengthValue =
+      some (.returned nextMemory nextFfi)) :
+    ∃ arrayBytes bytes,
+      riscv64ReadByteArray base arrayValue arrayLengthValue.toNat = some arrayBytes ∧
+      crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+          (riscv64CrepRuntimeTarget base) function
+          configuration configurationLength array arrayLength =
+        (.normal, riscv64WriteState { base with ffi := nextFfi } arrayValue bytes) ∧
+      nextMemory =
+        panValueMemoryView
+          (riscv64WriteState { base with ffi := nextFfi } arrayValue bytes).memory ∧
+      stateRel { source with memory := nextMemory, ffi := nextFfi }
+        (riscv64WriteState { base with ffi := nextFfi } arrayValue bytes) := by
+  obtain ⟨configurationBytes, arrayBytes, bytes, hcr, har, hffiR, hmem⟩ :=
+    panValueFfiExtCall_returned_inv
+      (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel base.memaddrs)
+      (riscv64PanValueFfiContext base.shMemaddrs) source.memory
+      (8 : RiscV.Word 64) source.ffi function
+      configurationValue configurationLengthValue arrayValue arrayLengthValue
+      nextMemory nextFfi hsource
+  have hmemView : source.memory = panValueMemoryView base.memory := hstate.1
+  rw [hmemView] at hcr har
+  rw [riscv64PanValueFfiContext_valueToNat_eq_riscv] at hcr har
+  rw [panValueFfiReadBytes_view_eq_riscv] at hcr har
+  have hbaseffi : base.ffi = source.ffi :=
+    (hstate.2.2.2.2.2.2.2.1.trans (riscv64CrepRuntimeTarget_ffi base)).symm
+  have hfBase : callFfi base.ffi (.extCall function)
+      configurationBytes arrayBytes = .returned nextFfi bytes := by
+    rw [hbaseffi]; exact hffiR
+  have hdispatch := crepRuntimeExtCall_stateRel_dispatch source base
+    function configuration configurationLength array arrayLength
+    configurationValue configurationLengthValue arrayValue arrayLengthValue
+    hconfiguration hconfigurationLength harray harrayLength hstate
+  refine ⟨arrayBytes, bytes, har, ?_, ?_, ?_⟩
+  · rw [hdispatch.1]
+    simp only [hcr, har, hfBase]
+  · rw [hmem, panValueFfiWriteBytes_eq_panSemWriteBytearray, hmemView,
+      panSemWriteBytearray_target_eq_riscv]
+    conv => rhs; rw [riscv64WriteState_withFfi]
+  · rw [hmem, panValueFfiWriteBytes_eq_panSemWriteBytearray]
+    simpa only [hcr, har, hfBase] using hdispatch.2
+
 end Flapjack

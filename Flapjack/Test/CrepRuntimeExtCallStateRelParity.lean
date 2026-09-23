@@ -373,6 +373,96 @@ example :
   (crepRuntimeExtCall_stateRel_dispatch callSource wrapperBase "" 0 1 2 3
     (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 rfl rfl rfl rfl wrapperStateRel).1
 
+/-- The source `panValueFfiExtCall` evaluator outcome for the fixture: the
+    configuration and array reads return `[1,2,3,4]`, and the identity oracle of
+    `natCrepRuntimeFfiState` returns the array bytes on the unchanged ffi, so the
+    source writes those bytes back with `panValueFfiWriteBytes`. -/
+def wrapperSourceMemory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)) :=
+  panValueFfiWriteBytes
+    (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+    (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+    (8 : RiscV.Word 64) (8 : RiscV.Word 64) [(1 : UInt8), 2, 3, 4]
+
+theorem wrapperReadConfigurationBytes :
+    panValueFfiReadBytes
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64)
+        ((riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+          (4 : RiscV.Word 64)) =
+      some [(1 : UInt8), 2, 3, 4] := by
+  have hmem : callSource.memory = panValueMemoryView wrapperBase.memory :=
+    wrapperStateRel.1
+  rw [hmem]
+  rw [show (riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+      (4 : RiscV.Word 64) = 4 from by decide]
+  rw [panValueFfiReadBytes_view_eq_riscv]
+  decide
+
+theorem wrapperReadArrayBytes :
+    panValueFfiReadBytes
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64)
+        ((riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+          (4 : RiscV.Word 64)) =
+      some [(1 : UInt8), 2, 3, 4] := by
+  have hmem : callSource.memory = panValueMemoryView wrapperBase.memory :=
+    wrapperStateRel.1
+  rw [hmem]
+  rw [show (riscv64PanValueFfiContext wrapperBase.shMemaddrs).valueToNat
+      (4 : RiscV.Word 64) = 4 from by decide]
+  rw [panValueFfiReadBytes_view_eq_riscv]
+  decide
+
+theorem wrapperSourceExtCall :
+    panValueFfiExtCall
+        (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+        (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+        (8 : RiscV.Word 64) callSource.ffi "" (8 : RiscV.Word 64) 4
+        (8 : RiscV.Word 64) 4 =
+      some (.returned wrapperSourceMemory callSource.ffi) := by
+  unfold panValueFfiExtCall
+  erw [wrapperReadConfigurationBytes]
+  simp only [callFfi_empty_extCall]
+  rfl
+
+/-- The source evaluator outcome drives the target dispatch: `panValueFfiExtCall`
+    returning the written-back source memory yields the `Normal` target step and
+    the related post-states, with the returned bytes derived (not assumed). -/
+example :
+    ∃ arrayBytes bytes,
+      riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 = some arrayBytes ∧
+      crepRuntimeExtCall riscv64ExtCallCallFfiHandler
+          (riscv64CrepRuntimeTarget wrapperBase) "" 0 1 2 3 =
+        (.normal, riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+          (8 : RiscV.Word 64) bytes) ∧
+      wrapperSourceMemory =
+        panValueMemoryView
+          (riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+            (8 : RiscV.Word 64) bytes).memory ∧
+      stateRel { callSource with memory := wrapperSourceMemory, ffi := callSource.ffi }
+        (riscv64WriteState { wrapperBase with ffi := callSource.ffi }
+          (8 : RiscV.Word 64) bytes) :=
+  panValueFfiExtCall_stateRel_target callSource wrapperBase "" 0 1 2 3
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 rfl rfl rfl rfl
+    wrapperSourceMemory callSource.ffi wrapperStateRel wrapperSourceExtCall
+
+/-- Executes the source ExtCall evaluator and checks the written-back memory. -/
+def sourceOutcomeGuard : Bool :=
+  match panValueFfiExtCall
+      (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel wrapperBase.memaddrs)
+      (riscv64PanValueFfiContext wrapperBase.shMemaddrs) callSource.memory
+      (8 : RiscV.Word 64) callSource.ffi "" (8 : RiscV.Word 64) 4
+      (8 : RiscV.Word 64) 4 with
+  | some (.returned memory _) =>
+      match memory (8 : RiscV.Word 64) with
+      | some (.word value) =>
+          RiscV.panRiscVGetByte (8 : RiscV.Word 64) (8 : RiscV.Word 64) value ==
+            (1 : RiscV.Word 64)
+      | _ => false
+  | _ => false
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
@@ -387,6 +477,8 @@ def runChecks : IO Bool := do
       errorGuard),
     ("Crep ExtCall one-shot production dispatch matches call_FFI shape",
       oneShotGuard),
+    ("Crep ExtCall source panValueFfiExtCall outcome drives target dispatch",
+      sourceOutcomeGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

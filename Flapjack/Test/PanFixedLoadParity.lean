@@ -81,6 +81,16 @@ def load32HitWidth8 : Option (Word 8) :=
   panModelRead32 word8Model word8Domain word8Memory
     word8BytesInWord (BitVec.ofNat 8 0) false
 
+/-! HOL `byte_align_def` is `align (LOG2 (dimindex DIV 8))`, while the
+RISC-V target rounds down by the supplied `bytesInWord`. For a 24-bit word,
+HOL therefore uses exponent `LOG2 3 = 1` and aligns address 5 to 4; the
+production target divides by 3 and aligns it to 3. This direct width-24
+oracle counterexample shows why the all-width theorem cannot silently reuse
+the RISC-V target. -/
+def holByteAlignWidth24Address5 : Word 24 := BitVec.ofNat 24 4
+def riscvByteAlignWidth24Address5 : Word 24 :=
+  panRiscVByteAlign (BitVec.ofNat 24 3) (BitVec.ofNat 24 5)
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
@@ -92,5 +102,8 @@ def load32HitWidth8 : Option (Word 8) :=
 #guard load32DomainMiss == originalLoad32DomainMiss
 #guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
 #guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard holByteAlignWidth24Address5 == BitVec.ofNat 24 4
+#guard riscvByteAlignWidth24Address5 == BitVec.ofNat 24 3
+#guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5
 
 end Flapjack.Test.PanFixedLoadParity

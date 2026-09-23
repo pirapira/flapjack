@@ -307,6 +307,9 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
                 match lookupInfo exception context.exceptions with
                 | none => none
                 | some code =>
+                    /- HOL's handled-call branch builds the handler body with
+                       `exp_hdl` (`pan_to_crepScript.sml:238`) and never calls
+                       `ret_hdl`/`ret_var`; see bead `flapjack-pxn.18.2.4.1`. -/
                     let handlerSetup := expHdl context.vars handlerVar
                     some (code, .seq handlerSetup (compileProg context handlerProgram))
           match destination with

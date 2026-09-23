@@ -33,6 +33,30 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! ## Return-path bridge checks (Flapjack-only)
+
+Kernel-checked reductions, not HOL fixtures: they confirm the tagged
+`ret_hdl_def` / `exp_hdl_def` agree with the tagged `assign_ret_def` on the
+emitted program, as recorded by `flapjack-pxn.18.2.4.1`. -/
+
+example : retHdl (α := Nat) (.comb [.one, .one]) [1, 2] = assignRet (α := Nat) [1, 2] :=
+  retHdl_comb_eq_assignRet _ _ (by native_decide)
+
+example : retHdl (α := Nat) (.comb [.one]) [1] = .skip :=
+  retHdl_one_word_eq_skip _ _ (by native_decide)
+
+example : expHdlFiniteMap
+    (FUPDATE (FEMPTY : FiniteMap String (Shape × List Nat))
+      ("x", (.comb [.one, .one], [1, 2]))) "x"
+    = assignRet (α := Nat) [1, 2] :=
+  expHdlFiniteMap_eq_assignRet (shape := .comb [.one, .one])
+    (by simp [FLOOKUP, FUPDATE])
+
+example : expHdl [("x", (.comb [.one, .one], [1, 2]))] "x"
+    = assignRet (α := Nat) [1, 2] :=
+  expHdl_eq_assignRet_of_lookupInfo (shape := .comb [.one, .one])
+    (by simp [lookupInfo])
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS ret_hdl One/Comb/Named parity"

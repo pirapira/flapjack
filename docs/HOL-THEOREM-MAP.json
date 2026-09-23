@@ -4061,7 +4061,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelUpdateExistingValue",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; the actual one-word target exp_hdl write from globals_lookup is proved by crepRuntimeExpHdlOneWord; general multiword handler case remains open"
+    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; the one-word target exp_hdl execution step is proved by EvaluateCases.crepRuntimeExpHdlOneWord; general handler case and enclosing Call relation remain open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -1,5 +1,5 @@
-(* Direct HOL-EVAL instance of pan_structsProof$compile_exp_correct for its
-   Local and Global Var induction cases. *)
+(* Direct HOL-EVAL instances of pan_structsProof$compile_exp_correct for its
+   expression constructors, including Local and Global Var and NStruct. *)
 load "bossLib";
 load "preamble";
 load "pan_structsTheory";
@@ -150,3 +150,18 @@ val _ = print_simp "compile_exp_correct_rstruct"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^rstruct_expression) =
          SOME (pan_structsProof$convert_v ^rstruct_value))``;
+
+val nstruct_value = ``NStruct (strlit "Pair")
+  [(strlit "left", ValWord (3w:8 word));
+   (strlit "right", ValWord (5w:8 word))]``;
+val nstruct_expression = ``(panLang$NStruct (strlit "Pair")
+  [(strlit "left", panLang$Const (3w:8 word));
+   (strlit "right", panLang$Const (5w:8 word))] : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_nstruct"
+  ``(pan_structs$old_exp_shape ^ctxt ^nstruct_expression,
+     panSem$shape_of ^nstruct_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^nstruct_value,
+     panSem$eval ^local_state ^nstruct_expression = SOME ^nstruct_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^nstruct_expression) =
+       SOME (pan_structsProof$convert_v ^nstruct_value))``;

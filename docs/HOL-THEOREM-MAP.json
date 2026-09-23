@@ -4235,6 +4235,38 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_locals_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves local finite-map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_globals_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves global finite-map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_exceptionShapes_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `FMAP_MAP2` conversion preserves exception-shape map support in the explicit Nodup list representation; projection support for convert_s, not a standalone HOL theorem or compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFiniteState_code_support",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Proves `convert_code_def` conversion preserves unique function-code map support; depends on LawfulBEq String so production lookup coincides with HOL equality, and is support rather than a compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructSkipFiniteMapEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Skip evaluator support for a finite-map-backed source-state wrapper; omits the full compile_correct premises and invariant/shape-map/result postconditions."

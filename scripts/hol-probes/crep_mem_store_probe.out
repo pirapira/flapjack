@@ -1,0 +1,3 @@
+mem_store_valid_lookup=SOME (Word 7w)
+mem_store_valid_other=SOME (Word 0w)
+mem_store_invalid=NONE

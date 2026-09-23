@@ -535,6 +535,42 @@ theorem crepRuntimeLoad_eq_none_of_memaddrs_false {state : CrepRuntimeState α �
   rw [crepRuntimeLoad]
   simp [hinvalid]
 
+/-- First branch of HOL `panSem$mem_store`
+    (`cakeml/pancake/semantics/panSemScript.sml:373-378`) as used by
+    `crepSem$evaluate`'s store case: a store at an address in `memaddrs`
+    succeeds and updates exactly that address, keeping the rest of the memory
+    function. -/
+theorem crepRuntimeStore_eq_some_of_memaddrs_true [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hvalid : state.memaddrs address = true) :
+    crepRuntimeStore state address value =
+      some { state with memory := updateMemory state.memory address value } := by
+  rw [crepRuntimeStore]
+  simp [hvalid]
+
+/-- Second branch of HOL `panSem$mem_store`: a store outside `memaddrs` fails. -/
+theorem crepRuntimeStore_eq_none_of_memaddrs_false [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hinvalid : state.memaddrs address = false) :
+    crepRuntimeStore state address value = none := by
+  rw [crepRuntimeStore]
+  simp [hinvalid]
+
+/-- Storing a value preserves `crepMemoryRel` when the total memory function is
+    updated at the same address: the stored cell becomes the `word_lab` of the
+    value, and every other guarded address is untouched. -/
+theorem crepMemoryRel_store [BEq α] {state : CrepRuntimeState α σ}
+    {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
+    (_hvalid : state.memaddrs address = true) (value : α) :
+    crepMemoryRel
+      { state with memory := updateMemory state.memory address value }
+      (fun current => if current == address then .word value else total current) := by
+  intro candidate hcandidate
+  by_cases hsame : candidate == address
+  · simp [updateMemory, hsame, panTheWord]
+  · simp only [updateMemory, hsame]
+    exact hrel candidate hcandidate
+
 /-- HOL `locals_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:71`):
     the proof context's variable map is well formed, and every live source
     variable is recovered in the target locals by mapping its slot list through

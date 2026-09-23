@@ -510,6 +510,99 @@ def evalCrepRuntimeExp
   | _ => none
 termination_by expression => sizeOf expression
 
+/-! ### Word-result constructor slice
+
+The equations below cover evaluator cases whose result shape does not depend
+on HOL's `word_op`, `word_sh`, or byte-memory helpers. They are polymorphic in
+the word carrier `α` and do not choose a RISC-V target. These are Flapjack-only
+projection facts: `CrepRuntimeState` still has target fields absent from HOL's
+`crepSem$state`, so they do not establish full evaluator correspondence. -/
+
+/-- Projection equation for the `Const` case. This is Flapjack-only adapter
+infrastructure: it wraps the raw production result as HOL's `word_lab`
+constructor, while the full evaluator still uses a target-extended state. -/
+theorem evalCrepRuntimeExp_const_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (value : α) :
+    (evalCrepRuntimeExp state (.const value)).map PanWordLab.word =
+      some (.word value) := by
+  simp [evalCrepRuntimeExp]
+
+/-- Projection equation for `Var`. Since `PanWordLab` has exactly the `word`
+constructor, projecting and rewrapping the local cell recovers it. This is
+Flapjack-only infrastructure, not a claim that its state type is HOL's. -/
+theorem evalCrepRuntimeExp_var_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (name : Nat) :
+    (evalCrepRuntimeExp state (.var name)).map PanWordLab.word = state.locals name := by
+  cases h : state.locals name with
+  | none => simp [evalCrepRuntimeExp, h]
+  | some cell => cases cell <;> simp [evalCrepRuntimeExp, h, panTheWord]
+
+/-- Projection equation for `LoadGlob`, independent of the target memory
+model. This remains Flapjack-only because its state is target-extended. -/
+theorem evalCrepRuntimeExp_loadGlob_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (address : BitVec 5) :
+    (evalCrepRuntimeExp state (.loadGlob address)).map PanWordLab.word =
+      state.globals address := by
+  cases h : state.globals address with
+  | none => simp [evalCrepRuntimeExp, h]
+  | some cell => cases cell <;> simp [evalCrepRuntimeExp, h, panTheWord]
+
+/-- The ordinary `Load` equation uses only the memory function and its domain
+predicate. It assumes no byte order or canonical target, but is still an
+adapter fact over Flapjack's extended state. -/
+theorem evalCrepRuntimeExp_load_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (address : CrepExp α) :
+    (evalCrepRuntimeExp state (.load address)).map PanWordLab.word =
+      (evalCrepRuntimeExp state address).bind fun value =>
+        if state.memaddrs value then some (state.memory value) else none := by
+  cases haddr : evalCrepRuntimeExp state address with
+  | none => simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr]
+  | some value =>
+    by_cases hdomain : state.memaddrs value
+    · cases hmem : state.memory value with
+      | word word => simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain, hmem, panTheWord]
+    · simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain]
+
+/-- Projection equation for `BaseAddr`; Flapjack-only because its state is
+target-extended. -/
+theorem evalCrepRuntimeExp_baseAddr_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) :
+    (evalCrepRuntimeExp state .baseAddr).map PanWordLab.word =
+      some (.word state.baseAddress) := by
+  simp [evalCrepRuntimeExp]
+
+/-- Projection equation for `TopAddr`; Flapjack-only because its state is
+target-extended. -/
+theorem evalCrepRuntimeExp_topAddr_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) :
+    (evalCrepRuntimeExp state .topAddr).map PanWordLab.word =
+      some (.word state.topAddress) := by
+  simp [evalCrepRuntimeExp]
+
 def crepRuntimeSharedMemExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

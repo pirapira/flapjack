@@ -3004,8 +3004,8 @@
     "hol_name": "ctxt_fc_vmax",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcVmax",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL MAX_LIST and Lean maxList slot projection match with no premises; direct HOL-EVAL empty and unsorted nonempty rows paired with kernel-checked Lean theorem instances)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4078,6 +4078,11 @@
     "lean_name": "crepRuntimeExpHdlOneWord",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual target exp_hdl execution for a one-word payload loaded from globals_lookup slot 0 into an existing handler local; induction support, not the enclosing Call_Ret_Exception theorem"
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: resolves the actual Nat-indexed production crepRuntimeExtCall wrapper to the canonical-target ExtCall dispatch and builds the source panSemWriteBytearray post-state for the FFI_return branch; no single HOL declaration"
+
   },
   {
     "hol_path": null,
@@ -4086,6 +4091,11 @@
     "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only non-returned companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: when the call_FFI handler reports a final event, the canonical-target ExtCall step is FinalFFI with the target state unchanged and the source/target states remain the related pre-states (HOL FFI_final, (SOME (FinalFFI outcome), s))."
+
   },
   {
     "hol_path": null,
@@ -4094,6 +4104,11 @@
     "lean_name": "panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source-state Call exception dispatch helper: state-owned callee raises a one-word payload and a preexisting matching handler local returns it; induction support, not full pc_compile_correct case"
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_error",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local wrapper failing-read branch (HOL _ => (SOME Error, s)): the Nat-indexed production crepRuntimeExtCall resolves its four locals, the configuration or array read fails, and the step is Error with the target state unchanged and the source/target states still related."
+
   },
   {
     "hol_path": null,
@@ -4110,5 +4125,10 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of target Call exception dispatch with actual exp_hdl/Return evaluation, given target code lookup and callee-body IH; full source/target state relation composition remains open"
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_final: the production crepRuntimeExtCall wrapper resolves its four locals, the reads succeed and the handler reports a final event, so the step is FinalFFI with the target state unchanged and the source/target states stay related."
+
   }
 ]

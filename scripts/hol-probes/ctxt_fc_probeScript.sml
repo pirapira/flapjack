@@ -28,3 +28,8 @@ val _ = print_eval "functions_projection"
   ``(pan_to_crepProof$ctxt_fc
       (FEMPTY |+ («f», ([], One))) FEMPTY [] [] []).funcs =
     FEMPTY |+ («f», ([], One))``;
+val _ = print_eval "vmax_nonempty_list"
+  ``(pan_to_crepProof$ctxt_fc FEMPTY FEMPTY [] [] [4; 1; 7; 3]).vmax =
+    MAX_LIST [4; 1; 7; 3]``;
+val _ = print_eval "vmax_empty_list"
+  ``(pan_to_crepProof$ctxt_fc FEMPTY FEMPTY [] [] []).vmax = MAX_LIST []``;

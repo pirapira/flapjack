@@ -410,6 +410,26 @@ def adapterProgGuard : Bool :=
 #eval adapterProgGuard
 #guard adapterProgGuard
 
+def adapterDeclarations : List (Decl (BitVec 8)) := [.decl Shape.one "g" (.const 7)]
+
+theorem adapterRecordAgreement :
+    compileDecsCake (cakeContextOfPass adapterPassContext) adapterDeclarations =
+      { initializers := (globalCompileDecsThreaded adapterPassContext adapterDeclarations).initializers
+        functions := (globalCompileDecsThreaded adapterPassContext adapterDeclarations).functions
+        exceptions := (globalCompileDecsThreaded adapterPassContext adapterDeclarations).exceptions
+        context :=
+          cakeContextOfPass (globalCompileDecsThreaded adapterPassContext adapterDeclarations).context } :=
+  compileDecsCake_cakeContextOfPass adapterPassContext adapterCanonical adapterDeclarations
+
+def adapterRecordGuard : Bool :=
+  (compileDecsCake (cakeContextOfPass adapterPassContext) adapterDeclarations).initializers.length ==
+    (globalCompileDecsThreaded adapterPassContext adapterDeclarations).initializers.length &&
+  (compileDecsCake (cakeContextOfPass adapterPassContext) adapterDeclarations).functions.length ==
+    (globalCompileDecsThreaded adapterPassContext adapterDeclarations).functions.length
+
+#eval adapterRecordGuard
+#guard adapterRecordGuard
+
 def adapterExpGuard : Bool :=
   expEq (compileExpCake (cakeContextOfPass adapterPassContext) (.var .global "g"))
     (globalCompileExp adapterPassContext (.var .global "g")) &&
@@ -441,6 +461,7 @@ def cakeThreadingGuard : Bool :=
   adapterGuard &&
   adapterExpGuard &&
   adapterProgGuard &&
+  adapterRecordGuard &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

@@ -79,6 +79,10 @@ of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty
 declaration list. Its Lean checks live in
 `Flapjack.Test.PanGlobalsCompileTopForStartParity`.
+`pan_structs_afindi_map_probe.out` records direct HOL EVAL for the hit and
+miss cases of `afindi_MAP_eq` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:356`; its matching Lean
+checks live in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

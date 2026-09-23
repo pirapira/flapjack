@@ -737,7 +737,7 @@ theorem panSemEvaluateCodeState_call_zero_clock_timeout_of_entry
       cases fuel with
       | zero => omega
       | succ fuel =>
-          simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+          simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
             hargs, hlookupCall, hclock, panValueFfiClockTimeout]
 
 /-! A bounded successful Call equation for a nonempty state-owned code map.
@@ -799,7 +799,7 @@ theorem panSemEvaluateCodeState_call_return_const_of_entry
               cases fuel with
               | zero => omega
               | succ fuel =>
-                  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+                  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
                     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
                     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
                     panValueShape, panShapeMatches,
@@ -1140,7 +1140,7 @@ theorem panSemEvaluateCodeState_callReturnParameter_ofEntry
       (.call none function [.const value] : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, decPanClock]
@@ -1228,7 +1228,7 @@ theorem panSemEvaluateRiscV64CodeState_callAssignParameter_ofEntry
   unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
   have hfuelConcrete : panSemCodeEvaluateFuel state program = tail + 5 := hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     hassignment, panValueShape, panShapeMatches, decPanClock]
@@ -1276,7 +1276,7 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
   unfold panSemEvaluateRiscV64CodeState panSemEvaluateCodeStateWithMemoryModel
   unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueRaiseResult, evalPanValueExpCounted, evalPanValueExp,
     hargs, hcallee, hexception, hclock, panValueShape, panShapeMatches,
@@ -1335,7 +1335,7 @@ theorem panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry
   unfold panSemEvaluateRiscV64CodeState panSemEvaluateCodeStateWithMemoryModel
   unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueRaiseResult, panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
     hargs, hcallee, hexception,
@@ -2049,7 +2049,7 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
         .skip : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,

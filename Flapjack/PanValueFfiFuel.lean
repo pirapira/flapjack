@@ -111,13 +111,13 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
   have hfk : fuel ≤ k := by omega
   rw [evalPanValueFfiCallSteps] at h
   rw [evalPanValueFfiCallSteps]
-  cases hargs : evalPanValueExpsCounted structs locals globals memory baseAddress
-      topAddress bytesInWord arguments ma with
-  | none => rw [hargs] at h; simp at h
+  cases hargs : panValueCallArguments structs baseAddress topAddress bytesInWord
+      locals globals memory arguments ma with
+  | none => rw [hargs] at h; exact h
   | some ap =>
     obtain ⟨values, argumentSteps⟩ := ap
     rw [hargs] at h
-    simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+    simp only [Option.elim_some] at h ⊢
     cases htarget : panValueCallTarget structs c function functions values with
     | none => rw [htarget] at h; simp only [Option.elim_none] at h ⊢; exact h
     | some target =>
@@ -132,7 +132,7 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
         obtain ⟨res, steps⟩ := rp
         rw [hbody] at h
         rw [ihBody body calleeLocals _ _ hfk hbody]
-        simp only [Option.bind_some] at h ⊢
+        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
         cases res with
         | normal l cg cm cf => exact h
         | returned l cg cm cf vs => exact h

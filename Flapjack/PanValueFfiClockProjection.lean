@@ -231,9 +231,9 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
       some (.returned (fun _ => none) finalGlobals finalMemory finalFfi values,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
       hwithin, hclockBody]
-  · simp [evalPanValueFfiCallSteps, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
+  · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hstepBody]
 
 /-! The uncaught-exception call branch projects in the same way: the callee
@@ -291,9 +291,9 @@ theorem evalPanValueFfiClockCall_raised_projects_to_steps
       some (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception value,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hexception,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hexception,
       hwithin, hclockBody]
-  · simp [evalPanValueFfiCallSteps, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hexception,
+  · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hexception,
       hwithin, hstepBody]
 
 /-! Cake's `pc_compile_correct[Call_Ret_FinalFFI]` propagates a terminal FFI
@@ -355,9 +355,9 @@ theorem evalPanValueFfiClockCall_finalFfi_projects_to_steps
       some (.finalFfi (fun _ => none) finalGlobals finalMemory finalFfi event,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock,
       hclockBody]
-  · simp [evalPanValueFfiCallSteps, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters,
+  · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters,
       hstepBody]
 
 /-! Return values assigned to an explicit caller destination project as well.
@@ -418,9 +418,9 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
       some (.normal assignedLocals assignedGlobals finalMemory finalFfi,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
       hwithin, hassign, hclockBody]
-  · simp [evalPanValueFfiCallSteps, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
+  · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hassign, hstepBody]
 
 /-! A caught exception projects through the handler continuation.  The
@@ -493,9 +493,9 @@ theorem evalPanValueFfiClockCall_handler_projects_to_steps
       (memoryAccess := memoryAccess) (contracts := contracts) =
       some (handlerResult, argumentSteps + calleeSteps + handlerSteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hexception,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hexception,
       hwithin, hcaught, hhandlerValid, hclockBody, hclockHandler]
-  · simp [evalPanValueFfiCallSteps, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hexception,
+  · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hexception,
       hwithin, hcaught, hhandlerValid, hstepBody, hstepHandler]
 
 /-! One true loop iteration also projects compositionally.  The body consumes

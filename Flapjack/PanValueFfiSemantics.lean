@@ -687,6 +687,32 @@ def panValueCallTarget
         | none => none
       else none
 
+/-- Counted evaluation of a call's argument list.  HOL returns `SOME Error`
+with the unchanged state when this fails. -/
+def panValueCallArguments
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (arguments : List (Exp α)) (memoryAccess : Option (PanValueMemoryAccess α)) :
+    Option (List (PanValue α) × Nat) :=
+  evalPanValueExpsCounted structs locals globals memory baseAddress topAddress bytesInWord
+    arguments (memoryAccess := memoryAccess)
+
+/-- Uncounted evaluation of a call's argument list; the clocked counterpart of
+`panValueCallArguments`. -/
+def panValueCallArgumentsValue
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
+    (arguments : List (Exp α)) (memoryAccess : Option (PanValueMemoryAccess α)) :
+    Option (List (PanValue α)) :=
+  evalPanValueExps structs locals globals memory baseAddress topAddress bytesInWord
+    arguments (memoryAccess := memoryAccess)
+
 /-- Result of the `Return` leaf.  HOL returns `SOME Error` with the unchanged
 state when the expression fails to evaluate or the payload exceeds the limit. -/
 def panValueReturnResult
@@ -748,69 +774,72 @@ mutual
     | 0, _, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, info, function, arguments, memoryAccess,
         contracts, memoryHandler => do
-        let (values, argumentSteps) ← evalPanValueExpsCounted structs locals globals memory
-          baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
-        (panValueCallTarget structs contracts function functions values).elim
-          (some (.error locals globals memory ffi, argumentSteps))
-          (fun callTarget => do
-            let (body, calleeLocals) := callTarget
-            let (result, steps) ← evalPanValueFfiProgSteps context primitive handler structs functions
-              baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
-              (memoryAccess := memoryAccess) (contracts := contracts)
-              (memoryHandler := memoryHandler)
-            -- HOL returns `SOME Error` preserving the callee state's locals for
-            -- NONE/Break/Continue, and empties them only in the catch-all
-            -- (`SOME Error`/TimeOut) clause.
-            match result with
-            | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
-                some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
-                  argumentSteps + steps)
-            | .returned _ calleeGlobals calleeMemory calleeFfi values =>
-                if panValueReturnValid structs contracts function values &&
-                    panValueValuesWithinLimit structs values then
-                  match info with
-                  | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory calleeFfi values,
+        (panValueCallArguments structs baseAddress topAddress bytesInWord locals globals memory
+          arguments memoryAccess).elim
+          (some (.error locals globals memory ffi, 0))
+          (fun argumentPair => do
+            let (values, argumentSteps) := argumentPair
+            (panValueCallTarget structs contracts function functions values).elim
+              (some (.error locals globals memory ffi, argumentSteps))
+              (fun callTarget => do
+                let (body, calleeLocals) := callTarget
+                let (result, steps) ← evalPanValueFfiProgSteps context primitive handler structs functions
+                  baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
+                  (memoryAccess := memoryAccess) (contracts := contracts)
+                  (memoryHandler := memoryHandler)
+                -- HOL returns `SOME Error` preserving the callee state's locals for
+                -- NONE/Break/Continue, and empties them only in the catch-all
+                -- (`SOME Error`/TimeOut) clause.
+                match result with
+                | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                       argumentSteps + steps)
-                  | some (destination, _) => do
-                      let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
-                        destination values
-                        (structs := structs)
-                      pure (.normal locals globals calleeMemory calleeFfi,
-                        argumentSteps + steps)
-                else none
-            | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
-                if panValueExceptionValid structs contracts exception value &&
-                    panValuePayloadWithinLimit structs value then
-                  match info with
-                  | some (_, some (caught, handlerVariable, handlerProgram)) =>
-                      if caught == exception then
-                        if panValueHandlerValid structs contracts locals handlerVariable value then
-                          let (handlerResult, handlerSteps) ← evalPanValueFfiProgSteps context
-                            primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                            (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
-                            calleeFfi handlerProgram
-                            (memoryAccess := memoryAccess) (contracts := contracts)
-                            (memoryHandler := memoryHandler)
-                          pure (handlerResult, argumentSteps + steps + handlerSteps)
-                        else none
-                      else
-                        pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
+                | .returned _ calleeGlobals calleeMemory calleeFfi values =>
+                    if panValueReturnValid structs contracts function values &&
+                        panValueValuesWithinLimit structs values then
+                      match info with
+                      | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory calleeFfi values,
                           argumentSteps + steps)
-                  | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
+                      | some (destination, _) => do
+                          let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                            destination values
+                            (structs := structs)
+                          pure (.normal locals globals calleeMemory calleeFfi,
+                            argumentSteps + steps)
+                    else none
+                | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
+                    if panValueExceptionValid structs contracts exception value &&
+                        panValuePayloadWithinLimit structs value then
+                      match info with
+                      | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                          if caught == exception then
+                            if panValueHandlerValid structs contracts locals handlerVariable value then
+                              let (handlerResult, handlerSteps) ← evalPanValueFfiProgSteps context
+                                primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                                (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
+                                calleeFfi handlerProgram
+                                (memoryAccess := memoryAccess) (contracts := contracts)
+                                (memoryHandler := memoryHandler)
+                              pure (handlerResult, argumentSteps + steps + handlerSteps)
+                            else none
+                          else
+                            pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
+                              argumentSteps + steps)
+                      | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
+                          argumentSteps + steps)
+                    else none
+                | .broke calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                       argumentSteps + steps)
-                else none
-            | .broke calleeLocals calleeGlobals calleeMemory calleeFfi =>
-                pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
-                  argumentSteps + steps)
-            | .continued calleeLocals calleeGlobals calleeMemory calleeFfi =>
-                pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
-                  argumentSteps + steps)
-            | .error _ calleeGlobals calleeMemory calleeFfi =>
-                pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
-                  argumentSteps + steps)
-            | .finalFfi _ calleeGlobals calleeMemory calleeFfi event =>
-                pure (.finalFfi (fun _ => none) calleeGlobals calleeMemory calleeFfi event,
-                  argumentSteps + steps))
+                | .continued calleeLocals calleeGlobals calleeMemory calleeFfi =>
+                    pure (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
+                      argumentSteps + steps)
+                | .error _ calleeGlobals calleeMemory calleeFfi =>
+                    pure (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi,
+                      argumentSteps + steps)
+                | .finalFfi _ calleeGlobals calleeMemory calleeFfi event =>
+                    pure (.finalFfi (fun _ => none) calleeGlobals calleeMemory calleeFfi event,
+                      argumentSteps + steps)))
     termination_by fuel _ _ _ _ _ _ _ _ => fuel
 
   def evalPanValueFfiProgSteps

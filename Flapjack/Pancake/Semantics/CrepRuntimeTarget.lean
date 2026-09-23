@@ -32,9 +32,60 @@ Direct HOL oracle: `scripts/hol-probes/crep_runtime_word_boundary_probe.out`
   word32_unaligned=NONE; store_byte_roundtrip=SOME 0xABw;
   store_byte_outside=NONE; store32_roundtrip=SOME 0xAABBCCDDw;
   store32_unaligned=NONE; store32_outside=NONE
+
+`ffiContext` is fixed to the canonical RISC-V 64 byte codec
+(`riscv64PanValueFfiContext`), so the executable external-call/shared-memory
+byte boundary uses the same `get_byte`/`set_byte`/`byte_align` arithmetic as HOL.
+Direct HOL oracle: `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`
+  bytes64=8w; get_byte_0=8w; get_byte_1=7w; get_byte_7=1w; byte_align_8=8w;
+  byte_align_16=16w; word_to_bytes_64=[8w; 7w; 6w; 5w; 4w; 3w; 2w; 1w];
+  word_of_bytes_roundtrip=0x102030405060708w; set_byte_0_roundtrip=0x102030405060708w
 -/
 
 namespace Flapjack
+
+/-! ## Canonical FFI byte codec
+
+`CrepRuntimeState.ffiContext` is unconstrained, yet `crepRuntimeReadBytes`,
+`crepRuntimeWriteBytes`, `crepRuntimeExtCallValues`, and `crepRuntimeSharedMem`
+all take the byte representation of a machine word from it before handing bytes
+to the external handler. HOL's `call_FFI` receives that byte list as produced by
+`byte$word_to_bytes` / `byte$get_byte`, while `crepSem` validates shared-memory
+addresses with `byte$byte_align`. The canonical RISC-V 64 context below uses the
+RISC-V helpers that mirror those HOL functions, so the executable FFI boundary
+is read as the fixed little-endian target byte codec.
+
+The `sharedDomain` field is deliberately total here; constraining shared-memory
+address validity is tracked in child bead `flapjack-pxn.18.4.3.43.1.1`, and the
+general `wordOfBytes`/`call_FFI` handler relation in
+`flapjack-pxn.18.4.3.43.1.2`. -/
+
+/-- The RISC-V byte at `index` of `value`, reusing the pan memory model's
+    `panRiscVGetByte` (the same offset arithmetic as HOL `byte$get_byte`). -/
+def riscv64GetByte (index : Nat) (value : RiscV.Word 64) : UInt8 :=
+  UInt8.ofNat
+    (RiscV.panRiscVGetByte (8 : RiscV.Word 64) (BitVec.ofNat 64 index) value).toNat
+
+/-- Insert bytes at increasing addresses, mirroring HOL `byte$word_of_bytes`
+    (which starts at address `a` and increments by one word per byte). -/
+def riscv64PutBytes (bigEndian : Bool) : Nat → List UInt8 → RiscV.Word 64 → RiscV.Word 64
+  | _, [], value => value
+  | index, byte :: bytes, value =>
+      riscv64PutBytes bigEndian (index + 1) bytes
+        (RiscV.panRiscVSetByte (8 : RiscV.Word 64) (BitVec.ofNat 64 index)
+          (BitVec.ofNat 64 byte.toNat) value)
+
+/-- Canonical RISC-V 64 FFI byte codec: little-endian bytes, low byte first, as
+    HOL `word_to_bytes` produces for the 64-bit target. -/
+def riscv64PanValueFfiContext : PanValueFfiContext (RiscV.Word 64) where
+  sharedDomain := fun _ => true
+  byteAlign := RiscV.panRiscVByteAlign (8 : RiscV.Word 64)
+  bigEndian := false
+  wordToBytes := fun address _ => (List.range 8).map (fun index => riscv64GetByte index address)
+  wordOfBytes := fun bigEndian bytes => riscv64PutBytes bigEndian 0 bytes 0
+  wordToByte := fun value => riscv64GetByte 0 value
+  byteToWord := fun byte => BitVec.ofNat 64 byte.toNat
+  valueToNat := fun value => value.toNat
 
 /-- Canonical RISC-V 64 runtime target: fix the three target fields that HOL
     leaves fixed by the word type. -/
@@ -43,18 +94,20 @@ def riscv64CrepRuntimeTarget (base : CrepRuntimeState (RiscV.Word 64) σ) :
   { base with
     bytesInWord := (8 : RiscV.Word 64)
     bigEndian := false
-    memoryModel := RiscV.panRiscVMemoryModel }
+    memoryModel := RiscV.panRiscVMemoryModel
+    ffiContext := riscv64PanValueFfiContext }
 
 /-- Predicate naming the canonical target constraints. -/
 def isRiscV64CrepRuntimeTarget (state : CrepRuntimeState (RiscV.Word 64) σ) : Prop :=
   state.bytesInWord = (8 : RiscV.Word 64) ∧
     state.bigEndian = false ∧
-    state.memoryModel = RiscV.panRiscVMemoryModel
+    state.memoryModel = RiscV.panRiscVMemoryModel ∧
+    state.ffiContext = riscv64PanValueFfiContext
 
 theorem riscv64CrepRuntimeTarget_isTarget
     (base : CrepRuntimeState (RiscV.Word 64) σ) :
     isRiscV64CrepRuntimeTarget (riscv64CrepRuntimeTarget base) :=
-  ⟨rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl⟩
 
 /-- The canonical target fixes `bytesInWord` to the word-type value used by HOL
     `byte$bytes_in_word` (64 DIV 8 = 8). -/
@@ -71,6 +124,38 @@ theorem riscv64CrepRuntimeTarget_bigEndian
 theorem riscv64CrepRuntimeTarget_memoryModel
     (base : CrepRuntimeState (RiscV.Word 64) σ) :
     (riscv64CrepRuntimeTarget base).memoryModel = RiscV.panRiscVMemoryModel :=
+  rfl
+
+theorem riscv64CrepRuntimeTarget_ffiContext
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    (riscv64CrepRuntimeTarget base).ffiContext = riscv64PanValueFfiContext :=
+  rfl
+
+/-! ### FFI byte-codec bridges
+
+On the canonical target the FFI byte operations are exactly the RISC-V byte
+helpers, whose offset arithmetic is HOL `byte$get_byte` / `byte$set_byte` /
+`byte$byte_align`. `wordToBytes` is the little-endian byte list handed to the
+external handler for `ExtCall` and shared memory, matching HOL `word_to_bytes`.
+Direct oracle: `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`. -/
+
+theorem riscv64PanValueFfiContext_byteAlign_eq_riscv (address : RiscV.Word 64) :
+    riscv64PanValueFfiContext.byteAlign address =
+      RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address :=
+  rfl
+
+theorem riscv64PanValueFfiContext_wordToByte_eq_getByte0 (value : RiscV.Word 64) :
+    riscv64PanValueFfiContext.wordToByte value = riscv64GetByte 0 value :=
+  rfl
+
+theorem riscv64PanValueFfiContext_wordToBytes_eq_getByte
+    (address : RiscV.Word 64) (bigEndian : Bool) :
+    riscv64PanValueFfiContext.wordToBytes address bigEndian =
+      (List.range 8).map (fun index => riscv64GetByte index address) :=
+  rfl
+
+theorem riscv64PanValueFfiContext_valueToNat_eq_riscv (value : RiscV.Word 64) :
+    riscv64PanValueFfiContext.valueToNat value = value.toNat :=
   rfl
 
 theorem riscv64CrepRuntimeTarget_idem

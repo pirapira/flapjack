@@ -120,9 +120,9 @@ theorem shapeSize_comb_map_panValueShape_eq_flatten_length (values : List (PanVa
       panValueFlatten_length_eq_shapeSize value (hwf value (by simp)),
       ih (fun other hmem => hwf other (by simp [hmem]))]
 
-/-- Counterpart of Cake's `flatten_nil_no_size`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3001`): for a well-formed
-    value, flattening is empty exactly when its shape has size zero. -/
+/-- Flapjack-specific helper using the older context-parameter shape function.
+    The exact HOL `flatten_nil_no_size` port uses the source-semantics
+    `shape_of` counterpart and lives in `Proofs/PanToCrep.lean`. -/
 theorem panValueFlatten_eq_nil_iff_shapeSize_eq_zero (value : PanValue α)
     (h : isWfShape ([] : StructContext) (panValueShape ([] : StructContext) value) = true) :
     panValueFlatten value = [] ↔ Shape.shapeSize (panValueShape ([] : StructContext) value) = 0 := by
@@ -191,4 +191,3 @@ theorem shapeSize_comb_eq_flatten_length_of_getElem (vshs : List Shape)
         ih vshs hlenTail hrelTail hwfTail]
 
 end Flapjack
-

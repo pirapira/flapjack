@@ -34,6 +34,15 @@ theorem maxListNotMemHol (x : Nat) (values : List Nat)
     (h : x > maxList values) : x ∉ values :=
   maxList_not_mem x values h
 
+/-- HOL `flookup_res_var_thm_quant`: restoring one natural-number local
+    changes only that local's lookup. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flookup_res_var_thm_quant"]
+theorem flookupResVarQuant (locals : FiniteMap Nat α)
+    (name query : Nat) (value : Option α) :
+    FLOOKUP (resVar locals (name, value)) query =
+      if query = name then value else FLOOKUP locals query := by
+  simpa [beq_iff_eq] using FLOOKUP_resVar locals name query value
+
 /-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
     input expression or produces the zero fallback. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]

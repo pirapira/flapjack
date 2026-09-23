@@ -87,6 +87,25 @@ def zipTruncationGuard : Bool :=
 def emptyMaximumGuard : Bool :=
   (ctxtFc FEMPTY FEMPTY [] [] [] : PanToCrepProofContext Nat).vmax == 0
 
+theorem ctxt_fc_funcs_eq_fixture :
+    (ctxtFc compilerFunctions exceptionCodes [] [] []).funcs = compilerFunctions :=
+  ctxtFcFuncsEq compilerFunctions exceptionCodes [] [] []
+
+theorem ctxt_fc_vmax_nonempty_fixture :
+    (ctxtFc shapedSlotsContext.funcs exceptionCodes [] [] [4, 1, 7, 3]).vmax =
+      maxList [4, 1, 7, 3] :=
+  ctxtFcVmax shapedSlotsContext exceptionCodes [] [] [4, 1, 7, 3]
+
+theorem ctxt_fc_vmax_empty_fixture :
+    (ctxtFc shapedSlotsContext.funcs exceptionCodes [] [] []).vmax = maxList [] :=
+  ctxtFcVmax shapedSlotsContext exceptionCodes [] [] []
+
+def ctxtFcVmaxGuard : Bool :=
+  (ctxtFc shapedSlotsContext.funcs exceptionCodes [] [] [4, 1, 7, 3]).vmax == 7 &&
+  (ctxtFc shapedSlotsContext.funcs exceptionCodes [] [] []).vmax == 0
+
+#guard ctxtFcVmaxGuard
+
 #guard shapedSlotsGuard
 #guard zipTruncationGuard
 #guard emptyMaximumGuard
@@ -99,7 +118,9 @@ def runChecks : IO Bool := do
     ("excp_rel rejects duplicate compiler codes", true),
     ("ctxt_fc slices shaped slots and preserves maps", shapedSlotsGuard),
     ("ctxt_fc preserves ZIP truncation", zipTruncationGuard),
-    ("ctxt_fc empty MAX_LIST", emptyMaximumGuard)]
+    ("ctxt_fc empty MAX_LIST", emptyMaximumGuard),
+    ("ctxt_fc funcs projection matches HOL theorem", true),
+    ("ctxt_fc vmax matches HOL MAX_LIST", ctxtFcVmaxGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

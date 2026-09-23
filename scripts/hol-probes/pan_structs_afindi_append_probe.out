@@ -1,0 +1,3 @@
+prefix_hit_keeps_first_index=T
+suffix_hit_adds_prefix_length=T
+missing_key_stays_none=T

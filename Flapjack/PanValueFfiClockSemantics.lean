@@ -529,6 +529,78 @@ mutual
     termination_by fuel _ _ _ _ _ _ _ _ _ => fuel
 end
 
+/-! General source Call exception-dispatch step.  The callee body, argument
+values, return shape, exception payload, and handler program are all
+parameters; `hcalleeBody` is the source-side induction hypothesis for the
+callee.  This exposes the exact clock clamp and handler-local update used by
+HOL `evaluate_def` without assuming a fixed callee syntax or a target run. -/
+theorem evalPanValueFfiClockCodeCall_catchesRaisedBody
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext) (code : PanSemCodeMap α)
+    (exceptionShapes : ExceptionId → Option Shape)
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+    (handlerVariable : VarName) (handlerProgram body : Prog α)
+    (function : FunName) (exception : ExceptionId)
+    (arguments : List (Exp α)) (values : List (PanValue α))
+    (returnShape : Shape)
+    (calleeLocals : VarName → Option (PanValue α))
+    (calleeGlobals : VarName → Option (PanValue α))
+    (calleeMemory : α → Option (PanValue α)) (calleeFfi : FfiState σ)
+    (exceptionValue : PanValue α) (calleeClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (handlerResult : PanValueFfiClockResult α σ)
+    (harguments : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hcallee : lookupPanSemCodeCall structs code function values =
+      some (body, returnShape, calleeLocals))
+    (hclock : clock ≠ 0)
+    (calleeRaisedLocals : VarName → Option (PanValue α))
+    (hcalleeBody : evalPanValueFfiClockCodeProg context primitive handler
+      structs code exceptionShapes baseAddress topAddress bytesInWord fuel
+      calleeLocals globals memory ffi (decPanClock clock) body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+        some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory
+          calleeFfi exception exceptionValue), calleeClock))
+    (hexceptionShape : ∃ shape, exceptionShapes exception = some shape ∧
+      panShapeMatches (panValueShape structs exceptionValue) shape = true)
+    (hexceptionContract : panValueExceptionValid structs contracts exception
+      exceptionValue = true)
+    (hpayload : panValuePayloadWithinLimit structs exceptionValue = true)
+    (hhandlerAssignment : panValueAssignmentValid structs locals (fun _ => none)
+      .local handlerVariable exceptionValue = true)
+    (hhandlerContract : panValueHandlerValid structs contracts locals
+      handlerVariable exceptionValue = true)
+    (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
+      structs code exceptionShapes baseAddress topAddress bytesInWord fuel
+      (updatePanValueMap locals handlerVariable exceptionValue)
+      calleeGlobals calleeMemory calleeFfi
+      (min (decPanClock clock) calleeClock) handlerProgram
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some handlerResult) :
+    evalPanValueFfiClockCodeCall context primitive handler structs code
+      exceptionShapes baseAddress topAddress bytesInWord (fuel + 1) locals
+      globals memory ffi clock
+      (some (none, some (exception, handlerVariable, handlerProgram)))
+      function arguments (memoryAccess := memoryAccess)
+      (contracts := contracts) (memoryHandler := memoryHandler) =
+        some handlerResult := by
+  rcases hexceptionShape with ⟨shape, hshape, hshapeMatch⟩
+  simp [evalPanValueFfiClockCodeCall, harguments, hcallee, hclock,
+    hcalleeBody, hshape, hshapeMatch, hexceptionContract, hpayload,
+    hhandlerAssignment, hhandlerContract, hhandlerBody, decPanClock]
+
 def evalPanValueFfiClockProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

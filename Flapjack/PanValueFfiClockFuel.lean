@@ -113,12 +113,11 @@ theorem call_clock_succ_mono
   have hfk : fuel ≤ k := by omega
   rw [evalPanValueFfiClockCall] at h
   rw [evalPanValueFfiClockCall]
-  cases hargs : evalPanValueExps structs locals globals memory baseAddress
-      topAddress bytesInWord arguments ma with
-  | none => rw [hargs] at h; simp at h
+  cases hargs : panValueCallArgumentsValue structs baseAddress topAddress bytesInWord
+      locals globals memory arguments ma with
+  | none => simp only [hargs, Option.elim_none] at h ⊢; exact h
   | some values =>
-    rw [hargs] at h
-    simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+    simp only [hargs, Option.elim_some] at h ⊢
     cases htarget : panValueCallTarget structs c function functions values with
     | none => rw [htarget] at h; simp only [Option.elim_none] at h ⊢; exact h
     | some target =>
@@ -136,7 +135,6 @@ theorem call_clock_succ_mono
               obtain ⟨outcome, calleeClock⟩ := rp
               rw [hbody] at h
               rw [ihBody body calleeLocals _ _ hfk hbody]
-              simp only [Option.bind_some] at h ⊢
               cases outcome with
               | timeout l cg cm cf => exact h
               | control res =>
@@ -148,7 +146,7 @@ theorem call_clock_succ_mono
                 | finalFfi l cg cm cf ev => exact h
                 | error l cg cm cf => exact h
                 | raised l cg cm cf e v =>
-                  dsimp only at h ⊢
+                  simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
                   by_cases hev :
                       (panValueExceptionValid structs c e v &&
                         panValuePayloadWithinLimit structs v) = true

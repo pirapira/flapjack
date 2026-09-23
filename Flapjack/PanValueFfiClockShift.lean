@@ -368,8 +368,8 @@ theorem evalPanValueFfiClockCall_raised_no_handler_shift_step
   have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
     decPanClock_add clock ck hclock
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hbody, hwithin]
-  · simp [evalPanValueFfiClockCall, panValueCallTarget, hargs, hlookup, hbind, hclock, hdec,
+  · simp [evalPanValueFfiClockCall, panValueCallTarget, panValueCallArgumentsValue, hargs, hlookup, hbind, hclock, hbody, hwithin]
+  · simp [evalPanValueFfiClockCall, panValueCallTarget, panValueCallArgumentsValue, hargs, hlookup, hbind, hclock, hdec,
       hbodyShift, hwithin]
 
 /-! Cross-clock ExtCall FinalFFI preserves the exact event and post-state;

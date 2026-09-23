@@ -1,0 +1,4 @@
+call_arg_fail_result=SOME Error
+call_arg_fail_clock=5
+call_arg_fail_locals=SOME (ValWord 3w)
+call_arg_fail_missing_result=SOME Error

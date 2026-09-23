@@ -359,6 +359,11 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
   deccall_ok_result deccall_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call argument probe observes that a failing argument rejects the call
+# with `SOME Error` before callee lookup, preserving clock and locals.
+run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
+  call_arg_fail_result call_arg_fail_missing_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -159,6 +159,29 @@ def deccallNcBreakGuard : Bool :=
 def deccallNcContinueGuard : Bool :=
   nonClockedIsErrorNamed "c" .continue (deccallNamedProgram "c")
 
+/-- A `DecCall` whose argument list fails to evaluate (an unbound local),
+    which HOL rejects before callee lookup. -/
+def deccallArgFailProgram (name : FunName) : Prog Word64 :=
+  .decCall "r" Shape.one name [.var .local "z"] .skip
+
+/-- True when evaluation yields an explicit `Error` at the given clock with the
+    pre-existing local `x` still bound to `3`. -/
+def isErrorAt (clock : Nat)
+    (result : Option
+      (PanValueFfiClockResult Word64 Unit × PanSemState Word64 (FfiState Unit))) : Bool :=
+  match result with
+  | some ((.control (.error locals _ _ _), n), _) => n == clock && isWord 3 (locals "x")
+  | _ => false
+
+def deccallArgFailGuard : Bool :=
+  isErrorAt 5 (decCallEvaluate 5 calleeCode (deccallArgFailProgram "f"))
+def deccallArgFailMissingGuard : Bool :=
+  isErrorAt 5 (decCallEvaluate 5 calleeCode (deccallArgFailProgram "missing"))
+def deccallNcArgFailGuard : Bool :=
+  nonClockedIsErrorNamed "f" calleeBody (deccallArgFailProgram "f")
+def deccallNcArgFailMissingGuard : Bool :=
+  nonClockedIsErrorNamed "missing" .skip (deccallArgFailProgram "missing")
+
 #guard deccallOkGuard
 #guard deccallShapeGuard
 #guard deccallCalleeErrorGuard
@@ -172,6 +195,10 @@ def deccallNcContinueGuard : Bool :=
 #guard deccallNcSkipGuard
 #guard deccallNcBreakGuard
 #guard deccallNcContinueGuard
+#guard deccallArgFailGuard
+#guard deccallArgFailMissingGuard
+#guard deccallNcArgFailGuard
+#guard deccallNcArgFailMissingGuard
 
 def runChecks : IO Bool := do
   let ok := deccallOkGuard
@@ -201,6 +228,10 @@ def runChecks : IO Bool := do
   let cont := deccallContinueGuard && deccallNcContinueGuard
   IO.println (if cont then "PASS panSem Call Continue callee rejected with Error"
     else "FAIL panSem Call Continue callee rejected with Error")
-  pure (ok && shape && callee && ncShape && ncErr && missing && skip && brk && cont)
+  let argFail := deccallArgFailGuard && deccallArgFailMissingGuard &&
+    deccallNcArgFailGuard && deccallNcArgFailMissingGuard
+  IO.println (if argFail then "PASS panSem Call failing argument rejected with Error before lookup"
+    else "FAIL panSem Call failing argument rejected with Error before lookup")
+  pure (ok && shape && callee && ncShape && ncErr && missing && skip && brk && cont && argFail)
 
 end Flapjack.Test.PanSemDecCallErrorParity

@@ -593,7 +593,8 @@ def panCompileTap [CakeDisplayWord α]
     metadata is retained from `globalCompileTop` for callers that inspect the
     intermediate pipeline record; the declarations sent into Crep are the
     direct output of Cake's tagged `compile_top`. -/
-def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
+def compileFlapjackEntryCake {width : Nat} [NeZero width]
+    [BEq (BitVec width)] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]
     [AndOp (BitVec width)] [ShiftRight (BitVec width)]
     [PanShiftWidth (BitVec width)]

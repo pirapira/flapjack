@@ -12,13 +12,15 @@ namespace Flapjack.Test.PanGlobalsCompileTopShapeWfParity
 
 open Flapjack
 
-example {width : Nat} (declarations : List (Decl (BitVec width)))
+example {width : Nat} [NeZero width] (declarations : List (Decl (BitVec width)))
     (start : FunName) :
     globalCompileTopCake declarations start =
       globalCompileTopForStart (BitVec.ofNat width (width / 8))
-        (BitVec.ofNat width) declarations start := rfl
+        (BitVec.ofNat width) declarations start := by
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
 
-example {width : Nat} [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
+example {width : Nat} [NeZero width] [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) Unit)
     (declarations : List (Decl (BitVec width)))
     (start : FunName) (state' : PanSemDeclarationState (BitVec width) Unit)
@@ -31,7 +33,7 @@ example {width : Nat} [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
           isWfShape state.runtime.structs function.returnShape = true :=
   globalCompileTopCake_shapes_wf state declarations start state' heval hadmissible
 
-example {width : Nat} [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
+example {width : Nat} [NeZero width] [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) Unit)
     (declarations : List (Decl (BitVec width)))
     (start : FunName) (state' : PanSemDeclarationState (BitVec width) Unit)

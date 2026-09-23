@@ -1689,6 +1689,50 @@ def cakeShapeVal {width : Nat} (context : CakeContext width) : Shape → Exp (Bi
   | .comb shapes => .rStruct (shapes.map (cakeShapeVal context))
 termination_by shape => sizeOf shape
 
+/-- Interpret a production `GlobalPassContext` over `BitVec width` as a
+    canonical HOL-shaped `CakeContext`: the association-list `globals` become a
+    finite-map lookup through `lookupInfo`, keeping the size fields.  This is
+    the production-to-canonical direction of the adapter required by
+    `flapjack-pxn.18.5.2.20.2`; the executed RISC-V path reduces to the tagged
+    `compileDecsCake` through this view. -/
+def cakeContextOfPass [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) : CakeContext width :=
+  { globals := fun key => lookupInfo key context.globals
+    globalsSize := context.globalsSize
+    maxGlobalsSize := context.maxGlobalsSize }
+
+/-- Canonical-word hypothesis for the adapter: the production context uses
+    HOL's fixed `bytes_in_word = n2w (dimindex DIV 8)` and `n2w`. -/
+def GlobalPassContext.IsCakeCanonical {width : Nat}
+    (context : GlobalPassContext (BitVec width)) : Prop :=
+  context.bytesInWord = cakeBytesInWord width ∧
+    ∀ value : Nat, context.fromNat value = BitVec.ofNat width value
+
+/-- Under the canonical-word hypothesis the production global address
+    (`GlobalPassContext`-based) agrees with the canonical HOL address. -/
+theorem cakeAddress_ofPass [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width))
+    (hcanonical : context.IsCakeCanonical) (shape : Shape) :
+    cakeAddress (cakeContextOfPass context) shape = globalAddress context shape := by
+  rcases hcanonical with ⟨hbytes, hfrom⟩
+  simp [cakeAddress, cakeContextOfPass, globalAddress, hbytes, hfrom]
+
+/-- `cakeContextOfPass` commutes with the `Decl` context update: prepending a
+    global to the production association list is exactly `FUPDATE` on the
+    extracted finite map. -/
+theorem cakeContextOfPass_update [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (name : String)
+    (shape : Shape) (address : BitVec width) :
+    cakeContextOfPass { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      = { cakeContextOfPass context with
+          globals := FUPDATE (cakeContextOfPass context).globals
+            (name, (shape, address))
+          globalsSize := address } := by
+  simp only [cakeContextOfPass]
+  rfl
+
 /-- Exact clause-structured port of HOL `pan_globals$compile_exp_def`
     (`pan_globalsScript.sml:18-46`) over the canonical word context
     `CakeContext`.  Each clause matches HOL directly: `Var Global` uses

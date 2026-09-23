@@ -4,3 +4,5 @@ forward_nested=Comb [Comb [One]]
 backward_suffix=Comb [One]
 missing=One
 compile_shapes_map=T
+compiled_shape_wf=T
+compiled_shapes_wf=T

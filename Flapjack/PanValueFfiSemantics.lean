@@ -73,6 +73,142 @@ def panValueFfiSharedStore (context : PanValueFfiContext α)
     | .returned nextFfi _ => some (.stored nextFfi)
     | .final event => some (.final ffi event)
 
+/-- Inversion of a successful mapped read: the address passes the shared-memory
+    domain guard and `call_FFI` (Lean `callFfi`) returns bytes whose
+    `word_of_bytes` image is the observed value. -/
+theorem panValueFfiSharedLoad_loaded_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address : α) (nextFfi : FfiState σ) (value : α)
+    (h : panValueFfiSharedLoad context ffi size address = some (.loaded nextFfi value)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    ∃ bytes,
+      callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+          (context.wordToBytes address false) = .returned nextFfi bytes ∧
+      value = context.wordOfBytes false bytes := by
+  simp only [panValueFfiSharedLoad] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hval
+        exact ⟨hdom, bytes, by simp only [hffi], hval.symm⟩
+    | final event =>
+        rw [hcall] at h
+        simp at h
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a terminal mapped read. -/
+theorem panValueFfiSharedLoad_final_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address : α) (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (h : panValueFfiSharedLoad context ffi size address = some (.final nextFfi event)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    nextFfi = ffi ∧
+    callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) = .final event := by
+  simp only [panValueFfiSharedLoad] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat (panValueFfiWidth size)]
+        (context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp at h
+    | final event' =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hev
+        exact ⟨hdom, hffi.symm, by simp only [hev]⟩
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a successful mapped write: the address passes the domain guard
+    and the `SharedMem MappedWrite` send returns normally, updating the ffi. -/
+theorem panValueFfiSharedStore_stored_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address value : α) (nextFfi : FfiState σ)
+    (h : panValueFfiSharedStore context ffi size address value = some (.stored nextFfi)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    ∃ bytes,
+      callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+          (if panValueFfiWidth size = 0 then
+              context.wordToBytes value false ++ context.wordToBytes address false
+            else
+              (context.wordToBytes value false).take (panValueFfiWidth size) ++
+                context.wordToBytes address false) = .returned nextFfi bytes := by
+  simp only [panValueFfiSharedStore] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi
+        exact ⟨hdom, bytes, by simp only [hffi]⟩
+    | final event =>
+        rw [hcall] at h
+        simp at h
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
+/-- Inversion of a terminal mapped write. -/
+theorem panValueFfiSharedStore_final_inv
+    (context : PanValueFfiContext α) (ffi : FfiState σ) (size : OpSize)
+    (address value : α) (nextFfi : FfiState σ) (event : FfiFinalEvent)
+    (h : panValueFfiSharedStore context ffi size address value = some (.final nextFfi event)) :
+    context.sharedDomain (panValueFfiSharedAddress context size address) = true ∧
+    nextFfi = ffi ∧
+    callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) = .final event := by
+  simp only [panValueFfiSharedStore] at h
+  by_cases hdom : context.sharedDomain (panValueFfiSharedAddress context size address) = true
+  · rw [hdom] at h
+    simp only [Bool.not_true, Bool.false_eq_true, if_false] at h
+    cases hcall : callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat (panValueFfiWidth size)]
+        (if panValueFfiWidth size = 0 then
+            context.wordToBytes value false ++ context.wordToBytes address false
+          else
+            (context.wordToBytes value false).take (panValueFfiWidth size) ++
+              context.wordToBytes address false) with
+    | returned returnedFfi bytes =>
+        rw [hcall] at h
+        simp at h
+    | final event' =>
+        rw [hcall] at h
+        simp only [Option.some.injEq] at h
+        injection h with hffi hev
+        exact ⟨hdom, hffi.symm, by simp only [hev]⟩
+  · have hb : context.sharedDomain (panValueFfiSharedAddress context size address) = false := by
+      cases hval : context.sharedDomain (panValueFfiSharedAddress context size address) <;>
+        simp_all
+    rw [hb] at h
+    simp at h
+
 def panValueFfiReadBytes [Add α] [OfNat α 1]
     (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
     (memory : α → Option (PanValue α)) (bytesInWord address : α) :
@@ -149,6 +285,44 @@ theorem panValueFfiExtCall_returned_ioEvents_prefix
               rcases hcall with ⟨_, rfl⟩
               exact callFfi_return_ioEvents_prefix ffi (.extCall function)
                 configurationBytes arrayBytes returnedFfi returnedBytes hffi
+
+/-- Inversion of a successful `panValueFfiExtCall` outcome: the two argument
+    reads and the `call_FFI` returned result, with the write-back memory. -/
+theorem panValueFfiExtCall_returned_inv
+    [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (ffi : FfiState σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
+    (h : panValueFfiExtCall access context memory bytesInWord ffi function
+      configuration configurationLength array arrayLength =
+      some (.returned nextMemory nextFfi)) :
+    ∃ configurationBytes arrayBytes bytes,
+      panValueFfiReadBytes access context memory bytesInWord configuration
+          (context.valueToNat configurationLength) = some configurationBytes ∧
+      panValueFfiReadBytes access context memory bytesInWord array
+          (context.valueToNat arrayLength) = some arrayBytes ∧
+      callFfi ffi (.extCall function) configurationBytes arrayBytes =
+        .returned nextFfi bytes ∧
+      nextMemory = panValueFfiWriteBytes access context memory bytesInWord
+        array bytes := by
+  unfold panValueFfiExtCall at h
+  cases hconfiguration : panValueFfiReadBytes access context memory bytesInWord
+      configuration (context.valueToNat configurationLength) with
+  | none => simp [hconfiguration] at h
+  | some configurationBytes =>
+      cases harray : panValueFfiReadBytes access context memory bytesInWord
+          array (context.valueToNat arrayLength) with
+      | none => simp [hconfiguration, harray] at h
+      | some arrayBytes =>
+          cases hffi : callFfi ffi (.extCall function) configurationBytes arrayBytes with
+          | final event => simp [hconfiguration, harray, hffi] at h
+          | returned returnedFfi bytes =>
+              simp [hconfiguration, harray, hffi] at h
+              rcases h with ⟨hmem, hffiEq⟩
+              exact ⟨configurationBytes, arrayBytes, bytes, rfl, rfl,
+                by rw [← hffiEq]; exact hffi, hmem.symm⟩
 
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
@@ -685,13 +859,15 @@ mutual
                 (memoryHandler := memoryHandler)
               pure (restorePanValueFfiLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
-            else none
+            else some (.error (fun _ => none) globals memory ffi, callSteps + 1)
         | .raised _ globals memory ffi exception value =>
             pure (.raised (fun _ => none) globals memory ffi exception value,
               callSteps + 1)
         | .finalFfi _ globals memory ffi event =>
             pure (.finalFfi (fun _ => none) globals memory ffi event,
               callSteps + 1)
+        | .error _ globals memory ffi =>
+            pure (.error (fun _ => none) globals memory ffi, callSteps + 1)
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess,
@@ -739,28 +915,30 @@ mutual
                       expressionSteps + 1)
                 | none => none
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
-        contracts, memoryHandler => do
-        let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
-        let .word conditionValue := condition | none
-        if conditionValue == 0 then
-          pure (.normal locals globals memory ffi, conditionSteps + 1)
-        else
-          let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler structs
-            functions baseAddress topAddress bytesInWord fuel locals globals memory ffi body
-            (memoryAccess := memoryAccess) (contracts := contracts)
-            (memoryHandler := memoryHandler)
-          match bodyResult with
-          | .normal locals globals memory ffi | .continued locals globals memory ffi =>
-              let (loopResult, loopSteps) ← evalPanValueFfiProgSteps context primitive handler
+        contracts, memoryHandler =>
+        (panValueIteCondition structs baseAddress topAddress bytesInWord locals globals
+          memory conditionExp memoryAccess).elim
+          (some (.error locals globals memory ffi, 0))
+          (fun conditionPair => do
+            let (conditionValue, conditionSteps) := conditionPair
+            if conditionValue == 0 then
+              pure (.normal locals globals memory ffi, conditionSteps + 1)
+            else
+              let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-                (.while conditionExp body)
-                (memoryAccess := memoryAccess) (contracts := contracts)
+                body (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
-              pure (loopResult, conditionSteps + bodySteps + loopSteps + 1)
-          | .broke locals globals memory ffi =>
-              pure (.normal locals globals memory ffi, conditionSteps + bodySteps + 1)
-          | result => pure (result, conditionSteps + bodySteps + 1)
+              match bodyResult with
+              | .normal locals globals memory ffi | .continued locals globals memory ffi =>
+                  let (loopResult, loopSteps) ← evalPanValueFfiProgSteps context primitive handler
+                    structs functions baseAddress topAddress bytesInWord fuel locals globals memory
+                    ffi (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts)
+                    (memoryHandler := memoryHandler)
+                  pure (loopResult, conditionSteps + bodySteps + loopSteps + 1)
+              | .broke locals globals memory ffi =>
+                  pure (.normal locals globals memory ffi, conditionSteps + bodySteps + 1)
+              | result => pure (result, conditionSteps + bodySteps + 1))
     | _fuel + 1, locals, globals, memory, ffi, .break, _, _, _ =>
         pure (.broke locals globals memory ffi, 1)
     | _fuel + 1, locals, globals, memory, ffi, .continue, _, _, _ =>

@@ -332,7 +332,8 @@ theorem evalPanValueFfiClockProg_fuel_mono'
                   rw [hb] at h
                   rw [ihBody _ _ _ _ _ _ _ hfk hb]
                   exact h
-              · rw [if_neg hshape] at h; simp at h
+              · rw [if_neg hshape] at h ⊢
+                exact h
         | raised l g m f e v => exact h
         | normal l g m f => simp at h
         | broke l g m f => simp at h
@@ -346,60 +347,57 @@ theorem evalPanValueFfiClockProg_fuel_mono'
     have hfk : fuel ≤ k := by omega
     rw [evalPanValueFfiClockProg] at h
     rw [evalPanValueFfiClockProg]
-    cases hc : evalPanValueExp structs locals globals memory baseAddress topAddress
-        bytesInWord conditionExp ma with
-    | none => rw [hc] at h; simp at h
-    | some condition =>
-      rw [hc] at h
-      cases condition with
-      | word cv =>
-        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-        by_cases hz : (cv == 0) = true
-        · rw [if_pos hz] at h ⊢; exact h
-        · rw [if_neg hz] at h ⊢
-          by_cases hclock : (clock == 0) = true
-          · rw [if_pos hclock] at h ⊢; exact h
-          · rw [if_neg hclock] at h ⊢
-            cases hb : evalPanValueFfiClockProg context primitive handler structs functions
-              baseAddress topAddress bytesInWord fuel locals globals memory ffi (clock - 1)
-                body ma c mh with
-            | none => rw [hb] at h; simp at h
-            | some bodyPair =>
-              obtain ⟨bodyOutcome, bodyClock⟩ := bodyPair
-              rw [hb] at h
-              rw [ihBody _ _ hfk hb]
-              simp only [Option.bind_some] at h ⊢
-              cases bodyOutcome with
-              | control r =>
-                cases r with
-                | normal l g m f =>
-                  dsimp only at h ⊢
-                  cases hl : evalPanValueFfiClockProg context primitive handler structs
-                    functions baseAddress topAddress bytesInWord fuel l g m f bodyClock
-                      (Prog.while conditionExp body) ma c mh with
-                  | none => rw [hl] at h; simp at h
-                  | some loopPair =>
-                    rw [hl] at h
-                    rw [ihLoop _ _ _ _ _ _ _ hfk hl]
-                    exact h
-                | continued l g m f =>
-                  dsimp only at h ⊢
-                  cases hl : evalPanValueFfiClockProg context primitive handler structs
-                    functions baseAddress topAddress bytesInWord fuel l g m f bodyClock
-                      (Prog.while conditionExp body) ma c mh with
-                  | none => rw [hl] at h; simp at h
-                  | some loopPair =>
-                    rw [hl] at h
-                    rw [ihLoop _ _ _ _ _ _ _ hfk hl]
-                    exact h
-                | returned l g m f vs => exact h
-                | raised l g m f e v => exact h
-                | broke l g m f => exact h
-                | finalFfi l g m f ev => exact h
-                | error l g m f => exact h
-              | timeout l g m f => exact h
-      | rStruct fields => simp at h
-      | nStruct nm fields => simp at h
+    cases hv : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+        locals globals memory conditionExp ma with
+    | none =>
+      simp only [hv, Option.elim_none] at h ⊢
+      exact h
+    | some cv =>
+      simp only [hv, Option.elim_some] at h ⊢
+      by_cases hz : (cv == 0) = true
+      · rw [if_pos hz] at h ⊢; exact h
+      · rw [if_neg hz] at h ⊢
+        by_cases hclock : (clock == 0) = true
+        · rw [if_pos hclock] at h ⊢; exact h
+        · rw [if_neg hclock] at h ⊢
+          cases hb : evalPanValueFfiClockProg context primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel locals globals memory ffi (clock - 1)
+              body ma c mh with
+          | none => rw [hb] at h; simp at h
+          | some bodyPair =>
+            obtain ⟨bodyOutcome, bodyClock⟩ := bodyPair
+            rw [hb] at h
+            rw [ihBody _ _ hfk hb]
+            simp [Option.bind_some] at h ⊢
+            cases bodyOutcome with
+            | control r =>
+              cases r with
+              | normal l g m f =>
+                dsimp only at h ⊢
+                cases hl : evalPanValueFfiClockProg context primitive handler structs
+                  functions baseAddress topAddress bytesInWord fuel l g m f bodyClock
+                    (Prog.while conditionExp body) ma c mh with
+                | none => rw [hl] at h; simp at h
+                | some loopPair =>
+                  rw [hl] at h
+                  rw [ihLoop _ _ _ _ _ _ _ hfk hl]
+                  exact h
+              | continued l g m f =>
+                dsimp only at h ⊢
+                cases hl : evalPanValueFfiClockProg context primitive handler structs
+                  functions baseAddress topAddress bytesInWord fuel l g m f bodyClock
+                    (Prog.while conditionExp body) ma c mh with
+                | none => rw [hl] at h; simp at h
+                | some loopPair =>
+                  rw [hl] at h
+                  rw [ihLoop _ _ _ _ _ _ _ hfk hl]
+                  exact h
+              | returned l g m f vs => exact h
+              | raised l g m f e v => exact h
+              | broke l g m f => exact h
+              | finalFfi l g m f ev => exact h
+              | error l g m f => exact h
+            | timeout l g m f => exact h
   | case10 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

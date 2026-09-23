@@ -95,6 +95,22 @@ val _ = print_eval "call_handles_exception_7"
                    (panLang$Const (7w:8 word)), panLang$One));
              clock := 10 |>)))``
 
+val _ = print_eval "call_handles_struct_exception_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call
+        (SOME (NONE, SOME (strlit "E", strlit "caught",
+          panLang$Return (panLang$Var panLang$Local (strlit "caught")))))
+        (strlit "raisePair") [],
+       ((ARB:((8),unit) panSem$state) with
+          <| locals := FEMPTY |+ (strlit "caught",
+               RStruct [ValWord (0w:8 word); ValWord (0w:8 word)]);
+             eshapes := FEMPTY |+ (strlit "E", panLang$Comb [panLang$One; panLang$One]);
+             code := FEMPTY |+ (strlit "raisePair",
+               ([], panLang$Raise (strlit "E")
+                   (panLang$RStruct [panLang$Const (7w:8 word);
+                     panLang$Const (8w:8 word)]), panLang$One));
+             clock := 10 |>)))``
+
 val _ = print_eval "recursive_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],
@@ -115,6 +131,29 @@ val _ = print_eval "deccall_code_map_7"
          code := FEMPTY |+
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
+
+val _ = print_eval "call_struct_argument_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RStruct [panLang$Const (7w:8 word);
+          panLang$Const (8w:8 word)]],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One])))))``
+
+val _ = print_eval "call_record_first_field_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «id»
+        [panLang$RField 0 (panLang$Var panLang$Local «pair»)],
+       ((ARB:((8),unit) panSem$state) with
+        <| locals := FEMPTY |+ («pair», RStruct [ValWord (7w:8 word);
+               ValWord (8w:8 word)]);
+         code := FEMPTY |+
+           («id», ([(«x», panLang$One)],
+             panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+         clock := 10 |>)))``
 
 val _ = print_eval "call_zero_clock_timeout"
   ``FST (panSem$evaluate

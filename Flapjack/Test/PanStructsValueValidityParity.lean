@@ -32,15 +32,15 @@ example : panStructValueFieldsOkBool valueValidityContext (.word 1 : PanValue Na
 
 example : panStructValueFieldsOkBool valueValidityContext valueValidityMatch = true := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, lookupInfo, valueValidityContext,
-    valueValidityMatch]
+    panStructFieldValuesFieldsOkBool, panValueFieldsHaveShapes,
+    panShapeMatches, panShapeMatches.panShapeListMatches, panValueShape, lookupInfo,
+    valueValidityContext, valueValidityMatch]
 
 example : panStructValueFieldsOkBool valueValidityContext valueValidityMismatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, lookupInfo, valueValidityContext,
-    valueValidityMismatch]
+    panStructFieldValuesFieldsOkBool, panValueFieldsHaveShapes,
+    panShapeMatches, panShapeMatches.panShapeListMatches, panValueShape, lookupInfo,
+    valueValidityContext, valueValidityMismatch]
 
 example : panStructValueFieldsOkBool [] valueValidityMatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
@@ -49,8 +49,8 @@ example : panStructValueFieldsOkBool [] valueValidityMatch = false := by
 example : panStructValueFieldsOkBool valueValidityFirstMatchContext
     valueValidityMatch = false := by
   simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    panStructFieldValuesFieldsOkBool, panStructShapeListEqBool,
-    panStructShapeEqBool, panSemShapeOf, lookupInfo,
+    panStructFieldValuesFieldsOkBool, panValueFieldsHaveShapes,
+    panShapeMatches, panValueShape, lookupInfo,
     valueValidityFirstMatchContext, valueValidityMatch]
 
 example : panIsWfShapeValueBool valueValidityContext (.word 1 : PanValue Nat) = true := by

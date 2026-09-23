@@ -73,7 +73,19 @@ run_probe() {
     if [[ ${#labels[@]} -eq 0 ]]; then
       cp "$tmp" "$output"
     else
-      sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+      awk -v first="$first_label" -v last="$last_label" '
+        BEGIN { started = 0; ended = 0 }
+        {
+          if (!started) {
+            if (index($0, first "=") != 1) next
+            started = 1
+          } else if (ended && $0 ~ /^[[:alnum:]_]+=/) {
+            exit
+          }
+          if (index($0, last "=") == 1) ended = 1
+          print
+        }
+      ' "$tmp" \
         | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d; /^$/d' > "$output"
     fi
   fi
@@ -95,6 +107,12 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
   convert_s_finite_maps \
   compile_correct_tick_zero_source compile_correct_tick_zero_converted \
   compile_correct_tick_positive_source compile_correct_tick_positive_converted \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
+  compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
+  compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
+  compile_exp_correct_nstruct \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
@@ -174,11 +192,17 @@ run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_prob
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_runtime_shared_mem_probeScript.sml crep_runtime_shared_mem_probe.out \
+  load_returned store_final "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
   const_hit always_op_nested "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
   afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
+  fold_flookup_eq flookup_absent "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -321,6 +345,17 @@ run_probe pan_sem_error_prop_e2e_probeScript.sml pan_sem_error_prop_e2e_probe.ou
 # condition rejection branches.
 run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
   if_ok_result shmemstore_domain_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The While probe observes the explicit `SOME Error` for a non-word condition,
+# the same-clock normal exit for a zero condition, clock-exhaustion timeout,
+# and a one-iteration exit that clears the condition.
+run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
+  while_bad_result while_one_iter_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The DecCall probe observes the successful continuation, the wrong-shape
+# rejection, the failing-callee rejection, and the unknown-function rejection.
+run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
+  deccall_ok_result deccall_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
@@ -529,6 +564,8 @@ run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
   missing_start global_present present_start "$cake_dir/pancake/pan_globalsScript.sml"
+run_probe pan_globals_compile_decs_probeScript.sml pan_globals_compile_decs_probe.out \
+  empty compile_decs_probe_done "$cake_dir/pancake/pan_globalsScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
 run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \

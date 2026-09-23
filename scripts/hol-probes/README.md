@@ -36,8 +36,11 @@ shape/duplicate failure cases.
 `pan_sem_state_eval_probe.out` records direct HOL EVAL of `eval_def` at
 `cakeml/pancake/semantics/panSemScript.sml:209-297` for in-domain and
 out-of-domain word loads, little- and big-endian byte loads, 32-bit loads, and
-list-valued word operators with accepted and rejected operand counts. The
-state-derived Lean boundary and its matching cases live in
+list-valued `word_op_def` operators with accepted and rejected operand counts.
+The source-shaped generic definition is `Flapjack.Pancake.wordOpHOL`; its
+all-width equation to the production RISC-V target is in
+`Flapjack.Pancake.Semantics.CrepRuntimeTarget`. The state-derived Lean
+boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
@@ -79,6 +82,12 @@ destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
+`crep_simp_exp_probe.out` records direct HOL EVAL of
+`crep_arith$simp_exp_def` (`crep_arithScript.sml:59`) for constant folding,
+left/right constant multiplication, nested multiplication, and recursive
+load/word-operation children. Its Lean syntax checks live in
+`Flapjack.Test.CrepeSimpExpParity`; these cases do not establish the
+polymorphic evaluator-preservation theorem `simp_exp_correct1`.
 `crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
 `LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
 `cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production
@@ -120,6 +129,21 @@ evaluator support only; the full theorem's finite-map premises and invariant,
 shape-map, and result-value postconditions remain open in
 `flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
+`pan_structs_compile_exp_correct_probe.out` records HOL simplifier evaluations
+of Local and Global variable-constructor instances, and Const-, RStruct-, and
+NStruct-constructor instances of `compile_exp_correct`; each tuple contains
+old shape, semantic value shape, field validity, source evaluation, and
+converted target evaluation. The production `structCompileExp`/`evalPanValueExp` cases are
+proved in `panStructCompileExpCorrectVarCase` and
+`panStructCompileExpCorrectConstCase` and
+`panStructCompileExpCorrectRStructCase` and exercised by finite-map regressions
+in `Flapjack.Test.PanStructsCompileCorrect`. The RStruct row uses two constants
+and validates all three constructor conclusions. Its nonempty-list row separately
+checks source `OPT_MMAP` success, pointwise compiled-expression correctness,
+and the converted `compile_exps` result for the local HOL helper
+`compile_exp_correct_mmap_helper`; Lean proves the corresponding production
+list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
+The other expression constructors remain open.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

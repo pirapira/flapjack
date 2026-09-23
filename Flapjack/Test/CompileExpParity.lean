@@ -67,18 +67,60 @@ def finiteMapLookupOK : Bool :=
   | ([.var 5], .one) => true
   | _ => false
 
+/-! The remaining probe rows are reproduced through the tagged finite-map
+    `compileExpHOL`. These mirror the `compileExp` rows above but exercise the
+    HOL-shaped path used by `compileProgHOL`/`compileProgRiscV`. -/
+def holLeavesOK : Bool :=
+  oneResultOK [.const 7] (compileExpHOL finiteMapContext (.const 7)) &&
+  oneResultOK [.const 0] (compileExpHOL finiteMapContext (.var .global "g")) &&
+  oneResultOK [.baseAddr] (compileExpHOL finiteMapContext (.baseAddr)) &&
+  oneResultOK [.topAddr] (compileExpHOL finiteMapContext (.topAddr))
+
+def holStructFieldOK : Bool :=
+  combTwoResultOK [.const 1, .const 2]
+      (compileExpHOL finiteMapContext (.rStruct [.const 1, .const 2])) &&
+  oneResultOK [.const 2]
+      (compileExpHOL finiteMapContext (.rField 1 (.rStruct [.const 1, .const 2])))
+
+def holLoadsOpsOK : Bool :=
+  oneResultOK [.load32 (.const 3)]
+      (compileExpHOL finiteMapContext (.load32 (.const 3))) &&
+  oneResultOK [.loadByte (.const 4)]
+      (compileExpHOL finiteMapContext (.loadByte (.const 4))) &&
+  oneResultOK [.op .add [.const 1, .const 2]]
+      (compileExpHOL finiteMapContext (.op .add [.const 1, .const 2])) &&
+  oneResultOK [.crepOp .mul [.const 5, .const 6]]
+      (compileExpHOL finiteMapContext (.panOp .mul [.const 5, .const 6]))
+
+def holCmpShiftOK : Bool :=
+  oneResultOK [.cmp .equal (.const 1) (.const 0)]
+      (compileExpHOL finiteMapContext (.cmp .equal (.const 1) (.const 0))) &&
+  oneResultOK [.shift .lsl (.const 2) (.const 1)]
+      (compileExpHOL finiteMapContext (.shift .lsl (.const 2) (.const 1)))
+
 def parityGuard : Bool :=
-  leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK
+  leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
+  holLeavesOK && holStructFieldOK && holLoadsOpsOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.var .local "p") = ([.var 5], .one) := by
   simp [compileExpHOL, finiteMapContext, FLOOKUP, FUPDATE]
+
+example : compileExpHOL finiteMapContext (.rField 1 (.rStruct [.const 1, .const 2])) =
+    ([.const 2], .one) := by
+  simp [compileExpHOL, compileExpHOL.compileExpListHOL, compileField,
+    finiteMapContext]
+
+example : compileExpHOL finiteMapContext (.panOp .mul [.const 5, .const 6]) =
+    ([.crepOp .mul [.const 5, .const 6]], .one) := by
+  simp [compileExpHOL, compileExpHOL.compileExpListHOL, cexpHeads,
+    compilePanOp, finiteMapContext]
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS compile_exp leaves/struct-field/loads/ops/cmp-shift/finite-map"
+    IO.println "PASS compile_exp leaves/struct-field/loads/ops/cmp-shift/finite-map (tagged compileExpHOL)"
   else
     IO.println "FAIL compile_exp parity"
   pure parityGuard

@@ -552,9 +552,15 @@ theorem evalPanValueFfiClockProg_while_projects_to_steps
       (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
       some (finalResult, conditionSteps + bodySteps + restSteps + 1) := by
   constructor
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+  · have hcond : panValueIteConditionValue structs baseAddress topAddress bytesInWord
+        locals globals memory condition memoryAccess = some conditionValue := by
+      simp [panValueIteConditionValue, hcondition]
+    simp [evalPanValueFfiClockProg, hcond, hconditionNonzero, hclock,
       hclockBody, hclockRest]
-  · simp [evalPanValueFfiProgSteps, hconditionSteps, hconditionNonzero,
+  · have hcondSteps : panValueIteCondition structs baseAddress topAddress bytesInWord
+        locals globals memory condition memoryAccess = some (conditionValue, conditionSteps) := by
+      simp [panValueIteCondition, hconditionSteps]
+    simp [evalPanValueFfiProgSteps, hcondSteps, hconditionNonzero,
       hstepBody, hstepRest]
 
 /-! A declaration call projects through its returned-value continuation.  The

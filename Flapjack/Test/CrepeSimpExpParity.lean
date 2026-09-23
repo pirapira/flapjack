@@ -1,9 +1,188 @@
 import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.Pancake.Proofs.CrepArith
 import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeSimpExpParity
+
+/-! HOL words use a finite Boolean-function carrier. This direct check
+    exercises its `Fin n` encoding and conversion to the production BitVec
+    representation independently of the expression evaluator bridge. -/
+def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
+
+#guard holWordBitsToBitVec holBits4 == BitVec.ofNat 4 5
+#guard holWordBitsToBitVec (holBits4 + holBits4) == BitVec.ofNat 4 10
+#guard holWordBitsToBitVec (holBits4 * holBits4) == BitVec.ofNat 4 9
+
+example : bitVecToHolWordBits (holWordBitsToBitVec holBits4) = holBits4 :=
+  bitVecToHolWordBits_holWordBitsToBitVec holBits4
+
+example :
+    holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat 4 5)) =
+      BitVec.ofNat 4 5 :=
+  holWordBitsToBitVec_bitVecToHolWordBits (BitVec.ofNat 4 5)
+
+/-! The general finite-dimension adapter also works when the dimension is not
+    represented by `Fin` in the source theorem. Here `Bool` is explicitly
+    enumerated as two indices and its word carrier is transported to BitVec. -/
+@[instance_reducible] def boolWordDimension : HolFiniteDimension Bool where
+  width := 2
+  width_pos := by decide
+  encode := fun index => if index then 1 else 0
+  decode := fun index => index.val == 1
+  encode_decode := by decide
+  decode_encode := by decide
+
+local instance : HolFiniteDimension Bool := boolWordDimension
+
+def boolDimensionWord : Bool → Bool := id
+
+example : bitVecToHolWord boolWordDimension
+    (holWordToBitVec boolWordDimension boolDimensionWord) = boolDimensionWord :=
+  bitVecToHolWord_holWordToBitVec boolWordDimension boolDimensionWord
+
+example : holWordToBitVec boolWordDimension
+    (bitVecToHolWord boolWordDimension (BitVec.ofNat 2 2)) = BitVec.ofNat 2 2 :=
+  holWordToBitVec_bitVecToHolWord boolWordDimension (BitVec.ofNat 2 2)
+
+def boolDimensionSimplifiedMultiply : CrepExp (Bool → Bool) := by
+  letI : HolFiniteDimension Bool := boolWordDimension
+  exact crepSimpExp (fun value =>
+    bitVecToHolWord boolWordDimension (BitVec.ofNat 2 value))
+    (.crepOp .mul [.var 0, .const (boolDimensionWord)])
+
+def boolDimensionSimplifyHasExpectedShift : Bool :=
+  match boolDimensionSimplifiedMultiply with
+  | .shift .lsl (.var 0) (.const value) =>
+      holWordToBitVec boolWordDimension value == BitVec.ofNat 2 1
+  | _ => false
+
+#guard boolDimensionSimplifyHasExpectedShift
+
+def boolDimensionHolState : CrepHolState (Bool → Bool) Unit where
+  locals := fun name => if name == 0 then some (.word boolDimensionWord) else none
+  globals := fun address => if address == 0 then some (.word boolDimensionWord) else none
+  code := fun _ => none
+  memory := fun _ => .word boolDimensionWord
+  memaddrs := fun _ => true
+  shMemaddrs := fun _ => false
+  clock := 10
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := boolDimensionWord
+  topAddress := boolDimensionWord
+
+#guard evalCrepRuntimeExp
+    (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) ==
+      some boolDimensionWord
+#guard evalCrepRuntimeExp
+    (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) ==
+      some boolDimensionWord
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.var 0) :=
+  evalCrepRuntimeExp_finiteDimension_var boolWordDimension boolDimensionHolState 0
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.loadGlob 0) :=
+  evalCrepRuntimeExp_finiteDimension_loadGlob
+    boolWordDimension boolDimensionHolState 0
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.op .add [.const boolDimensionWord, .const boolDimensionWord]) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.op .add [.const boolDimensionWord, .const boolDimensionWord]) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.cmp .equal (.const boolDimensionWord) (.const boolDimensionWord)) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.cmp .equal (.const boolDimensionWord) (.const boolDimensionWord)) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.shift .lsl (.const boolDimensionWord) (.const boolDimensionWord)) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.shift .lsl (.const boolDimensionWord) (.const boolDimensionWord)) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.loadByte (.const boolDimensionWord)) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.loadByte (.const boolDimensionWord)) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+example :
+    evalCrepRuntimeExp
+        (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
+        (.load32 (.const boolDimensionWord)) =
+      evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+        (.load32 (.const boolDimensionWord)) := by
+  exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState _
+
+#guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
+    (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==
+  .shift .lsl (.var 2) (.const (bitVecToHolWordBits (BitVec.ofNat 4 1)))
+
+def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
+  locals := fun _ => none
+  globals := fun _ => none
+  code := fun _ => none
+  memory := fun _ => .word holBits4
+  memaddrs := fun _ => false
+  shMemaddrs := fun _ => false
+  clock := 0
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := holBits4
+  topAddress := holBits4
+
+#guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime (.const holBits4) ==
+  some holBits4
+#guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+    (.crepOp .mul [.const holBits4, .const holBits4]) ==
+  some (bitVecToHolWordBits (BitVec.ofNat 4 9))
+
+example :
+    evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+        (.loadByte (.const holBits4)) =
+      evalCrepHolWordBitsExp holWordBitsState4 (.loadByte (.const holBits4)) :=
+  evalCrepRuntimeExp_toHolWordBits_eq holWordBitsState4
+    (.loadByte (.const holBits4))
+
+example :
+    evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+        (.load32 (.const holBits4)) =
+      evalCrepHolWordBitsExp holWordBitsState4 (.load32 (.const holBits4)) :=
+  evalCrepRuntimeExp_toHolWordBits_eq holWordBitsState4
+    (.load32 (.const holBits4))
 
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,
@@ -85,5 +264,41 @@ def runtimeEvalSimpParity : Bool :=
     (crepSimpExp (BitVec.ofNat 64) nested) == some 168
 
 #guard runtimeEvalSimpParity
+
+/-! An 8-bit all-width instance exercises the source-shaped state adapter and
+    the proved production evaluator correspondence, beyond the RV64 executable
+    fixture above. This remains untagged support for the arbitrary HOL word
+    carrier gap documented beside `crepSimpExpCorrect1BitVec`. -/
+def holState8 : CrepHolState (RiscV.Word 8) Unit :=
+  { locals := updateCrepRuntimeLocal (fun _ => none) 2 (.word (word8 7))
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun _ => .word 0
+    memaddrs := fun _ => false
+    shMemaddrs := fun _ => false
+    clock := 0
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def holExpression8 : CrepExp (RiscV.Word 8) :=
+  .crepOp .mul [.var 2, .const (word8 8)]
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) holExpression8) =
+    evalCrepHolExpWordLab holState8 holExpression8 := by
+  apply crepSimpExpCorrect1BitVec
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
+    updateCrepRuntimeLocal]
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) holExpression8) =
+      some (.word (word8 56)) := by
+  apply crepSimpExpCorrectBitVec
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
+    updateCrepRuntimeLocal, panTheWord, word8]
 
 end Flapjack.Test.CrepeSimpExpParity

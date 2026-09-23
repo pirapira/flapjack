@@ -13,6 +13,9 @@ finite_map_shadow_return=Return [Var 5]
 extcall_high_tail=Dec 101 (Var 4)
   (Dec 102 (Var 5)
      (Dec 103 (Var 6) (Dec 104 (Var 7) (ExtCall «f» 101 102 103 104))))
+extcall_shared_high_tail=Dec 100 (Var 1)
+  (Dec 101 (Var 1)
+     (Dec 102 (Var 1) (Dec 103 (Var 1) (ExtCall «f» 100 101 102 103))))
 pair_load=Return
   (Load (Var 0)::
      if n2w (dimindex (:word64) DIV 8 MOD dimword (:word64)) = 0w then

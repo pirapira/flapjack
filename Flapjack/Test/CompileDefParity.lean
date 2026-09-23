@@ -55,6 +55,16 @@ def highTailExtCall : Prog Nat :=
   .extCall "f" (.var .local "ptr1") (.var .local "len1")
     (.var .local "ptr2") (.var .local "len2")
 
+def sharedHighTailHOLContext : PanToCrepHOLContext Nat :=
+  { vars := FUPDATE FEMPTY ("x", (.one, [1, 99]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 99 }
+
+def sharedHighTailExtCall : Prog Nat :=
+  .extCall "f" (.var .local "x") (.var .local "x")
+    (.var .local "x") (.var .local "x")
+
 def extraNamesHOLContext : PanToCrepHOLContext Nat :=
   { vars := FUPDATE FEMPTY ("extra_names", (.one, [4, 5]))
     funcs := FEMPTY
@@ -174,6 +184,11 @@ def isHighTailExtCall : CrepProg Nat → Bool
       (.dec 104 (.var 7) (.extCall "f" 101 102 103 104)))) => true
   | _ => false
 
+def isSharedHighTailExtCall : CrepProg Nat → Bool
+  | .dec 100 (.var 1) (.dec 101 (.var 1) (.dec 102 (.var 1)
+      (.dec 103 (.var 1) (.extCall "f" 100 101 102 103)))) => true
+  | _ => false
+
 def isReturnSeven : CrepProg Nat → Bool
   | .return [.const 7] => true
   | _ => false
@@ -202,6 +217,8 @@ def nativeProgramParityGuard : Bool :=
   isContinue (compileProgHOL emptyHOLContext (.continue : Prog Nat)) &&
   isSeqSkipTick (compileProgHOL emptyHOLContext (.seq .skip (.tick : Prog Nat))) &&
   isHighTailExtCall (compileProgHOL highTailHOLContext highTailExtCall) &&
+  isSharedHighTailExtCall
+    (compileProgHOL sharedHighTailHOLContext sharedHighTailExtCall) &&
   isTailCallToF (compileProgHOL emptyHOLContext missingGlobalCall) &&
   isTailCallToF (compileProgHOL emptyOneHOLContext emptyOneGlobalCall) &&
   isExtraNamesCallToF (compileProgHOL extraNamesHOLContext extraNamesGlobalCall) &&

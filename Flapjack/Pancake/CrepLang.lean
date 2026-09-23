@@ -166,6 +166,11 @@ theorem crepExpVars_var {α : Type} (name : Nat) :
 class CrepBytesInWord (α : Type u) where
   bytesInWord : α
 
+/-! `Nat` is used by source-parity fixtures as an unbounded stand-in for the
+    64-bit target word; its fixed target stride is eight bytes. -/
+instance natCrepBytesInWord : CrepBytesInWord Nat where
+  bytesInWord := 8
+
 /-- The RISC-V style instance: a `BitVec w` word has `w / 8` bytes. -/
 instance bitVecCrepBytesInWord (w : Nat) : CrepBytesInWord (BitVec w) where
   bytesInWord := BitVec.ofNat w (w / 8)

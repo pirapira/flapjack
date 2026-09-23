@@ -315,6 +315,14 @@ def pipelineCrepeContext [BEq α] [Add α]
     maxVar := 0
     bytesInWord := bytesInWord }
 
+def pipelineCrepeCompileContext [BEq α] [Add α]
+    (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
+    PanToCrepCompileContext α :=
+  { vars := []
+    functions := []
+    exceptions := crepGetEidsFromDecls fromNat program.declarations
+    maxVar := 0 }
+
 /-- The production context constructor records exactly the `bytesInWord` value it
     was given, so the executable entry point's word width is preserved into the
     Pan-to-Crep lowering. -/
@@ -682,8 +690,8 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrep crepeContext cakeDeclarations
+      let crepeContext := pipelineCrepeCompileContext fromNat globals
+      let compiled := compileToCrepFixed crepeContext cakeDeclarations
       let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe

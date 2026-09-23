@@ -151,23 +151,23 @@ def callVarsUsedByProg : Prog α → List VarName
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def compileCodeRelContext [BEq String] [OfNat α 8] (context : PanToCrepProofContext α)
-    (program : Prog α) : CompileContext α :=
+def compileCodeRelContext [BEq String] (context : PanToCrepProofContext α)
+    (program : Prog α) : PanToCrepCompileContext α :=
   { vars := projectFiniteMapToInfoMap
       (freeVarIds program ++ callVarsUsedByProg program) context.vars
     functions := projectFiniteMapToInfoMap (functionsUsedByProg program) context.funcs
     exceptions := projectFiniteMapToInfoMap (expIds program) context.eids
-    maxVar := context.vmax
-    bytesInWord := 8 }
+    maxVar := context.vmax }
 
 /-! Execute the Pan-to-Crep compiler with the HOL proof context. The map
 projection is limited to names syntactically queried by `compileProg`, and the
-word stride is the fixed RISC-V byte width (`byte$bytes_in_word`), not a
-caller-provided context field. -/
-def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
+word stride comes from the fixed `CrepBytesInWord` instance, not a context
+field. -/
+def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
     [BEq String] (context : PanToCrepProofContext α) (program : Prog α) :
     CrepProg α :=
-  compileProg (compileCodeRelContext context program) program
+  compileProgFixed (compileCodeRelContext context program) program
 
 /-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
     It quantifies over every source code entry, requires localisation and the
@@ -179,7 +179,8 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
     `compileProg` adapter. The source HOL definition concludes with exact HOL
     `compile`, whose fixed byte-width behavior is tracked separately by bead
     `flapjack-pxn.18.3.1.4`. -/
-def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
+def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
     [BEq String]
     (context : PanToCrepProofContext α)
     (sourceCode : FiniteMap FunName

@@ -249,6 +249,68 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
       (holWordToBitVec dimension left * holWordToBitVec dimension right)) = _
   rw [holWordToBitVec_bitVecToHolWord]
 
+/-! Source-shaped arithmetic for HOL4's `word_add_def` and `word_mul_def` in
+    `$HOL/src/n-bit/wordsScript.sml`. HOL defines each operation by converting
+    its operands with `w2n`, doing natural arithmetic, and converting back
+    with `n2w`. These definitions make that contract explicit for a finite
+    Boolean-index carrier; they remain untagged because the HOL core theory is
+    outside the repository and the chosen `HolFiniteDimension` witness has not
+    yet been identified with HOL's implicit `finite_index` dictionary. -/
+def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
+    (value : Nat) : ι → Bool :=
+  bitVecToHolWord dimension (BitVec.ofNat dimension.width value)
+
+def holFiniteWordW2N {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : ι → Bool) : Nat :=
+  (holWordToBitVec dimension word).toNat
+
+def holFiniteWordSourceAdd {ι : Type u} (dimension : HolFiniteDimension ι)
+    (left right : ι → Bool) : ι → Bool :=
+  holFiniteWordN2W dimension
+    (holFiniteWordW2N dimension left + holFiniteWordW2N dimension right)
+
+def holFiniteWordSourceMul {ι : Type u} (dimension : HolFiniteDimension ι)
+    (left right : ι → Bool) : ι → Bool :=
+  holFiniteWordN2W dimension
+    (holFiniteWordW2N dimension left * holFiniteWordW2N dimension right)
+
+def holFiniteWordSourceSub {ι : Type u} (dimension : HolFiniteDimension ι)
+    (left right : ι → Bool) : ι → Bool :=
+  holFiniteWordN2W dimension
+    (holFiniteWordW2N dimension left +
+      (2 ^ dimension.width - holFiniteWordW2N dimension right %
+        2 ^ dimension.width))
+
+theorem holFiniteWordSourceAdd_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holWordToBitVec dimension (holFiniteWordSourceAdd dimension left right) =
+      holWordToBitVec dimension left + holWordToBitVec dimension right := by
+  rw [holFiniteWordSourceAdd, holFiniteWordN2W, holFiniteWordW2N,
+    holWordToBitVec_bitVecToHolWord]
+  simp [holFiniteWordW2N, BitVec.ofNat_add]
+
+theorem holFiniteWordSourceMul_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holWordToBitVec dimension (holFiniteWordSourceMul dimension left right) =
+      holWordToBitVec dimension left * holWordToBitVec dimension right := by
+  rw [holFiniteWordSourceMul, holFiniteWordN2W, holFiniteWordW2N,
+    holWordToBitVec_bitVecToHolWord]
+  simp [holFiniteWordW2N, BitVec.ofNat_mul]
+
+theorem holFiniteWordSourceSub_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holWordToBitVec dimension (holFiniteWordSourceSub dimension left right) =
+      holWordToBitVec dimension left - holWordToBitVec dimension right := by
+  rw [holFiniteWordSourceSub, holFiniteWordN2W, holFiniteWordW2N,
+    holWordToBitVec_bitVecToHolWord]
+  change BitVec.ofNat dimension.width
+      ((holWordToBitVec dimension left).toNat +
+        (2 ^ dimension.width -
+          (holWordToBitVec dimension right).toNat % 2 ^ dimension.width)) = _
+  rw [Nat.add_comm _ (2 ^ dimension.width - _)]
+  rw [← BitVec.ofNat_sub_ofNat]
+  simp
+
 theorem holFiniteWordToBitVec_and {ι : Type u}
     [dimension : HolFiniteDimension ι] (left right : ι → Bool) :
     holWordToBitVec dimension (AndOp.and left right) =

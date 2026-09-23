@@ -2553,6 +2553,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared all four clauses with HOL struct_infos_ok_def at pan_structsProofScript.sml:68-76)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "struct_infos_ok_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_drop",

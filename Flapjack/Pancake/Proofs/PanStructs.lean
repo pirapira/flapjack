@@ -96,6 +96,7 @@ theorem isWfShapeList_of_all {context : StructContext} {shapes : List Shape}
 
 /-- The `struct_infos_ok` predicate from `pan_structsProofScript.sml`, over
     the production Pancake structure context. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_def"]
 def structInfosOk (context : StructContext) : Prop :=
   (∀ entry ∈ context, (entry.2.fields.map Prod.fst).Nodup) ∧
   (context.map Prod.fst).Nodup ∧

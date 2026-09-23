@@ -24,7 +24,17 @@ termination_by structural expressions
 /-! Finite-map expression lowering for the HOL `context` record. The lookup is
     directly `FLOOKUP context.vars`; this path does not enumerate or project a
     finite map into `InfoMap`. `compileProgHOL` uses this expression compiler
-    throughout its recursive program lowering. -/
+    throughout its recursive program lowering.
+
+    This is the Lean counterpart of Cake's `pan_to_crep$compile_exp`
+    (`cakeml/pancake/pan_to_crepScript.sml:39-101`): the two match the source
+    expression constructors equation by equation, with `compileExpListHOL`
+    standing for HOL's `MAP (compile_exp ctxt)` and the `CrepBytesInWord`
+    stride for HOL's implicit `bytes_in_word` (as in the tagged
+    `load_shape_def` counterpart `loadShapeBytes`). The fallback branches
+    return `([Const 0w], One)`, matching HOL. Direct oracle:
+    `scripts/hol-probes/compile_exp_probe.out`. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_exp_def"]
 def compileExpHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

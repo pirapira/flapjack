@@ -118,6 +118,10 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_conversion_probe.out \
+  mem_load_conversion_one mem_load_conversion_comb_multiword \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \

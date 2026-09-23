@@ -2772,32 +2772,32 @@
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_EVERY_is_function",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: globalCompileDecs compiles function bodies under the final collected context, unlike HOL compile_decs which threads context through declarations."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_decls_thm",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_decls_thm",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_exns_are_exns",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_exns_are_exns",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "compile_decs_preserve_functions",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_preserve_functions",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2812,8 +2812,8 @@
     "hol_name": "compile_decs_FILTER_decs",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "compile_decs_FILTER_decs",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: the premise concerns globalCompileDecs, not HOL's context-threading compile_decs."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

@@ -1862,6 +1862,21 @@ mutual
           compileExpCakeList_cakeContextOfPass context hcanonical expressions]
 end
 
+/-- Adapter for the argument-list compiler used by `compileProgCake`: on the
+    `cakeContextOfPass` view of a canonical production context, the canonical
+    `compileExpCakeArgs` agrees with the production `globalCompileExpList`. -/
+theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (expressions : List (Exp (BitVec width))) →
+      compileExpCakeArgs (cakeContextOfPass context) expressions =
+        globalCompileExpList context expressions
+  | [] => by
+      simp only [compileExpCakeArgs, globalCompileExpList]
+  | expression :: expressions => by
+      simp only [compileExpCakeArgs, globalCompileExpList,
+        compileExpCake_cakeContextOfPass context hcanonical expression,
+        compileExpCakeArgs_cakeContextOfPass context hcanonical expressions]
+
 /-- Exact clause-structured port of HOL `pan_globals$compile_def`
     (`pan_globalsScript.sml:69-149`) over the canonical word context
     `CakeContext`.  Each clause matches HOL directly; the global-return-handler
@@ -1973,6 +1988,10 @@ def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : C
       .shMemStore size (compileExpCake context address) (compileExpCake context value)
   | program => program
 termination_by program => sizeOf program
+
+@[simp] theorem FLOOKUP_cakeContextOfPass_globals [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (key : String) :
+    (cakeContextOfPass context).globals key = lookupInfo key context.globals := rfl
 
 /-- HOL-shaped output of `compile_decs`. -/
 structure CakeCompileDecsResult (width : Nat) where

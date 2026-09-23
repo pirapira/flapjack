@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.PanToCrepMaxList
 
 /-! Exact theorem counterpart for CakeML's `crep_inlineProofScript.sml`.
 
@@ -37,5 +38,15 @@ theorem genlist_all_distinct (n a : Nat) :
     (fun _left _right hne heq =>
       hne (Nat.add_right_cancel (Nat.add_left_cancel heq)))
     List.nodup_range
+
+/-- CakeML's `MORE_THEN_NOT_MAX_LIST` (`crep_inlineProofScript.sml:1562`): a
+    value strictly above `MAX_LIST l` does not occur in `l`.  Lean's `maxList`
+    is the faithful port of HOL's `rich_list$MAX_LIST`
+    (`Flapjack/PanToCrepMaxList.lean`), so this is the same fact as HOL's
+    `MAX_LIST_NOT_MEM`, stated here under the `crep_inline` declaration name. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "MORE_THEN_NOT_MAX_LIST"]
+theorem moreThenNotMaxList (l : List Nat) (x : Nat) (h : maxList l < x) :
+    x ∉ l :=
+  maxList_not_mem x l (by omega)
 
 end Flapjack

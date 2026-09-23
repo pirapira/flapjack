@@ -652,4 +652,34 @@ theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
   simp only [h] at hinit hfuns hexns hctx
   simp [hinit, hfuns, hexns, hctx]
 
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). Cake's `ALOOKUP_MAP3`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2841`) is polymorphic
+    in the association-list key, whereas the production `lookupInfo`/`InfoMap`
+    is specialized to `String`. AGENTS.md forbids a `@[hol]` tag when the
+    statement shape differs, so this `String`-specialized corollary is
+    untagged and tracked as `documented_mismatch`; the faithful polymorphic
+    port is filed as a dependency bead. The lookup equations and the mapped
+    value match the HOL ones exactly. -/
+theorem ALOOKUP_MAP3 [BEq String] (f : γ → δ) (entries : List (String × (β × γ))) :
+    (fun name => lookupInfo name (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2)))) =
+      (fun name => (lookupInfo name entries).map (fun value => (value.1, f value.2))) := by
+  funext name
+  exact lookupInfo_map3 f name entries
+
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). Cake's `ALOOKUP_MAP4`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2851`) is polymorphic
+    in the association-list key, whereas the production `lookupInfo`/`InfoMap`
+    is specialized to `String`. AGENTS.md forbids a `@[hol]` tag when the
+    statement shape differs, so this `String`-specialized corollary is
+    untagged and tracked as `documented_mismatch`; the faithful polymorphic
+    port is filed as a dependency bead. The lookup equations and the mapped
+    value match the HOL ones exactly. -/
+theorem ALOOKUP_MAP4 [BEq String] (f : γ → δ)
+    (entries : List (String × (β × γ × ε))) :
+    (fun name => lookupInfo name
+        (entries.map (fun entry => (entry.1, entry.2.1, f entry.2.2.1, entry.2.2.2)))) =
+      (fun name => (lookupInfo name entries).map (fun value => (value.1, f value.2.1, value.2.2))) := by
+  funext name
+  exact lookupInfo_map4 f name entries
+
 end Flapjack

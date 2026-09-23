@@ -612,18 +612,26 @@ theorem crepRuntimeExtCallValues_target_final
     riscv64PanValueFfiContext_valueToNat_eq_riscv,
     crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hf]
 
-/-! Dispatch when the `callFfi` handler reports a `returned` result (HOL
-    `FFI_return`): the production step writes the returned bytes back into the
-    array argument with the canonical target writer and installs the returned
-    ffi, exactly HOL's `FFI_return` branch (`write_bytearray` + `ffi:=new_ffi`).
-    This last `ExtCall` outcome remains open in child bead
-    `flapjack-pxn.18.4.3.43.1.2.2.1.1`: the production occurrence of
-    `crepRuntimeWriteBytes` inside `crepRuntimeExtCallValues` is elaborated with
-    a `let`/projection form of the updated state that does not syntactically
-    match the `{ .. with ffi := .. }` form of the proven
-    `crepRuntimeWriteBytes_target_updateFfi` bridge, and `rw`/`simp`/`change`/
-    `convert` keyed matching does not close the gap.  The write-back relation
-    itself is proven (`crepRuntimeWriteBytes_target_eq_riscv_state`); only its
-    composition into the one-shot dispatch expression is blocked. -/
+/-! ## Remaining `returned` dispatch gap (child `flapjack-pxn.18.4.3.43.1.2.2.1.1`)
+
+The `FFI_return` (write-back) branch of `crepRuntimeExtCallValues` is not yet
+composed. After the two argument reads and the handler result are rewritten, the
+goal is an equality between two syntactically identical
+`match crepRuntimeWriteBytes <record> array bytes with ...` terms, but `rfl` /
+`dsimp` reject it: the production occurrence (unfolded from `CrepSem`) and the
+goal occurrence elaborate distinct hidden arguments for the well-founded
+recursive `crepRuntimeWriteBytes`, so they are not definitionally equal. The
+write-back relation itself is proven (`crepRuntimeWriteBytes_target_eq_riscv_state`
+and `crepRuntimeWriteBytes_target_updateFfi`); only its composition into the
+one-shot dispatch expression is blocked, because the production `let state :=
+{ state with ffi := ffi }` is elaborated as a `have __src` projection literal
+that the bridge lemma's `{ .. with ffi := .. }` pattern cannot syntactically
+match.
+
+Concrete normalisation routes for a follow-up slice: (a) state the write-back
+bridge with the production's exact `let`/projection-literal state as its LHS;
+(b) restructure the production `let` so that the write call's state argument is
+shared with the bridge; (c) give `crepRuntimeWriteBytes` an explicit-argument
+alias so both occurrences use the same elaborated term. -/
 
 end Flapjack

@@ -5,6 +5,7 @@ import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
+import Flapjack.Test.PanStructsCompileCorrect
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity

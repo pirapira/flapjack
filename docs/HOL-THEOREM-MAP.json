@@ -4190,5 +4190,93 @@
     "lean_name": "panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "eraseDups_eq_self_of_nodup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list utility proving eraseDups preserves a nodup natural-number list; used to discharge the target runtime's distinct parameter-slot guard"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_ofCodeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual-state Call support: derives production target code lookup and parameter locals from code_rel for arbitrary argument words with an explicit flattened parameter-length premise; compiled argument evaluation bridge and enclosing Call relation remain open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "convert_v_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertValue",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertState_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projection helper for the untagged PanSemState convert_s adapter; total function maps do not preserve HOL finite-map support."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_mapValues",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Finite-map lookup adapter lemma used to connect HOL FMAP_MAP2 results with explicit InfoMap entries; support for the open convert_s/compile_correct port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStruct_mapKeys_preserved",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic key-preservation lemma for list-backed finite-map entries; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipFiniteMapEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Skip evaluator support for a finite-map-backed source-state wrapper; omits the full compile_correct premises and invariant/shape-map/result postconditions."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileSkip_eq_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired production evaluator equation only; omits compile_correct premises and invariant/shape-map/result postconditions. Full Skip port tracked by flapjack-pxn.18.5.3.29."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileTick_eq_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructTickEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
   }
 ]

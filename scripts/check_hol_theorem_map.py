@@ -32,6 +32,7 @@ THEOREM_RE = re.compile(
 VALID_STATUSES = {
     "reviewed_exact",
     "pending_statement_review",
+    "documented_mismatch",
     "no_hol_reference_pending_classification",
 }
 FIELDS = {
@@ -210,6 +211,13 @@ def validate_inventory(
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         if (hol_path is None) != (hol_name is None):
             errors.append(f"{key[0]}:{key[1]}: HOL path and name must both be set or null")
+        elif status == "documented_mismatch":
+            if hol_path is None:
+                errors.append(f"{key[0]}:{key[1]}: documented mismatch needs its HOL candidate")
+            elif not isinstance(hol_path, str) or not isinstance(hol_name, str):
+                errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
+            if key in tagged:
+                errors.append(f"{key[0]}:{key[1]}: documented mismatch must not carry an @[hol] tag")
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")

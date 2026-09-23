@@ -703,11 +703,25 @@ theorem panStructCompileCorrectContinueCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
-/-- HOL `compile_exp_correct` variable-constructor case over the production
-    evaluator and the finite-map state adapter. This retains its source
-    successful-evaluation, context, map, value-validity, and struct-info
-    premises, and proves all three HOL conclusions. The recursive literal,
-    field, load, and operator cases remain separate. -/
+/-- Derived Local/Global Var-constructor specialization of HOL
+    `compile_exp_correct`; intentionally untagged because HOL has only the
+    universally quantified theorem, not a separately named Var-case
+    declaration, and this Lean statement is not textually/expression-for-
+    expression the same theorem. It retains every HOL premise in translated
+    form: successful source evaluation, the struct-context projection,
+    local/global field-validity predicates, `struct_infos_ok`, and both
+    local/global shape-map equations. The interface differs because Lean
+    represents HOL finite maps by nodup `InfoMap` lists plus total runtime
+    lookup functions (`PanStructFiniteState`), expresses `FEVERY` and
+    `FMAP_MAP2` through pointwise adapters, and requires lawful `BEq String`
+    to make production lookup agree with HOL equality. `panStructContextShapeView`
+    projects Lean struct infos to the HOL context's fields view. Lean also
+    stores a `shapedFields` cache absent from HOL; `structInfosOk` does not
+    inspect that cache. The evaluator takes an explicit `bytesInWord`
+    parameter. Under these interfaces, the three
+    conjuncts are the Var instance of HOL's old-shape, `v_flds_ok`, and
+    converted-evaluation conclusions. Other expression constructors remain
+    open. -/
 private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     {β : Type} (key : String) (entries : List (String × β)) :
     @lookupInfo String β instBEqOfDecidableEq key entries =

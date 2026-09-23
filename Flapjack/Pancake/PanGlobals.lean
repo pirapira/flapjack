@@ -1669,17 +1669,25 @@ structure CakeCompileDecsResult (width : Nat) where
   exceptions : List (Decl (BitVec width))
   context : CakeContext width
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port).  Structural context-threading
-    `compile_decs` over `CakeContext`, with the clause shapes of HOL
-    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): a function
-    body is compiled under the context as of its own position, and a `Decl`
-    extends the context for the declarations that follow.  The program compiler
-    `compileProgCake` is now the reviewed exact `compile_def` port.  The
-    `@[hol]` tag is still withheld because `CakeContext.globals` is a
-    `FiniteMap` lookup function without a finite-support invariant; the
-    per-declaration `FUPDATE`/`globalAddress` clauses are clause-identical to
-    HOL.  `width` is restricted by `[NeZero width]`, as HOL `dimindex` is
-    positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
+/-- Exact clause-structured port of HOL `pan_globals$compile_decs_def`
+    (`pan_globalsScript.sml:160-176`) over the canonical word context
+    `CakeContext`: a function body is compiled (`compileProgCake`) under the
+    context as of its own position, and a `Decl` computes
+    `globals_size + bytes_in_word * n2w (size_of_shape sh)`, extends `globals`
+    by `FUPDATE` and updates `globals_size` for the declarations that follow.
+    Every clause matches HOL directly; `ExnDecl` conses the exception, `Name`
+    is skipped, and the empty list returns the context unchanged.
+
+    `CakeContext.globals` renders HOL's extensional finite map by the
+    repository's `FiniteMap` (`α → Option β`), which also admits lookups with
+    infinite support.  As recorded for `compileExpCake`, the HOL `compile_decs`
+    clauses consult `globals` only through `FLOOKUP`/`FUPDATE`, and every HOL
+    finite map embeds as one such lookup function, so on HOL-representable
+    contexts the Lean clauses agree clause-for-clause; the extra
+    infinite-support lookups do not alter the port.  No cross-system finite-map
+    equivalence is claimed beyond that local use.  `width` is restricted by
+    `[NeZero width]`, as HOL `dimindex` is positive. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_decs_def"]
 def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }

@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Proofs.PanToCrep
+import Flapjack.Pancake.Proofs.PanToCrep.EvaluatorBoundary
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.PanSem
 
@@ -204,5 +205,50 @@ theorem compileProgHOL_controlLeaves
     compileProgHOL context (.annot tag text) = .skip ∧
     compileProgHOL context .tick = .tick := by
   exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- The `Skip` constructor satisfies the concrete source-run-implies-target-run
+goal. The target run is constructed here; only clock agreement is needed
+because both evaluators leave their runtime states unchanged. -/
+theorem panToCrepConcreteEvaluationGoal_skip
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [CrepBytesInWord α] [BEq String]
+    (context : PanToCrepProofContext α)
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog α × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg α))
+    (sourceContext : PanValueFfiContext α)
+    (sourcePrimitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueStatefulFfiHandler α σ)
+    (targetHandler : CrepRuntimeFfiHandler α σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (sourceState : PanSemExactState α σ)
+    (targetState : CrepRuntimeState α σ)
+    (hclock : sourceState.legacy.clock = targetState.clock)
+    (hfuel : 0 < fuel) :
+    panToCrepConcreteEvaluationGoal context sourceCode targetCode
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      fuel sourceState targetState .skip := by
+  intro _hruntime sourceRun hsource
+  have hsourceSkip :
+      panToCrepSourceEvaluate sourceContext sourcePrimitive sourceHandler
+        sourceState .skip =
+      some (.control (.normal sourceState.legacy.locals sourceState.legacy.globals
+        sourceState.legacy.memory sourceState.legacy.ffi), sourceState.legacy.clock) := by
+    simp [panToCrepSourceEvaluate, panSemEvaluateExactState, panSemEvaluate,
+      panSemEvaluateWithFuel, panSemEvaluateFuel, PanSemExactState.toEvaluateState,
+      evalPanValueFfiClockProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+  rw [hsourceSkip] at hsource
+  injection hsource with hrun
+  subst sourceRun
+  cases fuel with
+  | zero => omega
+  | succ fuel =>
+      refine ⟨((CrepRuntimeResult.normal : CrepRuntimeResult α FfiFinalEvent),
+        targetState), ?_, ?_⟩
+      · simp [panToCrepTargetEvaluate, compileCodeRelProg, compileProgHOL,
+          evalCrepRuntimeResult, evalCrepRuntimeProg]
+      · simp [panToCrepRunResultRel, panToCrepControlResultRel, hclock]
 
 end Flapjack

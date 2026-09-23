@@ -292,6 +292,22 @@ theorem functions_FILTER_is_name (declarations : List (Decl α)) :
     functions (globalDeclsFilter isName declarations) = [] :=
   functions_globalDeclsFilter_isName declarations
 
+/-! Exact-shaped port of Cake's `MEM_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380`): every entry of
+    `functions` comes from a `.function` declaration of the source list, with
+    the entry being that declaration's name, parameters, body, and return
+    shape. Wraps the reviewed production lemma `mem_functions`
+    (`Flapjack/Pancake/PanSimp.lean`). -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "MEM_functions"]
+theorem MEM_functions {declarations : List (Decl α)}
+    {entry : FunName × List (VarName × Shape) × Prog α × Shape}
+    (hmem : entry ∈ functions declarations) :
+    ∃ declaration : FunDecl α,
+      (.function declaration : Decl α) ∈ declarations ∧
+        entry = (declaration.name, declaration.params, declaration.body,
+          declaration.returnShape) :=
+  mem_functions hmem
+
 /-! Exact-shaped port of Cake's `fperm_name_cancel`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`). `fperm_name`
     (defined `pan_globalsScript.sml:184`) is the source-shaped rename of a

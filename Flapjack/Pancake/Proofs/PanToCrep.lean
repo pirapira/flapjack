@@ -796,15 +796,14 @@ theorem localRelLeZipUpdatePreserved
       ((panValueFlatten newValue).map PanWordLab.word) hdisjoint hlenNew]
     exact hmap
 
-/-! General matched-Call handler pre-state relation. Once the callee-body IH
-supplies the exception payload and the source assignment check gives shape
-preservation, `locals_rel` identifies the handler's existing slots. Writing
-the flattened payload into those slots yields the relation expected by the
-handler-body IH. The target `exp_hdl` load and update for a one-word payload
-is already proved in `EvaluateCases.crepRuntimeExpHdlOneWord`, and its result
-is composed with the `locals_rel` update by
-`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. General payload widths and
-the enclosing Call relation remain open. -/
+/-! `localsRelUpdateExistingValue` proves the local-map relation after a
+shape-preserving source update, using the slots recorded in `context.vars`.
+Separately, `EvaluateCases.crepRuntimeExpHdlOneWord` evaluates the target
+`exp_hdl` for an existing one-word local: it reads the payload from global
+cell zero and writes that payload to the local slot. The theorem
+`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel` composes that execution
+with the local-map relation. This covers the one-word handler prestate; other
+payload widths and the enclosing Call relation remain open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

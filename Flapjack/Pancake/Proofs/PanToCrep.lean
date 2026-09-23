@@ -26,6 +26,15 @@ context.
 
 namespace Flapjack
 
+/-! HOL `globals_lookup_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`).
+    `List.range` is the `GENLIST I` index list, and `BitVec.ofNat 5` is HOL's
+    `n2w` at the fixed global-map key width. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
+def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
+    Option (List (PanWordLab α)) :=
+  (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
+    (fun index => state.globals (BitVec.ofNat 5 index))
+
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
 /-- Exact port of the duplicate Cake `EL_load_globals` theorem

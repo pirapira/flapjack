@@ -56,6 +56,10 @@ and target entry. The probe also proves matching and deliberately mismatching
 analogue tests live in `Flapjack.Test.PanToCrepCodeRelParity`. The Lean
 relation remains untagged until its list-backed compiler body is replaced by
 the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
+`globals_lookup_probe.out` records direct HOL EVAL of
+`pan_to_crepProof$globals_lookup_def` for a present singleton word and a
+missing global; the matching Lean guards live in
+`Flapjack.Test.PanToCrepGlobalsLookupParity`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

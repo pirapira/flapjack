@@ -337,6 +337,209 @@ theorem panStructCompileExpsEvalOfPointwiseCorrect
               simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
                 structCompileExp.structCompileExps, htargetHead, htargetTail]
 
+inductive PanStructAll {α : Type} (predicate : α → Prop) : List α → Prop
+  | nil : PanStructAll predicate []
+  | cons {head tail} : predicate head → PanStructAll predicate tail →
+      PanStructAll predicate (head :: tail)
+
+private theorem panStructAll_mem {α : Type} {predicate : α → Prop}
+    {values : List α} (hvalues : PanStructAll predicate values) :
+    ∀ value, value ∈ values → predicate value := by
+  induction hvalues with
+  | nil => intro value hmem; simp at hmem
+  | @cons head tail hhead htail ih =>
+      intro value hmem
+      simp only [List.mem_cons] at hmem
+      rcases hmem with heq | hmem
+      · subst value
+        exact hhead
+      · exact ih value hmem
+
+private theorem panStructAll_map {α : Type} {source target : α → Prop}
+    (transform : ∀ value, source value → target value) {values : List α}
+    (hvalues : PanStructAll source values) : PanStructAll target values := by
+  induction hvalues with
+  | nil => exact .nil
+  | @cons value values hhead htail ih =>
+      exact .cons (transform value hhead) ih
+
+private theorem panStructConvertValues_eq_map (values : List (PanValue α)) :
+    panStructConvertValues values = values.map panStructConvertValue := by
+  induction values with
+  | nil => simp [panStructConvertValues]
+  | cons value values ih => simp [panStructConvertValues, ih]
+
+private theorem panStructRStructListShapeFields
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α]
+    [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (baseAddress topAddress bytesInWord : α)
+    (expressions : List (Exp α))
+    (hinduction : PanStructAll (fun expression => ∀ subvalue,
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        expression = some subvalue →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool structs subvalue = true) expressions)
+    (values : List (PanValue α))
+    (hvalues : evalPanValueExps structs locals globals memory baseAddress topAddress
+      bytesInWord expressions = some values) :
+    structOldExpShape.structOldExpShapes context expressions = values.map panSemShapeOf ∧
+    panStructValuesFieldsOkBool structs values = true := by
+  revert hinduction values hvalues
+  induction expressions with
+  | nil =>
+      intro hinduction values hvalues
+      cases hinduction
+      simp [evalPanValueExps, evalPanValueExp.evalPanValueExps] at hvalues
+      subst values
+      exact ⟨by simp [structOldExpShape.structOldExpShapes],
+        by simp [panStructValuesFieldsOkBool]⟩
+  | cons expression expressions ih =>
+      intro hinduction values hvalues
+      cases hinduction with
+      | cons ihHead ihTail =>
+          simp only [evalPanValueExps, evalPanValueExp.evalPanValueExps] at hvalues
+          cases hhead : evalPanValueExp structs locals globals memory
+              baseAddress topAddress bytesInWord expression with
+          | none => simp [hhead] at hvalues
+          | some head =>
+              cases htail : evalPanValueExp.evalPanValueExps structs locals globals memory
+                  baseAddress topAddress bytesInWord expressions with
+              | none => simp [hhead, htail] at hvalues
+              | some tail =>
+                  have hvaluesEq : head :: tail = values := by
+                    simpa [hhead, htail] using hvalues
+                  subst values
+                  have hheadFacts := ihHead head hhead
+                  have htailFacts := ih ihTail tail
+                    (by simpa [evalPanValueExps] using htail)
+                  exact ⟨by simp [structOldExpShape.structOldExpShapes,
+                    hheadFacts.1, htailFacts.1], by
+                    simp [panStructValuesFieldsOkBool, hheadFacts.2, htailFacts.2]⟩
+
+/-- Derived RStruct induction case for HOL `compile_exp_correct`.
+    The input contains one recursive hypothesis per field, matching the HOL
+    induction step; each hypothesis retains the outer context, finite-map,
+    field-validity, and struct-info premises. This case proves all three
+    conclusions using production `structCompileExps` and `evalPanValueExps`.
+    It is untagged because it specializes the universal HOL theorem through
+    Lean's total-lookup state adapter and explicit `bytesInWord` argument. -/
+theorem panStructCompileExpCorrectRStructCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (expressions : List (Exp α)) (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord
+      (.rStruct expressions) = some value)
+    (hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (hstructInfos : structInfosOk state.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.globals)
+    (hinduction : PanStructAll (fun expression => ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      panStructContextShapeView context.structs = panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue subvalue))
+      expressions) :
+    structOldExpShape context (.rStruct expressions) = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context (.rStruct expressions)) =
+        some (panStructConvertValue value) := by
+  have hfieldsIH : PanStructAll (fun expression => ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true) expressions := by
+    exact panStructAll_map (fun expression hind => fun subvalue hevalSub =>
+      let hcase := hind subvalue hevalSub hstructs hlocalsFields hglobalsFields
+        hstructInfos hlocalsMap hglobalsMap
+      ⟨hcase.1, hcase.2.1⟩) hinduction
+  have hinductionAt : ∀ expression, expression ∈ expressions → ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      panStructContextShapeView context.structs = panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue subvalue) := by
+    intro expression hmem
+    exact panStructAll_mem hinduction expression hmem
+  cases hvalues : evalPanValueExp.evalPanValueExps state.structs state.locals
+      state.globals state.memory state.baseAddress state.topAddress bytesInWord expressions with
+  | none => simp [evalPanValueExp, hvalues] at heval
+  | some values =>
+      have hvalue : PanValue.rStruct values = value := by
+        simpa [evalPanValueExp, hvalues] using heval
+      cases hvalue
+      have hsourceValues : evalPanValueExps state.structs state.locals state.globals
+          state.memory state.baseAddress state.topAddress bytesInWord expressions = some values := by
+        simpa [evalPanValueExps] using hvalues
+      have hshapeFields := panStructRStructListShapeFields context state.structs
+        state.locals state.globals state.memory state.baseAddress state.topAddress
+        bytesInWord expressions hfieldsIH values hsourceValues
+      have hpointwise : ∀ expression, expression ∈ expressions → ∀ subvalue,
+          evalPanValueExp state.structs state.locals state.globals state.memory
+            state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+          evalPanValueExp (panStructConvertState context state).structs
+            (panStructConvertState context state).locals
+            (panStructConvertState context state).globals
+            (panStructConvertState context state).memory
+            (panStructConvertState context state).baseAddress
+            (panStructConvertState context state).topAddress bytesInWord
+            (structCompileExp context expression) = some (panStructConvertValue subvalue) := by
+        intro expression hmem subvalue hevalSub
+        exact (hinductionAt expression hmem subvalue hevalSub
+          hstructs hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap).2.2
+      have htargetList := panStructCompileExpsEvalOfPointwiseCorrect
+        context state bytesInWord expressions values hsourceValues hpointwise
+      have hconvertValues := panStructConvertValues_eq_map values
+      refine ⟨?_, ?_, ?_⟩
+      · have hshapeMap : expressions.map (structOldExpShape context) =
+            values.map panSemShapeOf := by
+          simpa only [structOldExpShapes_eq_map] using hshapeFields.1
+        simpa only [structOldExpShape, panSemShapeOf,
+          structOldExpShapes_eq_map] using congrArg Shape.comb hshapeMap
+      · simpa [panStructValueFieldsOkBool] using hshapeFields.2
+      · simpa [evalPanValueExp, structCompileExp, panStructConvertState,
+          panStructConvertValue, hconvertValues, htargetList]
+
 /-- Lookup in HOL's `FMAP_MAP2`-shaped `InfoMap` representation commutes with
     mapping values. Keeping this finite list, rather than only its total lookup
     function, preserves the exact support needed by `compile_correct`. -/

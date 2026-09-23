@@ -344,4 +344,30 @@ theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     name ≤ context.vmax := by
   exact compileExpHOL_outputs_vars_bounded context hmax expression output houtput name hvar
 
+/-- Exact port of HOL `genlist_vmax_distinct_lists_compiled_exps`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`). HOL's
+    `GENLIST (λx. SUC x + ctxt.vmax) count` is `List.range count` mapped to
+    `i + 1 + context.vmax`; `var_cexp` is represented by `crepExpVars`, and
+    HOL `distinct_lists` is the proposition `ListDisjoint`. The only premise
+    is the original `ctxt_max` bound on the context variables. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
+theorem genlistVmaxDistinctListsCompiledExps
+    [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (count : Nat)
+    (argExpressions : List (Exp α))
+    (hmax : ctxtMax context.vmax context.vars) :
+    ListDisjoint
+      ((List.range count).map (fun i => i + 1 + context.vmax))
+      ((argExpressions.map (compileExpHOL context)).flatMap
+        (fun compiled => compiled.1.flatMap crepExpVars)) := by
+  apply listDisjoint_range_add count context.vmax _
+  intro name hname
+  simp only [List.mem_flatMap] at hname
+  rcases hname with ⟨compiled, hcompiled, hvars⟩
+  simp only [List.mem_map] at hcompiled
+  rcases hcompiled with ⟨expression, _hexpression, rfl⟩
+  rcases hvars with ⟨output, houtput, hvar⟩
+  exact compileExpHOL_outputs_vars_bounded context hmax expression output
+    houtput name hvar
+
 end Flapjack

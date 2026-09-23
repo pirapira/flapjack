@@ -2496,9 +2496,8 @@ theorem panValueResVar_eq_ite [BEq String] [LawfulBEq String]
     panValueResVar locals name oldValue other =
       if other == name then oldValue else locals other := rfl
 
-/-- Counterpart of Cake's `res_var_commutes'`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4094`): restoring two
-    distinct locals commutes. -/
+/-- Flapjack-specific function-map analogue of Cake's `res_var_commutes'`.
+    The exact HOL finite-map theorem is tagged in `Proofs/PanToCrep.lean`. -/
 theorem panValueResVar_comm [BEq String] [LawfulBEq String]
     (locals : VarName → Option (PanValue α)) (h n : VarName)
     (v v' : Option (PanValue α)) (hne : n ≠ h) :

@@ -236,7 +236,7 @@ theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
           rw [hmul]
           simp only [evalCrepRuntimeExp]
           rw [hRaw]
-          simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModel, hshift]
+          simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian, hshift]
 
 /-! Lean-only adapter from the explicit `PanWordLab.word` result shape to the
     raw production evaluator result used by the recursive simp proof. -/

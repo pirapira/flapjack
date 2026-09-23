@@ -64,6 +64,14 @@
     "reviewer": "Codex (source formula and direct numeric HOL-EVAL comparison)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "word_op_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "wordOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared source word_op cases, fold identities, and binary Sub arity)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "flatten_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",

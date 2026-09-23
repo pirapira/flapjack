@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordInstSelect
+import Flapjack.Pancake.WordLang
 
 /-!
 # Cake's `word_simp$const_fp` program-level constant propagation
@@ -132,16 +133,10 @@ def wordSimpStripConst : List (WordExp α) → Option (List α)
       (wordSimpStripConst expressions).map (fun values => value :: values)
   | _ :: _ => none
 
-/-! `word_op` (`wordLangScript.sml:302-311`). -/
+/-! Word instruction selection uses the shared `wordLang$word_op` definition. -/
 def wordSimpFoldOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [Complement α] [OfNat α 0] (operator : BinOp) (values : List α) : Option α :=
-  match operator, values with
-  | .and, values => some (values.foldr (fun value rest => value &&& rest) (~~~(0 : α)))
-  | .add, values => some (values.foldr (fun value rest => value + rest) 0)
-  | .or, values => some (values.foldr (fun value rest => value ||| rest) 0)
-  | .xor, values => some (values.foldr (fun value rest => value ^^^ rest) 0)
-  | .sub, [left, right] => some (left - right)
-  | _, _ => none
+  wordOpHOL operator values
 
 class WordSimpShift (α : Type u) where
   eval : Shift → α → α → Option α

@@ -1,5 +1,6 @@
 import Flapjack.PanMemory
 import Flapjack.PanMemoryModel
+import Flapjack.Pancake.WordLang
 import Flapjack.RiscV.Model
 
 /-!
@@ -53,6 +54,25 @@ def panRiscVSetByte [NeZero width]
   BitVec.ofNat width
     (low + (byte.toNat % 256) * offset + high * block)
 
+/-! HOL `get_byte`/`set_byte` byte numbering from `panSem$mem_load_byte_def`:
+big endian reverses the byte index within `bytesInWord`. -/
+def panRiscVGetByteEndian [NeZero width]
+    (bytesInWord address value : Word width) (bigEndian : Bool) : Word width :=
+  let byteIndex := panRiscVByteIndex bytesInWord address
+  let byteIndex := if bigEndian then bytesInWord.toNat - 1 - byteIndex else byteIndex
+  BitVec.ofNat width ((value.toNat / (256 ^ byteIndex)) % 256)
+
+def panRiscVSetByteEndian [NeZero width]
+    (bytesInWord address byte value : Word width) (bigEndian : Bool) : Word width :=
+  let byteIndex := panRiscVByteIndex bytesInWord address
+  let byteIndex := if bigEndian then bytesInWord.toNat - 1 - byteIndex else byteIndex
+  let offset := 256 ^ byteIndex
+  let block := offset * 256
+  let low := value.toNat % offset
+  let high := value.toNat / block
+  BitVec.ofNat width
+    (low + (byte.toNat % 256) * offset + high * block)
+
 /-!
 The Pancake word operator is list-valued: Add, And, Or, and Xor fold over
 all word operands, with the corresponding neutral element, while Sub is
@@ -61,15 +81,7 @@ defined only for exactly two operands.
 
 def panRiscVWordOp [NeZero width]
     (operator : BinOp) (values : List (Word width)) : Option (Word width) :=
-  match operator with
-  | .add => some (values.foldr (fun left right => left + right) 0)
-  | .and => some (values.foldr (fun left right => AndOp.and left right) (~~~(0 : Word width)))
-  | .or => some (values.foldr (fun left right => OrOp.or left right) 0)
-  | .xor => some (values.foldr (fun left right => HXor.hXor left right) 0)
-  | .sub =>
-      match values with
-      | [left, right] => some (left - right)
-      | _ => none
+  wordOpHOL operator values
 
 /-! RISC-V source comparison, preserving Pancake's signed/unsigned split. -/
 
@@ -95,6 +107,19 @@ def panRiscVShift [NeZero width]
     | .asr => some (BitVec.sshiftRight left right.toNat)
     | .ror => some (BitVec.rotateRight left right.toNat)
   else none
+
+def panRiscVMemoryModelForEndian [NeZero width] (bigEndian : Bool) :
+    PanMemoryModel (Word width) :=
+  { byteAlign := panRiscVByteAlign
+    getByte := fun bytesInWord address value _ =>
+      panRiscVGetByteEndian bytesInWord address value bigEndian
+    setByte := fun bytesInWord address byte value _ =>
+      panRiscVSetByteEndian bytesInWord address byte value bigEndian
+    aligned := fun alignment address => aligned address alignment
+    wordOfBytes := panRiscVWordOfBytes
+    wordOp := panRiscVWordOp
+    compare := panRiscVCmp
+    shift := panRiscVShift }
 
 def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
   { byteAlign := panRiscVByteAlign

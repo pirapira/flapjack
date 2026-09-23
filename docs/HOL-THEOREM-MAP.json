@@ -5131,6 +5131,70 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "boolAndRearr",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Bool rearrangement helper ((l && s && (n && m)) = ((l && n) && (s && m))); no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "string_beq_comm",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only commutativity of String BEq used to align helper argument order; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeMatches_eq_panStructShapeEqBool",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter equating the production panShapeMatches with panStructShapeEqBool (decide of structural Shape equality) under lawful String equality; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeListMatches_eq_panStructShapeListEqBool",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-level companion of panShapeMatches_eq_panStructShapeEqBool; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter rewriting panValueFieldsHaveShapes as HOL v_flds_ok's MAP FST / MAP (shape_of o SND) equalities over the panSemShapeOf port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Clause-by-clause adapter from the exact HOL-shaped panValueFldsOk over StructContextHOL to the production panStructValueFieldsOkBool over the cache-augmented StructContext under StructContext.toHOL; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValuesFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "List-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panFieldsFldsOk_toHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Field-list-level companion of panValueFldsOk_toHOL; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructAll_mem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Generic membership eliminator for the local PanStructAll induction-hypothesis list; no standalone HOL declaration."

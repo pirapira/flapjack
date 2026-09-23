@@ -156,6 +156,7 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+
 mutual
   /-- Prop-valued Flapjack convenience predicate mirroring the equations of
       HOL `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while
@@ -651,6 +652,143 @@ mutual
         simp only [List.map_cons]
         rw [panValueShape_eq_panSemShapeOf, panValueShapeList_eq_panSemShapeOf]
 end
+
+/-! ## Adapter between the HOL-shaped predicates and production struct contexts
+
+These lemmas relate the exact HOL-shaped predicates over `StructContextHOL`
+(`panValueFldsOk`, `panIsWfShapeValueHOL`, in their counterpart files) to the
+production predicates over the cache-augmented `StructContext`
+(`panStructValueFieldsOkBool`, `panIsWfShapeValueBool`). The context adapter is
+the projection `StructContext.toHOL`, which drops the production-only
+`shapedFields` cache and preserves first-match lookup shadowing. -/
+
+/-- Boolean rearrangement used when comparing the pairwise production field
+    check with the whole-list HOL shape/name equalities. -/
+theorem boolAndRearr (left shape names shapes : Bool) :
+    (left && shape && (names && shapes)) = ((left && names) && (shape && shapes)) := by
+  cases left <;> cases shape <;> cases names <;> cases shapes <;> rfl
+
+/-- String `==` is symmetric, used to reorient the pairwise field-name check
+    against the HOL whole-list `MAP FST` equality. -/
+theorem string_beq_comm (left right : String) :
+    (left == right) = (right == left) := by
+  by_cases h : left = right
+  · rw [beq_iff_eq.mpr h, beq_iff_eq.mpr h.symm]
+  · have h' : ¬ right = left := fun hba => h hba.symm
+    rw [beq_eq_false_iff_ne.mpr h, beq_eq_false_iff_ne.mpr h']
+
+/- The production `panShapeMatches` agrees with the constructor-recursive
+    `panStructShapeEqBool` under lawful String equality. -/
+mutual
+  theorem panShapeMatches_eq_panStructShapeEqBool [LawfulBEq String]
+      (left right : Shape) :
+      panShapeMatches left right = panStructShapeEqBool left right := by
+    cases left with
+    | one => cases right <;> simp [panShapeMatches, panStructShapeEqBool]
+    | named leftName =>
+        cases right with
+        | one => simp [panShapeMatches, panStructShapeEqBool]
+        | named rightName =>
+            simp only [panShapeMatches, panStructShapeEqBool]
+            by_cases h : leftName = rightName
+            · rw [beq_iff_eq.mpr h, decide_eq_true h]
+            · rw [beq_eq_false_iff_ne.mpr h, decide_eq_false h]
+        | comb _ => simp [panShapeMatches, panStructShapeEqBool]
+    | comb leftFields =>
+        cases right with
+        | one => simp [panShapeMatches, panStructShapeEqBool]
+        | named _ => simp [panShapeMatches, panStructShapeEqBool]
+        | comb rightFields =>
+            simp only [panShapeMatches, panStructShapeEqBool]
+            exact panShapeListMatches_eq_panStructShapeListEqBool leftFields rightFields
+
+  theorem panShapeListMatches_eq_panStructShapeListEqBool [LawfulBEq String]
+      (left right : List Shape) :
+      panShapeMatches.panShapeListMatches left right = panStructShapeListEqBool left right := by
+    cases left with
+    | nil => cases right <;> simp [panShapeMatches.panShapeListMatches, panStructShapeListEqBool]
+    | cons head tail =>
+        cases right with
+        | nil => simp [panShapeMatches.panShapeListMatches, panStructShapeListEqBool]
+        | cons head' tail' =>
+            simp only [panShapeMatches.panShapeListMatches, panStructShapeListEqBool]
+            rw [panShapeMatches_eq_panStructShapeEqBool head head']
+            exact congrArg (fun rest => panStructShapeEqBool head head' && rest)
+              (panShapeListMatches_eq_panStructShapeListEqBool tail tail')
+end
+
+/-- The production pairwise `panValueFieldsHaveShapes` check is exactly HOL's
+    whole-list `MAP FST flds = MAP FST info.fields /\
+    MAP (shape_of o SND) flds = MAP SND info.fields` conjunction. -/
+theorem panValueFieldsHaveShapes_eq [LawfulBEq String] (context : StructContext)
+    (expected : List (FieldName × Shape)) (actual : List (FieldName × PanValue α)) :
+    panValueFieldsHaveShapes context expected actual =
+      ((actual.map Prod.fst == expected.map Prod.fst) &&
+        panStructShapeListEqBool
+          (actual.map (panSemShapeOf ∘ Prod.snd))
+          (expected.map Prod.snd)) := by
+  induction expected generalizing actual with
+  | nil =>
+      cases actual with
+      | nil => simp [panValueFieldsHaveShapes, panStructShapeListEqBool]
+      | cons head tail => simp [panValueFieldsHaveShapes]
+  | cons expectedHead expectedTail ih =>
+      obtain ⟨expectedName, expectedShape⟩ := expectedHead
+      cases actual with
+      | nil => simp [panValueFieldsHaveShapes]
+      | cons actualHead actualTail =>
+          obtain ⟨actualName, actualValue⟩ := actualHead
+          simp only [panValueFieldsHaveShapes, List.map_cons,
+            panStructShapeListEqBool, Function.comp_apply]
+          rw [ih actualTail, panShapeMatches_eq_panStructShapeEqBool,
+            panValueShape_eq_panSemShapeOf, string_beq_comm expectedName actualName]
+          exact boolAndRearr (actualName == expectedName)
+            (panStructShapeEqBool (panSemShapeOf actualValue) expectedShape)
+            (actualTail.map Prod.fst == expectedTail.map Prod.fst)
+            (panStructShapeListEqBool (actualTail.map (panSemShapeOf ∘ Prod.snd))
+              (expectedTail.map Prod.snd))
+
+/- Full clause-by-clause adapter for HOL `v_flds_ok_def`: the exact
+    HOL-shaped `panValueFldsOk` over the projected context equals the
+    production `panStructValueFieldsOkBool` over the cache-augmented context. -/
+mutual
+  theorem panValueFldsOk_toHOL [LawfulBEq String] (context : StructContext)
+      (value : PanValue α) :
+      panValueFldsOk context.toHOL value = panStructValueFieldsOkBool context value := by
+    cases value with
+    | word word => simp [panValueFldsOk, panStructValueFieldsOkBool]
+    | rStruct values =>
+        simp only [panValueFldsOk, panStructValueFieldsOkBool]
+        exact panValuesFldsOk_toHOL context values
+    | nStruct name fields =>
+        simp only [panValueFldsOk, panStructValueFieldsOkBool, lookupInfo_toHOL]
+        rw [panFieldsFldsOk_toHOL context fields]
+        cases hlookup : lookupInfo name context with
+        | none => simp
+        | some info =>
+            simp only [Option.map_some]
+            rw [panValueFieldsHaveShapes_eq]
+
+  theorem panValuesFldsOk_toHOL [LawfulBEq String] (context : StructContext)
+      (values : List (PanValue α)) :
+      panValuesFldsOk context.toHOL values = panStructValuesFieldsOkBool context values := by
+    cases values with
+    | nil => simp [panValuesFldsOk, panStructValuesFieldsOkBool]
+    | cons value values =>
+        simp only [panValuesFldsOk, panStructValuesFieldsOkBool]
+        rw [panValueFldsOk_toHOL context value, panValuesFldsOk_toHOL context values]
+
+  theorem panFieldsFldsOk_toHOL [LawfulBEq String] (context : StructContext)
+      (fields : List (FieldName × PanValue α)) :
+      panFieldsFldsOk context.toHOL fields = panStructFieldValuesFieldsOkBool context fields := by
+    cases fields with
+    | nil => simp [panFieldsFldsOk, panStructFieldValuesFieldsOkBool]
+    | cons field fields =>
+        obtain ⟨fieldName, value⟩ := field
+        simp only [panFieldsFldsOk, panStructFieldValuesFieldsOkBool]
+        rw [panValueFldsOk_toHOL context value, panFieldsFldsOk_toHOL context fields]
+end
+
 
 private theorem panStructRStructListShapeFields
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α]

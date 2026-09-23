@@ -1,0 +1,52 @@
+import Flapjack.HolRef
+import Flapjack.Pancake.Semantics.PanSem
+
+/-!
+HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
+The full generated semantic property library is not yet present; this module
+starts with the value-well-formedness definition used by PanStructs
+`compile_correct`.
+-/
+
+namespace Flapjack
+
+/-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
+    production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
+    the HOL equality semantics explicit. -/
+def panPropsALookupEq [DecidableEq κ] (key : κ) : List (κ × α) → Option α
+  | [] => none
+  | (candidate, value) :: entries =>
+      if decide (candidate = key) then some value else panPropsALookupEq key entries
+
+mutual
+  /-- Exact Bool-valued counterpart of HOL `is_wf_shape_v_def`. It preserves
+      the word, recursive struct, and named struct equations and uses
+      equality-based first-match `ALOOKUP`. Lean `StructInfo.shapedFields` is
+      an extra cached field which this definition does not inspect. -/
+  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
+    | .word _ => true
+    | .rStruct values => panIsWfShapeValuesBool structs values
+    | .nStruct name fields =>
+        (panPropsALookupEq name structs).isSome &&
+          panIsWfShapeValueFieldsBool structs fields
+  termination_by value => sizeOf value
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panIsWfShapeValuesBool (structs : StructContext) : List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panIsWfShapeValueBool structs value && panIsWfShapeValuesBool structs values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panIsWfShapeValueFieldsBool (structs : StructContext) :
+      List (FieldName × PanValue α) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        panIsWfShapeValueBool structs value && panIsWfShapeValueFieldsBool structs fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+end Flapjack

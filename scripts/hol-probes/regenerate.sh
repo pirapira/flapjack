@@ -97,6 +97,13 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
   compile_correct_tick_positive_source compile_correct_tick_positive_converted \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
+  v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
+  v_flds_ok_named_missing v_flds_ok_duplicate_first \
+  is_wf_shape_v_word is_wf_shape_v_named_match \
+  is_wf_shape_v_named_missing \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_afindi_map_probeScript.sml pan_structs_afindi_map_probe.out \
   hit_preserves_key_index missing_key_stays_missing \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \

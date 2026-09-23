@@ -1,5 +1,4 @@
 empty=([],[],[],<|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)
-
 decl=([Store
     (Op Sub
        [TopAddr;
@@ -19,8 +18,59 @@ decl=([Store
      n2w
        ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
         dimword (:word8)); max_globals_size := 16w|>)
-
 exception=([],[],[ExnDecl «E» One],
  <|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)
-
 name=([],[],[],<|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)
+function_before_decl=([Store
+    (Op Sub
+       [TopAddr;
+        Const
+          (n2w
+             ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+              dimword (:word8)))]) (Const 7w)],
+ [Function
+    <|name := «f»; inline := F; export := F; params := [];
+      body := Assign Local «x» (Const 0w); return := One|>],[],
+ <|globals :=
+     FEMPTY⟨
+       «g» ↦
+         (One,
+          n2w
+            ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+             dimword (:word8)))
+     ⟩;
+   globals_size :=
+     n2w
+       ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+        dimword (:word8)); max_globals_size := 16w|>)
+function_after_decl=([Store
+    (Op Sub
+       [TopAddr;
+        Const
+          (n2w
+             ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+              dimword (:word8)))]) (Const 7w)],
+ [Function
+    <|name := «f»; inline := F; export := F; params := [];
+      body :=
+        Assign Local «x»
+          (Load One
+             (Op Sub
+                [TopAddr;
+                 Const
+                   (n2w
+                      ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+                       dimword (:word8)))])); return := One|>],[],
+ <|globals :=
+     FEMPTY⟨
+       «g» ↦
+         (One,
+          n2w
+            ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+             dimword (:word8)))
+     ⟩;
+   globals_size :=
+     n2w
+       ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+        dimword (:word8)); max_globals_size := 16w|>)
+compile_decs_probe_done=0

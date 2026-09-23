@@ -2873,6 +2873,38 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_functions_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_functions_thm_threaded",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: HOL maps with an ARB fallback for non-function declarations; this Lean statement uses the identity declaration fallback, which agrees with HOL under the EVERY is_function premise. ARB rendering pending review."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_name": "compile_decs_decls_thm_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_name": "compile_decs_EVERY_is_function_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "hol_name": "compile_decls_append",
+    "lean_name": "compile_decls_append_threaded"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP3",
@@ -4269,7 +4301,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch and relation-aware handler post-relations. Target callee and handler relation IHs remain premises; this is not the full compiled-program Call_Ret_Exception case"
+    "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The target callee IH yields its run plus callee state_rel/code_rel/excp_rel and the word payload in target global cell zero needed by exp_hdl, rather than taking these as detached inputs; the handler relation IH remains a premise. This is not the full compiled-program Call_Ret_Exception case"
   },
   {
     "hol_path": null,
@@ -4454,6 +4486,46 @@
     "lean_name": "panStructCompileExpsEvalOfPointwiseCorrect",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked production list-evaluation prerequisite for HOL's local compile_exp_correct_mmap_helper at line 206. It preserves the source-list success premise, per-expression source-to-compiled correctness premise, and converted mapped-values conclusion over evalPanValueExps/structCompileExps. It is intentionally untagged: the HOL helper is local and ranges over eval of a HOL finite-map state, while Lean uses PanSemState total lookup functions and an explicit bytesInWord evaluator argument. This supports RStruct/NStruct and other recursive expression cases; it is not itself a compile_exp_correct constructor case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectRStructCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked RStruct constructor specialization of HOL compile_exp_correct. It retains the translated successful-evaluation, context-view equality, pointwise field-validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions. The per-field induction hypotheses carry those same premises and are assembled as a list-indexed induction family. This is intentionally untagged because HOL has one universally quantified theorem with no named RStruct theorem/case, and the Lean interface uses PanSemState total lookup functions plus explicit bytesInWord rather than HOL finite maps and fixed-width eval."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructAll_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic membership eliminator for the local PanStructAll induction-hypothesis list; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructAll_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Generic map over the local PanStructAll induction-hypothesis list; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertValues_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Executable list conversion equals List.map of the production value converter; support for the RStruct case only, with no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructRStructListShapeFields",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private list induction support that derives old-shape map equality and recursive field validity from the per-field compile_exp_correct induction hypotheses. It supports, but is not itself, the RStruct case."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

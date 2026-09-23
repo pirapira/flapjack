@@ -69,7 +69,7 @@ theorem lookupInfo_isSome_drop_fixture :
 theorem isWfShape_drop_fixture : isWfShape context (.named "s") = true := by
   have h : isWfShape (context.drop 1) (.named "s") = true := by
     simp [context, isWfShape, lookupInfo]
-  exact isWfShape_drop (.named "s") context 1 h
+  exact isWfShape_drop context (.named "s") 1 h
 
 /-! Focused regression for the ported Cake `pan_structs` `alookup_drop_helper`
     lemma. -/

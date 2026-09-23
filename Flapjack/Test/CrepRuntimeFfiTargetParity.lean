@@ -59,7 +59,7 @@ def ffiProbeBase : CrepRuntimeState (RiscV.Word 64) Unit :=
   { locals := fun _ => none
     globals := fun _ => none
     code := FEMPTY
-    memory := fun _ => none
+    memory := fun _ => .word 0
     memaddrs := fun _ => false
     shMemaddrs := fun _ => false
     memoryModel := RiscV.panRiscVMemoryModel
@@ -138,8 +138,8 @@ def ffiReadBase : CrepRuntimeState (RiscV.Word 64) Unit :=
   { ffiProbeBase with
     memory := fun address =>
       if address == (8 : RiscV.Word 64) then
-        some (0x0807060504030201 : RiscV.Word 64)
-      else none
+        .word (0x0807060504030201 : RiscV.Word 64)
+      else .word 0
     memaddrs := fun address => address == (8 : RiscV.Word 64) }
 
 def ffiReadTarget : CrepRuntimeState (RiscV.Word 64) Unit :=
@@ -179,19 +179,19 @@ def writeBytes1 : List UInt8 := [(0xAA : UInt8)]
     `riscv64WriteMem` mirrors HOL's total `write_bytearray`. -/
 def ffiWriteBytesGuard : Bool :=
   (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
-      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (crepRuntimeMemoryView (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8))
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
   (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
-      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (crepRuntimeMemoryView (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8))
       (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (187 : RiscV.Word 64)) &&
   (RiscV.panRiscVRead32 ffiWriteBase.memaddrs
-      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (crepRuntimeMemoryView (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8))
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (0xDDCCBBAA : RiscV.Word 64)) &&
   (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
-      (riscv64WriteMem ffiWriteBase (9 : RiscV.Word 64) writeBytes1)
+      (crepRuntimeMemoryView (riscv64WriteMem ffiWriteBase (9 : RiscV.Word 64) writeBytes1))
       (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
   (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
-      (riscv64WriteMem ffiWriteBase (16 : RiscV.Word 64) writeBytes1)
+      (crepRuntimeMemoryView (riscv64WriteMem ffiWriteBase (16 : RiscV.Word 64) writeBytes1))
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64))
 
 /-- Production `crepRuntimeWriteBytes` on the canonical target maps to the HOL

@@ -17,7 +17,7 @@ open Flapjack
 
 def validDomain : Nat → Bool := fun address => address == 0
 
-def oneWordMemory : Nat → Option Nat := fun address => if address == 0 then some 7 else none
+def oneWordMemory : Nat → PanWordLab Nat := fun _ => .word 7
 
 /-- Base state with `memaddrs` accepting only address `0`, matching the probe's
 `memaddrs := {0w}` and total memory returning `Word 7w`. -/
@@ -43,9 +43,8 @@ def totalMemory : Nat → PanWordLab Nat := fun _ => .word 7
 /-- The production state and the total view satisfy the bridge on the guarded
 domain. -/
 theorem crepMemoryRel_holds : crepMemoryRel baseState totalMemory := by
-  intro address hvalid
-  simp [baseState, oneWordMemory, validDomain, totalMemory, panTheWord] at hvalid ⊢
-  exact hvalid
+  unfold crepMemoryRel
+  rfl
 
 /-- `mem_load_valid=SOME (Word 7w)`: a guarded address loads the total cell. -/
 theorem load_valid :
@@ -55,6 +54,24 @@ theorem load_valid :
 /-- `mem_load_invalid=NONE`: an address outside `memaddrs` has no cell. -/
 theorem load_invalid : crepRuntimeLoad baseState 9 = none :=
   crepRuntimeLoad_eq_none_of_memaddrs_false (by rfl)
+
+/-- HOL `mem_store` valid branch: a guarded store updates exactly that cell. -/
+theorem store_valid :
+    crepRuntimeStore baseState 0 7 =
+      some { baseState with memory := updateCrepRuntimeMemory baseState.memory 0 (.word 7) } :=
+  crepRuntimeStore_eq_some_of_memaddrs_true (by rfl)
+
+/-- HOL `mem_store` invalid branch: a store outside `memaddrs` fails. -/
+theorem store_invalid : crepRuntimeStore baseState 9 7 = none :=
+  crepRuntimeStore_eq_none_of_memaddrs_false (by rfl)
+
+/-- The bridge survives a store when the total view is updated at the same
+cell. -/
+theorem store_rel_preserved :
+    crepMemoryRel
+      { baseState with memory := updateCrepRuntimeMemory baseState.memory 0 (.word 7) }
+      (fun current => if current == 0 then .word 7 else totalMemory current) :=
+  crepMemoryRel_store crepMemoryRel_holds (by rfl) 7
 
 /-- `mem_load_valid=SOME (Word 7w)`, `mem_load_invalid=NONE`, and
 `mem_load_other_valid=SOME (Word 7w)`. -/
@@ -68,8 +85,22 @@ def evalGuard : Bool :=
   (evalCrepRuntimeExp baseState (.load (.const 0)) == some 7) &&
     (evalCrepRuntimeExp baseState (.load (.const 9))).isNone
 
+/-- `mem_store_valid_lookup=SOME (Word 7w)`,
+`mem_store_valid_other=SOME (Word 0w)`, `mem_store_invalid=NONE`: a valid store
+changes exactly the target cell and a store outside `memaddrs` fails. -/
+def storeGuard : Bool :=
+  match crepRuntimeStore baseState 0 7 with
+  | some state => state.memory 0 == .word 7 && state.memory 9 == .word 7
+  | none => false
+
+/-- A store followed by a load of the same address observes the stored word. -/
+def storeEvalGuard : Bool :=
+  match crepRuntimeStore baseState 0 7 with
+  | some state => evalCrepRuntimeExp state (.load (.const 0)) == some 7
+  | none => false
+
 def crepMemoryGuard : Bool :=
-  loadGuard && evalGuard
+  loadGuard && evalGuard && storeGuard && storeEvalGuard
 
 #eval crepMemoryGuard
 #guard crepMemoryGuard

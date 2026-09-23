@@ -4736,6 +4736,14 @@
     "reviewer": "Flapjack-only evaluation support for HOL comp_field index zero on an rField over a nonempty source-local rStruct; Call argument support remains restricted and this is not the full compile_exp_val_rel theorem"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldOne_pairLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluation support for HOL comp_field index one on a two-word source-local rStruct; proves the selected target word through locals_rel and does not claim full compile_exp_val_rel or Call correctness"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "fields_in_order_reorder_noop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",

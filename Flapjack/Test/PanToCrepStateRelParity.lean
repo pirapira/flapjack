@@ -5,7 +5,8 @@ import Flapjack.Pancake.Semantics.PanCommonProps
 /-! Nonvacuous checks for the HOL `state_rel_def`, `state_rel_structs`,
 `state_rel_globals`, and `locals_rel_def` ports in
 `Flapjack/Pancake/Proofs/PanToCrep.lean`.  Each relation has a satisfying
-fixture and a rejected fixture. -/
+fixture and a rejected fixture. A nonempty target code map is also tied to the
+runtime function list and carried through target Skip evaluation. -/
 
 namespace Flapjack.Test.PanToCrepStateRelParity
 
@@ -46,6 +47,71 @@ def targetState : CrepRuntimeState Nat Unit :=
     baseAddress := 0
     topAddress := 0 }
 
+def skipCodeFunction : CompiledFunction Nat :=
+  { name := "id", params := [], body := .skip, returnShape := .one }
+
+def skipCodeMap : FiniteMap String (List Nat × CrepProg Nat) :=
+  FUPDATE_LIST FEMPTY [("id", ([], .skip))]
+
+def skipCodeRuntime : CrepRuntimeState Nat Unit :=
+  { targetState with functions := [skipCodeFunction] }
+
+theorem skipCodeRuntimeMatchesMap :
+    ∀ function,
+      lookupCompiledFunction function skipCodeRuntime.functions =
+        FLOOKUP skipCodeMap function := by
+  intro function
+  by_cases h : function = "id"
+  · subst function
+    simp [skipCodeRuntime, skipCodeFunction, lookupCompiledFunction,
+      skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
+  · have hne : ("id" : String) ≠ function := fun heq => h heq.symm
+    simp [skipCodeRuntime, skipCodeFunction, lookupCompiledFunction,
+      skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP, FEMPTY, hne, h]
+
+def skipCodeState : CrepCodeState Nat Unit :=
+  { code := skipCodeMap
+    runtime := skipCodeRuntime
+    runtimeCode := skipCodeRuntimeMatchesMap }
+
+theorem skipCodeMap_has_runtime_entry :
+    FLOOKUP skipCodeState.code "id" = some ([], (CrepProg.skip : CrepProg Nat)) ∧
+    lookupCompiledFunction "id" skipCodeState.runtime.functions =
+      some ([], .skip) := by
+  constructor
+  · simp [skipCodeState, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
+  · simp [skipCodeState, skipCodeRuntime, skipCodeFunction,
+      lookupCompiledFunction]
+
+def skipCodeContext : PanToCrepProofContext Nat :=
+  { vars := FEMPTY
+    funcs := FUPDATE FEMPTY ("id", ([], Shape.one))
+    eids := FEMPTY
+    vmax := 0 }
+
+def skipSourceCode : FiniteMap String
+    (List (VarName × Shape) × Prog Nat × Shape) :=
+  FUPDATE FEMPTY ("id", ([], .skip, Shape.one))
+
+theorem skipCodeRelFixture : codeRel skipCodeContext skipSourceCode skipCodeState.code := by
+  intro function variableShapes program returnShape hlookup
+  by_cases hname : function = "id"
+  · subst function
+    have hvalues : ([], Prog.skip, Shape.one) =
+        (variableShapes, program, returnShape) := by
+      simpa [skipSourceCode, FLOOKUP_update] using hlookup
+    rcases hvalues with ⟨rfl, rfl, rfl⟩
+    simp [skipCodeContext, skipCodeState, skipCodeMap, FUPDATE_LIST, FUPDATE,
+      FLOOKUP, compileCodeRelProg, compileProgHOL, localisedProg,
+      Shape.shapeSize]
+  · have hid : ("id" : String) ≠ function := fun heq => hname heq.symm
+    simp [skipSourceCode, FLOOKUP_update, hid] at hlookup
+
+def skipCodeFfiHandler : CrepRuntimeFfiHandler Nat Unit FfiFinalEvent :=
+  fun _ state => .returned state []
+
+def skipCodePrimitiveHandler : CrepPrimitiveHandler Nat := fun _ _ => none
+
 def nonEmptyGlobalsSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with globals := fun _ => some (.word 0) }
 
@@ -56,6 +122,28 @@ theorem stateRel_satisfied : stateRel sourceState targetState := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   funext address
   simp [sourceState, targetState, noPanValueCells, noNatCells]
+
+theorem skipCodeState_relates_runtime :
+    stateRel sourceState skipCodeState.runtime := by
+  simpa [stateRel, skipCodeState, skipCodeRuntime, targetState] using
+    stateRel_satisfied
+
+theorem skipCodeState_skipBoundary_fixture :
+    ∃ post : CrepCodeState Nat Unit,
+      evalCrepRuntimeResult skipCodeFfiHandler skipCodePrimitiveHandler 1
+        skipCodeState.runtime .skip = some (.normal, post.runtime) ∧
+      stateRel sourceState post.runtime ∧
+      codeRel skipCodeContext skipSourceCode post.code ∧
+      post.code = skipCodeState.code ∧
+      (∀ function, lookupCompiledFunction function post.runtime.functions =
+        FLOOKUP post.code function) :=
+  crepCodeStateSkipBoundary skipCodeContext sourceState skipSourceCode
+    skipCodeFfiHandler skipCodePrimitiveHandler 0 skipCodeState
+    skipCodeState_relates_runtime skipCodeRelFixture
+
+def skipCodeStateLookupGuard : Bool :=
+  (FLOOKUP skipCodeState.code "id").isSome &&
+    (lookupCompiledFunction "id" skipCodeState.runtime.functions).isSome
 
 theorem stateRel_structs_fixture : sourceState.structs = [] :=
   stateRel_structs sourceState targetState stateRel_satisfied
@@ -186,6 +274,8 @@ def runChecks : IO Bool := do
     ("HOL locals_rel satisfying fixture", contextVarGuard && localMapGuard),
     ("HOL locals_rel_lookup_ctxt exact slot, flattened value, and shape",
       localsRelLookupCtxtGuard),
+    ("HOL Crep code field matches a nonempty runtime function and survives Skip",
+      skipCodeStateLookupGuard),
     ("HOL locals_rel rejects unmapped local", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

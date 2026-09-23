@@ -366,7 +366,9 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
               (.raise code)
           else .skip
       | none => .skip
-  | .return value => .return (compileExp context value).1
+  | .return value =>
+      let compiled := compileExp context value
+      if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1
   | .shMemLoad size .local name address =>
       match lookupInfo name context.vars, firstCompiledExpAnyShape context address with
       | some (_, destination :: _), some address => .shMem (loadMemOp size) destination address
@@ -486,7 +488,9 @@ theorem compileProg_seq [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
 theorem compileProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (value : Exp α) :
-    compileProg context (.return value) = .return (compileExp context value).1 := by
+    compileProg context (.return value) =
+      let compiled := compileExp context value
+      if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1 := by
   simp [compileProg]
 
 theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]

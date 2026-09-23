@@ -51,6 +51,11 @@ val _ = print_eval "missing_names_global"
       (panLang$Call
         (SOME (SOME (panLang$Global, «missing_names»), NONE)) «f» [])``;
 
+val _ = print_eval "empty_struct_return"
+  ``pan_to_crep$compile
+      <| vars := FEMPTY; funcs := FEMPTY; eids := FEMPTY; vmax := 0 |>
+      (panLang$Return (panLang$RStruct []))``;
+
 val _ = print_eval "pair_load"
   ``pan_to_crep$compile
       <| vars := FEMPTY |+ («p», (panLang$One, [0]));

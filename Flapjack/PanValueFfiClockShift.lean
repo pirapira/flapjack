@@ -99,7 +99,7 @@ theorem evalPanValueFfiClockProg_while_zero_shift
       (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) =
       some (.control (.normal locals globals memory ffi), clock + ck) := by
-  simp [evalPanValueFfiClockProg, hcondition]
+  simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition]
 
 /-! A nonzero `While` iteration preserves the clock shift when both the body
     and the resumed loop are supplied at the two clocks.  This is the local
@@ -172,9 +172,9 @@ theorem evalPanValueFfiClockProg_while_normal_shift_step
   have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
     decPanClock_add clock ck hclockNe
   constructor
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclock,
       hbody, hrest]
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclockShift,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclockShift,
       hdec, hbodyShift, hrestShift]
 
 /-! A nonzero `While` iteration whose body breaks exits normally at both
@@ -235,9 +235,9 @@ theorem evalPanValueFfiClockProg_while_broke_shift_step
   have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
     decPanClock_add clock ck hclockNe
   constructor
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclock,
       hbody]
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclockShift,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclockShift,
       hdec, hbodyShift]
 
 /-! A nonzero `While` iteration whose body continues re-enters the loop at
@@ -309,9 +309,9 @@ theorem evalPanValueFfiClockProg_while_continued_shift_step
   have hdec : decPanClock (clock + ck) = decPanClock clock + ck :=
     decPanClock_add clock ck hclockNe
   constructor
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclock,
       hbody, hrest]
-  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclockShift,
+  · simp [evalPanValueFfiClockProg, panValueIteConditionValue, hcondition, hconditionNonzero, hclockShift,
       hdec, hbodyShift, hrestShift]
 
 /-! Cross-clock form of Cake's direct `Call_Ret_Raise` case.  The argument,

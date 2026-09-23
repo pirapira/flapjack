@@ -83,6 +83,10 @@ declaration list. Its Lean checks live in
 miss cases of `afindi_MAP_eq` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:356`; its matching Lean
 checks live in `Flapjack.Test.PanStructsAfindiParity`.
+`pan_structs_afindi_length_probe.out` records direct HOL EVAL of first and
+last successful key indices against `afindi_less_length` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:345`; Lean checks the same
+rows in `Flapjack.Test.PanStructsAfindiParity`.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.

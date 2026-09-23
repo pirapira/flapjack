@@ -25,6 +25,17 @@ theorem afindi_less_length_fixture :
   intro h
   exact afindi_less_length "b" entries 1 h
 
+/-! Direct HOL-EVAL rows from `pan_structs_afindi_length_probe.out`, generated
+from `pan_structsProofScript.sml:345`. The first and last successful matches
+both satisfy the strict index bound stated by `afindi_less_length`. -/
+def holAfIndiLengthGuard : Bool :=
+  (afindi "a" ([ ("a", 10), ("b", 20) ] : List (String × Nat)) == some 0) &&
+    (0 < ([ ("a", 10), ("b", 20) ] : List (String × Nat)).length) &&
+  (afindi "c" entries == some 2) && (2 < entries.length)
+
+#eval holAfIndiLengthGuard
+#guard holAfIndiLengthGuard
+
 theorem afindi_el_fst_fixture : (entries[1]?).map Prod.fst = some "b" := by
   have h : afindi "b" entries = some 1 := by simp [afindi, entries]
   exact afindi_el_fst "b" entries 1 h

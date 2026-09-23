@@ -217,6 +217,53 @@ def CrepHolState.toHolWordBitsRuntime [NeZero width]
     baseAddress := state.baseAddress
     topAddress := state.topAddress }
 
+/-! Structural change of word carrier for expression-evaluator comparison.
+    The HOL state code map is omitted because `crepSem$eval` never reads code;
+    expression-only correspondence therefore does not need to translate
+    stored programs. -/
+def mapCrepExpWord {α β : Type} (convert : α → β) :
+    CrepExp α → CrepExp β
+  | .const value => .const (convert value)
+  | .var name => .var name
+  | .load address => .load (mapCrepExpWord convert address)
+  | .load32 address => .load32 (mapCrepExpWord convert address)
+  | .loadByte address => .loadByte (mapCrepExpWord convert address)
+  | .loadGlob address => .loadGlob address
+  | .op operator expressions =>
+      .op operator (expressions.map (mapCrepExpWord convert))
+  | .crepOp operator expressions =>
+      .crepOp operator (expressions.map (mapCrepExpWord convert))
+  | .cmp operator left right =>
+      .cmp operator (mapCrepExpWord convert left) (mapCrepExpWord convert right)
+  | .shift operator left right =>
+      .shift operator (mapCrepExpWord convert left) (mapCrepExpWord convert right)
+  | .baseAddr => .baseAddr
+  | .topAddr => .topAddr
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def mapCrepHolWordLab (convert : α → β) : PanWordLab α → PanWordLab β
+  | .word value => .word (convert value)
+
+def CrepHolState.toBitVecState [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepHolState (RiscV.Word width) σ :=
+  { locals := fun name => (state.locals name).map
+      (mapCrepHolWordLab holWordBitsToBitVec)
+    globals := fun name => (state.globals name).map
+      (mapCrepHolWordLab holWordBitsToBitVec)
+    code := fun _ => none
+    memory := fun address => mapCrepHolWordLab holWordBitsToBitVec
+      (state.memory (bitVecToHolWordBits address))
+    memaddrs := fun address => state.memaddrs (bitVecToHolWordBits address)
+    shMemaddrs := fun address => state.shMemaddrs (bitVecToHolWordBits address)
+    clock := state.clock
+    bigEndian := state.bigEndian
+    ffi := state.ffi
+    baseAddress := holWordBitsToBitVec state.baseAddress
+    topAddress := holWordBitsToBitVec state.topAddress }
+
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word
     carrier remains unrepresented; `evalCrepRuntimeExp_toRuntime_eq` proves
@@ -269,6 +316,29 @@ def evalCrepHolExpWordLab [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) :
     CrepExp (RiscV.Word width) → Option (PanWordLab (RiscV.Word width)) :=
   fun expression => (evalCrepHolExp state expression).map PanWordLab.word
+
+/-! HOL evaluator source shape for the Fin-index word representation is
+    obtained by transporting the existing source-shaped evaluator through the
+    carrier equivalence. This adapter is untagged until its relation to the
+    full production evaluator is proved for every constructor. -/
+def evalCrepHolWordBitsExp [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepExp (Fin width → Bool) → Option (Fin width → Bool) :=
+  fun expression =>
+    (evalCrepHolExp (state.toBitVecState)
+      (mapCrepExpWord holWordBitsToBitVec expression)).map bitVecToHolWordBits
+
+def evalCrepHolWordBitsExpWordLab [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) :
+    CrepExp (Fin width → Bool) → Option (PanWordLab (Fin width → Bool)) :=
+  fun expression => (evalCrepHolWordBitsExp state expression).map PanWordLab.word
+
+/-! The next desired bridge would show that the production runtime evaluator on
+    the finite-index HOL-word carrier equals the transported source evaluator
+    above. This is not implied by the carrier equivalence alone: memory-model
+    load operations, list-valued `wordOp`, comparisons, and shifts must all
+    commute with the conversion. Keep the statement out of the HOL map until
+    those operation and state equations are proved. -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :

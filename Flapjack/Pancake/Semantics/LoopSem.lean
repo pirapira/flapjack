@@ -456,6 +456,19 @@ def riscvGetByteHOL {width : Nat} [NeZero width] (bigEndian : Bool)
     else 8 * (address.toNat % bytesInWord)
   UInt8.ofNat ((value >>> shift).toNat % 256)
 
+/-- Width-generic port of HOL `byte$byte_align` (`src/n-bit/alignmentScript.sml:23`):
+    `byte_align (w : 'a word) = align (LOG2 (dimindex(:'a) DIV 8)) w`, i.e. the
+    low `LOG2 (width DIV 8)` bits of the address are cleared.  That script is
+    part of the HOL standard library rather than the CakeML submodule, so this
+    declaration carries no HOL tag.  Note that this is *not* division by
+    `width / 8`: it agrees with `RiscV.panRiscVByteAlign (width / 8)` only when
+    `width / 8` is a power of two (e.g. width 64).  For width 24, HOL clears one
+    low bit and aligns by 2, whereas dividing by 3 would align by 3. -/
+def riscvByteAlignHOL {width : Nat} [NeZero width] (address : RiscV.Word width) :
+    RiscV.Word width :=
+  let bits := Nat.log2 (width / 8)
+  (address >>> bits) <<< bits
+
 /-- Width-generic exact port of HOL `mem_load_byte_aux_def`
     (`wordSemScript.sml:159`).  As in HOL, `memory` is a total
     `'a word -> 'a word_loc` map (Lean `LoopValue` is the `word_loc`
@@ -466,8 +479,7 @@ def memLoadByteAuxHOL {width : Nat} [NeZero width]
     (memory : RiscV.Word width → LoopValue (RiscV.Word width))
     (domain : RiscV.Word width → Prop) [DecidablePred domain]
     (bigEndian : Bool) (address : RiscV.Word width) : Option UInt8 :=
-  let bytesInWord : RiscV.Word width := BitVec.ofNat width (width / 8)
-  let aligned := RiscV.panRiscVByteAlign bytesInWord address
+  let aligned := riscvByteAlignHOL address
   match memory aligned with
   | .loc _ _ => none
   | .word value =>
@@ -497,8 +509,7 @@ def memStoreByteAuxHOL {width : Nat} [NeZero width]
     (bigEndian : Bool)
     (address : RiscV.Word width) (byte : UInt8) :
     Option (RiscV.Word width → LoopValue (RiscV.Word width)) :=
-  let bytesInWord : RiscV.Word width := BitVec.ofNat width (width / 8)
-  let aligned := RiscV.panRiscVByteAlign bytesInWord address
+  let aligned := riscvByteAlignHOL address
   match memory aligned with
   | .word value =>
       if domain aligned then

@@ -125,6 +125,19 @@ def writeBytearrayGuard : Bool :=
       (loopTotalMemory state) (loopTotalDomain state) state.be
   memory (8 : Word) == .word (0x2211 : Word)
 
+/-- HOL `byte_align_def` (`alignmentScript.sml:23`) is
+    `align (LOG2 (dimindex DIV 8))`: the low `LOG2 (width DIV 8)` bits are
+    cleared.  For width 24 (3 bytes) `LOG2 3 = 1`, so alignment rounds down to
+    a multiple of 2, not 3 (`5w ↦ 4w`, `3w ↦ 2w`); width 8 is a no-op; and for
+    width 64 `LOG2 8 = 3` agrees with `panRiscVByteAlign 8`. -/
+def byteAlignGuard : Bool :=
+  riscvByteAlignHOL (width := 24) (5 : RiscV.Word 24) == 4 &&
+  riscvByteAlignHOL (width := 24) (3 : RiscV.Word 24) == 2 &&
+  riscvByteAlignHOL (width := 8) (7 : RiscV.Word 8) == 7 &&
+  riscvByteAlignHOL (width := 64) (13 : RiscV.Word 64) == 8 &&
+  riscvByteAlignHOL (width := 64) (13 : RiscV.Word 64) ==
+      RiscV.panRiscVByteAlign (8 : RiscV.Word 64) 13
+
 #guard returnedGuard
 #guard finalGuard
 #guard missingLocalGuard
@@ -132,6 +145,7 @@ def writeBytearrayGuard : Bool :=
 #guard readBytearrayGuard
 #guard memStoreGuard
 #guard writeBytearrayGuard
+#guard byteAlignGuard
 
 def runChecks : IO Bool := do
   let returnedOk ←
@@ -183,7 +197,14 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL Loop width-generic write_bytearray byte-array writes"
       pure false
+  let byteAlignOk ←
+    if byteAlignGuard then
+      IO.println "PASS Loop byte_align matches HOL LOG2(width/8) alignment"
+      pure true
+    else
+      IO.println "FAIL Loop byte_align matches HOL LOG2(width/8) alignment"
+      pure false
   pure (returnedOk && finalOk && missingOk && memLoadOk && readBytearrayOk &&
-    memStoreOk && writeBytearrayOk)
+    memStoreOk && writeBytearrayOk && byteAlignOk)
 
 end Flapjack.Test.LoopFfiParity

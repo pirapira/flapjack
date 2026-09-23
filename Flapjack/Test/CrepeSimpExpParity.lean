@@ -103,16 +103,16 @@ def boolDimensionWord : Bool → Bool := id
 /-! Generic finite-dimension `dest_2exp` support is checked on Bool-indexed
     words, in addition to the existing BitVec fixture. These remain support
     instances under this explicit enumeration, not HOL tags. -/
-example : crepDest2Exp 0 boolDimensionWord = some 1 := by native_decide
+example : crepDest2Exp 0 boolDimensionWord = some 1 := by decide +kernel
 
 example : 1 < boolWordDimension.width :=
   crepDest2ExpHolFiniteDimension_lt_width boolWordDimension
-    boolDimensionWord 1 (by native_decide)
+    boolDimensionWord 1 (by decide +kernel)
 
 example : boolDimensionWord = ShiftLeft.shiftLeft (1 : Bool → Bool)
     (bitVecToHolWord boolWordDimension (BitVec.ofNat 2 1)) :=
   crepDest2ExpHolFiniteDimension_eq_shift boolWordDimension
-    boolDimensionWord 1 (by native_decide)
+    boolDimensionWord 1 (by decide +kernel)
 
 #guard wordOp .add [] == some (0 : Bool → Bool)
 #guard wordOp .and [] == some (Complement.complement (0 : Bool → Bool))

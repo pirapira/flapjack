@@ -912,6 +912,43 @@ def holFiniteWordRiscVMemoryModel {ι : Type u}
     (holWordToBitVec dimension)
     (RiscV.panRiscVMemoryModelForEndian bigEndian)
 
+/-! HOL `byte_align_def` clears the low bits selected by
+    `LOG2 (dimindex DIV 8)`. This differs from target rounding when a word has
+    a non-power-of-two number of bytes. -/
+def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
+  let alignment := 2 ^ Nat.log2 (width / 8)
+  BitVec.ofNat width ((address.toNat / alignment) * alignment)
+
+/-! Source-shaped finite-word memory adapter. It transports the target's byte
+    extraction, alignment predicate, and word-of-bytes operation through the
+    finite-word/BitVec equivalence, but replaces target byte-cell rounding with
+    HOL `byte_align`: `align (LOG2 (dimindex DIV 8))`. This distinction matters
+    when the number of bytes per word is not a power of two (for example, a
+    24-bit word). It is a first step toward a generic `crepSem$eval` model; the
+    remaining transported memory primitives still need direct HOL operation
+    correspondence before the evaluator can carry a HOL theorem tag. -/
+def holFiniteWordSourceByteAlign {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address : ι → Bool) : ι → Bool := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  exact bitVecToHolWord dimension
+    (holByteAlignBitVec (holWordToBitVec dimension address))
+
+def holFiniteWordSourceMemoryModel {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool) :
+    PanMemoryModel (ι → Bool) := by
+  let model := holFiniteWordRiscVMemoryModel dimension bigEndian
+  exact { model with byteAlign := fun _ address =>
+    holFiniteWordSourceByteAlign dimension address }
+
+/-- A load model with HOL's dimension-derived byte alignment and the existing
+    RISC-V byte extraction, alignment, and word-of-bytes operations. This is
+    only the first operation-level bridge: the remaining imported word
+    primitives still require a generic correspondence proof. -/
+def holByteAlignedRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
+    PanMemoryModel (RiscV.Word width) :=
+  let model := RiscV.panRiscVMemoryModelForEndian bigEndian
+  { model with byteAlign := fun _ address => holByteAlignBitVec address }
+
 def CrepHolState.toHolFiniteBitVecState {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) :

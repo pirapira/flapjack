@@ -133,6 +133,9 @@ run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.
 run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
   write_head write_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
+  empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -482,7 +485,7 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero max "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \

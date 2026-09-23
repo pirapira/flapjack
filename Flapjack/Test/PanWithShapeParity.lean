@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.Proofs.CrepInline
 
 /-!
 # Original-domain parity for `panLang$with_shape`

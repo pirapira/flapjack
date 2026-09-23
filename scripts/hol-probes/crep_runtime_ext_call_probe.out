@@ -1,0 +1,4 @@
+empty_name_identity=T
+return_matching_length=T
+return_length_mismatch=T
+oracle_diverged=T

@@ -299,6 +299,7 @@ def panSemCodeStateAfter (state : PanSemState α (FfiState σ))
   | (.control control, clock) =>
       match control with
       | .normal locals globals memory ffi
+      | .error locals globals memory ffi
       | .returned locals globals memory ffi _
       | .raised locals globals memory ffi _ _
       | .broke locals globals memory ffi
@@ -406,6 +407,184 @@ theorem panSemEvaluateCodeStateWithPostState_skip
   simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
     panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
     evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+
+/-! Exact HOL `evaluate_def` Assign equation
+    (`cakeml/pancake/semantics/panSemScript.sml:566-572`) over the production
+    source-state evaluator: the source expression is evaluated, the assignment
+    is accepted exactly when `is_valid_value` holds, and the accepted value is
+    written to the local or global map with the clock and every other state
+    component carried verbatim. When the source expression does not evaluate or
+    `is_valid_value` rejects the value, the result is an explicit `.error`
+    control result with the unchanged state, matching HOL's `(SOME Error, s)`
+    (distinct from Lean `none`, which now denotes a missing evaluation result).
+    This is an untagged boundary equation because
+    the structured result is reduced rather than HOL's `(prog_result, state)`
+    pair. -/
+theorem panSemEvaluateCodeStateWithFuel_assign
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (vk : VarKind) (name : VarName) (value : Exp α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.assign vk name value : Prog α) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value with
+      | some evaluated =>
+          if panValueAssignmentValid state.structs state.locals state.globals vk name evaluated then
+            match vk with
+            | .local =>
+                some ((.control (.normal (updatePanValueMap state.locals name evaluated)
+                    state.globals state.memory state.ffi), state.clock))
+            | .global =>
+                some ((.control (.normal state.locals
+                    (updatePanValueMap state.globals name evaluated)
+                    state.memory state.ffi), state.clock))
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value with
+  | none =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue]
+  | some evaluated =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue] <;>
+      split <;> simp
+
+/-- Production source-state `Dec` equation. When the initialiser evaluates to a
+    value whose shape matches the declared shape, the body runs with the
+    declaration bound in the local map and, on completion, the declared local is
+    restored to its previous binding; a shape mismatch or a failing initialiser
+    yields an explicit `Error` control result carrying the unchanged state
+    (`panSem`'s `(SOME Error, s)`), distinct from a missing `none` evaluation
+    result. The equation is stated over the explicit-fuel evaluator
+    because the recursive body call reuses the predecessor fuel, so it cannot be
+    phrased against the finite-map-derived entry point. This is an untagged
+    boundary equation because the structured result is reduced rather than HOL's
+    `(prog_result, state)` pair. Reference:
+    cakeml/pancake/semantics/panSemScript.sml:558-565 (`Dec`). -/
+theorem panSemEvaluateCodeStateWithFuel_dec
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.dec name shape value body : Prog α) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value with
+      | some evaluated =>
+          if panShapeMatches (panValueShape state.structs evaluated) shape then
+            (panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+                { state with
+                  locals := updatePanValueMap state.locals name evaluated } body).map
+              (fun result =>
+                (panValueFfiClockRestoreLocal name (state.locals name) result.1, result.2))
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value with
+  | none =>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        panValueDecAcceptedValue, hvalue]
+  | some evaluated =>
+      by_cases hshape : panShapeMatches (panValueShape state.structs evaluated) shape = true
+      · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+          panValueDecAcceptedValue, hvalue, hshape, Option.map_eq_bind]
+        rfl
+      · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+          panValueDecAcceptedValue, hvalue, hshape]
+
+/-- Production source-state `Primitive` equation. The argument expressions are
+    evaluated together; when they all succeed the primitive handler is applied
+    and, if the produced value has the same shape as the destination local's
+    current binding, that local is updated; any failure yields an explicit
+    `Error` control result carrying the unchanged state (`panSem`'s
+    `(SOME Error, s)`), distinct from a missing `none` evaluation result. This is
+    an untagged boundary equation because the structured result is reduced
+    rather than HOL's `(prog_result, state)` pair. Reference:
+    cakeml/pancake/semantics/panSemScript.sml:573-582 (`Primitive`). -/
+theorem panSemEvaluateCodeStateWithFuel_primitive
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (name : VarName) (operator : PrimOp) (arguments : List (Exp α)) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.primitive name operator arguments : Prog α) =
+      match evalPanValueExps state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord arguments with
+      | some values =>
+          match primitive operator values with
+          | some evaluated =>
+              match state.locals name with
+              | some oldValue =>
+                  if panShapeMatches (panValueShape state.structs evaluated)
+                      (panValueShape state.structs oldValue) then
+                    some ((.control (.normal
+                        (updatePanValueMap state.locals name evaluated)
+                        state.globals state.memory state.ffi), state.clock))
+                  else
+                    some ((.control (.error state.locals state.globals state.memory state.ffi),
+                      state.clock))
+              | none =>
+                  some ((.control (.error state.locals state.globals state.memory state.ffi),
+                    state.clock))
+          | none =>
+              some ((.control (.error state.locals state.globals state.memory state.ffi),
+                state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
+  cases hvalues : evalPanValueExps state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord arguments with
+  | none =>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+        evalPanValueExpsCounted, hvalues]
+  | some values =>
+      cases hprim : primitive operator values with
+      | none =>
+          simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+            evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+            evalPanValueExpsCounted, hvalues, hprim]
+      | some evaluated =>
+          cases hlocal : state.locals name with
+          | none =>
+              simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+                evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                evalPanValueExpsCounted, hvalues, hprim, hlocal]
+          | some oldValue =>
+              by_cases hshape : panShapeMatches (panValueShape state.structs evaluated)
+                  (panValueShape state.structs oldValue) = true
+              · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                  evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
+              · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+                  evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+                  evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
 
 /-!
   Exact source-memory entry point.

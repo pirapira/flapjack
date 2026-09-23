@@ -1,0 +1,9 @@
+prim_ok_result=NONE
+prim_ok_clock=5
+prim_ok_locals=SOME (RStruct [ValWord 3w; ValWord 0w])
+prim_fresh_invalid_result=SOME Error
+prim_arg_missing_result=SOME Error
+prim_fresh_invalid_locals=SOME (RStruct [ValWord 0w; ValWord 0w])
+prim_fresh_invalid_clock=5
+prim_arg_missing_locals=SOME (RStruct [ValWord 0w; ValWord 0w])
+prim_arg_missing_clock=5

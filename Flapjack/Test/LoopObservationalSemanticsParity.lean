@@ -24,7 +24,7 @@ def lprefixLubProbeCommand : String := "scripts/hol-probes/regenerate.sh"
 
 #guard lprefixLubProbeCommand == "scripts/hol-probes/regenerate.sh"
 
-def emptyState (clock : Nat) : LoopMachineState LoopWordLoc :=
+def emptyState (clock : Nat) : LoopMachineState Nat LoopWordLoc :=
   { locals := fun _ => none
     globals := fun _ => none
     memory := fun _ => none
@@ -33,11 +33,16 @@ def emptyState (clock : Nat) : LoopMachineState LoopWordLoc :=
     clock := clock
     code := []
     be := false
-    ffi := .word 0
-    baseAddr := .word 4
-    topAddr := .word 100 }
+    ffi := trivialFfiState LoopWordLoc (.word 0)
+    baseAddr := 4
+    topAddr := 100 }
 
-def noEvents : LoopMachineState LoopWordLoc → List FfiEvent := fun _ => []
+def noEvents : LoopMachineState Nat LoopWordLoc → List FfiEvent := fun _ => []
+
+/-- A representative fixed `final_event` (`ffiScript.sml:43`) for the
+    `FinalFFI` branch. -/
+def sampleFinalEvent : FfiFinalEvent :=
+  { name := .extCall "", configuration := [], bytes := [], outcome := .failed }
 
 def emptyLprefixLub : LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
   { trace := fun _ => none
@@ -112,10 +117,10 @@ def divergingEvaluate (_clock : Nat) : LoopMachineStep :=
   (some .timeOut, emptyState 0)
 
 def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
-  (some (.finalFfi (.word 9)), emptyState 0)
+  (some (.finalFfi sampleFinalEvent), emptyState 0)
 
 def observeStep (step : LoopMachineStep) :
-    Option (LoopMachineResult LoopWordLoc) × Nat :=
+    Option (LoopMachineResult Nat) × Nat :=
   (step.1, step.2.clock)
 
 def sourceClockParity : Bool :=
@@ -149,13 +154,13 @@ theorem successNoForbidden :
 
 theorem finalFfiBranch :
     loopHasSuccessfulRun (hooksFor finalFfiEvaluate) := by
-  refine ⟨0, some (.finalFfi (.word 9)), emptyState 0, .ffi .failed, ?_, ?_⟩
+  refine ⟨0, some (.finalFfi sampleFinalEvent), emptyState 0, .ffi .failed, ?_, ?_⟩
   · rfl
   · rfl
 
 theorem finalFfiOutcome :
     loopResultOutcome (hooksFor finalFfiEvaluate)
-        (some (.finalFfi (.word 9))) = some (.ffi .failed) := by
+        (some (.finalFfi sampleFinalEvent)) = some (.ffi .failed) := by
   rfl
 
 theorem finalFfiNoForbidden :

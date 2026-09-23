@@ -312,6 +312,33 @@ def errorGuard : Bool :=
   | (.error, _) => true
   | _ => false
 
+/-- The one-shot dispatch theorem on the four-local `wrapperBase` fixture. -/
+example :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget wrapperBase) "" (8 : RiscV.Word 64) 4
+        (8 : RiscV.Word 64) 4 =
+      (match riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4,
+             riscv64ReadByteArray wrapperBase (8 : RiscV.Word 64) 4 with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi wrapperBase.ffi (.extCall "") configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { wrapperBase with ffi := ffi }
+                  (8 : RiscV.Word 64) bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget wrapperBase))
+       | _, _ => (.error, riscv64CrepRuntimeTarget wrapperBase)) :=
+  crepRuntimeExtCallValues_target_dispatch_any wrapperBase "" (8 : RiscV.Word 64) 4
+    (8 : RiscV.Word 64) 4
+
+/-- Executes the one-shot production dispatch and checks the returned byte. -/
+def oneShotGuard : Bool :=
+  match crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+      (riscv64CrepRuntimeTarget wrapperBase) "" (8 : RiscV.Word 64) 4
+      (8 : RiscV.Word 64) 4 with
+  | (.normal, state) =>
+      RiscV.panRiscVReadByte state.memaddrs (crepRuntimeMemoryView state.memory)
+        (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64)
+  | _ => false
+
 def runChecks : IO Bool := do
   let checks := [
     ("Crep ExtCall dispatch follows source call_FFI and stateRel ffi update",
@@ -324,6 +351,8 @@ def runChecks : IO Bool := do
       finalGuard),
     ("Crep ExtCall four-local failing-read wrapper returns Error with stateRel",
       errorGuard),
+    ("Crep ExtCall one-shot production dispatch matches call_FFI shape",
+      oneShotGuard),
     ("Crep ExtCall failing-read branch returns Error with state unchanged", true)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

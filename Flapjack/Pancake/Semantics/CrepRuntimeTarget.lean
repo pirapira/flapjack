@@ -726,6 +726,43 @@ theorem crepRuntimeExtCallValues_target_dispatch
         arrayBytes hc ha event (by
           rw [riscv64ExtCallCallFfiHandler_extCall, hres])
 
+/-- One-shot canonical-target dispatch of `crepRuntimeExtCallValues`: the whole
+    production `ExtCall` step equals a `call_FFI`-shaped relation on the
+    canonical target, covering every branch.  When either argument read fails the
+    step returns `Error`; otherwise it case-splits on the Lean `callFfi` (HOL
+    `call_FFI`) result: `FFI_return` writes the returned bytes back and installs
+    the returned ffi (`Normal`), while `FFI_final` returns `FinalFFI` with the
+    target state unchanged.  This is a single statement with no target-run or
+    post-state premises, so it can be composed with a source-side `call_FFI`
+    relation directly. -/
+theorem crepRuntimeExtCallValues_target_dispatch_any
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match riscv64ReadByteArray base configuration configurationLength.toNat,
+             riscv64ReadByteArray base array arrayLength.toNat with
+       | some configurationBytes, some arrayBytes =>
+           (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+            | .returned ffi bytes =>
+                (.normal, riscv64WriteState { base with ffi := ffi } array bytes)
+            | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base))
+       | _, _ => (.error, riscv64CrepRuntimeTarget base)) := by
+  cases hc : riscv64ReadByteArray base configuration configurationLength.toNat with
+  | none =>
+      exact crepRuntimeExtCallValues_target_error base function configuration
+        configurationLength array arrayLength (Or.inl hc)
+  | some configurationBytes =>
+      cases ha : riscv64ReadByteArray base array arrayLength.toNat with
+      | none =>
+          exact crepRuntimeExtCallValues_target_error base function configuration
+            configurationLength array arrayLength (Or.inr ha)
+      | some arrayBytes =>
+          exact crepRuntimeExtCallValues_target_dispatch base function
+            configuration configurationLength array arrayLength configurationBytes
+            arrayBytes hc ha
+
 /-! ## Post-write-back memory correspondence
 
 HOL `write_bytearray` updates the source `word_lab` memory by storing each

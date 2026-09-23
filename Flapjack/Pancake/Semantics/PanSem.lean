@@ -357,6 +357,34 @@ theorem panSemEvaluateCodeStateWithPostState_eq_map
       (memoryHandler := memoryHandler) <;>
     simp [panSemEvaluateCodeStateWithPostState, hresult]
 
+/-! Exact HOL `evaluate_def` Tick equation
+    (`cakeml/pancake/semantics/panSemScript.sml:683-685`) over the production
+    source-state evaluator: at clock zero the result is `TimeOut` with cleared
+    locals, otherwise `NONE` with the clock decremented and every other state
+    component preserved. This is an untagged boundary equation because the
+    structured result is reduced rather than HOL's `(prog_result, state)` pair. -/
+theorem panSemEvaluateCodeStateWithPostState_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.tick : Prog α) =
+      if state.clock = 0 then
+        some ((.timeout (fun _ => none) state.globals state.memory state.ffi, 0),
+          { state with locals := fun _ => none })
+      else
+        some ((.control (.normal state.locals state.globals state.memory state.ffi),
+            state.clock - 1),
+          { state with clock := state.clock - 1 }) := by
+  by_cases hclock : state.clock = 0 <;>
+    simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+      panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+      panValueFfiClockTimeout, evalPanValueFfiClockCodeProg, hclock]
+
 /-!
   Exact source-memory entry point.
 

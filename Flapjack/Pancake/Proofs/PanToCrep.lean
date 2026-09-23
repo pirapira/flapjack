@@ -506,6 +506,35 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
   exact hglobals
 
+/-- Flapjack-specific bridge for the target memory representation.  HOL
+    `crepSem$state.memory` is a *total* `word -> word_lab` function
+    (`cakeml/pancake/semantics/crepSemScript.sml:24-26`) guarded by the separate
+    `memaddrs` set; the executable `CrepRuntimeState.memory` stores absence in an
+    `Option`.  The relation records the HOL view on every address the guard
+    accepts, so no `word_lab` cell is silently dropped.  It is the target-side
+    hypothesis of the `mem_load_def` correspondence below. -/
+def crepMemoryRel (state : CrepRuntimeState α σ) (total : α → PanWordLab α) : Prop :=
+  ∀ address, state.memaddrs address = true →
+    state.memory address = some (panTheWord (total address))
+
+/-- First branch of HOL `mem_load_def`
+    (`cakeml/pancake/semantics/crepSemScript.sml:48-51`): a load at an address in
+    `memaddrs` returns the total memory cell, reconstructed as a `word_lab`. -/
+theorem crepRuntimeLoad_eq_some_of_crepMemoryRel {state : CrepRuntimeState α σ}
+    {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
+    (hvalid : state.memaddrs address = true) :
+    crepRuntimeLoad state address = some (panTheWord (total address)) := by
+  rw [crepRuntimeLoad]
+  simp [hvalid, hrel address hvalid]
+
+/-- Second branch of HOL `mem_load_def`: an address outside `memaddrs` has no
+    loadable cell. -/
+theorem crepRuntimeLoad_eq_none_of_memaddrs_false {state : CrepRuntimeState α σ}
+    {address : α} (hinvalid : state.memaddrs address = false) :
+    crepRuntimeLoad state address = none := by
+  rw [crepRuntimeLoad]
+  simp [hinvalid]
+
 /-- HOL `locals_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:71`):
     the proof context's variable map is well formed, and every live source
     variable is recovered in the target locals by mapping its slot list through

@@ -27,6 +27,15 @@ The list-valued helpers `opt_mmap_some_eq_zip_flookup` and
 `opt_mmap_disj_zip_flookup` (`pan_commonPropsScript.sml:170`, `:188`) are the
 ones consumed by `local_rel_le_zip_update_preserved`
 (`pan_to_crepProofScript.sml:2263`).
+
+Provenance convention: the lemmas below cite the CakeML/HOL declaration they are
+modelled after, but they are Flapjack-specific analogues, not exact HOL ports,
+and therefore carry no `@[hol]` tag.  They are stated over this repository's
+extensional `α → Option β` finite-map representation with Boolean `BEq`,
+whereas the HOL originals are stated over `finite_map`'s `FLOOKUP` object; where
+an exact port exists it is tagged and placed in the corresponding proof module
+(for example the tagged `locals_rel_def` over the finite-map context lives in
+`Flapjack/Pancake/Proofs/PanToCrep.lean`).
 -/
 
 namespace Flapjack
@@ -48,8 +57,10 @@ theorem FUPDATE_comm [BEq α] [LawfulBEq α] (f : FiniteMap α β)
     have h2f : (k2 == key) = false := beq_eq_false_iff_ne.mpr (fun he => hk2 he.symm)
     by_cases h1 : k1 == key <;> simp [h2f, h1]
 
-/-- Cake `FUPDATE_FUPDATE_LIST_COMMUTES`: a single update at a key absent from
-the update list commutes with the whole list update. -/
+/-- Flapjack-specific analogue of Cake `FUPDATE_FUPDATE_LIST_COMMUTES` (not an
+exact HOL port, since it is proved over this file's extensional representation):
+a single update at a key absent from the update list commutes with the whole
+list update. -/
 theorem FUPDATE_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
     (f : FiniteMap α β) (k : α) (v : β) (entries : List (α × β))
     (h : k ∉ entries.map Prod.fst) :
@@ -70,7 +81,8 @@ theorem FUPDATE_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
     rw [FUPDATE_comm f entry.1 entry.2 k v hk]
 
 /-- `mapM` congruence: pointwise-equal maps on the elements of a list give the
-same `OPT_MMAP` result. -/
+same `OPT_MMAP` result.  Flapjack-specific proof infrastructure; no exact HOL
+counterpart. -/
 theorem list_mapM_congr {α β : Type} (g h : α → Option β) (xs : List α)
     (hgh : ∀ x, x ∈ xs → g x = h x) : xs.mapM g = xs.mapM h := by
   induction xs with
@@ -78,9 +90,11 @@ theorem list_mapM_congr {α β : Type} (g h : α → Option β) (xs : List α)
   | cons x xs ih =>
     rw [List.mapM_cons, List.mapM_cons, hgh x (by simp), ih (fun y hy => hgh y (by simp [hy]))]
 
-/-- Cake `opt_mmap_some_eq_zip_flookup` (`pan_commonPropsScript.sml:170`):
-folding the `(key,value)` list over a finite map makes every key look up its
-paired value, provided the key list is duplicate-free and lengths agree. -/
+/-- Flapjack-specific analogue of Cake `opt_mmap_some_eq_zip_flookup`
+(`pan_commonPropsScript.sml:170`), not an exact HOL port: it uses this file's
+extensional map with Boolean `BEq`.  Folding the `(key,value)` list over a finite
+map makes every key look up its paired value, provided the key list is
+duplicate-free and lengths agree. -/
 theorem opt_mmap_some_eq_zip_flookup [BEq α] [LawfulBEq α]
     (xs : List α) (f : FiniteMap α β) (ys : List β)
     (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
@@ -113,9 +127,9 @@ theorem opt_mmap_some_eq_zip_flookup [BEq α] [LawfulBEq α]
       rw [hhead, htail]
       rfl
 
-/-- Cake `opt_mmap_disj_zip_flookup` (`pan_commonPropsScript.sml:188`): if the
-updated keys are disjoint from the queried keys, the list update is invisible
-to the query. -/
+/-- Flapjack-specific analogue of Cake `opt_mmap_disj_zip_flookup`
+(`pan_commonPropsScript.sml:188`), not an exact HOL port: if the updated keys are
+disjoint from the queried keys, the list update is invisible to the query. -/
 theorem opt_mmap_disj_zip_flookup [BEq α] [LawfulBEq α]
     (xs : List α) (f : FiniteMap α β) (ys : List α) (zs : List β)
     (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
@@ -147,13 +161,17 @@ theorem opt_mmap_disj_zip_flookup [BEq α] [LawfulBEq α]
         exact hxnot (he ▸ hkey)
       simp [hkx]
 
-/-- Cake `locals_rel_def` (`pan_to_crepProofScript.sml:71`) port.  The source
-locals are keyed by variable name and the target locals by word address; the
-relation records that every live variable's flattened word list is recoverable
-from the target map through its slot list.  `vars` is the alist representation
-of `ctxt.vars` (looked up with `lookupInfo`, the Flapjack `FLOOKUP` on the
-context). -/
-def localsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
+/-- Flapjack-specific executable surrogate for Cake `locals_rel_def`
+(`pan_to_crepProofScript.sml:71`).  The source locals are keyed by variable name
+and the target locals by word address; the relation records that every live
+variable's flattened word list is recoverable from the target map through its
+slot list.  `vars` is the alist representation of `ctxt.vars` (looked up with
+`lookupInfo`, the Flapjack `FLOOKUP` on the context).
+
+This list-backed variant is not the reviewed finite-map HOL port; the exact
+`@[hol]`-tagged `locals_rel_def` over `PanToCrepProofContext` lives in
+`Flapjack/Pancake/Proofs/PanToCrep.lean`. -/
+def executableLocalsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (sLocals : FiniteMap String (PanValue α))
     (tLocals : FiniteMap Nat α) : Prop :=
   panValueNoOverlap vars ∧ panValueCtxtMax vmax vars ∧
@@ -162,12 +180,17 @@ def localsRel [BEq String] (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
         ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
         isWfShape [] (panValueShape [] v) = true
 
-/-- Cake `locals_rel_lookup_ctxt` (`pan_to_crepProofScript.sml:527`). -/
-theorem localsRel_lookup_ctxt [BEq String]
+/-- Flapjack-specific alist analogue of Cake `locals_rel_lookup_ctxt`
+(`pan_to_crepProofScript.sml:527`); not the HOL port.  The exact `@[hol]`-tagged
+`locals_rel_def`/`ctxt_max`/`no_overlap` ports are stated over the finite-map
+context in `Flapjack/Pancake/Proofs/PanToCrep.lean` and
+`Flapjack/Pancake/Semantics/PanCommonProps.lean`; this lemma works with the
+list-backed `executableLocalsRel`. -/
+theorem executableLocalsRel_lookup_ctxt [BEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (sLocals : FiniteMap String (PanValue α)) (tLocals : FiniteMap Nat α)
     (vr : String) (v : PanValue α)
-    (hrel : localsRel vars vmax sLocals tLocals)
+    (hrel : executableLocalsRel vars vmax sLocals tLocals)
     (hlookup : FLOOKUP sLocals vr = some v) :
     ∃ ns, lookupInfo vr vars = some (panValueShape [] v, ns) ∧
       ns.length = (panValueFlatten v).length ∧
@@ -180,45 +203,49 @@ theorem localsRel_lookup_ctxt [BEq String]
   · rw [hflat]
     exact hmap
 
-/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`),
-source-map-empty generalization: any context map that satisfies `no_overlap`
-and `ctxt_max` is related to an arbitrary target locals map when the source
-locals map is `FEMPTY` (the third conjunct is vacuous). -/
-theorem localsRel_of_empty_source [BEq String]
+/-- Flapjack-specific alist analogue of Cake `mk_ctxt_imp_locals_rel`
+(`pan_to_crepProofScript.sml:4677`); not an exact HOL port, because the context
+and relation here are the list-backed surrogates.  Source-map-empty
+generalization: any context map that satisfies `no_overlap` and `ctxt_max` is
+related to an arbitrary target locals map when the source locals map is
+`FEMPTY` (the third conjunct is vacuous). -/
+theorem executableLocalsRel_of_empty_source [BEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (tLocals : FiniteMap Nat α)
     (hnooverlap : panValueNoOverlap vars)
     (hmax : panValueCtxtMax vmax vars) :
-    localsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
+    executableLocalsRel vars vmax (FEMPTY : FiniteMap String (PanValue α)) tLocals := by
   refine ⟨hnooverlap, hmax, ?_⟩
   intro vname v hlookup
   simp [FLOOKUP_empty] at hlookup
 
-/-- Cake `mk_ctxt_imp_locals_rel` (`pan_to_crepProofScript.sml:4677`) at the
-empty context `mk_ctxt FEMPTY (make_funcs pc) 0 es`: the empty variable map
-satisfies `no_overlap` and `ctxt_max`, and the source locals map is empty. -/
-theorem localsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
-    localsRel ([] : InfoMap (Shape × List Nat)) vmax
+/-- Flapjack-specific alist analogue of Cake `mk_ctxt_imp_locals_rel`
+(`pan_to_crepProofScript.sml:4677`); not an exact HOL port.  At the empty
+context `mk_ctxt FEMPTY (make_funcs pc) 0 es`: the empty variable map satisfies
+`no_overlap` and `ctxt_max`, and the source locals map is empty. -/
+theorem executableLocalsRel_empty [BEq String] (vmax : Nat) (tLocals : FiniteMap Nat α) :
+    executableLocalsRel ([] : InfoMap (Shape × List Nat)) vmax
       (FEMPTY : FiniteMap String (PanValue α)) tLocals :=
-  localsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
+  executableLocalsRel_of_empty_source [] vmax tLocals panValueNoOverlap_empty
     (panValueCtxtMax_empty vmax (Nat.zero_le vmax))
 
-/-- Cake `local_rel_le_zip_update_preserved`
-(`pan_to_crepProofScript.sml:2263`): overwriting a variable with a
-shape-compatible value and refreshing the target map through the variable's
-slot list preserves the locals relation. -/
+/-- Flapjack-specific alist analogue of Cake `local_rel_le_zip_update_preserved`
+(`pan_to_crepProofScript.sml:2263`); not an exact HOL port, since it is stated
+over `executableLocalsRel` and the list-backed context.  Overwriting a variable
+with a shape-compatible value and refreshing the target map through the
+variable's slot list preserves the locals relation. -/
 theorem localRel_le_zip_update_preserved [BEq String] [LawfulBEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (l : FiniteMap String (PanValue α)) (l' : FiniteMap Nat α)
     (x : String) (v v' : PanValue α) (sh : Shape) (ns : List Nat)
-    (hrel : localsRel vars vmax l l')
+    (hrel : executableLocalsRel vars vmax l l')
     (hlookup : FLOOKUP l x = some v)
     (hctxt : lookupInfo x vars = some (sh, ns))
     (hshape : panValueShape [] v = panValueShape [] v')
     (hdistinct : ns.Nodup) :
-    localsRel vars vmax (FUPDATE l (x, v'))
+    executableLocalsRel vars vmax (FUPDATE l (x, v'))
       (FUPDATE_LIST l' (ns.zip (panValueFlatten v'))) := by
-  obtain ⟨hns, hnsctxt0, hnslen0, _hnsmap, hnswf⟩ := localsRel_lookup_ctxt vars vmax l l' x v hrel hlookup
+  obtain ⟨hns, hnsctxt0, hnslen0, _hnsmap, hnswf⟩ := executableLocalsRel_lookup_ctxt vars vmax l l' x v hrel hlookup
   have heq : (panValueShape [] v, hns) = (sh, ns) := by
     apply Option.some.inj
     rw [← hnsctxt0, hctxt]
@@ -261,21 +288,23 @@ theorem localRel_le_zip_update_preserved [BEq String] [LawfulBEq String]
     rw [opt_mmap_disj_zip_flookup ns l' ns'' (panValueFlatten v') hdisj hlen']
     exact hmap''
 
-/-- Cake `locals_rel_extend_new_var` (`pan_to_crepProofScript.sml:4179`):
-extending the source and target locals with a fresh variable whose slot list is
-duplicate-free, bounded above the old context and below the new context bound,
-and length-matched to the flattened value, preserves the locals relation. -/
-theorem localsRel_extend_new_var [BEq String] [LawfulBEq String]
+/-- Flapjack-specific alist analogue of Cake `locals_rel_extend_new_var`
+(`pan_to_crepProofScript.sml:4179`); not an exact HOL port, since it is stated
+over `executableLocalsRel` and the list-backed context.  Extending the source and
+target locals with a fresh variable whose slot list is duplicate-free, bounded
+above the old context and below the new context bound, and length-matched to the
+flattened value, preserves the locals relation. -/
+theorem executableLocalsRel_extend_new_var [BEq String] [LawfulBEq String]
     (vars : InfoMap (Shape × List Nat)) (vmax : Nat)
     (l : FiniteMap String (PanValue α)) (l' : FiniteMap Nat α)
     (x : String) (v : PanValue α) (ns : List Nat)
-    (hrel : localsRel vars vmax l l')
+    (hrel : executableLocalsRel vars vmax l l')
     (hwf : isWfShape [] (panValueShape [] v) = true)
     (hdistinct : ns.Nodup)
     (hbounds : ∀ slot ∈ ns,
       vmax < slot ∧ slot ≤ vmax + Shape.shapeSize (panValueShape [] v))
     (hlen : ns.length = Shape.shapeSize (panValueShape [] v)) :
-    localsRel ((x, (panValueShape [] v, ns)) :: vars)
+    executableLocalsRel ((x, (panValueShape [] v, ns)) :: vars)
       (vmax + Shape.shapeSize (panValueShape [] v))
       (FUPDATE l (x, v)) (FUPDATE_LIST l' (ns.zip (panValueFlatten v))) := by
   have hlenFlat : ns.length = (panValueFlatten v).length := by
@@ -322,13 +351,16 @@ theorem localsRel_extend_new_var [BEq String] [LawfulBEq String]
 
 /-! ### Domain subtraction and Cake's `res_var` -/
 
-/-- Counterpart of HOL4's `\\` (domain subtraction) on finite maps:
-    `FDOMSUB f key` removes `key` from the domain of `f`. -/
+/-- Flapjack-specific counterpart of HOL4's `\\` (domain subtraction) on finite
+maps, not an exact HOL port: `FDOMSUB f key` removes `key` from the domain of
+`f`. -/
 def FDOMSUB [BEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
   fun k => if key == k then none else f k
 
-/-- Counterpart of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
-    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`. -/
+/-- Flapjack-specific analogue of Cake's `res_var_def`
+(cakeml/pancake/semantics/crepSemScript.sml:163); not an exact HOL port, since it
+is implemented with this file's Boolean `BEq`: `res_var lc (n, NONE) = lc \\ n`
+and `res_var lc (n, SOME v) = lc |+ (n,v)`. -/
 def resVar [BEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
   match entry.2 with
   | none => FDOMSUB f entry.1
@@ -372,8 +404,9 @@ theorem FDOMSUB_commutes [BEq α] [LawfulBEq α] (f : FiniteMap α β) (n m : α
       simp only [hnk, if_true, hmk, Bool.false_eq_true, if_false]
     · simp only [hmn, hnk, Bool.false_eq_true, if_false]
 
-/-- Counterpart of Cake's `flookup_res_var_thm` (crepPropsScript.sml:257),
-    stated with the Boolean equality that `resVar` is implemented with. -/
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_thm`
+(crepPropsScript.sml:257), not an exact HOL port: it is stated with the Boolean
+equality that `resVar` is implemented with. -/
 theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
     (v : Option β) :
     FLOOKUP (resVar f (m, v)) n = if n == m then v else FLOOKUP f n := by
@@ -403,7 +436,9 @@ theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
         exact h (beq_iff_eq.mpr hc.symm)
       simp only [hm, Bool.false_eq_true, if_false, h]
 
-/-- Counterpart of Cake's `flookup_res_var_diff_eq` (crepPropsScript.sml:249). -/
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_diff_eq`
+(crepPropsScript.sml:249); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
 theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
     (v : β) (h : n ≠ m) : FLOOKUP (resVar f (m, some v)) n = FLOOKUP f n := by
   rw [FLOOKUP_resVar]
@@ -412,7 +447,9 @@ theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m 
     exact h
   simp only [hb, Bool.false_eq_true, if_false]
 
-/-- Counterpart of Cake's `res_var_commutes` (crepPropsScript.sml:234). -/
+/-- Flapjack-specific analogue of Cake's `res_var_commutes`
+(crepPropsScript.sml:234); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
 theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h : α)
     (hne : n ≠ h) :
     resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
@@ -435,8 +472,10 @@ theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h 
       simp only [resVar]
       rw [FUPDATE_comm lc h vh n vn hne.symm]
 
-/-- Counterpart of Cake's `flookup_res_var_distinct_eq` (crepPropsScript.sml:763):
-folding `res_var` over a list whose keys do not contain `x` leaves `x` untouched. -/
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_eq`
+(crepPropsScript.sml:763); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over a list whose keys do not contain `x`
+leaves `x` untouched. -/
 theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
     (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
     (h : x ∉ xs.map Prod.fst) :
@@ -450,8 +489,9 @@ theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
     have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
     simp [hfalse]
 
-/-- Counterpart of Cake's `flookup_res_var_distinct_zip_eq` (crepPropsScript.sml:777):
-the zipped form of `FLOOKUP_foldl_resVar_not_mem`. -/
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_zip_eq`
+(crepPropsScript.sml:777); not an exact HOL port: the zipped form of
+`FLOOKUP_foldl_resVar_not_mem`. -/
 theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
     (hlen : xs.length = ys.length) (h : x ∉ xs) :
@@ -460,8 +500,9 @@ theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
   rw [List.map_fst_zip (by omega)]
   exact h
 
-/-- Counterpart of Cake's `flookup_res_var_distinct` (crepPropsScript.sml:796):
-looking up a key list disjoint from the updated key list is unaffected by the fold. -/
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct`
+(crepPropsScript.sml:796); not an exact HOL port: looking up a key list disjoint
+from the updated key list is unaffected by the fold. -/
 theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
     (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
@@ -511,8 +552,10 @@ theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
   rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
   exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
 
-/-- Cake `domsub_commutes_fupdate` (pan_commonPropsScript.sml:319): domain
-subtraction at a key absent from the update list commutes with the list update. -/
+/-- Flapjack-specific analogue of Cake `domsub_commutes_fupdate`
+(pan_commonPropsScript.sml:319); not an exact HOL port, since it is stated over
+the Boolean-`BEq` `FDOMSUB`: domain subtraction at a key absent from the update
+list commutes with the list update. -/
 theorem FDOMSUB_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List β) (fm : FiniteMap α β) (x : α)
     (h : x ∉ xs) (hlen : xs.length = ys.length) :
@@ -539,8 +582,9 @@ theorem FDOMSUB_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
       rw [FDOMSUB_FUPDATE_neq fm x a y hne]
       rw [FUPDATE_LIST_cons]
 
-/-- Cake `update_eq_zip_flookup` (pan_commonPropsScript.sml:244): a key occurring
-in a distinct key list looks up its paired value in the updated map. -/
+/-- Flapjack-specific analogue of Cake `update_eq_zip_flookup`
+(pan_commonPropsScript.sml:244); not an exact HOL port: a key occurring in a
+distinct key list looks up its paired value in the updated map. -/
 theorem FLOOKUP_FUPDATE_LIST_zip_getElem [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List β) (f : FiniteMap α β) (n : Nat)
     (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) (hn : n < xs.length) :
@@ -611,9 +655,10 @@ theorem FUPDATE_FUPDATE_same [BEq α] [LawfulBEq α]
   · simp only [FUPDATE, hk, if_true]
   · simp only [FUPDATE, hk, Bool.false_eq_true, if_false]
 
-/-- Cake `res_var_lookup_original_eq` (crepPropsScript.sml:612): folding `res_var`
-over the `ZIP` of a distinct key list with its values, restoring each key's
-original binding, reproduces the original map. -/
+/-- Flapjack-specific analogue of Cake `res_var_lookup_original_eq`
+(crepPropsScript.sml:612); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over the `ZIP` of a distinct key list with its
+values, restoring each key's original binding, reproduces the original map. -/
 theorem foldl_resVar_zip_lookup_original [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List β) (lc : FiniteMap α β)
     (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :

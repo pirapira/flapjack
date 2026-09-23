@@ -315,6 +315,36 @@ def pipelineCrepeContext [BEq α] [Add α]
     maxVar := 0
     bytesInWord := bytesInWord }
 
+def pipelineCrepeCompileContext [BEq α] [Add α]
+    (fromNat : Nat → α) (program : GlobalCompiledProgram α) :
+    PanToCrepCompileContext α :=
+  { vars := []
+    functions := []
+    exceptions := crepGetEidsFromDecls fromNat program.declarations
+    maxVar := 0 }
+
+/-- The executed RV64 compiler context obtains Cake's fixed byte width from
+    the word type, not a caller-controlled field. -/
+theorem pipelineCrepeCompileContext_riscv64
+    (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64)) :
+    (pipelineCrepeCompileContext fromNat program).toExecutable.bytesInWord =
+      CrepBytesInWord.bytesInWord := rfl
+
+/-- The production RV64 context lowers a structured load at Cake's fixed
+    byte stride. -/
+theorem compileExp_load_pipelineRiscv64
+    (fromNat : Nat → BitVec 64) (program : GlobalCompiledProgram (BitVec 64))
+    (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
+    (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
+    (hcompile : compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
+      expression = (head :: rest, shape')) :
+    (compileExp ((pipelineCrepeCompileContext fromNat program).toExecutable)
+        (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head :=
+  compileExp_load_riscv64 _
+    (by rfl)
+    shape expression head rest shape' hcompile
+
 /-! Source-named ports of CakeML Pancake's `first_name_def` and
     `make_funcs_def` (`crep_to_loopScript.sml:243-255`).  The executable
     pipeline also needs a caller-selected label base when runtime sections
@@ -649,8 +679,8 @@ def compileFlapjackEntryCake [BEq (BitVec width)] [OfNat (BitVec width) 0]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrep crepeContext cakeDeclarations
+      let crepeContext := pipelineCrepeCompileContext fromNat globals
+      let compiled := compileToCrepFixed crepeContext cakeDeclarations
       let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames cakeDeclarations) compiled)
       let loop := pipelineLoopFunctionsSource architecture 1 crepe

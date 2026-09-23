@@ -21,6 +21,23 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
+/-! The HOL `ctxt` shape used by `compile_def`: it has the variable, function,
+    and exception maps plus `vmax`. The machine byte width comes from the word
+    type (`CrepBytesInWord`), not a caller-provided context field. -/
+structure PanToCrepCompileContext (α : Type u) where
+  vars : InfoMap (Shape × List Nat)
+  functions : InfoMap (List (VarName × Shape) × Shape)
+  exceptions : InfoMap α
+  maxVar : Nat
+
+def PanToCrepCompileContext.toExecutable [CrepBytesInWord α]
+    (context : PanToCrepCompileContext α) : CompileContext α :=
+  { vars := context.vars
+    functions := context.functions
+    exceptions := context.exceptions
+    maxVar := context.maxVar
+    bytesInWord := CrepBytesInWord.bytesInWord }
+
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
 def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
   | [] => some []
@@ -285,5 +302,21 @@ theorem compileExp_load_eq_loadShapeBytes [BEq α] [OfNat α 0] [Add α]
   rw [compileExp]
   simp only [hcompile]
   rw [loadShape_eq_loadShapeBytes_of_stride_eq _ _ _ _ hbytes]
+
+/-- The executable RV64 entry point supplies `riscv64BytesInWord` as the context's
+    `bytesInWord` (`Flapjack.compileMain`), so the production `.load` lowering is
+    exactly Cake's fixed-stride `load_shape`.  This discharges the `hbytes`
+    invariant of `compileExp_load_eq_loadShapeBytes` at the value the executable
+    path actually uses, rather than in a hand-built test context. -/
+theorem compileExp_load_riscv64
+    (context : CompileContext (BitVec 64))
+    (hbytes : context.bytesInWord = riscv64BytesInWord)
+    (shape : Shape) (expression : Exp (BitVec 64)) (head : CrepExp (BitVec 64))
+    (rest : List (CrepExp (BitVec 64))) (shape' : Shape)
+    (hcompile : compileExp context expression = (head :: rest, shape')) :
+    (compileExp context (.load shape expression)).1 =
+      loadShapeBytes 0 (Shape.shapeSize shape) head :=
+  compileExp_load_eq_loadShapeBytes context (by rw [hbytes, riscv64BytesInWord_eq])
+    shape expression head rest shape' hcompile
 
 end Flapjack

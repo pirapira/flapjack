@@ -1,6 +1,9 @@
 import Flapjack.FiniteMap
 import Flapjack.HolRef
+import Flapjack.PanBst
 import Flapjack.PanLocalised
+import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.PanToCrepMaxList
 
@@ -47,6 +50,54 @@ def ctxtFc
     funcs := compilerFunctions
     eids := exceptionCodes
     vmax := maxList names }
+
+/-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
+    The source Pancake state and target Crepe state agree on their memory
+    domains, clock, endianness, FFI state, and address bounds; the source has
+    no struct context (`s.structs = []`) and no globals (`s.globals = FEMPTY`).
+    `word_lab` is a single-constructor type, so the target's raw word cells
+    reconstruct the source `PanValue` cells with `PanValue.word`; a source cell
+    that stored a structure could not be recovered from the target memory and
+    therefore does not satisfy the relation. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_def"]
+def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : Prop :=
+  s.memory = (fun address => (t.memory address).map PanValue.word) ∧
+    s.memaddrs = t.memaddrs ∧
+    s.sharedMemaddrs = t.shMemaddrs ∧ s.structs = [] ∧
+    s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) ∧
+    s.clock = t.clock ∧ s.be = t.bigEndian ∧ s.ffi = t.ffi ∧
+    s.baseAddress = t.baseAddress ∧ s.topAddress = t.topAddress
+
+/-- HOL `state_rel_structs[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:54`). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_structs"]
+theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
+    (hrel : stateRel s t) : s.structs = [] := by
+  rcases hrel with ⟨_, _, _, hstructs, _, _, _, _, _, _⟩
+  exact hstructs
+
+/-- HOL `state_rel_globals[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:55`). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_globals"]
+theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
+    (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
+  rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
+  exact hglobals
+
+/-- HOL `locals_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:71`):
+    the proof context's variable map is well formed, and every live source
+    variable is recovered in the target locals by mapping its slot list through
+    the target map, with the flattened value equal to the produced word list and
+    the variable's shape well formed against the empty struct context. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_def"]
+def localsRel (context : PanToCrepProofContext α)
+    (sLocals : FiniteMap String (PanValue α))
+    (tLocals : FiniteMap Nat α) : Prop :=
+  noOverlap context.vars ∧ ctxtMax context.vmax context.vars ∧
+    ∀ vname v, FLOOKUP sLocals vname = some v →
+      ∃ ns vs, FLOOKUP context.vars vname = some (panValueShape [] v, ns) ∧
+        ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
+        isWfShape [] (panValueShape [] v) = true
 
 /-! Finite-map lookups needed by the extracted compiler are represented in its
 list-backed executable context.  Repeated keys are harmless: every projected
@@ -100,23 +151,23 @@ def callVarsUsedByProg : Prog α → List VarName
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def compileCodeRelContext [BEq String] [OfNat α 8] (context : PanToCrepProofContext α)
-    (program : Prog α) : CompileContext α :=
+def compileCodeRelContext [BEq String] (context : PanToCrepProofContext α)
+    (program : Prog α) : PanToCrepCompileContext α :=
   { vars := projectFiniteMapToInfoMap
       (freeVarIds program ++ callVarsUsedByProg program) context.vars
     functions := projectFiniteMapToInfoMap (functionsUsedByProg program) context.funcs
     exceptions := projectFiniteMapToInfoMap (expIds program) context.eids
-    maxVar := context.vmax
-    bytesInWord := 8 }
+    maxVar := context.vmax }
 
 /-! Execute the Pan-to-Crep compiler with the HOL proof context. The map
 projection is limited to names syntactically queried by `compileProg`, and the
-word stride is the fixed RISC-V byte width (`byte$bytes_in_word`), not a
-caller-provided context field. -/
-def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
+word stride comes from the fixed `CrepBytesInWord` instance, not a context
+field. -/
+def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
     [BEq String] (context : PanToCrepProofContext α) (program : Prog α) :
     CrepProg α :=
-  compileProg (compileCodeRelContext context program) program
+  compileProgFixed (compileCodeRelContext context program) program
 
 /-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
     It quantifies over every source code entry, requires localisation and the
@@ -128,7 +179,8 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
     `compileProg` adapter. The source HOL definition concludes with exact HOL
     `compile`, whose fixed byte-width behavior is tracked separately by bead
     `flapjack-pxn.18.3.1.4`. -/
-def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 8] [Add α]
+def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
     [BEq String]
     (context : PanToCrepProofContext α)
     (sourceCode : FiniteMap FunName

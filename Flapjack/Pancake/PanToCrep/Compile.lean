@@ -383,6 +383,15 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
 termination_by structural program
 
+/-! The fixed-width compiler entrypoint for the HOL `ctxt` shape. This
+    accepts no byte-width value; load and Store lowering use the word-type
+    `CrepBytesInWord` instance. The older `compileProg` remains available for
+    analyses that deliberately model a caller-chosen stride. -/
+def compileProgFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepCompileContext α)
+    (program : Prog α) : CrepProg α :=
+  compileProg (context.toExecutable) program
+
 /-! Source-named port of CakeML Pancake's active `comp_func_def`
     (`pan_to_crepScript.sml:337`).  Cake derives the context's `vmax` from
     the flattened parameter shape, then invokes `compile`; keeping that
@@ -426,6 +435,44 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     List (CompiledFunction α) :=
   let context := { context with functions := functionInfos declarations }
   compileFunctionsSource context declarations
+
+/-! Fixed-width variants used by the RISC-V production path. Their compiler
+    context omits a stride field, and `compileProgFixed` draws it from the
+    `CrepBytesInWord` instance for the value word type. -/
+def panToCrepCompFuncFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepCompileContext α)
+    (params : List (VarName × Shape)) (body : Prog α) : CrepProg α :=
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProgFixed
+    { vars := panToCrepMakeVmap params
+      functions := context.functions
+      exceptions := context.exceptions
+      maxVar := vmax } body
+
+def compileFunDeclSourceFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepCompileContext α)
+    (declaration : FunDecl α) : CompiledFunction α :=
+  { name := declaration.name, params := panToCrepVars declaration.params,
+    body := panToCrepCompFuncFixed context declaration.params declaration.body,
+    returnShape := declaration.returnShape }
+
+def compileFunctionsSourceFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepCompileContext α) :
+    List (Decl α) → List (CompiledFunction α)
+  | [] => []
+  | .function declaration :: declarations =>
+      compileFunDeclSourceFixed context declaration ::
+        compileFunctionsSourceFixed context declarations
+  | _ :: declarations => compileFunctionsSourceFixed context declarations
+termination_by declarations => sizeOf declarations
+
+def compileToCrepFixed [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α] (context : PanToCrepCompileContext α)
+    (declarations : List (Decl α)) :
+    List (CompiledFunction α) :=
+  let context := { context with functions := functionInfos declarations }
+  compileFunctionsSourceFixed context declarations
 
 theorem compileProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by

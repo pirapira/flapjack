@@ -124,8 +124,8 @@
     "hol_name": "eval_mul_const",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement comparison; production evaluator and PanWordLab output wrapper)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (Lean support lemma fixes RiscV.Word 64 and canonical target; HOL theorem is polymorphic)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",

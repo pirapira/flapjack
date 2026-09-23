@@ -149,11 +149,13 @@ theorem crepDest2Exp_lt_width {n : Nat} [NeZero n] (word : RiscV.Word n)
   have hs := crepDest2ExpFuel_sound (n + 1) 0 word exponent h
   exact (by simpa using hs.2.1)
 
-/-! The runtime state has an explicit target memory model that HOL's state
-    fixes implicitly. This theorem uses the production evaluator with the
-    canonical RISC-V 64-bit model; `PanWordLab.word` is projected by the
-    evaluator exactly where HOL returns the wrapped `Word` value. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "eval_mul_const"]
+/-! This is an untagged RISC-V 64-bit support lemma for CakeML's
+    `eval_mul_const`. Its type fixes `RiscV.Word 64` and the canonical RISC-V
+    runtime target, while the HOL theorem is polymorphic over the word type
+    and uses the corresponding HOL word operations. The fixed-width target
+    operations here do not establish that generic statement. The faithful
+    generic theorem remains open; this specialization is retained to support
+    the later `simp_exp_correct` proof. -/
 theorem crepEvalMulConst {σ : Type} (state : CrepRuntimeState (RiscV.Word 64) σ)
     (expression : CrepExp (RiscV.Word 64)) (constant value : RiscV.Word 64)
     (h : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget state) expression).map

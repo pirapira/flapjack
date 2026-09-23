@@ -378,4 +378,70 @@ theorem tuple_4_o {α β γ δ ε ζ η θ ι κ ℓ μ : Type}
   obtain ⟨x, y, z, t⟩ := p
   rfl
 
+/-! Exact-shaped port of Cake's `dec_shapes_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2328`): the collected
+    declaration shapes distribute over list append. `dec_shapes` is the
+    production `globalDeclShapes`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_append"]
+theorem dec_shapes_append (declarations rest : List (Decl α)) :
+    globalDeclShapes (declarations ++ rest) =
+      globalDeclShapes declarations ++ globalDeclShapes rest :=
+  globalDeclShapes_append declarations rest
+
+/-! Exact-shaped port of Cake's `dec_shapes_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2335`): a declaration
+    list all of whose entries are functions collects no shapes. HOL `EVERY
+    is_function` is Lean `List.all globalDeclIsFunction = true`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_functions"]
+theorem dec_shapes_functions (declarations : List (Decl α))
+    (hfunctions : declarations.all globalDeclIsFunction = true) :
+    globalDeclShapes declarations = [] :=
+  globalDeclShapes_of_functions declarations
+    (fun declaration hmem => List.all_eq_true.mp hfunctions declaration hmem)
+
+/-! Exact-shaped port of Cake's `dec_shapes_FILTER`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2343`): filtering out
+    function declarations preserves collected shapes, while filtering to names
+    or exceptions yields none. HOL `FILTER` is Lean `globalDeclsFilter`,
+    `is_decl` is `globalDeclIsGlobal` and `is_exn_decl` is
+    `globalDeclIsException`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_FILTER"]
+theorem dec_shapes_FILTER (declarations : List (Decl α)) :
+    globalDeclShapes
+        (globalDeclsFilter
+          (fun declaration => !globalDeclIsFunction declaration) declarations) =
+      globalDeclShapes declarations ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsName declarations) = [] ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsGlobal declarations) =
+      globalDeclShapes declarations ∧
+    globalDeclShapes (globalDeclsFilter globalDeclIsException declarations) = [] :=
+  ⟨globalDeclShapes_globalDeclsFilter_not_function declarations,
+    globalDeclShapes_globalDeclsFilter_name declarations,
+    globalDeclShapes_globalDeclsFilter_global declarations,
+    globalDeclShapes_globalDeclsFilter_exception declarations⟩
+
+/-! Exact-shaped port of Cake's `dec_shapes_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2354`): renaming does not
+    change the collected declaration shapes. The source-shaped `fperm_decs` is
+    the production `globalRenameDecls`, which only rewrites function entries. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_fperm_decs"]
+theorem dec_shapes_fperm_decs [BEq String] (source target : FunName)
+    (declarations : List (Decl α)) :
+    globalDeclShapes (globalRenameDecls source target declarations) =
+      globalDeclShapes declarations := by
+  induction declarations with
+  | nil => simp [globalRenameDecls, globalDeclShapes_nil]
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [globalRenameDecls, globalDeclShapes_cons, ih]
+
+/-! Exact-shaped port of Cake's `dec_shapes_resort_decls_def`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2361`): resorting
+    declarations preserves the collected shapes. `resort_decls` is the
+    production `globalResortDecls`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "dec_shapes_resort_decls_def"]
+theorem dec_shapes_resort_decls_def (declarations : List (Decl α)) :
+    globalDeclShapes (globalResortDecls declarations) =
+      globalDeclShapes declarations :=
+  globalDeclShapes_globalResortDecls declarations
+
 end Flapjack

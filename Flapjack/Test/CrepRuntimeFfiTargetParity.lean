@@ -253,6 +253,23 @@ example : riscv64ExtCallCallFfiHandler
   riscv64ExtCallCallFfiHandler_extCall "f" ffiCallFfiConf ffiCallFfiBytes
     ffiCallFfiState
 
+/-- A target state whose domain rejects every address, used to exercise the
+    HOL `ExtCall` error branch. -/
+def ffiErrorBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { ffiProbeBase with memaddrs := fun _ => false }
+
+/-- Failed configuration read on the canonical target dispatches to `Error`,
+    matching the HOL `ExtCall` error branch. -/
+example :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget ffiErrorBase) "f"
+        (16 : RiscV.Word 64) 1 (8 : RiscV.Word 64) 0 =
+      (.error, riscv64CrepRuntimeTarget ffiErrorBase) :=
+  crepRuntimeExtCallValues_target_error ffiErrorBase "f"
+    (16 : RiscV.Word 64) 1 (8 : RiscV.Word 64) 0
+    (Or.inl (by simp [riscv64ReadByteArray, RiscV.panRiscVReadByte,
+      panModelReadByte, ffiErrorBase]))
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard

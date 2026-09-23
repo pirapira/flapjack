@@ -564,4 +564,52 @@ theorem riscv64ExtCallCallFfiHandler_sharedMem
     riscv64ExtCallCallFfiHandler
         (.sharedMem operator name address payload) ffi = .returned ffi [] := rfl
 
+/-- Canonical-target dispatch of `crepRuntimeExtCallValues`.  The two HOL
+    `ExtCall` non-returning outcomes are pinned here: a failed configuration or
+    array read returns `Error` (HOL's `_ => (SOME Error, s)`), and an ffi `final`
+    event returns `FinalFFI` with the target state unchanged (HOL `FFI_final`).
+    The `returned` branch (HOL `FFI_return`: write the returned bytes back with
+    the canonical target writer and install the returned ffi) is the remaining
+    gap, tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`; separately
+    elaborated occurrences of the well-founded `crepRuntimeWriteBytes` do not
+    share their hidden instance arguments, so that equalities is not `rfl`. -/
+theorem crepRuntimeExtCallValues_target_error
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (h : riscv64ReadByteArray base configuration configurationLength.toNat = none ∨
+         riscv64ReadByteArray base array arrayLength.toNat = none) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.error, riscv64CrepRuntimeTarget base) := by
+  unfold crepRuntimeExtCallValues
+  simp only [riscv64CrepRuntimeTarget_ffiContext,
+    riscv64PanValueFfiContext_valueToNat_eq_riscv,
+    crepRuntimeReadBytes_target_eq_riscv]
+  rcases h with h | h <;> simp [h]
+
+/-- Dispatch when the `callFfi` handler reports a `final` event (HOL
+    `FFI_final`): the production step returns `FinalFFI` with the target state
+    unchanged, exactly HOL's `call_FFI` final branch.  The `returned` branch
+    (write-back) is tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`. -/
+theorem crepRuntimeExtCallValues_target_final
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
+    (event : FfiFinalEvent)
+    (hf : riscv64ExtCallCallFfiHandler
+        (.extCall function configurationBytes arrayBytes :
+          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .final event) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.finalFfi event, riscv64CrepRuntimeTarget base) := by
+  unfold crepRuntimeExtCallValues
+  simp only [riscv64CrepRuntimeTarget_ffiContext,
+    riscv64PanValueFfiContext_valueToNat_eq_riscv,
+    crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hf]
+
 end Flapjack

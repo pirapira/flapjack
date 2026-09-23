@@ -657,11 +657,14 @@ theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
   simp only [h] at hinit hfuns hexns hctx
   simp [hinit, hfuns, hexns, hctx]
 
-/-- Exact-shaped port of Cake's `compile_decs_decls_thm`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`) for the
-    HOL-shaped, context-threading `globalCompileDecsThreaded`: a program whose
-    declarations contain no functions compiles to an empty function table. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decs_decls_thm` (`pan_globalsProofScript.sml:1967`) for the
+    context-threading `globalCompileDecsThreaded`, but the quantifiers are not
+    HOL's: the context exposes arbitrary `bytesInWord`/`fromNat`
+    (`GlobalPassContext` generalizes HOL's fixed `bytes_in_word` and `n2w`), the
+    word type carries arbitrary `[Add α] [Mul α]` rather than HOL's word
+    operations, and `[BEq String]` is not required to be lawful.  An exact port
+    over a canonical HOL word context is tracked by the dependency bead. -/
 theorem compile_decs_decls_thm_threaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (code : List (Decl α))
     (decls : List (Prog α)) (funs exns : List (Decl α))
@@ -676,11 +679,12 @@ theorem compile_decs_decls_thm_threaded [BEq String] [Add α] [Mul α]
   rw [hfuns]
   exact globalCompileDecsThreaded_functions_eq_nil_of_no_functions code context hnone
 
-/-- Exact-shaped port of Cake's `compile_decs_EVERY_is_function`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) for the
-    HOL-shaped, context-threading `globalCompileDecsThreaded`: every entry the
-    compilation pass emits into the function table is a function declaration. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decs_EVERY_is_function` (`pan_globalsProofScript.sml:1977`) for the
+    context-threading `globalCompileDecsThreaded`, but the context exposes
+    arbitrary `bytesInWord`/`fromNat`, the word type carries arbitrary
+    `[Add α] [Mul α]`, and `[BEq String]` need not be lawful; see the exact-port
+    dependency bead. -/
 theorem compile_decs_EVERY_is_function_threaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (code : List (Decl α))
     (decls : List (Prog α)) (funs exns : List (Decl α))
@@ -694,12 +698,12 @@ theorem compile_decs_EVERY_is_function_threaded [BEq String] [Add α] [Mul α]
   rw [hfuns]
   exact globalCompileDecsThreaded_functions_all_isFunction context code
 
-/-- Exact-shaped port of Cake's `compile_decls_append`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) for the
-    HOL-shaped, context-threading `globalCompileDecsThreaded`: appending two
-    programs appends the three output lists and runs the second program under
-    the context the first reaches. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decls_append"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). This is Cake's
+    `compile_decls_append` (`pan_globalsProofScript.sml:1997`) for the
+    context-threading `globalCompileDecsThreaded`, with the same quantifier gap as
+    the two theorems above: arbitrary `bytesInWord`/`fromNat`, arbitrary
+    `[Add α] [Mul α]`, and possibly non-lawful `[BEq String]`; see the
+    exact-port dependency bead. -/
 theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (decs rest : List (Decl α)) :
     globalCompileDecsThreaded context (decs ++ rest) =
@@ -708,23 +712,8 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
       { initializers := first.initializers ++ second.initializers
         functions := first.functions ++ second.functions
         exceptions := first.exceptions ++ second.exceptions
-        context := second.context } := by
-  induction decs generalizing context with
-  | nil => simp [globalCompileDecsThreaded]
-  | cons declaration declarations ih =>
-      cases declaration with
-      | function function =>
-          simp only [List.cons_append, globalCompileDecsThreaded]
-          rw [ih context]
-      | decl shape name value =>
-          simp only [List.cons_append, globalCompileDecsThreaded]
-          rw [ih _]
-      | exnDecl exception shape =>
-          simp only [List.cons_append, globalCompileDecsThreaded]
-          rw [ih _]
-      | name struct fields =>
-          simp only [List.cons_append, globalCompileDecsThreaded]
-          rw [ih context]
+        context := second.context } :=
+  globalCompileDecsThreaded_append context decs rest
 
 /-- Flapjack-only (untagged) counterpart of Cake's `compile_decs_functions_thm`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1951`) for

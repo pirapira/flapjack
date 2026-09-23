@@ -1395,6 +1395,35 @@ theorem globalCompileDecsThreaded_functions_eq_nil_of_no_functions
           simp only [globalCompileDecsThreaded]
           exact ih _ hnone.2
 
+/-- Flapjack-specific (untagged) append law for the context-threading pass:
+    appending two declaration lists appends the three output lists and runs the
+    second list under the context reached by the first. -/
+theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (decs rest : List (Decl α)) :
+    globalCompileDecsThreaded context (decs ++ rest) =
+      let first := globalCompileDecsThreaded context decs
+      let second := globalCompileDecsThreaded first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } := by
+  induction decs generalizing context with
+  | nil => simp [globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+      | decl shape name value =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | exnDecl exception shape =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | name struct fields =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+
 /-! Counterpart of Cake's `compile_decs_preserve_functions`
     (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the
     function-name table. -/

@@ -100,6 +100,12 @@ example :
 
 def boolDimensionWord : Bool → Bool := id
 
+#guard holFiniteWordSBitSum boolWordDimension boolDimensionWord == 2
+
+example : holFiniteWordW2N boolWordDimension boolDimensionWord = 2 := by
+  rw [holFiniteWordW2N_eq_SBitSum]
+  rfl
+
 example : bitVecToHolWord boolWordDimension
     (holWordToBitVec boolWordDimension boolDimensionWord) = boolDimensionWord :=
   bitVecToHolWord_holWordToBitVec boolWordDimension boolDimensionWord

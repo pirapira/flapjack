@@ -256,12 +256,11 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
     `$HOL/src/n-bit/wordsScript.sml`. HOL defines each operation by converting
     its operands with `w2n`, doing natural arithmetic, and converting back
     with `n2w`. These adapters use BitVec `toNat`/`ofNat` for those conversions.
-    The pointwise `n2w`/FCP `BIT` equation is proved below, but the HOL `w2n`
-    weighted `SBIT` sum has not yet been connected to BitVec `toNat`; these
-    equations are not yet a proof of HOL operation correspondence. They remain
-    untagged because the HOL core theory is outside the repository and the
-    chosen `HolFiniteDimension` witness has not yet been identified with HOL's
-    implicit `finite_index` dictionary. -/
+    The pointwise `n2w`/FCP `BIT` equation and the HOL `w2n` weighted `SBIT`
+    sum to BitVec `toNat` correspondence are proved below, and source-shaped
+    add/mul/sub equations expose those conversions. They remain untagged
+    because the chosen `HolFiniteDimension` witness has not yet been identified
+    with HOL's implicit `finite_index` dictionary. -/
 def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
     (value : Nat) : ι → Bool :=
   bitVecToHolWord dimension (BitVec.ofNat dimension.width value)
@@ -276,6 +275,49 @@ theorem holFiniteWordN2W_at_index {ι : Type u}
 def holFiniteWordW2N {ι : Type u} (dimension : HolFiniteDimension ι)
     (word : ι → Bool) : Nat :=
   (holWordToBitVec dimension word).toNat
+
+/-! Recursive finite spelling of HOL `SUM width (λi. SBIT (word i) i)`: the
+    zero index contributes bit 0, while every later index's weight is twice
+    its weight in the tail dimension. -/
+def finWordSBitSum : (width : Nat) → (Fin width → Bool) → Nat
+  | 0, _ => 0
+  | width + 1, word =>
+      (if word 0 then 1 else 0) +
+        2 * finWordSBitSum width (fun index => word index.succ)
+
+theorem finWordSBitSum_eq_holWordBitsToBitVec_toNat
+    (width : Nat) (word : Fin width → Bool) :
+    finWordSBitSum width word = (BitVec.ofBoolListLE (List.ofFn word)).toNat := by
+  induction width with
+  | zero =>
+      have hlist : List.ofFn word = [] := by simp [List.ofFn]
+      rw [hlist]
+      simp [finWordSBitSum, BitVec.ofBoolListLE]
+  | succ width ih =>
+      change (if word 0 then 1 else 0) +
+          2 * finWordSBitSum width (fun index => word index.succ) =
+        (BitVec.ofBoolListLE (List.ofFn word)).toNat
+      rw [List.ofFn_succ]
+      rw [BitVec.ofBoolListLE, BitVec.toNat_concat, ih]
+      cases word 0 <;> simp [Bool.toNat, Nat.mul_comm, Nat.add_comm]
+
+theorem holWordBitsToBitVec_toNat_eq_ofBoolListLE {width : Nat}
+    (word : Fin width → Bool) :
+    (holWordBitsToBitVec word).toNat =
+      (BitVec.ofBoolListLE (List.ofFn word)).toNat := by
+  simp [holWordBitsToBitVec, BitVec.toNat_cast]
+
+def holFiniteWordSBitSum {ι : Type u} (dimension : HolFiniteDimension ι)
+    (word : ι → Bool) : Nat :=
+  finWordSBitSum dimension.width (holWordToFinBits dimension word)
+
+theorem holFiniteWordW2N_eq_SBitSum {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool) :
+    holFiniteWordW2N dimension word = holFiniteWordSBitSum dimension word := by
+  change (holWordBitsToBitVec (holWordToFinBits dimension word)).toNat =
+    finWordSBitSum dimension.width (holWordToFinBits dimension word)
+  rw [holWordBitsToBitVec_toNat_eq_ofBoolListLE]
+  exact (finWordSBitSum_eq_holWordBitsToBitVec_toNat _ _).symm
 
 def holFiniteWordSourceAdd {ι : Type u} (dimension : HolFiniteDimension ι)
     (left right : ι → Bool) : ι → Bool :=
@@ -293,6 +335,29 @@ def holFiniteWordSourceSub {ι : Type u} (dimension : HolFiniteDimension ι)
     (holFiniteWordW2N dimension left +
       (2 ^ dimension.width - holFiniteWordW2N dimension right %
         2 ^ dimension.width))
+
+theorem holFiniteWordSourceAdd_eq_n2w_SBitSum {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holFiniteWordSourceAdd dimension left right =
+      holFiniteWordN2W dimension
+        (holFiniteWordSBitSum dimension left + holFiniteWordSBitSum dimension right) := by
+  simp [holFiniteWordSourceAdd, holFiniteWordW2N_eq_SBitSum]
+
+theorem holFiniteWordSourceMul_eq_n2w_SBitSum {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holFiniteWordSourceMul dimension left right =
+      holFiniteWordN2W dimension
+        (holFiniteWordSBitSum dimension left * holFiniteWordSBitSum dimension right) := by
+  simp [holFiniteWordSourceMul, holFiniteWordW2N_eq_SBitSum]
+
+theorem holFiniteWordSourceSub_eq_n2w_SBitSum {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holFiniteWordSourceSub dimension left right =
+      holFiniteWordN2W dimension
+        (holFiniteWordSBitSum dimension left +
+          (2 ^ dimension.width - holFiniteWordSBitSum dimension right %
+            2 ^ dimension.width)) := by
+  simp [holFiniteWordSourceSub, holFiniteWordW2N_eq_SBitSum]
 
 theorem holFiniteWordSourceAdd_toBitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (left right : ι → Bool) :

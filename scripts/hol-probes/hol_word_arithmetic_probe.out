@@ -5,6 +5,9 @@ w2n_definition=∀w. w2n w = SUM (dimindex (:α)) (λi. SBIT (w ' i) i)
 word_add_n2w=∀m n. n2w m + n2w n = n2w (m + n)
 word_mul_n2w=∀m n. n2w m * n2w n = n2w (m * n)
 word_2comp_n2w=∀n. -n2w n = n2w (dimword (:α) − n MOD dimword (:α))
+sbit_definition=∀b n. SBIT b n = if b then 2 ** n else 0
+sbit_false0=SBIT F 0 = 0
+sbit_true0=SBIT T 0 = 1
 add_3_5_8=3w + 5w = 8w
 mul_3_5_8=3w * 5w = 15w
 sub_3_5_8=3w − 5w = 254w

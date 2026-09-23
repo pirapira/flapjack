@@ -3,6 +3,8 @@ import Flapjack.HolRef
 import Flapjack.PanBst
 import Flapjack.PanLocalised
 import Flapjack.PanValueFlatten
+import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
@@ -19,6 +21,21 @@ context.
 namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
+
+/-- Faithful port of Cake `pan_to_crepProof$cexp_heads_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:104`). The simplified
+    head collector is imported from the `crepProps` counterpart. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "cexp_heads_eq"]
+theorem cexpHeads_eq_cexpHeadsSimp (expressions : List (List (CrepExp α))) :
+    cexpHeads expressions = cexpHeadsSimp expressions := by
+  induction expressions with
+  | nil => rfl
+  | cons expression expressions ih =>
+      cases expression with
+      | nil => simp [cexpHeads, cexpHeadsSimp]
+      | cons head tail =>
+          simp only [cexpHeads, ih, cexpHeadsSimp]
+          cases h : expressions.any List.isEmpty <;> simp [h]
 
 /-- HOL `MAX_LIST_APPEND`: the maximum of an appended list is the maximum
     of the two constituent maxima. -/

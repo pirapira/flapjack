@@ -64,6 +64,14 @@
     "reviewer": "Codex (reference inventory)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "cexp_heads_simp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "cexpHeadsSimp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "comp_field_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
@@ -2254,6 +2262,14 @@
     "lean_name": "map_fst_eq_lookup",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "cexp_heads_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "cexpHeads_eq_cexpHeadsSimp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

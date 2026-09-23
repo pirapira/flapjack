@@ -31,12 +31,34 @@ def crepInlineGenlistIntervalGuard : Bool :=
 
 #guard crepInlineGenlistIntervalGuard
 
+def crepInlineMaxListValues : List Nat := [4, 5, 6, 7, 8]
+
+#guard maxList crepInlineMaxListValues = 8
+
+theorem crepInlineMaxList_not_in : (9 : Nat) ∉ crepInlineMaxListValues :=
+  moreThenNotMaxList crepInlineMaxListValues 9 (by decide)
+
+def crepInlineMaxListGuard : Bool :=
+  decide (maxList crepInlineMaxListValues = 8) &&
+    !crepInlineMaxListValues.contains 9
+
+#guard crepInlineMaxListGuard
+
 def runChecks : IO Bool := do
-  if crepInlineGenlistIntervalGuard then
-    IO.println "PASS crep_inline GENLIST interval lemmas"
-    pure true
-  else
-    IO.println "FAIL crep_inline GENLIST interval lemmas"
-    pure false
+  let genlistOk ←
+    if crepInlineGenlistIntervalGuard then
+      IO.println "PASS crep_inline GENLIST interval lemmas"
+      pure true
+    else
+      IO.println "FAIL crep_inline GENLIST interval lemmas"
+      pure false
+  let maxListOk ←
+    if crepInlineMaxListGuard then
+      IO.println "PASS crep_inline MORE_THEN_NOT_MAX_LIST"
+      pure true
+    else
+      IO.println "FAIL crep_inline MORE_THEN_NOT_MAX_LIST"
+      pure false
+  pure (genlistOk && maxListOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

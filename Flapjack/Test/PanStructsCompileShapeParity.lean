@@ -45,6 +45,24 @@ theorem structCompileShapes_eq_map_fixture :
   simp [structCompileShapeWF, structCompileShapeWF.structCompileShapesWF,
     forwardContext, lookupInfoWithRest]
 
+/-! Direct counterpart of the original HOL `is_wf_shape_compile_shape`
+    oracle rows below. Check both the single-shape and mutually recursive list
+    conclusions over an unrelated outer context. -/
+def unrelatedOuterContext : StructContext :=
+  [("unused", { fields := [], size := 0 })]
+
+theorem structCompileShapeWF_isWfShape_fixture :
+    isWfShape unrelatedOuterContext
+        (structCompileShapeWF forwardContext (.named "outer")) = true ∧
+      isWfShape.isWfShapeList unrelatedOuterContext
+        (structCompileShapeWF.structCompileShapesWF forwardContext
+          [.named "outer", .comb [.one, .named "inner"], .named "missing"]) = true := by
+  have hshape := (structCompileShapeWF_isWfShape unrelatedOuterContext).1
+    forwardContext (.named "outer")
+  have hshapes := (structCompileShapeWF_isWfShape unrelatedOuterContext).2
+    forwardContext [.named "outer", .comb [.one, .named "inner"], .named "missing"]
+  exact ⟨hshape, hshapes⟩
+
 /-! The fuel-indexed helper remains a separate untagged analogue. -/
 theorem structCompileShapesFuel_eq_map_fixture :
     structCompileShapeFuel.structCompileShapesFuel 8 forwardContext

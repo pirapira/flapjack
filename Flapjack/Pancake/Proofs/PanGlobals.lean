@@ -203,4 +203,14 @@ theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
     state declarations start state' heval hadmissible
   simpa [isWfShapeNil, hstructs] using hshapes
 
+/-! Exact-shaped port of Cake's `exceptions_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2507`). `exceptionEntries`
+    is the direct source-shaped counterpart of `panLang$exceptions`; the body is
+    the existing production proof `exceptionEntries_append`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "exceptions_append"]
+theorem exceptions_append (declarations rest : List (Decl α)) :
+    exceptionEntries (declarations ++ rest) =
+      exceptionEntries declarations ++ exceptionEntries rest :=
+  exceptionEntries_append declarations rest
+
 end Flapjack

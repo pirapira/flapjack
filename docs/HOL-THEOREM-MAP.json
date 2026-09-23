@@ -4070,5 +4070,29 @@
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: resolves the actual Nat-indexed production crepRuntimeExtCall wrapper to the canonical-target ExtCall dispatch and builds the source panSemWriteBytearray post-state for the FFI_return branch; no single HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCallValues_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only non-returned companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: when the call_FFI handler reports a final event, the canonical-target ExtCall step is FinalFFI with the target state unchanged and the source/target states remain the related pre-states (HOL FFI_final, (SOME (FinalFFI outcome), s))."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_error",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local wrapper failing-read branch (HOL _ => (SOME Error, s)): the Nat-indexed production crepRuntimeExtCall resolves its four locals, the configuration or array read fails, and the step is Error with the target state unchanged and the source/target states still related."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_final",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_final: the production crepRuntimeExtCall wrapper resolves its four locals, the reads succeed and the handler reports a final event, so the step is FinalFFI with the target state unchanged and the source/target states stay related."
   }
 ]

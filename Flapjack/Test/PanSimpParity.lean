@@ -935,10 +935,10 @@ example :
     (by
       intro locals globals memory ffi
       exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
-        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
-          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
-          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
-          updatePanValueMemory]⟩)
+        simp [evalPanValueFfiProgSteps, panValueStoreResult, evalPanValueExpCounted,
+          evalPanValueExp, panValueExpStepCost, panValueStoreWithAccess,
+          panValueFlatStoreWords, panValueFlatWords, panValueFlatWordsFuel,
+          panValueFlatOffset, updatePanValueMemory]⟩)
 
 /-- A destination call is normal-adequate from a nonzero clock, given the
 per-state argument/shape evidence and the destination assignment. -/
@@ -1259,10 +1259,10 @@ example :
     (by
       intro locals globals memory ffi
       exact ⟨locals, globals, updatePanValueMemory memory 7 (.word 9), ffi, 3, by
-        simp [evalPanValueFfiProgSteps, evalPanValueExpCounted, evalPanValueExp,
-          panValueExpStepCost, panValueStoreWithAccess, panValueFlatStoreWords,
-          panValueFlatWords, panValueFlatWordsFuel, panValueFlatOffset,
-          updatePanValueMemory]⟩)
+        simp [evalPanValueFfiProgSteps, panValueStoreResult, evalPanValueExpCounted,
+          evalPanValueExp, panValueExpStepCost, panValueStoreWithAccess,
+          panValueFlatStoreWords, panValueFlatWords, panValueFlatWordsFuel,
+          panValueFlatOffset, updatePanValueMemory]⟩)
 
 /-- The raised `DecCall` outcome also lifts to the declaration's progSize. -/
 example

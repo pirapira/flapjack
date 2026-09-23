@@ -138,11 +138,10 @@ theorem evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
       (contracts := contracts) =
       some (.normal nextLocals nextGlobals nextMemory nextFfi, addressSteps + 1)) :
     ffi.ioEvents <+: nextFfi.ioEvents := by
-  simp [evalPanValueFfiProgSteps, haddress] at hresult
-  rcases hresult with ⟨hvalid', hresult⟩
+  simp [evalPanValueFfiProgSteps, panValueShMemLoadResult, haddress] at hresult
   by_cases hvalid :
       panValueSharedLoadValid structs locals globals kind name (.word 0) = true
-  · clear hvalid'
+  · simp [hvalid] at hresult
     cases hload : panValueFfiSharedLoad context ffi size addressWord with
     | none => simp [hload] at hresult
     | some result =>
@@ -157,7 +156,7 @@ theorem evalPanValueFfiProgSteps_shMemLoad_normal_ioEvents_prefix
             (.loaded loadedFfi value) hload
       | stored storedFfi => simp [hload] at hresult
       | final finalFfi event => simp [hload] at hresult
-  · exact False.elim (hvalid hvalid')
+  · simp [hvalid] at hresult
 
 theorem evalPanValueFfiProgSteps_shMemLoad_finalFfi_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -183,11 +182,10 @@ theorem evalPanValueFfiProgSteps_shMemLoad_finalFfi_ioEvents_prefix
       some (.finalFfi (fun _ => none) globals memory nextFfi event,
         addressSteps + 1)) :
     ffi.ioEvents <+: nextFfi.ioEvents := by
-  simp [evalPanValueFfiProgSteps, haddress] at hresult
-  rcases hresult with ⟨hvalid', hresult⟩
+  simp [evalPanValueFfiProgSteps, panValueShMemLoadResult, haddress] at hresult
   by_cases hvalid :
       panValueSharedLoadValid structs locals globals kind name (.word 0) = true
-  · clear hvalid'
+  · simp [hvalid] at hresult
     cases hload : panValueFfiSharedLoad context ffi size addressWord with
     | none => simp [hload] at hresult
     | some loadResult =>
@@ -203,7 +201,7 @@ theorem evalPanValueFfiProgSteps_shMemLoad_finalFfi_ioEvents_prefix
         cases hffi
         cases hevent
         simpa [panValueFfiSharedResultFfi] using hprefix
-  · exact False.elim (hvalid hvalid')
+  · simp [hvalid] at hresult
 
 theorem evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -233,7 +231,7 @@ theorem evalPanValueFfiProgSteps_shMemStore_normal_ioEvents_prefix
       some (.normal nextLocals nextGlobals nextMemory nextFfi,
         addressSteps + valueSteps + 1)) :
     ffi.ioEvents <+: nextFfi.ioEvents := by
-  simp [evalPanValueFfiProgSteps, haddress, hvalue] at hresult
+  simp [evalPanValueFfiProgSteps, panValueShMemStoreResult, haddress, hvalue] at hresult
   cases hstore : panValueFfiSharedStore context ffi size addressWord valueWord with
   | none => simp [hstore] at hresult
   | some result =>
@@ -275,7 +273,7 @@ theorem evalPanValueFfiProgSteps_shMemStore_finalFfi_ioEvents_prefix
       some (.finalFfi locals globals memory nextFfi event,
         addressSteps + valueSteps + 1)) :
     ffi.ioEvents <+: nextFfi.ioEvents := by
-  simp [evalPanValueFfiProgSteps, haddress, hvalue] at hresult
+  simp [evalPanValueFfiProgSteps, panValueShMemStoreResult, haddress, hvalue] at hresult
   cases hstore : panValueFfiSharedStore context ffi size addressWord valueWord with
   | none => simp [hstore] at hresult
   | some storeResult =>

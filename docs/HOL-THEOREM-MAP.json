@@ -2868,8 +2868,8 @@
     "hol_name": "dropWhile_afindi",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "afindi_dropWhile",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL key inequality and DROP index case split match Lean decide/dropWhile and List.drop; direct HOL-EVAL first/later/missing rows paired with Lean regressions)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -110,6 +110,10 @@ run_probe pan_structs_afindi_append_probeScript.sml pan_structs_afindi_append_pr
   prefix_hit_keeps_first_index suffix_hit_adds_prefix_length missing_key_stays_none \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_dropwhile_afindi_probeScript.sml pan_structs_dropwhile_afindi_probe.out \
+  first_hit_drop later_hit_drop missing_hit_drop \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only

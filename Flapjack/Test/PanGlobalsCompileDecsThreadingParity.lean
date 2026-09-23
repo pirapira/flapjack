@@ -358,12 +358,51 @@ theorem cakeAppend :
         context := second.context } :=
   compile_decls_append_cake cakeContext cakeFunctionBeforeDecl [.exnDecl "E" .one]
 
+def adapterPassContext : GlobalPassContext (BitVec 8) :=
+  { globals := [("g", (Shape.one, (7 : BitVec 8)))]
+    globalsSize := 8
+    maxGlobalsSize := 16
+    bytesInWord := cakeBytesInWord 8
+    fromNat := BitVec.ofNat 8 }
+
+theorem adapterCanonical : adapterPassContext.IsCakeCanonical :=
+  ⟨rfl, fun _ => rfl⟩
+
+theorem adapterAddress :
+    cakeAddress (cakeContextOfPass adapterPassContext) Shape.one =
+      globalAddress adapterPassContext Shape.one :=
+  cakeAddress_ofPass adapterPassContext adapterCanonical Shape.one
+
+theorem adapterUpdate :
+    cakeContextOfPass { adapterPassContext with
+        globals := ("h", (Shape.one, (8 : BitVec 8))) :: adapterPassContext.globals
+        globalsSize := 8 }
+      = { cakeContextOfPass adapterPassContext with
+          globals := FUPDATE (cakeContextOfPass adapterPassContext).globals
+            ("h", (Shape.one, (8 : BitVec 8)))
+          globalsSize := 8 } :=
+  cakeContextOfPass_update adapterPassContext "h" Shape.one 8
+
+def adapterLookupOk : Bool :=
+  match (cakeContextOfPass adapterPassContext).globals "g" with
+  | some (Shape.one, address) => address == (7 : BitVec 8)
+  | _ => false
+
+def adapterGuard : Bool :=
+  (cakeAddress (cakeContextOfPass adapterPassContext) Shape.one ==
+      globalAddress adapterPassContext Shape.one) &&
+    adapterLookupOk
+
+#eval adapterGuard
+#guard adapterGuard
+
 def cakeThreadingGuard : Bool :=
   cakeThreadingValues == [0, 1] &&
   compileExpChecks.all id &&
   compileProgChecks.all id &&
   freshNameChecks.all id &&
   handledProgramChecks &&
+  adapterGuard &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

@@ -4094,5 +4094,69 @@
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_final",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_final: the production crepRuntimeExtCall wrapper resolves its four locals, the reads succeed and the handler reports a final event, so the step is FinalFFI with the target state unchanged and the source/target states stay related."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "convert_v_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertValue",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Direct HOL EVAL matches the word and named-record cases; exact datatype-wrapper statement review remains open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueFieldsOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Recursive cases transcribed over StructContext; equivalence of list lookup/context representation remains under review."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueShapeWf",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Recursive cases transcribed over StructContext; equivalence of list lookup/context representation remains under review."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertState_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projection helper for the untagged PanSemState convert_s adapter; total function maps do not preserve HOL finite-map support."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileSkip_eq_skip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructSkipEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired production evaluator equation only; omits compile_correct premises and invariant/shape-map/result postconditions. Full Skip port tracked by flapjack-pxn.18.5.3.29."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileTick_eq_tick",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Production compiler support equation; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructTickEvaluatorSupport",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
   }
 ]

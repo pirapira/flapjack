@@ -2345,6 +2345,22 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_rel_extend_new_var",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelExtendNewVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "filter_not_mem_self",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "filterNotMemSelf",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "locals_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRel",

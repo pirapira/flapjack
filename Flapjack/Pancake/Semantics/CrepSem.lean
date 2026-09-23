@@ -103,12 +103,31 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- Flapjack runtime adaptation of HOL `set_globals`: the 5-bit key and
-    `word_lab` cell update agree, but the enclosing state still carries extra
-    runtime fields, so this declaration is not an exact HOL port. -/
+/-- Production global update on the 14-field `CrepRuntimeState`. Its field
+    operation follows HOL `crepSem$set_globals` (crepSemScript.sml:61), but the
+    runtime state carries three target-configuration fields
+    (`memoryModel`, `bytesInWord`, `ffiContext`) absent from HOL's 11-field
+    state, so this is NOT tagged as the exact HOL definition. The exact
+    HOL-shaped port lives in `Flapjack/Pancake/Semantics/CrepSem/Eval.lean` as
+    `setCrepHolGlobals`; `setCrepRuntimeGlobals_eq_FUPDATE` records that the
+    update is HOL's finite-map `|+`/`FUPDATE` on the globals component. -/
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with globals := updateCrepRuntimeGlobal state.globals key value }
+
+/-- The global-cell update is HOL's finite-map `|+`/`FUPDATE` on the
+    function-represented globals map. -/
+theorem updateCrepRuntimeGlobal_eq_FUPDATE
+    (globals : BitVec 5 → Option (PanWordLab α)) (key : BitVec 5)
+    (value : PanWordLab α) :
+    updateCrepRuntimeGlobal globals key value = FUPDATE globals (key, value) := rfl
+
+/-- `setCrepRuntimeGlobals` has exactly HOL's `set_globals_def` body once the
+    globals cell update is written as the HOL finite-map update. -/
+theorem setCrepRuntimeGlobals_eq_FUPDATE
+    (key : BitVec 5) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    setCrepRuntimeGlobals key value state =
+      { state with globals := FUPDATE state.globals (key, value) } := rfl
 
 def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=

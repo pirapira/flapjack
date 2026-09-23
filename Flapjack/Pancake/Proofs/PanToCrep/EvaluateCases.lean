@@ -2785,6 +2785,76 @@ private theorem compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
   rw [hcompiled]
   rw [evalCrepRuntimeExps_vars_eq, htargetPrefix]
 
+/-! Second-field projection for a two-word local record. This extends the
+Call-argument relation past the first-field slice while keeping the source
+record and target flattened locals tied by `locals_rel`. -/
+private theorem compileExpHOL_rFieldOne_pairLocal_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (first second : RiscV.Word 64)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsource : FLOOKUP source.locals name =
+      some (.rStruct [.word first, .word second])) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField 1 (.var .local name))).1 = some [second] := by
+  obtain ⟨slots, hcontext, hslotsLength, htargetWords, _⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name
+      (.rStruct [.word first, .word second]) hlocals hsource
+  have hslotsLength' : slots.length = 2 := by
+    simpa [panValueShape, panValueFlatten_rStruct,
+      panValueFlattenValues_eq_flatMap, panValueFlatten] using hslotsLength
+  have hslotsExists : ∃ slot0 slot1, slots = [slot0, slot1] := by
+    cases slots with
+    | nil => simp at hslotsLength'
+    | cons slot0 rest =>
+        cases rest with
+        | nil => simp at hslotsLength'
+        | cons slot1 rest =>
+            cases rest with
+            | nil => exact ⟨slot0, slot1, rfl⟩
+            | cons extra rest => simp at hslotsLength'
+  obtain ⟨slot0, slot1, rfl⟩ := hslotsExists
+  have hcontext' : FLOOKUP context.vars name =
+      some (.comb [.one, .one], [slot0, slot1]) := by
+    simpa [panValueShape] using hcontext
+  have htargetWordCells : [slot0, slot1].mapM
+      (FLOOKUP target.locals) = some [.word first, .word second] := by
+    simpa [panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap,
+      panValueFlatten] using htargetWords
+  have hsecondWordCells : [slot1].mapM (FLOOKUP target.locals) =
+      some [.word second] := by
+    simp only [List.mapM_cons] at htargetWordCells
+    cases hfirst : FLOOKUP target.locals slot0 with
+    | none => simp [hfirst] at htargetWordCells
+    | some firstCell =>
+        cases firstCell with
+        | word firstValue =>
+            cases hsecond : FLOOKUP target.locals slot1 with
+            | none => simp [hfirst, hsecond] at htargetWordCells
+            | some secondCell =>
+                cases secondCell with
+                | word secondValue =>
+                    simp [hfirst, hsecond] at htargetWordCells
+                    rcases htargetWordCells with ⟨_, hsecondValue⟩
+                    subst secondValue
+                    simp [hsecond]
+  have hsecond : [slot1].mapM
+      (fun slot => (FLOOKUP target.locals slot).map panTheWord) = some [second] := by
+    apply mapM_panTheWord_of_wordLab target.locals [slot1] [second]
+    simpa [FLOOKUP] using hsecondWordCells
+  have hcompiled :
+      compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField 1 (.var .local name)) = ([slot1].map .var, .one) := by
+    simp [compileExpHOL, hcontext', compileField]
+  rw [hcompiled, evalCrepRuntimeExps_vars_eq]
+  exact hsecond
+
 /-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
     the general expression theorem remains open. -/
 theorem compileExpHOL_const_eval_flatten
@@ -2953,6 +3023,10 @@ inductive compileArgConstLocalStructAddress
       (hsource : FLOOKUP source.locals name =
         some (.rStruct (fieldValue :: remainingFields))) :
       compileArgConstLocalStructAddress source (.rField 0 (.var .local name))
+  | secondRecordFieldLocal (name : String) (first second : RiscV.Word 64)
+      (hsource : FLOOKUP source.locals name =
+        some (.rStruct [.word first, .word second])) :
+      compileArgConstLocalStructAddress source (.rField 1 (.var .local name))
   | baseAddress : compileArgConstLocalStructAddress source .baseAddr
   | topAddress : compileArgConstLocalStructAddress source .topAddr
   | bytesInWord : compileArgConstLocalStructAddress source .bytesInWord
@@ -3032,6 +3106,17 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
         subst value
         exact compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten
           context source target name fieldValue remainingFields hlocals hsource
+    | secondRecordFieldLocal name first second hsource =>
+        have hlocal : source.locals name =
+            some (.rStruct [.word first, .word second]) := by
+          simpa [FLOOKUP] using hsource
+        unfold evalPanSemStateExp at heval
+        simp [evalPanValueExp, hlocal] at heval
+        have hvalue : value = .word second := heval.symm
+        subst value
+        simpa [panValueFlatten] using
+          compileExpHOL_rFieldOne_pairLocal_eval_flatten
+            context source target name first second hlocals hsource
   simpa [compilerContext] using
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach

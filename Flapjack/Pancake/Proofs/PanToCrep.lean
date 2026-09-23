@@ -25,11 +25,11 @@ context.
 
 namespace Flapjack
 
-/-! Flapjack analogue of HOL `globals_lookup_def`: the global-key and cell
-    projection matches the original oracle, but this definition takes the
-    current `CrepRuntimeState`, whose local cells are bare words rather than
-    HOL `word_lab` cells. It is not an exact state-level declaration until
-    that P0 representation gap is repaired. -/
+/-! Flapjack analogue of HOL `globals_lookup_def`. `CrepRuntimeState.globals`
+    now uses the HOL key and cell shapes (`BitVec 5` and `PanWordLab α`), and
+    the direct oracle cases are in `PanToCrepGlobalsLookupParity`. This helper
+    remains untagged: its `panSemShapeOf` input shape has not yet been shown to
+    be the exact HOL `shape_of` used by `globals_lookup_def`. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM

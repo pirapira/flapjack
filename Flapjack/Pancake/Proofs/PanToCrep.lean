@@ -245,14 +245,20 @@ theorem maxListNotMemHol (x : Nat) (values : List Nat)
     (h : x > maxList values) : x ∉ values :=
   maxList_not_mem x values h
 
-/-- HOL `flookup_res_var_thm_quant`: restoring one natural-number local
-    changes only that local's lookup. -/
+section
+attribute [local instance] Classical.propDecidable
+
+/-- HOL `flookup_res_var_thm_quant`: restoring one key changes only that
+    key's lookup. Lawful Boolean equality represents HOL key equality. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flookup_res_var_thm_quant"]
-theorem flookupResVarQuant (locals : FiniteMap Nat α)
-    (name query : Nat) (value : Option α) :
+theorem flookupResVarQuant [BEq κ] [LawfulBEq κ]
+    (locals : FiniteMap κ α)
+    (name query : κ) (value : Option α) :
     FLOOKUP (resVar locals (name, value)) query =
       if query = name then value else FLOOKUP locals query := by
   simpa [beq_iff_eq] using FLOOKUP_resVar locals name query value
+
+end
 
 /-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
     lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
@@ -465,20 +471,20 @@ theorem ctxtMaxGetElemLe
 /-- HOL `slc_def`: pair each source parameter name with its argument value,
     with `ZIP` truncation represented by Lean's `List.zip`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_def"]
-def slc [BEq String] (parameters : List (String × Shape))
+def slc (parameters : List (String × Shape))
     (arguments : List (PanValue α)) : FiniteMap String (PanValue α) :=
   FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments)
 
 /-- HOL `tlc_def`: pair target slots with the flattened argument words. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "tlc_def"]
-def tlc [BEq Nat] (slots : List Nat) (arguments : List (PanValue α)) :
+def tlc (slots : List Nat) (arguments : List (PanValue α)) :
     FiniteMap Nat α :=
   FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten))
 
 /-- HOL `slc_tlc_rw`: both local-map constructor names unfold to their
     original finite-map updates. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_tlc_rw"]
-theorem slcTlcRw [BEq String] [BEq Nat]
+theorem slcTlcRw
     (parameters : List (String × Shape)) (slots : List Nat)
     (arguments : List (PanValue α)) :
     (FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments) =
@@ -812,16 +818,6 @@ theorem localsRelExtendNewVar
           (hdisjointOld other (panValueShape [] otherValue) otherSlots hcontext)
           hlenFlat]
         exact hmap
-
-/-- HOL `filter_not_mem_self`: filtering a list for elements absent from that
-    same list always produces the empty list. This is used by the compiled
-    assigned-variable invariant in the `DecCall` case. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]
-theorem filterNotMemSelf [DecidableEq α] (values : List α) :
-    values.filter (fun value => value ∉ values) = [] := by
-  apply List.filter_eq_nil_iff.mpr
-  intro value hmem
-  simp [hmem]
 
 /-! Execute the finite-map compiler with the HOL proof context. Every map is
     passed directly to `compileProgHOL`; no queried-name projection to an

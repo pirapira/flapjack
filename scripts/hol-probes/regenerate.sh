@@ -112,7 +112,7 @@ run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
-  bytes64 word32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml" \
+  bytes64 store32_outside "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -482,6 +482,12 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
   set_globals_direct store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+# The locals_wordlab probe observes varname |-> word_lab cell retention,
+# Var-read flattening and overwrite behaviour.
+run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
+  locals_set_var_cell locals_set_var_overwrite \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

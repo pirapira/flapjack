@@ -42,11 +42,11 @@ def noPrimitive : CrepPrimitiveHandler Nat := fun _ _ => none
    update behavior; it does not claim the whole Lean runtime-state type is a
    port of HOL crepSem$state. -/
 def directUpdateState : CrepRuntimeState Nat Unit :=
-  { globalState with locals := fun name => if name == 3 then some 7 else none }
+  { globalState with locals := fun name => if name == 3 then some (.word 7) else none }
 
 #guard let state := setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState
        state.globals (4 : BitVec 5) == some (.word 22) &&
-       state.locals 3 == some 7 &&
+       state.locals 3 == some (.word 7) &&
        (state.locals 9).isNone
 
 /- HOL crep_eval_probe: eval_global_hit=SOME (Word 11w). -/

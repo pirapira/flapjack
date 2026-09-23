@@ -1,29 +1,30 @@
-import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.RiscV.PanMemory
+import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 
 /-!
 # Canonical RISC-V 64 Crep runtime target and word/byte memory boundary
+
+The canonical target and its production bridges live in the production module
+`Flapjack.Pancake.Semantics.CrepRuntimeTarget`; this module exercises them
+against the direct HOL oracle.
 
 `CrepRuntimeState` leaves `bytesInWord`, `memoryModel`, and `bigEndian`
 unconstrained, unlike HOL `panSem$state` whose `bytes_in_word` is fixed by the
 word type (`byte$bytes_in_word = n2w (dimindex (:'a) DIV 8)`) and whose
 `mem_load_byte`/`mem_load_32` are fixed accordingly (panSemScript.sml:86-106).
 
-This module adds a Flapjack-only canonical target instance that pins those
-three fields to the RISC-V 64 values and connects the production runtime byte
-load to the RISC-V model read. It is not a port of `stateRel` and it does not
-change any tagged declaration; it fixes one production target operation
-boundary without adding premises to a tagged theorem.
-
 Direct oracle: `scripts/hol-probes/crep_runtime_word_boundary_probe.out`
   bytes64=8w; bytes32=4w; byte_at_9=SOME 2w; byte_at_8=SOME 1w;
   byte_outside_domain=NONE; word32_at_8=SOME 0x4030201w;
-  word32_unaligned=NONE
+  word32_unaligned=NONE; store_byte_roundtrip=SOME 0xABw;
+  store_byte_outside=NONE; store32_roundtrip=SOME 0xAABBCCDDw;
+  store32_unaligned=NONE; store32_outside=NONE
 -/
 
 namespace Flapjack.Test.CrepRuntimeTargetParity
 
 open Flapjack
+
+/-! ## Concrete oracle fixture -/
 
 /-- A minimal `PanValueFfiContext` for the 64-bit RISC-V target, used only to
     totalize the fixture state; it is not a claim about CakeML's FFI. -/
@@ -36,43 +37,6 @@ def riscv64FfiContext : PanValueFfiContext (RiscV.Word 64) :=
     wordToByte := fun value => UInt8.ofNat value.toNat
     byteToWord := fun value => BitVec.ofNat 64 value.toNat
     valueToNat := fun value => value.toNat }
-
-/-- Canonical RISC-V 64 runtime target: fix the target word width and memory
-    model, exactly the fields HOL leaves fixed by the target word type. -/
-def riscv64CrepRuntimeTarget (base : CrepRuntimeState (RiscV.Word 64) σ) :
-    CrepRuntimeState (RiscV.Word 64) σ :=
-  { base with
-    bytesInWord := (8 : RiscV.Word 64)
-    bigEndian := false
-    memoryModel := RiscV.panRiscVMemoryModel }
-
-/-- Predicate naming the canonical target constraints. -/
-def isRiscV64CrepRuntimeTarget (state : CrepRuntimeState (RiscV.Word 64) σ) : Prop :=
-  state.bytesInWord = (8 : RiscV.Word 64) ∧
-    state.bigEndian = false ∧
-    state.memoryModel = RiscV.panRiscVMemoryModel
-
-theorem riscv64CrepRuntimeTarget_isTarget
-    (base : CrepRuntimeState (RiscV.Word 64) σ) :
-    isRiscV64CrepRuntimeTarget (riscv64CrepRuntimeTarget base) :=
-  ⟨rfl, rfl, rfl⟩
-
-/-- The canonical target fixes `bytesInWord` to the word-type value used by
-    HOL `byte$bytes_in_word` (64 DIV 8 = 8). -/
-theorem riscv64CrepRuntimeTarget_bytesInWord
-    (base : CrepRuntimeState (RiscV.Word 64) σ) :
-    (riscv64CrepRuntimeTarget base).bytesInWord = CrepBytesInWord.bytesInWord :=
-  rfl
-
-/-- On the canonical target the production Crep byte load is exactly the
-    RISC-V model read that underlies HOL `mem_load_byte`. -/
-theorem crepRuntimeLoadByte_target_eq_riscv
-    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
-    crepRuntimeLoadByte (riscv64CrepRuntimeTarget base) address =
-      RiscV.panRiscVReadByte base.memaddrs base.memory (8 : RiscV.Word 64) address :=
-  rfl
-
-/-! ## Concrete oracle fixture -/
 
 def probeMemory : PanFlatMemory (RiscV.Word 64) :=
   fun address =>
@@ -119,15 +83,55 @@ def wordBoundaryGuard : Bool :=
     some (0x04030201 : RiscV.Word 64)) &&
   (crepRuntimeLoad32 probeTargetState (9 : RiscV.Word 64)).isNone
 
+/-- Memory cell read back from a store result. -/
+def storedMemoryAt (result : Option (CrepRuntimeState (RiscV.Word 64) Unit))
+    (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  result.bind (fun state => state.memory address)
+
+/-- Word/byte store round-trips through the canonical target: the production
+    store updates the same cell the RISC-V model store does, and rejects
+    out-of-domain addresses. -/
+def storeRoundTripGuard : Bool :=
+  (storedMemoryAt (crepRuntimeStore probeTargetState (8 : RiscV.Word 64)
+      (0xAB : RiscV.Word 64)) (8 : RiscV.Word 64) == some (0xAB : RiscV.Word 64)) &&
+  (storedMemoryAt (crepRuntimeStoreByte probeTargetState (8 : RiscV.Word 64)
+      (0xAB : RiscV.Word 64)) (8 : RiscV.Word 64) ==
+    some (0x08070605040302AB : RiscV.Word 64)) &&
+  (storedMemoryAt (crepRuntimeStore32 probeTargetState (8 : RiscV.Word 64)
+      (0xAABBCCDD : RiscV.Word 64)) (8 : RiscV.Word 64) ==
+    some (0x08070605AABBCCDD : RiscV.Word 64)) &&
+  (crepRuntimeStore probeTargetState (16 : RiscV.Word 64)
+      (0xAB : RiscV.Word 64)).isNone &&
+  (crepRuntimeStoreByte probeTargetState (16 : RiscV.Word 64)
+      (0xAB : RiscV.Word 64)).isNone &&
+  (crepRuntimeStore32 probeTargetState (9 : RiscV.Word 64)
+      (0xAABBCCDD : RiscV.Word 64)).isNone &&
+  (crepRuntimeStore32 probeTargetState (16 : RiscV.Word 64)
+      (0xAABBCCDD : RiscV.Word 64)).isNone
+
+/-- The production evaluator computes `.load`/`.load32` through the same model
+    operations the canonical target bridges expose. -/
+example : crepRuntimeLoad (riscv64CrepRuntimeTarget probeBaseState) (8 : RiscV.Word 64) =
+    RiscV.panRiscVReadWord probeBaseState.memaddrs probeBaseState.memory
+      (8 : RiscV.Word 64) :=
+  crepRuntimeLoad_target_eq_riscv probeBaseState 8
+
+example : crepRuntimeLoad32 (riscv64CrepRuntimeTarget probeBaseState) (8 : RiscV.Word 64) =
+    RiscV.panRiscVRead32 probeBaseState.memaddrs probeBaseState.memory
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) :=
+  crepRuntimeLoad32_target_eq_riscv probeBaseState 8
+
 #guard wordBoundaryGuard
+#guard storeRoundTripGuard
 
 #eval wordBoundaryGuard
+#eval storeRoundTripGuard
 
 def runChecks : IO Bool := do
-  if wordBoundaryGuard then
+  if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 target word/byte boundary parity"
-  pure wordBoundaryGuard
+  pure (wordBoundaryGuard && storeRoundTripGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

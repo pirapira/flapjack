@@ -34,7 +34,7 @@ def crepRuntimeShMemLoad (state : CrepRuntimeState α σ)
     | .returned ffi bytes =>
         let value := state.ffiContext.wordOfBytes false bytes
         let state := { state with ffi := ffi }
-        (.normal, { state with locals := updateCrepLocal state.locals name value })
+        (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
 
 def crepShMemLoad (state : CrepRuntimeState α σ)
     (name : Nat) (address : α) (width : Nat) :

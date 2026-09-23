@@ -21,7 +21,10 @@ universe u
     `List.mapM` over the same local lookup. This uses the HOL-mirrored
     `CrepSem` runtime evaluator, not the legacy compatibility evaluator
     `evalCrepFullExpState`; every expression evaluated by this theorem is a
-    `Var`, so the explicit variable equation is the relevant semantic case. -/
+    `Var`, so the explicit variable equation is the relevant semantic case.
+    Under the state correspondence `t.locals = state.locals`, HOL's left side
+    is `names.mapM state.locals` and its right side is exactly the mapped
+    `Var` expression list evaluated by `crepSemEvalExp` below. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
 theorem lookup_locals_eq_map_vars
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

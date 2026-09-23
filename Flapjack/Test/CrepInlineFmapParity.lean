@@ -156,13 +156,44 @@ theorem bridgeCongrShadow :
   crepInlineProgFmap_congr (fs := fmapReinsert) (gs := fmapEntries)
     fmapReinsertViewEq CrepProg.skip
 
+/-- HOL `inline_prog_def` Call clause (ctyp `NONE`) as a single equation. -/
+theorem clauseCallNone :
+    crepInlineProgFmap fmapEntries (.call none "f" [.const 5]) =
+      (match fmapEntries.lookup "f" with
+       | none => .call none "f" [.const 5]
+       | some (argsVname, body) =>
+           let inlined :=
+             (crepUnreachElim (crepInlineProgFmap (fmapEntries.remove "f") body)).1
+           let tmp := crepInlineTmpNames ([.const 5].flatMap crepExpVars) argsVname
+           crepInlineTail (crepArgLoad tmp [.const 5] argsVname inlined)) :=
+  crepInlineProgFmap_call_hol fmapEntries "f" [.const 5]
+
+/-- HOL `inline_prog_def` `SOME(rts, SOME _)` branch: the call is only
+    ctyp-updated, and the handler is recursively inlined. -/
+theorem clauseCallHandler :
+    crepInlineProgFmap fmapEntries (.call (some ([1], some (0, .skip))) "f" []) =
+      .call (some ([1], some (0, crepInlineProgFmap fmapEntries .skip))) "f" [] :=
+  crepInlineProgFmap_call_some_handler_hol fmapEntries [1] 0 .skip "f" []
+
+/-- HOL `inline_prog_def` `Dec` clause is the structural recursion. -/
+theorem clauseDec :
+    crepInlineProgFmap fmapEntries (.dec 1 (.const 1) .skip) =
+      .dec 1 (.const 1) (crepInlineProgFmap fmapEntries .skip) :=
+  crepInlineProgFmap_dec_hol fmapEntries 1 (.const 1) .skip
+
+def clauseGuard : Bool :=
+  match crepInlineProgFmap fmapEntries (.call (some ([1], some (0, .skip))) "f" []) with
+  | .call (some ([1], some (_, _))) "f" [] => true
+  | _ => false
+
 /-- Matching HOL `FLOOKUP` on the finite map. -/
 def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&
     ((fmapEntries.remove "f").lookup "f").isNone
 
 def parityGuard : Bool :=
-  inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape
+  inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape &&
+    clauseGuard
 
 #guard parityGuard
 #eval parityGuard

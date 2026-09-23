@@ -1,5 +1,8 @@
 # Flapjack
 
+> **Warning — work in progress.** Nothing in this repository is ready to be
+> relied upon. Do not use Flapjack for anything of value.
+
 Flapjack is an in-progress Lean 4 port of the formally verified Pancake
 compiler; the original HOL sources are in the [`cakeml/pancake`](cakeml/pancake)
 submodule. It has an executable RV64I compiler path for a growing subset of

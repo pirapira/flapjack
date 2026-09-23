@@ -2,6 +2,7 @@ import Flapjack.FiniteMap
 import Flapjack.HolRef
 import Flapjack.PanBst
 import Flapjack.PanLocalised
+import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
@@ -76,6 +77,30 @@ theorem ctxtFcVmax
     (context : PanToCrepProofContext α) (codes : FiniteMap String α)
     (variables : List String) (shapes : List Shape) (names : List Nat) :
     (ctxtFc context.funcs codes variables shapes names).vmax = maxList names := rfl
+
+/-- HOL `slc_def`: pair each source parameter name with its argument value,
+    with `ZIP` truncation represented by Lean's `List.zip`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_def"]
+def slc [BEq String] (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) : FiniteMap String (PanValue α) :=
+  FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments)
+
+/-- HOL `tlc_def`: pair target slots with the flattened argument words. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "tlc_def"]
+def tlc [BEq Nat] (slots : List Nat) (arguments : List (PanValue α)) :
+    FiniteMap Nat α :=
+  FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten))
+
+/-- HOL `slc_tlc_rw`: both local-map constructor names unfold to their
+    original finite-map updates. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_tlc_rw"]
+theorem slcTlcRw [BEq String] [BEq Nat]
+    (parameters : List (String × Shape)) (slots : List Nat)
+    (arguments : List (PanValue α)) :
+    (FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments) =
+      slc parameters arguments) ∧
+    (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
+      tlc slots arguments) := ⟨rfl, rfl⟩
 
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
     The source Pancake state and target Crepe state agree on their memory

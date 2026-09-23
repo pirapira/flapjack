@@ -48,6 +48,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConst_eq_const",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement comparison and direct HOL-EVAL constructor probe)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
@@ -2248,6 +2256,14 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapesFuel_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fuel parameter differs from no-fuel HOL compile_shapes_eq_map; see theorem docstring)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "old_exp_shapes_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -2694,6 +2710,14 @@
     "lean_name": "codeRelImp",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "globals_lookup_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "globalsLookup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact state globals, shape_of, n2w, and OPT_MMAP ports)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -3230,6 +3254,30 @@
     "lean_name": "panToCrepPcCompileCorrectAnnotCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state Annot case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_decCallSkip_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (state-owned DecCall evaluator case infrastructure; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_decCallSkip_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 DecCall evaluator specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state DecCall induction case; untagged)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",

@@ -123,6 +123,10 @@ run_probe crep_runtime_ffi_boundary_probeScript.sml crep_runtime_ffi_boundary_pr
 run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_probe.out \
   valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
+  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_arith_eval_mul_const_probeScript.sml crep_arith_eval_mul_const_probe.out \
+  input_word multiply_general "$cake_dir/pancake/proofs/crep_arithProofScript.sml"
 run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.out \
   read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -152,6 +156,8 @@ run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_prob
   is_decl_decl is_decl_exception is_exn_decl_exception is_exn_decl_decl \
   is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
   "$cake_dir/pancake/panLangScript.sml"
+run_probe compile_shape_probeScript.sml compile_shape_probe.out \
+  one compile_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
   local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
@@ -435,7 +441,7 @@ run_probe code_rel_probeScript.sml code_rel_probe.out \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
-  lookup_success lookup_missing \
+  lookup_success lookup_missing lookup_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \

@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.Proofs.PanStructs
 
 namespace Flapjack.Test.PanStructsCompileShapeParity
 
@@ -32,6 +33,18 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+/-! The production list helper is the fuel-indexed analogue of HOL's
+    mutually recursive `compile_shapes`. This concrete list mirrors the direct
+    HOL-EVAL `compile_shapes_map` oracle; the fuel parameter is the reason the
+    helper theorem is intentionally left untagged. -/
+theorem structCompileShapesFuel_eq_map_fixture :
+    structCompileShapeFuel.structCompileShapesFuel 8 forwardContext
+      [.named "outer", .comb [.one, .named "inner"], .named "missing"] =
+      [.comb [.comb [.one]], .comb [.one, .comb [.one]], .one] := by
+  rw [structCompileShapesFuel_eq_map]
+  simp [structCompileShapeFuel, structCompileShapeFuel.structCompileShapesFuel,
+    forwardContext, lookupInfoWithRest]
 
 /- Direct parity for `pan_structs$get_names_def`
    (`pan_structsScript.sml:235`).  Cake prepends each Name declaration while

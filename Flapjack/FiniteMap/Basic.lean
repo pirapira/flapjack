@@ -72,6 +72,34 @@ theorem FLOOKUP_FUPDATE_LIST_not_mem [BEq α] [LawfulBEq α]
     have hbf : (entry.1 == k) = false := beq_eq_false_iff_ne.mpr hk
     simp [hbf]
 
+/-! Inverse support fact for finite-map reasoning: a successful lookup after a
+list of updates either came from one of those entries or from the base map.
+This is Flapjack-specific finite-map infrastructure; it is not a standalone
+HOL theorem port. -/
+theorem flookupFupdateList_mem_or_base [BEq α] [LawfulBEq α]
+    (base : FiniteMap α β) (entries : List (α × β)) (key : α) (value : β)
+    (hlookup : FLOOKUP (FUPDATE_LIST base entries) key = some value) :
+    (∃ entry, entry ∈ entries ∧ entry.1 = key ∧ entry.2 = value) ∨
+      FLOOKUP base key = some value := by
+  induction entries generalizing base with
+  | nil =>
+      simp only [FUPDATE_LIST_nil] at hlookup
+      exact Or.inr hlookup
+  | cons entry entries ih =>
+      rcases entry with ⟨entryKey, entryValue⟩
+      rw [FUPDATE_LIST_cons] at hlookup
+      rcases ih (FUPDATE base (entryKey, entryValue)) hlookup with htail | hbase
+      · rcases htail with ⟨tailEntry, hmem, hkey, hvalue⟩
+        exact Or.inl ⟨tailEntry, by simp [hmem], hkey, hvalue⟩
+      · by_cases heq : entryKey == key
+        · have hvalueEq : entryValue = value := by
+            simpa [FLOOKUP_update, heq] using hbase
+          exact Or.inl ⟨(entryKey, entryValue), by simp,
+            beq_iff_eq.mp heq, hvalueEq⟩
+        · have hbaseLookup : FLOOKUP base key = some value := by
+            simpa [FLOOKUP_update, heq] using hbase
+          exact Or.inr hbaseLookup
+
 /-- Two single updates at distinct keys commute. -/
 theorem FUPDATE_comm [BEq α] [LawfulBEq α] (f : FiniteMap α β)
     (k1 : α) (v1 : β) (k2 : α) (v2 : β) (h : k1 ≠ k2) :

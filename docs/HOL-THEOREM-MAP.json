@@ -2952,6 +2952,14 @@
     "reviewer": "Untagged: compileDecsCake composes the untagged Flapjack globalCompileProg/globalCompileExp, not proved clause-for-clause against HOL pan_globals$compile/compile_exp; CakeContext.globals is a list (InfoMap) rather than HOL's extensional finite map; width : Nat admits 0 while HOL dimindex is positive. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "compile_exp_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "compileExpCake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with extensional finite-map globals, bytes_in_word = n2w (width/8); all compile_exp_def clauses including total FLOOKUP miss -> Const 0w, NStruct/NField -> Const 0w, TopAddr -> Op Sub [TopAddr; Const max_globals_size], catch-all identity)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

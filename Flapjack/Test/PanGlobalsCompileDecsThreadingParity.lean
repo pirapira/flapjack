@@ -98,15 +98,20 @@ theorem threadedAppend :
         context := second.context } :=
   compile_decls_append_threaded compileContext functionBeforeDecl [.exnDecl "E" .one]
 
-/-! Canonical HOL-shaped context fixtures (untagged Flapjack-only structural
-    lemmas; see bead `flapjack-pxn.18.5.2.20.1.1`). These use `CakeContext 8`
-    (HOL's `globals`, `globals_size`, `max_globals_size` fields over 8-bit words)
-    and mirror the direct original-HOL rows in
-    `scripts/hol-probes/pan_globals_compile_decs_probe.out`. -/
+/-! Canonical HOL-shaped context fixtures.  These use `CakeContext 8` (HOL's
+    `globals`/`globals_size`/`max_globals_size` fields over 8-bit words, with an
+    extensional finite map for `globals`) and mirror the direct original-HOL rows
+    in `scripts/hol-probes/pan_globals_compile_decs_probe.out`. -/
 
-/-- The canonical HOL-shaped context over 8-bit words. -/
+/-- The canonical HOL-shaped context over 8-bit words, with no globals. -/
 def cakeContext : CakeContext 8 :=
-  { globals := [], globalsSize := 0, maxGlobalsSize := 16 }
+  { globals := FEMPTY, globalsSize := 0, maxGlobalsSize := 16 }
+
+/-- The canonical context with global `g` bound to address `7`. -/
+def cakeContextWithGlobal : CakeContext 8 :=
+  { globals := FUPDATE cakeContext.globals ("g", (Shape.one, (7 : BitVec 8)))
+    globalsSize := 1
+    maxGlobalsSize := 16 }
 
 /-- The same forward-reference function, over 8-bit words. -/
 def cakeFunction : Decl (BitVec 8) :=
@@ -140,20 +145,59 @@ def firstCakeFunctionBodyKind (result : CakeCompileDecsResult 8) : Nat :=
   | [.function function] => cakeBodyKind function.body
   | _ => 3
 
-/-- Canonical `function_before_decl` row: the later `g` declaration is not yet in
-    scope, so the body's global read stays unresolved (HOL probe prints
-    `Const 0w`). -/
-theorem cakeBeforeBodyUnresolved : firstCakeFunctionBodyKind cakeResultBefore = 0 := by
-  simp [firstCakeFunctionBodyKind, cakeResultBefore, compileDecsCake, cakeBodyKind,
-    cakeFunction, cakeFunctionBeforeDecl, cakeContext, CakeContext.toPass,
-    globalCompileProg, globalCompileExp, lookupInfo]
+/-- Canonical `function_before_decl` / `function_after_decl` rows: the compiled
+    body reads `Const` before the `g` declaration and `Load` after it, matching
+    the HOL probe. -/
+def cakeThreadingValues : List Nat :=
+  [firstCakeFunctionBodyKind cakeResultBefore, firstCakeFunctionBodyKind cakeResultAfter]
 
-/-- Canonical `function_after_decl` row: with `g` declared first, the body's
-    global read is resolved (HOL probe prints `Load One (Op Sub ...)`). -/
-theorem cakeAfterBodyResolved : firstCakeFunctionBodyKind cakeResultAfter = 1 := by
-  simp [firstCakeFunctionBodyKind, cakeResultAfter, compileDecsCake, cakeBodyKind,
-    cakeFunction, cakeFunctionAfterDecl, cakeContext, CakeContext.toPass,
-    globalCompileProg, globalCompileExp, globalAddress, lookupInfo]
+#eval cakeThreadingValues
+#guard cakeThreadingValues = [0, 1]
+
+/-! Direct `compile_exp` clause checks matching HOL `compile_exp_def`: a missing
+    global is `Const 0w`, a present `(One, addr)` global is
+    `Load One (Op Sub [TopAddr; Const addr])`, `NStruct` is `Const 0w`, and
+    `TopAddr` is `Op Sub [TopAddr; Const max_globals_size]`. -/
+def isConstZero : Exp (BitVec 8) → Bool
+  | .const value => value == 0
+  | _ => false
+
+def isLoadOneFrom (address : BitVec 8) : Exp (BitVec 8) → Bool
+  | .load .one (.op .sub [.topAddr, .const found]) => found == address
+  | _ => false
+
+def isTopAddrSub (bound : BitVec 8) : Exp (BitVec 8) → Bool
+  | .op .sub [.topAddr, .const found] => found == bound
+  | _ => false
+
+def compileExpChecks : List Bool :=
+  [ isConstZero (compileExpCake cakeContext (.var .global "missing"))
+  , isLoadOneFrom 7 (compileExpCake cakeContextWithGlobal (.var .global "g"))
+  , isConstZero (compileExpCake cakeContext (.nStruct "S" []))
+  , isTopAddrSub 16 (compileExpCake cakeContext .topAddr) ]
+
+#eval compileExpChecks
+#guard compileExpChecks.all id
+
+/-! Direct `compile` program-clause checks matching HOL `compile_def`: assigning
+    to a present `(One, addr)` global stores under `Op Sub [TopAddr; Const addr]`,
+    while a missing global becomes `Skip`. -/
+def isGlobalAssignStore (address value : BitVec 8) : Prog (BitVec 8) → Bool
+  | .store (.op .sub [.topAddr, .const found]) (.const stored) =>
+      found == address && stored == value
+  | _ => false
+
+def isSkip : Prog (BitVec 8) → Bool
+  | .skip => true
+  | _ => false
+
+def compileProgChecks : List Bool :=
+  [ isGlobalAssignStore 7 5
+      (compileProgCake cakeContextWithGlobal (.assign .global "g" (.const 5)))
+  , isSkip (compileProgCake cakeContext (.assign .global "g" (.const 5))) ]
+
+#eval compileProgChecks
+#guard compileProgChecks.all id
 
 theorem cakeEveryIsFunction :
     cakeResultBefore.functions.all globalDeclIsFunction = true :=
@@ -181,8 +225,9 @@ theorem cakeAppend :
   compile_decls_append_cake cakeContext cakeFunctionBeforeDecl [.exnDecl "E" .one]
 
 def cakeThreadingGuard : Bool :=
-  firstCakeFunctionBodyKind cakeResultBefore == 0 &&
-  firstCakeFunctionBodyKind cakeResultAfter == 1 &&
+  cakeThreadingValues == [0, 1] &&
+  compileExpChecks.all id &&
+  compileProgChecks.all id &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

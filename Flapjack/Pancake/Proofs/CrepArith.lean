@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-! Exact theorem counterpart for CakeML's `crep_arithProofScript.sml`.
     The statement specializes the source's `'a word crepLang$exp` to a
@@ -592,6 +593,65 @@ theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
   rw [crepEvalCodeMapIrrel f (riscvCrepWordTarget state)
     (crepSimpExp (BitVec.ofNat n) expression)]
   rw [hsimp]
+
+/-! Flapjack-only all-width support for the source-shaped state update. This
+    is intentionally not tagged as HOL `simp_exp_correct1`: it represents
+    HOL words only as `RiscV.Word n`/`BitVec n` and the direct evaluator's
+    width operations through the RISC-V model. The exact arbitrary HOL word
+    carrier theorem remains open. The all-constructor production evaluator
+    correspondence is proved in `CrepSem.Eval`. -/
+def crepArithHolMapCode {n : Nat} {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) :
+    CrepHolState (RiscV.Word n) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+theorem crepArithHolMapCode_target [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) :
+    riscvCrepWordTarget (crepArithHolMapCode f state).toRuntime =
+      crepArithMapCode f (riscvCrepWordTarget state.toRuntime) := by
+  cases state
+  rfl
+
+theorem crepSimpExpCorrect1BitVec {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (expression : CrepExp (RiscV.Word n))
+    (h : evalCrepHolExpWordLab state expression ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) expression) =
+    evalCrepHolExpWordLab state expression := by
+  have hraw :
+      evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime) expression ≠ none := by
+    rw [evalCrepRuntimeExp_toRuntime_eq]
+    simpa [evalCrepHolExpWordLab] using h
+  have hsimp := crepSimpExpEvalPreserves state.toRuntime expression hraw
+  calc
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+        (crepSimpExp (BitVec.ofNat n) expression) =
+        (evalCrepRuntimeExp
+          (riscvCrepWordTarget (crepArithHolMapCode f state).toRuntime)
+          (crepSimpExp (BitVec.ofNat n) expression)).map PanWordLab.word := by
+          simp only [evalCrepHolExpWordLab]
+          rw [← evalCrepRuntimeExp_toRuntime_eq]
+    _ = (evalCrepRuntimeExp
+          (crepArithMapCode f (riscvCrepWordTarget state.toRuntime))
+          (crepSimpExp (BitVec.ofNat n) expression)).map PanWordLab.word := by
+          rw [crepArithHolMapCode_target]
+    _ = (evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime)
+          (crepSimpExp (BitVec.ofNat n) expression)).map PanWordLab.word := by
+          rw [crepEvalCodeMapIrrel f (riscvCrepWordTarget state.toRuntime)
+            (crepSimpExp (BitVec.ofNat n) expression)]
+    _ = (evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime)
+          expression).map PanWordLab.word := by
+          exact congrArg (Option.map PanWordLab.word) hsimp
+    _ = evalCrepHolExpWordLab state expression := by
+          rw [evalCrepHolExpWordLab]
+          rw [← evalCrepRuntimeExp_toRuntime_eq]
 
 
 end Flapjack

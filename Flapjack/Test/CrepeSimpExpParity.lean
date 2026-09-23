@@ -1,6 +1,7 @@
 import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.Pancake.Proofs.CrepArith
 import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeSimpExpParity
@@ -85,5 +86,33 @@ def runtimeEvalSimpParity : Bool :=
     (crepSimpExp (BitVec.ofNat 64) nested) == some 168
 
 #guard runtimeEvalSimpParity
+
+/-! An 8-bit all-width instance exercises the source-shaped state adapter and
+    the proved production evaluator correspondence, beyond the RV64 executable
+    fixture above. This remains untagged support for the arbitrary HOL word
+    carrier gap documented beside `crepSimpExpCorrect1BitVec`. -/
+def holState8 : CrepHolState (RiscV.Word 8) Unit :=
+  { locals := updateCrepRuntimeLocal (fun _ => none) 2 (.word (word8 7))
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun _ => .word 0
+    memaddrs := fun _ => false
+    shMemaddrs := fun _ => false
+    clock := 0
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def holExpression8 : CrepExp (RiscV.Word 8) :=
+  .crepOp .mul [.var 2, .const (word8 8)]
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) holExpression8) =
+    evalCrepHolExpWordLab holState8 holExpression8 := by
+  apply crepSimpExpCorrect1BitVec
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
+    updateCrepRuntimeLocal]
 
 end Flapjack.Test.CrepeSimpExpParity

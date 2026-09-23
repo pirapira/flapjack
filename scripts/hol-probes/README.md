@@ -79,6 +79,14 @@ destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
+`crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
+`LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
+`cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production
+checks live in `Flapjack.Test.CrepEvalConstructorParity`; generic word-result
+projection equations live beside `evalCrepRuntimeExp` in
+`Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
+scope slice only: the target-extended runtime state and the remaining
+word-operation and byte-load cases still need an evaluator correspondence.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

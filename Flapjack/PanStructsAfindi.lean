@@ -148,11 +148,6 @@ theorem compileShapes_isWfShape [BEq String] (outer : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨compileShape_isWfShape_of outer context shape, ih⟩
 
-theorem structInfosOk_append (xs ys : StructContext)
-    (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
-  have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
-  rwa [List.drop_left] at hdrop
-
 /-- Cake `pan_structs` `struct_infos_ok_cons`: prepending a fresh structure
     whose fields are distinct, whose shapes are well formed in the existing
     context and whose recorded size matches keeps the context well formed. -/

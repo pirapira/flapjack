@@ -310,35 +310,33 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     have hfk : fuel ≤ k := by omega
     rw [evalPanValueFfiProgSteps] at h
     rw [evalPanValueFfiProgSteps]
-    cases hc : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
-        bytesInWord condition ma with
-    | none => rw [hc] at h; simp at h
+    cases hv : panValueIteCondition structs baseAddress topAddress bytesInWord
+        locals globals memory condition ma with
+    | none =>
+      simp only [hv, Option.elim_none] at h ⊢
+      exact h
     | some pair =>
-      obtain ⟨cvalue, conditionSteps⟩ := pair
-      rw [hc] at h
-      cases cvalue with
-      | word w =>
-        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-        by_cases hz : (w != 0) = true
-        · rw [if_pos hz] at h ⊢
-          cases ht : evalPanValueFfiProgSteps context primitive handler structs functions
-            baseAddress topAddress bytesInWord fuel locals globals memory ffi thenBranch
-            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-          | none => rw [ht] at h; simp at h
-          | some q =>
-            rw [ht] at h
-            rw [ihThen _ _ hfk ht]
-            exact h
-        · rw [if_neg hz] at h ⊢
-          cases te : evalPanValueFfiProgSteps context primitive handler structs functions
-            baseAddress topAddress bytesInWord fuel locals globals memory ffi elseBranch
-            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-          | none => rw [te] at h; simp at h
-          | some q =>
-            rw [te] at h
-            rw [ihElse _ _ hfk te]
-            exact h
-      | _ => simp at h
+      obtain ⟨w, conditionSteps⟩ := pair
+      simp only [hv, Option.elim_some, Option.bind_eq_bind] at h ⊢
+      by_cases hz : (w != 0) = true
+      · rw [if_pos hz] at h ⊢
+        cases ht : evalPanValueFfiProgSteps context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi thenBranch
+          (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+        | none => rw [ht] at h; simp at h
+        | some q =>
+          rw [ht] at h
+          rw [ihThen _ _ hfk ht]
+          exact h
+      · rw [if_neg hz] at h ⊢
+        cases te : evalPanValueFfiProgSteps context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi elseBranch
+          (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+        | none => rw [te] at h; simp at h
+        | some q =>
+          rw [te] at h
+          rw [ihElse _ _ hfk te]
+          exact h
   | case14 fuel locals globals memory ffi info function arguments ma c mh ihCall =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

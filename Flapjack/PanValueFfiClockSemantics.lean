@@ -216,15 +216,16 @@ mutual
               (memoryHandler := memoryHandler)
         | _ => pure (firstOutcome, firstClock)
     | fuel + 1, locals, globals, memory, ffi, clock,
-        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
-        let .word condition := condition | none
-        evalPanValueFfiClockProg context primitive handler structs functions
-          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-          (if condition != 0 then thenBranch else elseBranch)
-          (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory condition memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun condition =>
+            evalPanValueFfiClockProg context primitive handler structs functions
+              baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+              (if condition != 0 then thenBranch else elseBranch)
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler))
     | fuel + 1, locals, globals, memory, ffi, clock,
         .call info function arguments, memoryAccess, contracts, memoryHandler =>
         evalPanValueFfiClockCall context primitive handler structs functions
@@ -449,15 +450,16 @@ mutual
               (memoryHandler := memoryHandler)
         | _ => pure (firstOutcome, firstClock)
     | fuel + 1, locals, globals, memory, ffi, clock,
-        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler => do
-        let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
-        let .word condition := condition | none
-        evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
-          baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-          (if condition != 0 then thenBranch else elseBranch)
-          (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+        .ite condition thenBranch elseBranch, memoryAccess, contracts, memoryHandler =>
+        (panValueIteConditionValue structs baseAddress topAddress bytesInWord locals globals
+          memory condition memoryAccess).elim
+          (pure (.control (.error locals globals memory ffi), clock))
+          (fun condition =>
+            evalPanValueFfiClockCodeProg context primitive handler structs code exceptionShapes
+              baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
+              (if condition != 0 then thenBranch else elseBranch)
+              (memoryAccess := memoryAccess) (contracts := contracts)
+              (memoryHandler := memoryHandler))
     | fuel + 1, locals, globals, memory, ffi, clock,
         .call info function arguments, memoryAccess, contracts, memoryHandler =>
         evalPanValueFfiClockCodeCall context primitive handler structs code exceptionShapes

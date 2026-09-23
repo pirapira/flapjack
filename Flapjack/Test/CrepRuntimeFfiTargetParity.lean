@@ -201,6 +201,31 @@ example : (crepRuntimeWriteBytes (riscv64CrepRuntimeTarget ffiWriteBase)
     some (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8) :=
   crepRuntimeWriteBytes_target_eq_riscv ffiWriteBase 8 writeBytes8
 
+/-- A domain that admits only address `16`, so a write starting at `8` has a
+    failing head store and a succeeding tail store at `16`. -/
+def ffiFallbackBase : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { ffiWriteBase with
+    memory := fun address =>
+      if address == (8 : RiscV.Word 64) then .word (0x11 : RiscV.Word 64)
+      else if address == (16 : RiscV.Word 64) then .word (0x22 : RiscV.Word 64)
+      else .word 0
+    memaddrs := fun address => address == (16 : RiscV.Word 64) }
+
+/-- The multi-byte fallback rows of the HOL oracle
+    (`write_fallback_tail_isolated=SOME 0xBBw; write_fallback_discards_tail=SOME
+    0x22w`): the tail store at `16` succeeds in isolation, but a failing head
+    store at `8` discards it and returns the original memory. -/
+def ffiWriteFallbackGuard : Bool :=
+  (RiscV.panRiscVReadByte ffiFallbackBase.memaddrs
+      (crepRuntimeMemoryView
+        (riscv64WriteMem ffiFallbackBase (16 : RiscV.Word 64) [(0xBB : UInt8)]))
+      (8 : RiscV.Word 64) (16 : RiscV.Word 64) == some (187 : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiFallbackBase.memaddrs
+      (crepRuntimeMemoryView
+        (riscv64WriteMem ffiFallbackBase (8 : RiscV.Word 64)
+          [(0xAA : UInt8), 0xBB]))
+      (8 : RiscV.Word 64) (16 : RiscV.Word 64) == some (34 : RiscV.Word 64))
+
 /-- Oracle mirroring the HOL `call_FFI` probe: `f` echoes with a new host state,
     `g` returns the wrong byte count, `live` diverges and every other name
     fails. -/
@@ -270,6 +295,39 @@ example :
     (Or.inl (by simp [riscv64ReadByteArray, RiscV.panRiscVReadByte,
       panModelReadByte, ffiErrorBase]))
 
+/-- A base state with the read-bytes memory/domain and the `call_FFI` oracle,
+    used to exercise the HOL `FFI_return` write-back branch. -/
+def ffiReturnedBase : CrepRuntimeState (RiscV.Word 64) Nat :=
+  { ffiProbeBase with
+    memory := fun address =>
+      if address == (8 : RiscV.Word 64) then
+        .word (0x0807060504030201 : RiscV.Word 64)
+      else .word 0
+    memaddrs := fun address => address == (8 : RiscV.Word 64)
+    ffi := ffiCallFfiState }
+
+def ffiReturnedFfi : FfiState Nat :=
+  { ffiCallFfiState with
+    state := 1
+    ioEvents := ffiCallFfiState.ioEvents ++
+      [{ name := .extCall "f", configuration := [1, 2, 3, 4]
+         bytes := [1, 2, 3, 4].zip [1, 2, 3, 4] }] }
+
+/-- The returned branch writes the oracle bytes back with `crepRuntimeWriteBytes`
+    and returns `Normal` with the updated ffi, matching `call_FFI`'s `FFI_return`
+    (`write_bytearray` plus the ffi update). -/
+example :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget ffiReturnedBase) "f"
+        (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4 =
+      (.normal, riscv64WriteState
+        { ffiReturnedBase with ffi := ffiReturnedFfi }
+        (8 : RiscV.Word 64) [1, 2, 3, 4]) :=
+  crepRuntimeExtCallValues_target_returned ffiReturnedBase "f"
+    (8 : RiscV.Word 64) 4 (8 : RiscV.Word 64) 4
+    [1, 2, 3, 4] [1, 2, 3, 4]
+    (by decide) (by decide) ffiReturnedFfi [1, 2, 3, 4] (by rfl)
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard
@@ -277,6 +335,8 @@ example :
 #guard ffiReadBytesGuard
 
 #guard ffiWriteBytesGuard
+
+#guard ffiWriteFallbackGuard
 
 #guard ffiCallFfiGuard
 
@@ -287,6 +347,8 @@ example :
 #eval ffiReadBytesGuard
 
 #eval ffiWriteBytesGuard
+
+#eval ffiWriteFallbackGuard
 
 #eval ffiCallFfiGuard
 
@@ -307,11 +369,15 @@ def runChecks : IO Bool := do
     IO.println "PASS crep runtime RISC-V 64 FFI write-bytes target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 FFI write-bytes target parity"
+  if ffiWriteFallbackGuard then
+    IO.println "PASS crep runtime RISC-V 64 FFI write-bytes fallback parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 FFI write-bytes fallback parity"
   if ffiCallFfiGuard then
     IO.println "PASS crep runtime RISC-V 64 call_FFI target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 call_FFI target parity"
   pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard &&
-    ffiWriteBytesGuard && ffiCallFfiGuard)
+    ffiWriteBytesGuard && ffiWriteFallbackGuard && ffiCallFfiGuard)
 
 end Flapjack.Test.CrepRuntimeFfiTargetParity

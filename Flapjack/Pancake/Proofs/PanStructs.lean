@@ -84,6 +84,30 @@ theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
           have h' : xs.length = ys.length := by omega
           rw [ih ys h']
 
+/-! Helper for projecting one well-formed shape from a well-formed shape list. -/
+theorem isWfShapeList_of_all {context : StructContext} {shapes : List Shape}
+    (h : ∀ shape ∈ shapes, isWfShape context shape = true) :
+    isWfShape.isWfShapeList context shapes = true := by
+  induction shapes with
+  | nil => simp [isWfShape.isWfShapeList]
+  | cons s ss ih =>
+      simp only [isWfShape.isWfShapeList, Bool.and_eq_true]
+      exact ⟨h s (by simp), ih (fun t ht => h t (by simp [ht]))⟩
+
+/-- The `struct_infos_ok` predicate from `pan_structsProofScript.sml`, over
+    the production Pancake structure context. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_def"]
+def structInfosOk (context : StructContext) : Prop :=
+  (∀ entry ∈ context, (entry.2.fields.map Prod.fst).Nodup) ∧
+  (context.map Prod.fst).Nodup ∧
+  (∀ (i : Nat) (name : StructName) (info : StructInfo),
+      context[i]? = some (name, info) →
+      ∀ shape ∈ info.fields.map Prod.snd,
+        isWfShape (context.drop (i + 1)) shape = true) ∧
+  (∀ entry ∈ context,
+      entry.2.size =
+        shapeSizeWithContext context (.comb (entry.2.fields.map Prod.snd)))
+
 /-- HOL's mutual `is_wf_shape_compile_shape`
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in
@@ -305,6 +329,148 @@ theorem shapeSizeWithContext_drop (context : StructContext)
       | some info =>
           have hctx := lookupInfo_drop_helper n context name info hlk hnodup
           simp [shapeSizeWithContext, hlk, hctx]
+
+/-- Exact API translation of HOL `struct_infos_ok_drop`
+    (`pan_structsProofScript.sml:169`): dropping a context prefix preserves
+    distinct field and structure names, suffix well-formedness, and sizes. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_drop" 169]
+theorem structInfosOk_drop (n : Nat) (context : StructContext)
+    (h : structInfosOk context) : structInfosOk (context.drop n) := by
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  have hdrop_drop : ∀ (i : Nat) (shape : Shape),
+      isWfShape (context.drop (n + i + 1)) shape = true →
+        isWfShape ((context.drop n).drop (i + 1)) shape = true := by
+    intro i shape hshape
+    have hdrop : (context.drop n).drop (i + 1) = context.drop (n + i + 1) := by
+      rw [List.drop_drop]
+      rw [Nat.add_assoc]
+    rwa [hdrop]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro entry hentry
+    exact h1 entry (List.mem_of_mem_drop hentry)
+  · rw [List.map_drop]
+    exact h2.drop
+  · intro i name info hget shape hmem
+    have hget' : context[n + i]? = some (name, info) := by
+      rw [← List.getElem?_drop]
+      exact hget
+    exact hdrop_drop i shape (h3 (n + i) name info hget' shape hmem)
+  · intro entry hentry
+    obtain ⟨i, hi, heq⟩ := List.getElem_of_mem hentry
+    have hget : context[n + i]? = some entry := by
+      rw [← List.getElem?_drop]
+      rw [List.getElem?_eq_getElem hi]
+      exact congrArg some heq
+    obtain ⟨name, info⟩ := entry
+    have hwfFields : isWfShape (context.drop n)
+        (.comb (info.fields.map Prod.snd)) = true := by
+      have hlist : isWfShape.isWfShapeList (context.drop n)
+          (info.fields.map Prod.snd) = true := by
+        refine isWfShapeList_of_all (fun shape hmem => ?_)
+        have hshape := h3 (n + i) name info hget shape hmem
+        exact isWfShape_drop (context.drop n) shape (i + 1)
+          (hdrop_drop i shape hshape)
+      simpa [isWfShape] using hlist
+    have hsize := shapeSizeWithContext_drop context
+      (.comb (info.fields.map Prod.snd)) n hwfFields h2
+    have hctx := h4 (name, info) (List.mem_of_mem_drop hentry)
+    rw [hsize]
+    exact hctx
+
+/-- Exact API translation of HOL `struct_infos_ok_append`
+    (`pan_structsProofScript.sml:198`): a valid appended structure context
+    remains valid in its suffix. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_append" 198]
+theorem structInfosOk_append (xs ys : StructContext)
+    (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
+  have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
+  rwa [List.drop_left] at hdrop
+
+/-- Exact API translation of HOL `struct_infos_ok_cons`
+    (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
+    fields, well-formed field shapes, and its computed size preserves the
+    structure-context invariant. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_cons" 132]
+theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
+    (hxs : structInfosOk xs)
+    (hflds : (info.fields.map Prod.fst).Nodup)
+    (hfresh : nm ∉ xs.map Prod.fst)
+    (hwf : ∀ shape ∈ info.fields.map Prod.snd, isWfShape xs shape = true)
+    (hsize : info.size = shapeSizeWithContext xs (.comb (info.fields.map Prod.snd))) :
+    structInfosOk ((nm, info) :: xs) := by
+  obtain ⟨h1, h2, h3, h4⟩ := hxs
+  have hkeys : (((nm, info) :: xs).map Prod.fst).Nodup := by
+    simp only [List.map_cons, List.nodup_cons]
+    exact ⟨hfresh, h2⟩
+  have hdropOne : ∀ (shape : Shape),
+      isWfShape xs shape = true →
+      shapeSizeWithContext xs shape =
+        shapeSizeWithContext ((nm, info) :: xs) shape := by
+    intro shape hshape
+    have hd := shapeSizeWithContext_drop ((nm, info) :: xs) shape 1
+      (by simpa using hshape) hkeys
+    simpa using hd
+  refine ⟨?_, hkeys, ?_, ?_⟩
+  · intro entry hentry
+    rcases List.mem_cons.mp hentry with rfl | hentry
+    · exact hflds
+    · exact h1 entry hentry
+  · intro i name info' hget shape hmem
+    cases i with
+    | zero =>
+        simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
+        obtain ⟨rfl, rfl⟩ := hget
+        have hdrop : ((nm, info) :: xs).drop (0 + 1) = xs := rfl
+        rw [hdrop]
+        exact hwf shape hmem
+    | succ k =>
+        simp only [List.getElem?_cons_succ] at hget
+        have hdrop : ((nm, info) :: xs).drop (Nat.succ k + 1) = xs.drop (k + 1) := by
+          rw [Nat.succ_eq_add_one, List.drop_succ_cons]
+        rw [hdrop]
+        exact h3 k name info' hget shape hmem
+  · intro entry hentry
+    rcases List.mem_cons.mp hentry with rfl | hentry
+    · have hlist : isWfShape.isWfShapeList xs (info.fields.map Prod.snd) = true :=
+        isWfShapeList_of_all hwf
+      have hwfComb : isWfShape xs (.comb (info.fields.map Prod.snd)) = true := by
+        simpa [isWfShape] using hlist
+      rw [← hdropOne (.comb (info.fields.map Prod.snd)) hwfComb]
+      exact hsize
+    · obtain ⟨name, info'⟩ := entry
+      obtain ⟨i, hi, heq⟩ := List.getElem_of_mem hentry
+      have hget : xs[i]? = some (name, info') := by
+        rw [List.getElem?_eq_getElem hi]
+        exact congrArg some heq
+      have hlist : isWfShape.isWfShapeList xs (info'.fields.map Prod.snd) = true :=
+        isWfShapeList_of_all (fun shape hmem =>
+          isWfShape_drop xs shape (i + 1) (h3 i name info' hget shape hmem))
+      have hwfComb : isWfShape xs (.comb (info'.fields.map Prod.snd)) = true := by
+        simpa [isWfShape] using hlist
+      rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
+      exact h4 (name, info') hentry
+
+/-- Exact translation of HOL's local `alookup_map_structs_ok`
+    (`pan_structsProofScript.sml:243`): a found structure in a valid context
+    has distinct field names. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok" 243]
+theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
+    (context : StructContext) (info : StructInfo)
+    (hlookup : lookupInfo name context = some info)
+    (hok : structInfosOk context) :
+    (info.fields.map Prod.fst).Nodup := by
+  induction context with
+  | nil => simp [lookupInfo] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      simp only [lookupInfo] at hlookup
+      by_cases hc : (candidate == name) = true
+      · rw [if_pos hc] at hlookup
+        have heq : entryInfo = info := Option.some.inj hlookup
+        subst heq
+        exact hok.1 (candidate, entryInfo) (by simp)
+      · rw [if_neg hc] at hlookup
+        exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
 /-- Exact port of HOL `dropWhile_MAP_helper`
     (`pan_structsProofScript.sml:542`): mapping commutes with `dropWhile` when

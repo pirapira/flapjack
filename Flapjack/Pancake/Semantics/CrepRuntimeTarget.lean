@@ -428,9 +428,10 @@ theorem crepRuntimeReadBytes_target_eq_riscv
 
 HOL `crepSem$ExtCall` writes the returned bytes back with
 `write_bytearray ptr new_bytes s.memory s.memaddrs s.be`, where
-`write_bytearray` is total: when `mem_store_byte` returns `NONE` it keeps the
-memory it already had. The production `crepRuntimeWriteBytes` mirrors this by
-keeping the tail state on a `NONE` store. `riscv64SetMemory`/`riscv64WriteMem`
+`write_bytearray` is total: when `mem_store_byte` returns `NONE` it discards
+that store *and every remaining store* and keeps the memory of the original
+call. The production `crepRuntimeWriteBytes` mirrors this by returning the
+original state on a `NONE` store. `riscv64SetMemory`/`riscv64WriteMem`
 are the canonical target witness of that write.
 Direct oracle: `scripts/hol-probes/crep_runtime_write_bytes_probe.out`. -/
 
@@ -445,14 +446,15 @@ theorem riscv64SetMemory_self (base : CrepRuntimeState (RiscV.Word 64) σ) :
     riscv64SetMemory base base.memory = riscv64CrepRuntimeTarget base := rfl
 
 /-- The production byte writer's step: store (with HOL's total fallback) at the
-    head address after writing the tail. -/
+    head address after writing the tail.  A failed head store discards the tail
+    writes too, returning the original state (HOL `write_bytearray`'s outer `m`). -/
 theorem crepRuntimeWriteBytes_cons (s : CrepRuntimeState (RiscV.Word 64) σ)
     (address : RiscV.Word 64) (byte : UInt8) (bytes : List UInt8) :
     crepRuntimeWriteBytes s address (byte :: bytes) =
       (crepRuntimeWriteBytes s (address + 1) bytes).map
         (fun tailState =>
           (crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte)).getD
-            tailState) := by
+            s) := by
   rw [crepRuntimeWriteBytes]
   cases hrec : crepRuntimeWriteBytes s (address + 1) bytes with
   | none => rfl
@@ -461,15 +463,15 @@ theorem crepRuntimeWriteBytes_cons (s : CrepRuntimeState (RiscV.Word 64) σ)
       cases crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte) <;> rfl
 
 /-- HOL `write_bytearray address bytes memory domain false` for the canonical
-    RISC-V 64 target: writes the bytes tail-first (matching HOL), keeping the
-    previous state whenever a byte store fails. -/
+    RISC-V 64 target: writes the bytes tail-first (matching HOL); a failed byte
+    store discards the tail writes and returns the original canonical target. -/
 def riscv64WriteState (base : CrepRuntimeState (RiscV.Word 64) σ)
     (address : RiscV.Word 64) : List UInt8 → CrepRuntimeState (RiscV.Word 64) σ
   | [] => riscv64CrepRuntimeTarget base
   | byte :: bytes =>
       (crepRuntimeStoreByte (riscv64WriteState base (address + 1) bytes) address
         ((riscv64CrepRuntimeTarget base).ffiContext.byteToWord byte)).getD
-        (riscv64WriteState base (address + 1) bytes)
+        (riscv64CrepRuntimeTarget base)
 
 /-- The memory produced by `riscv64WriteState`, i.e. the HOL `write_bytearray`
     result for `mem_store_byte`. -/
@@ -582,10 +584,9 @@ theorem riscv64ExtCallCallFfiHandler_sharedMem
     array read returns `Error` (HOL's `_ => (SOME Error, s)`), and an ffi `final`
     event returns `FinalFFI` with the target state unchanged (HOL `FFI_final`).
     The `returned` branch (HOL `FFI_return`: write the returned bytes back with
-    the canonical target writer and install the returned ffi) is the remaining
-    gap, tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`; separately
-    elaborated occurrences of the well-founded `crepRuntimeWriteBytes` do not
-    share their hidden instance arguments, so that equalities is not `rfl`. -/
+    the canonical target writer and install the returned ffi) is pinned by
+    `crepRuntimeExtCallValues_target_returned`; `crepRuntimeExtCallValues_target_dispatch`
+    assembles both handler outcomes. -/
 theorem crepRuntimeExtCallValues_target_error
     (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
     (configuration configurationLength array arrayLength : RiscV.Word 64)
@@ -604,7 +605,8 @@ theorem crepRuntimeExtCallValues_target_error
 /-- Dispatch when the `callFfi` handler reports a `final` event (HOL
     `FFI_final`): the production step returns `FinalFFI` with the target state
     unchanged, exactly HOL's `call_FFI` final branch.  The `returned` branch
-    (write-back) is tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`. -/
+    (write-back) is pinned by `crepRuntimeExtCallValues_target_returned` and the
+    two are assembled by `crepRuntimeExtCallValues_target_dispatch`. -/
 theorem crepRuntimeExtCallValues_target_final
     (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
     (configuration configurationLength array arrayLength : RiscV.Word 64)
@@ -625,18 +627,63 @@ theorem crepRuntimeExtCallValues_target_final
     riscv64PanValueFfiContext_valueToNat_eq_riscv,
     crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hf]
 
-/-! Dispatch when the `callFfi` handler reports a `returned` result (HOL
+/-- Dispatch when the `callFfi` handler reports a `returned` result (HOL
     `FFI_return`): the production step writes the returned bytes back into the
-    array argument with the canonical target writer and installs the returned
-    ffi, exactly HOL's `FFI_return` branch (`write_bytearray` + `ffi:=new_ffi`).
-    This last `ExtCall` outcome remains open in child bead
-    `flapjack-pxn.18.4.3.43.1.2.2.1.1`: the production occurrence of
-    `crepRuntimeWriteBytes` inside `crepRuntimeExtCallValues` is elaborated with
-    a `let`/projection form of the updated state that does not syntactically
-    match the `{ .. with ffi := .. }` form of the proven
-    `crepRuntimeWriteBytes_target_updateFfi` bridge, and `rw`/`simp`/`change`/
-    `convert` keyed matching does not close the gap.  The write-back relation
-    itself is proven (`crepRuntimeWriteBytes_target_eq_riscv_state`); only its
-    composition into the one-shot dispatch expression is blocked. -/
+    canonical target with `crepRuntimeWriteBytes` and returns `Normal` with the
+    updated ffi, matching `write_bytearray` plus the ffi update in `call_FFI`. -/
+theorem crepRuntimeExtCallValues_target_returned
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes)
+    (ffi : FfiState σ) (bytes : List UInt8)
+    (hr : riscv64ExtCallCallFfiHandler
+        (.extCall function configurationBytes arrayBytes :
+          CrepRuntimeRequest (RiscV.Word 64)) base.ffi = .returned ffi bytes) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (.normal, riscv64WriteState { base with ffi := ffi } array bytes) := by
+  unfold crepRuntimeExtCallValues
+  simp only [riscv64CrepRuntimeTarget_ffiContext,
+    riscv64PanValueFfiContext_valueToNat_eq_riscv,
+    crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hr]
+  erw [crepRuntimeWriteBytes_target_updateFfi]
+
+/-- Assembled canonical-target dispatch of `crepRuntimeExtCallValues`.  With both
+    argument reads succeeding, the production step case-splits on the Lean
+    `callFfi` (HOL `call_FFI`) result exactly as the source semantics does:
+    `FFI_return` writes the returned bytes back into the canonical target and
+    installs the returned ffi (`Normal`), while `FFI_final` returns `FinalFFI`
+    with the target state unchanged.  The failing-read branch is
+    `crepRuntimeExtCallValues_target_error`, so this theorem together with that
+    one covers every production `ExtCall` outcome. -/
+theorem crepRuntimeExtCallValues_target_dispatch
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+       | .returned ffi bytes =>
+           (.normal, riscv64WriteState { base with ffi := ffi } array bytes)
+       | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base)) := by
+  cases hres : callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+  | returned ffi bytes =>
+      exact crepRuntimeExtCallValues_target_returned base function
+        configuration configurationLength array arrayLength configurationBytes
+        arrayBytes hc ha ffi bytes (by
+          rw [riscv64ExtCallCallFfiHandler_extCall, hres])
+  | final event =>
+      exact crepRuntimeExtCallValues_target_final base function
+        configuration configurationLength array arrayLength configurationBytes
+        arrayBytes hc ha event (by
+          rw [riscv64ExtCallCallFfiHandler_extCall, hres])
 
 end Flapjack

@@ -75,28 +75,28 @@ def runtimeParityGuard : Bool :=
 #guard runtimeParityGuard
 
 private theorem runtimeInputWrapped :
-    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState) runtimeExpression).map
+    (evalCrepRuntimeExp (riscvCrepWordTarget runtimeState) runtimeExpression).map
       PanWordLab.word = some (.word (7 : RiscV.Word 64)) := by
-  have hRaw : evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+  have hRaw : evalCrepRuntimeExp (riscvCrepWordTarget runtimeState)
       runtimeExpression = some (7 : RiscV.Word 64) := by decide +kernel
   simp [hRaw]
 
-example : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+example : (evalCrepRuntimeExp (riscvCrepWordTarget runtimeState)
     (crepMulConst (BitVec.ofNat 64) runtimeExpression (0 : RiscV.Word 64))).map
       PanWordLab.word = some (.word 0) :=
   crepEvalMulConst runtimeState runtimeExpression 0 7 runtimeInputWrapped
 
-example : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+example : (evalCrepRuntimeExp (riscvCrepWordTarget runtimeState)
     (crepMulConst (BitVec.ofNat 64) runtimeExpression (1 : RiscV.Word 64))).map
       PanWordLab.word = some (.word 7) :=
   crepEvalMulConst runtimeState runtimeExpression 1 7 runtimeInputWrapped
 
-example : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+example : (evalCrepRuntimeExp (riscvCrepWordTarget runtimeState)
     (crepMulConst (BitVec.ofNat 64) runtimeExpression (8 : RiscV.Word 64))).map
       PanWordLab.word = some (.word 56) :=
   crepEvalMulConst runtimeState runtimeExpression 8 7 runtimeInputWrapped
 
-example : (evalCrepRuntimeExp (riscv64CrepRuntimeTarget runtimeState)
+example : (evalCrepRuntimeExp (riscvCrepWordTarget runtimeState)
     (crepMulConst (BitVec.ofNat 64) runtimeExpression (3 : RiscV.Word 64))).map
       PanWordLab.word = some (.word 21) :=
   crepEvalMulConst runtimeState runtimeExpression 3 7 runtimeInputWrapped

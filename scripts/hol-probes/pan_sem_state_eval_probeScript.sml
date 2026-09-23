@@ -41,3 +41,8 @@ val _ = print_eval "byte_big_last"
   ``eval ^big (panLang$LoadByte (panLang$Const 7w))``;
 val _ = print_eval "word32_big"
   ``eval ^big (panLang$Load32 (panLang$Const 0w))``;
+val _ = print_eval "op_add_fold_three"
+  ``eval ^little (panLang$Op Add [panLang$Const 1w; panLang$Const 2w;
+      panLang$Const 3w])``;
+val _ = print_eval "op_sub_wrong_arity"
+  ``eval ^little (panLang$Op Sub [panLang$Const 1w])``;

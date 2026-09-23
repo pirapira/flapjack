@@ -2651,4 +2651,40 @@ example : PanValueFfiClockNormalAdequateProgFromFloor 3 3 evaluatorContext
 -- `evaluate_add_clock_eq`.
 
 
+/-! ## Exact HOL helper-slice instantiations
+
+These instantiate the tagged HOL helper restatements in
+`Flapjack/Pancake/Proofs/PanSimp.lean` at a concrete word type so the reviewed
+statements are exercised by `lake build`. -/
+
+example : expIds (retToTail (.skip : Prog Nat)) = expIds (.skip : Prog Nat) :=
+  expIdsRetToTailEq .skip
+
+example : expIds (seqAssoc (.skip : Prog Nat) (.skip : Prog Nat)) =
+    expIds (.skip : Prog Nat) ++ expIds (.skip : Prog Nat) :=
+  expIdsSeqAssocEq .skip .skip
+
+example : expIds (panSimpProg (.skip : Prog Nat)) = expIds (.skip : Prog Nat) :=
+  expIdsCompileEq .skip
+
+example : sizeOfEids (panSimpDecls ([] : List (Decl Nat))) =
+    sizeOfEids ([] : List (Decl Nat)) :=
+  sizeOfEidsPanSimpDeclsEq []
+
+example : functions (panSimpDecls ([] : List (Decl Nat))) =
+    (functions ([] : List (Decl Nat))).map (fun entry =>
+      (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) :=
+  functionsCompileProg []
+
+example : ((functions (panSimpDecls ([] : List (Decl Nat)))).map
+    (fun entry => entry.1)).Nodup :=
+  firstCompileProgAllDistinctPanSimp [] (by simp [functions])
+
+example :
+    ([(1, (2, 3))] : List (Nat × Nat × Nat)).map (fun entry => entry.2.2 + 1) =
+      (([(1, (2, 3))] : List (Nat × Nat × Nat)).map
+        (fun entry => entry.2.2)).map (fun body => body + 1) :=
+  mapSndFEq _ (fun body => body + 1) (fun value => value)
+
+
 end Flapjack.Test.PanSimpParity

@@ -74,26 +74,84 @@ where
     | [] => 0
     | (_, shape) :: fields => structCompileShapeDepth shape + structCompileFieldFuel fields
 
-/-! Cake's `compile_shape` recursively expands every child and searches only
-    the suffix after a named declaration.  The executable wrapper retains the
-    same recursive equations while deriving fuel from the complete syntax,
-    including nested field shapes; unlike the old word-count fuel it cannot
-    truncate a valid nested shape. -/
+/-! Fuel-indexed auxiliary analogue of Cake's `compile_shape`, retained for the
+    explicit fuel-indexed map lemma and its regression fixture. Production
+    `structCompileShape` below now uses the no-fuel well-founded definition that
+    mirrors HOL's mutual recursion and suffix-context termination measure. -/
 def structCompileShapeFuel : Nat → StructContext → Shape → Shape
   | 0, _, _ => .one
   | _fuel + 1, _context, .one => .one
   | fuel + 1, context, .comb shapes =>
-      .comb (shapes.map (structCompileShapeFuel fuel context))
+      .comb (structCompileShapesFuel fuel context shapes)
   | fuel + 1, context, .named name =>
       match lookupInfoWithRest name context with
       | some (info, suffix) =>
-          .comb ((info.fields.map Prod.snd).map (structCompileShapeFuel fuel suffix))
+          .comb (structCompileShapesFuel fuel suffix (info.fields.map Prod.snd))
       | none => .one
+  termination_by fuel _context shape => (fuel, sizeOf shape)
+where
+  structCompileShapesFuel (fuel : Nat) (context : StructContext) :
+      List Shape → List Shape
+    | [] => []
+    | shape :: shapes =>
+        structCompileShapeFuel fuel context shape ::
+          structCompileShapesFuel fuel context shapes
+  termination_by shapes => (fuel, sizeOf shapes)
+  decreasing_by all_goals simp_wf <;> omega
+
+/-- Looking up a declaration and returning its suffix always strictly shortens
+    the context, matching the first component of Cake's `compile_shape`
+    termination measure. -/
+theorem lookupInfoWithRest_suffix_length_lt [BEq String] (name : String)
+    (context : StructContext) (info : StructInfo) (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix)) :
+    suffix.length < context.length := by
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      by_cases hmatch : entry.1 == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨_, rfl⟩
+        simp
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        have htail := ih hlookup
+        simp
+        omega
+
+/-! The production compiler uses a well-founded, no-fuel version of Cake's
+    mutually recursive `compile_shape` and `compile_shapes`. Its lexicographic
+    measure mirrors the HOL definition: a named declaration recurses only on
+    the strictly shorter context suffix, while Comb children and list tails
+    decrease their syntax size. -/
+def structCompileShapeWF : StructContext → Shape → Shape
+  | _context, .one => .one
+  | context, .comb shapes => .comb (structCompileShapesWF context shapes)
+  | context, .named name =>
+      match _hlookup : lookupInfoWithRest name context with
+      | some (info, suffix) =>
+          .comb (structCompileShapesWF suffix (info.fields.map Prod.snd))
+      | none => .one
+termination_by context shape => (context.length, sizeOf shape)
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | apply Prod.Lex.left
+      exact lookupInfoWithRest_suffix_length_lt name context info suffix _hlookup
+    | omega
+where
+  structCompileShapesWF : StructContext → List Shape → List Shape
+    | _context, [] => []
+    | context, shape :: shapes =>
+        structCompileShapeWF context shape :: structCompileShapesWF context shapes
+  termination_by context shapes => (context.length, sizeOf shapes)
+  decreasing_by
+    all_goals simp_wf
+    all_goals try omega
+    all_goals exact lookupInfoWithRest_suffix_length_lt name context info suffix hlookup
 
 def structCompileShape (context : StructContext) (shape : Shape) : Shape :=
-  structCompileShapeFuel
-    (structCompileContextFuel context + structCompileShapeDepth shape + 1)
-    context shape
+  structCompileShapeWF context shape
 
 def structOldExpShape (context : StructPassContext) : Exp α → Shape
   | .var kind name =>
@@ -276,30 +334,12 @@ def structCompileTop (declarations : List (Decl α)) : List (Decl α) :=
 
 @[simp] theorem structCompileShape_one (context : StructContext) :
     structCompileShape context .one = .one := by
-  simp [structCompileShape, structCompileShapeFuel]
+  simp [structCompileShape, structCompileShapeWF]
 
 @[simp] theorem structCompileExp_const [BEq String]
     (context : StructPassContext) (value : α) :
     structCompileExp context (.const value) = .const value := by
   simp [structCompileExp]
-
-theorem structCompileExps_eq_map [BEq String] (context : StructPassContext)
-    (expressions : List (Exp α)) :
-    structCompileExp.structCompileExps context expressions =
-      expressions.map (structCompileExp context) := by
-  induction expressions with
-  | nil => simp [structCompileExp.structCompileExps]
-  | cons expression expressions ih =>
-      simp [structCompileExp.structCompileExps, ih]
-
-theorem structOldExpShapes_eq_map (context : StructPassContext)
-    (expressions : List (Exp α)) :
-    structOldExpShape.structOldExpShapes context expressions =
-      expressions.map (structOldExpShape context) := by
-  induction expressions with
-  | nil => simp [structOldExpShape.structOldExpShapes]
-  | cons expression expressions ih =>
-      simp [structOldExpShape.structOldExpShapes, ih]
 
 theorem structCompileProg_seq [BEq String] (context : StructPassContext)
     (first second : Prog α) :

@@ -69,7 +69,7 @@ theorem lookupInfo_isSome_drop_fixture :
 theorem isWfShape_drop_fixture : isWfShape context (.named "s") = true := by
   have h : isWfShape (context.drop 1) (.named "s") = true := by
     simp [context, isWfShape, lookupInfo]
-  exact isWfShape_drop (.named "s") context 1 h
+  exact isWfShape_drop context (.named "s") 1 h
 
 /-! Focused regression for the ported Cake `pan_structs` `alookup_drop_helper`
     lemma. -/
@@ -114,7 +114,7 @@ theorem shapeSizeWithContext_drop_fixture :
       shapeSizeWithContext context (.named "s") := by
   have h : isWfShape (context.drop 1) (.named "s") = true := by
     simp [context, isWfShape, lookupInfo]
-  exact shapeSizeWithContext_drop 1 context (.named "s") h (by decide)
+  exact shapeSizeWithContext_drop context (.named "s") 1 h (by decide)
 
 /-! Focused regression for the ported Cake `size_of_sh_with_ctxt_eq`
     (`panPropsScript.sml:184`): for a shape well formed against the empty

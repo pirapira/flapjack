@@ -35,3 +35,7 @@ val _ = print_eval "six"
   ``crep_arith$dest_2exp 0n (6w : 8 word)``;
 val _ = print_eval "max"
   ``crep_arith$dest_2exp 0n (255w : 8 word)``;
+val _ = print_eval "eight_shift_conclusion"
+  ``word_lsl (1w : 8 word) 3n``;
+val _ = print_eval "highest_shift_conclusion"
+  ``word_lsl (1w : 8 word) 7n``;

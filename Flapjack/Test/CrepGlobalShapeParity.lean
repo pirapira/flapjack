@@ -1,5 +1,4 @@
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Direct runtime checks against `scripts/hol-probes/crep_eval_probe.out` and
@@ -12,7 +11,7 @@ namespace Flapjack.Test.CrepGlobalShapeParity
 
 open Flapjack
 
-def noNatMemory : Nat → Option Nat := fun _ => none
+def noNatMemory : Nat → PanWordLab Nat := fun _ => .word 0
 def noNatDomain : Nat → Bool := fun _ => false
 
 def globalState : CrepRuntimeState Nat Unit :=
@@ -38,15 +37,24 @@ def runtimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
 
 def noPrimitive : CrepPrimitiveHandler Nat := fun _ _ => none
 
+/- HOL crep_store_global_probe: set_globals_direct has a hit at global 4,
+   preserves the local 3, and leaves local 9 absent. This checks the observable
+   update behavior; it does not claim the whole Lean runtime-state type is a
+   port of HOL crepSem$state. -/
+def directUpdateState : CrepRuntimeState Nat Unit :=
+  { globalState with locals := fun name => if name == 3 then some (.word 7) else none }
+
+#guard let state := setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState
+       state.globals (4 : BitVec 5) == some (.word 22) &&
+       state.locals 3 == some (.word 7) &&
+       (state.locals 9).isNone
+
 /- HOL crep_eval_probe: eval_global_hit=SOME (Word 11w). -/
 #guard evalCrepRuntimeExp globalState (.loadGlob (4 : BitVec 5)) == some 11
 #guard evalCrepRuntimeExp globalState (.loadGlob (36 : BitVec 5)) == some 11
-#guard crepSemEvalExp globalState (.loadGlob (4 : BitVec 5)) == some 11
-#guard crepSemEvalExp globalState (.loadGlob (36 : BitVec 5)) == some 11
 
 /- HOL crep_eval_probe: eval_global_miss=NONE. -/
 #guard (evalCrepRuntimeExp globalState (.loadGlob (12 : BitVec 5))).isNone
-#guard (crepSemEvalExp globalState (.loadGlob (12 : BitVec 5))).isNone
 
 /- HOL crep_store_global_probe: StoreGlob inserts the wrapped cell and leaves
    the unrelated global at address eight unchanged. -/

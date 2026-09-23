@@ -1,4 +1,5 @@
-mem_load_hit=SOME (Word 7w)
-
-mem_load_miss=NONE
-
+mem_load_valid=SOME (Word 7w)
+mem_load_invalid=NONE
+mem_load_other_valid=SOME (Word 7w)
+eval_load_valid=SOME (Word 7w)
+eval_load_invalid=NONE

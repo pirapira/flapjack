@@ -229,6 +229,31 @@ def inlinable : Decl α → Bool
   | .function declaration => declaration.inline
   | _ => false
 
+/-! Direct source-shaped counterpart of `panLang$exceptions`
+    (`panLangScript.sml:328`): the exception table of a declaration list, in
+    declaration order, dropping every non-exception declaration. -/
+@[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
+def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
+  | [] => []
+  | .exnDecl exception shape :: declarations =>
+      (exception, shape) :: exceptionEntries declarations
+  | _ :: declarations => exceptionEntries declarations
+termination_by declarations => sizeOf declarations
+
+/-! Direct source-shaped counterpart of `panLang$functions`
+    (`panLangScript.sml:319-328`): retain every function's metadata while
+    skipping value, exception, and struct declarations.  The tuple order
+    matches HOL exactly: name, params, body, return shape. -/
+@[hol "cakeml/pancake/panLangScript.sml" "functions_def"]
+def functionEntries : List (Decl α) →
+    List (FunName × List (VarName × Shape) × Prog α × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionEntries declarations
+  | _ :: declarations => functionEntries declarations
+termination_by declarations => sizeOf declarations
+
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
@@ -980,32 +1005,6 @@ theorem zero_not_mem_genlist_offset {α : Type} (t : List α) (h : t.length ≤ 
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   rw [hzero] at htoNat
   simp at htoNat
-
-/-- Cake's `genlist_less_than` (`crep_inlineProofScript.sml:629`): every value
-    in `GENLIST (λx. a + SUC x) n` is strictly above `a`. -/
-theorem genlist_less_than (n a v : Nat) :
-    v ∈ (List.range n).map (fun x => a + (x + 1)) → a < v := by
-  intro hx
-  obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hx
-  rw [List.mem_range] at hi
-  omega
-
-/-- Cake's `genlist_not_in` (`crep_inlineProofScript.sml:636`): values at or
-    below `a` do not occur in `GENLIST (λx. a + SUC x) n`. -/
-theorem genlist_not_in (n a v : Nat) (h : v ≤ a) :
-    v ∉ (List.range n).map (fun x => a + (x + 1)) := by
-  intro hmem
-  have := genlist_less_than n a v hmem
-  omega
-
-/-- Cake's `genlist_all_distinct` (`crep_inlineProofScript.sml:643`):
-    `GENLIST (λx. a + SUC x) n` has no duplicates. -/
-theorem genlist_all_distinct (n a : Nat) :
-    ((List.range n).map (fun x => a + (x + 1))).Nodup :=
-  List.Pairwise.map (fun x => a + (x + 1))
-    (fun _left _right hne heq =>
-      hne (Nat.add_right_cancel (Nat.add_left_cancel heq)))
-    List.nodup_range
 
 /-- Cake's `map_pick_up_first` (`pan_globalsProofScript.sml:2995`): projecting
     the first component of a quadruple map recovers the mapped first

@@ -35,8 +35,9 @@ evaluation, an in-domain word load, function-code replacement, and
 shape/duplicate failure cases.
 `pan_sem_state_eval_probe.out` records direct HOL EVAL of `eval_def` at
 `cakeml/pancake/semantics/panSemScript.sml:209-297` for in-domain and
-out-of-domain word loads, little- and big-endian byte loads, and 32-bit loads.
-The state-derived Lean boundary and its matching cases live in
+out-of-domain word loads, little- and big-endian byte loads, 32-bit loads, and
+list-valued word operators with accepted and rejected operand counts. The
+state-derived Lean boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
@@ -56,6 +57,23 @@ and target entry. The probe also proves matching and deliberately mismatching
 analogue tests live in `Flapjack.Test.PanToCrepCodeRelParity`. The Lean
 relation remains untagged until its list-backed compiler body is replaced by
 the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
+`globals_lookup_probe.out` records direct HOL EVAL of
+`pan_to_crepProof$globals_lookup_def` for a present singleton word and a
+missing global; the matching Lean guards live in
+`Flapjack.Test.PanToCrepGlobalsLookupParity`.
+`crep_arith_dest_const_probe.out` records direct HOL EVAL of
+`crep_arith$dest_const_def` at
+`cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
+and multiplication expression. Its Lean constructor checks live in
+`Flapjack.Test.CrepeDestConstParity`.
+`crep_dest_2exp_probe.out` records direct HOL EVAL of
+`crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
+the corresponding `word_lsl 1w` results for successful exponents. Its Lean
+destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
+`crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
+`crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
+general multipliers, with a word-valued local. Its matching production runtime
+cases live in `Flapjack.Test.CrepeMulConstParity`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

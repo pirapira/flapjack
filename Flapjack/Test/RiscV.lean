@@ -407,8 +407,8 @@ example :
     structCompileShape
         [("pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
         (.named "pair") = .comb [.one, .one] := by
-  simp [structCompileShape, structCompileShapeFuel, structCompileContextFuel,
-    structCompileShapeDepth]
+  simp [structCompileShape, structCompileShapeWF,
+    structCompileShapeWF.structCompileShapesWF, lookupInfoWithRest]
 
 example :
     structCompileExp

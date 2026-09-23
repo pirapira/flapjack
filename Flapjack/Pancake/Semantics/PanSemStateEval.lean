@@ -1,4 +1,5 @@
 import Flapjack.PanBst
+import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.RiscV.PanMemory
 
 /-!
@@ -14,7 +15,8 @@ the full polymorphic `word` interface is represented in Lean.
 
 namespace Flapjack
 
-private def panSemBitVec64WordModel : PanMemoryModel (RiscV.Word 64) := by
+/-- RISC-V 64-bit source word model with the full HOL `be` behavior. -/
+def panSemBitVec64WordModel : PanMemoryModel (RiscV.Word 64) := by
   let model := RiscV.panRiscVMemoryModel (width := 64)
   exact { model with
     getByte := fun bytesInWord address value bigEndian =>
@@ -42,6 +44,29 @@ def panSemBitVec64MemoryAccess (state : PanSemState (RiscV.Word 64) ffi) :
     PanValueMemoryAccess (RiscV.Word 64) :=
   panValueMemoryAccessOfModel panSemBitVec64WordModel
     state.memaddrs state.sharedMemaddrs state.be
+
+/-- Full state-owned source code-map evaluator for the RISC-V 64-bit word
+    model. It derives the memory domains and endianness from the PanSem state
+    and fixes the source width from the word type, without consulting a Crep
+    runtime state. -/
+def panSemEvaluateRiscV64CodeState [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)]
+    [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (handler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (state : PanSemState (RiscV.Word 64) (FfiState σ)) (program : Prog (RiscV.Word 64)) :
+    Option (PanValueFfiClockResult (RiscV.Word 64) σ) :=
+  panSemEvaluateCodeStateWithMemoryModel context primitive handler
+    panSemBitVec64WordModel panSemBitVec64BytesInWord state program
 
 /-- Evaluate one source expression using the word-memory inputs derived from
     its `PanSemState`. -/

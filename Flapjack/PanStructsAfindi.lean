@@ -9,159 +9,8 @@ declaration-level proof ports now live under `Flapjack/Pancake`.
 
 namespace Flapjack
 
-/-! CakeML `pan_structsProofScript.sml` `is_wf_shape_drop`: dropping a prefix
-    of the struct context preserves well-formedness of a shape, because a name
-    found in the suffix is also found (at least as far left) in the whole
-    context. -/
-
-theorem lookupInfo_isSome_drop (name : String) (context : StructContext) (n : Nat) :
-    (lookupInfo name (context.drop n)).isSome = true →
-      (lookupInfo name context).isSome = true := by
-  induction context generalizing n with
-  | nil => cases n <;> simp [lookupInfo]
-  | cons entry rest ih =>
-      obtain ⟨candidate, value⟩ := entry
-      cases n with
-      | zero => simp
-      | succ m =>
-          simp only [List.drop_succ_cons]
-          intro h
-          have hrest := ih m h
-          by_cases hc : candidate == name
-          · simp [lookupInfo, hc]
-          · simp only [lookupInfo, hc]
-            exact hrest
-
-theorem isWfShape_drop (shape : Shape) (context : StructContext) (n : Nat) :
-    isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
-  (isWfShape.induct
-    (motive1 := fun shapes => ∀ (context : StructContext) (n : Nat),
-      isWfShape.isWfShapeList (context.drop n) shapes = true →
-        isWfShape.isWfShapeList context shapes = true)
-    (motive2 := fun shape => ∀ (context : StructContext) (n : Nat),
-      isWfShape (context.drop n) shape = true → isWfShape context shape = true)
-    (by intro context n _; simp [isWfShape.isWfShapeList])
-    (by
-      intro shape shapes ih1 ih2 context n h
-      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h ⊢
-      exact ⟨ih1 context n h.1, ih2 context n h.2⟩)
-    (by intro context n _; simp [isWfShape])
-    (by
-      intro shapes ih context n h
-      have h' : isWfShape.isWfShapeList (context.drop n) shapes = true := by
-        simpa [isWfShape] using h
-      simpa [isWfShape] using ih context n h')
-    (by
-      intro name context n h
-      simp only [isWfShape] at h ⊢
-      exact lookupInfo_isSome_drop name context n h))
-    shape context n
-
-/-- Cake `pan_structs` `map_uncurry_zip_again`: mapping an uncurried pair
-constructor over a `zip` equals the `zip` of the two maps. -/
-theorem list_zip_map_eq {α β γ δ : Type} (f : α → γ) (g : β → δ)
-    (xs : List α) (ys : List β) (h : xs.length = ys.length) :
-    (xs.zip ys).map (fun p => (f p.1, g p.2)) = (xs.map f).zip (ys.map g) := by
-  induction xs generalizing ys with
-  | nil =>
-      cases ys with
-      | nil => rfl
-      | cons y ys => simp at h
-  | cons x xs ih =>
-      cases ys with
-      | nil => simp at h
-      | cons y ys =>
-          simp only [List.zip_cons_cons, List.map_cons, List.length_cons] at h ⊢
-          have h' : xs.length = ys.length := by omega
-          rw [ih ys h']
-
-/-- Cake `pan_structs` `UNCURRY_EQ_o_SND`: an uncurried constant pair
-function is the constant composed with `SND`. -/
-theorem prod_uncurry_const_eq_comp_snd {α β γ : Type} (f : β → γ) :
-    Function.uncurry (fun _ : α => f) = f ∘ Prod.snd := by
-  funext p
-  cases p
-  rfl
-
-/-- `lookupInfo` is the `List.lookup` of the underlying association list. -/
-theorem lookupInfo_eq_lookup (name : String) (entries : InfoMap α) :
-    lookupInfo name entries = List.lookup name entries := by
-  induction entries with
-  | nil => rfl
-  | cons entry entries ih =>
-      obtain ⟨candidate, value⟩ := entry
-      simp only [lookupInfo, List.lookup_cons, ih]
-      by_cases h : (candidate == name) = true
-      · have h' : (name == candidate) = true := by
-          rw [beq_iff_eq] at h ⊢
-          exact h.symm
-        simp [h, h']
-      · have h' : (name == candidate) = false :=
-          beq_eq_false_iff_ne.mpr (fun hc => h (beq_iff_eq.mpr hc.symm))
-        simp [h, h']
-
-/-- Cake `pan_structs` `alookup_drop_helper` specialised to `lookupInfo`:
-a hit in a suffix survives dropping the prefix, provided the keys are distinct. -/
-theorem lookupInfo_drop_helper (n : Nat)
-    (context : StructContext) (name : String) (info : StructInfo)
-    (hlookup : lookupInfo name (context.drop n) = some info)
-    (hnodup : (context.map Prod.fst).Nodup) :
-    lookupInfo name context = some info := by
-  rw [lookupInfo_eq_lookup] at hlookup ⊢
-  exact (lookup_drop_helper n context name info hlookup hnodup).2
-
-/-- A member of a well-formed shape list is itself a well-formed shape. -/
-theorem isWfShape_of_mem {context : StructContext} {shapes : List Shape} {shape : Shape}
-    (h : isWfShape.isWfShapeList context shapes = true) (hmem : shape ∈ shapes) :
-    isWfShape context shape = true := by
-  induction shapes with
-  | nil => simp at hmem
-  | cons s ss ih =>
-      simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at h
-      rcases List.mem_cons.mp hmem with rfl | hmem'
-      · exact h.1
-      · exact ih h.2 hmem'
-
-/-- Cake `pan_structs` `size_of_sh_with_ctxt_drop`: dropping a prefix of the
-structure context preserves the shape size, provided the remaining context
-still witnesses the shape and the context keys are distinct. -/
-theorem shapeSizeWithContext_drop (n : Nat) (context : StructContext) (shape : Shape)
-    (h : isWfShape (context.drop n) shape = true)
-    (hnodup : (context.map Prod.fst).Nodup) :
-    shapeSizeWithContext (context.drop n) shape = shapeSizeWithContext context shape := by
-  revert h hnodup
-  induction shape using shapeSizeWithContext.induct with
-  | case1 => intro _ _; simp only [shapeSizeWithContext]
-  | case2 shapes ih =>
-      intro h hnodup
-      have hlist : isWfShape.isWfShapeList (context.drop n) shapes = true := by
-        simpa [isWfShape] using h
-      have hpoint : ∀ s ∈ shapes,
-          shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s :=
-        fun s hs => ih s hs (isWfShape_of_mem hlist hs) hnodup
-      have hfold : ∀ (l : List Shape),
-          (∀ s ∈ l, shapeSizeWithContext (context.drop n) s = shapeSizeWithContext context s) →
-          ∀ acc, l.foldl (fun total shape => total + shapeSizeWithContext (context.drop n) shape) acc =
-              l.foldl (fun total shape => total + shapeSizeWithContext context shape) acc := by
-        intro l
-        induction l with
-        | nil => intro _ acc; rfl
-        | cons s ss ihs =>
-            intro hl acc
-            simp only [List.foldl_cons]
-            rw [hl s (by simp)]
-            exact ihs (fun t ht => hl t (by simp [ht])) (acc + shapeSizeWithContext context s)
-      simp only [shapeSizeWithContext]
-      exact hfold shapes hpoint 0
-  | case3 name =>
-      intro h hnodup
-      have hsome : (lookupInfo name (context.drop n)).isSome = true := by
-        simpa [isWfShape] using h
-      cases hlk : lookupInfo name (context.drop n) with
-      | none => simp [hlk] at hsome
-      | some info =>
-          have hctx := lookupInfo_drop_helper n context name info hlk hnodup
-          simp only [shapeSizeWithContext, hlk, hctx]
+/-! These helpers and the exact shape-size theorem now live in the Pancake
+    proof counterpart. -/
 
 /-- Cake's `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`): if `dropWhile P xs`
@@ -299,35 +148,6 @@ theorem compileShapes_isWfShape [BEq String] (outer : StructContext)
       simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨compileShape_isWfShape_of outer context shape, ih⟩
 
-/-- Counterpart of Cake's `dropWhile_MAP_helper`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:542`): dropping a prefix
-    and then mapping commutes, provided the two predicates agree on the mapped
-    elements. -/
-theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
-    (f : α → β) (xs : List α) (ys : List α)
-    (h : xs.dropWhile P = ys)
-    (hPQ : ∀ x ∈ xs, P x = Q (f x)) :
-    (xs.map f).dropWhile Q = ys.map f := by
-  induction xs generalizing ys with
-  | nil =>
-      simp only [List.dropWhile_nil] at h
-      subst h
-      simp
-  | cons x xs ih =>
-      have hx : P x = Q (f x) := hPQ x (by simp)
-      rw [List.dropWhile_cons] at h
-      by_cases hP : P x = true
-      · rw [if_pos hP] at h
-        have hQ : Q (f x) = true := by rw [← hx]; exact hP
-        rw [List.map_cons, List.dropWhile_cons, hQ]
-        simp only [if_true]
-        exact ih ys h (fun y hy => hPQ y (by simp [hy]))
-      · rw [if_neg hP] at h
-        have hPfalse : P x = false := by simpa using hP
-        have hQ : Q (f x) = false := by rw [← hx]; exact hPfalse
-        rw [← h, List.map_cons, List.dropWhile_cons, hQ]
-        simp only [Bool.false_eq_true, if_false]
-
 theorem isWfShapeList_of_all {context : StructContext} {shapes : List Shape}
     (h : ∀ shape ∈ shapes, isWfShape context shape = true) :
     isWfShape.isWfShapeList context shapes = true := by
@@ -385,11 +205,11 @@ theorem structInfosOk_drop (n : Nat) (context : StructContext)
           (info.fields.map Prod.snd) = true := by
         refine isWfShapeList_of_all (fun shape hmem => ?_)
         have hshape := h3 (n + i) name info hget shape hmem
-        exact isWfShape_drop shape (context.drop n) (i + 1)
+        exact isWfShape_drop (context.drop n) shape (i + 1)
           (hdrop_drop i shape hshape)
       simpa [isWfShape] using hlist
-    have hsize := shapeSizeWithContext_drop n context
-      (.comb (info.fields.map Prod.snd)) hwfFields h2
+    have hsize := shapeSizeWithContext_drop context
+      (.comb (info.fields.map Prod.snd)) n hwfFields h2
     have hctx := h4 (name, info) (List.mem_of_mem_drop hentry)
     rw [hsize]
     exact hctx
@@ -418,7 +238,7 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
       shapeSizeWithContext xs shape =
         shapeSizeWithContext ((nm, info) :: xs) shape := by
     intro shape hshape
-    have hd := shapeSizeWithContext_drop 1 ((nm, info) :: xs) shape
+    have hd := shapeSizeWithContext_drop ((nm, info) :: xs) shape 1
       (by simpa using hshape) hkeys
     simpa using hd
   refine ⟨?_, hkeys, ?_, ?_⟩
@@ -455,7 +275,7 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
         exact congrArg some heq
       have hlist : isWfShape.isWfShapeList xs (info'.fields.map Prod.snd) = true :=
         isWfShapeList_of_all (fun shape hmem =>
-          isWfShape_drop shape xs (i + 1) (h3 i name info' hget shape hmem))
+          isWfShape_drop xs shape (i + 1) (h3 i name info' hget shape hmem))
       have hwfComb : isWfShape xs (.comb (info'.fields.map Prod.snd)) = true := by
         simpa [isWfShape] using hlist
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]

@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.Proofs.PanStructs
 
 namespace Flapjack.Test.PanStructsCompileExpParity
 
@@ -101,23 +102,26 @@ def compileDeclsParityGuard : Bool :=
 #eval compileDeclsParityGuard
 #guard compileDeclsParityGuard
 
-/- Cake `compile_exps_eq_map` (`pan_structsProofScript.sml:11`): the list
-   compiler is the pointwise map of the expression compiler. -/
+/- Cake `compile_exps_eq_map` (`pan_structsProofScript.sml:11`): the production
+   list helper maps the production expression compiler over a nontrivial
+   structure expression. -/
 theorem structCompileExps_eq_map_fixture :
     structCompileExp.structCompileExps context
-        ([.const 1, .const 2] : List (Exp Nat)) =
-      [.const 1, .const 2] := by
+        ([.nStruct "Pair" [("right", .const 2), ("left", .const 1)]] : List (Exp Nat)) =
+      [.rStruct [.const 1, .const 2]] := by
   rw [structCompileExps_eq_map]
-  simp [structCompileExp_const]
+  simp [structCompileExp, structCompileExp.structCompileFields,
+    structSelectFields, context, lookupInfo]
 
-/- Cake `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the list of
-   old expression shapes is the pointwise map of the single-expression
-   shape function. -/
+/- Cake `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the production
+   old-shape list helper maps nontrivial source expressions pointwise. -/
 theorem structOldExpShapes_eq_map_fixture :
     structOldExpShape.structOldExpShapes context
-        ([.const 1, .var .local "local"] : List (Exp Nat)) =
-      [.one, .comb [.one, .one]] := by
+        ([.const 1, .var .local "local", .nStruct "Pair" [],
+          .rStruct [.const 2, .var .global "global", .var .local "local"]] : List (Exp Nat)) =
+      [.one, .comb [.one, .one], .named "Pair",
+       .comb [.one, .named "Pair", .comb [.one, .one]]] := by
   rw [structOldExpShapes_eq_map]
-  simp [structOldExpShape, context, lookupInfo]
+  simp [structOldExpShape, structOldExpShape.structOldExpShapes, context, lookupInfo]
 
 end Flapjack.Test.PanStructsCompileExpParity

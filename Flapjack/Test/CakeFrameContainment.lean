@@ -171,6 +171,25 @@ def cakeMaxVarSequenceOracle : Bool :=
 
 #guard cakeMaxVarSequenceOracle
 
+/- Later-offset Stack Temp-region bound (bead flapjack-pxn.18.2.2.2).  The
+   checked `word_stack_frame_probe.out` rows `later_pair_*` lower a two-word
+   payload at Word colours 44 and 46 with `arg_count = reg_count = 22`: the
+   frame equation sees `max_var = 46`, occupancy `MAX (46/2 + 1 - 22) 0 = 2`,
+   frame `3`, entry `StackAlloc 3`, and `wReg1` numbers the two payload words
+   from the top of that frame at slots 2 and 1 -- both strictly inside it. -/
+def cakeLaterPairStackBoundOracle : Bool :=
+  let occupancy := 46 / 2 + 1 - 22
+  let frame := if occupancy = 0 then 0 else occupancy + 1
+  frame == 3 &&
+    cakeWordFrameSlots
+        ({ locations := [], nextSpill := occupancy } : WordSpillState)
+        (List.range 22) (WordProg.skip : WordProg (RiscV.Word 64)) == occupancy &&
+    CakeRegAlloc.cakeColourLocation 22 frame 44 == .stack 2 &&
+    CakeRegAlloc.cakeColourLocation 22 frame 46 == .stack 1 &&
+    decide (2 < frame) && decide (1 < frame)
+
+#guard cakeLaterPairStackBoundOracle
+
 def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64))) :=
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
   | .error _ => none
@@ -235,6 +254,8 @@ def runChecks : IO Bool := do
         cakeColourWordSpillStateOracleExact),
       ("Cake max_var preserves the sequential-assignment frame input",
         cakeMaxVarSequenceOracle),
+      ("later-offset two-word payload stays inside the allocated frame",
+        cakeLaterPairStackBoundOracle),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

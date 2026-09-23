@@ -51,6 +51,36 @@ val _ = print_eval "call_code_map_7"
                 panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
              clock := 10 |>)))``
 
+val _ = print_eval "call_assign_local_7"
+  ``(FST (panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, strlit "answer"), NONE))
+        (strlit "id") [panLang$Const (7w:8 word)],
+       ((ARB:((8),unit) panSem$state) with
+          <| code := FEMPTY |+ (strlit "id",
+               ([ (strlit "x", panLang$One) ],
+                panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+             locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
+             clock := 10 |>))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, strlit "answer"), NONE))
+        (strlit "id") [panLang$Const (7w:8 word)],
+       ((ARB:((8),unit) panSem$state) with
+          <| code := FEMPTY |+ (strlit "id",
+               ([ (strlit "x", panLang$One) ],
+                panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+             locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
+             clock := 10 |>)))).locals (strlit "answer"))``
+
+val _ = print_eval "call_raises_exception_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE (strlit "raiseE") [],
+       ((ARB:((8),unit) panSem$state) with
+          <| eshapes := FEMPTY |+ (strlit "E", panLang$One);
+             code := FEMPTY |+ (strlit "raiseE",
+               ([], panLang$Raise (strlit "E")
+                   (panLang$Const (7w:8 word)), panLang$One));
+             clock := 10 |>)))``
+
 val _ = print_eval "recursive_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],
@@ -71,6 +101,21 @@ val _ = print_eval "deccall_code_map_7"
          code := FEMPTY |+
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
+
+val _ = print_eval "call_zero_clock_timeout"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «callee» [],
+       (((ARB:((8),unit) panSem$state) with clock := 0) with
+         code := FEMPTY |+
+           («callee», ([], panLang$Skip, panLang$One)))))``
+
+val _ = print_eval "call_zero_arg_const_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «constant» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («constant», ([],
+             panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
 
 val _ = print_eval "recursive_call_timeout"
   ``FST (panSem$evaluate

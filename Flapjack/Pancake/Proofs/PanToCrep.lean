@@ -7,7 +7,6 @@ import Flapjack.PanValueFlatten
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
@@ -25,6 +24,20 @@ context.
 -/
 
 namespace Flapjack
+
+/-! Exact Lean port of HOL `globals_lookup_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The production
+    globals field has HOL's `5 word` keys and `word_lab` cells; `panSemShapeOf`
+    is the exact `shape_of` port constructor by constructor, with no premises.
+    `Shape.shapeSize` matches HOL `size_of_shape_def` on `One`, `Comb` (sum of
+    child sizes), and `Named`, also without side conditions. `List.range` with
+    `BitVec.ofNat` represents `GENLIST n2w` including 5-bit truncation, and
+    `List.mapM` represents `OPT_MMAP`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
+def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
+    Option (List (PanWordLab α)) :=
+  (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
+    (fun index => state.globals (BitVec.ofNat 5 index))
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
@@ -152,24 +165,6 @@ theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
     rw [hpositive hpos]
     exact panValueFlatten_length_eq_shapeSize value hwf
 
-/-- HOL `evaluate_replicate_const` uses `crepSem$eval`: its result is
-    `Word 0w`, whereas `panSem$eval (Const 0w)` returns `ValWord 0w`
-    (`crepSemScript.sml:90-92`, `panSemScript.sml:209-211`). HOL's sole
-    `Word` wrapper is erased in the Lean Crep word-value representation. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "evaluate_replicate_const"]
-theorem evaluateReplicateConst
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (count : Nat) (state : CrepRuntimeState α σ) :
-    (List.replicate count (CrepExp.const (0 : α))).mapM
-      (crepSemEvalExp state) = some (List.replicate count (0 : α)) := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      simp [List.replicate_succ, crepSemEvalExp, ih]
-
 /-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
     module. This drops the source theorem's unused Nat witness; the exact
     tagged theorem below restores that witness in its original position. -/
@@ -235,14 +230,20 @@ theorem maxListNotMemHol (x : Nat) (values : List Nat)
     (h : x > maxList values) : x ∉ values :=
   maxList_not_mem x values h
 
-/-- HOL `flookup_res_var_thm_quant`: restoring one natural-number local
-    changes only that local's lookup. -/
+section
+attribute [local instance] Classical.propDecidable
+
+/-- HOL `flookup_res_var_thm_quant`: restoring one key changes only that
+    key's lookup. Lawful Boolean equality represents HOL key equality. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flookup_res_var_thm_quant"]
-theorem flookupResVarQuant (locals : FiniteMap Nat α)
-    (name query : Nat) (value : Option α) :
+theorem flookupResVarQuant [BEq κ] [LawfulBEq κ]
+    (locals : FiniteMap κ α)
+    (name query : κ) (value : Option α) :
     FLOOKUP (resVar locals (name, value)) query =
       if query = name then value else FLOOKUP locals query := by
   simpa [beq_iff_eq] using FLOOKUP_resVar locals name query value
+
+end
 
 /-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
     lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
@@ -455,20 +456,20 @@ theorem ctxtMaxGetElemLe
 /-- HOL `slc_def`: pair each source parameter name with its argument value,
     with `ZIP` truncation represented by Lean's `List.zip`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_def"]
-def slc [BEq String] (parameters : List (String × Shape))
+def slc (parameters : List (String × Shape))
     (arguments : List (PanValue α)) : FiniteMap String (PanValue α) :=
   FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments)
 
 /-- HOL `tlc_def`: pair target slots with the flattened argument words. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "tlc_def"]
-def tlc [BEq Nat] (slots : List Nat) (arguments : List (PanValue α)) :
+def tlc (slots : List Nat) (arguments : List (PanValue α)) :
     FiniteMap Nat α :=
   FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten))
 
 /-- HOL `slc_tlc_rw`: both local-map constructor names unfold to their
     original finite-map updates. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "slc_tlc_rw"]
-theorem slcTlcRw [BEq String] [BEq Nat]
+theorem slcTlcRw
     (parameters : List (String × Shape)) (slots : List Nat)
     (arguments : List (PanValue α)) :
     (FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments) =
@@ -476,7 +477,7 @@ theorem slcTlcRw [BEq String] [BEq Nat]
     (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
       tlc slots arguments) := ⟨rfl, rfl⟩
 
-/-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:47`).
+/-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
     domains, clock, endianness, FFI state, and address bounds; the source has
     no struct context (`s.structs = []`) and no globals (`s.globals = FEMPTY`).
@@ -486,7 +487,7 @@ theorem slcTlcRw [BEq String] [BEq Nat]
     therefore does not satisfy the relation. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_def"]
 def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : Prop :=
-  s.memory = (fun address => (t.memory address).map PanValue.word) ∧
+  s.memory = (fun address => some (PanValue.word (panTheWord (t.memory address)))) ∧
     s.memaddrs = t.memaddrs ∧
     s.sharedMemaddrs = t.shMemaddrs ∧ s.structs = [] ∧
     s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) ∧
@@ -494,7 +495,7 @@ def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : P
     s.baseAddress = t.baseAddress ∧ s.topAddress = t.topAddress
 
 /-- HOL `state_rel_structs[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:54`). -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_structs"]
 theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.structs = [] := by
@@ -502,12 +503,77 @@ theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   exact hstructs
 
 /-- HOL `state_rel_globals[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:55`). -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_globals"]
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
   exact hglobals
+
+/-- Flapjack-specific bridge for the target memory representation. HOL
+    `crepSem$state.memory` and executable `CrepRuntimeState.memory` are both
+    total `word → word_lab` functions; the separate `memaddrs` set guards
+    accessible addresses (`crepSemScript.sml:24-26`). This relation states
+    equality of the complete memories and is the target-side hypothesis of
+    the `mem_load_def` correspondence below. -/
+def crepMemoryRel (state : CrepRuntimeState α σ) (total : α → PanWordLab α) : Prop :=
+  state.memory = total
+
+/-- First branch of HOL `mem_load_def`
+    (`cakeml/pancake/semantics/crepSemScript.sml:48-51`): a load at an address in
+    `memaddrs` returns the total memory cell, reconstructed as a `word_lab`. -/
+theorem crepRuntimeLoad_eq_some_of_crepMemoryRel {state : CrepRuntimeState α σ}
+    {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
+    (hvalid : state.memaddrs address = true) :
+    crepRuntimeLoad state address = some (panTheWord (total address)) := by
+  change state.memory = total at hrel
+  rw [crepRuntimeLoad]
+  simp [hvalid, hrel]
+
+/-- Second branch of HOL `mem_load_def`: an address outside `memaddrs` has no
+    loadable cell. -/
+theorem crepRuntimeLoad_eq_none_of_memaddrs_false {state : CrepRuntimeState α σ}
+    {address : α} (hinvalid : state.memaddrs address = false) :
+    crepRuntimeLoad state address = none := by
+  rw [crepRuntimeLoad]
+  simp [hinvalid]
+
+/-- First branch of HOL `panSem$mem_store`
+    (`cakeml/pancake/semantics/panSemScript.sml:373-378`) as used by
+    `crepSem$evaluate`'s store case: a store at an address in `memaddrs`
+    succeeds and updates exactly that address, keeping the rest of the memory
+    function. -/
+theorem crepRuntimeStore_eq_some_of_memaddrs_true [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hvalid : state.memaddrs address = true) :
+    crepRuntimeStore state address value =
+      some { state with memory := updateCrepRuntimeMemory state.memory address (.word value) } := by
+  rw [crepRuntimeStore]
+  simp [hvalid]
+
+/-- Second branch of HOL `panSem$mem_store`: a store outside `memaddrs` fails. -/
+theorem crepRuntimeStore_eq_none_of_memaddrs_false [BEq α]
+    {state : CrepRuntimeState α σ} {address value : α}
+    (hinvalid : state.memaddrs address = false) :
+    crepRuntimeStore state address value = none := by
+  rw [crepRuntimeStore]
+  simp [hinvalid]
+
+/-- Storing a value preserves `crepMemoryRel` when the total memory function is
+    updated at the same address: the stored cell becomes the `word_lab` of the
+    value, and every other guarded address is untouched. -/
+theorem crepMemoryRel_store [BEq α] {state : CrepRuntimeState α σ}
+    {total : α → PanWordLab α} (hrel : crepMemoryRel state total) {address : α}
+    (_hvalid : state.memaddrs address = true) (value : α) :
+    crepMemoryRel
+      { state with memory := updateCrepRuntimeMemory state.memory address (.word value) }
+      (fun current => if current == address then .word value else total current) := by
+  unfold crepMemoryRel at hrel ⊢
+  rw [hrel]
+  funext current
+  by_cases hsame : current == address
+  · simp [updateCrepRuntimeMemory, hsame]
+  · simp [updateCrepRuntimeMemory, hsame]
 
 /-- HOL `locals_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:71`):
     the proof context's variable map is well formed, and every live source
@@ -517,20 +583,21 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_def"]
 def localsRel (context : PanToCrepProofContext α)
     (sLocals : FiniteMap String (PanValue α))
-    (tLocals : FiniteMap Nat α) : Prop :=
+    (tLocals : FiniteMap Nat (PanWordLab α)) : Prop :=
   noOverlap context.vars ∧ ctxtMax context.vmax context.vars ∧
     ∀ vname v, FLOOKUP sLocals vname = some v →
       ∃ ns vs, FLOOKUP context.vars vname = some (panValueShape [] v, ns) ∧
-        ns.mapM (FLOOKUP tLocals) = some vs ∧ panValueFlatten v = vs ∧
+        ns.mapM (FLOOKUP tLocals) = some vs ∧
+        (panValueFlatten v).map PanWordLab.word = vs ∧
         isWfShape [] (panValueShape [] v) = true
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape"]
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape" 2345]
 theorem localsRelWfShape
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (name : String) (value : PanValue α)
     (hrel : localsRel context sourceLocals targetLocals)
     (hlookup : FLOOKUP sourceLocals name = some value) :
     panValueIsWf [] value = true := by
@@ -559,7 +626,7 @@ theorem evalPanSemStateExpsWfShapeOfStateRel
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (target : CrepRuntimeState (RiscV.Word 64) σ)
     (context : PanToCrepProofContext (RiscV.Word 64))
-    (targetLocals : FiniteMap Nat (RiscV.Word 64))
+    (targetLocals : FiniteMap Nat (PanWordLab (RiscV.Word 64)))
     (expressions : List (Exp (RiscV.Word 64)))
     (values : List (PanValue (RiscV.Word 64)))
     (heval : evalPanSemStateExps source expressions = some values)
@@ -597,21 +664,24 @@ theorem evalPanSemStateExpsWfShapeOfStateRel
 theorem localsRelLookupCtxt
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (name : String) (value : PanValue α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (name : String) (value : PanValue α)
     (hrel : localsRel context sourceLocals targetLocals)
     (hlookup : FLOOKUP sourceLocals name = some value) :
     ∃ slots,
       FLOOKUP context.vars name = some (panValueShape [] value, slots) ∧
       slots.length = (panValueFlatten value).length ∧
-      slots.mapM (FLOOKUP targetLocals) = some (panValueFlatten value) ∧
+      slots.mapM (FLOOKUP targetLocals) =
+        some ((panValueFlatten value).map PanWordLab.word) ∧
       isWfShape [] (panValueShape [] value) = true := by
   obtain ⟨slots, values, hcontext, hmap, hflatten, hwf⟩ :=
     hrel.2.2 name value hlookup
   refine ⟨slots, hcontext, ?_, ?_, hwf⟩
-  · rw [hflatten]
-    exact list_mapM_length (FLOOKUP targetLocals) slots values hmap
-  · rw [hflatten]
-    exact hmap
+  · calc slots.length = values.length :=
+        list_mapM_length (FLOOKUP targetLocals) slots values hmap
+      _ = ((panValueFlatten value).map PanWordLab.word).length :=
+        congrArg List.length hflatten.symm
+      _ = (panValueFlatten value).length := List.length_map PanWordLab.word
+  · rw [hmap, ← hflatten]
 
 /-- HOL `local_rel_gt_vmax_preserved`: a target local slot strictly above the
     proof context's maximum cannot occur in any source variable's slot list. -/
@@ -619,7 +689,8 @@ theorem localsRelLookupCtxt
 theorem localRelGtVmaxPreserved
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α) (slot : Nat) (newValue : α)
+    (targetLocals : FiniteMap Nat (PanWordLab α)) (slot : Nat)
+    (newValue : PanWordLab α)
     (hrel : localsRel context sourceLocals targetLocals)
     (habove : context.vmax < slot) :
     localsRel context sourceLocals (FUPDATE targetLocals (slot, newValue)) := by
@@ -647,7 +718,7 @@ theorem localRelGtVmaxPreserved
 theorem localRelLeZipUpdatePreserved
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α)
+    (targetLocals : FiniteMap Nat (PanWordLab α))
     (name : String) (oldValue newValue : PanValue α)
     (shape : Shape) (slots : List Nat)
     (hrel : localsRel context sourceLocals targetLocals)
@@ -656,7 +727,8 @@ theorem localRelLeZipUpdatePreserved
     (hshape : panValueShape [] oldValue = panValueShape [] newValue)
     (hdistinct : slots.Nodup) :
     localsRel context (FUPDATE sourceLocals (name, newValue))
-      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten newValue))) := by
+      (FUPDATE_LIST targetLocals
+        (slots.zip ((panValueFlatten newValue).map PanWordLab.word))) := by
   obtain ⟨oldSlots, hlookup, hlen, _, hwf⟩ :=
     localsRelLookupCtxt context sourceLocals targetLocals name oldValue hrel hsource
   have hpair : (panValueShape [] oldValue, oldSlots) = (shape, slots) := by
@@ -670,7 +742,9 @@ theorem localRelLeZipUpdatePreserved
   have hwfNew : isWfShape [] (panValueShape [] newValue) = true := by
     rw [← hshape]
     exact hwf
-  have hlenNew : slots.length = (panValueFlatten newValue).length := by
+  have hlenNew : slots.length =
+      ((panValueFlatten newValue).map PanWordLab.word).length := by
+    rw [List.length_map]
     rw [← hslots, hlen, panValueFlatten_length_eq_shapeSize oldValue hwf,
       panValueFlatten_length_eq_shapeSize newValue hwfNew, hshape]
   refine ⟨hrel.1, hrel.2.1, ?_⟩
@@ -680,11 +754,11 @@ theorem localRelLeZipUpdatePreserved
   · subst other
     simp at hsourceOther
     cases hsourceOther
-    refine ⟨slots, panValueFlatten newValue, ?_, ?_, rfl, hwfNew⟩
+    refine ⟨slots, (panValueFlatten newValue).map PanWordLab.word, ?_, ?_, rfl, hwfNew⟩
     · rw [← hshape]
       exact hcontextOld
     · exact opt_mmap_some_eq_zip_flookup slots targetLocals
-        (panValueFlatten newValue) hdistinct hlenNew
+        ((panValueFlatten newValue).map PanWordLab.word) hdistinct hlenNew
   · have hneq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
     simp [hneq] at hsourceOther
     obtain ⟨otherSlots, words, hother, hmap, hflat, hotherWf⟩ :=
@@ -697,7 +771,7 @@ theorem localRelLeZipUpdatePreserved
         (panValueShape [] value) slots otherSlots hcontextOld hother
         ⟨slot, hin, hotherIn⟩
     rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
-      (panValueFlatten newValue) hdisjoint hlenNew]
+      ((panValueFlatten newValue).map PanWordLab.word) hdisjoint hlenNew]
     exact hmap
 
 /-- HOL `locals_rel_extend_new_var`: a fresh, well-shaped source local can be
@@ -706,7 +780,7 @@ theorem localRelLeZipUpdatePreserved
 theorem localsRelExtendNewVar
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
-    (targetLocals : FiniteMap Nat α)
+    (targetLocals : FiniteMap Nat (PanWordLab α))
     (value : PanValue α) (name : String) (slots : List Nat)
     (hrel : localsRel context sourceLocals targetLocals)
     (hwf : isWfShape [] (panValueShape [] value) = true)
@@ -720,9 +794,11 @@ theorem localsRelExtendNewVar
         vars := FUPDATE context.vars (name, (panValueShape [] value, slots))
         vmax := context.vmax + Shape.shapeSize (panValueShape [] value) }
       (FUPDATE sourceLocals (name, value))
-      (FUPDATE_LIST targetLocals (slots.zip (panValueFlatten value))) := by
-  have hlenFlat : slots.length = (panValueFlatten value).length := by
-    rw [hlen, panValueFlatten_length_eq_shapeSize value hwf]
+      (FUPDATE_LIST targetLocals
+        (slots.zip ((panValueFlatten value).map PanWordLab.word))) := by
+  have hlenFlat : slots.length =
+      ((panValueFlatten value).map PanWordLab.word).length := by
+    rw [List.length_map, hlen, panValueFlatten_length_eq_shapeSize value hwf]
   have hdisjointOld : ∀ other shape otherSlots,
       FLOOKUP context.vars other = some (shape, otherSlots) →
       ListDisjoint slots otherSlots := by
@@ -787,10 +863,10 @@ theorem localsRelExtendNewVar
     by_cases hsame : name = other
     · simp [beq_iff_eq.mpr hsame] at hlookupSource
       cases hlookupSource
-      refine ⟨slots, panValueFlatten value, ?_, ?_, rfl, hwf⟩
+      refine ⟨slots, (panValueFlatten value).map PanWordLab.word, ?_, ?_, rfl, hwf⟩
       · simp [FLOOKUP_update, beq_iff_eq.mpr hsame]
       · exact opt_mmap_some_eq_zip_flookup slots targetLocals
-          (panValueFlatten value) hdistinct hlenFlat
+          ((panValueFlatten value).map PanWordLab.word) hdistinct hlenFlat
     · have hbeq : (name == other) = false := beq_eq_false_iff_ne.mpr hsame
       simp [hbeq] at hlookupSource
       obtain ⟨otherSlots, words, hcontext, hmap, hflat, hotherWf⟩ :=
@@ -798,20 +874,10 @@ theorem localsRelExtendNewVar
       refine ⟨otherSlots, words, ?_, ?_, hflat, hotherWf⟩
       · simpa [FLOOKUP_update, hbeq] using hcontext
       · rw [opt_mmap_disj_zip_flookup slots targetLocals otherSlots
-          (panValueFlatten value)
+          ((panValueFlatten value).map PanWordLab.word)
           (hdisjointOld other (panValueShape [] otherValue) otherSlots hcontext)
           hlenFlat]
         exact hmap
-
-/-- HOL `filter_not_mem_self`: filtering a list for elements absent from that
-    same list always produces the empty list. This is used by the compiled
-    assigned-variable invariant in the `DecCall` case. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "filter_not_mem_self"]
-theorem filterNotMemSelf [DecidableEq α] (values : List α) :
-    values.filter (fun value => value ∉ values) = [] := by
-  apply List.filter_eq_nil_iff.mpr
-  intro value hmem
-  simp [hmem]
 
 /-! Execute the finite-map compiler with the HOL proof context. Every map is
     passed directly to `compileProgHOL`; no queried-name projection to an
@@ -831,8 +897,8 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     context with `ctxt_fc`, and relates that entry to its compiled body.
 
     Its compiler conclusion routes to `compileProgHOL`, whose context is the
-    original finite-map record and whose definition is tagged to HOL
-    `compile_def`. -/
+    original finite-map record. The `compile_def` tag is on the production
+    wrapper `compileProgRiscV`, not on this helper. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]

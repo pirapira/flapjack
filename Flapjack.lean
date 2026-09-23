@@ -30,12 +30,10 @@ import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
 import Flapjack.CrepExitLoop
 import Flapjack.CrepFixClock
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore
 import Flapjack.CrepMemLoad
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
 import Flapjack.PanBStateEmptyLocals
@@ -66,7 +64,6 @@ import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
-import Flapjack.Pancake.Proofs.PanToCrep.EvaluatorBoundary
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps
@@ -88,6 +85,8 @@ import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.Proofs.CrepArith
+import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics

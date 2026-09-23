@@ -2302,4 +2302,54 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
     memoryAccess hall] at heval
   exact heval
 
+/-! ## Exact HOL helper slice for `pan_simp`
+
+The syntactic preservation lemmas below are the exact HOL declarations from
+`cakeml/pancake/proofs/pan_simpProofScript.sml` that the `compile_correct`
+proof uses.  The executable transformations (`expIds`, `retToTail`,
+`seqAssoc`, `panSimpDecls`, `panSimpProg`) live in
+`Flapjack/Pancake/PanSimp.lean`; these tagged restatements record the HOL
+statements over those production definitions. -/
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_ret_to_tail_eq"]
+theorem expIdsRetToTailEq (program : Prog α) :
+    expIds (retToTail program) = expIds program :=
+  expIds_retToTail program
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_seq_assoc_eq"]
+theorem expIdsSeqAssocEq (pre program : Prog α) :
+    expIds (seqAssoc pre program) = expIds pre ++ expIds program :=
+  expIds_seqAssoc pre program
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_compile_eq"]
+theorem expIdsCompileEq (program : Prog α) :
+    expIds (panSimpProg program) = expIds program :=
+  expIds_panSimpProg program
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "size_of_eids_compile_eq"]
+theorem sizeOfEidsPanSimpDeclsEq (declarations : List (Decl α)) :
+    sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
+  rw [panSimpDecls_eq_map, sizeOfEids_map_panSimpDecl]
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "map_snd_f_eq"]
+theorem mapSndFEq {α β γ δ ε : Type} (entries : List (α × β × γ))
+    (f : γ → δ) (g : δ → ε) :
+    entries.map (fun entry => g (f entry.2.2)) =
+      (entries.map (fun entry => entry.2.2)).map (fun body => g (f body)) := by
+  rw [List.map_map]
+  congr 1
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "functions_compile_prog"]
+theorem functionsCompileProg (declarations : List (Decl α)) :
+    functions (panSimpDecls declarations) =
+      (functions declarations).map (fun entry =>
+        (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) :=
+  functions_panSimpDecls declarations
+
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "first_compile_prog_all_distinct"]
+theorem firstCompileProgAllDistinctPanSimp (declarations : List (Decl α))
+    (hnames : ((functions declarations).map (fun entry => entry.1)).Nodup) :
+    ((functions (panSimpDecls declarations)).map (fun entry => entry.1)).Nodup :=
+  functions_panSimpDecls_names_nodup declarations hnames
+
 end Flapjack

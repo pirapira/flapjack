@@ -87,6 +87,9 @@ run_probe word_add_carry_probeScript.sml word_add_carry_probe.out \
   "$cake_dir/compiler/backend"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
+  success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
@@ -97,7 +100,8 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_state_eval_probeScript.sml pan_sem_state_eval_probe.out \
-  word_load_hit word32_big "$cake_dir/pancake/semantics/panSemScript.sml"
+  word_load_hit op_add_fold_three op_sub_wrong_arity \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_evaluate_decls_probeScript.sml pan_evaluate_decls_probe.out \
@@ -110,6 +114,28 @@ run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
+  bytes64 store32_outside "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_ffi_boundary_probeScript.sml crep_runtime_ffi_boundary_probe.out \
+  bytes64 set_byte_0_roundtrip "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_probe.out \
+  valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
+  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_arith_eval_mul_const_probeScript.sml crep_arith_eval_mul_const_probe.out \
+  input_word multiply_general "$cake_dir/pancake/proofs/crep_arithProofScript.sml"
+run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.out \
+  read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
+  write_head write_fallback_discards_tail "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
+  empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -123,13 +149,17 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
-  one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
+  one known_named missing_named nested_comb nested_named_size_drop \
+  "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
   one empty_comb named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_probe.out \
   is_decl_decl is_decl_exception is_exn_decl_exception is_exn_decl_decl \
   is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
   "$cake_dir/pancake/panLangScript.sml"
+run_probe compile_shape_probeScript.sml compile_shape_probe.out \
+  one compile_shapes_map compiled_shape_wf compiled_shapes_wf \
+  "$cake_dir/pancake/pan_structsScript.sml"
 run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
   local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
@@ -144,7 +174,9 @@ run_probe pan_lang_exceptions_probeScript.sml pan_lang_exceptions_probe.out \
 run_probe pan_lang_fun_ids_probeScript.sml pan_lang_fun_ids_probe.out \
   empty call handler dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
-  maxvar_skip limit_seq "$cake_dir/compiler/backend/word_to_stackScript.sml"
+  maxvar_skip limit_seq later_pair_f later_pair_alloc later_pair_slot_44 \
+  later_pair_slot_46 later_pair_bounded \
+  "$cake_dir/compiler/backend/word_to_stackScript.sml"
 run_probe word_stack_max_var_probeScript.sml word_stack_max_var_probe.out \
   maxvar_inst_mem maxvar_return "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
@@ -208,6 +240,14 @@ run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
 # The dec_clock artifact fixture probe evaluates `tick; return 7` directly.
 run_probe pan_sem_dec_clock_e2e_probeScript.sml pan_sem_dec_clock_e2e_probe.out \
   dec_clock_tick_return dec_clock_tick_return_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Tick probe observes both the zero-clock timeout and positive-clock branches.
+run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
+  tick_zero_result tick_succ_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Skip probe observes the normal result with state carried verbatim.
+run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
+  skip_result skip_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
@@ -391,6 +431,9 @@ run_probe compile_def_probeScript.sml compile_def_probe.out \
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
   empty raise_const raise_pair raise_pair_later raise_pair_later_64 handled_pair done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
+  dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
+  "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call global_dest handled_missing_dest done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
@@ -405,6 +448,10 @@ run_probe ctxt_fc_probeScript.sml ctxt_fc_probe.out \
 run_probe code_rel_probeScript.sml code_rel_probe.out \
   code_rel_type compiled_return localised_return localised_global_assignment \
   function_signature_lookup target_function_lookup code_rel_rejects_unlocalised_source \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe globals_lookup_probeScript.sml globals_lookup_probe.out \
+  lookup_success lookup_missing lookup_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe pan_globals_compile_top_probeScript.sml pan_globals_compile_top_probe.out \
@@ -447,7 +494,7 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero max "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
@@ -455,7 +502,11 @@ run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \
-  empty duplicate_first "$cake_dir/pancake/pan_structsScript.sml"
+  empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
+  map_uncurry_zip_again \
+  "$cake_dir/pancake/pan_structsScript.sml"
+run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
+  rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
@@ -467,8 +518,28 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
-  store_global_insert store_global_then_load \
+  set_globals_direct store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+# The locals_wordlab probe observes varname |-> word_lab cell retention,
+# Var-read flattening and overwrite behaviour.
+run_probe crep_locals_wordlab_probeScript.sml crep_locals_wordlab_probe.out \
+  locals_set_var_cell locals_set_var_overwrite \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_replicate_const_probeScript.sml crep_replicate_const_probe.out \
+  replicate_const_one replicate_const_nonzero \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+# The mem_load probe observes the total word -> word_lab memory function and the
+# memaddrs guard on both mem_load and eval (Load ...).
+run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
+  mem_load_valid eval_load_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
+  mem_store_valid_lookup mem_store_invalid \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

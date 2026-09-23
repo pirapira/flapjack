@@ -66,3 +66,37 @@ val _ = print_eval "limit_skip" ``limit_var (Skip:64 wordLang$prog)``
 val _ = print_eval "limit_seq"
   ``limit_var (Seq (Assign 0 (Const (0w:64 word)))
     (Assign 26 (Const (0w:64 word))))``
+
+(* Later-offset Stack Temp-region bound (bead flapjack-pxn.18.2.2.2).
+
+   compile_prog at the production RISC-V shape (reg_count 32, avoid_regs
+   [0;2;3;4;31] -> k = 22) picks stack_var_count = MAX(max_var DIV 2 + 1 - k,
+   stack_arg_count) and frame f = stack_var_count + 1. A function taking its
+   arguments in registers (arg_count = reg_count = 22) whose later variables
+   44 and 46 are multiword/stack colours must place both slots strictly inside
+   the frame: 44 DIV 2 = 22 -> slot f - 1 - 0, 46 DIV 2 = 23 -> slot
+   f - 1 - 1, both < f. *)
+val cp_config = ``(<| ISA := RISC_V; encode := ARB; big_endian := F;
+   code_alignment := 0; link_reg := SOME 1; avoid_regs := [0;2;3;4;31];
+   reg_count := 32; fp_reg_count := 0; two_reg_arith := F; valid_imm := ARB;
+   addr_offset := ARB; hw_offset := ARB; byte_offset := ARB; jump_offset := ARB;
+   cjump_offset := ARB; loc_offset := ARB |>) : 64 asm_config``
+val cp_bitmaps = ``((List [4w],1n) : (64 word) app_list # num)``
+val later_pair_prog =
+  ``(Seq (Assign 44 (Const (0w:64 word)))
+       (Seq (Assign 46 (Const (0w:64 word))) Skip)) : 64 wordLang$prog``
+
+val _ = print_eval "later_pair_f"
+  ``FST (SND (compile_prog ^cp_config F ^later_pair_prog 22 22 ^cp_bitmaps))``
+val _ = print_eval "later_pair_alloc"
+  ``FST (compile_prog ^cp_config F ^later_pair_prog 22 22 ^cp_bitmaps)``
+val _ = print_eval "later_pair_slot_44"
+  ``let f = FST (SND (compile_prog ^cp_config F ^later_pair_prog 22 22 ^cp_bitmaps))
+   in SND (HD (FST (wReg1 44 (22,f,0:num))))``
+val _ = print_eval "later_pair_slot_46"
+  ``let f = FST (SND (compile_prog ^cp_config F ^later_pair_prog 22 22 ^cp_bitmaps))
+   in SND (HD (FST (wReg1 46 (22,f,0:num))))``
+val _ = print_eval "later_pair_bounded"
+  ``let f = FST (SND (compile_prog ^cp_config F ^later_pair_prog 22 22 ^cp_bitmaps))
+   in SND (HD (FST (wReg1 44 (22,f,0:num)))) < f /\
+      SND (HD (FST (wReg1 46 (22,f,0:num)))) < f``

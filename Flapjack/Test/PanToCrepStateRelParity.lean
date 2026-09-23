@@ -12,8 +12,8 @@ namespace Flapjack.Test.PanToCrepStateRelParity
 
 open Flapjack
 
-def noNatCells : Nat → Option Nat := fun _ => none
-def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => none
+def noNatCells : Nat → PanWordLab Nat := fun _ => .word 0
+def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => some (.word 0)
 def noMemaddrs : Nat → Bool := fun _ => false
 
 def sourceState : PanSemState Nat (FfiState Unit) :=
@@ -59,7 +59,7 @@ theorem skipCodeMap_has_runtime_entry :
   constructor
   · simp [skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
   · simp [lookupCrepRuntimeCode, skipCodeRuntime, skipCodeMap,
-      FUPDATE_LIST, FUPDATE, FLOOKUP, assignCrepValues]
+      FUPDATE_LIST, FUPDATE, FLOOKUP, assignCrepRuntimeLocals]
 
 def skipCodeContext : PanToCrepProofContext Nat :=
   { vars := FEMPTY
@@ -100,7 +100,7 @@ def structMemorySourceState : PanSemState Nat (FfiState Unit) :=
 theorem stateRel_satisfied : stateRel sourceState targetState := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   funext address
-  simp [sourceState, targetState, noPanValueCells, noNatCells]
+  simp [sourceState, targetState, noPanValueCells, noNatCells, panTheWord]
 
 theorem skipCodeRuntime_relates :
     stateRel sourceState skipCodeRuntime := by
@@ -136,7 +136,7 @@ theorem rejectsStructMemory :
     ¬ stateRel structMemorySourceState targetState := by
   intro hrel
   have h0 := congrFun hrel.1 0
-  simp [structMemorySourceState, sourceState, targetState, noNatCells] at h0
+  simp [structMemorySourceState, sourceState, targetState, noNatCells, panTheWord] at h0
 
 def oneVarContext : PanToCrepProofContext Nat :=
   { vars := FUPDATE FEMPTY ("x", (Shape.one, [0]))
@@ -147,8 +147,8 @@ def oneVarContext : PanToCrepProofContext Nat :=
 def sourceLocals : FiniteMap String (PanValue Nat) :=
   FUPDATE FEMPTY ("x", .word 5)
 
-def targetLocals : FiniteMap Nat Nat :=
-  FUPDATE FEMPTY (0, 5)
+def targetLocals : FiniteMap Nat (PanWordLab Nat) :=
+  FUPDATE FEMPTY (0, .word 5)
 
 theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals := by
   refine ⟨⟨?_, ?_⟩, ⟨Nat.zero_le 0, ?_⟩, ?_⟩
@@ -187,7 +187,7 @@ theorem localsRel_satisfied : localsRel oneVarContext sourceLocals targetLocals 
       have hv_eq : ("x" : String) = vname := beq_iff_eq.mp hvcond
       simp only [Option.some.injEq] at hlookup
       rcases hlookup with rfl
-      refine ⟨[0], [5], ?_, ?_, ?_, ?_⟩
+      refine ⟨[0], [.word 5], ?_, ?_, ?_, ?_⟩
       · rw [← hv_eq]
         simp [oneVarContext, FLOOKUP, FUPDATE, panValueShape]
       · simp [targetLocals, FLOOKUP, FUPDATE]
@@ -229,7 +229,7 @@ theorem localsRelLookupCtxt_fixture :
     ∃ slots,
       FLOOKUP oneVarContext.vars "x" = some (.one, slots) ∧
       slots.length = 1 ∧
-      slots.mapM (FLOOKUP targetLocals) = some [5] ∧
+      slots.mapM (FLOOKUP targetLocals) = some [.word 5] ∧
       isWfShape [] .one = true := by
   obtain ⟨slots, hcontext, _, hmap, hwf⟩ :=
     localsRelLookupCtxt oneVarContext sourceLocals targetLocals "x" (.word 5)
@@ -240,7 +240,7 @@ theorem localsRelLookupCtxt_fixture :
   refine ⟨[0], ?_, ?_, ?_, ?_⟩
   · simp [oneVarContext, FLOOKUP, FUPDATE]
   · simp
-  · simpa only [panValueFlatten_word] using hmap
+  · simpa [panValueFlatten_word] using hmap
   · simpa [panValueShape] using hwf
 
 theorem rejectsUnmappedLocal :
@@ -256,14 +256,14 @@ def contextVarGuard : Bool :=
   | _ => false
 
 def localMapGuard : Bool :=
-  ([0].mapM (FLOOKUP targetLocals) == some [5]) &&
+  ([0].mapM (FLOOKUP targetLocals) == some [.word 5]) &&
     (panValueFlatten (.word 5) == [5])
 
 def localsRelLookupCtxtGuard : Bool :=
   match FLOOKUP oneVarContext.vars "x" with
   | some (.one, slots) =>
       (slots == [0]) && slots.length == 1 &&
-        ([0].mapM (FLOOKUP targetLocals) == some [5]) && isWfShape [] .one
+        ([0].mapM (FLOOKUP targetLocals) == some [.word 5]) && isWfShape [] .one
   | _ => false
 
 def runChecks : IO Bool := do

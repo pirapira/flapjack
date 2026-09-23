@@ -1,6 +1,5 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Crepe language properties from `cakeml/pancake/semantics/crepPropsScript.sml`.
@@ -23,83 +22,6 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
   | expressions =>
       if expressions.any List.isEmpty then none
       else some (expressions.map (fun expression => expression.headD (.var 0)))
-
-/-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:17`). The HOL statement
-    applies `crepSem.eval` only to `Var` expressions. Its defining `Var`
-    equation is implemented directly by `crepSemEvalExp_var`; HOL
-    `OPT_MMAP` therefore translates to `List.mapM` over the same local
-    lookup. The theorem does not use the compatibility evaluator
-    `evalCrepFullExpState`, nor does it claim a whole-evaluator equivalence.
-
-    The representation translation erases HOL's sole `word_lab` constructor
-    `Word`: a HOL lookup of `SOME (Word w)` corresponds to Lean's `some w`,
-    and absent entries correspond to `none`. Thus a HOL finite `locals` map
-    translates to the Lean lookup function `state.locals`. The runtime type
-    carries extra evaluator dictionaries, but this theorem's only semantic
-    case is the direct HOL `Var` clause.
-
-    Scope boundary: this tag is for the variable-only theorem, not a claim that
-    `crepSemEvalExp` ports all of HOL `eval_def`. Lean stores memory as
-    `α → Option α` with a Boolean domain, while HOL stores total word memory
-    with a separate address set. Global keys and cells use HOL's fixed 5-bit
-    and `word_lab` shapes; Lean represents their finite-map lookup as a
-    function. This theorem observes only the exact `Var` clause, not the
-    remaining memory representation gap. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "lookup_locals_eq_map_vars"]
-theorem lookup_locals_eq_map_vars
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (state : CrepRuntimeState α σ) (names : List Nat) :
-    names.mapM state.locals =
-      (names.map (CrepExp.var (α := α))).mapM
-        (crepSemEvalExp state) := by
-  induction names with
-  | nil => rfl
-  | cons name names ih =>
-      simp only [List.mapM_cons, List.map_cons, crepSemEvalExp_var, ih]
-
-/-- Exact port of Cake `crepProps$dec_clock_simp`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:267`). It states every
-    unchanged field listed by HOL: locals, globals, code, memory, both memory
-    domains, endianness (`be`), FFI, and both address bounds. HOL omits `clock`
-    because `dec_clock` changes it; Lean's `bigEndian` is the corresponding
-    field for HOL's `be`. No extra premises are needed. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
-theorem dec_clock_simp (state : CrepRuntimeState α σ) :
-    (decCrepClock state).locals = state.locals ∧
-    (decCrepClock state).globals = state.globals ∧
-    (decCrepClock state).code = state.code ∧
-    (decCrepClock state).memory = state.memory ∧
-    (decCrepClock state).memaddrs = state.memaddrs ∧
-    (decCrepClock state).shMemaddrs = state.shMemaddrs ∧
-    (decCrepClock state).bigEndian = state.bigEndian ∧
-    (decCrepClock state).ffi = state.ffi ∧
-    (decCrepClock state).baseAddress = state.baseAddress ∧
-    (decCrepClock state).topAddress = state.topAddress := by
-  simp [decCrepClock]
-
-/-- Exact port of Cake `crepProps$empty_locals_simp`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:282`). It states every
-    unchanged field listed by HOL: globals, code, memory, both memory domains,
-    clock, endianness (`be`), FFI, and both address bounds. HOL omits `locals`
-    because `empty_locals` clears that field. Lean's `bigEndian` is the
-    corresponding field for HOL's `be`; no extra premises are needed. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
-theorem empty_locals_simp (state : CrepRuntimeState α σ) :
-    (clearCrepRuntimeLocals state).globals = state.globals ∧
-    (clearCrepRuntimeLocals state).code = state.code ∧
-    (clearCrepRuntimeLocals state).memory = state.memory ∧
-    (clearCrepRuntimeLocals state).memaddrs = state.memaddrs ∧
-    (clearCrepRuntimeLocals state).shMemaddrs = state.shMemaddrs ∧
-    (clearCrepRuntimeLocals state).clock = state.clock ∧
-    (clearCrepRuntimeLocals state).bigEndian = state.bigEndian ∧
-    (clearCrepRuntimeLocals state).ffi = state.ffi ∧
-    (clearCrepRuntimeLocals state).baseAddress = state.baseAddress ∧
-    (clearCrepRuntimeLocals state).topAddress = state.topAddress := by
-  simp [clearCrepRuntimeLocals]
 
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/

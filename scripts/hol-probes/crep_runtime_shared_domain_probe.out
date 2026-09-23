@@ -1,0 +1,6 @@
+valid_zero_mem=T
+valid_zero_out=F
+valid_aligned_mem=T
+valid_aligned_out=F
+align_9=8w
+align_16=16w

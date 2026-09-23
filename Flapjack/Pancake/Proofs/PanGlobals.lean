@@ -203,4 +203,62 @@ theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
     state declarations start state' heval hadmissible
   simpa [isWfShapeNil, hstructs] using hshapes
 
+/-! Exact-shaped port of Cake's `exceptions_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2507`). `exceptionEntries`
+    is the direct source-shaped counterpart of `panLang$exceptions`; the body is
+    the existing production proof `exceptionEntries_append`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "exceptions_append"]
+theorem exceptions_append (declarations rest : List (Decl α)) :
+    exceptionEntries (declarations ++ rest) =
+      exceptionEntries declarations ++ exceptionEntries rest :=
+  exceptionEntries_append declarations rest
+
+/-! Exact-shaped port of Cake's `exceptions_FILTER_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2515`). The five
+    conjuncts assemble the production filter lemmas; `globalDeclIsFunction`,
+    `globalDeclIsException`, `globalDeclIsName`, and `globalDeclIsGlobal`
+    correspond to HOL `is_function`, `is_exn_decl`, `is_name`, and `is_decl`,
+    and `globalDeclsFilter` to HOL `FILTER`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "exceptions_FILTER_is_function"]
+theorem exceptions_FILTER_is_function (declarations : List (Decl α)) :
+    exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] ∧
+    exceptionEntries
+        (globalDeclsFilter (fun declaration => !globalDeclIsFunction declaration)
+          declarations) = exceptionEntries declarations ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsException declarations) =
+      exceptionEntries declarations ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsName declarations) = [] ∧
+    exceptionEntries (globalDeclsFilter globalDeclIsGlobal declarations) = [] :=
+  ⟨exceptionEntries_filter_function declarations,
+    exceptionEntries_filter_not_function declarations,
+    exceptionEntries_filter_exception declarations,
+    exceptionEntries_filter_name declarations,
+    exceptionEntries_filter_global declarations⟩
+
+/-! Exact-shaped port of Cake's `not_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2527`). `isName`,
+    `isDecl`, and `isExnDecl` are the source-shaped counterparts of HOL
+    `is_name`, `is_decl`, and `is_exn_decl`; `globalDeclIsFunction` is the
+    pass-facing `is_function`. The production module keeps the three
+    per-predicate helper lemmas, assembled here. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "not_is_function"]
+theorem not_is_function (declaration : Decl α) :
+    (isName declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isDecl declaration = true → globalDeclIsFunction declaration = false) ∧
+    (isExnDecl declaration = true → globalDeclIsFunction declaration = false) :=
+  ⟨isName_not_function declaration, isDecl_not_function declaration,
+    isExnDecl_not_function declaration⟩
+
+/-! Exact-shaped port of Cake's `decl_distinct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2535`): a value
+    declaration is disjoint from the name, function, and exception
+    declaration classes. `a && b = false` is the Bool spelling of HOL
+    `a ∧ b ⇔ F`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "decl_distinct"]
+theorem decl_distinct (declaration : Decl α) :
+    (isDecl declaration && isName declaration) = false ∧
+    (isDecl declaration && globalDeclIsFunction declaration) = false ∧
+    (isDecl declaration && isExnDecl declaration) = false := by
+  cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
+
 end Flapjack

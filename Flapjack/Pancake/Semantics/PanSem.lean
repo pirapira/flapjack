@@ -26,9 +26,13 @@ def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
   { state with locals := fun _ => none }
 
 /-- Faithful context-free port of Cake `panSem$shape_of`
-    (`cakeml/pancake/semantics/panSemScript.sml:80`). `PanValue.word`
-    represents `Val (Word w)`; the record cases retain Cake's structural and
-    named shapes. -/
+    (`cakeml/pancake/semantics/panSemScript.sml:80`). The source `v` cases
+    correspond exhaustively to `PanValue`: `.word w` represents
+    `Val (Word w)` because HOL `word_lab` has only its `Word` constructor;
+    `.rStruct vs` maps recursively to `Comb (MAP shape_of vs)`; `.nStruct nm
+    fields` maps to `Named nm`, with fields ignored on both sides. The HOL
+    definition has no premises or side conditions, and these three Lean cases
+    have exactly the same behavior. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
 def panSemShapeOf : PanValue α → Shape
   | .word _ => .one
@@ -253,6 +257,30 @@ def panSemEvaluateCodeState
     (memoryAccess := memoryAccess) (contracts := contracts)
     (memoryHandler := memoryHandler)
 
+/-- Evaluate a production source state using Cake's `memaddrs`,
+    `sh_memaddrs`, and `be` fields. The supplied word model describes the
+    source word operations; every memory domain and endianness input is
+    derived from `state`, while `bytesInWord` is source word-type metadata.
+    This boundary must be used for HOL-facing proofs instead of the optional
+    no-access compatibility path or a width read from the target state. -/
+def panSemEvaluateCodeStateWithMemoryModel
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) (program : Prog α)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluateCodeState context primitive handler bytesInWord state program
+    (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+      state.sharedMemaddrs state.be))
+    (contracts := contracts) (memoryHandler := memoryHandler)
+
 /-- Materialise the observable post-state of code-map evaluation. The source
     semantics never updates `state.code`; it is carried verbatim while the
     evaluator updates locals, globals, memory, FFI state, and clock. -/
@@ -328,6 +356,56 @@ theorem panSemEvaluateCodeStateWithPostState_eq_map
       program (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) <;>
     simp [panSemEvaluateCodeStateWithPostState, hresult]
+
+/-! Production-evaluator counterpart of the HOL `evaluate_def` Tick equation
+    (`cakeml/pancake/semantics/panSemScript.sml:683-685`) over the production
+    source-state evaluator: at clock zero the result is `TimeOut` with cleared
+    locals, otherwise `NONE` with the clock decremented and every other state
+    component preserved. This is an untagged boundary equation because the
+    structured result is reduced rather than HOL's `(prog_result, state)` pair. -/
+theorem panSemEvaluateCodeStateWithPostState_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.tick : Prog α) =
+      if state.clock = 0 then
+        some ((.timeout (fun _ => none) state.globals state.memory state.ffi, 0),
+          { state with locals := fun _ => none })
+      else
+        some ((.control (.normal state.locals state.globals state.memory state.ffi),
+            state.clock - 1),
+          { state with clock := state.clock - 1 }) := by
+  by_cases hclock : state.clock = 0 <;>
+    simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+      panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+      panValueFfiClockTimeout, evalPanValueFfiClockCodeProg, hclock]
+
+/-! Production-evaluator counterpart of the HOL `evaluate_def` Skip equation
+    (`cakeml/pancake/semantics/panSemScript.sml:557`) over the production
+    source-state evaluator: `Skip` yields the normal control result with the
+    state (including the clock) carried verbatim. This is an untagged boundary
+    equation because the structured result is reduced rather than HOL's
+    `(prog_result, state)` pair. -/
+theorem panSemEvaluateCodeStateWithPostState_skip
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.skip : Prog α) =
+      some ((.control (.normal state.locals state.globals state.memory state.ffi),
+          state.clock), state) := by
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
 
 /-!
   Exact source-memory entry point.

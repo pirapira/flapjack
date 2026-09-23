@@ -111,7 +111,7 @@ run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
-  bytes64 word32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml" \
+  bytes64 store32_outside "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"

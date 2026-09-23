@@ -3230,5 +3230,21 @@
     "lean_name": "mapSndFEq",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeLoad_eq_some_of_crepMemoryRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeLoad_eq_none_of_memaddrs_false",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

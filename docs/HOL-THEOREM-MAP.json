@@ -4376,6 +4376,14 @@
     "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; one-word exp_hdl execution and its relation-aware handler prestate are composed in EvaluateCases, while other payload widths and the source/target Call theorem remain open"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldZero_singleLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluation support for first-field projection from a one-field local record; this is a restricted helper for source-shaped Call arguments, not a separate HOL theorem port"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "fields_in_order_reorder_noop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",

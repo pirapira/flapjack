@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.PanToCrepMaxList
+import Flapjack.Pancake.Semantics.CrepSem
 
 /-! Exact theorem counterpart for CakeML's `crep_inlineProofScript.sml`.
 
@@ -59,5 +60,65 @@ theorem max_list_genlist_add_suc_val (k : Nat) :
     ∀ n, n ≠ 0 →
       maxList ((List.range n).map (fun x => (x + 1) + k)) = n + k :=
   maxList_genlist_add_suc_val k
+
+/-! ## State and locals relations of `inline_prog_correct` -/
+
+/-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree
+    on globals, code, memory, both address domains, clock, endianness, FFI
+    state, and base/top addresses.  `CrepHolState` is the exact 11-field
+    encoding of `crepSem$state`, so this is a field-by-field port; like HOL it
+    leaves `locals` to `locals_rel`/`locals_strong_rel`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_def"]
+def crepInlineStateRel (s t : CrepHolState α σ) : Prop :=
+  s.globals = t.globals ∧
+  s.code = t.code ∧
+  s.memory = t.memory ∧
+  s.memaddrs = t.memaddrs ∧
+  s.shMemaddrs = t.shMemaddrs ∧
+  s.clock = t.clock ∧
+  s.bigEndian = t.bigEndian ∧
+  s.ffi = t.ffi ∧
+  s.baseAddress = t.baseAddress ∧
+  s.topAddress = t.topAddress
+
+/-- Finite-map `SUBMAP` for Lean's extensional lookup-function representation:
+    every binding of `s` is also a binding of `t` with the same value.  HOL's
+    `SUBMAP` holds when `FLOOKUP s` and `FLOOKUP t` agree on `FDOM s`, which is
+    exactly this statement.  Untagged infrastructure: HOL's `SUBMAP` is a
+    finite-map operation, not a declaration of `crep_inlineProofScript.sml`. -/
+def crepHolSubmap (s t : Nat → Option β) : Prop :=
+  ∀ n v, s n = some v → t n = some v
+
+/-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
+    `s.locals SUBMAP t.locals`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_def"]
+def crepInlineLocalsRel (s t : CrepHolState α σ) : Prop :=
+  crepHolSubmap s.locals t.locals
+
+/-- CakeML's `locals_strong_rel` (`crep_inlineProofScript.sml:31`):
+    `s.locals = t.locals`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_strong_rel_def"]
+def crepInlineLocalsStrongRel (s t : CrepHolState α σ) : Prop :=
+  s.locals = t.locals
+
+/-- Flapjack clock decrement on the 11-field `CrepHolState`, following
+    `crepSem$dec_clock_def` (`crepSemScript.sml:145`).  Untagged here: the
+    clock update itself is the state operation of `crepSem`, not a declaration
+    of `crep_inlineProofScript.sml`. -/
+def crepInlineDecClock (s : CrepHolState α σ) : CrepHolState α σ :=
+  { s with clock := s.clock - 1 }
+
+/-- CakeML's `locals_rel_dec_clock` (`crep_inlineProofScript.sml:167`): both
+    relations are preserved by `dec_clock`, since only `clock` changes. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_dec_clock"]
+theorem crepInlineLocalsRel_decClock (s t : CrepHolState α σ)
+    (hlocals : crepInlineLocalsRel s t) (hstate : crepInlineStateRel s t) :
+    crepInlineLocalsRel (crepInlineDecClock s) (crepInlineDecClock t) ∧
+    crepInlineStateRel (crepInlineDecClock s) (crepInlineDecClock t) := by
+  obtain ⟨hg, hc, hm, hma, hsm, hcl, hbe, hf, hba, hta⟩ := hstate
+  refine ⟨?_, ?_⟩
+  · simpa only [crepInlineLocalsRel, crepInlineDecClock] using hlocals
+  · simp only [crepInlineStateRel, crepInlineDecClock]
+    exact ⟨hg, hc, hm, hma, hsm, by rw [hcl], hbe, hf, hba, hta⟩
 
 end Flapjack

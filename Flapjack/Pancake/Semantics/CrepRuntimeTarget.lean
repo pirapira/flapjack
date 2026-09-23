@@ -395,4 +395,110 @@ theorem crepRuntimeReadBytes_target_eq_riscv
         crepRuntimeLoadByte_target_eq_riscv, riscv64CrepRuntimeTarget_ffiContext,
         riscv64PanValueFfiContext_wordToByte_eq_getByte0]
 
+/-! ## External-call byte-array writes
+
+HOL `crepSem$ExtCall` writes the returned bytes back with
+`write_bytearray ptr new_bytes s.memory s.memaddrs s.be`, where
+`write_bytearray` is total: when `mem_store_byte` returns `NONE` it keeps the
+memory it already had. The production `crepRuntimeWriteBytes` mirrors this by
+keeping the tail state on a `NONE` store. `riscv64SetMemory`/`riscv64WriteMem`
+are the canonical target witness of that write.
+Direct oracle: `scripts/hol-probes/crep_runtime_write_bytes_probe.out`. -/
+
+/-- Put a memory into a canonical target state, keeping every other field. -/
+def riscv64SetMemory (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : PanWordMemory (RiscV.Word 64)) : CrepRuntimeState (RiscV.Word 64) σ :=
+  { riscv64CrepRuntimeTarget base with memory := memory }
+
+/-- Putting the state's own memory back is the canonical target itself. -/
+theorem riscv64SetMemory_self (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    riscv64SetMemory base base.memory = riscv64CrepRuntimeTarget base := rfl
+
+/-- Strong form of the byte-store bridge over an arbitrary tail memory: the
+    production store is the canonical RISC-V store lifted back into a state. -/
+theorem crepRuntimeStoreByte_setMemory_target
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : PanWordMemory (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    crepRuntimeStoreByte (riscv64SetMemory base memory) address value =
+      (RiscV.panRiscVStoreByte base.memaddrs memory (8 : RiscV.Word 64)
+        address value).map (fun memory' => riscv64SetMemory base memory') := by
+  rw [crepRuntimeStoreByte, RiscV.panRiscVStoreByte, panModelStoreByte,
+    riscv64SetMemory, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+  by_cases hb : base.memaddrs (RiscV.panRiscVByteAlign 8 address) = true
+  · rw [if_pos hb, if_pos hb]
+    cases hm : memory (RiscV.panRiscVByteAlign 8 address) <;>
+      simp_all [riscv64SetMemory, riscv64CrepRuntimeTarget,
+        RiscV.panRiscVMemoryModel, updateMemory_eq_panModelUpdateMemory]
+  · rw [if_neg hb, if_neg hb]
+    rfl
+
+/-- The production store/keep-tail fallback is the canonical RISC-V store with
+    the HOL `write_bytearray` total fallback (`getD` the tail memory). -/
+theorem crepRuntimeStoreByte_getD_setMemory_target
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (memory : PanWordMemory (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    (crepRuntimeStoreByte (riscv64SetMemory base memory) address value).getD
+        (riscv64SetMemory base memory) =
+      riscv64SetMemory base
+        ((RiscV.panRiscVStoreByte base.memaddrs memory (8 : RiscV.Word 64)
+          address value).getD memory) := by
+  rw [crepRuntimeStoreByte_setMemory_target]
+  cases hp : RiscV.panRiscVStoreByte base.memaddrs memory (8 : RiscV.Word 64)
+      address value <;> rfl
+
+/-- The production byte writer's step: store (with HOL's total fallback) at the
+    head address after writing the tail. -/
+theorem crepRuntimeWriteBytes_cons (s : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) (byte : UInt8) (bytes : List UInt8) :
+    crepRuntimeWriteBytes s address (byte :: bytes) =
+      (crepRuntimeWriteBytes s (address + 1) bytes).map
+        (fun tailState =>
+          (crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte)).getD
+            tailState) := by
+  rw [crepRuntimeWriteBytes]
+  cases hrec : crepRuntimeWriteBytes s (address + 1) bytes with
+  | none => rfl
+  | some tailState =>
+      simp [Option.getD]
+      cases crepRuntimeStoreByte tailState address (s.ffiContext.byteToWord byte) <;> rfl
+
+/-- HOL `write_bytearray address bytes memory domain false` for the canonical
+    RISC-V 64 target: writes the bytes tail-first (matching HOL), keeping the
+    previous memory whenever a byte store fails. -/
+def riscv64WriteMem (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) : List UInt8 → PanWordMemory (RiscV.Word 64)
+  | [] => base.memory
+  | byte :: bytes =>
+      let tailMemory := riscv64WriteMem base (address + 1) bytes
+      (RiscV.panRiscVStoreByte base.memaddrs tailMemory (8 : RiscV.Word 64)
+        address ((riscv64CrepRuntimeTarget base).ffiContext.byteToWord byte)).getD
+        tailMemory
+
+/-- Production `crepRuntimeWriteBytes` on the canonical target is the total HOL
+    `write_bytearray` for `mem_store_byte`. -/
+theorem crepRuntimeWriteBytes_target_eq_riscv_state
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (bytes : List UInt8) :
+    crepRuntimeWriteBytes (riscv64CrepRuntimeTarget base) address bytes =
+      some (riscv64SetMemory base (riscv64WriteMem base address bytes)) := by
+  induction bytes generalizing address with
+  | nil => simp [crepRuntimeWriteBytes, riscv64WriteMem, riscv64SetMemory_self]
+  | cons byte bytes ih =>
+      rw [crepRuntimeWriteBytes_cons, ih (address + 1), Option.map_some,
+        crepRuntimeStoreByte_getD_setMemory_target]
+      rfl
+
+/-- Memory-level form of the write-bytes bridge (the produced memory is exactly
+    the HOL `write_bytearray` result). -/
+theorem crepRuntimeWriteBytes_target_eq_riscv
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64)
+    (bytes : List UInt8) :
+    (crepRuntimeWriteBytes (riscv64CrepRuntimeTarget base) address bytes).map
+        (fun state => state.memory) =
+      some (riscv64WriteMem base address bytes) := by
+  rw [crepRuntimeWriteBytes_target_eq_riscv_state]
+  rfl
+
 end Flapjack

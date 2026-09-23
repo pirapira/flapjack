@@ -2327,6 +2327,34 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
 
+/-! Fieldwise link between the executed polymorphic `globalCompileDecs` and the
+    tagged canonical `compileDecsCake`. The three declaration-list fields agree
+    under the canonical context view; the contexts themselves are deliberately
+    not compared as data because `CakeContext.globals` is a finite map while the
+    production context keeps an association list. -/
+theorem globalCompileDecs_fields_cakeContextOfPass [LawfulBEq String] {width : Nat}
+    [NeZero width] (context : GlobalPassContext (BitVec width))
+    (hcanonical : context.IsCakeCanonical)
+    (declarations : List (Decl (BitVec width))) :
+    (compileDecsCake (cakeContextOfPass context) declarations).initializers =
+        (globalCompileDecs context declarations).initializers ∧
+      (compileDecsCake (cakeContextOfPass context) declarations).functions =
+        (globalCompileDecs context declarations).functions ∧
+      (compileDecsCake (cakeContextOfPass context) declarations).exceptions =
+        (globalCompileDecs context declarations).exceptions := by
+  rw [compileDecsCake_cakeContextOfPass context hcanonical declarations]
+  refine ⟨?_, ?_, ?_⟩
+  · show (globalCompileDecsThreaded context declarations).initializers =
+      (globalCompileDecs context declarations).initializers
+    exact globalCompileDecsThreaded_initializers context declarations
+  · show (globalCompileDecsThreaded context declarations).functions =
+      (globalCompileDecs context declarations).functions
+    rfl
+  · show (globalCompileDecsThreaded context declarations).exceptions =
+      (globalCompileDecs context declarations).exceptions
+    exact (globalCompileDecsThreaded_exceptions_eq_filter context declarations).trans
+      (globalCompileDecs_exceptions_eq_filter context declarations).symm
+
 theorem functions_globalDeclsFilter_isException (declarations : List (Decl α)) :
     functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
   functions_globalDeclsFilter_nil_of_predicate _
@@ -2597,17 +2625,84 @@ def globalCompileTopForStart [BEq String] [Add α] [Mul α]
     (start : FunName) : List (Decl α) :=
   (globalCompileTopForStartSome bytesInWord fromNat declarations start).getD []
 
+/-! Canonical fixed-word top-level compiler. Its global pass runs through the
+    tagged `compileDecsCake` over a `CakeContext`; the polymorphic
+    `globalCompileTopForStartSome` above remains available for arbitrary word
+    types. `globalCompileTopForStartSomeCake_eq` proves the two compute the same
+    output list, so the executed fixed-word path below can use the canonical
+    definition without changing observable behavior. -/
+def globalCompileTopForStartSomeCake [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    Option (List (Decl (BitVec width))) :=
+  match globalFindFunction start declarations with
+  | none => none
+  | some entry =>
+      let resorted := globalResortDecls declarations
+      let renamedStart := globalNewMainName declarations
+      let renamed := globalRenameDecls start renamedStart resorted
+      let maxGlobalsSize :=
+        cakeBytesInWord width * BitVec.ofNat width
+          ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+      let initial : GlobalPassContext (BitVec width) :=
+        { globals := []
+          globalsSize := BitVec.ofNat width 0
+          maxGlobalsSize := maxGlobalsSize
+          bytesInWord := cakeBytesInWord width
+          fromNat := BitVec.ofNat width }
+      let compiled := compileDecsCake (cakeContextOfPass initial) renamed
+      let parameters := entry.params.map (fun (name, _) => Exp.var .local name)
+      let newMain : Decl (BitVec width) :=
+        .function
+          { name := start
+            inline := false
+            exported := false
+            params := entry.params
+            body := .seq (nestedSeq compiled.initializers)
+              (.call none renamedStart parameters)
+            returnShape := entry.returnShape }
+      some (compiled.exceptions ++ [newMain] ++ compiled.functions)
+
+theorem globalCompileTopForStartSomeCake_eq [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    globalCompileTopForStartSomeCake declarations start =
+      globalCompileTopForStartSome (cakeBytesInWord width) (BitVec.ofNat width)
+        declarations start := by
+  unfold globalCompileTopForStartSomeCake globalCompileTopForStartSome
+  cases globalFindFunction start declarations with
+  | none => rfl
+  | some entry =>
+      simp only
+      congr 1
+      generalize hrenamed : globalRenameDecls start (globalNewMainName declarations)
+        (globalResortDecls declarations) = renamed
+      have hfields := globalCompileDecs_fields_cakeContextOfPass
+        (context := { globals := []
+                      globalsSize := BitVec.ofNat width 0
+                      maxGlobalsSize := cakeBytesInWord width * BitVec.ofNat width
+                        ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+                      bytesInWord := cakeBytesInWord width
+                      fromNat := BitVec.ofNat width })
+        (by refine ⟨rfl, fun value => rfl⟩) renamed
+      simp only [hfields.1, hfields.2.1, hfields.2.2]
+
 /-! HOL's `compile_top` fixes its compiler context to
     `bytes_in_word` and `n2w`. For a word of `width` bits, those are represented
     by `width / 8` and `BitVec.ofNat width` respectively. This wrapper keeps
     those choices out of the caller interface while remaining polymorphic in
     the HOL word width. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
-def globalCompileTopCake [BEq String] [Add (BitVec width)] [Mul (BitVec width)]
+def globalCompileTopCake [LawfulBEq String] {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) (start : FunName) :
     List (Decl (BitVec width)) :=
-  globalCompileTopForStart (BitVec.ofNat width (width / 8))
-    (BitVec.ofNat width) declarations start
+  (globalCompileTopForStartSomeCake declarations start).getD []
+
+theorem globalCompileTopCake_eq [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    globalCompileTopCake declarations start =
+      globalCompileTopForStart (cakeBytesInWord width) (BitVec.ofNat width)
+        declarations start := by
+  simp only [globalCompileTopCake, globalCompileTopForStart,
+    globalCompileTopForStartSomeCake_eq declarations start]
 
 theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
     (declarations : List (Decl α))

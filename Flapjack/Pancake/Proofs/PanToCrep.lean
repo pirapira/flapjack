@@ -6,6 +6,7 @@ import Flapjack.PanValueFlatten
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.PanToCrep.Compile
@@ -21,6 +22,15 @@ context.
 namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
+
+/-- Faithful port of Cake `pan_to_crepProof$shape_of_alt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1906`). HOL's
+    `Val (Word w)` is represented by `PanValue.word w`, and the context-free
+    `panSemShapeOf` counterpart retains the exact conclusion shape. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "shape_of_alt"]
+theorem panSemShapeOf_word (value : α) :
+    panSemShapeOf (.word value) = .one := by
+  simp [panSemShapeOf]
 
 /-- Faithful port of Cake `pan_to_crepProof$cexp_heads_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:104`). The simplified

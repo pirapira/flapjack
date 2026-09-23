@@ -237,9 +237,9 @@ theorem riscvBytesInWord_eq : (8 : BitVec 64) = CrepBytesInWord.bytesInWord := r
     `byte$bytes_in_word = 4`. -/
 theorem probeBytesInWord_eq : (4 : BitVec 32) = CrepBytesInWord.bytesInWord := rfl
 
-/-- Original-domain counterpart of Cake's `load_shape_el_rel`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`): the `n`-th
-    loaded word reads from `address + n * stride`. -/
+/-- Flapjack-specific Nat/variable-stride indexing helper. The exact HOL
+    `load_shape_el_rel` port uses word arithmetic and fixed machine-byte
+    stride in `Proofs/PanToCrep.lean`. -/
 theorem loadShape_getElem (address stride count n : Nat) (value : CrepExp Nat)
     (h : n < count) :
     (loadShape address stride count value)[n]? =

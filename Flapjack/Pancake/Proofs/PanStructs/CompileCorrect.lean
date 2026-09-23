@@ -712,8 +712,9 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- Derived Local/Global Var-constructor specialization of HOL
-    `compile_exp_correct`; intentionally untagged because HOL has only the
+/-- Documentation for `panStructCompileExpCorrectVarCase`: this is a derived
+    Local/Global Var-constructor specialization of HOL `compile_exp_correct`;
+    intentionally untagged because HOL has only the
     universally quantified theorem, not a separately named Var-case
     declaration. This Lean statement is not an exact statement port. It keeps
     successful source evaluation, but re-encodes the HOL premises: the direct

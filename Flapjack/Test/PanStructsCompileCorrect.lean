@@ -128,4 +128,19 @@ example :
   exact (panStructSkipFiniteMapEvaluatorSupport finiteMapContext statefulTestContext
     statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8) finiteMapState).2
 
+example :
+    panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+        statefulTestHandler (BitVec.ofNat 64 8)
+        (panStructConvertFiniteState finiteMapContext finiteMapState).runtime
+        (structCompileProg finiteMapContext (.skip : Prog Word64)) =
+      (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+        statefulTestHandler (BitVec.ofNat 64 8) finiteMapState.runtime
+        (.skip : Prog Word64)).map
+        (fun (result, postState) =>
+          (panStructConvertClockResult result,
+            panStructConvertState finiteMapContext postState)) := by
+  exact panStructFiniteMapSkipEvaluationProjection finiteMapContext
+    statefulTestContext statefulTestPrimitive statefulTestHandler
+    (BitVec.ofNat 64 8) finiteMapState
+
 end Flapjack.Test

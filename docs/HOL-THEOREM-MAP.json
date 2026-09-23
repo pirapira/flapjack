@@ -4259,6 +4259,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFiniteMapSkipEvaluationProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Kernel-checked production-evaluator projection for finite-map state under Skip; supports, but is not, the HOL compile_correct induction case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileSkip_eq_skip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Production compiler support equation; no standalone HOL declaration."

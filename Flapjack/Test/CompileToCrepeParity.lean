@@ -227,6 +227,24 @@ def crepVarsOracle : Bool :=
       ("right", .one)] == [0, 1, 2, 3]
 
 #guard crepVarsOracle
+
+/-! Direct HOL `mk_ctxt_fields` oracle in `compile_to_crep_probe.out`:
+    the constructor preserves all four fields in HOL's argument order. -/
+def mkCtxtOracle : Bool :=
+  let vars : FiniteMap VarName (Shape × List Nat) :=
+    FUPDATE FEMPTY ("x", (.one, [0]))
+  let funcs : FiniteMap FunName (List (VarName × Shape) × Shape) :=
+    FUPDATE FEMPTY ("f", ([("x", .one)], .one))
+  let eids : FiniteMap ExceptionId (BitVec 8) :=
+    FUPDATE FEMPTY ("E", 2)
+  let context := panToCrepMkCtxtHOL vars funcs 3 eids
+  context.vmax == 3 &&
+    (FLOOKUP context.vars "x").isSome &&
+    (FLOOKUP context.funcs "f").isSome &&
+    FLOOKUP context.eids "E" == some 2
+
+#guard mkCtxtOracle
+
 /-! Direct `make_vmap_def` oracle: shaped parameters receive consecutive
     flattened slots in source order. -/
 def makeVmapOracle : Bool :=

@@ -115,4 +115,11 @@ val _ = print_eval "crep_vars_nested"
        («pair», panLang$Comb [panLang$One; panLang$One]);
        («right», panLang$One)]``;
 
+val _ = print_eval "mk_ctxt_fields"
+  ``pan_to_crep$mk_ctxt
+      (FEMPTY |+ («x», (panLang$One, [0])))
+      (FEMPTY |+ («f», ([(«x», panLang$One)], panLang$One)))
+      3
+      (FEMPTY |+ («E», (2w : 8 word)))``;
+
 val _ = print_eval "done" ``T``;

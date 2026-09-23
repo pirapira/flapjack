@@ -2694,5 +2694,13 @@
     "lean_name": "panToCrepConcreteEvaluationGoal_tick",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "pc_compile_correct[Skip]",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectSkip",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (case statement review)"
   }
 ]

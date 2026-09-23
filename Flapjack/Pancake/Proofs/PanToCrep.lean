@@ -836,8 +836,8 @@ theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : PanToCrepProofContext α)
     (source : PanSemState α (FfiState σ))
     (target : CrepRuntimeState α σ)
-    (hcode : codeRel context source.code target.code) :
-    codeRel context (panEmptyLocals source).code
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code) :
+    codeRel context (panSemCodeAsLookup (panEmptyLocals source).code)
       (clearCrepRuntimeLocals target).code := by
   simpa [panEmptyLocals, clearCrepRuntimeLocals] using hcode
 

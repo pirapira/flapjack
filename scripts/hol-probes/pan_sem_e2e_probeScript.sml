@@ -50,3 +50,14 @@ val _ = print_eval "call_code_map_7"
                ([ (strlit "x", panLang$One) ],
                 panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
              clock := 10 |>)))``
+
+val _ = print_eval "recursive_call_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «f» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([],
+             panLang$DecCall «nested» panLang$One «g» []
+               (panLang$Return (panLang$Var panLang$Local «nested»)),
+             panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``

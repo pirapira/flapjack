@@ -20,7 +20,7 @@ def sourceState : PanSemState Nat (FfiState Unit) :=
   { locals := fun _ => none
     globals := fun _ => none
     structs := []
-    code := fun _ => none
+    code := []
     exceptionShapes := fun _ => none
     memory := noPanValueCells
     memaddrs := noMemaddrs
@@ -67,27 +67,29 @@ def skipCodeContext : PanToCrepProofContext Nat :=
     eids := FEMPTY
     vmax := 0 }
 
-def skipSourceCode : FiniteMap String
-    (List (VarName × Shape) × Prog Nat × Shape) :=
-  FUPDATE FEMPTY ("id", ([], .skip, Shape.one))
+def skipSourceCode : PanSemCodeMap Nat :=
+  [("id", ([], .skip, Shape.one))]
 
 def skipSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with code := skipSourceCode }
 
 theorem skipCodeRelFixture :
-    codeRel skipCodeContext skipSourceState.code skipCodeRuntime.code := by
+    codeRel skipCodeContext (panSemCodeAsLookup skipSourceState.code)
+      skipCodeRuntime.code := by
   intro function variableShapes program returnShape hlookup
   by_cases hname : function = "id"
   · subst function
     have hvalues : ([], Prog.skip, Shape.one) =
         (variableShapes, program, returnShape) := by
-      simpa [skipSourceState, skipSourceCode, FLOOKUP_update] using hlookup
+      simpa [skipSourceState, skipSourceCode, panSemCodeAsLookup,
+        panSemCodeLookup, lookupInfo, FLOOKUP] using hlookup
     rcases hvalues with ⟨rfl, rfl, rfl⟩
     simp [skipCodeContext, skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE,
       FLOOKUP, compileCodeRelProg, compileProgHOL, localisedProg,
       Shape.shapeSize]
   · have hid : ("id" : String) ≠ function := fun heq => hname heq.symm
-    simp [skipSourceState, skipSourceCode, FLOOKUP_update, hid] at hlookup
+    simp [skipSourceState, skipSourceCode, panSemCodeAsLookup,
+      panSemCodeLookup, lookupInfo, FLOOKUP, hid] at hlookup
 
 def nonEmptyGlobalsSourceState : PanSemState Nat (FfiState Unit) :=
   { sourceState with globals := fun _ => some (.word 0) }
@@ -106,7 +108,8 @@ theorem skipCodeRuntime_relates :
     stateRel_satisfied
 
 theorem skipCodeRelEmptyLocalsFixture :
-    codeRel skipCodeContext (panEmptyLocals skipSourceState).code
+    codeRel skipCodeContext
+      (panSemCodeAsLookup (panEmptyLocals skipSourceState).code)
       (clearCrepRuntimeLocals skipCodeRuntime).code :=
   codeRelEmptyLocals skipCodeContext skipSourceState skipCodeRuntime
     skipCodeRelFixture

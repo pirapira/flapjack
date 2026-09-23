@@ -1,7 +1,40 @@
+mem_load_byte_definition=∀m dm be w.
+  mem_load_byte m dm be w =
+  case m (byte_align w) of
+    Word v => if byte_align w ∈ dm then SOME (get_byte w v be) else NONE
+mem_load_32_definition=∀m dm be w.
+  mem_load_32 m dm be w =
+  if aligned 2 w then
+    case m (byte_align w) of
+      Word v =>
+        if byte_align w ∈ dm then
+          SOME
+            (word_of_bytes be 0w
+               [get_byte w v be; get_byte (w + 1w) v be;
+                get_byte (w + 2w) v be; get_byte (w + 3w) v be])
+        else NONE
+  else NONE
+byte_align_definition=∀w. byte_align w = align (LOG2 (dimindex (:α) DIV 8)) w
+aligned_definition=∀p w. aligned p w ⇔ align p w = w
+align_definition=∀p w. align p w = (dimindex (:α) − 1 '' p) w
+get_byte_definition=∀a w is_bigendian.
+  get_byte a w is_bigendian = w2w (w ⋙ byte_index a is_bigendian)
+byte_index_definition=∀a is_bigendian.
+  byte_index a is_bigendian =
+  (let
+     d = dimindex (:α) DIV 8
+   in
+     if is_bigendian then 8 * (d − 1 − w2n a MOD d) else 8 * (w2n a MOD d))
+word_of_bytes_definition=(∀be a. word_of_bytes be a [] = 0w) ∧
+∀be a b bs.
+  word_of_bytes be a (b::bs) = set_byte a b (word_of_bytes be (a + 1w) bs) be
 byte_hit=SOME 2w
-
 byte_miss=NONE
-
+byte_big_endian=SOME 7w
 load32_hit=SOME 0x4030201w
-
 load32_unaligned=NONE
+load32_domain_miss=NONE
+load32_big_endian=SOME 0x8070605w
+byte_hit_width8=SOME 165w
+load32_hit_width8=SOME 0xA5A5A5A5w
+byte_align_width24_address5=4w

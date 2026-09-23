@@ -112,6 +112,66 @@ structure CrepHolState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
+/-! Source-shaped Crep memory-read helpers, parameterized by the word
+    operations for one particular word carrier. These make the case split in
+    HOL `panSem$mem_load_byte_def` and the alignment/domain/list computation in
+    `mem_load_32_def` explicit before adapting the `word32` result back to the
+    state's word type. The extra `PanMemoryModel` and `bytesInWord` parameters
+    stand for operations fixed by HOL's word type; until their generic
+    correspondence is established these helpers are Flapjack infrastructure
+    and carry no HOL tag. -/
+def crepHolEvalMemLoadByte
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) : Option α :=
+  let alignedAddress := model.byteAlign bytesInWord address
+  match state.memory alignedAddress with
+  | .word value =>
+      if state.memaddrs alignedAddress then
+        some (model.getByte bytesInWord address value state.bigEndian)
+      else none
+
+def crepHolEvalMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) : Option α :=
+  if model.aligned 4 address then
+    let alignedAddress := model.byteAlign bytesInWord address
+    match state.memory alignedAddress with
+    | .word value =>
+        if state.memaddrs alignedAddress then
+          some (model.wordOfBytes state.bigEndian
+            [model.getByte bytesInWord address value state.bigEndian,
+             model.getByte bytesInWord (address + 1) value state.bigEndian,
+             model.getByte bytesInWord (address + 2) value state.bigEndian,
+             model.getByte bytesInWord (address + 3) value state.bigEndian])
+        else none
+  else none
+
+theorem crepHolEvalMemLoadByte_eq_panModelReadByte [Add α] [OfNat α 1]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) :
+    crepHolEvalMemLoadByte model bytesInWord state address =
+      panModelReadByte model state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        bytesInWord address state.bigEndian := by
+  unfold crepHolEvalMemLoadByte panModelReadByte
+  cases hcell : state.memory (model.byteAlign bytesInWord address)
+  simp [hcell, panTheWord]
+
+theorem crepHolEvalMemLoad32_eq_panModelRead32 [Add α]
+    [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) :
+    crepHolEvalMemLoad32 model bytesInWord state address =
+      panModelRead32 model state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        bytesInWord address state.bigEndian := by
+  unfold crepHolEvalMemLoad32 panModelRead32
+  by_cases haligned : model.aligned 4 address
+  · simp only [haligned, ↓reduceIte]
+    cases hcell : state.memory (model.byteAlign bytesInWord address)
+    simp [hcell, panTheWord]
+  · simp [haligned]
+
 /-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
     over the 11-field `CrepHolState`:
     `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.

@@ -128,6 +128,22 @@ not by itself establish the unrestricted HOL-polymorphic
 `simp_exp_correct1` statement. Regenerate against a read-only CakeML checkout
 with matching built theories by setting `CAKEML`; the checked output was
 generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
+`pan_fixed_load_probe.out` prints HOL `mem_load_byte_def` and
+`mem_load_32_def` directly, together with the imported `byte_align_def`,
+`aligned_def`, `align_def`, `get_byte_def`, `byte_index_def`, and
+`word_of_bytes_def`. It evaluates domain misses, alignment failure, both
+endiannesses, 8-bit/64-bit word instances, and the 24-bit case
+`byte_align 5w = 4w`. That last row differs from production RISC-V's
+`panRiscVByteAlign 3 5 = 3`: RISC-V rounds by a multiple of three while the
+HOL definition aligns using `LOG2 (dimindex DIV 8)`. The matching focused
+RISC-V model checks and explicit width-24 mismatch guard are in
+`Flapjack.Test.PanFixedLoadParity`. The generic
+Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
+their equations to `panModelReadByte`/`panModelRead32`, are in
+`Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit
+and remain untagged until its operations are related to HOL's word-derived
+`byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
+dimensions.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
@@ -183,7 +199,7 @@ induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
 and Global variable-constructor instances and Const-, RStruct-, NStruct-,
-NField-, RField-, and Op-constructor instances of `compile_exp_correct`; each
+NField-, RField-, Op-, and Load-constructor instances of `compile_exp_correct`; each
 five-element tuple contains old shape, semantic value shape, field validity,
 source evaluation, and converted target evaluation. The production
 `structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,
@@ -200,7 +216,13 @@ row separately checks source `OPT_MMAP` success, pointwise compiled-expression
 correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
-The other expression constructors remain open.
+The Load row directly exercises an explicit two-word memory read and is paired
+with a Lean source/converted evaluation fixture. Its general constructor case
+and the required memory-conversion induction remain open. The
+`size_of_compile_shape_comb` row separately directly evaluates the HOL
+`size_of_compile_shape` prerequisite at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem
+and concrete fixture live in `Flapjack.Test.PanStructsCompileShapeParity`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

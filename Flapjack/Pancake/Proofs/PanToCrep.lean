@@ -1414,6 +1414,37 @@ theorem slcTlcWordLabLocalsRelOfIndexedPanSem_exact
   exact slcTlcWordLabLocalsRelOfIndexedPanSem context parameters arguments slots
     hnames hlength hshapeAt hslots hslotsLength hwf
 
+/-! Relate the successful source evaluator binder directly to the target
+callee-entry word_lab locals. This is the state-owned Call boundary: the
+source's `bindPanValueParameters` result is identified with HOL `slc`, then
+the exact expanded `locals_rel` proof above applies. It remains support for the
+enclosing recursive Call case and is not itself a HOL theorem port. -/
+theorem bindPanValueParametersLocalsRelOfIndexedPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (sourceLocals : String → Option (PanValue α))
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hbind : bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some sourceLocals) :
+    localsRel
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots)
+      sourceLocals (tlcWordLab slots arguments) := by
+  have hbindSlc := bindPanValueParameters_eq_slc parameters arguments hlength
+  have hsourceLocals : sourceLocals = slc parameters arguments :=
+    Option.some.inj (hbind.symm.trans hbindSlc)
+  rw [hsourceLocals]
+  exact slcTlcWordLabLocalsRelOfIndexedPanSem_exact context parameters
+    arguments slots hnames hlength hshapeAt hslots hslotsLength hwf
+
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_wf_shape" 2345]

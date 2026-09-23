@@ -104,6 +104,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "functions_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "functionEntries",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

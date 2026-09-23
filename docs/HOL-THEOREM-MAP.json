@@ -4150,5 +4150,13 @@
     "lean_name": "panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-RV64 actual-state matching Call exception case for one-word payload: derives source callee from PanSemState.code and target callee from code_rel, maps handler via excp_rel/context, executes exp_hdl payload load and Return, and proves state_rel/code_rel/excp_rel/global lookup/clock; not a direct HOL theorem port"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
   }
 ]

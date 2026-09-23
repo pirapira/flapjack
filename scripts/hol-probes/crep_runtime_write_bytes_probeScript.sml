@@ -4,7 +4,8 @@
    References:
      cakeml/misc/miscScript.sml:113-121: read_bytearray
      cakeml/pancake/semantics/panSemScript.sml:300-316: mem_store_byte,
-       write_bytearray (total: a failing `mem_store_byte` keeps the memory)
+       write_bytearray (total: a failing `mem_store_byte` returns the outer
+       original memory, discarding the recursively written tail)
      cakeml/pancake/semantics/crepSemScript.sml ExtCall: write_bytearray ptr
        new_bytes s.memory s.memaddrs s.be *)
 
@@ -49,3 +50,20 @@ val _ = print_eval "write_out_of_domain"
   ``mem_load_byte
      (write_bytearray (16w:64 word) ([0xAAw] : word8 list) ^mem ^dm F)
      ^dm F (8w:64 word)``;
+
+(* A failing head store must discard the tail writes too: `write_bytearray`
+   returns the outer original memory, not the recursively written tail. *)
+val mem2 =
+  ``(λw:64 word. if w = 8w then Word (0x11w:64 word)
+     else if w = 16w then Word (0x22w:64 word)
+     else Word (0w:64 word))``;
+val dm2 = ``{16w : 64 word}``;
+
+val _ = print_eval "write_fallback_tail_isolated"
+  ``mem_load_byte
+     (write_bytearray (16w:64 word) ([0xBBw] : word8 list) ^mem2 ^dm2 F)
+     ^dm2 F (16w:64 word)``;
+val _ = print_eval "write_fallback_discards_tail"
+  ``mem_load_byte
+     (write_bytearray (8w:64 word) ([0xAAw; 0xBBw] : word8 list) ^mem2 ^dm2 F)
+     ^dm2 F (16w:64 word)``;

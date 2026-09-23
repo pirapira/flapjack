@@ -407,7 +407,7 @@ def crepRuntimeWriteBytes [BEq α] [Add α] [OfNat α 1]
       match crepRuntimeStoreByte tailState address
           (state.ffiContext.byteToWord byte) with
       | some updatedState => some updatedState
-      | none => some tailState
+      | none => some state
 termination_by bytes => sizeOf bytes
 
 def crepRuntimeExtCallValues [BEq α] [Add α] [OfNat α 1]

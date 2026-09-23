@@ -208,7 +208,7 @@ theorem lookupFunctionEntry_panSimpDecls_fixture :
     lookupFunctionEntry "f" (functions (panSimpDecls relationDecls)) =
       some ([], panSimpProg (.seq (.skip : Prog Nat) (.skip : Prog Nat)), .one) := by
   apply lookupFunctionEntry_panSimpDecls relationDecls "f"
-  simp [relationDecls, functions, lookupFunctionEntry]
+  simp [relationDecls, functions, functionEntries, lookupFunctionEntry]
 
 /-- Focused regression for `map_snd_f_eq` (`pan_simpProofScript.sml:43`):
     rewriting the body component then projecting it is the same as projecting
@@ -286,7 +286,7 @@ theorem mem_functions_fixture :
             declaration.returnShape) :=
   mem_functions (declarations := relationDecls)
     (entry := ("f", [], (.seq (.skip : Prog Nat) (.skip : Prog Nat)), .one))
-    (by simp [relationDecls, functions])
+    (by simp [relationDecls, functions, functionEntries])
 
 def wfFunction : FunDecl Nat :=
   { name := "f", inline := false, exported := false, params := [],

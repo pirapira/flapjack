@@ -416,6 +416,118 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "map_pick_up_first",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "map_pick_up_first",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "tuple_4_o",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "tuple_4_o",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "dec_shapes_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "dec_shapes_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "dec_shapes_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "dec_shapes_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "dec_shapes_FILTER",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "dec_shapes_FILTER",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "dec_shapes_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "dec_shapes_fperm_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "dec_shapes_resort_decls_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "dec_shapes_resort_decls_def",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "resort_decls_preserve_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "resort_decls_preserve_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "fperm_decs_FILTER_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "fperm_decs_FILTER_is_function",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "fperm_decs_decls",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "fperm_decs_decls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "new_main_name_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "new_main_name_correct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "fresh_name_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "fresh_name_correct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "fresh_name_correct'",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "fresh_name_correct'",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "FILTER_decs_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "FILTER_decs_fperm_decs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
@@ -2544,6 +2656,54 @@
     "reviewer": "Lean specialization of local alookup_drop_helper; no separate HOL declaration"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "isWfShapeList_of_all",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean support lemma for the struct_infos_ok_drop proof"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared all four clauses with HOL struct_infos_ok_def at pan_structsProofScript.sml:68-76)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source definition clauses and DROP conclusion matched by a concrete HOL theorem instance)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source implication and appended-context premise/conclusion shape comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_cons",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk_cons",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (ALL_DISTINCT/EVERY premises and prepended-context conclusion matched)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "alookup_map_structs_ok",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "lookupInfo_fields_nodup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (ALOOKUP translated by lawful List.lookup; HOL local helper proof reproduced in direct oracle)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -3726,5 +3886,13 @@
     "lean_name": "crepRuntimeExtCallValues_stateRel_returned",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only source/target post-state stateRel for the Crep ExtCall FFI_return write-back branch; assembles panSemWriteBytearray and riscv64WriteState through stateRel; no single HOL declaration"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "fields_in_order_reorder_noop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "fieldsInOrderReorderNoop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source MAP/FST, ALL_DISTINCT, FLAT/ALOOKUP statement matched to production structCompileFields/structSelectFields; direct HOL oracle and Lean fixture)"
   }
 ]

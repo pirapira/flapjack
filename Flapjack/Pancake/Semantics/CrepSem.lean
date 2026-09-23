@@ -468,7 +468,7 @@ mutual
                   let callee := decCrepClock
                     { caller with locals := calleeLocals }
                   match evalCrepRuntimeProg handler primitive fuel callee body with
-                  | none => some (.error, callee)
+                  | none => none
                   | some (result, callee) =>
                       let (result, callee) := fixCrepRuntimeClock callee (result, callee)
                       let callerState := crepRuntimeCallerState caller callee
@@ -518,7 +518,7 @@ mutual
         | some value =>
             let nextState := { state with locals := updateCrepLocal state.locals name value }
             match evalCrepRuntimeProg handler primitive fuel nextState body with
-            | none => some (.error, state)
+            | none => none
             | some result => some (restoreCrepRuntimeStep name (state.locals name) result)
     | _fuel + 1, state, .assign name value =>
         match evalCrepRuntimeExp state value with
@@ -566,14 +566,14 @@ mutual
         | none => some (.error, state)
     | fuel + 1, state, .seq first second =>
         match evalCrepRuntimeProg handler primitive fuel state first with
-        | none => some (.error, state)
+        | none => none
         | some result =>
             let (result, state) := fixCrepRuntimeClock state result
             match result with
             | .normal =>
               match evalCrepRuntimeProg handler primitive fuel state second with
               | some result => some result
-              | none => some (.error, state)
+              | none => none
             | _ => some (result, state)
     | fuel + 1, state, .ite condition thenBranch elseBranch =>
         match evalCrepRuntimeExp state condition with
@@ -582,7 +582,7 @@ mutual
             match evalCrepRuntimeProg handler primitive fuel state
               (if conditionValue != 0 then thenBranch else elseBranch) with
             | some result => some result
-            | none => some (.error, state)
+            | none => none
     | fuel + 1, state, .while condition body =>
         match evalCrepRuntimeExp state condition with
         | none => some (.error, state)
@@ -594,7 +594,7 @@ mutual
             else
               let decremented := decCrepClock state
               match evalCrepRuntimeProg handler primitive fuel decremented body with
-              | none => some (.error, state)
+              | none => none
               | some result =>
                   let (result, state) := fixCrepRuntimeClock decremented result
                   match result with
@@ -602,12 +602,12 @@ mutual
                     match evalCrepRuntimeProg handler primitive fuel state
                     (.while condition body) with
                     | some result => some result
-                    | none => some (.error, state)
+                    | none => none
                   | .continued 0 =>
                     match evalCrepRuntimeProg handler primitive fuel state
                       (.while condition body) with
                     | some result => some result
-                    | none => some (.error, state)
+                    | none => none
                   | .broke 0 => some (.normal, state)
                   | .continued label => some (.continued (label - 1), state)
                   | .broke label => some (.broke (label - 1), state)
@@ -641,6 +641,10 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-! `evalCrepRuntimeResult` is fuel bounded: `none` means the supplied target
+fuel was exhausted. Semantic `Error` is returned as `some (.error, state)`, so
+correctness arguments can choose a sufficient fuel without treating a cutoff
+as a program result. -/
 def evalCrepRuntimeResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

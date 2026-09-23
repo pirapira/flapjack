@@ -88,6 +88,7 @@ import Flapjack.Test.LoopObservationalSemanticsParity
 import Flapjack.Test.LoopSemEvaluateParity
 import Flapjack.Test.LoopLiveEffectFreeParity
 import Flapjack.Test.LoopPrimopParity
+import Flapjack.Test.LoopShMemParity
 import Flapjack.Test.PanItreeFfiParity
 import Flapjack.Test.PanItreeTracePrefixParity
 import Flapjack.Test.PanItreeTracePrefix0Parity
@@ -675,6 +676,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopSemEvaluateParity.runChecks,
     Flapjack.Test.LoopLiveEffectFreeParity.runChecks,
     Flapjack.Test.LoopPrimopParity.runChecks,
+    Flapjack.Test.LoopShMemParity.runChecks,
     Flapjack.Test.PanItreeFfiParity.runChecks,
     Flapjack.Test.PanItreeTracePrefixParity.runChecks,
     Flapjack.Test.PanItreeTracePrefix0Parity.runChecks,

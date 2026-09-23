@@ -1,10 +1,12 @@
 (* Direct HOL-EVAL fixture for pan_structs$afindi_def. *)
 load "bossLib";
 load "preamble";
+load "pan_commonPropsTheory";
 load "pan_structsProofTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
+open pan_commonPropsTheory;
 open pan_structsProofTheory;
 
 fun print_eval label q =
@@ -81,3 +83,57 @@ val _ = print
   (String.translate (fn #"\n" => " " | c => String.str c)
     (term_to_string (concl struct_infos_ok_cons_instance)));
 val _ = print "\n";
+val alookup_map_structs_ok_oracle = prove(
+  ``!s_ctxt nm info. ALOOKUP s_ctxt nm = SOME info /\
+      struct_infos_ok s_ctxt ==> ALL_DISTINCT (MAP FST info.fields)``,
+  rw [] >>
+  imp_res_tac ALOOKUP_MEM >>
+  fs [struct_infos_ok_def, EVERY_MAP] >>
+  imp_res_tac EVERY_MEM >>
+  fs []);
+val alookup_map_context = valid_struct_context;
+val alookup_map_name = ``strlit "S"``;
+val alookup_map_info = ``<| fields := [(strlit "f", One)]; size := 1 |>``;
+val alookup_map_structs_ok_instance =
+  SPECL [alookup_map_context, alookup_map_name, alookup_map_info]
+    alookup_map_structs_ok_oracle;
+val _ = print "alookup_map_structs_ok=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl alookup_map_structs_ok_instance)));
+val _ = print "\n";
+val _ = print "fields_in_order_reorder_noop=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl fields_in_order_reorder_noop)));
+val _ = print "\n";
+val opt_mmap_eq_every_oracle = prove(
+  ``!f xs ys P. OPT_MMAP f xs = SOME ys /\
+      (!x y. MEM x xs /\ f x = SOME y ==> P y) ==> EVERY P ys``,
+  rw [EVERY_EL] >>
+  imp_res_tac opt_mmap_length_eq >> fs [] >>
+  imp_res_tac opt_mmap_el >> fs [] >>
+  gs [] >> res_tac >>
+  metis_tac [EL_MEM]);
+val _ = print "opt_mmap_eq_every=";
+val _ = print
+  (String.translate (fn #"\n" => " " | c => String.str c)
+    (term_to_string (concl opt_mmap_eq_every_oracle)));
+val _ = print "\n";
+val _ = print_eval "alookup_drop_helper"
+  ``ALOOKUP (DROP 1 [(strlit "a", 10); (strlit "b", 20)]) (strlit "b") = SOME 20 /\
+    ALL_DISTINCT (MAP FST [(strlit "a", 10); (strlit "b", 20)]) ==>
+    ~MEM (strlit "b") (MAP FST (TAKE 1 [(strlit "a", 10); (strlit "b", 20)])) /\
+    ALOOKUP [(strlit "a", 10); (strlit "b", 20)] (strlit "b") = SOME 20``;
+(* The HOL existential has the concrete witness i = 1 in this oracle row. *)
+val _ = print_eval "map_fst_eq_alookup"
+  ``MAP FST [(strlit "a", 1); (strlit "b", 2)] =
+      MAP FST [(strlit "a", 3); (strlit "b", 4)] /\
+    ALOOKUP [(strlit "a", 1); (strlit "b", 2)] (strlit "b") = SOME 2 ==>
+    pan_structs$afindi (strlit "b") [(strlit "a", 1); (strlit "b", 2)] = SOME 1 /\
+      pan_structs$afindi (strlit "b") [(strlit "a", 3); (strlit "b", 4)] = SOME 1 /\
+      1 < LENGTH [(strlit "a", 1); (strlit "b", 2)] /\
+      1 < LENGTH [(strlit "a", 3); (strlit "b", 4)] /\
+      2 = SND (EL 1 [(strlit "a", 1); (strlit "b", 2)]) /\
+      ALOOKUP [(strlit "a", 3); (strlit "b", 4)] (strlit "b") =
+        SOME (SND (EL 1 [(strlit "a", 3); (strlit "b", 4)]))``;

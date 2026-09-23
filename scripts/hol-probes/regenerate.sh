@@ -131,7 +131,7 @@ run_probe crep_runtime_read_bytes_probeScript.sml crep_runtime_read_bytes_probe.
   read_bytes_zero read_bytes_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_runtime_write_bytes_probeScript.sml crep_runtime_write_bytes_probe.out \
-  write_head write_out_of_domain "$cake_dir/pancake/semantics/panSemScript.sml" \
+  write_head write_fallback_discards_tail "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_runtime_ext_call_probeScript.sml crep_runtime_ext_call_probe.out \
   empty_name_identity oracle_diverged "$cake_dir/pancake/semantics/panSemScript.sml" \
@@ -520,7 +520,8 @@ run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
 run_probe afindi_probeScript.sml afindi_probe.out \
   empty duplicate_first wf_shape_drop dropWhile_MAP_helper UNCURRY_EQ_o_SND_pair \
   map_uncurry_zip_again struct_infos_ok_drop struct_infos_ok_append \
-  struct_infos_ok_cons \
+  struct_infos_ok_cons alookup_map_structs_ok fields_in_order_reorder_noop \
+  opt_mmap_eq_every alookup_drop_helper map_fst_eq_alookup \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"

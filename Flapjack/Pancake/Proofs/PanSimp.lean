@@ -321,35 +321,6 @@ theorem list_mapM_eq_some_iff {α β : Type} (f : α → Option β) (xs : List �
             have hxs : xs.mapM f = some ys' := (ih ys').mpr htail
             simp [hfx, hxs]
 
-/-- Cake's `opt_mmap_eq_every`
-(`cakeml/pancake/proofs/pan_structsProofScript.sml:255-265`): if `mapM f` succeeds
-on `xs` producing `ys`, then any predicate that holds for every successful image
-`f x = some y` with `x ∈ xs` holds for every element of `ys`. -/
-theorem list_mapM_all_of_mem {α β : Type} (f : α → Option β) (P : β → Bool)
-    (xs : List α) (ys : List β) (h : xs.mapM f = some ys)
-    (hf : ∀ x y, x ∈ xs → f x = some y → P y = true) :
-    ys.all P = true := by
-  induction xs generalizing ys with
-  | nil =>
-      simp only [List.mapM_nil] at h
-      cases h
-      simp
-  | cons a as ih =>
-      rw [List.mapM_cons] at h
-      cases hx : f a with
-      | none => simp [hx] at h
-      | some b =>
-          simp only [hx] at h
-          cases hxs : as.mapM f with
-          | none => simp [hxs] at h
-          | some ys' =>
-              simp only [hxs] at h
-              have hb : b :: ys' = ys := by simpa using h
-              subst hb
-              simp only [List.all_cons, Bool.and_eq_true]
-              exact ⟨hf a b (by simp) hx,
-                ih ys' hxs (fun x y hx' hfy => hf x y (by simp [hx']) hfy)⟩
-
 /-- Cake's `OPT_MMAP_MEM_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:115-123`): every element of a
 successful `OPT_MMAP` image has a preimage in the source list on which `f`

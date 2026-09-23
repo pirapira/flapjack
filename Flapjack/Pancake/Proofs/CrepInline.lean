@@ -49,4 +49,15 @@ theorem moreThenNotMaxList (l : List Nat) (x : Nat) (h : maxList l < x) :
     x ∉ l :=
   maxList_not_mem x l (by omega)
 
+/-- CakeML's `max_list_genlist_add_suc_val`
+    (`crep_inlineProofScript.sml:2579`): the maximum of
+    `GENLIST (λx. SUC x + k) n` is `n + k` for `n ≠ 0`.  `(List.range n).map f`
+    is Lean's image of HOL's `GENLIST f n`, and `maxList` is the faithful
+    `rich_list$MAX_LIST` port (`Flapjack/PanToCrepMaxList.lean`). -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "max_list_genlist_add_suc_val"]
+theorem max_list_genlist_add_suc_val (k : Nat) :
+    ∀ n, n ≠ 0 →
+      maxList ((List.range n).map (fun x => (x + 1) + k)) = n + k :=
+  maxList_genlist_add_suc_val k
+
 end Flapjack

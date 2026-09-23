@@ -11,3 +11,8 @@ map_uncurry_zip_again=T
 struct_infos_ok_drop=struct_infos_ok [(«S»,<|fields := [(«f»,One)]; size := 1|>)] ⇒ struct_infos_ok (DROP 1 [(«S»,<|fields := [(«f»,One)]; size := 1|>)])
 struct_infos_ok_append=struct_infos_ok ([] ++ [(«S»,<|fields := [(«f»,One)]; size := 1|>)]) ⇒ struct_infos_ok [(«S»,<|fields := [(«f»,One)]; size := 1|>)]
 struct_infos_ok_cons=struct_infos_ok [] ∧ ALL_DISTINCT (MAP FST <|fields := [(«f»,One)]; size := 1|>.fields) ∧ ¬MEM «S» (MAP FST []) ∧ EVERY is_wf_shape_nil (MAP SND <|fields := [(«f»,One)]; size := 1|>.fields) ∧ <|fields := [(«f»,One)]; size := 1|>.size = size_of_sh_with_ctxt []   (Comb (MAP SND <|fields := [(«f»,One)]; size := 1|>.fields)) ⇒ struct_infos_ok [(«S»,<|fields := [(«f»,One)]; size := 1|>)]
+alookup_map_structs_ok=ALOOKUP [(«S»,<|fields := [(«f»,One)]; size := 1|>)] «S» = SOME <|fields := [(«f»,One)]; size := 1|> ∧ struct_infos_ok [(«S»,<|fields := [(«f»,One)]; size := 1|>)] ⇒ ALL_DISTINCT (MAP FST <|fields := [(«f»,One)]; size := 1|>.fields)
+fields_in_order_reorder_noop=∀eflds info_fields.   MAP FST info_fields = MAP FST eflds ∧ ALL_DISTINCT (MAP FST info_fields) ⇒   FLAT     (MAP        (λ(nm',sh).             case ALOOKUP (compile_fields ctxt eflds) nm' of               NONE => []             | SOME e => [e]) info_fields) =   MAP (compile_exp ctxt ∘ SND) eflds
+opt_mmap_eq_every=∀f xs ys P.   OPT_MMAP f xs = SOME ys ∧ (∀x y. MEM x xs ∧ f x = SOME y ⇒ P y) ⇒   EVERY P ys
+alookup_drop_helper=T
+map_fst_eq_alookup=T

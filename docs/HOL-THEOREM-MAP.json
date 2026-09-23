@@ -2313,6 +2313,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "ctxt_max_el_leq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "ctxtMaxGetElemLe",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "excp_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "excpRel",
@@ -2324,6 +2332,14 @@
     "hol_name": "locals_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRel",
+    "statement_status": "pending_statement_review",
+    "reviewer": "Codex (reference inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "locals_rel_wf_shape",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelWfShape",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
   },

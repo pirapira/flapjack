@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.CrepProps
 
 /-!
@@ -134,6 +135,24 @@ example :
     (setCrepHolGlobals (4 : BitVec 5) (.word (22 : RiscV.Word 64)) holState64).toRuntime =
       setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) holState64.toRuntime :=
   setCrepHolGlobals_toRuntime (4 : BitVec 5) (.word 22) holState64
+
+/-- Production routing: `setCrepRuntimeGlobals` derives its globals component
+   from the tagged HOL-shaped `setCrepHolGlobals` on `toHolState`. -/
+example :
+    (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).toHolState =
+      setCrepHolGlobals (4 : BitVec 5) (.word 22) directUpdateState.toHolState :=
+  setCrepRuntimeGlobals_toHolState (4 : BitVec 5) (.word 22) directUpdateState
+
+/-- The three runtime configuration fields survive the production StoreGlob
+   update unchanged. -/
+example :
+    (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).memoryModel =
+        directUpdateState.memoryModel ∧
+      (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).bytesInWord =
+        directUpdateState.bytesInWord ∧
+      (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).ffiContext =
+        directUpdateState.ffiContext :=
+  ⟨rfl, rfl, rfl⟩
 
 /- Untagged production adapter: writing a global cell on the 14-field runtime
    state leaves every local lookup unchanged. -/

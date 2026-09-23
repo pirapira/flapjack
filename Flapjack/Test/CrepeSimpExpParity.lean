@@ -44,6 +44,22 @@ local instance : HolFiniteDimension Bool := boolWordDimension
   encode_decode := by decide
   decode_encode := by decide
 
+/-! This witness demonstrates why an arbitrary finite enumeration alone is
+    not a HOL word representation: `n2w 1` changes when the index order is
+    permuted. The generic preservation theorem holds under either selected
+    model, but an exact HOL port must identify HOL's canonical index order. -/
+example :
+    bitVecToHolWord boolWordDimension (BitVec.ofNat 2 1) ≠
+      bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1) := by
+  intro h
+  have hFalse := congrFun h false
+  have hleft :
+      bitVecToHolWord boolWordDimension (BitVec.ofNat 2 1) false = true := by decide
+  have hright :
+      bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1) false = false := by decide
+  rw [hleft, hright] at hFalse
+  cases hFalse
+
 def boolDimensionWord : Bool → Bool := id
 
 example : bitVecToHolWord boolWordDimension

@@ -1,7 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 Crepe language properties from `cakeml/pancake/semantics/crepPropsScript.sml`.

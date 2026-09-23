@@ -1434,8 +1434,11 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     Lean's `PanWordLab` each have only the `Word` constructor. It remains
     untagged as HOL `simp_exp_correct1` because this evaluator interprets the
     carrier through an explicit `HolFiniteDimension` enumeration and the
-    RISC-V/BitVec operation model; that is not yet a proved unrestricted
-    correspondence for HOL's polymorphic word type. -/
+    RISC-V/BitVec operation model. The chosen `encode` determines the bit
+    order used by `n2w`; a Lean fixture shows that permuting the enumeration
+    changes the word denoted by 1. No theorem currently identifies the
+    selected encoding with HOL's canonical `dimindex`/index map, so this is
+    not yet an unrestricted correspondence for HOL's polymorphic word type. -/
 theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

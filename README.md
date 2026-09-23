@@ -95,11 +95,11 @@ Contributions are welcome. The RISC-V compiler port and its correctness proof
 are still in progress. [GitHub issues](https://github.com/pirapira/flapjack/issues)
 track work and claims; [`PLAN.md`](PLAN.md) gives the staged direction.
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) describes assurance limits, external
-assumptions, and out-of-scope gaps, not the task queue.
+assumptions, and out-of-scope gaps.
 Start with the porting and verification rules in [`AGENTS.md`](AGENTS.md).
 The bead and single-PR instructions in its *Fleet workflow* section apply to
 the coordinated internal agents; outside contributors can open their own
-focused PRs. Backends other than RISC-V are out of scope.
+focused PRs.
 
 Work bottom-up from a desired theorem through its HOL dependencies: port small
 definitions and supporting lemmas first. Use `@[hol ...]` tags and

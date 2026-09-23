@@ -131,6 +131,14 @@ end HolWordBits
     (holWordBitsToBitVec left + holWordBitsToBitVec right)) = _
   rw [holWordBitsToBitVec_bitVecToHolWordBits]
 
+@[simp] theorem holWordBitsToBitVec_mul {width : Nat}
+    (left right : Fin width → Bool) :
+    holWordBitsToBitVec (left * right) =
+      holWordBitsToBitVec left * holWordBitsToBitVec right := by
+  change holWordBitsToBitVec (bitVecToHolWordBits
+    (holWordBitsToBitVec left * holWordBitsToBitVec right)) = _
+  rw [holWordBitsToBitVec_bitVecToHolWordBits]
+
 @[simp] theorem holWordBitsToBitVec_one {width : Nat} :
     holWordBitsToBitVec (1 : Fin width → Bool) = BitVec.ofNat width 1 := by
   change holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat width 1)) =
@@ -322,6 +330,36 @@ theorem crepHolWordBits_loadByte_toBitVec [NeZero width]
     holWordBitsRiscVMemoryModel, riscvCrepWordTarget, mapCrepHolWordLab,
     panTheWord, holWordBitsToBitVec_bitVecToHolWordBits] <;>
     (split <;> simp_all)
+
+theorem crepHolWordBits_wordOp_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : BinOp) (values : List (Fin width → Bool)) :
+    state.toHolWordBitsRuntime.memoryModel.wordOp operator values =
+      (state.toBitVecState.toRuntime.memoryModel.wordOp operator
+        (values.map holWordBitsToBitVec)).map bitVecToHolWordBits := by
+  cases state
+  simp [CrepHolState.toHolWordBitsRuntime, CrepHolState.toBitVecState,
+    CrepHolState.toRuntime, holWordBitsRiscVMemoryModel]
+
+theorem crepHolWordBits_compare_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : Cmp) (left right : Fin width → Bool) :
+    state.toHolWordBitsRuntime.memoryModel.compare operator left right =
+      bitVecToHolWordBits
+        (state.toBitVecState.toRuntime.memoryModel.compare operator
+          (holWordBitsToBitVec left) (holWordBitsToBitVec right)) := by
+  cases state
+  rfl
+
+theorem crepHolWordBits_shift_toBitVec [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (operator : Shift) (left right : Fin width → Bool) :
+    state.toHolWordBitsRuntime.memoryModel.shift operator left right =
+      (state.toBitVecState.toRuntime.memoryModel.shift operator
+        (holWordBitsToBitVec left) (holWordBitsToBitVec right)).map
+          bitVecToHolWordBits := by
+  cases state
+  rfl
 
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word

@@ -2699,6 +2699,54 @@ theorem lookupCrepRuntimeCode_ofCodeRel
   rw [htargetEntry]
   simp [names, hnamesLength, hnamesEraseDups, assignCrepRuntimeLocals]
 
+/-! Compose the restricted HOL compiled-argument cases with the state-owned
+code_rel lookup. For Const/Local/RStruct/address arguments, target argument
+evaluation is derived from the source state evaluator, and the production
+target callee lookup then uses those exact words. The explicit flattened
+parameter-length premise is still an obligation for a full Call case. -/
+theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalStructAddress expression)
+    (hsource : evalPanSemStateExps source expressions = some values)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (values.flatMap panValueFlatten).length) :
+    ∃ targetLocals : Nat → Option (PanWordLab (RiscV.Word 64)),
+      evalCrepRuntimeExps target
+        (compileArgsHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expressions) = some (values.flatMap panValueFlatten) ∧
+      lookupCrepRuntimeCode function (values.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have harguments := compileArgsHOL_constLocalStructAddress_eval_flatten
+    context source target expressions values hstate hlocals hsupported hsource
+  obtain ⟨targetLocals, hlookup, _⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel context source target function parameters
+      sourceBody returnShape (values.flatMap panValueFlatten) hcode hentry
+      hargumentLength
+  exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup⟩
+
 /-! Compose the actual target exp_hdl/Return execution with the generic Crep
 Call exception-dispatch induction step. The callee lookup and body execution
 remain explicit inputs so the enclosing state/code relation proof can derive

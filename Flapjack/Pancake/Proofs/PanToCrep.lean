@@ -511,13 +511,12 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
   exact hglobals
 
-/-- Flapjack-specific bridge for the target memory representation.  HOL
-    `crepSem$state.memory` is a *total* `word -> word_lab` function
-    (`cakeml/pancake/semantics/crepSemScript.sml:24-26`) guarded by the separate
-    `memaddrs` set; the executable `CrepRuntimeState.memory` stores absence in an
-    `Option`.  The relation records the HOL view on every address the guard
-    accepts, so no `word_lab` cell is silently dropped.  It is the target-side
-    hypothesis of the `mem_load_def` correspondence below. -/
+/-- Flapjack-specific bridge for the target memory representation. HOL
+    `crepSem$state.memory` and executable `CrepRuntimeState.memory` are both
+    total `word → word_lab` functions; the separate `memaddrs` set guards
+    accessible addresses (`crepSemScript.sml:24-26`). This relation states
+    equality of the complete memories and is the target-side hypothesis of
+    the `mem_load_def` correspondence below. -/
 def crepMemoryRel (state : CrepRuntimeState α σ) (total : α → PanWordLab α) : Prop :=
   state.memory = total
 

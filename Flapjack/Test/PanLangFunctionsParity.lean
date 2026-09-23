@@ -42,4 +42,12 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS panLang functions definition"
+    pure true
+  else
+    IO.println "FAIL panLang functions definition"
+    pure false
+
 end Flapjack.Test.PanLangFunctionsParity

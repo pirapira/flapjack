@@ -2556,6 +2556,82 @@ theorem compileArgsHOL_constLocalOrStruct_eval_flatten
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach
 
+inductive compileArgConstLocalStructAddress : Exp (RiscV.Word 64) → Prop where
+  | existing (expression : Exp (RiscV.Word 64))
+      (supported : compileArgConstLocalOrStruct expression) :
+      compileArgConstLocalStructAddress expression
+  | baseAddress : compileArgConstLocalStructAddress .baseAddr
+  | topAddress : compileArgConstLocalStructAddress .topAddr
+  | bytesInWord : compileArgConstLocalStructAddress .bytesInWord
+
+/-! Call argument results for all already-proved Const/Local/RStruct cases,
+plus the three address/word-size constructors of HOL compile_exp_val_rel.
+The state relation supplies the source/target address equalities. -/
+theorem compileArgsHOL_constLocalStructAddress_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalStructAddress expression)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  rcases hstate with ⟨_, _, _, _, _, _, _, _, hbase, htop⟩
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value) := by
+    intro expression hmem value heval
+    cases hsupported expression hmem with
+    | baseAddress =>
+        have hvalue : value = .word source.baseAddress := by
+          simpa [evalPanSemStateExp, evalPanValueExp] using heval.symm
+        subst value
+        simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+          panValueFlatten, hbase]
+    | topAddress =>
+        have hvalue : value = .word source.topAddress := by
+          simpa [evalPanSemStateExp, evalPanValueExp] using heval.symm
+        subst value
+        simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+          panValueFlatten, htop]
+    | bytesInWord =>
+        have hvalue : value = .word panSemBitVec64BytesInWord := by
+          simpa [evalPanSemStateExp, evalPanValueExp] using heval.symm
+        subst value
+        simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+          panValueFlatten, panSemBitVec64BytesInWord,
+          CrepBytesInWord.bytesInWord]
+    | existing _ supported =>
+        cases supported with
+        | const word =>
+            exact compileExpHOL_const_eval_flatten context source target word value heval
+        | localVar name =>
+            exact compileExpHOL_local_eval_flatten context source target name value
+              hlocals heval
+        | rStruct fields hfields =>
+            cases value with
+            | word word =>
+                simp [evalPanSemStateExp, evalPanValueExp] at heval
+            | rStruct fieldValues =>
+                exact compileExpHOL_rStruct_constOrLocal_eval_flatten context source
+                  target fields fieldValues hlocals hfields heval
+            | nStruct name fields =>
+                simp [evalPanSemStateExp, evalPanValueExp] at heval
+  simpa [compilerContext] using
+    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+      hsource heach
+
 /-! Derive the production Crep callee lookup and parameter locals from the
 state-owned source/target code maps. The argument words are arbitrary; their
 length must match the flattened source parameter shapes. The HOL compiled

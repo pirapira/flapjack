@@ -344,8 +344,8 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
             match lookupInfo name context.globals with
             | some (shape, address) =>
                 let compiledHandlerProgram := globalCompileProg context handler
-                let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
-                  compiledArguments.flatMap globalExpVars
+                let names := handlerVar :: freeVarIds compiledHandlerProgram ++
+                  compiledArguments.flatMap expLocalVars
                 let resultName := globalFreshName "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/

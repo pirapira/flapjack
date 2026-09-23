@@ -84,3 +84,24 @@ val _ = print_eval "rv64_extcall_missing_local"
       (loopLang$FFI (strlit "x") 99 1 2 3 (insert 0 () (insert 1 () (insert 2 () (insert 3 () LN)))),
        ^(base_with returning_ffi)) of
       (res,s') => (res, lookup 1 s'.locals)``
+
+(* The four argument locals are read from the PRE-cut locals, so an empty
+   cutset still calls the oracle and the result locals are cut to the cutset. *)
+val _ = print_eval "rv64_extcall_precut_empty_cutset"
+  ``case loopSem$evaluate
+      (loopLang$FFI (strlit "x") 0 1 2 3 LN,
+       ^(base_with returning_ffi)) of
+      (res,s') => (res, s'.memory 8w, lookup 1 s'.locals)``
+
+val _ = print_eval "rv64_extcall_precut_partial_cutset"
+  ``case loopSem$evaluate
+      (loopLang$FFI (strlit "x") 0 1 2 3 (insert 1 () LN),
+       ^(base_with returning_ffi)) of
+      (res,s') => (res, lookup 1 s'.locals, lookup 0 s'.locals)``
+
+(* A live local that is absent from the pre-cut locals fails cut_state. *)
+val _ = print_eval "rv64_extcall_live_absent"
+  ``case loopSem$evaluate
+      (loopLang$FFI (strlit "x") 0 1 2 3 (insert 7 () LN),
+       ^(base_with returning_ffi)) of
+      (res,s') => (res, lookup 1 s'.locals)``

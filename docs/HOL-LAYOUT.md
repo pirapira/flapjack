@@ -41,6 +41,12 @@ entries or tests. Correctness claims are described in
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
 
+For `pan_to_crepScript.sml`, `compileProgHOL` executes `compile_def` over the
+finite-map `context` record, and `codeRel` executes that compiler through
+`compileCodeRelProg`. The older list-backed `compileProg` and `compileProgFixed`
+remain untagged compatibility code. These definition tags record provenance;
+they do not claim the pass-correctness theorem has been proved.
+
 Additional helper, semantic, and proof modules still live at the old top
 Placement under `Proofs` does not imply that a whole pass correctness theorem
 has been established. For declaration-level provenance, use

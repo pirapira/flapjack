@@ -1316,6 +1316,85 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
       (globalCompileDecls collected declarations)
     context := collected }
 
+/-! HOL-shaped `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`):
+    the pass context is threaded through the declaration list, so each function
+    body is compiled under the context as of its own position rather than the
+    final collected context.  This is an intermediate exact port; production
+    `globalCompileDecs` above still uses the collected-context shape and is
+    switched over in `flapjack-pxn.18.5.2.20.2`. -/
+def globalCompileDecsThreaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) : List (Decl α) → GlobalCompileDecsResult α
+  | [] => { initializers := [], functions := [], exceptions := [], context := context }
+  | .function declaration :: declarations =>
+      let rest := globalCompileDecsThreaded context declarations
+      { initializers := rest.initializers
+        functions := .function { declaration with
+            body := globalCompileProg context declaration.body } :: rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+  | .exnDecl exception shape :: declarations =>
+      let rest := globalCompileDecsThreaded context declarations
+      { rest with exceptions := .exnDecl exception shape :: rest.exceptions }
+  | .name _ _ :: declarations => globalCompileDecsThreaded context declarations
+  | .decl shape name value :: declarations =>
+      let address := globalAddress context shape
+      let nextContext := { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      let rest := globalCompileDecsThreaded nextContext declarations
+      { initializers :=
+          .store (.op .sub [.topAddr, .const address])
+            (globalCompileExp context value) :: rest.initializers
+        functions := rest.functions
+        exceptions := rest.exceptions
+        context := rest.context }
+
+theorem globalCompileDecsThreaded_functions_all_isFunction [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (globalCompileDecsThreaded context declarations).functions.all globalDeclIsFunction =
+      true := by
+  induction declarations generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecsThreaded, List.all_cons, globalDeclIsFunction,
+            Bool.true_and]
+          exact ih context
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+
+theorem globalCompileDecsThreaded_functions_eq_nil_of_no_functions
+    [BEq String] [Add α] [Mul α] (declarations : List (Decl α)) :
+    ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
+      (globalCompileDecsThreaded context declarations).functions = [] := by
+  induction declarations with
+  | nil => intro context _; rfl
+  | cons declaration declarations ih =>
+      intro context hnone
+      cases declaration with
+      | function function =>
+          simp [List.all_cons, globalDeclIsFunction] at hnone
+      | decl shape name value =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+      | exnDecl exception shape =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+      | name struct fields =>
+          simp only [List.all_cons, Bool.and_eq_true] at hnone
+          simp only [globalCompileDecsThreaded]
+          exact ih _ hnone.2
+
 /-! Counterpart of Cake's `compile_decs_preserve_functions`
     (`pan_globalsProofScript.sml:2062`): compiling declarations preserves the
     function-name table. -/

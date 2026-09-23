@@ -657,6 +657,105 @@ theorem compile_decs_FILTER_decs [BEq String] [Add α] [Mul α]
   simp only [h] at hinit hfuns hexns hctx
   simp [hinit, hfuns, hexns, hctx]
 
+/-- Exact-shaped port of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`) for the
+    HOL-shaped, context-threading `globalCompileDecsThreaded`: a program whose
+    declarations contain no functions compiles to an empty function table. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
+theorem compile_decs_decls_thm_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecsThreaded context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' })
+    (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
+    funs = [] := by
+  have hfuns : funs = (globalCompileDecsThreaded context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact globalCompileDecsThreaded_functions_eq_nil_of_no_functions code context hnone
+
+/-- Exact-shaped port of Cake's `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) for the
+    HOL-shaped, context-threading `globalCompileDecsThreaded`: every entry the
+    compilation pass emits into the function table is a function declaration. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
+theorem compile_decs_EVERY_is_function_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (decls : List (Prog α)) (funs exns : List (Decl α))
+    (ctxt' : GlobalPassContext α)
+    (hcompile : globalCompileDecsThreaded context code =
+      { initializers := decls, functions := funs,
+        exceptions := exns, context := ctxt' }) :
+    funs.all globalDeclIsFunction = true := by
+  have hfuns : funs = (globalCompileDecsThreaded context code).functions := by
+    rw [hcompile]
+  rw [hfuns]
+  exact globalCompileDecsThreaded_functions_all_isFunction context code
+
+/-- Exact-shaped port of Cake's `compile_decls_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) for the
+    HOL-shaped, context-threading `globalCompileDecsThreaded`: appending two
+    programs appends the three output lists and runs the second program under
+    the context the first reaches. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decls_append"]
+theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (decs rest : List (Decl α)) :
+    globalCompileDecsThreaded context (decs ++ rest) =
+      let first := globalCompileDecsThreaded context decs
+      let second := globalCompileDecsThreaded first.context rest
+      { initializers := first.initializers ++ second.initializers
+        functions := first.functions ++ second.functions
+        exceptions := first.exceptions ++ second.exceptions
+        context := second.context } := by
+  induction decs generalizing context with
+  | nil => simp [globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+      | decl shape name value =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | exnDecl exception shape =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih _]
+      | name struct fields =>
+          simp only [List.cons_append, globalCompileDecsThreaded]
+          rw [ih context]
+
+/-- Flapjack-only (untagged) counterpart of Cake's `compile_decs_functions_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1951`) for
+    `globalCompileDecsThreaded`, for a program consisting only of functions:
+    the function table is the source list with each body compiled under the
+    running context.  HOL's statement maps with an `ARB` fallback for
+    non-function declarations; here the fallback is the identity declaration,
+    which coincides with HOL exactly under the `EVERY is_function` premise, so
+    this carries no `@[hol]` tag until the ARB rendering is reviewed. -/
+theorem compile_decs_functions_thm_threaded [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α))
+    (hall : code.all globalDeclIsFunction = true) :
+    (globalCompileDecsThreaded context code).functions =
+      code.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with body := globalCompileProg context function.body }
+        | other => other) := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [List.all_cons, globalDeclIsFunction, Bool.true_and] at hall
+          simp only [globalCompileDecsThreaded, List.map_cons, ih context hall]
+      | decl shape name value =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+      | exnDecl exception shape =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+      | name struct fields =>
+          simp [List.all_cons, globalDeclIsFunction] at hall
+
 /-- Exact-shaped port of Cake's `ALOOKUP_MAP3`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2841`). HOL's `ALOOKUP`
     is key-polymorphic; the reviewed `lookupInfo` is likewise key-polymorphic

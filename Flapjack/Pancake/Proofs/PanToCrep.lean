@@ -70,6 +70,33 @@ theorem evaluateReplicateConst
       simp only [crepSemEvalExp] at ih
       simp [List.replicate_succ, crepSemEvalExp, evalCrepRuntimeExp, ih]
 
+/-! Local support for `MAP_SOME_MEM_lemma`, kept in its HOL counterpart
+    module. This drops the source theorem's unused Nat witness; the exact
+    tagged theorem below restores that witness in its original position. -/
+theorem mapFlattenMemSomeSupport {α β : Type} (f : α → Option β)
+    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
+    (h : xs.flatten.map f = ys.flatten.map some)
+    (hzs : zs ∈ xs) (hz : z ∈ zs) :
+    ∃ y, f z = some y ∧ y ∈ ys.flatten := by
+  have hzflat : z ∈ xs.flatten := List.mem_flatten.mpr ⟨zs, hzs, hz⟩
+  have hzmap : f z ∈ xs.flatten.map f := List.mem_map.mpr ⟨z, hzflat, rfl⟩
+  rw [h] at hzmap
+  obtain ⟨y, hy, hfy⟩ := List.mem_map.mp hzmap
+  exact ⟨y, hfy.symm, hy⟩
+
+/-- Faithful port of Cake `pan_to_crepProof$MAP_SOME_MEM_lemma`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4060`). The unused HOL
+    existential `r` has type `num`: the source proof instantiates it with the
+    flattened-list index `m` (or `LENGTH h + _`). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MAP_SOME_MEM_lemma"]
+theorem mapSomeMemLemma {α β : Type} (f : α → Option β)
+    (xs : List (List α)) (ys : List (List β)) (zs : List α) (z : α)
+    (h : xs.flatten.map f = ys.flatten.map some)
+    (hzs : zs ∈ xs) (hz : z ∈ zs) :
+    ∃ (_r : Nat) (y : β), f z = some y ∧ y ∈ ys.flatten := by
+  obtain ⟨y, hfy, hy⟩ := mapFlattenMemSomeSupport f xs ys zs z h hzs hz
+  exact ⟨0, y, hfy, hy⟩
+
 /-- Faithful port of Cake `pan_to_crepProof$shape_of_alt`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1906`). HOL's
     `Val (Word w)` is represented by `PanValue.word w`, and the context-free

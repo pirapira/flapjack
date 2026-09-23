@@ -25,4 +25,12 @@ theorem mod_eq_of_lt_eq_fixture {n x m : Nat} (hn : n < x) (hm : m < x)
     (h : n % x = m % x) : n = m :=
   mod_eq_of_lt_eq hn hm h
 
+/-- Focused regression retaining `MAP_SOME_MEM_lemma`'s unused Nat witness. -/
+theorem mapSomeMemLemma_fixture :
+    ∃ (_r : Nat) (y : Nat),
+      (fun n : Nat => if n == 4 then none else some (n + 1)) 3 = some y ∧
+        y ∈ ([4, 6] : List Nat) :=
+  mapSomeMemLemma (fun n : Nat => if n == 4 then none else some (n + 1))
+    [[3], [5]] [[4], [6]] [3] 3 (by decide) (by simp) (by simp)
+
 end Flapjack.Test.PanToCrepUtilitiesParity

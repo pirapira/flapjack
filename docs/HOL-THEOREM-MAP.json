@@ -706,10 +706,18 @@
   {
     "hol_path": null,
     "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
-    "lean_name": "map_flatten_eq_map_some_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mapFlattenMemSomeSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MAP_SOME_MEM_lemma",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mapSomeMemLemma",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
   },
   {
     "hol_path": null,

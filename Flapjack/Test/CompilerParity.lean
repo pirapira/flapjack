@@ -179,6 +179,10 @@ import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
 import Flapjack.Test.PanSemTickParity
 import Flapjack.Test.PanSemSkipParity
+import Flapjack.Test.PanSemAssignParity
+import Flapjack.Test.PanSemDecParity
+import Flapjack.Test.PanSemPrimitiveParity
+import Flapjack.Test.PanSemErrorPropagationParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
 import Flapjack.Test.ParserExtractSumParity
@@ -737,6 +741,10 @@ def main : IO Unit := do
     Flapjack.Test.PanEvaluateParity.runChecks,
     Flapjack.Test.PanSemTickParity.runChecks,
     Flapjack.Test.PanSemSkipParity.runChecks,
+    Flapjack.Test.PanSemAssignParity.runChecks,
+    Flapjack.Test.PanSemDecParity.runChecks,
+    Flapjack.Test.PanSemPrimitiveParity.runChecks,
+    Flapjack.Test.PanSemErrorPropagationParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
     Flapjack.Test.PanMrecParity.runChecks,

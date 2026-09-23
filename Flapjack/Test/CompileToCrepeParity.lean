@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.RiscV.WordToStack
 
 namespace Flapjack.Test.CompileToCrepeParity
 
@@ -303,6 +304,25 @@ def laterPairOracle : Bool :=
   | _ => false
 
 #guard laterPairOracle
+
+/-! The `compile_to_crep` fixture above separately checks `StoreGlob 0/1`.
+This boundary check starts from a representative Word program containing
+`Set (Temp 0/1)` and checks that `word_to_stack` preserves those indices; it
+does not establish an end-to-end link between the two fixtures. The original
+rules are `loop_to_wordScript.sml:93` and
+`compiler/backend/word_to_stackScript.sml:491`. -/
+def laterPairStackTempRegionOracle : Bool :=
+  let config : RiscV.WordStackConfig :=
+    { locations := [], scratch := 31, stackBase := 0 }
+  let program : WordProg Nat :=
+    .seq (.set (.temp 0) (.const 7)) (.set (.temp 1) (.const 9))
+  match RiscV.wordToStackProgNat config program with
+  | some (.seq
+      (.seq (.const 31 7) (.set (.temp 0) 31))
+      (.seq (.const 31 9) (.set (.temp 1) 31))) => true
+  | _ => false
+
+#guard laterPairStackTempRegionOracle
 
 def handledPairDecls : List (Decl Nat) :=
   [.exnDecl "E" (.comb [.one, .one]),

@@ -393,6 +393,23 @@ theorem adapterTopAddrAgreement :
       globalCompileExp adapterPassContext .topAddr :=
   compileExpCake_cakeContextOfPass adapterPassContext adapterCanonical .topAddr
 
+theorem adapterProgAgreement :
+    compileProgCake (cakeContextOfPass adapterPassContext) handledCallSource =
+      globalCompileProg adapterPassContext handledCallSource :=
+  globalCompileProg_cakeContextOfPass adapterPassContext adapterCanonical handledCallSource
+
+theorem adapterShapeValAgreement :
+    globalShapeVal adapterPassContext Shape.one =
+      cakeShapeVal (cakeContextOfPass adapterPassContext) Shape.one :=
+  globalShapeVal_cakeShapeVal adapterPassContext adapterCanonical Shape.one
+
+def adapterProgGuard : Bool :=
+  progEq (compileProgCake (cakeContextOfPass adapterPassContext) handledCallSource)
+    (globalCompileProg adapterPassContext handledCallSource)
+
+#eval adapterProgGuard
+#guard adapterProgGuard
+
 def adapterExpGuard : Bool :=
   expEq (compileExpCake (cakeContextOfPass adapterPassContext) (.var .global "g"))
     (globalCompileExp adapterPassContext (.var .global "g")) &&
@@ -423,6 +440,7 @@ def cakeThreadingGuard : Bool :=
   handledProgramChecks &&
   adapterGuard &&
   adapterExpGuard &&
+  adapterProgGuard &&
   cakeResultBefore.functions.all globalDeclIsFunction
 
 #eval cakeThreadingGuard

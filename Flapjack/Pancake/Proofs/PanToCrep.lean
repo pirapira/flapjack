@@ -775,6 +775,39 @@ theorem localRelLeZipUpdatePreserved
       ((panValueFlatten newValue).map PanWordLab.word) hdisjoint hlenNew]
     exact hmap
 
+/-! General matched-Call handler pre-state relation.  Once the callee-body
+IH supplies the exception payload and the source assignment check gives
+shape preservation, `locals_rel` identifies the handler's existing slots.
+Writing the flattened payload into those slots yields the relation expected
+by the handler-body IH.  The target runtime proof that `exp_hdl` performs
+these writes from `globals_lookup` remains a separate step. -/
+theorem localsRelUpdateExistingValue
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat (PanWordLab α))
+    (name : String) (oldValue newValue : PanValue α)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (hsource : FLOOKUP sourceLocals name = some oldValue)
+    (hshape : panValueShape [] oldValue = panValueShape [] newValue) :
+    ∃ slots,
+      FLOOKUP context.vars name = some (panValueShape [] newValue, slots) ∧
+      slots.Nodup ∧
+      localsRel context (FUPDATE sourceLocals (name, newValue))
+        (FUPDATE_LIST targetLocals
+          (slots.zip ((panValueFlatten newValue).map PanWordLab.word))) := by
+  obtain ⟨slots, hcontextOld, _hlen, _hwords, _hwf⟩ :=
+    localsRelLookupCtxt context sourceLocals targetLocals name oldValue hrel hsource
+  have hcontextNew : FLOOKUP context.vars name =
+      some (panValueShape [] newValue, slots) := by
+    rw [← hshape]
+    exact hcontextOld
+  have hdistinct : slots.Nodup := hrel.1.1 name
+    (panValueShape [] oldValue) slots hcontextOld
+  refine ⟨slots, hcontextNew, hdistinct, ?_⟩
+  exact localRelLeZipUpdatePreserved context sourceLocals targetLocals name
+    oldValue newValue (panValueShape [] oldValue) slots hrel hsource hcontextOld
+    hshape hdistinct
+
 /-- HOL `locals_rel_extend_new_var`: a fresh, well-shaped source local can be
     allocated in distinct target slots above the old context maximum. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "locals_rel_extend_new_var"]

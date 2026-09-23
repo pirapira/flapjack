@@ -4016,11 +4016,35 @@
     "reviewer": "Flapjack-only assembly of the dispatched Crep ExtCall FFI_return step with its post-state stateRel; connects crepRuntimeExtCallValues_target_returned to crepRuntimeExtCallValues_stateRel_returned; no single HOL declaration"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "localsRelUpdateExistingValue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only handler-prestate bridge from locals_rel lookup to shape-preserving flattened update; no standalone HOL declaration"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "fields_in_order_reorder_noop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "fieldsInOrderReorderNoop",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source MAP/FST, ALL_DISTINCT, FLAT/ALOOKUP statement matched to production structCompileFields/structSelectFields; direct HOL oracle and Lean fixture)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual target exp_hdl execution for a one-word payload loaded from globals_lookup slot 0 into an existing handler local; induction support, not the enclosing Call_Ret_Exception theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
   }
 ]

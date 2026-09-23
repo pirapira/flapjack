@@ -18,6 +18,8 @@ namespace Flapjack
 inductive PanValueFfiClockResultProjection (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+  | error (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
   | returned (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α)) (ffi : FfiState σ)
       (values : List (PanValue α)) (clock : Nat)
@@ -38,6 +40,8 @@ def panValueFfiClockResultProjection :
     PanValueFfiClockResult α σ → PanValueFfiClockResultProjection α σ
   | (.control (.normal locals globals memory ffi), clock) =>
       .normal locals globals memory ffi clock
+  | (.control (.error locals globals memory ffi), clock) =>
+      .error locals globals memory ffi clock
   | (.control (.returned locals globals memory ffi values), clock) =>
       .returned locals globals memory ffi values clock
   | (.control (.raised locals globals memory ffi exception value), clock) =>
@@ -57,6 +61,8 @@ def panValueFfiClockResultProjection_shiftClock (extra : Nat) :
       PanValueFfiClockResultProjection α σ
   | .normal locals globals memory ffi clock =>
       .normal locals globals memory ffi (clock + extra)
+  | .error locals globals memory ffi clock =>
+      .error locals globals memory ffi (clock + extra)
   | .returned locals globals memory ffi values clock =>
       .returned locals globals memory ffi values (clock + extra)
   | .raised locals globals memory ffi exception value clock =>

@@ -153,6 +153,7 @@ theorem call_clock_succ_mono
                 | continued l cg cm cf => exact h
                 | returned l cg cm cf vs => exact h
                 | finalFfi l cg cm cf ev => exact h
+                | error l cg cm cf => exact h
                 | raised l cg cm cf e v =>
                   dsimp only at h ⊢
                   by_cases hev :
@@ -221,12 +222,14 @@ theorem evalPanValueFfiClockProg_fuel_mono'
     rw [evalPanValueFfiClockProg]
     cases hv : evalPanValueExp structs locals globals memory baseAddress topAddress
         bytesInWord valueExp ma with
-    | none => rw [hv] at h; simp at h
+    | none =>
+      simp only [panValueDecAcceptedValue, hv, Option.elim_none] at h ⊢
+      exact h
     | some value =>
-      rw [hv] at h
-      simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+      simp only [panValueDecAcceptedValue, hv] at h ⊢
       by_cases hshape : panShapeMatches (panValueShape structs value) shape
-      · rw [if_pos hshape] at h ⊢
+      · simp only [hshape, if_true, Option.elim_some,
+          Option.bind_eq_bind] at h ⊢
         cases hb : evalPanValueFfiClockProg context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value)
             globals memory ffi clock body ma c mh with
@@ -235,7 +238,8 @@ theorem evalPanValueFfiClockProg_fuel_mono'
           rw [hb] at h
           rw [ihBody value _ _ hfk hb]
           exact h
-      · rw [if_neg hshape] at h; simp at h
+      · simp only [hshape] at h ⊢
+        exact h
   | case5 fuel locals globals memory ffi clock first second ma c mh ihFirst ihSecond =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -266,6 +270,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
         | raised l g m f e v => exact h
         | broke l g m f => exact h
         | continued l g m f => exact h
+        | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h
   | case6 fuel locals globals memory ffi clock condition thenBranch elseBranch ma c mh
@@ -335,6 +340,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
         | normal l g m f => simp at h
         | broke l g m f => simp at h
         | continued l g m f => simp at h
+        | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h
   | case9 fuel locals globals memory ffi clock conditionExp body ma c mh ihBody ihLoop =>
@@ -393,6 +399,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
                 | raised l g m f e v => exact h
                 | broke l g m f => exact h
                 | finalFfi l g m f ev => exact h
+                | error l g m f => exact h
               | timeout l g m f => exact h
       | rStruct fields => simp at h
       | nStruct nm fields => simp at h

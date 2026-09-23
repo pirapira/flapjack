@@ -512,13 +512,132 @@ theorem evalCrepRuntimeExp_op_toHolWordBits [NeZero width]
         RiscV.panRiscVMemoryModelForEndian,
         panRiscVWordOp_eq_wordOpHOL]
 
+theorem evalCrepRuntimeExp_cmp_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (operator : Cmp)
+    (left right : CrepExp (Fin width → Bool))
+    (ihLeft : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+    evalCrepHolWordBitsExp state left)
+    (ihRight : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+      evalCrepHolWordBitsExp state right) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.cmp operator left right) =
+    evalCrepHolWordBitsExp state (.cmp operator left right) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ihLeft ihRight ⊢
+  cases hLeft : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec left) with
+  | none =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left = none := by
+        simpa [hLeft] using ihLeft
+      simp [hLeftFin]
+  | some leftValue =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+          some (bitVecToHolWordBits leftValue) := by
+        simpa [hLeft] using ihLeft
+      cases hRight : evalCrepHolExp state.toBitVecState
+          (mapCrepExpWord holWordBitsToBitVec right) with
+      | none =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right = none := by
+            simpa [hRight] using ihRight
+          simp [hLeftFin, hRightFin]
+      | some rightValue =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+              some (bitVecToHolWordBits rightValue) := by
+            simpa [hRight] using ihRight
+          rw [hLeftFin, hRightFin]
+          simp
+          rw [crepHolWordBits_compare_toBitVec state operator
+            (bitVecToHolWordBits leftValue) (bitVecToHolWordBits rightValue)]
+          simp [CrepHolState.toBitVecState, CrepHolState.toRuntime,
+            RiscV.panRiscVMemoryModelForEndian, panRiscVCmp_eq_evalPanCmp,
+            holWordBitsToBitVec_bitVecToHolWordBits]
+
+theorem evalCrepRuntimeExp_shift_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ) (operator : Shift)
+    (left right : CrepExp (Fin width → Bool))
+    (ihLeft : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+      evalCrepHolWordBitsExp state left)
+    (ihRight : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+      evalCrepHolWordBitsExp state right) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime (.shift operator left right) =
+    evalCrepHolWordBitsExp state (.shift operator left right) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp, evalCrepHolExp,
+    mapCrepExpWord] at ihLeft ihRight ⊢
+  cases hLeft : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec left) with
+  | none =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left = none := by
+        simpa [hLeft] using ihLeft
+      simp [hLeftFin]
+  | some leftValue =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+          some (bitVecToHolWordBits leftValue) := by
+        simpa [hLeft] using ihLeft
+      cases hRight : evalCrepHolExp state.toBitVecState
+          (mapCrepExpWord holWordBitsToBitVec right) with
+      | none =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right = none := by
+            simpa [hRight] using ihRight
+          simp [hLeftFin, hRightFin]
+      | some rightValue =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+              some (bitVecToHolWordBits rightValue) := by
+            simpa [hRight] using ihRight
+          rw [hLeftFin, hRightFin]
+          simp
+          rw [crepHolWordBits_shift_toBitVec state operator
+            (bitVecToHolWordBits leftValue) (bitVecToHolWordBits rightValue)]
+          simp [CrepHolState.toBitVecState, CrepHolState.toRuntime,
+            RiscV.panRiscVMemoryModelForEndian, panRiscVShift_eq_evalPanShiftFull,
+            holWordBitsToBitVec_bitVecToHolWordBits]
+
+theorem evalCrepRuntimeExp_crepOpMul_toHolWordBits [NeZero width]
+    (state : CrepHolState (Fin width → Bool) σ)
+    (left right : CrepExp (Fin width → Bool))
+    (ihLeft : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+      evalCrepHolWordBitsExp state left)
+    (ihRight : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+      evalCrepHolWordBitsExp state right) :
+    evalCrepRuntimeExp state.toHolWordBitsRuntime
+        (.crepOp .mul [left, right]) =
+      evalCrepHolWordBitsExp state (.crepOp .mul [left, right]) := by
+  simp only [evalCrepRuntimeExp, evalCrepHolWordBitsExp,
+    mapCrepExpWord] at ihLeft ihRight ⊢
+  cases hLeft : evalCrepHolExp state.toBitVecState
+      (mapCrepExpWord holWordBitsToBitVec left) with
+  | none =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left = none := by
+        simpa [hLeft] using ihLeft
+      simp [hLeftFin, evalCrepHolExp, hLeft]
+  | some leftValue =>
+      have hLeftFin : evalCrepRuntimeExp state.toHolWordBitsRuntime left =
+          some (bitVecToHolWordBits leftValue) := by
+        simpa [hLeft] using ihLeft
+      cases hRight : evalCrepHolExp state.toBitVecState
+          (mapCrepExpWord holWordBitsToBitVec right) with
+      | none =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right = none := by
+            simpa [hRight] using ihRight
+          simp [hLeftFin, hRightFin, evalCrepHolExp, hLeft, hRight]
+      | some rightValue =>
+          have hRightFin : evalCrepRuntimeExp state.toHolWordBitsRuntime right =
+              some (bitVecToHolWordBits rightValue) := by
+            simpa [hRight] using ihRight
+          rw [hLeftFin, hRightFin]
+          simp [evalCrepHolExp, hLeft, hRight]
+          change bitVecToHolWordBits
+              (holWordBitsToBitVec (bitVecToHolWordBits leftValue) *
+                holWordBitsToBitVec (bitVecToHolWordBits rightValue)) =
+            bitVecToHolWordBits (leftValue * rightValue)
+          simp [holWordBitsToBitVec_bitVecToHolWordBits]
+
 /-! The next desired bridge would show that the production runtime evaluator on
     the finite-index HOL-word carrier equals the transported source evaluator
-    above. Production `Var`, `LoadGlob`, and recursive plain `Load` cases are
-    now proved, as are conversion equations for list `wordOp`, comparisons,
-    shifts, and byte loads. The 32-bit load and the list-recursive evaluator
-    proof remain open. Keep the full theorem out of the HOL map until every
-    expression case is proved. -/
+    above. Production `Var`, `LoadGlob`, recursive plain `Load`, list-valued
+    `Op`, `CrepOp.mul`, `Cmp`, and `Shift` cases are now proved using their
+    structural induction hypotheses. The load32 correspondence and the
+    assembling expression/list induction remain open. Keep the full theorem
+    out of the HOL map until the load32 case and assembling proof are complete.
+    -/
 
 private theorem crepHolState_load32 [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) (address : RiscV.Word width) :

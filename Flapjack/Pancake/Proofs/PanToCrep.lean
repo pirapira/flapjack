@@ -24,6 +24,43 @@ namespace Flapjack
 
 /-! Exact utility theorem ports used by the `pan_to_crep` proof development. -/
 
+/-- Exact word-width port of Cake `load_shape_el_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:114`). The index bound
+    is explicit because Lean total indexing requires its proof; `BitVec.ofNat`
+    is HOL's `n2w`, and the fixed `CrepBytesInWord` instance is
+    `byte$bytes_in_word`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "load_shape_el_rel"]
+theorem loadShapeBytesGetElem {width : Nat}
+    (count index : Nat) (address : BitVec width)
+    (value : CrepExp (BitVec width)) (hindex : index < count) :
+    (loadShapeBytes address count value)[index]'(by
+      simpa only [length_loadShape_eq_shape] using hindex) =
+      if address + (CrepBytesInWord.bytesInWord * BitVec.ofNat width index) = 0 then
+        .load value
+      else
+        .load (.op .add
+          [value, .const
+            (address + (CrepBytesInWord.bytesInWord * BitVec.ofNat width index))]) := by
+  induction count generalizing address index with
+  | zero => omega
+  | succ count ih =>
+      cases index with
+      | zero =>
+          simp [loadShapeBytes]
+      | succ index =>
+          have hlt : index < count := by omega
+          simp only [loadShapeBytes, List.getElem_cons_succ]
+          rw [ih (index := index)
+            (address := address + CrepBytesInWord.bytesInWord) hlt]
+          have hoffset :
+              (address + CrepBytesInWord.bytesInWord) +
+                  CrepBytesInWord.bytesInWord * BitVec.ofNat width index =
+                address + CrepBytesInWord.bytesInWord * BitVec.ofNat width (index + 1) := by
+            rw [BitVec.ofNat_add]
+            simp only [BitVec.mul_add, BitVec.mul_one]
+            ac_rfl
+          rw [hoffset]
+
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
     HOL has one `shape_of` function, so this bridge has no HOL original. -/

@@ -4379,9 +4379,17 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "compileExpHOL_rFieldZero_singleLocal_eval_flatten",
+    "lean_name": "mapM_take_of_success",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only evaluation support for first-field projection from a one-field local record; this is a restricted helper for source-shaped Call arguments, not a separate HOL theorem port"
+    "reviewer": "Flapjack-only Option mapM list infrastructure: successful lookup/evaluation on a flattened local slice is preserved for matching prefixes; no separate HOL theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rFieldZero_nonemptyLocal_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluation support for HOL comp_field index zero on an rField over a nonempty source-local rStruct; Call argument support remains restricted and this is not the full compile_exp_val_rel theorem"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4734,6 +4742,38 @@
     "lean_name": "panStructAll_map",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Generic map over the local PanStructAll induction-hypothesis list; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_mapValuesNStruct",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only lookup/map commutation for the NStruct case; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoDefaultPanPropsNStruct",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equality-instance adapter for the NStruct lookup; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapesNames",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only consequence that successful named-field shape matching preserves field names; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructConvertFieldValues_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equation relating named-field conversion to List.map for the NStruct case; no standalone HOL declaration."
   },
   {
     "hol_path": null,

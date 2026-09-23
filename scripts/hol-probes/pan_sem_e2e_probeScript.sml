@@ -127,6 +127,18 @@ val _ = print_eval "call_struct_argument_7_8"
              panLang$Return (panLang$Var panLang$Local «p»),
              panLang$Comb [panLang$One; panLang$One])))))``
 
+val _ = print_eval "call_record_first_field_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «id»
+        [panLang$RField 0 (panLang$Var panLang$Local «pair»)],
+       ((ARB:((8),unit) panSem$state) with
+        <| locals := FEMPTY |+ («pair», RStruct [ValWord (7w:8 word);
+               ValWord (8w:8 word)]);
+         code := FEMPTY |+
+           («id», ([(«x», panLang$One)],
+             panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+         clock := 10 |>)))``
+
 val _ = print_eval "call_zero_clock_timeout"
   ``FST (panSem$evaluate
       (panLang$Call NONE «callee» [],

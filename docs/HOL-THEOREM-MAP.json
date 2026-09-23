@@ -4734,5 +4734,21 @@
     "lean_name": "panValueFfiExtCall_stateRel_target",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only: derives the target Crep ExtCall dispatch and post-state stateRel from a source panValueFfiExtCall returned-evaluator outcome plus stateRel, using the source/target read-write bridges; hypothesis is the source evaluator result, not the target result or post-relation)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "statement_status": "no_hol_reference_pending_classification",
+    "lean_name": "panValueFfiSharedLoad_stateRel_target",
+    "reviewer": "Flapjack-only: a source panValueFfiSharedLoad `.loaded` outcome (HOL sh_mem_load FFI_return) drives the target crepRuntimeSharedMem MappedRead dispatch and the ffi-only stateRel post-state; direct oracle scripts/hol-probes/crep_runtime_shared_mem_probe.out (load_returned)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "statement_status": "no_hol_reference_pending_classification",
+    "lean_name": "panValueFfiSharedStore_stateRel_target",
+    "reviewer": "Flapjack-only: a source panValueFfiSharedStore `.stored` outcome (HOL sh_mem_store FFI_return) drives the target crepRuntimeSharedMem MappedWrite dispatch and the ffi-only stateRel post-state; direct oracle scripts/hol-probes/crep_runtime_shared_mem_probe.out (store_returned)."
   }
 ]

@@ -47,20 +47,25 @@ val _ = print_eval "compile_correct_skip_converted"
 val finite_map_state = ``^state with <|
     locals := FUPDATE FEMPTY (strlit "local", ValWord 7w);
     globals := FUPDATE FEMPTY (strlit "global", ValWord 11w);
-    eshapes := FUPDATE FEMPTY (strlit "E", panLang$One)
+    eshapes := FUPDATE FEMPTY (strlit "E", panLang$One);
+    code := FUPDATE FEMPTY (strlit "f", ([], panLang$Skip, panLang$One))
   |>``;
 val _ = print_simp "convert_s_finite_maps"
   [pan_structsProofTheory.convert_s_def,
    pan_structsProofTheory.convert_v_def,
+   pan_structsProofTheory.convert_code_def,
    pan_structsProofTheory.convert_eshapes_def,
    pan_structsTheory.compile_shape_def,
+   pan_structsTheory.compile_def,
    FLOOKUP_FMAP_MAP2, FLOOKUP_UPDATE]
   ``(FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
        ^finite_map_state).locals (strlit "local"),
      FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
        ^finite_map_state).globals (strlit "global"),
      FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
-       ^finite_map_state).eshapes (strlit "E"))``;
+       ^finite_map_state).eshapes (strlit "E"),
+     FLOOKUP (pan_structsProof$convert_s (ARB:pan_structs$context)
+       ^finite_map_state).code (strlit "f"))``;
 
 val zero_state = ``(^state with clock := 0)``;
 val positive_state = ``(^state with clock := 1)``;

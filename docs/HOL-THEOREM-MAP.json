@@ -4176,12 +4176,44 @@
     "reviewer": "Flapjack-only fixed-RV64 source Call induction step: arbitrary callee/body/arguments and raised-payload source IH are evaluated through the finite state-owned code map and memory domains derived from PanSemState; does not prove the target relation or full pc_compile_correct Call case"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "eraseDups_eq_self_of_nodup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list utility proving eraseDups preserves a nodup natural-number list; used to discharge the target runtime's distinct parameter-slot guard"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_ofCodeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual-state Call support: derives production target code lookup and parameter locals from code_rel for arbitrary argument words with an explicit flattened parameter-length premise; compiled argument evaluation bridge and enclosing Call relation remain open"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "convert_v_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertValue",
     "statement_status": "reviewed_exact",
     "reviewer": "All HOL cases reviewed against PanValue: Val (Word w) maps to .word unchanged; RStruct xs maps recursively in order to .rStruct; NStruct nm flds maps recursively over field values in order to .rStruct, dropping names as HOL does. The adjacent direct HOL EVAL fixture covers named-record conversion."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueFieldsOkBool",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct EVERY over field values and first-match equality-based ALOOKUP followed by exact field-name and shape-list equality. The adjacent direct HOL EVAL fixture covers word, matching/mismatching fields, and missing context. The extra Lean StructInfo.shapedFields cache is ignored; fields and size correspond to the HOL struct_info projection."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueBool",
+    "statement_status": "reviewed_exact",
+    "reviewer": "All HOL cases match the Bool-valued Lean equations: word true; RStruct EVERY over values; NStruct equality-based ALOOKUP success and EVERY over field values. The adjacent direct HOL EVAL fixture covers word, matching named struct, and missing context. The extra Lean StructInfo.shapedFields cache is ignored."
   },
   {
     "hol_path": null,
@@ -4246,5 +4278,45 @@
     "lean_name": "panStructTickEvaluatorSupport",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Paired Tick evaluator support only; omits compile_correct premises and invariant/shape-map/result postconditions; not an exact theorem case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_vars_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only evaluator adapter equating compiled local-slot variables with target locals mapM evaluation; utility for compiling the HOL local-expression case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "mapM_panTheWord_of_wordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only word_lab projection lemma translating locals_rel target cells into evaluated target words; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_local_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Local-variable constructor case for HOL compile_exp_val_rel: from state-owned source local evaluation and locals_rel, production Crep evaluation of the compiled slots returns the flattened PanValue. The general expression and Call argument theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_const_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Constant constructor case for HOL compile_exp_val_rel: the state-owned source evaluator and production Crep compiler/evaluator both flatten the word constant; general expression and Call argument theorem remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "every_exp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepEveryExp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
   }
 ]

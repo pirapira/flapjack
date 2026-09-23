@@ -2222,6 +2222,171 @@ theorem crepRuntimeExpHdlReturnOneWord
   simp [evalCrepRuntimeExps, evalCrepRuntimeExp, updateCrepRuntimeLocal,
     panTheWord, clearCrepRuntimeLocals, fixCrepRuntimeClock]
 
+private theorem evalCrepRuntimeExps_vars_eq
+    (state : CrepRuntimeState (RiscV.Word 64) σ) (slots : List Nat) :
+    evalCrepRuntimeExps state (slots.map CrepExp.var) =
+      slots.mapM (fun slot => (state.locals slot).map panTheWord) := by
+  induction slots with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons slot slots ih =>
+      simp [evalCrepRuntimeExps, evalCrepRuntimeExp, ih]
+
+private theorem mapM_panTheWord_of_wordLab
+    (locals : Nat → Option (PanWordLab (RiscV.Word 64)))
+    (slots : List Nat) (words : List (RiscV.Word 64))
+    (hslots : slots.mapM (FLOOKUP locals) =
+      some (words.map PanWordLab.word)) :
+    slots.mapM (fun slot => (FLOOKUP locals slot).map panTheWord) = some words := by
+  induction slots generalizing words with
+  | nil =>
+      cases words with
+      | nil => simp
+      | cons word words => simp at hslots
+  | cons slot slots ih =>
+      cases words with
+      | nil =>
+          simp only [List.mapM_cons] at hslots
+          cases hlookup : FLOOKUP locals slot with
+          | none => simp [hlookup] at hslots
+          | some cell =>
+              cases htail : slots.mapM (FLOOKUP locals) <;>
+                simp [hlookup, htail] at hslots
+      | cons word words =>
+          simp only [List.mapM_cons] at hslots
+          cases hlookup : FLOOKUP locals slot with
+          | none => simp [hlookup] at hslots
+          | some cell =>
+              cases cell with
+                | word cellWord =>
+                  cases htail : slots.mapM (FLOOKUP locals) with
+                  | none => simp [hlookup, htail] at hslots
+                  | some cells =>
+                      simp [hlookup, htail] at hslots
+                      rcases hslots with ⟨hword, htailWords⟩
+                      subst word
+                      have htailLookup : slots.mapM (FLOOKUP locals) =
+                          some (words.map PanWordLab.word) := by
+                        rw [htail, htailWords]
+                      have htailEval := ih words htailLookup
+                      simp [List.mapM_cons, hlookup, panTheWord, htailEval]
+
+/-! Flapjack-specific local-variable support toward HOL `compile_exp_val_rel`. `locals_rel`
+provides the flattened target words for the source value, and target `.var`
+evaluation reads those same slots through the production Crep locals map.
+This handles one RV64 constructor, but does not state HOL's full case or
+claim the general expression theorem `eval_map_comp_exp_flat_eq`. -/
+theorem compileExpHOL_local_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (value : PanValue (RiscV.Word 64))
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceEval : evalPanSemStateExp source (.var .local name) = some value) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.var .local name)).1 = some (panValueFlatten value) := by
+  have hsource : FLOOKUP source.locals name = some value := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceEval
+  obtain ⟨slots, hcontext, _, htargetWords, _⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name value hlocals hsource
+  have htargetValues : slots.mapM
+      (fun slot => (FLOOKUP target.locals slot).map panTheWord) =
+      some (panValueFlatten value) := by
+    exact mapM_panTheWord_of_wordLab target.locals slots (panValueFlatten value)
+      htargetWords
+  simp only [compileExpHOL, hcontext]
+  rw [evalCrepRuntimeExps_vars_eq]
+  exact htargetValues
+
+/-! Flapjack-specific RV64 constant support toward HOL `compile_exp_val_rel`;
+    the general expression theorem remains open. -/
+theorem compileExpHOL_const_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (value : RiscV.Word 64) (sourceValue : PanValue (RiscV.Word 64))
+    (hsourceEval : evalPanSemStateExp source (.const value) = some sourceValue) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.const value)).1 = some (panValueFlatten sourceValue) := by
+  have hsourceValue : sourceValue = .word value := by
+    have hword : PanValue.word value = sourceValue := by
+      simpa [evalPanSemStateExp, evalPanValueExp] using hsourceEval
+    exact hword.symm
+  subst sourceValue
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp, panValueFlatten]
+
+/-! Derive the production Crep callee lookup and parameter locals from the
+state-owned source/target code maps. The argument words are arbitrary; their
+length must match the flattened source parameter shapes. The HOL compiled
+argument evaluation bridge that supplies those words remains a separate
+obligation in the general Call case. -/
+private theorem eraseDups_eq_self_of_nodup (values : List Nat)
+    (hnodup : values.Nodup) : values.eraseDups = values := by
+  induction values with
+  | nil => rfl
+  | cons head tail ih =>
+      have ⟨hhead, htail⟩ := List.nodup_cons.mp hnodup
+      rw [List.eraseDups_cons]
+      have hfilter : tail.filter (fun value => !(value == head)) = tail := by
+        apply List.filter_eq_self.mpr
+        intro value hvalue
+        have hne : value ≠ head := by
+          intro heq
+          subst value
+          exact hhead hvalue
+        simp [hne]
+      rw [hfilter, ih htail]
+
+theorem lookupCrepRuntimeCode_ofCodeRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (argumentWords : List (RiscV.Word 64))
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) = argumentWords.length) :
+    ∃ targetLocals : Nat → Option (PanWordLab (RiscV.Word 64)),
+      lookupCrepRuntimeCode function argumentWords target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+            (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) ∧
+      targetLocals = ((List.range
+        (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip argumentWords).foldl
+          (fun locals (name, value) =>
+            updateCrepRuntimeLocal locals name (.word value))
+            (fun _ => none : Nat → Option (PanWordLab (RiscV.Word 64))) := by
+  let names := List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup source.code) function =
+      some (parameters, sourceBody, returnShape) := by
+    change panSemCodeLookup source.code function = _
+    exact hentry
+  rcases codeRelImp context (panSemCodeAsLookup source.code) target.code hcode
+      function parameters sourceBody returnShape hsourceLookup with
+    ⟨_, _, htargetEntry⟩
+  have hnamesLength : names.length = argumentWords.length := by
+    simpa [names] using hargumentLength
+  have hnamesEraseDups : names.eraseDups = names :=
+    eraseDups_eq_self_of_nodup names (by simp [names, List.nodup_range])
+  refine ⟨(names.zip argumentWords).foldl
+      (fun locals (name, value) =>
+        updateCrepRuntimeLocal locals name (.word value))
+      (fun _ => none : Nat → Option (PanWordLab (RiscV.Word 64))), ?_, rfl⟩
+  unfold lookupCrepRuntimeCode
+  rw [htargetEntry]
+  simp [names, hnamesLength, hnamesEraseDups, assignCrepRuntimeLocals]
+
 /-! Compose the actual target exp_hdl/Return execution with the generic Crep
 Call exception-dispatch induction step. The callee lookup and body execution
 remain explicit inputs so the enclosing state/code relation proof can derive
@@ -2399,7 +2564,7 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     exact hentry
   have hcodeEntry := codeRelImp context (panSemCodeAsLookup sourceState.code)
     targetState.code hcode function [] (.raise exception (.const value)) .one hsourceCode
-  rcases hcodeEntry with ⟨_, hfunction, htargetEntry⟩
+  rcases hcodeEntry with ⟨_, hfunction, _⟩
   let functionContext := ctxtFc context.funcs context.eids [] [] []
   let targetBody : CrepProg (RiscV.Word 64) :=
     .seq (.dec 1 (.const value)
@@ -2410,13 +2575,18 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     simp [functionContext, targetBody, compileCodeRelProg, compileProgHOL,
       compileExpHOL, freshNamesHOL, ctxtFc, maxList, hcontextException,
       nestedDecs, crepNestedSeq, storeGlobals]
-  have htargetEntry' : FLOOKUP targetState.code function = some ([], targetBody) := by
-    simpa [Shape.shapeSize, functionContext, maxList, hcompiledBody] using htargetEntry
-  have htargetLookup : lookupCrepRuntimeCode function [] targetState.code =
+  have hemptySlots :
+      List.range (Shape.shapeSize (.comb ([] : List Shape))) = [] := by
+    simp [Shape.shapeSize]
+  obtain ⟨targetCalleeLocals, htargetLookup, htargetCalleeLocalsEq⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel context sourceState targetState function []
+      (.raise exception (.const value)) .one [] hcode hentry (by simp [Shape.shapeSize])
+  have htargetLookup' : lookupCrepRuntimeCode function [] targetState.code =
       some (targetBody, fun _ => none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetEntry']
-    simp [assignCrepRuntimeLocals]
+    have hlocals : targetCalleeLocals = (fun _ => none) := by
+      simpa [hemptySlots, Shape.shapeSize] using htargetCalleeLocalsEq
+    simpa [hemptySlots, Shape.shapeSize, functionContext, hcompiledBody, hlocals]
+      using htargetLookup
 
   let returnSlot := context.vmax + 1
   have hfunctionLookup : context.funcs function = some ([], Shape.one) := by
@@ -2466,7 +2636,7 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
   have htargetCall := evalCrepRuntimeCall_catchesRaisedOneWordHandler context
     targetHandler targetPrimitive targetCaller [returnSlot] exceptionCode
     function handlerVariable slot [] [] targetBody (fun _ => none) calleeState
-    value (by simp [evalCrepRuntimeExps]) htargetLookup hcallInfo
+    value (by simp [evalCrepRuntimeExps]) htargetLookup' hcallInfo
     (by simpa [targetCaller] using hclock) hcalleeBody hvariable hcallerSlot
     (by simp [calleeState, updateCrepRuntimeGlobal])
   have htargetCall' : evalCrepRuntimeCall targetHandler targetPrimitive 5

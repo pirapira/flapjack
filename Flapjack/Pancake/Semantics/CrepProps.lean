@@ -23,6 +23,37 @@ def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
       if expressions.any List.isEmpty then none
       else some (expressions.map (fun expression => expression.headD (.var 0)))
 
+mutual
+/-- Faithful port of Cake `crepProps$every_exp` from
+    `cakeml/pancake/semantics/crepPropsScript.sml:1300`: `every_exp P e`
+    holds when `P` holds of `e` and of every subexpression of `e`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+def crepEveryExp (predicate : CrepExp α → Bool) : CrepExp α → Bool
+  | .const value => predicate (.const value)
+  | .var name => predicate (.var name)
+  | .load address => predicate (.load address) && crepEveryExp predicate address
+  | .load32 address => predicate (.load32 address) && crepEveryExp predicate address
+  | .loadByte address => predicate (.loadByte address) && crepEveryExp predicate address
+  | .loadGlob address => predicate (.loadGlob address)
+  | .op operator arguments =>
+      predicate (.op operator arguments) && crepEveryExpList predicate arguments
+  | .crepOp operator arguments =>
+      predicate (.crepOp operator arguments) && crepEveryExpList predicate arguments
+  | .cmp operator left right =>
+      predicate (.cmp operator left right) && crepEveryExp predicate left &&
+        crepEveryExp predicate right
+  | .shift operator left right =>
+      predicate (.shift operator left right) && crepEveryExp predicate left &&
+        crepEveryExp predicate right
+  | .baseAddr => predicate .baseAddr
+  | .topAddr => predicate .topAddr
+/-- Cake's `EVERY (every_exp P)` list traversal. -/
+def crepEveryExpList (predicate : CrepExp α → Bool) : List (CrepExp α) → Bool
+  | [] => true
+  | expression :: expressions =>
+      crepEveryExp predicate expression && crepEveryExpList predicate expressions
+end
+
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "map_var_cexp_eq_var"]

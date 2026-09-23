@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.Proofs.PanStructs
+import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem
 
 /-!
@@ -40,16 +41,76 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-! Structural Bool equality for the translated Shape datatype. It performs
+    the HOL constructor equality cases recursively and avoids a BEq instance
+    for Shape or String. -/
 mutual
-  /-- Flapjack support predicate mirroring the conditions in HOL
-      `v_flds_ok_def`, but not an exact port. HOL returns a boolean (`T`/`F`);
-      this definition returns `Prop`. It also searches the Lean `StructContext`
-      with `[BEq String]` via `lookupInfo`, whereas HOL uses equality-based
-      `ALOOKUP` over an association list. The equivalence of that key comparison
-      (and thus lookup behavior) is not established. `StructInfo.size` is an
-      extra Lean field absent from the HOL projection; this predicate reads
-      only `.fields`. Keep the HOL tag off until the boolean/type and lookup
-      representations are aligned. -/
+  def panStructShapeEqBool : Shape → Shape → Bool
+    | .one, .one => true
+    | .comb left, .comb right => panStructShapeListEqBool left right
+    | .named left, .named right => decide (left = right)
+    | _, _ => false
+  termination_by left right => sizeOf left + sizeOf right
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructShapeListEqBool : List Shape → List Shape → Bool
+    | [], [] => true
+    | left :: lefts, right :: rights =>
+        panStructShapeEqBool left right && panStructShapeListEqBool lefts rights
+    | _, _ => false
+  termination_by left right => sizeOf left + sizeOf right
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
+  /-- Exact Bool-valued counterpart of HOL `v_flds_ok_def`. The Lean
+      `StructInfo` includes HOL's `fields` and `size`, plus a Flapjack-only
+      `shapedFields` cache which is ignored here. Key lookup uses decidable
+      equality and first-match order, matching HOL `ALOOKUP`; structural shape
+      list equality is decided by a structural comparator equivalent to HOL
+      structural list equality. -/
+  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  def panStructValueFieldsOkBool (structs : StructContext) :
+      PanValue α → Bool
+    | .word _ => true
+    | .rStruct values => panStructValuesFieldsOkBool structs values
+    | .nStruct name fields =>
+        panStructFieldValuesFieldsOkBool structs fields &&
+          match panPropsALookupEq name structs with
+          | none => false
+          | some info =>
+              decide (fields.map Prod.fst = info.fields.map Prod.fst) &&
+              panStructShapeListEqBool
+                (fields.map (panSemShapeOf ∘ Prod.snd)) (info.fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructValuesFieldsOkBool (structs : StructContext) :
+      List (PanValue α) → Bool
+    | [] => true
+    | value :: values =>
+        panStructValueFieldsOkBool structs value &&
+          panStructValuesFieldsOkBool structs values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def panStructFieldValuesFieldsOkBool (structs : StructContext) :
+      List (FieldName × PanValue α) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        panStructValueFieldsOkBool structs value &&
+          panStructFieldValuesFieldsOkBool structs fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+mutual
+  /-- Prop-valued Flapjack convenience predicate mirroring HOL
+      `v_flds_ok_def`. It is not an exact port: HOL returns Bool, while this
+      declaration returns Prop and uses `[BEq String]` lookup. The adjacent
+      `panStructValueFieldsOkBool` definition is the Bool/equality-based HOL
+      counterpart. `StructInfo.shapedFields` is an additional Lean cache field
+      absent from HOL and is ignored by both predicates. -/
   def panStructValueFieldsOk [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True
@@ -82,15 +143,12 @@ mutual
 end
 
 mutual
-  /-- Flapjack support predicate mirroring the conditions in HOL
-      `is_wf_shape_v_def`, but not an exact port. HOL returns a boolean
-      (`T`/`F`); this definition returns `Prop`. It also searches the Lean
-      `StructContext` with `[BEq String]` via `lookupInfo`, whereas HOL uses
-      equality-based `ALOOKUP` over an association list. The equivalence of that
-      key comparison (and thus lookup behavior) is not established.
-      `StructInfo.size` is an extra Lean field absent from the HOL projection;
-      this predicate reads only `.fields`. Keep the HOL tag off until the
-      boolean/type and lookup representations are aligned. -/
+  /-- Prop-valued Flapjack convenience predicate mirroring HOL
+      `is_wf_shape_v_def`. It is not an exact port: HOL returns Bool, while
+      this declaration returns Prop and uses `[BEq String]` lookup. The
+      adjacent `panIsWfShapeValueBool` definition is the Bool/equality-based
+      HOL counterpart. The HOL `struct_info` has fields and size; Lean adds an
+      unused `shapedFields` cache which this predicate also ignores. -/
   def panStructValueShapeWf [BEq String] (structs : StructContext) :
       PanValue α → Prop
     | .word _ => True

@@ -6,6 +6,7 @@ import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanStructsCompileCorrect
+import Flapjack.Test.PanStructsValueValidityParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity
@@ -88,6 +89,7 @@ import Flapjack.Test.LoopObservationalSemanticsParity
 import Flapjack.Test.LoopSemEvaluateParity
 import Flapjack.Test.LoopLiveEffectFreeParity
 import Flapjack.Test.LoopPrimopParity
+import Flapjack.Test.LoopShMemParity
 import Flapjack.Test.PanItreeFfiParity
 import Flapjack.Test.PanItreeTracePrefixParity
 import Flapjack.Test.PanItreeTracePrefix0Parity
@@ -159,6 +161,7 @@ import Flapjack.Test.DupExnEidsParity
 import Flapjack.Test.CrepRuntimeTargetParity
 import Flapjack.Test.CrepRuntimeFfiTargetParity
 import Flapjack.Test.CrepRuntimeExtCallStateRelParity
+import Flapjack.Test.CrepEveryExpParity
 import Flapjack.Test.PanSimpParity
 import Flapjack.Test.PanProgramSimpParity
 import Flapjack.Test.PanValueWfParity
@@ -674,6 +677,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopSemEvaluateParity.runChecks,
     Flapjack.Test.LoopLiveEffectFreeParity.runChecks,
     Flapjack.Test.LoopPrimopParity.runChecks,
+    Flapjack.Test.LoopShMemParity.runChecks,
     Flapjack.Test.PanItreeFfiParity.runChecks,
     Flapjack.Test.PanItreeTracePrefixParity.runChecks,
     Flapjack.Test.PanItreeTracePrefix0Parity.runChecks,
@@ -727,6 +731,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepRuntimeTargetParity.runChecks,
     Flapjack.Test.CrepRuntimeFfiTargetParity.runChecks,
     Flapjack.Test.CrepRuntimeExtCallStateRelParity.runChecks,
+    Flapjack.Test.CrepEveryExpParity.runChecks,
     Flapjack.Test.PanToCrepRelationsParity.runChecks,
     Flapjack.Test.PanToCrepCodeRelParity.runChecks,
     Flapjack.Test.PanToCrepStateRelParity.runChecks,

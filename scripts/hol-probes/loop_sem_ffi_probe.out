@@ -1,0 +1,5 @@
+extcall_returned=(NONE,Word (set_byte 5w 17w 205w F),Word (set_byte 6w 34w 239w F),
+ SOME (Word 1w))
+extcall_final=(SOME (FinalFFI (Final_event (ExtCall «x») [171w] [205w; 239w] FFI_failed)),
+ NONE)
+extcall_missing_local=(SOME Error,SOME (Word 1w))

@@ -346,10 +346,10 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
                 let compiledHandlerProgram := globalCompileProg context handler
                 let names := handlerVar :: freeVarIds compiledHandlerProgram ++
                   compiledArguments.flatMap expLocalVars
-                let resultName := globalFreshName "" names
+                let resultName := freshNameHOL "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/
-                let flagName := globalFreshName "vn'" (resultName :: names)
+                let flagName := freshNameHOL "vn'" (resultName :: names)
                 let handlerBody :=
                   .seq compiledHandlerProgram
                     (.assign .local flagName (.const (context.fromNat 1)))
@@ -1732,6 +1732,20 @@ theorem cakeContextOfPass_update [BEq String] {width : Nat}
           globalsSize := address } := by
   simp only [cakeContextOfPass]
   rfl
+
+/-- Adapter: production `shape_val` agrees with the canonical `cakeShapeVal`
+    through `cakeContextOfPass`, under the canonical-word hypothesis. -/
+theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (shape : Shape) :
+    globalShapeVal context shape = cakeShapeVal (cakeContextOfPass context) shape := by
+  induction shape using cakeShapeVal.induct with
+  | case1 => simp only [globalShapeVal, cakeShapeVal, hcanonical.2 0]
+  | case2 name => simp only [globalShapeVal, cakeShapeVal, hcanonical.2 0]
+  | case3 shapes ih =>
+      simp only [globalShapeVal, cakeShapeVal]
+      congr 1
+      exact List.map_congr_left ih
 
 /-- Exact clause-structured port of HOL `pan_globals$compile_exp_def`
     (`pan_globalsScript.sml:18-46`) over the canonical word context

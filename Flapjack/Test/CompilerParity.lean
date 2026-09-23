@@ -38,6 +38,7 @@ import Flapjack.Test.PanGlobalsExceptionsAppendParity
 import Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity
 import Flapjack.Test.PanGlobalsDeclPredicateParity
 import Flapjack.Test.PanGlobalsFunctionsFilterNilParity
+import Flapjack.Test.PanGlobalsFpermClusterParity
 import Flapjack.Test.PanLangFunctionsParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
@@ -127,6 +128,7 @@ import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
 import Flapjack.Test.CrepFuelCutoffParity
 import Flapjack.Test.PanToCrepGlobalsLookupParity
+import Flapjack.Test.PanToCrepCallExceptionParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity
@@ -640,6 +642,7 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity.runChecks,
     Flapjack.Test.PanGlobalsDeclPredicateParity.runChecks,
     Flapjack.Test.PanGlobalsFunctionsFilterNilParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermClusterParity.runChecks,
     Flapjack.Test.PanLangFunctionsParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,

@@ -113,6 +113,9 @@ def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
 def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
   [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
 
+def sourceRaiseExceptionCallCode : PanSemCodeMap Word64 :=
+  [("raiseE", ([], .raise "E" (.const (BitVec.ofNat 64 7)), .one))]
+
 def evaluateSourceCallId :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -127,6 +130,14 @@ def evaluateSourceCallAssigned :=
           if name == "answer" then some (.word (BitVec.ofNat 64 3)) else none })
     (.call (some (some (.local, "answer"), none)) "id"
       [.const (BitVec.ofNat 64 7)] : Prog Word64)
+
+def evaluateSourceCallRaisesException :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceRaiseExceptionCallCode with
+        exceptionShapes := fun exception =>
+          if exception == "E" then some .one else none })
+    (.call none "raiseE" [] : Prog Word64)
 
 def evaluateSourceDecCallId :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -199,6 +210,12 @@ def observeSourceCallAssigned : Bool :=
       | _ => false
   | _ => false
 
+def observeSourceCallRaisesException : Bool :=
+  match evaluateSourceCallRaisesException with
+  | some (.control (.raised _ _ _ _ "E" (.word value)), 9) =>
+      value == BitVec.ofNat 64 7
+  | _ => false
+
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
 
@@ -234,6 +251,7 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 
 #guard observeSourceCodeCall
 #guard observeSourceCallAssigned
+#guard observeSourceCallRaisesException
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceCodePreservedAfterRecursion
@@ -491,6 +509,8 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
   if observeSourceCallAssigned then IO.println "PASS state-owned Call writes the existing local destination" else
     IO.println "FAIL state-owned Call writes the existing local destination"
+  if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
+    IO.println "FAIL state-owned Call propagates the callee exception payload"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else

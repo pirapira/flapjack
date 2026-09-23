@@ -133,14 +133,19 @@ generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
 `aligned_def`, `align_def`, `get_byte_def`, `byte_index_def`, and
 `word_of_bytes_def`. It evaluates domain misses, alignment failure, both
 endiannesses, 8-bit/64-bit word instances, and the 24-bit cases
-`byte_align 5w = 4w` and `mem_load_byte ... {4w} F 5w = SOME 51w`. Those rows
+`byte_align 5w = 4w`, little-endian `mem_load_byte ... {4w} F 5w = SOME 51w`,
+and big-endian `mem_load_byte ... {4w} T 5w = SOME 17w`. Those rows
 differ from production RISC-V's `panRiscVByteAlign 3 5 = 3`, which misses the
 domain containing only address 4. RISC-V rounds by a multiple of three while
 the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The
 `holByteAlignedRiscVMemoryModel` overlay uses the source alignment formula and
 returns the probed byte while leaving the other RISC-V model operations
 explicit. Focused checks for the source overlay and production mismatch are in
-`Flapjack.Test.PanFixedLoadParity`. The generic
+`Flapjack.Test.PanFixedLoadParity`. The generic finite-word
+`holFiniteWordSourceMemoryModel` adapter uses the same alignment formula and
+direct HOL `get_byte` index arithmetic; tests cover both endiannesses at width
+24. Its `aligned` and `word_of_bytes` operations still come from transported
+RISC-V operations and need their own correspondence proofs. The generic
 Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
 their equations to `panModelReadByte`/`panModelRead32`, are in
 `Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit

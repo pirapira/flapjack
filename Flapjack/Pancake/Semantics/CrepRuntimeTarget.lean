@@ -501,4 +501,79 @@ theorem crepRuntimeWriteBytes_target_eq_riscv
   rw [crepRuntimeWriteBytes_target_eq_riscv_state]
   rfl
 
+/-! ## External-call dispatch
+
+HOL `crepSem$ExtCall` reads the configuration and array arguments from memory
+with `read_bytearray ptr (w2n len) (mem_load_byte s.memory s.memaddrs s.be)`,
+then calls `call_FFI s.ffi (ExtCall ffi_index) configuration array`. On
+`FFI_return` it writes the returned bytes back with `write_bytearray` and
+updates the ffi state; on `FFI_final` it returns `FinalFFI` with the state
+unchanged; if either argument read fails it returns `Error`.
+
+The production `crepRuntimeExtCallValues` is related below to the Lean port
+`callFfi` (the counterpart of `call_FFI`), and the argument reads are the
+already-bridged `read_bytearray`. The handler payload codec
+(`wordOfBytes`/`valueToNat`) and the four-local `crepRuntimeExtCall` wrapper
+remain tracked in `flapjack-pxn.18.4.3.43.1.2.2`.
+Direct oracle: `scripts/hol-probes/crep_runtime_ext_call_probe.out`. -/
+
+/-- The canonical external-call handler for the RISC-V 64 target: it is the
+    Lean `callFfi` (the `call_FFI` port) lifted into the `CrepRuntimeFfiHandler`
+    response shape. The `sharedMem` case is dead for the `ExtCall` relation and
+    just returns the unchanged ffi with no bytes. -/
+def riscv64ExtCallCallFfiHandler :
+    CrepRuntimeFfiHandler α σ FfiFinalEvent
+  | .extCall function configuration array, ffi =>
+      match callFfi ffi (.extCall function) configuration array with
+      | .returned nextFfi bytes => .returned nextFfi bytes
+      | .final event => .final event
+  | .sharedMem _ _ _ _, ffi => .returned ffi []
+
+/-- `riscv64CrepRuntimeTarget` does not inspect the ffi state, so lifting it over
+    an ffi update commutes with the record update. -/
+theorem riscv64CrepRuntimeTarget_withFfi
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (ffi : FfiState σ) :
+    riscv64CrepRuntimeTarget { base with ffi := ffi } =
+      { riscv64CrepRuntimeTarget base with ffi := ffi } := rfl
+
+/-- The canonical target keeps the caller's ffi state. -/
+theorem riscv64CrepRuntimeTarget_ffi
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    (riscv64CrepRuntimeTarget base).ffi = base.ffi := rfl
+
+/-- Write-bytes bridge for an ffi-updated canonical target: the production writer
+    is the canonical RISC-V `write_bytearray` and installs the given ffi. -/
+theorem crepRuntimeWriteBytes_target_updateFfi
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (ffi : FfiState σ)
+    (address : RiscV.Word 64) (bytes : List UInt8) :
+    crepRuntimeWriteBytes { riscv64CrepRuntimeTarget base with ffi := ffi }
+        address bytes =
+      some (riscv64SetMemory { base with ffi := ffi }
+        (riscv64WriteMem { base with ffi := ffi } address bytes)) := by
+  rw [← riscv64CrepRuntimeTarget_withFfi base ffi,
+    crepRuntimeWriteBytes_target_eq_riscv_state]
+
+/-- The canonical-target `ExtCall` handler lifts HOL `call_FFI` to the Crep
+    runtime request/response boundary: an `extCall` request dispatches to
+    `callFfi` (the Lean counterpart of HOL `ffi$call_FFI`) and maps its
+    `FfiResult` to the Crep handler response.  Direct oracle:
+    `scripts/hol-probes/crep_runtime_ext_call_probe.out`. -/
+theorem riscv64ExtCallCallFfiHandler_extCall
+    (function : FunName) (configuration array : List UInt8) (ffi : FfiState σ) :
+    riscv64ExtCallCallFfiHandler
+        (.extCall function configuration array :
+          CrepRuntimeRequest (RiscV.Word 64)) ffi =
+      (match callFfi ffi (.extCall function) configuration array with
+       | .returned nextFfi bytes => .returned nextFfi bytes
+       | .final event => .final event) := rfl
+
+/-- The `ExtCall` handler leaves a `sharedMem` request untouched, returning the
+    ffi unchanged.  Direct oracle follows from the same HOL `call_FFI` case
+    analysis; included so the handler is characterised on every request. -/
+theorem riscv64ExtCallCallFfiHandler_sharedMem
+    (operator : CrepMemOp) (name : Nat) (address : RiscV.Word 64)
+    (payload : List UInt8) (ffi : FfiState σ) :
+    riscv64ExtCallCallFfiHandler
+        (.sharedMem operator name address payload) ffi = .returned ffi [] := rfl
+
 end Flapjack

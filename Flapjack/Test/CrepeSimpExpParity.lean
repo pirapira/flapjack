@@ -12,6 +12,8 @@ namespace Flapjack.Test.CrepeSimpExpParity
 def holBits4 : Fin 4 → Bool := fun index => index.val == 0 || index.val == 2
 
 #guard holWordBitsToBitVec holBits4 == BitVec.ofNat 4 5
+#guard holWordBitsToBitVec (holBits4 + holBits4) == BitVec.ofNat 4 10
+#guard holWordBitsToBitVec (holBits4 * holBits4) == BitVec.ofNat 4 9
 
 example : bitVecToHolWordBits (holWordBitsToBitVec holBits4) = holBits4 :=
   bitVecToHolWordBits_holWordBitsToBitVec holBits4
@@ -20,6 +22,29 @@ example :
     holWordBitsToBitVec (bitVecToHolWordBits (BitVec.ofNat 4 5)) =
       BitVec.ofNat 4 5 :=
   holWordBitsToBitVec_bitVecToHolWordBits (BitVec.ofNat 4 5)
+
+#guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
+    (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==
+  .shift .lsl (.var 2) (.const (bitVecToHolWordBits (BitVec.ofNat 4 1)))
+
+def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
+  locals := fun _ => none
+  globals := fun _ => none
+  code := fun _ => none
+  memory := fun _ => .word holBits4
+  memaddrs := fun _ => false
+  shMemaddrs := fun _ => false
+  clock := 0
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := holBits4
+  topAddress := holBits4
+
+#guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime (.const holBits4) ==
+  some holBits4
+#guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime
+    (.crepOp .mul [.const holBits4, .const holBits4]) ==
+  some (bitVecToHolWordBits (BitVec.ofNat 4 9))
 
 /-! Direct parity for `crep_arith$simp_exp_def`
     (`crep_arithScript.sml:59`).  These cases cover constant folding,

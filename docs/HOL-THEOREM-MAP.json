@@ -4307,6 +4307,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source Call result lifted to the production PanSemState evaluator when its code-map-derived fuel is exactly bodyFuel+2; recursively evaluates callee and handler body through state.code and preserves state-owned code in the post-state projection, but does not prove target simulation or pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "eraseDups_eq_self_of_nodup",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only list utility proving eraseDups preserves a nodup natural-number list; used to discharge the target runtime's distinct parameter-slot guard"

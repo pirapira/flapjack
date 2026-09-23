@@ -7,3 +7,12 @@ missing_global_assign=Skip
 seq=Seq Skip (Return (Const 7w))
 
 return_global=Return (Load One (Op Sub [TopAddr; Const 8w]))
+
+global_destination_handler_flag=Dec «» One (Const 0w)
+  (Dec «vn'» One (Const 0w)
+     (Seq
+        (AssignCall (Local,«»)
+           (SOME («E»,«handler»,Seq Skip (Assign Local «vn'» (Const 1w))))
+           «f» [])
+        (If (Var Local «vn'») Skip
+           (Store (Op Sub [TopAddr; Const 8w]) (Var Local «»)))))

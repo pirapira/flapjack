@@ -35,3 +35,9 @@ val _ = print_eval "seq"
 val _ = print_eval "return_global"
   ``pan_globals$compile ^ctxt
       (panLang$Return (panLang$Var Global «g») : 8 word panLang$prog)``;
+val _ = print_eval "global_destination_handler_flag"
+  ``pan_globals$compile ^ctxt
+      (panLang$Call
+        (SOME (SOME (Global, strlit "g"),
+          SOME (strlit "E", strlit "handler", panLang$Skip)))
+        (strlit "f") [] : 8 word panLang$prog)``;

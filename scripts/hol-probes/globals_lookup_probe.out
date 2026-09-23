@@ -1,2 +1,3 @@
 lookup_success=SOME [Word 7w]
 lookup_missing=NONE
+lookup_struct=SOME [Word 7w; Word 8w]

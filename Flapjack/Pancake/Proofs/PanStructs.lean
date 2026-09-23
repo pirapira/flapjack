@@ -27,6 +27,35 @@ theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassC
   | cons expression expressions ih =>
       simp [structCompileExp.structCompileExps, ih]
 
+/-- Fuel-indexed analogue of HOL `compile_shapes_eq_map`
+    (`pan_structsProofScript.sml:310`). The HOL statement has no fuel
+    parameter and concerns mutually recursive `compile_shape`/`compile_shapes`.
+    This auxiliary helper theorem is deliberately untagged; the production
+    no-fuel theorem `structCompileShapes_eq_map` below establishes the exact
+    HOL statement instead. -/
+theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
+    (structCompileShapeFuel.structCompileShapesFuel fuel context : List Shape → List Shape) =
+      fun shapes => shapes.map (structCompileShapeFuel fuel context) := by
+  funext shapes
+  induction shapes with
+  | nil => simp [structCompileShapeFuel.structCompileShapesFuel]
+  | cons shape shapes ih =>
+      simp [structCompileShapeFuel.structCompileShapesFuel, ih]
+
+/-- Exact no-fuel port of HOL `compile_shapes_eq_map`
+    (`pan_structsProofScript.sml:310`). The production mutually recursive
+    compiler decreases on the HOL context-suffix/syntax-size measure, so this
+    statement keeps the source theorem's context and list arguments unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_shapes_eq_map" 310]
+theorem structCompileShapes_eq_map (context : StructContext) :
+    (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
+      fun shapes => shapes.map (structCompileShapeWF context) := by
+  funext shapes
+  induction shapes with
+  | nil => simp [structCompileShapeWF.structCompileShapesWF]
+  | cons shape shapes ih =>
+      simp [structCompileShapeWF.structCompileShapesWF, ih]
+
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production
     single-expression old-shape function, with no additional premises. -/

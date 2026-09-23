@@ -37,6 +37,14 @@ Direct oracle: `scripts/hol-probes/crep_runtime_read_bytes_probe.out`
   read_bytes_zero=SOME []; read_bytes_short=SOME [1w; 2w; 3w; 4w];
   read_bytes_cross=SOME [1w; 2w; 3w; 4w; 5w; 6w; 7w; 8w];
   read_bytes_out_of_domain=NONE
+
+The ExtCall handler boundary `riscv64ExtCallCallFfiHandler` dispatches a
+`CrepRuntimeRequest.extCall` straight to `callFfi`, the Lean counterpart of HOL
+`ffiScript.sml`'s `call_FFI`.
+
+Direct oracle: `scripts/hol-probes/crep_runtime_ext_call_probe.out`
+  empty_name_identity=T; return_matching_length=T;
+  return_length_mismatch=T; oracle_diverged=T
 -/
 
 namespace Flapjack.Test.CrepRuntimeFfiTargetParity
@@ -157,17 +165,113 @@ example : crepRuntimeReadBytes ffiReadTarget (8 : RiscV.Word 64) 4 =
     riscv64ReadByteArray ffiReadBase (8 : RiscV.Word 64) 4 :=
   crepRuntimeReadBytes_target_eq_riscv ffiReadBase 8 4
 
+/-- The write-bytes oracle uses the same memory/domain as the read-bytes one. -/
+def ffiWriteBase : CrepRuntimeState (RiscV.Word 64) Unit := ffiReadBase
+
+def writeBytes8 : List UInt8 :=
+  [(0xAA : UInt8), 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22]
+
+def writeBytes1 : List UInt8 := [(0xAA : UInt8)]
+
+/-- Bool mirror of the write-bytes rows of the HOL oracle
+    (`write_head=SOME 0xAAw; write_byte1=SOME 0xBBw; write_32=SOME 0xDDCCBBAAw;
+    write_unaligned_byte=SOME 0xAAw; write_out_of_domain=SOME 0x01w`), where
+    `riscv64WriteMem` mirrors HOL's total `write_bytearray`. -/
+def ffiWriteBytesGuard : Bool :=
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (187 : RiscV.Word 64)) &&
+  (RiscV.panRiscVRead32 ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (0xDDCCBBAA : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (9 : RiscV.Word 64) writeBytes1)
+      (8 : RiscV.Word 64) (9 : RiscV.Word 64) == some (170 : RiscV.Word 64)) &&
+  (RiscV.panRiscVReadByte ffiWriteBase.memaddrs
+      (riscv64WriteMem ffiWriteBase (16 : RiscV.Word 64) writeBytes1)
+      (8 : RiscV.Word 64) (8 : RiscV.Word 64) == some (1 : RiscV.Word 64))
+
+/-- Production `crepRuntimeWriteBytes` on the canonical target maps to the HOL
+    `write_bytearray` memory. -/
+example : (crepRuntimeWriteBytes (riscv64CrepRuntimeTarget ffiWriteBase)
+      (8 : RiscV.Word 64) writeBytes8).map (fun state => state.memory) =
+    some (riscv64WriteMem ffiWriteBase (8 : RiscV.Word 64) writeBytes8) :=
+  crepRuntimeWriteBytes_target_eq_riscv ffiWriteBase 8 writeBytes8
+
+/-- Oracle mirroring the HOL `call_FFI` probe: `f` echoes with a new host state,
+    `g` returns the wrong byte count, `live` diverges and every other name
+    fails. -/
+def ffiCallFfiOracle : FfiOracle Nat := fun name state _ bytes =>
+  match name with
+  | .extCall "f" => .returned (state + 1) bytes
+  | .extCall "g" => .returned state [0, 1]
+  | .extCall "live" => .final .diverged
+  | _ => .final .failed
+
+def ffiCallFfiState : FfiState Nat :=
+  { oracle := ffiCallFfiOracle, state := 0, ioEvents := [] }
+
+def ffiCallFfiConf : List UInt8 := [1, 2, 3]
+
+def ffiCallFfiBytes : List UInt8 := [10, 20, 30]
+
+/-- The Crep `call_FFI` boundary: the empty name is the identity call; a
+    matching oracle return appends exactly one event and updates the host state;
+    a length mismatch and an oracle terminal result become `Final_event`s. -/
+def ffiCallFfiGuard : Bool :=
+  (match callFfi ffiCallFfiState (.extCall "") ffiCallFfiConf
+      ffiCallFfiBytes with
+   | .returned _ bytes => bytes == ffiCallFfiBytes
+   | .final _ => false) &&
+  (match callFfi ffiCallFfiState (.extCall "f") ffiCallFfiConf
+      ffiCallFfiBytes with
+   | .returned nextState bytes =>
+       bytes == ffiCallFfiBytes && nextState.state == 1 &&
+         nextState.ioEvents.length == 1
+   | .final _ => false) &&
+  (match callFfi ffiCallFfiState (.extCall "g") ffiCallFfiConf
+      ffiCallFfiBytes with
+   | .returned _ _ => false
+   | .final event => event.name == .extCall "g" && event.outcome == .failed) &&
+  (match callFfi ffiCallFfiState (.extCall "live") ffiCallFfiConf
+      ffiCallFfiBytes with
+   | .returned _ _ => false
+   | .final event =>
+       event.name == .extCall "live" && event.outcome == .diverged)
+
+/-- The production ExtCall handler hands the request straight to `callFfi`. -/
+example : riscv64ExtCallCallFfiHandler
+      (.extCall "f" ffiCallFfiConf ffiCallFfiBytes :
+        CrepRuntimeRequest (RiscV.Word 64)) ffiCallFfiState =
+    (match callFfi ffiCallFfiState (.extCall "f") ffiCallFfiConf
+        ffiCallFfiBytes with
+     | .returned nextFfi bytes => .returned nextFfi bytes
+     | .final event => .final event) :=
+  riscv64ExtCallCallFfiHandler_extCall "f" ffiCallFfiConf ffiCallFfiBytes
+    ffiCallFfiState
+
 #guard ffiByteCodecGuard
 
 #guard ffiSharedDomainGuard
 
 #guard ffiReadBytesGuard
 
+#guard ffiWriteBytesGuard
+
+#guard ffiCallFfiGuard
+
 #eval ffiByteCodecGuard
 
 #eval ffiSharedDomainGuard
 
 #eval ffiReadBytesGuard
+
+#eval ffiWriteBytesGuard
+
+#eval ffiCallFfiGuard
 
 def runChecks : IO Bool := do
   if ffiByteCodecGuard then
@@ -182,6 +286,15 @@ def runChecks : IO Bool := do
     IO.println "PASS crep runtime RISC-V 64 FFI read-bytes target parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 FFI read-bytes target parity"
-  pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard)
+  if ffiWriteBytesGuard then
+    IO.println "PASS crep runtime RISC-V 64 FFI write-bytes target parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 FFI write-bytes target parity"
+  if ffiCallFfiGuard then
+    IO.println "PASS crep runtime RISC-V 64 call_FFI target parity"
+  else
+    IO.println "FAIL crep runtime RISC-V 64 call_FFI target parity"
+  pure (ffiByteCodecGuard && ffiSharedDomainGuard && ffiReadBytesGuard &&
+    ffiWriteBytesGuard && ffiCallFfiGuard)
 
 end Flapjack.Test.CrepRuntimeFfiTargetParity

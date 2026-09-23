@@ -130,6 +130,7 @@ import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
+import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
 import Flapjack.Test.CrepFuelCutoffParity

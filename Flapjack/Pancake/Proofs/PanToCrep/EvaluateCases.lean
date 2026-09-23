@@ -2950,6 +2950,92 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs
     targetLocals calleeState value harguments hlookup hinfoValid hclock
     (hcalleeIH targetLocals hlookup) hvariable hslot hglobal
 
+/-! Connect the arbitrary-handler target Call dispatcher to the actual source
+and target code maps. Source argument evaluation plus `stateRel`, `codeRel`,
+and `localsRel` derive production target argument words and the state-owned
+callee lookup; the recursive target callee and handler-body results remain
+explicit IH inputs. Source Call results and post-state relations remain open. -/
+theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (caller : CrepRuntimeState (RiscV.Word 64) σ)
+    (function handlerVariable : String)
+    (destinations : List Nat) (caught exceptionCode : RiscV.Word 64)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (handlerBody : CrepProg (RiscV.Word 64))
+    (calleeState payloadState : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
+    (fuel : Nat)
+    (hstate : stateRel source caller)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hlocals : localsRel context source.locals caller.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstLocalStructAddress expression)
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length)
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exceptionCode) = true)
+    (hcalleeIH : ∀ targetLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) →
+      evalCrepRuntimeProg handler primitive (fuel + 1)
+        (decCrepClock { caller with locals := targetLocals })
+        (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody) = some (.raised exceptionCode, calleeState))
+    (hpayload : evalCrepRuntimeProg handler primitive fuel
+      { crepRuntimeCallerState caller calleeState with locals := caller.locals }
+      (expHdlFiniteMap context.vars handlerVariable) =
+        some (.normal, payloadState))
+    (hhandlerBody : evalCrepRuntimeProg handler primitive fuel
+      (fixCrepRuntimeClock (ε := FfiFinalEvent)
+        { crepRuntimeCallerState caller calleeState with locals := caller.locals }
+        (.normal, payloadState)).2 handlerBody = some handlerResult) :
+    evalCrepRuntimeCall handler primitive (fuel + 2) caller
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) function
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some handlerResult := by
+  obtain ⟨targetLocals, harguments, hlookup⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller function
+      parameters sourceBody returnShape expressions arguments hstate hcode hlocals
+      hsupported hsourceArgs hentry hargumentLength
+  exact evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody context handler
+    primitive caller destinations caught exceptionCode function handlerVariable
+    (compileArgsHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      expressions)
+    (arguments.flatMap panValueFlatten)
+    (compileCodeRelProg
+      (ctxtFc context.funcs context.eids
+        (parameters.map Prod.fst) (parameters.map Prod.snd)
+        (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+      sourceBody)
+    handlerBody targetLocals calleeState payloadState handlerResult fuel
+    harguments hlookup hinfoValid hclock hmatch (hcalleeIH targetLocals hlookup)
+    hpayload hhandlerBody
+
 /-! Fixed-RV64 actual-state Call simulation for a matching one-word exception
 handler. The source call and target callee both resolve through their
 state-owned code maps; the target handler reads the raised payload through

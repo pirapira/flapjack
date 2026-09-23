@@ -4234,6 +4234,14 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving actual target Call arguments and callee lookup from supported source argument evaluation/state_rel/code_rel/locals_rel, then applying arbitrary-handler target Call dispatch under callee, exp_hdl, and handler-body evaluator hypotheses; source result and post-state relations remain open, so not pc_compile_correct"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
     "statement_status": "no_hol_reference_pending_classification",

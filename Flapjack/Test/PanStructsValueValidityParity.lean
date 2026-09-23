@@ -68,4 +68,43 @@ example : panIsWfShapeValueBool [] valueValidityMatch = false := by
 example : panStructShapeListEqBool [.comb []] [.comb []] = true := by
   simp [panStructShapeListEqBool, panStructShapeEqBool]
 
+private def holValueValidityContext : StructContextHOL :=
+  [("Pair", { fields := [("left", Shape.one), ("right", Shape.comb [])], size := 2 })]
+
+private def holValueValidityFirstMatchContext : StructContextHOL :=
+  [("Pair", { fields := [("wrong", Shape.one)], size := 1 }),
+   ("Pair", { fields := [("left", Shape.one), ("right", Shape.comb [])], size := 2 })]
+
+private def holValueValidityMatch : PanValue Nat :=
+  .nStruct "Pair" [("left", .word 2), ("right", .rStruct [])]
+
+private def holValueValidityMismatch : PanValue Nat :=
+  .nStruct "Pair" [("left", .word 2), ("wrong", .rStruct [])]
+
+/-- `v_flds_ok_word` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk holValueValidityContext (.word 1 : PanValue Nat) = true := by
+  simp [panValueFldsOk, holValueValidityContext]
+
+/-- `v_flds_ok_named_match` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk holValueValidityContext holValueValidityMatch = true := by
+  simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
+    panStructShapeListEqBool, panStructShapeEqBool, panSemShapeOf,
+    holValueValidityContext, holValueValidityMatch]
+
+/-- `v_flds_ok_named_mismatch` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk holValueValidityContext holValueValidityMismatch = false := by
+  simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
+    holValueValidityContext, holValueValidityMismatch]
+
+/-- `v_flds_ok_named_missing` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk ([] : StructContextHOL) holValueValidityMatch = false := by
+  simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
+    holValueValidityMatch]
+
+/-- `v_flds_ok_duplicate_first` in `pan_structs_value_validity_probe.out`. -/
+example : panValueFldsOk holValueValidityFirstMatchContext
+    holValueValidityMatch = false := by
+  simp [panValueFldsOk, panValuesFldsOk, panFieldsFldsOk, lookupInfo,
+    holValueValidityFirstMatchContext, holValueValidityMatch]
+
 end Flapjack.Test

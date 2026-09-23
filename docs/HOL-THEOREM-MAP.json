@@ -4062,5 +4062,13 @@
     "lean_name": "fieldsInOrderReorderNoop",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source MAP/FST, ALL_DISTINCT, FLAT/ALOOKUP statement matched to production structCompileFields/structSelectFields; direct HOL oracle and Lean fixture)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only four-local companion of crepRuntimeExtCallValues_stateRel_dispatch_returned: resolves the actual Nat-indexed production crepRuntimeExtCall wrapper to the canonical-target ExtCall dispatch and builds the source panSemWriteBytearray post-state for the FFI_return branch; no single HOL declaration"
   }
 ]

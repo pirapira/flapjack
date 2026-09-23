@@ -3475,6 +3475,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "withShapeMap",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack list support proving withShape commutes with mapping each flattened word into HOL word_lab cells."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "tlcWordLabWithShapeGetElemMapOfPanSem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument’s flattened word_lab values; no HOL theorem tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcVarsLookupGetElem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only indexed lookup into the ctxtFc formal parameter slots, exposing the matching withShape slot group; support for the full Call locals_rel proof, not an independent HOL theorem."

@@ -84,6 +84,75 @@ def baseStateGuard : Bool :=
 
 #guard baseStateGuard
 
+/-- A state differing from `baseState` only in `code`. -/
+def codeState : CrepHolState Nat Unit :=
+  { baseState with code := fun _ => some ([1], CrepProg.skip) }
+
+theorem baseState_state_rel_code : crepInlineStateRelCode baseState baseState :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem state_rel_code_ignores_code : crepInlineStateRelCode baseState codeState :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem not_state_rel_code_other_clock :
+    ¬ crepInlineStateRelCode baseState { baseState with clock := 4 } := by
+  intro h
+  have hcl := h.2.2.2.2.1
+  simp [baseState] at hcl
+
+theorem localsExtRel_self_holds :
+    crepInlineLocalsExtRel baseState weakState baseState weakState :=
+  crepInlineLocalsExtRel_self baseState weakState
+
+/-- A run whose states have locals `{0 ↦ 7}` then `{0 ↦ 7, 1 ↦ 9}`. -/
+def extA : CrepHolState Nat Unit :=
+  { baseState with locals := fun n => match n with
+      | 0 => some (.word 7)
+      | _ => none }
+
+def extA' : CrepHolState Nat Unit :=
+  { extA with locals := fun n => match n with
+      | 0 => some (.word 7)
+      | 1 => some (.word 9)
+      | _ => none }
+
+/-- A run whose locals start differently but add the same `1 ↦ 9`. -/
+def extB : CrepHolState Nat Unit :=
+  { baseState with locals := fun n => match n with
+      | 2 => some (.word 5)
+      | _ => none }
+
+def extB' : CrepHolState Nat Unit :=
+  { extB with locals := fun n => match n with
+      | 1 => some (.word 9)
+      | 2 => some (.word 5)
+      | _ => none }
+
+/-- A run that adds `1 ↦ 11` instead of `1 ↦ 9`. -/
+def extBbad' : CrepHolState Nat Unit :=
+  { extB with locals := fun n => match n with
+      | 1 => some (.word 11)
+      | 2 => some (.word 5)
+      | _ => none }
+
+theorem localsExtRel_agree : crepInlineLocalsExtRel extA extB extA' extB' := by
+  simp only [crepInlineLocalsExtRel]
+  funext n
+  cases n with
+  | zero => simp [crepHolFdiff, crepHolFdom, extA, extB, extB']
+  | succ n =>
+      cases n with
+      | zero => simp [crepHolFdiff, crepHolFdom, extA, extA', extB, extB']
+      | succ n =>
+          cases n with
+          | zero => simp [crepHolFdiff, crepHolFdom, extA, extA', extB]
+          | succ n => simp [crepHolFdiff, crepHolFdom, extA, extA', extB, extB']
+
+theorem not_localsExtRel_disagree : ¬ crepInlineLocalsExtRel extA extB extA' extBbad' := by
+  intro h
+  have hpoint := congrFun h 1
+  simp [crepHolFdiff, crepHolFdom, extA, extA', extB, extBbad'] at hpoint
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -93,6 +162,7 @@ def runChecks : IO Bool := do
       IO.println "FAIL crep_inline state_rel/locals_rel/locals_strong_rel definitions"
       pure false
   IO.println "PASS crep_inline locals_rel_dec_clock preservation"
+  IO.println "PASS crep_inline locals_ext_rel/state_rel_code definitions"
   pure relOk
 
 end Flapjack.Test.CrepInlineRelParity

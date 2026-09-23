@@ -260,7 +260,7 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
     sum to BitVec `toNat` correspondence are proved below, and source-shaped
     add/mul/sub equations expose those conversions. They remain untagged
     because the chosen `HolFiniteDimension` witness has not yet been identified
-    with HOL's implicit `finite_index` dictionary. -/
+        with HOL's implicit `finite_index` dictionary. -/
 def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
     (value : Nat) : ι → Bool :=
   bitVecToHolWord dimension (BitVec.ofNat dimension.width value)

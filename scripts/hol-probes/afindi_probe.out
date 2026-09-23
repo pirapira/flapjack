@@ -8,3 +8,4 @@ wf_shape_drop=T
 dropWhile_MAP_helper=T
 UNCURRY_EQ_o_SND_pair=T
 map_uncurry_zip_again=T
+struct_infos_ok_drop=struct_infos_ok [(«S»,<|fields := [(«f»,One)]; size := 1|>)] ⇒ struct_infos_ok (DROP 1 [(«S»,<|fields := [(«f»,One)]; size := 1|>)])

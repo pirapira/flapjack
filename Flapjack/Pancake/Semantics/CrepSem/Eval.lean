@@ -943,6 +943,11 @@ def holFiniteWordSourceGetByte {ι : Type u}
   exact bitVecToHolWord dimension <| BitVec.ofNat dimension.width
     (((holWordToBitVec dimension value).toNat / (256 ^ byteIndex)) % 256)
 
+def holFiniteWordSourceAligned {ι : Type u}
+    (dimension : HolFiniteDimension ι) (alignment : Nat) (address : ι → Bool) :
+    Bool :=
+  decide ((holWordToBitVec dimension address).toNat % alignment = 0)
+
 def holFiniteWordSourceMemoryModel {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool) :
     PanMemoryModel (ι → Bool) := by
@@ -950,7 +955,9 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
   exact { model with
     byteAlign := fun _ address => holFiniteWordSourceByteAlign dimension address
     getByte := fun _ address value be =>
-      holFiniteWordSourceGetByte dimension address value be }
+      holFiniteWordSourceGetByte dimension address value be
+    aligned := fun alignment address =>
+      holFiniteWordSourceAligned dimension alignment address }
 
 /-- A load model with HOL's dimension-derived byte alignment and the existing
     RISC-V byte extraction, alignment, and word-of-bytes operations. This is

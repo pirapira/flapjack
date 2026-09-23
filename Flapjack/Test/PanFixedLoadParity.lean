@@ -123,6 +123,9 @@ def finiteWord24ByteLoad : Option (Fin 24 → Bool) :=
 def finiteWord24BigEndianByteLoad : Option (Fin 24 → Bool) :=
   panModelReadByte (holFiniteWordSourceMemoryModel dimension24 true)
     finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 5) true
+def finiteWord24Load32 : Option (Fin 24 → Bool) :=
+  panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
+    finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
 
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
@@ -145,5 +148,7 @@ def finiteWord24BigEndianByteLoad : Option (Fin 24 → Bool) :=
   some (BitVec.ofNat 24 0x33)
 #guard (finiteWord24BigEndianByteLoad.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x11)
+#guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x113322)
 
 end Flapjack.Test.PanFixedLoadParity

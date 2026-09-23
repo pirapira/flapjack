@@ -467,7 +467,9 @@ theorem panSemEvaluateCodeStateWithFuel_assign
     value whose shape matches the declared shape, the body runs with the
     declaration bound in the local map and, on completion, the declared local is
     restored to its previous binding; a shape mismatch or a failing initialiser
-    yields `none`. The equation is stated over the explicit-fuel evaluator
+    yields an explicit `Error` control result carrying the unchanged state
+    (`panSem`'s `(SOME Error, s)`), distinct from a missing `none` evaluation
+    result. The equation is stated over the explicit-fuel evaluator
     because the recursive body call reuses the predecessor fuel, so it cannot be
     phrased against the finite-map-derived entry point. This is an untagged
     boundary equation because the structured result is reduced rather than HOL's
@@ -515,7 +517,9 @@ theorem panSemEvaluateCodeStateWithFuel_dec
 /-- Production source-state `Primitive` equation. The argument expressions are
     evaluated together; when they all succeed the primitive handler is applied
     and, if the produced value has the same shape as the destination local's
-    current binding, that local is updated; any failure yields `none`. This is
+    current binding, that local is updated; any failure yields an explicit
+    `Error` control result carrying the unchanged state (`panSem`'s
+    `(SOME Error, s)`), distinct from a missing `none` evaluation result. This is
     an untagged boundary equation because the structured result is reduced
     rather than HOL's `(prog_result, state)` pair. Reference:
     cakeml/pancake/semantics/panSemScript.sml:573-582 (`Primitive`). -/

@@ -10,9 +10,12 @@ available for compatibility and for proofs that do not model a clock.  The
 clocked evaluator charges one unit at a function call, at each executed while
 iteration, and at `Tick`, exactly as `dec_clock` is used by `panSem`.
 
-Errors continue to be represented by `none`, while timeout is explicit and
-clears source locals.  Keeping timeout in a separate result type avoids
-changing the established control-result API used by the compiler proofs.
+Semantic errors (`panSem`'s `SOME Error`) are explicit
+`PanValueFfiControlResult.error` results carrying the unchanged state, while
+timeout is explicit and clears source locals.  Only a genuinely missing
+evaluation result (for example fuel exhaustion) is `none`.  Keeping timeout in
+a separate result type avoids changing the established control-result API used
+by the compiler proofs.
 -/
 
 namespace Flapjack

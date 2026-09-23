@@ -38,11 +38,11 @@ def riscv64FfiContext : PanValueFfiContext (RiscV.Word 64) :=
     byteToWord := fun value => BitVec.ofNat 64 value.toNat
     valueToNat := fun value => value.toNat }
 
-def probeMemory : PanFlatMemory (RiscV.Word 64) :=
+def probeMemory : RiscV.Word 64 → PanWordLab (RiscV.Word 64) :=
   fun address =>
     if address == (8 : RiscV.Word 64) then
-      some (0x0807060504030201 : RiscV.Word 64)
-    else none
+      .word (0x0807060504030201 : RiscV.Word 64)
+    else .word 0
 
 def probeDomain : PanMemoryDomain (RiscV.Word 64) :=
   fun address => address == (8 : RiscV.Word 64)
@@ -72,7 +72,7 @@ def wordBoundaryGuard : Bool :=
   (probeTargetState.bigEndian == false) &&
   ((8 : RiscV.Word 64) == CrepBytesInWord.bytesInWord) &&
   ((4 : RiscV.Word 32) == CrepBytesInWord.bytesInWord) &&
-  (RiscV.panRiscVReadByte probeDomain probeMemory (8 : RiscV.Word 64) 9 ==
+  (RiscV.panRiscVReadByte probeDomain (crepRuntimeMemoryView probeMemory) (8 : RiscV.Word 64) 9 ==
     some (0x02 : RiscV.Word 64)) &&
   (crepRuntimeLoadByte probeTargetState (9 : RiscV.Word 64) ==
     some (0x02 : RiscV.Word 64)) &&
@@ -86,7 +86,7 @@ def wordBoundaryGuard : Bool :=
 /-- Memory cell read back from a store result. -/
 def storedMemoryAt (result : Option (CrepRuntimeState (RiscV.Word 64) Unit))
     (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
-  result.bind (fun state => state.memory address)
+  result.bind (fun state => crepRuntimeMemoryView state.memory address)
 
 /-- Word/byte store round-trips through the canonical target: the production
     store updates the same cell the RISC-V model store does, and rejects
@@ -109,28 +109,28 @@ def storeRoundTripGuard : Bool :=
   (crepRuntimeStore32 probeTargetState (16 : RiscV.Word 64)
       (0xAABBCCDD : RiscV.Word 64)).isNone &&
   ((crepRuntimeStore32 probeTargetState (8 : RiscV.Word 64)
-      (0xAABBCCDD : RiscV.Word 64)).bind (fun state => state.memory (8 : RiscV.Word 64)) ==
-    (RiscV.panRiscVStore32 probeDomain probeMemory (8 : RiscV.Word 64)
+      (0xAABBCCDD : RiscV.Word 64)).bind (fun state => crepRuntimeMemoryView state.memory (8 : RiscV.Word 64)) ==
+    (RiscV.panRiscVStore32 probeDomain (crepRuntimeMemoryView probeMemory) (8 : RiscV.Word 64)
       (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64)).bind
         (fun memory => memory (8 : RiscV.Word 64)))
 
 /-- The production evaluator computes `.load`/`.load32` through the same model
     operations the canonical target bridges expose. -/
 example : crepRuntimeLoad (riscv64CrepRuntimeTarget probeBaseState) (8 : RiscV.Word 64) =
-    RiscV.panRiscVReadWord probeBaseState.memaddrs probeBaseState.memory
+    RiscV.panRiscVReadWord probeBaseState.memaddrs (crepRuntimeMemoryView probeBaseState.memory)
       (8 : RiscV.Word 64) :=
   crepRuntimeLoad_target_eq_riscv probeBaseState 8
 
 example : crepRuntimeLoad32 (riscv64CrepRuntimeTarget probeBaseState) (8 : RiscV.Word 64) =
-    RiscV.panRiscVRead32 probeBaseState.memaddrs probeBaseState.memory
+    RiscV.panRiscVRead32 probeBaseState.memaddrs (crepRuntimeMemoryView probeBaseState.memory)
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) :=
   crepRuntimeLoad32_target_eq_riscv probeBaseState 8
 
 /-- The 32-bit store production path is the same memory update as
     `panModelStore32` on the canonical target. -/
 example : (crepRuntimeStore32 (riscv64CrepRuntimeTarget probeBaseState)
-      (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64)).map (fun state => state.memory) =
-    RiscV.panRiscVStore32 probeBaseState.memaddrs probeBaseState.memory
+      (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64)).map (fun state => crepRuntimeMemoryView state.memory) =
+    RiscV.panRiscVStore32 probeBaseState.memaddrs (crepRuntimeMemoryView probeBaseState.memory)
       (8 : RiscV.Word 64) (8 : RiscV.Word 64) (0xAABBCCDD : RiscV.Word 64) :=
   crepRuntimeStore32_target_eq_riscv probeBaseState 8 (0xAABBCCDD : RiscV.Word 64)
 

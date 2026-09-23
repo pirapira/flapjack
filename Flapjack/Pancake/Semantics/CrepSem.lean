@@ -77,7 +77,9 @@ structure CrepRuntimeState (α σ : Type u) where
   globals : BitVec 5 → Option (PanWordLab α)
   /-- HOL `crepSem$state.code`: the code map used by runtime function calls. -/
   code : FunName → Option (List Nat × CrepProg α)
-  memory : α → Option α
+  /-- HOL `crepSem$state.memory` is a total `'a word → 'a word_lab` function
+      guarded by `memaddrs`; `PanWordLab.word` retains the HOL cell wrapper. -/
+  memory : α → PanWordLab α
   memaddrs : α → Bool
   shMemaddrs : α → Bool
   /-- The word-cell operations used by CakeML's `mem_load_byte` and
@@ -111,6 +113,11 @@ def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
 def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=
   fun candidate => if name == candidate then some value else locals candidate
+
+/-- Flapjack update of the total HOL-shaped memory function. -/
+def updateCrepRuntimeMemory [BEq α] (memory : α → PanWordLab α)
+    (address : α) (value : PanWordLab α) : α → PanWordLab α :=
+  fun candidate => if candidate == address then value else memory candidate
 
 /- Flapjack local-clear operation. Its locals projection matches CakeML's
    `empty_locals_def` (`crepSemScript.sml:71`), but the enclosing state type
@@ -191,22 +198,22 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
   state.shMemaddrs (crepRuntimeSharedAddress state operator address)
 
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
-  if state.memaddrs address then state.memory address else none
+  if state.memaddrs address then some (panTheWord (state.memory address)) else none
 
 def crepRuntimeLoadByte [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=
   let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
-  if state.memaddrs alignedAddress then do
-    let value ← state.memory alignedAddress
-    pure (state.memoryModel.getByte state.bytesInWord address value state.bigEndian)
+  if state.memaddrs alignedAddress then
+    pure (state.memoryModel.getByte state.bytesInWord address
+      (panTheWord (state.memory alignedAddress)) state.bigEndian)
   else none
 
 def crepRuntimeLoad32 [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memoryModel.aligned 4 address then
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
-    if state.memaddrs alignedAddress then do
-      let value ← state.memory alignedAddress
+    if state.memaddrs alignedAddress then
+      let value := panTheWord (state.memory alignedAddress)
       pure (state.memoryModel.wordOfBytes state.bigEndian
         [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
@@ -219,17 +226,17 @@ def crepRuntimeLoad32 [Add α] [OfNat α 1]
 def crepRuntimeStore [BEq α] (state : CrepRuntimeState α σ)
     (address value : α) : Option (CrepRuntimeState α σ) :=
   if state.memaddrs address then
-    some { state with memory := updateMemory state.memory address value }
+    some { state with memory := updateCrepRuntimeMemory state.memory address (.word value) }
   else none
 
 def crepRuntimeStoreByte [BEq α] [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address value : α) :
     Option (CrepRuntimeState α σ) :=
   let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
-  if state.memaddrs alignedAddress then do
-    let cell ← state.memory alignedAddress
+  if state.memaddrs alignedAddress then
+    let cell := panTheWord (state.memory alignedAddress)
     let updated := state.memoryModel.setByte state.bytesInWord address value cell state.bigEndian
-    pure { state with memory := updateMemory state.memory alignedAddress updated }
+    pure { state with memory := updateCrepRuntimeMemory state.memory alignedAddress (.word updated) }
   else none
 
 def crepRuntimeStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
@@ -237,8 +244,8 @@ def crepRuntimeStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     Option (CrepRuntimeState α σ) :=
   if state.memoryModel.aligned 4 address then
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
-    if state.memaddrs alignedAddress then do
-      let cell ← state.memory alignedAddress
+    if state.memaddrs alignedAddress then
+      let cell := panTheWord (state.memory alignedAddress)
       let cell0 := state.memoryModel.setByte state.bytesInWord address
         (state.memoryModel.getByte state.bytesInWord 0 value state.bigEndian)
         cell state.bigEndian
@@ -251,9 +258,125 @@ def crepRuntimeStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
       let cell3 := state.memoryModel.setByte state.bytesInWord (address + 1 + 1 + 1)
         (state.memoryModel.getByte state.bytesInWord (1 + 1 + 1) value state.bigEndian)
         cell2 state.bigEndian
-      pure { state with memory := updateMemory state.memory alignedAddress cell3 }
+      pure { state with memory := updateCrepRuntimeMemory state.memory alignedAddress (.word cell3) }
     else none
   else none
+
+/-- Flapjack-only view of the total HOL-shaped memory as an `Option`-valued
+    function (`some` of the carried word). This reconciles the production total
+    `word_lab` memory with the `Option`-valued RISC-V pan memory model; the
+    `word_lab` cell has a single constructor, so no cell is dropped. -/
+def crepRuntimeMemoryView (memory : α → PanWordLab α) : α → Option α :=
+  fun address => some (panTheWord (memory address))
+
+theorem crepRuntimeMemoryView_updateCrepRuntimeMemory_word [BEq α]
+    (memory : α → PanWordLab α) (address : α) (value : α) :
+    crepRuntimeMemoryView (updateCrepRuntimeMemory memory address (.word value)) =
+      updateMemory (crepRuntimeMemoryView memory) address value := by
+  funext current
+  by_cases hsame : current == address <;>
+    simp [crepRuntimeMemoryView, updateCrepRuntimeMemory, updateMemory, panTheWord, hsame]
+
+/-- Flapjack-only: memory-level view of a production word store. -/
+theorem crepRuntimeStore_eq_memory_view [BEq α]
+    (state : CrepRuntimeState α σ) (address value : α) :
+    (crepRuntimeStore state address value).map (fun s => crepRuntimeMemoryView s.memory) =
+      if state.memaddrs address then
+        some (updateMemory (crepRuntimeMemoryView state.memory) address value) else none := by
+  rw [crepRuntimeStore]
+  by_cases h : state.memaddrs address = true
+  · rw [if_pos h, if_pos h]
+    simp only [Option.map_some]
+    exact congrArg some
+      (crepRuntimeMemoryView_updateCrepRuntimeMemory_word state.memory address value)
+  · rw [if_neg h, if_neg h]
+    rfl
+
+/-- Flapjack-only: memory-level view of a production byte store. -/
+theorem crepRuntimeStoreByte_eq_memory_view [BEq α] [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address value : α) :
+    (crepRuntimeStoreByte state address value).map (fun s => crepRuntimeMemoryView s.memory) =
+      if state.memaddrs (state.memoryModel.byteAlign state.bytesInWord address) then
+        some (updateMemory (crepRuntimeMemoryView state.memory)
+          (state.memoryModel.byteAlign state.bytesInWord address)
+          (state.memoryModel.setByte state.bytesInWord address value
+            (panTheWord (state.memory (state.memoryModel.byteAlign state.bytesInWord address)))
+            state.bigEndian)) else none := by
+  simp only [crepRuntimeStoreByte]
+  by_cases h : state.memaddrs (state.memoryModel.byteAlign state.bytesInWord address) = true
+  · rw [if_pos h, if_pos h]
+    simp only [Option.pure_def, Option.map_some]
+    exact congrArg some
+      (crepRuntimeMemoryView_updateCrepRuntimeMemory_word state.memory _ _)
+  · rw [if_neg h, if_neg h]
+    rfl
+
+/-- Flapjack-only: memory-level view of a production 32-bit store. -/
+theorem crepRuntimeStore32_eq_memory_view [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address value : α) :
+    (crepRuntimeStore32 state address value).map (fun s => crepRuntimeMemoryView s.memory) =
+      if state.memoryModel.aligned 4 address then
+        (if state.memaddrs (state.memoryModel.byteAlign state.bytesInWord address) then
+          some (updateMemory (crepRuntimeMemoryView state.memory)
+            (state.memoryModel.byteAlign state.bytesInWord address)
+            (state.memoryModel.setByte state.bytesInWord (address + 1 + 1 + 1)
+              (state.memoryModel.getByte state.bytesInWord (1 + 1 + 1) value state.bigEndian)
+              (state.memoryModel.setByte state.bytesInWord (address + 1 + 1)
+                (state.memoryModel.getByte state.bytesInWord (1 + 1) value state.bigEndian)
+                (state.memoryModel.setByte state.bytesInWord (address + 1)
+                  (state.memoryModel.getByte state.bytesInWord 1 value state.bigEndian)
+                  (state.memoryModel.setByte state.bytesInWord address
+                    (state.memoryModel.getByte state.bytesInWord 0 value state.bigEndian)
+                    (panTheWord (state.memory (state.memoryModel.byteAlign state.bytesInWord address)))
+                    state.bigEndian) state.bigEndian) state.bigEndian) state.bigEndian))
+        else none)
+      else none := by
+  simp only [crepRuntimeStore32]
+  by_cases ha : state.memoryModel.aligned 4 address = true
+  · rw [if_pos ha, if_pos ha]
+    by_cases hb : state.memaddrs (state.memoryModel.byteAlign state.bytesInWord address) = true
+    · rw [if_pos hb, if_pos hb]
+      simp only [Option.pure_def, Option.map_some]
+      exact congrArg some
+        (crepRuntimeMemoryView_updateCrepRuntimeMemory_word state.memory _ _)
+    · rw [if_neg hb, if_neg hb]
+      rfl
+  · rw [if_neg ha, if_neg ha]
+    rfl
+
+/-- Flapjack-only: the single-constructor `word_lab` cell is recovered by
+    re-wrapping its carried word. -/
+theorem panWordLab_word_panTheWord (cell : PanWordLab α) :
+    PanWordLab.word (panTheWord cell) = cell := by
+  cases cell
+  rfl
+
+/-- Flapjack-only: re-totalize an `Option`-valued view into the production total
+    memory, using `fallback` for cells the view does not carry. Since the
+    production cell has a single constructor, a view that came from a total
+    memory round-trips exactly. -/
+def crepRuntimeMemoryOfView (view : α → Option α)
+    (fallback : α → PanWordLab α) : α → PanWordLab α :=
+  fun address => match view address with
+    | some value => .word value
+    | none => fallback address
+
+theorem crepRuntimeMemoryOfView_view (memory : α → PanWordLab α) :
+    crepRuntimeMemoryOfView (crepRuntimeMemoryView memory) memory = memory := by
+  funext address
+  simp only [crepRuntimeMemoryView, crepRuntimeMemoryOfView]
+  rw [panWordLab_word_panTheWord]
+
+theorem crepRuntimeMemoryOfView_updateMemory_word [BEq α]
+    (memory : α → PanWordLab α) (address value : α) :
+    crepRuntimeMemoryOfView
+        (updateMemory (crepRuntimeMemoryView memory) address value) memory =
+      updateCrepRuntimeMemory memory address (.word value) := by
+  funext current
+  by_cases hsame : current == address
+  · simp [crepRuntimeMemoryOfView, updateMemory, updateCrepRuntimeMemory, hsame]
+  · simp [crepRuntimeMemoryOfView, updateMemory, updateCrepRuntimeMemory,
+      crepRuntimeMemoryView, hsame, panWordLab_word_panTheWord]
 
 def crepRuntimeAssignExisting
     (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
@@ -683,7 +806,7 @@ def evalCrepRuntimeResult
 theorem crepRuntimeLoad_memaddrs
     (state : CrepRuntimeState α σ) (address : α)
     (haddress : state.memaddrs address = true) :
-    crepRuntimeLoad state address = state.memory address := by
+    crepRuntimeLoad state address = some (panTheWord (state.memory address)) := by
   simp [crepRuntimeLoad, haddress]
 
 theorem crepRuntimeStore_invalid

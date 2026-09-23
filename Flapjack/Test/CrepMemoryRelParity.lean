@@ -17,7 +17,7 @@ open Flapjack
 
 def validDomain : Nat → Bool := fun address => address == 0
 
-def oneWordMemory : Nat → Option Nat := fun address => if address == 0 then some 7 else none
+def oneWordMemory : Nat → PanWordLab Nat := fun _ => .word 7
 
 /-- Base state with `memaddrs` accepting only address `0`, matching the probe's
 `memaddrs := {0w}` and total memory returning `Word 7w`. -/
@@ -43,9 +43,8 @@ def totalMemory : Nat → PanWordLab Nat := fun _ => .word 7
 /-- The production state and the total view satisfy the bridge on the guarded
 domain. -/
 theorem crepMemoryRel_holds : crepMemoryRel baseState totalMemory := by
-  intro address hvalid
-  simp [baseState, oneWordMemory, validDomain, totalMemory, panTheWord] at hvalid ⊢
-  exact hvalid
+  unfold crepMemoryRel
+  rfl
 
 /-- `mem_load_valid=SOME (Word 7w)`: a guarded address loads the total cell. -/
 theorem load_valid :
@@ -59,7 +58,7 @@ theorem load_invalid : crepRuntimeLoad baseState 9 = none :=
 /-- HOL `mem_store` valid branch: a guarded store updates exactly that cell. -/
 theorem store_valid :
     crepRuntimeStore baseState 0 7 =
-      some { baseState with memory := updateMemory baseState.memory 0 7 } :=
+      some { baseState with memory := updateCrepRuntimeMemory baseState.memory 0 (.word 7) } :=
   crepRuntimeStore_eq_some_of_memaddrs_true (by rfl)
 
 /-- HOL `mem_store` invalid branch: a store outside `memaddrs` fails. -/
@@ -70,7 +69,7 @@ theorem store_invalid : crepRuntimeStore baseState 9 7 = none :=
 cell. -/
 theorem store_rel_preserved :
     crepMemoryRel
-      { baseState with memory := updateMemory baseState.memory 0 7 }
+      { baseState with memory := updateCrepRuntimeMemory baseState.memory 0 (.word 7) }
       (fun current => if current == 0 then .word 7 else totalMemory current) :=
   crepMemoryRel_store crepMemoryRel_holds (by rfl) 7
 
@@ -91,7 +90,7 @@ def evalGuard : Bool :=
 changes exactly the target cell and a store outside `memaddrs` fails. -/
 def storeGuard : Bool :=
   match crepRuntimeStore baseState 0 7 with
-  | some state => state.memory 0 == some 7 && state.memory 9 == none
+  | some state => state.memory 0 == .word 7 && state.memory 9 == .word 7
   | none => false
 
 /-- A store followed by a load of the same address observes the stored word. -/

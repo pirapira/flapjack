@@ -3997,6 +3997,8 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     simp [targetBody, calleeState, targetCaller, evalCrepRuntimeProg,
       evalCrepRuntimeExp, decCrepClock, updateCrepRuntimeLocal,
       restoreCrepRuntimeStep, fixCrepRuntimeClock, setCrepRuntimeGlobals,
+      setCrepHolGlobals, CrepRuntimeState.toHolState,
+      updateCrepRuntimeGlobal_eq_FUPDATE,
       clearCrepRuntimeLocals, panTheWord]
   have hcallerSlot : ∃ old, targetCaller.locals slot = some old := by
     by_cases heq : (returnSlot == slot)
@@ -4144,7 +4146,8 @@ theorem panToCrepPcCompileCorrectCallRaiseOneWordExceptionCodeStateRiscV64
       htargetClock, decCrepClock, fixCrepRuntimeClock,
       restoreCrepRuntimeStep, updateCrepRuntimeLocal, clearCrepRuntimeLocals,
       crepRuntimeCallerState, crepRuntimeCallInfoValid,
-      setCrepRuntimeGlobals, panTheWord]
+      setCrepRuntimeGlobals, setCrepHolGlobals, CrepRuntimeState.toHolState,
+      updateCrepRuntimeGlobal_eq_FUPDATE, panTheWord]
   refine ⟨hsource, targetPost, htargetRun, ?_, ?_, ?_, ?_, ?_⟩
   · simp [stateRel, panSemCodeStateAfter, targetPost,
       decCrepClock, decPanClock, hmem, hmemaddrs, hshared, hstructs,

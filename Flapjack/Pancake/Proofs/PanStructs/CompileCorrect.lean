@@ -1259,7 +1259,7 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   letI : LawfulBEq String := instLawfulBEqString
   exact lookupInfo_eq_panPropsALookupEq key entries
 
-/-- Mismatch note for the theorem immediately below:
+/-- Mismatch note for `panStructCompileExpCorrectVarCase`:
     `panStructCompileExpCorrectVarCase` is a derived Local/Global
     Var-constructor specialization of HOL `compile_exp_correct`;
     intentionally untagged because HOL has only the

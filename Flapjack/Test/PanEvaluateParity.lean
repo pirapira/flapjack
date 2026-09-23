@@ -198,6 +198,15 @@ def evaluateSourceCallMiddlePairField :=
           else none })
     (.call none "pair" [.rField 1 (.var .local "record")] : Prog Word64)
 
+def evaluateSourceCallConstructedMiddlePairField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceCallMiddlePairCode)
+    (.call none "pair"
+      [.rField 1 (.rStruct [.const (BitVec.ofNat 64 3),
+        .rStruct [.const (BitVec.ofNat 64 7), .const (BitVec.ofNat 64 8)],
+        .const (BitVec.ofNat 64 10)])] : Prog Word64)
+
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -333,6 +342,12 @@ def observeSourceCallFirstRecordField := isSourceReturnedWord
 
 def observeSourceCallMiddlePairField : Bool :=
   match evaluateSourceCallMiddlePairField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
+def observeSourceCallConstructedMiddlePairField : Bool :=
+  match evaluateSourceCallConstructedMiddlePairField with
   | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
       first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
   | _ => false
@@ -759,6 +774,9 @@ def runChecks : IO Bool := do
   if observeSourceCallMiddlePairField then
     IO.println "PASS state-owned Call evaluates a middle RField pair like original HOL"
   else IO.println "FAIL state-owned Call evaluates a middle RField pair like original HOL"
+  if observeSourceCallConstructedMiddlePairField then
+    IO.println "PASS state-owned Call selects a nested pair from a constructed RStruct like original HOL"
+  else IO.println "FAIL state-owned Call selects a nested pair from a constructed RStruct like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
@@ -815,6 +833,7 @@ def runChecks : IO Bool := do
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
     observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
     observeSourceCallMiddlePairField &&
+    observeSourceCallConstructedMiddlePairField &&
     observeSourceCodeDecCall &&
     observeSourceNestedCodeCall &&
     observeSourceNestedOrdinaryCall &&

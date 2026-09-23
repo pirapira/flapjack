@@ -91,8 +91,8 @@ def crepExpOracle : Bool :=
       (crepExpToDisplay (α := BitVec 64) (.const (BitVec.ofNat 64 255)))
       (.item none "Const" [.string "0xFF"]) &&
     sameDisplay
-      (crepExpToDisplay (α := BitVec 64) (.loadGlob (BitVec.ofNat 64 32)))
-      (.item none "LoadGlob" [.string "0x20"]) &&
+      (crepExpToDisplay (α := BitVec 64) (.loadGlob (BitVec.ofNat 5 5)))
+      (.item none "LoadGlob" [.string "0x5"]) &&
     sameDisplay
       (crepExpToDisplay (.var 7 : CrepExp (BitVec 64)))
       (.item none "Var" [.string "7"]) &&
@@ -142,9 +142,9 @@ def crepProgOracle : Bool :=
         [.string "ffi", .string "1", .string "2", .string "3", .string "4"]) &&
     sameDisplay
       (crepProgToDisplay
-        (.storeGlob (BitVec.ofNat 64 32) (.var 0) : CrepProg (BitVec 64)))
+        (.storeGlob (BitVec.ofNat 5 5) (.var 0) : CrepProg (BitVec 64)))
       (.item none "store_glob"
-        [.string "0x20", .item none "Var" [.string "0"]]) &&
+        [.string "0x5", .item none "Var" [.string "0"]]) &&
     sameDisplay
       (crepProgToDisplay
         (.ite (.var 0) (.assign 1 (.const (BitVec.ofNat 64 2))) .skip :
@@ -368,8 +368,8 @@ def loopExpConstOracle : Bool :=
 
 def loopExpLookupOracle : Bool :=
   sameDisplay
-    (loopExpToDisplay (α := BitVec 64) (.lookup (BitVec.ofNat 64 32)))
-    (.item none "Lookup" [.string "0x20"])
+    (loopExpToDisplay (α := BitVec 64) (.lookup (BitVec.ofNat 5 5)))
+    (.item none "Lookup" [.string "0x5"])
 
 def loopExpNestedOracle : Bool :=
   sameDisplay

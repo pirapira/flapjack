@@ -18,7 +18,7 @@ namespace Flapjack
     directly. -/
 inductive PanWordLab (α : Type u) where
   | word (value : α)
-  deriving Repr
+  deriving BEq, Repr
 
 def panIsWord : PanWordLab α → Bool
   | .word _ => true

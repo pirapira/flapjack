@@ -26,7 +26,7 @@ inductive LoopMachineResult (α : Type) where
 /-- Original `loopSem` state datatype; `α` is the address and FFI event type. -/
 structure LoopMachineState (α : Type) where
   locals : Nat → Option LoopWordLoc
-  globals : Nat → Option LoopWordLoc
+  globals : BitVec 5 → Option LoopWordLoc
   memory : α → Option LoopWordLoc
   mdomain : α → Bool
   shMdomain : α → Bool

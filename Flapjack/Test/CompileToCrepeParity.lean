@@ -23,7 +23,7 @@ def holDeclarationOnlyOracle : Bool :=
       .seq (.dec 1 (.const seven)
         (.seq (.storeGlob address (.var 1)) .skip))
         (.raise code))] =>
-      seven == (7 : BitVec 64) && address == (0 : BitVec 64) &&
+      seven == (7 : BitVec 64) && address == (0 : BitVec 5) &&
         code == (0 : BitVec 64)
   | _ => false
 
@@ -50,7 +50,7 @@ def holPairRaiseProductionOracle : Bool :=
             (.seq (.storeGlob second (.var 2)) .skip))))
       (.raise code))] =>
       seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
-        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
         code == (0 : BitVec 8)
   | _ => false
 
@@ -79,7 +79,7 @@ def holLaterPairRaiseProductionOracle : Bool :=
             (.raise code))))] =>
       three == (3 : BitVec 8) && five == (5 : BitVec 8) &&
         seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
-        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
         code == (0 : BitVec 8)
   | _ => false
 
@@ -113,9 +113,9 @@ def holHandledPairProductionOracle : Bool :=
               (.seq (.assign 1 (.loadGlob loadSecond)) .skip))
             .skip))) "f" [])] =>
       seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
-        first == (0 : BitVec 8) && second == (1 : BitVec 8) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
         raiseCode == (0 : BitVec 8) && handlerCode == (0 : BitVec 8) &&
-        loadFirst == (0 : BitVec 8) && loadSecond == (1 : BitVec 8)
+        loadFirst == (0 : BitVec 5) && loadSecond == (1 : BitVec 5)
   | _ => false
 
 #guard holHandledPairProductionOracle
@@ -181,7 +181,7 @@ def holDuplicateExceptionProductionOracle : Bool :=
           (.dec 1 (.const nine)
             (.seq (.storeGlob second (.var 1)) .skip)) (.raise fcode))] =>
           seven == (7 : BitVec 8) && nine == (9 : BitVec 8) &&
-            first == (0 : BitVec 8) && second == (0 : BitVec 8) &&
+            first == (0 : BitVec 5) && second == (0 : BitVec 5) &&
             ecode == (0 : BitVec 8) && fcode == (1 : BitVec 8)
      | _ => false)
 
@@ -379,7 +379,7 @@ def holLaterPairRaiseProductionOracle64 : Bool :=
             (.raise code))))] =>
       three == (3 : BitVec 64) && five == (5 : BitVec 64) &&
         seven == (7 : BitVec 64) && nine == (9 : BitVec 64) &&
-        first == (0 : BitVec 64) && second == (1 : BitVec 64) &&
+        first == (0 : BitVec 5) && second == (1 : BitVec 5) &&
         code == (0 : BitVec 64)
   | _ => false
 

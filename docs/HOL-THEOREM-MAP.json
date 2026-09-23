@@ -3158,5 +3158,21 @@
     "lean_name": "firstCompileToCrepAllDistinct",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source and production compiler projection comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_call_zero_clock_timeout_of_entry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (bounded actual-state Call case infrastructure; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallTimeoutCodeState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (bounded actual-state Call case infrastructure; untagged)"
   }
 ]

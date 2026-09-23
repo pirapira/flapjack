@@ -73,4 +73,10 @@ function_after_decl=([Store
      n2w
        ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
         dimword (:word8)); max_globals_size := 16w|>)
+compile_exp_top=Op Sub [TopAddr; Const 16w]
+compile_exp_global_miss=Const 0w
+compile_exp_global_hit=Load One (Op Sub [TopAddr; Const 7w])
+compile_exp_nstruct=Const 0w
+compile_assign_global_hit=Store (Op Sub [TopAddr; Const 7w]) (Const 5w)
+compile_assign_global_miss=Skip
 compile_decs_probe_done=0

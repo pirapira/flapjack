@@ -275,6 +275,62 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConst_mapCrepExpWord",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only transport of the constant destination test through a word-carrier expression map"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpMul_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only proof that the binary multiplication simplifier commutes with finite-index-to-BitVec conversion"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExp_holWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor bottom-up simplifier naturality under the canonical Fin-index word/BitVec equivalence"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithHolWordBitsMapCode_toBitVecState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only state projection equation showing the arbitrary code-map update is erased by the source-to-BitVec evaluator adapter"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width evaluator preservation theorem over the canonical Fin-index word carrier; arbitrary finite dimension carriers remain open"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpEvalPreservesHolWordBitsWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Option/PanWordLab wrapper for finite-index evaluator preservation; it does not establish the arbitrary-carrier HOL result"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBits",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width production evaluator result on Fin width -> Bool; deliberately untagged because HOL quantifies over arbitrary finite dimension types"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2ExpFuel_holWordBits",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only finite-index word to BitVec transport for the executable recognizer; HOL applies dest_2exp directly to its polymorphic word carrier"
@@ -462,6 +518,38 @@
     "lean_name": "lookupCrepRuntimeCode_ofCodeRel_compiledArgs",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition deriving target code-map lookup from code_rel and the proved restricted source-to-target Call-argument evaluator cases; keeps the flattened parameter-length obligation explicit and does not claim the full Call theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_flattenLength",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only consequence deriving the flattened source argument length from successful shape-aware code-parameter matching and well-formed values; no standalone HOL theorem statement is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemCodeArgumentsMatch_of_lookup_success",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only extraction of the shape-matching condition from successful state-owned source code lookup; no standalone HOL theorem statement is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeListMatches_shapeSize_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only structural consequence of the recursive shape matcher on lists; it supports argument-length derivation and carries no HOL tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeMatches_shapeSize_eq",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only structural consequence of the recursive shape matcher; Named shapes are covered because each has size one. No standalone HOL theorem statement is claimed."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -2929,6 +3017,38 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_decls_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_decls_thm_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decs_EVERY_is_function",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decs_EVERY_is_function_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "compile_decls_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "compile_decls_append_cake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: compileDecsCake composes compileProgCake, which is not yet proved clause-for-clause against HOL pan_globals$compile (handler case still uses fuel-based globalFreshName; fresh_name port tracked by flapjack-pxn.18.5.2.20.1.1.1.1), and CakeContext.globals is a FiniteMap lookup function that need not have finite support. width is restricted by [NeZero width] since HOL dimindex is positive; the compile_exp half is the exact tagged compileExpCake. Exact port tracked by flapjack-pxn.18.5.2.20.1.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "compile_exp_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "compileExpCake",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with [NeZero width] mirroring HOL dimindex positivity; extensional finite-map globals used only through FLOOKUP, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port; bytes_in_word = n2w (width/8); all compile_exp_def clauses Var Local/Global, RStruct, RField, NStruct/NField, Load/LoadByte/Load32, Op/Panop/Cmp/Shift, TopAddr and the identity catch-all match)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "ALOOKUP_MAP3",
@@ -4862,5 +4982,13 @@
     "lean_name": "panValueFfiSharedStore_stateRel_final",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "deepseek-two: Flapjack-only source-to-target shared-memory FFI_final step; HOL sh_mem_store FFI_final maps to target FinalFFI with unchanged state; oracle row store_final in scripts/hol-probes/crep_runtime_shared_mem_probe.out"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "stateRel_riscv64CrepRuntimeTarget_iff",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "deepseek-two: Flapjack-only canonicalization lemma; riscv64CrepRuntimeTarget edits bytesInWord/memoryModel/ffiContext (not constrained by state_rel) and bigEndian, so stateRel source base and stateRel source (riscv64CrepRuntimeTarget base) coincide when base.bigEndian = false"
   }
 ]

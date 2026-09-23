@@ -54,6 +54,11 @@ theorem callStateRel : stateRel callSource (riscv64CrepRuntimeTarget callBase) :
   funext address
   rfl
 
+/-- Canonicalizing the target does not change the relation, because `callBase`
+    is already little-endian. -/
+example : stateRel callSource callBase :=
+  (stateRel_riscv64CrepRuntimeTarget_iff callSource callBase rfl).1 callStateRel
+
 /-- The two argument reads succeed with the little-endian probe bytes. -/
 theorem callReadConfiguration :
     riscv64ReadByteArray callBase (8 : RiscV.Word 64) 4 =

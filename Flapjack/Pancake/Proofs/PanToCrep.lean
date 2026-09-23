@@ -511,6 +511,25 @@ theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
   exact hglobals
 
+/-- Canonicalizing the target with `riscv64CrepRuntimeTarget` does not change
+    the state relation: it only edits fields (`bytesInWord`, `memoryModel`,
+    `ffiContext`) that `stateRel` does not constrain, together with `bigEndian`,
+    which agrees with the source once the source is little-endian. Flapjack-only
+    convenience for the canonical RISC-V 64 target; no HOL original. -/
+theorem stateRel_riscv64CrepRuntimeTarget_iff
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (hbe : base.bigEndian = false) :
+    stateRel source (riscv64CrepRuntimeTarget base) ↔ stateRel source base := by
+  constructor
+  · intro hrel
+    unfold stateRel at hrel ⊢
+    obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe', hffi, hba, hta⟩ := hrel
+    exact ⟨hm, hma, hsm, hst, hg, hcl, hbe'.trans hbe.symm, hffi, hba, hta⟩
+  · intro hrel
+    unfold stateRel at hrel ⊢
+    obtain ⟨hm, hma, hsm, hst, hg, hcl, hbe', hffi, hba, hta⟩ := hrel
+    exact ⟨hm, hma, hsm, hst, hg, hcl, hbe'.trans hbe, hffi, hba, hta⟩
+
 /-- Flapjack-specific bridge for the target memory representation. HOL
     `crepSem$state.memory` and executable `CrepRuntimeState.memory` are both
     total `word → word_lab` functions; the separate `memaddrs` set guards
@@ -798,11 +817,11 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For a one-word payload, the target runtime `exp_hdl` step is proved by
-`EvaluateCases.crepRuntimeExpHdlOneWord`; its composition with the local-map
-relation is proved by `EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`.
-Together they establish the one-word handler prestate case. Other payload
-widths and the enclosing Call relation remain open. -/
+The one-word target runtime `exp_hdl` step and its composition with this
+local-map relation are already proved by
+`EvaluateCases.crepRuntimeExpHdlOneWord` and
+`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`, respectively. The
+remaining gap is the enclosing Call relation and payloads wider than one word. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

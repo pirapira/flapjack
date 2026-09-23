@@ -4784,6 +4784,22 @@
     "reviewer": "Kernel-checked NField constructor specialization over production structCompileExp/evalPanValueExp. It retains successful evaluation, projected struct-context equality, pointwise Bool field validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions; its recursive receiver hypothesis carries the same premises and conclusions. The field result is aligned between HOL ALOOKUP and production structFindFieldIndex by the validated field-name order. It is intentionally untagged because HOL has only the universal compile_exp_correct theorem. Lean uses PanSemState total lookups, Bool/list-backed finite-map adapters, and explicit bytesInWord; structInfosOk is retained but unused in this case."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectRFieldCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked RField constructor specialization over production structCompileExp/evalPanValueExp. It retains successful evaluation, projected struct-context equality, pointwise Bool field-validity premises, struct_infos_ok, local/global shape-map premises, and all three parent conclusions in its recursive receiver hypothesis. The selected index comes from successful source evaluation, so no extra bounds premise is added; production List.get? selection is aligned with HOL LLOOKUP. It is intentionally untagged because HOL has only universal compile_exp_correct. Lean uses PanSemState total lookups, Bool/list-backed finite-map adapters, and explicit bytesInWord; structInfosOk is retained but unused in this case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValuesFieldsOkBool_getElem?",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Projects pointwise Bool value-validity across an RStruct list to the selected element; RField case support only, with no standalone HOL declaration."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

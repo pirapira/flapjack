@@ -124,23 +124,27 @@ and zero-clock timeout / positive-clock decrement `Tick` evaluator equations,
 plus HOL simplifier reduction of `convert_s_def` over nonempty local, global,
 exception-shape, and function-code finite maps using the finite-map lookup
 rules. These are used in `compile_correct` at
-`cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows cover
-evaluator support only; the full theorem's finite-map premises and invariant,
-shape-map, and result-value postconditions remain open in
-`flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
+`cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows only check
+the listed evaluator and conversion equations; they do not prove the full
+theorem. The finite-map state interface and actual `compile_correct` Skip,
+Tick, Break, and Continue case specializations are tracked separately. The
+parent theorem remains open while other statement cases and the complete
+induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
-`pan_structs_compile_exp_correct_probe.out` records HOL simplifier evaluations
-of Local and Global variable-constructor instances, and Const-, RStruct-, and
-NStruct-constructor instances of `compile_exp_correct`; each tuple contains
-old shape, semantic value shape, field validity, source evaluation, and
-converted target evaluation. The production `structCompileExp`/`evalPanValueExp` cases are
-proved in `panStructCompileExpCorrectVarCase` and
-`panStructCompileExpCorrectConstCase` and
-`panStructCompileExpCorrectRStructCase` and exercised by finite-map regressions
-in `Flapjack.Test.PanStructsCompileCorrect`. The RStruct row uses two constants
-and validates all three constructor conclusions. Its nonempty-list row separately
-checks source `OPT_MMAP` success, pointwise compiled-expression correctness,
-and the converted `compile_exps` result for the local HOL helper
+`pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
+and Global variable-constructor instances and Const-, RStruct-, NStruct-,
+NField-, and RField-constructor instances of `compile_exp_correct`; each
+five-element tuple contains old shape, semantic value shape, field validity,
+source evaluation, and converted target evaluation. The production
+`structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,
+NField, and RField are proved in their corresponding `panStructCompileExpCorrect*Case`
+lemmas and exercised by finite-map regressions in
+`Flapjack.Test.PanStructsCompileCorrect`. These are constructor specializations
+of the universal HOL theorem, not a complete induction port, and remain
+untagged where the Lean state/evaluator interfaces differ. The RStruct row uses
+two constants and validates all three constructor conclusions. Its nonempty-list
+row separately checks source `OPT_MMAP` success, pointwise compiled-expression
+correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
 The other expression constructors remain open.

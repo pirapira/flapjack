@@ -40,46 +40,6 @@ an exact port exists it is tagged and placed in the corresponding proof module
 
 namespace Flapjack
 
-/-- Two single updates at distinct keys commute. -/
-theorem FUPDATE_comm [BEq α] [LawfulBEq α] (f : FiniteMap α β)
-    (k1 : α) (v1 : β) (k2 : α) (v2 : β) (h : k1 ≠ k2) :
-    FUPDATE (FUPDATE f (k1, v1)) (k2, v2) =
-      FUPDATE (FUPDATE f (k2, v2)) (k1, v1) := by
-  funext key
-  unfold FUPDATE
-  by_cases h2 : k2 == key
-  · have hk2 : k2 = key := beq_iff_eq.mp h2
-    have h1 : (k1 == key) = false := by
-      have hne : k1 ≠ key := fun he => h (he.trans hk2.symm)
-      exact beq_eq_false_iff_ne.mpr hne
-    simp [h2, h1]
-  · have hk2 : key ≠ k2 := fun he => h2 (beq_iff_eq.mpr he.symm)
-    have h2f : (k2 == key) = false := beq_eq_false_iff_ne.mpr (fun he => hk2 he.symm)
-    by_cases h1 : k1 == key <;> simp [h2f, h1]
-
-/-- Flapjack-specific analogue of Cake `FUPDATE_FUPDATE_LIST_COMMUTES` (not an
-exact HOL port, since it is proved over this file's extensional representation):
-a single update at a key absent from the update list commutes with the whole
-list update. -/
-theorem FUPDATE_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
-    (f : FiniteMap α β) (k : α) (v : β) (entries : List (α × β))
-    (h : k ∉ entries.map Prod.fst) :
-    FUPDATE (FUPDATE_LIST f entries) (k, v) =
-      FUPDATE_LIST (FUPDATE f (k, v)) entries := by
-  induction entries generalizing f with
-  | nil => rfl
-  | cons entry entries ih =>
-    have hk : entry.1 ≠ k := by
-      intro he
-      exact h (by simp [he])
-    have htail : k ∉ entries.map Prod.fst := by
-      intro hmem
-      exact h (by simp [hmem])
-    rw [FUPDATE_LIST_cons (f := FUPDATE f (k, v)) (entry := entry) (entries := entries)]
-    rw [FUPDATE_LIST_cons (f := f) (entry := entry) (entries := entries)]
-    rw [ih (FUPDATE f entry) htail]
-    rw [FUPDATE_comm f entry.1 entry.2 k v hk]
-
 /-- `mapM` congruence: pointwise-equal maps on the elements of a list give the
 same `OPT_MMAP` result.  Flapjack-specific proof infrastructure; no exact HOL
 counterpart. -/

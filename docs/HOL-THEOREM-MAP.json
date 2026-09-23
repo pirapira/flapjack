@@ -4282,6 +4282,14 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition deriving actual target argument words and code-map lookup from supported source argument evaluation plus state_rel/code_rel/locals_rel, then applying the target one-word exp_hdl/Return Call proof; source Call result and post-state relations remain open, so this is not the HOL pc_compile_correct case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
     "statement_status": "no_hol_reference_pending_classification",
@@ -4614,5 +4622,13 @@
     "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_empty_zip_alist",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fmEmptyZipAlist",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against fm_empty_zip_alist at pan_commonPropsScript.sml:426; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

@@ -385,6 +385,28 @@ theorem panSemEvaluateCodeStateWithPostState_tick
       panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
       panValueFfiClockTimeout, evalPanValueFfiClockCodeProg, hclock]
 
+/-! Production-evaluator counterpart of the HOL `evaluate_def` Skip equation
+    (`cakeml/pancake/semantics/panSemScript.sml:557`) over the production
+    source-state evaluator: `Skip` yields the normal control result with the
+    state (including the clock) carried verbatim. This is an untagged boundary
+    equation because the structured result is reduced rather than HOL's
+    `(prog_result, state)` pair. -/
+theorem panSemEvaluateCodeStateWithPostState_skip
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.skip : Prog α) =
+      some ((.control (.normal state.locals state.globals state.memory state.ffi),
+          state.clock), state) := by
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+
 /-!
   Exact source-memory entry point.
 

@@ -247,6 +247,96 @@ def panStructConvertState [BEq String] (context : StructPassContext)
   baseAddress := state.baseAddress
   topAddress := state.topAddress
 
+/-- Production-evaluator API translation of the local HOL helper
+    `compile_exp_correct_mmap_helper` (`pan_structsProofScript.sml:206`):
+    successful evaluation of a source expression list and pointwise
+    source-to-compiled-expression correctness imply successful evaluation of
+    the compiled list with each value converted by `panStructConvertValue`.
+    It is deliberately untagged: the HOL result is a local theorem over HOL's
+    finite-map state and fixed-width `eval`, while this Lean theorem uses
+    total lookup functions in `PanSemState` and an explicit `bytesInWord`
+    evaluator argument. The list traversal, production compiler, pointwise
+    hypothesis, and mapped conversion conclusion mirror the helper's proof
+    contract; this declaration does not claim an exact statement port. -/
+theorem panStructCompileExpsEvalOfPointwiseCorrect
+    [BEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (expressions : List (Exp α))
+    (values : List (PanValue α))
+    (hsource : evalPanValueExps state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord expressions =
+        some values)
+    (hpointwise : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some value →
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue value)) :
+    evalPanValueExps (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp.structCompileExps context expressions) =
+        some (values.map panStructConvertValue) := by
+  induction expressions generalizing values with
+  | nil =>
+      simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+        structCompileExp.structCompileExps] at hsource ⊢
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hsource
+  | cons expression expressions ih =>
+      simp only [evalPanValueExps,
+        evalPanValueExp.evalPanValueExps] at hsource
+      cases hhead : evalPanValueExp state.structs state.locals state.globals
+          state.memory state.baseAddress state.topAddress bytesInWord expression with
+      | none => simp [hhead] at hsource
+      | some value =>
+          cases htail : evalPanValueExp.evalPanValueExps state.structs
+              state.locals state.globals state.memory state.baseAddress state.topAddress
+              bytesInWord expressions with
+          | none => simp [hhead, htail] at hsource
+          | some tailValues =>
+              have hsourceEq : value :: tailValues = values := by
+                simpa [hhead, htail] using hsource
+              have hpointwiseTail : ∀ tailExpression,
+                  tailExpression ∈ expressions → ∀ tailValue,
+                    evalPanValueExp state.structs state.locals state.globals
+                        state.memory state.baseAddress state.topAddress bytesInWord
+                        tailExpression = some tailValue →
+                    evalPanValueExp (panStructConvertState context state).structs
+                        (panStructConvertState context state).locals
+                        (panStructConvertState context state).globals
+                        (panStructConvertState context state).memory
+                        (panStructConvertState context state).baseAddress
+                        (panStructConvertState context state).topAddress bytesInWord
+                        (structCompileExp context tailExpression) =
+                      some (panStructConvertValue tailValue) := by
+                intro tailExpression hmem tailValue htailEval
+                exact hpointwise tailExpression (by simp [hmem]) tailValue htailEval
+              have htargetHead := hpointwise expression (by simp) value hhead
+              have htargetTail := ih tailValues htail hpointwiseTail
+              change evalPanValueExp.evalPanValueExps
+                (panStructConvertState context state).structs
+                (panStructConvertState context state).locals
+                (panStructConvertState context state).globals
+                (panStructConvertState context state).memory
+                (panStructConvertState context state).baseAddress
+                (panStructConvertState context state).topAddress bytesInWord
+                (structCompileExp.structCompileExps context expressions) =
+                  some (List.map panStructConvertValue tailValues) at htargetTail
+              subst values
+              simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+                structCompileExp.structCompileExps, htargetHead, htargetTail]
+
 /-- Lookup in HOL's `FMAP_MAP2`-shaped `InfoMap` representation commutes with
     mapping values. Keeping this finite list, rather than only its total lookup
     function, preserves the exact support needed by `compile_correct`. -/

@@ -97,6 +97,61 @@ example :
     structCompileShape, structCompileShapeWF, lookupInfo]
 
 example :
+    evalPanValueExps
+        (panStructConvertState finiteMapContext finiteMapState.runtime).structs
+        (panStructConvertState finiteMapContext finiteMapState.runtime).locals
+        (panStructConvertState finiteMapContext finiteMapState.runtime).globals
+        (panStructConvertState finiteMapContext finiteMapState.runtime).memory
+        (panStructConvertState finiteMapContext finiteMapState.runtime).baseAddress
+        (panStructConvertState finiteMapContext finiteMapState.runtime).topAddress
+        (BitVec.ofNat 64 8)
+        (structCompileExp.structCompileExps finiteMapContext
+          ([.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)] : List (Exp Word64))) =
+      some [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)] := by
+  have hsource : evalPanValueExps finiteMapState.runtime.structs
+      finiteMapState.runtime.locals finiteMapState.runtime.globals
+      finiteMapState.runtime.memory finiteMapState.runtime.baseAddress
+      finiteMapState.runtime.topAddress (BitVec.ofNat 64 8)
+      ([.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)] : List (Exp Word64)) =
+        some [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps, evalPanValueExp]
+  have hpointwise : ∀ expression,
+      expression ∈
+        ([.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)] : List (Exp Word64)) →
+      ∀ value, evalPanValueExp finiteMapState.runtime.structs
+        finiteMapState.runtime.locals finiteMapState.runtime.globals
+        finiteMapState.runtime.memory finiteMapState.runtime.baseAddress
+        finiteMapState.runtime.topAddress (BitVec.ofNat 64 8) expression = some value →
+      evalPanValueExp
+        (panStructConvertState finiteMapContext finiteMapState.runtime).structs
+        (panStructConvertState finiteMapContext finiteMapState.runtime).locals
+        (panStructConvertState finiteMapContext finiteMapState.runtime).globals
+        (panStructConvertState finiteMapContext finiteMapState.runtime).memory
+        (panStructConvertState finiteMapContext finiteMapState.runtime).baseAddress
+        (panStructConvertState finiteMapContext finiteMapState.runtime).topAddress
+        (BitVec.ofNat 64 8) (structCompileExp finiteMapContext expression) =
+        some (panStructConvertValue value) := by
+    intro expression hmem value heval
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hfirst | hrest
+    · subst expression
+      simp [evalPanValueExp] at heval
+      cases heval
+      simp [evalPanValueExp, panStructConvertValue]
+    · rcases hrest with hsecond | hnil
+      · subst expression
+        simp [evalPanValueExp] at heval
+        cases heval
+        simp [evalPanValueExp, panStructConvertValue]
+      · simp at hnil
+  simpa [panStructConvertValue] using panStructCompileExpsEvalOfPointwiseCorrect
+    (context := finiteMapContext) (state := finiteMapState.runtime)
+    (bytesInWord := BitVec.ofNat 64 8)
+    (expressions := [.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)])
+    (values := [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)])
+    hsource hpointwise
+
+example :
     ((panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
         "local",
       (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals

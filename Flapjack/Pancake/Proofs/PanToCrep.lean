@@ -177,6 +177,33 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
+/-- HOL `local_rel_gt_vmax_preserved`: a target local slot strictly above the
+    proof context's maximum cannot occur in any source variable's slot list. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "local_rel_gt_vmax_preserved"]
+theorem localRelGtVmaxPreserved
+    (context : PanToCrepProofContext α)
+    (sourceLocals : FiniteMap String (PanValue α))
+    (targetLocals : FiniteMap Nat α) (slot : Nat) (newValue : α)
+    (hrel : localsRel context sourceLocals targetLocals)
+    (habove : context.vmax < slot) :
+    localsRel context sourceLocals (FUPDATE targetLocals (slot, newValue)) := by
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  intro name value hlookup
+  obtain ⟨names, values, hcontext, hvalues, hflatten, hwf⟩ :=
+    hrel.2.2 name value hlookup
+  refine ⟨names, values, hcontext, ?_, hflatten, hwf⟩
+  rw [← hvalues]
+  apply list_mapM_congr
+  intro key hkey
+  rw [FLOOKUP_update]
+  have hle : key ≤ context.vmax :=
+    hrel.2.1.2 name (panValueShape [] value) names hcontext key hkey
+  have hne : slot ≠ key := by
+    intro he
+    subst key
+    exact (Nat.not_lt_of_ge hle) habove
+  simp [beq_eq_false_iff_ne.mpr hne]
+
 /-! Finite-map lookups needed by the extracted compiler are represented in its
 list-backed executable context.  Repeated keys are harmless: every projected
 entry carries the same finite-map lookup result, and first-match lookup thus

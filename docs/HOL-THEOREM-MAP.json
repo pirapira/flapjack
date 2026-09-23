@@ -3118,5 +3118,61 @@
     "lean_name": "panToCrepPcCompileCorrectCallReturnConstCodeState",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (bounded actual-state Call case infrastructure; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallTimeoutCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Call case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectCallReturnConstCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Call case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectSkipCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Skip case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectBreakCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Break case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectContinueCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Continue case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectTickCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Tick case specialization; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectAnnotCodeStateRiscV64",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 actual-state Annot case specialization; untagged)"
   }
 ]

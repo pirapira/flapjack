@@ -206,6 +206,9 @@ run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
 run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq flookup_absent "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
+  flookup_f handler_call_untouched "$cake_dir/pancake/crep_inlineScript.sml" \
+  "$cake_dir/pancake"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \

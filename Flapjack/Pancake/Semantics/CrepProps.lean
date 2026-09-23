@@ -13,6 +13,17 @@ namespace Flapjack
 
 universe u
 
+/-- Faithful port of Cake `crepProps$cexp_heads_simp_def`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:11`). HOL rejects the
+    argument when any inner list is empty, then maps total `HD` over the lists.
+    The Lean default `.var 0` gives `headD` a total empty-list value; the guard
+    makes that value unreachable in the result. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
+  | expressions =>
+      if expressions.any List.isEmpty then none
+      else some (expressions.map (fun expression => expression.headD (.var 0)))
+
 /-- Faithful Lean port of Cake `crepProps$lookup_locals_eq_map_vars`
     (`cakeml/pancake/semantics/crepPropsScript.sml:17`). HOL uses
     `crepSem.eval`, whose `Var` case is `FLOOKUP s.locals v`. The Lean source-

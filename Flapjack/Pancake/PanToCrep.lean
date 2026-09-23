@@ -38,29 +38,6 @@ def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
 
-/-- Cake's simplified `cexp_heads_simp` (`crepPropsScript.sml:11`): reject when
-    some argument list is empty, otherwise keep every list's head.  The explicit
-    `fallback` replaces Cake's total `HD`. -/
-def cexpHeadsSimp (fallback : CrepExp α) :
-    List (List (CrepExp α)) → Option (List (CrepExp α))
-  | expressions =>
-      if expressions.any (fun expression => expression.isEmpty) then none
-      else some (expressions.map (fun expression => expression.headD fallback))
-
-/-- Cake's `cexp_heads_eq` (`pan_to_crepProofScript.sml:104`): the case-shaped
-    head collector agrees with the simplified one. -/
-theorem cexpHeads_eq_cexpHeadsSimp (fallback : CrepExp α)
-    (expressions : List (List (CrepExp α))) :
-    cexpHeads expressions = cexpHeadsSimp fallback expressions := by
-  induction expressions with
-  | nil => rfl
-  | cons expression expressions ih =>
-      cases expression with
-      | nil => simp [cexpHeads, cexpHeadsSimp]
-      | cons head tail =>
-          simp only [cexpHeads, ih, cexpHeadsSimp]
-          split <;> simp_all
-
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape

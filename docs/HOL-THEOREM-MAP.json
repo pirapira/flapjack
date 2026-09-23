@@ -4840,6 +4840,14 @@
     "reviewer": "Kernel-checked RField constructor specialization over production structCompileExp/evalPanValueExp. It retains successful evaluation, projected struct-context equality, pointwise Bool field-validity premises, struct_infos_ok, local/global shape-map premises, and all three parent conclusions in its recursive receiver hypothesis. The selected index comes from successful source evaluation, so no extra bounds premise is added; production List.get? selection is aligned with HOL LLOOKUP. It is intentionally untagged because HOL has only universal compile_exp_correct. Lean uses PanSemState total lookups, Bool/list-backed finite-map adapters, and explicit bytesInWord; structInfosOk is retained but unused in this case."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectOpCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Op-constructor specialization over production structCompileExp/evalPanValueExp. It retains source evaluation, projected context equality, pointwise Bool field validity, struct_infos_ok, local/global shape maps, and all three compile_exp_correct conclusions in the per-argument induction hypothesis. Successful Op evaluation is shown to produce exactly two words; the proof uses the production list-evaluation bridge and verifies word filtering commutes with panStructConvertValue. It remains untagged because HOL has only the universal compile_exp_correct theorem and the Lean state/evaluator interfaces use PanSemState lookups, pointwise adapters, and explicit bytesInWord."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

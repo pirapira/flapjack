@@ -142,7 +142,7 @@ induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
 and Global variable-constructor instances and Const-, RStruct-, NStruct-,
-NField-, and RField-constructor instances of `compile_exp_correct`; each
+NField-, RField-, and Op-constructor instances of `compile_exp_correct`; each
 five-element tuple contains old shape, semantic value shape, field validity,
 source evaluation, and converted target evaluation. The production
 `structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,
@@ -150,8 +150,11 @@ NField, and RField are proved in their corresponding `panStructCompileExpCorrect
 lemmas and exercised by finite-map regressions in
 `Flapjack.Test.PanStructsCompileCorrect`. These are constructor specializations
 of the universal HOL theorem, not a complete induction port, and remain
-untagged where the Lean state/evaluator interfaces differ. The RStruct row uses
-two constants and validates all three constructor conclusions. Its nonempty-list
+untagged where the Lean state/evaluator interfaces differ. The RStruct and Op
+rows use nonempty expressions: the former checks aggregate construction, while
+the latter checks that a binary Op retains exactly its two word operands after
+value conversion. Both validate all three constructor conclusions. The
+nonempty-list
 row separately checks source `OPT_MMAP` success, pointwise compiled-expression
 correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production

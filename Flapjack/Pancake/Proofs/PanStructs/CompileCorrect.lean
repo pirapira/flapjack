@@ -2188,4 +2188,198 @@ theorem panStructCompileCorrectTickCase
   · simp [panStructValuesFieldsOkBool]
   · simp [panIsWfShapeValuesBool]
 
+/-! Op-constructor specialization of HOL `compile_exp_correct`. It is
+    intentionally untagged: HOL states one universally quantified theorem and
+    has no separately named Op-case declaration. This Lean specialization
+    retains successful source evaluation, the translated context/state,
+    field-validity, `struct_infos_ok`, and local/global shape-map premises in
+    every argument induction hypothesis. As in the other production cases,
+    the direct HOL finite-map equalities are represented by a shape view,
+    pointwise Bool predicates, and the `PanSemState` lookup interface; Lean
+    also takes an explicit `bytesInWord`. The Op evaluator filters evaluated
+    operands to words and accepts exactly two, so the proof explicitly carries
+    the same value conversion through that filter. -/
+theorem panStructCompileExpCorrectOpCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (operator : BinOp) (arguments : List (Exp α))
+    (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.op operator arguments) = some value)
+    (hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (hstructInfos : structInfosOk state.structs)
+    (hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (hglobalsMap : panStructShapeMapEq context.globals state.globals)
+    (hinduction : ∀ argument, argument ∈ arguments → ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord argument = some subvalue →
+      panStructContextShapeView context.structs =
+        panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context argument = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool state.structs subvalue = true ∧
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context argument) = some (panStructConvertValue subvalue)) :
+    structOldExpShape context (.op operator arguments) = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context (.op operator arguments)) =
+        some (panStructConvertValue value) := by
+  let asWord : PanValue α → Option α := fun operand =>
+    match operand with
+    | .word word => some word
+    | _ => none
+  have hwordConvert : ∀ operand,
+      asWord (panStructConvertValue operand) = asWord operand := by
+    intro operand
+    cases operand <;> simp [asWord, panStructConvertValue]
+  have hmapWordConvert : ∀ operands : List (PanValue α),
+      (operands.map panStructConvertValue).mapM asWord = operands.mapM asWord := by
+    intro operands
+    induction operands with
+    | nil => rfl
+    | cons operand operands ih =>
+        simp [List.mapM_cons, hwordConvert operand, ih]
+  have hmapWordConvertCompose : ∀ operands : List (PanValue α),
+      operands.mapM (fun operand => asWord (panStructConvertValue operand)) =
+        (operands.map panStructConvertValue).mapM asWord := by
+    intro operands
+    induction operands with
+    | nil => rfl
+    | cons operand operands ih => simp [List.mapM_cons, ih]
+  have hpointwise : ∀ expression, expression ∈ arguments → ∀ subvalue,
+      evalPanValueExp state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      evalPanValueExp (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression) = some (panStructConvertValue subvalue) := by
+    intro expression hmem subvalue hsub
+    exact (hinduction expression hmem subvalue hsub hstructs hlocalsFields
+      hglobalsFields hstructInfos hlocalsMap hglobalsMap).2.2
+  cases harguments : evalPanValueExps state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord arguments with
+  | none =>
+      have harguments' : evalPanValueExp.evalPanValueExps state.structs
+          state.locals state.globals state.memory state.baseAddress state.topAddress
+          bytesInWord arguments = none := by
+        simpa [evalPanValueExps] using harguments
+      simp [evalPanValueExp, harguments'] at heval
+  | some operands =>
+      have harguments' : evalPanValueExp.evalPanValueExps state.structs
+          state.locals state.globals state.memory state.baseAddress state.topAddress
+          bytesInWord arguments = some operands := by
+        simpa [evalPanValueExps] using harguments
+      cases hwords : operands.mapM asWord with
+      | none =>
+          have hevalAfterArguments := heval
+          simp only [evalPanValueExp, harguments'] at hevalAfterArguments
+          change (operands.mapM asWord).bind (fun words =>
+            match words with
+            | [left, right] => some (PanValue.word (evalPanBinOp operator left right))
+            | _ => none) = some value at hevalAfterArguments
+          rw [hwords] at hevalAfterArguments
+          simp at hevalAfterArguments
+      | some words =>
+          have hevalAfterArguments := heval
+          simp only [evalPanValueExp, harguments'] at hevalAfterArguments
+          change (operands.mapM asWord).bind (fun words =>
+            match words with
+            | [left, right] => some (PanValue.word (evalPanBinOp operator left right))
+            | _ => none) = some value at hevalAfterArguments
+          cases words with
+          | nil =>
+              rw [hwords] at hevalAfterArguments
+              simp at hevalAfterArguments
+          | cons left rest =>
+              cases rest with
+              | nil =>
+                  rw [hwords] at hevalAfterArguments
+                  simp at hevalAfterArguments
+              | cons right rest =>
+                  cases rest with
+                  | cons extra rest =>
+                      rw [hwords] at hevalAfterArguments
+                      simp at hevalAfterArguments
+                  | nil =>
+                      have hvalue : value = .word (evalPanBinOp operator left right) := by
+                        rw [hwords] at hevalAfterArguments
+                        simp only [Option.bind_some] at hevalAfterArguments
+                        exact (Option.some.inj hevalAfterArguments).symm
+                      have hcompiledArgs := panStructCompileExpsEvalOfPointwiseCorrect
+                        context state bytesInWord arguments operands harguments hpointwise
+                      have hcompiledArgs' : evalPanValueExp.evalPanValueExps
+                          (panStructConvertState context state).structs
+                          (panStructConvertState context state).locals
+                          (panStructConvertState context state).globals
+                          (panStructConvertState context state).memory
+                          (panStructConvertState context state).baseAddress
+                          (panStructConvertState context state).topAddress bytesInWord
+                          (structCompileExp.structCompileExps context arguments) =
+                            some (operands.map panStructConvertValue) := by
+                        simpa [evalPanValueExps] using hcompiledArgs
+                      have htargetWords :
+                          (operands.map panStructConvertValue).mapM asWord = some [left, right] := by
+                        rw [hmapWordConvert, hwords]
+                      have htargetWordsInline :
+                          (operands.map panStructConvertValue).mapM
+                            (fun (operand : PanValue α) => match operand with
+                              | PanValue.word word => some word
+                              | _ => none) = some [left, right] := by
+                        simpa [asWord] using htargetWords
+                      have htargetWordsOp : operands.mapM
+                          (fun operand => asWord (panStructConvertValue operand)) =
+                            some [left, right] := by
+                        rw [hmapWordConvertCompose, htargetWords]
+                      have htargetWordsComposed : operands.mapM
+                          (((fun (operand : PanValue α) => match operand with
+                            | PanValue.word word => some word
+                            | _ => none) : PanValue α → Option α) ∘
+                            panStructConvertValue) = some [left, right] := by
+                        change operands.mapM (fun operand =>
+                          asWord (panStructConvertValue operand)) = some [left, right]
+                        exact htargetWordsOp
+                      refine ⟨?_, ?_, ?_⟩
+                      · simp [structOldExpShape, panSemShapeOf, hvalue]
+                      · simp [panStructValueFieldsOkBool, hvalue]
+                      · have hcompiledOp : structCompileExp context (.op operator arguments) =
+                            .op operator (structCompileExp.structCompileExps context arguments) := by
+                          simp [structCompileExp]
+                        rw [hcompiledOp]
+                        rw [hvalue]
+                        simp [evalPanValueExp, hcompiledArgs', Option.bind]
+                        generalize htargetMap :
+                          List.mapM (((fun (operand : PanValue α) =>
+                            match operand with
+                            | PanValue.word word => some word
+                            | _ => none) : PanValue α → Option α) ∘
+                            panStructConvertValue) operands = targetWords at *
+                        have htargetWordsEq : targetWords = some [left, right] := by
+                          exact htargetWordsComposed
+                        rw [htargetWordsEq]
+                        simp [panStructConvertValue]
+
 end Flapjack

@@ -147,6 +147,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstRaw",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only adapter removing the one-constructor PanWordLab wrapper from the untagged target-specific support lemma"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalCodeMapIrrel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only evaluator infrastructure; supports the local mapc update in simp_exp_correct1)"

@@ -1,0 +1,21 @@
+n2w_zero_word=0w = 0w
+n2w_one_word=1w = 1w
+n2w_high_word=128w = 128w
+dimindex8=dimindex (:8) = 8
+n2w_zero_bit0=0w ' 0 ⇔
+if 0 < dimindex (:8) then BIT 0 0 else FAIL $' $var$(index too large) 0w 0
+n2w_one_bit0=1w ' 0 ⇔
+if 0 < dimindex (:8) then BIT 0 1 else FAIL $' $var$(index too large) 1w 0
+n2w_one_bit1=1w ' 1 ⇔
+if 1 < dimindex (:8) then BIT 1 1 else FAIL $' $var$(index too large) 1w 1
+n2w_high_bit7=128w ' 7 ⇔
+if 7 < dimindex (:8) then BIT 7 128
+else FAIL $' $var$(index too large) 128w 7
+n2w_high_bit6=128w ' 6 ⇔
+if 6 < dimindex (:8) then BIT 6 128
+else FAIL $' $var$(index too large) 128w 6
+bit_zero0=BIT 0 0 ⇔ F
+bit_one0=BIT 0 1 ⇔ T
+bit_one1=BIT 1 1 ⇔ F
+bit_high7=BIT 7 128 ⇔ T
+bit_high6=BIT 6 128 ⇔ F

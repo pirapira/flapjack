@@ -34,6 +34,15 @@ theorem bitVecToHolWordBits_holWordBitsToBitVec {width : Nat}
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD]
 
+theorem bitVecToHolWordBits_ofNat {width : Nat} (value : Nat) :
+    bitVecToHolWordBits (BitVec.ofNat width value) =
+      fun index => Nat.testBit value index.val := by
+  funext index
+  change (BitVec.ofNat width value).toNat.testBit index.val =
+    Nat.testBit value index.val
+  rw [BitVec.toNat_ofNat]
+  simp [Nat.testBit_mod_two_pow, index.isLt]
+
 theorem holWordBitsToBitVec_bitVecToHolWordBits {width : Nat}
     (word : BitVec width) :
     holWordBitsToBitVec (bitVecToHolWordBits word) = word := by
@@ -44,6 +53,18 @@ theorem holWordBitsToBitVec_bitVecToHolWordBits {width : Nat}
     word.getLsbD index
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD, hindex]
+
+/-! HOL4 defines `n2w n` by `FCP i. BIT i n` in
+    `$HOL/src/n-bit/wordsScript.sml`; `word_index_n2w` identifies a valid FCP
+    index with that numeric bit position. This is the canonical `Fin width`
+    encoding fact, independent of the RISC-V evaluator. It is left untagged
+    because HOL4's core words theory is external to the checked CakeML source
+    tree, so this declaration cannot carry a repository-local `@[hol]` path. -/
+theorem holWordBitsToBitVec_n2w {width : Nat} (value : Nat) :
+    holWordBitsToBitVec (fun index : Fin width => Nat.testBit value index.val) =
+      BitVec.ofNat width value := by
+  rw [← bitVecToHolWordBits_ofNat]
+  exact holWordBitsToBitVec_bitVecToHolWordBits _
 
 /-! A dimension-indexed HOL word is isomorphic to the canonical Fin-index
     representation once its finite dimension is enumerated. Lean core/Std in

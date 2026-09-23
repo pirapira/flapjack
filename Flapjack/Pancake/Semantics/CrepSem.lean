@@ -122,6 +122,11 @@ def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with globals := FUPDATE state.globals (key, value) }
 
+/-- HOL `crepSem$dec_clock_def` on the 11-field Crep state. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with clock := state.clock - 1 }
+
 /-- Forget the three target-configuration fields of the executable runtime
     state, obtaining the 11-field HOL-shaped state. -/
 def CrepRuntimeState.toHolState (state : CrepRuntimeState α σ) :

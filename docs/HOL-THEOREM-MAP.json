@@ -120,6 +120,14 @@
     "reviewer": "Codex (statement comparison with dimindex specialized to RISC-V width)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement comparison; production evaluator and PanWordLab output wrapper)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "genlist_less_than",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",

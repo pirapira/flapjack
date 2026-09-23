@@ -646,6 +646,31 @@ def shMemOpHOL {width : Nat} [NeZero width]
   | .load32 => shMemLoadHOL state name address 4
   | .store32 => shMemStoreHOL state name address 4
 
+/-! Direct width-generic port of CakeML `mem_load_def`
+    (`cakeml/pancake/semantics/loopSemScript.sml:64-69`).  The memory is HOL's
+    total `'a word -> 'a word_loc` map and the domain is HOL's address set; the
+    result is `SOME (s.memory addr)` exactly when `addr` is in the domain. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_load_def"]
+def memLoadHOL {width : Nat}
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (address : RiscV.Word width) : Option (LoopValue (RiscV.Word width)) :=
+  if domain address then some (memory address) else none
+
+/-! Direct width-generic port of CakeML `mem_store_def`
+    (`cakeml/pancake/semantics/loopSemScript.sml:57-62`).  Inside the domain the
+    address is updated with `=+` (`addr =+ w`), leaving every other address
+    unchanged; outside the domain the result is `NONE`. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "mem_store_def"]
+def memStoreHOL {width : Nat}
+    (memory : RiscV.Word width → LoopValue (RiscV.Word width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (address : RiscV.Word width) (value : LoopValue (RiscV.Word width)) :
+    Option (RiscV.Word width → LoopValue (RiscV.Word width)) :=
+  if domain address then
+    some (fun current => if current = address then value else memory current)
+  else none
+
 /-! FLAPJACK-SPECIFIC (not exact tagged ports).  The following byte-array
     helpers are the 64-bit RISC-V instances of HOL's polymorphic word memory
     codec.  The exact width-generic ports are `readBytearrayHOL`,

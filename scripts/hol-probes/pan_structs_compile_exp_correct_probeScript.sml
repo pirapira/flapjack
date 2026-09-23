@@ -101,7 +101,7 @@ val _ = print_simp "compile_exp_correct_const"
    pan_structsProofTheory.v_flds_ok_def,
    FLOOKUP_UPDATE,
    FLOOKUP_FMAP_MAP2,
-   FLOOKUP_FUN_FMAP]
+     FLOOKUP_FUN_FMAP]
   ``(pan_structs$old_exp_shape ^ctxt ^const_expression,
      panSem$shape_of ^const_value,
      pan_structsProof$v_flds_ok (^local_state).structs ^const_value,
@@ -109,3 +109,23 @@ val _ = print_simp "compile_exp_correct_const"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^const_expression) =
        SOME (pan_structsProof$convert_v ^const_value))``;
+
+val mmap_expressions =
+  ``[(panLang$Const (3w:8 word)); (panLang$Const (5w:8 word))]``;
+val mmap_values = ``[ValWord (3w:8 word); ValWord (5w:8 word)]``;
+val _ = print_simp "compile_exp_correct_mmap_nonempty"
+  [pan_structsProofTheory.convert_s_def,
+   pan_structsProofTheory.convert_v_def,
+   pan_structsTheory.compile_exp_def,
+   panSemTheory.eval_def,
+   DISJ_IMP_THM,
+   FORALL_AND_THM]
+  ``(OPT_MMAP (panSem$eval ^local_state) ^mmap_expressions = SOME ^mmap_values,
+     (!e. MEM e ^mmap_expressions ==>
+       !v. panSem$eval ^local_state e = SOME v ==>
+         panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+           (pan_structs$compile_exp ^ctxt e) =
+             SOME (pan_structsProof$convert_v v)),
+     OPT_MMAP (panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state))
+       (pan_structs$compile_exps ^ctxt ^mmap_expressions) =
+         SOME (MAP pan_structsProof$convert_v ^mmap_values))``;

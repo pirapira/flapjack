@@ -739,28 +739,30 @@ mutual
                       expressionSteps + 1)
                 | none => none
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
-        contracts, memoryHandler => do
-        let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
-        let .word conditionValue := condition | none
-        if conditionValue == 0 then
-          pure (.normal locals globals memory ffi, conditionSteps + 1)
-        else
-          let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler structs
-            functions baseAddress topAddress bytesInWord fuel locals globals memory ffi body
-            (memoryAccess := memoryAccess) (contracts := contracts)
-            (memoryHandler := memoryHandler)
-          match bodyResult with
-          | .normal locals globals memory ffi | .continued locals globals memory ffi =>
-              let (loopResult, loopSteps) ← evalPanValueFfiProgSteps context primitive handler
+        contracts, memoryHandler =>
+        (panValueIteCondition structs baseAddress topAddress bytesInWord locals globals
+          memory conditionExp memoryAccess).elim
+          (some (.error locals globals memory ffi, 0))
+          (fun conditionPair => do
+            let (conditionValue, conditionSteps) := conditionPair
+            if conditionValue == 0 then
+              pure (.normal locals globals memory ffi, conditionSteps + 1)
+            else
+              let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-                (.while conditionExp body)
-                (memoryAccess := memoryAccess) (contracts := contracts)
+                body (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
-              pure (loopResult, conditionSteps + bodySteps + loopSteps + 1)
-          | .broke locals globals memory ffi =>
-              pure (.normal locals globals memory ffi, conditionSteps + bodySteps + 1)
-          | result => pure (result, conditionSteps + bodySteps + 1)
+              match bodyResult with
+              | .normal locals globals memory ffi | .continued locals globals memory ffi =>
+                  let (loopResult, loopSteps) ← evalPanValueFfiProgSteps context primitive handler
+                    structs functions baseAddress topAddress bytesInWord fuel locals globals memory
+                    ffi (.while conditionExp body)
+                    (memoryAccess := memoryAccess) (contracts := contracts)
+                    (memoryHandler := memoryHandler)
+                  pure (loopResult, conditionSteps + bodySteps + loopSteps + 1)
+              | .broke locals globals memory ffi =>
+                  pure (.normal locals globals memory ffi, conditionSteps + bodySteps + 1)
+              | result => pure (result, conditionSteps + bodySteps + 1))
     | _fuel + 1, locals, globals, memory, ffi, .break, _, _, _ =>
         pure (.broke locals globals memory ffi, 1)
     | _fuel + 1, locals, globals, memory, ffi, .continue, _, _, _ =>

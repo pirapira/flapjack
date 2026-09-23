@@ -405,54 +405,52 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     have hfk : fuel ≤ k := by omega
     rw [evalPanValueFfiProgSteps] at h
     rw [evalPanValueFfiProgSteps]
-    cases hc : evalPanValueExpCounted structs locals globals memory baseAddress topAddress
-        bytesInWord conditionExp ma with
-    | none => rw [hc] at h; simp at h
+    cases hc : panValueIteCondition structs baseAddress topAddress bytesInWord
+        locals globals memory conditionExp ma with
+    | none =>
+      simp only [hc, Option.elim_none] at h ⊢
+      exact h
     | some pair =>
-      obtain ⟨condition, conditionSteps⟩ := pair
-      rw [hc] at h
-      cases condition with
-      | word cv =>
-        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-        by_cases hz : (cv == 0) = true
-        · rw [if_pos hz] at h ⊢; exact h
-        · rw [if_neg hz] at h ⊢
-          cases hb : evalPanValueFfiProgSteps context primitive handler structs functions
-            baseAddress topAddress bytesInWord fuel locals globals memory ffi body
-            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-          | none => rw [hb] at h; simp at h
-          | some bodyPair =>
-            obtain ⟨bodyResult, bodySteps⟩ := bodyPair
-            rw [hb] at h
-            rw [ihBody _ _ hfk hb]
-            simp only [Option.bind_some] at h ⊢
-            cases bodyResult with
-            | normal l g m f =>
-              dsimp only at h ⊢
-              cases hl : evalPanValueFfiProgSteps context primitive handler structs functions
-                baseAddress topAddress bytesInWord fuel l g m f (Prog.while conditionExp body)
-                (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-              | none => rw [hl] at h; simp at h
-              | some loopPair =>
-                rw [hl] at h
-                rw [ihLoop _ _ _ _ _ _ hfk hl]
-                exact h
-            | continued l g m f =>
-              dsimp only at h ⊢
-              cases hl : evalPanValueFfiProgSteps context primitive handler structs functions
-                baseAddress topAddress bytesInWord fuel l g m f (Prog.while conditionExp body)
-                (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-              | none => rw [hl] at h; simp at h
-              | some loopPair =>
-                rw [hl] at h
-                rw [ihLoop _ _ _ _ _ _ hfk hl]
-                exact h
-            | returned l g m f vs => exact h
-            | raised l g m f e v => exact h
-            | broke l g m f => exact h
-            | finalFfi l g m f ev => exact h
-            | error l g m f => exact h
-      | _ => simp at h
+      obtain ⟨cv, conditionSteps⟩ := pair
+      simp only [hc, Option.elim_some] at h ⊢
+      by_cases hz : (cv == 0) = true
+      · rw [if_pos hz] at h ⊢; exact h
+      · rw [if_neg hz] at h ⊢
+        cases hb : evalPanValueFfiProgSteps context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory ffi body
+          (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+        | none => rw [hb] at h; simp at h
+        | some bodyPair =>
+          obtain ⟨bodyResult, bodySteps⟩ := bodyPair
+          rw [hb] at h
+          rw [ihBody _ _ hfk hb]
+          simp at h ⊢
+          cases bodyResult with
+          | normal l g m f =>
+            dsimp only at h ⊢
+            cases hl : evalPanValueFfiProgSteps context primitive handler structs functions
+              baseAddress topAddress bytesInWord fuel l g m f (Prog.while conditionExp body)
+              (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+            | none => rw [hl] at h; simp at h
+            | some loopPair =>
+              rw [hl] at h
+              rw [ihLoop _ _ _ _ _ _ hfk hl]
+              exact h
+          | continued l g m f =>
+            dsimp only at h ⊢
+            cases hl : evalPanValueFfiProgSteps context primitive handler structs functions
+              baseAddress topAddress bytesInWord fuel l g m f (Prog.while conditionExp body)
+              (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+            | none => rw [hl] at h; simp at h
+            | some loopPair =>
+              rw [hl] at h
+              rw [ihLoop _ _ _ _ _ _ hfk hl]
+              exact h
+          | returned l g m f vs => exact h
+          | raised l g m f e v => exact h
+          | broke l g m f => exact h
+          | finalFfi l g m f ev => exact h
+          | error l g m f => exact h
   | case18 =>
     intro fuel' result hle h
     obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩

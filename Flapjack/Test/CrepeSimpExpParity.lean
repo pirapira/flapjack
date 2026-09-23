@@ -185,6 +185,25 @@ example :
   exact crepSimpExpCorrect1HolFiniteDimension id boolDimensionHolState _
     (by simp [evalCrepRuntimeExp])
 
+example :
+    evalCrepHolFiniteDimensionExpWordLab boolWordDimension
+        (crepArithHolFiniteDimensionMapCode id boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])) =
+      evalCrepHolFiniteDimensionExpWordLab boolWordDimension boolDimensionHolState
+        (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
+  apply crepSimpExpCorrect1HolFiniteDimensionSource boolWordDimension id
+    boolDimensionHolState _
+  have hEval := evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
+    boolDimensionHolState
+      (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])
+  change (evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState
+    (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
+      PanWordLab.word ≠ none
+  rw [← hEval]
+  simp [evalCrepRuntimeExp]
+
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
     (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) ==
   .shift .lsl (.var 2) (.const (bitVecToHolWordBits (BitVec.ofNat 4 1)))

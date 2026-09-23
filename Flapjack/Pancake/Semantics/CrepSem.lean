@@ -513,9 +513,10 @@ termination_by expression => sizeOf expression
 /-! ### Word-result constructor slice
 
 The equations below cover evaluator cases whose result shape does not depend
-on HOL's `word_op`, `word_sh`, or byte-memory helpers. They are polymorphic in
-the word carrier `α` and do not choose a RISC-V target. These are Flapjack-only
-projection facts: `CrepRuntimeState` still has target fields absent from HOL's
+on HOL's `word_op`, `word_sh`, or byte-memory helpers, including the explicit
+`crep_op Mul` multiplication case. They are polymorphic in the word carrier
+`α` and do not choose a RISC-V target. These are Flapjack-only projection
+facts: `CrepRuntimeState` still has target fields absent from HOL's
 `crepSem$state`, so they do not establish full evaluator correspondence. -/
 
 /-- Projection equation for the `Const` case. This is Flapjack-only adapter
@@ -578,6 +579,33 @@ theorem evalCrepRuntimeExp_load_wordLab
     · cases hmem : state.memory value with
       | word word => simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain, hmem, panTheWord]
     · simp [evalCrepRuntimeExp, crepRuntimeLoad, haddr, hdomain]
+
+/-- The production `CrepOp.mul` equation for every argument-list shape,
+expressed with HOL's complete wrapped result type. This is generic in `α` and
+uses no target fields, but remains Flapjack-only because the evaluator's state
+type is target-extended. -/
+theorem evalCrepRuntimeExp_crepOp_mul_wordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (arguments : List (CrepExp α)) :
+    (evalCrepRuntimeExp state (.crepOp .mul arguments)).map PanWordLab.word =
+      match arguments with
+      | [left, right] => do
+          let leftValue ← evalCrepRuntimeExp state left
+          let rightValue ← evalCrepRuntimeExp state right
+          pure (.word (leftValue * rightValue))
+      | _ => none := by
+  cases arguments with
+  | nil => simp [evalCrepRuntimeExp]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp]
+      | cons right rest =>
+        cases rest with
+        | nil => simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+        | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Projection equation for `BaseAddr`; Flapjack-only because its state is
 target-extended. -/

@@ -2256,6 +2256,14 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structCompileShapesFuel_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fuel parameter differs from no-fuel HOL compile_shapes_eq_map; see theorem docstring)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "old_exp_shapes_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",

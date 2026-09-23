@@ -385,7 +385,7 @@ theorem panSemEvaluateCodeStateWithPostState_tick
       panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
       panValueFfiClockTimeout, evalPanValueFfiClockCodeProg, hclock]
 
-/-! Exact HOL `evaluate_def` Skip equation
+/-! Production-evaluator counterpart of the HOL `evaluate_def` Skip equation
     (`cakeml/pancake/semantics/panSemScript.sml:557`) over the production
     source-state evaluator: `Skip` yields the normal control result with the
     state (including the clock) carried verbatim. This is an untagged boundary

@@ -569,10 +569,9 @@ theorem riscv64ExtCallCallFfiHandler_sharedMem
     array read returns `Error` (HOL's `_ => (SOME Error, s)`), and an ffi `final`
     event returns `FinalFFI` with the target state unchanged (HOL `FFI_final`).
     The `returned` branch (HOL `FFI_return`: write the returned bytes back with
-    the canonical target writer and install the returned ffi) is the remaining
-    gap, tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`; separately
-    elaborated occurrences of the well-founded `crepRuntimeWriteBytes` do not
-    share their hidden instance arguments, so that equalities is not `rfl`. -/
+    the canonical target writer and install the returned ffi) is pinned by
+    `crepRuntimeExtCallValues_target_returned`; `crepRuntimeExtCallValues_target_dispatch`
+    assembles both handler outcomes. -/
 theorem crepRuntimeExtCallValues_target_error
     (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
     (configuration configurationLength array arrayLength : RiscV.Word 64)
@@ -591,7 +590,8 @@ theorem crepRuntimeExtCallValues_target_error
 /-- Dispatch when the `callFfi` handler reports a `final` event (HOL
     `FFI_final`): the production step returns `FinalFFI` with the target state
     unchanged, exactly HOL's `call_FFI` final branch.  The `returned` branch
-    (write-back) is tracked in child bead `flapjack-pxn.18.4.3.43.1.2.2.1.1`. -/
+    (write-back) is pinned by `crepRuntimeExtCallValues_target_returned` and the
+    two are assembled by `crepRuntimeExtCallValues_target_dispatch`. -/
 theorem crepRuntimeExtCallValues_target_final
     (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
     (configuration configurationLength array arrayLength : RiscV.Word 64)
@@ -636,5 +636,39 @@ theorem crepRuntimeExtCallValues_target_returned
     riscv64PanValueFfiContext_valueToNat_eq_riscv,
     crepRuntimeReadBytes_target_eq_riscv, riscv64CrepRuntimeTarget_ffi, hc, ha, hr]
   erw [crepRuntimeWriteBytes_target_updateFfi]
+
+/-- Assembled canonical-target dispatch of `crepRuntimeExtCallValues`.  With both
+    argument reads succeeding, the production step case-splits on the Lean
+    `callFfi` (HOL `call_FFI`) result exactly as the source semantics does:
+    `FFI_return` writes the returned bytes back into the canonical target and
+    installs the returned ffi (`Normal`), while `FFI_final` returns `FinalFFI`
+    with the target state unchanged.  The failing-read branch is
+    `crepRuntimeExtCallValues_target_error`, so this theorem together with that
+    one covers every production `ExtCall` outcome. -/
+theorem crepRuntimeExtCallValues_target_dispatch
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (function : FunName)
+    (configuration configurationLength array arrayLength : RiscV.Word 64)
+    (configurationBytes arrayBytes : List UInt8)
+    (hc : riscv64ReadByteArray base configuration configurationLength.toNat =
+      some configurationBytes)
+    (ha : riscv64ReadByteArray base array arrayLength.toNat = some arrayBytes) :
+    crepRuntimeExtCallValues riscv64ExtCallCallFfiHandler
+        (riscv64CrepRuntimeTarget base) function
+        configuration configurationLength array arrayLength =
+      (match callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+       | .returned ffi bytes =>
+           (.normal, riscv64WriteState { base with ffi := ffi } array bytes)
+       | .final event => (.finalFfi event, riscv64CrepRuntimeTarget base)) := by
+  cases hres : callFfi base.ffi (.extCall function) configurationBytes arrayBytes with
+  | returned ffi bytes =>
+      exact crepRuntimeExtCallValues_target_returned base function
+        configuration configurationLength array arrayLength configurationBytes
+        arrayBytes hc ha ffi bytes (by
+          rw [riscv64ExtCallCallFfiHandler_extCall, hres])
+  | final event =>
+      exact crepRuntimeExtCallValues_target_final base function
+        configuration configurationLength array arrayLength configurationBytes
+        arrayBytes hc ha event (by
+          rw [riscv64ExtCallCallFfiHandler_extCall, hres])
 
 end Flapjack

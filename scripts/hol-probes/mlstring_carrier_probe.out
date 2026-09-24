@@ -1,0 +1,8 @@
+ml_strlen=3
+ml_ord0=0
+ml_ord255=255
+ml_chr_ord=T
+ml_explode_len=2
+ml_implode_explode=T
+ml_explode_implode=T
+ml_concat_len=3

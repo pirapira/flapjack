@@ -5523,6 +5523,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_rFieldInnerIH_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args list lifting for RField arguments with arbitrary inner expressions, using the source result and explicit compile_exp_val_rel-shaped inner IH; only RField arguments are covered, not the full expression theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_rField_eval_flatten_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only case composition with the inner compile_exp_val_rel IH, carrying state_rel/code_rel/locals_rel, source evaluation, a localised-expression condition, compiled tuple, and IH shape facts; the enclosing expression induction and full theorem remain open."
@@ -5966,6 +5974,14 @@
     "lean_name": "not_crepInlineCodeInlRel_of_target_none",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only refutation rule for the finite-map code_inl_rel relation; no HOL original."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "evaluate_replicate_const",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "evaluateReplicateConst",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged: only a Flapjack word_lab core analogue. evalCrepRuntimeExpsWordLab recurses through the bare evalCrepRuntimeExp (returns bare alpha) and its op/crepOp cases delegate to the arbitrary runtime memoryModel hooks, whereas HOL crepSem$eval is the fixed evaluator returning word_lab. Not kernel-checked equal to crepSem$eval, so no @[hol] tag; faithful production evaluator/projection tracked by bead flapjack-pxn.18.4.3.48.1."
   },
   {
     "hol_path": null,

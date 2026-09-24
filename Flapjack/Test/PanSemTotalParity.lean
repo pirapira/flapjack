@@ -2,7 +2,7 @@ import Flapjack.Pancake.Semantics.PanSem.Total
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
-# Parity for the HOL-shaped total `evaluate` base cases
+# Parity for the total PanSem clock-leaf evaluator
 
 The source oracles are `scripts/hol-probes/pan_sem_skip_e2e_probe.out`
 (`skip_result=NONE`, `skip_clock=5`, `skip_locals_preserved=SOME (ValWord 7w)`)
@@ -74,28 +74,28 @@ def tickZeroGuard : Bool :=
 /-- These check the total clauses directly. Their result is a `(result,state)`
     pair, with no evaluator `Option` or fuel layer. -/
 def totalSkipClauseGuard : Bool :=
-  match panSemEvaluateSkip (totalState 5) with
-  | (.normal, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  match panSemEvaluateClockLeaf .skip (totalState 5) with
+  | (none, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def totalBreakClauseGuard : Bool :=
-  match panSemEvaluateBreak (totalState 5) with
-  | (.broke, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  match panSemEvaluateClockLeaf .break (totalState 5) with
+  | (some .break, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def totalContinueClauseGuard : Bool :=
-  match panSemEvaluateContinue (totalState 5) with
-  | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  match panSemEvaluateClockLeaf .continue (totalState 5) with
+  | (some .continue, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def totalTickClauseGuard : Bool :=
-  match panSemEvaluateTick (totalState 5) with
-  | (.normal, state) => state.clock == 4 && isWordOption 7 (state.locals "x")
+  match panSemEvaluateClockLeaf .tick (totalState 5) with
+  | (none, state) => state.clock == 4 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def totalTickZeroClauseGuard : Bool :=
-  match panSemEvaluateTick (totalState 0) with
-  | (.timeout, state) => state.clock == 0 && (state.locals "x").isNone
+  match panSemEvaluateClockLeaf .tick (totalState 0) with
+  | (some .timeOut, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
 /-- The compositional HOL `Seq` step applied to base-case first-command results
@@ -180,6 +180,31 @@ def totalGuard : Bool :=
     assignFreshGuard && assignMissingGuard
 
 #guard totalGuard
+
+example :
+    panSemEvaluateClockLeaf .skip (totalState 5) =
+      (none, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .break (totalState 5) =
+      (some .break, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .continue (totalState 5) =
+      (some .continue, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .tick (totalState 0) =
+      (some .timeOut, { totalState 0 with locals := fun _ => none }) := by
+  simp [panSemEvaluateClockLeaf, totalState]
+
+example :
+    panSemEvaluateClockLeaf .tick (totalState 5) =
+      (none, { totalState 5 with clock := 4 }) := by
+  simp [panSemEvaluateClockLeaf, totalState]
 
 example :
     (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive

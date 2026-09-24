@@ -1,0 +1,5 @@
+storebyte_offset9_result=NONE
+storebyte_offset9_mem8=Word 0x112233445566AA88w
+storebyte_offset8_mem8=Word 0x11223344556677AAw
+storebyte_outside_domain_result=SOME Error
+storebyte_outside_domain_mem8=Word 0x1122334455667788w

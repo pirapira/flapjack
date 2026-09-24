@@ -1,0 +1,5 @@
+w2w_highbits=0x11223344w
+store32_highbits_result=NONE
+store32_highbits_mem8=Word 0x1122334411223344w
+store32_lowbits_mem8=Word 0x1122334411223344w
+store32_unaligned_result=SOME Error

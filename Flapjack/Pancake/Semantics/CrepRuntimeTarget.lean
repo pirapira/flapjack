@@ -1719,6 +1719,44 @@ theorem panRiscVGetByte_eight_eq_holGetByte64 (address value : RiscV.Word 64) :
     rw [show (256 : Nat) = 2 ^ 8 by decide, Nat.pow_mul]
   rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, hpow, Nat.shiftRight_eq_div_pow]
 
+/-- Arithmetic core of the HOL `w2w` truncation relation: extracting a byte at
+byte offset `k ≤ 24` does not see the high 32 bits. -/
+theorem nat_shiftRight_mod_low32 (x k : Nat) (hk : k ≤ 24) :
+    (x >>> k) % 256 = ((x % 2^32) >>> k) % 256 := by
+  rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow]
+  rw [← Nat.mod_mul_right_div_self x (2^k) 256,
+      ← Nat.mod_mul_right_div_self (x % 2^32) (2^k) 256]
+  have hdvd : 2^k * 256 ∣ 2^32 := by
+    have h : 2^k * 256 = 2^(k+8) := by rw [show (256 : Nat) = 2^8 by decide, ← Nat.pow_add]
+    rw [h]
+    exact ⟨2^(32-(k+8)), by rw [← Nat.pow_add]; congr 1; omega⟩
+  rw [Nat.mod_mod_of_dvd x hdvd]
+
+/-- HOL `w2w` truncation of a `Word 64` to a `Word 32`: only the low 32 bits are
+kept, matching the `hw : word32` argument of HOL `panSemScript.sml`
+`mem_store_32_def`. -/
+def holW2w32_64 (value : RiscV.Word 64) : BitVec 32 :=
+  BitVec.ofNat 32 (value.toNat % 2^32)
+
+/-- HOL `w2w` commutation: at a byte offset within the low half (indices 0..3),
+HOL `get_byte` does not distinguish a `Word 64` from its `w2w` truncation to
+`Word 32`. -/
+theorem holGetByte64_low32_eq (value index : RiscV.Word 64)
+    (hindex : index.toNat % 8 < 4) :
+    holGetByte64 index value false =
+      holGetByte64 index (BitVec.ofNat 64 (value.toNat % 2^32)) false := by
+  have hbyte : (value.toNat >>> holByteIndex64 index false) % 256 =
+      ((BitVec.ofNat 64 (value.toNat % 2^32)).toNat >>>
+        holByteIndex64 index false) % 256 := by
+    simp only [holByteIndex64, Bool.false_eq_true, ↓reduceIte]
+    have hk : 8 * (index.toNat % 8) ≤ 24 := by omega
+    have hval : (BitVec.ofNat 64 (value.toNat % 2^32)).toNat = value.toNat % 2^32 := by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    rw [hval]
+    exact nat_shiftRight_mod_low32 value.toNat (8 * (index.toNat % 8)) hk
+  simp only [holGetByte64]
+  rw [hbyte]
+
 theorem panRiscVReadByte_eight_eq_holMemLoadByte64
     (domain : PanMemoryDomain (RiscV.Word 64))
     (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
@@ -2575,6 +2613,158 @@ theorem crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches
     rw [hset]
     simp only [Option.pure_def, Option.map_some]
   · simp [hd]
+
+/-- RV64-lifted counterpart of HOL `panSemScript.sml` `mem_store_32_def`.  HOL
+`mem_store_32` takes a `word32` value; this definition takes an RV64 word and
+performs the same four-byte replacement through the low 32 bits (`w2w`, modelled
+by `holW2w32_64`), so it is not the exact HOL signature.  The relation between
+the two is `holGetByte64_low32_eq` (byte indices 0..3 commute with the
+truncation) and `holMemStore32_64_high_bits_ignored` (the high RV64 bits do not
+affect the resulting cell). -/
+def holMemStore32_64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (bigEndian : Bool) (address value : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  if holAligned32_64 address then
+    let alignedAddress := holByteAlign64 address
+    if domain alignedAddress then
+      let cell := panTheWord (memory alignedAddress)
+      let cell0 := holSetByte64 address (holGetByte64 0 value bigEndian) cell bigEndian
+      let cell1 := holSetByte64 (address + 1) (holGetByte64 1 value bigEndian) cell0 bigEndian
+      let cell2 := holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value bigEndian) cell1 bigEndian
+      let cell3 := holSetByte64 (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value bigEndian) cell2 bigEndian
+      some (updateCrepRuntimeMemory memory alignedAddress (.word cell3))
+    else none
+  else none
+
+def CrepMemoryModelStore32MatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address _value cell : RiscV.Word 64),
+    model.aligned 4 address = holAligned32_64 address ∧
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+        holGetByte64 byteAddress byteValue false) ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+        holSetByte64 byteAddress byteValue cell false)
+
+theorem crepMemoryModelStore32_aligned_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.aligned 4 address = holAligned32_64 address :=
+  (hmodel address value cell).1
+
+theorem crepMemoryModelStore32_byteAlign_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address value cell).2.1
+
+theorem crepMemoryModelStore32_getByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+      holGetByte64 byteAddress byteValue false :=
+  (hmodel address value cell).2.2.1 byteAddress byteValue
+
+theorem crepMemoryModelStore32_setByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+      holSetByte64 byteAddress byteValue cell false :=
+  (hmodel address value cell).2.2.2 byteAddress byteValue
+
+theorem riscv64CrepRuntimeTarget_store32_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelStore32MatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address _value cell =>
+    ⟨panRiscVAligned32_eq_holAligned32 address,
+      panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      fun byteAddress byteValue => panRiscVGetByte_eight_eq_holGetByte64 byteAddress byteValue,
+      fun byteAddress byteValue => panRiscVSetByte_eight_eq_holSetByte64 byteAddress byteValue cell⟩
+
+theorem crepRuntimeStore32_eq_holMemStore32_64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      (holMemStore32_64 base.memaddrs base.memory false address value).map
+        (fun memory => { base with memory := memory }) := by
+  have haligned := crepMemoryModelStore32_aligned_of_matches hmodel address value 0
+  have halign := crepMemoryModelStore32_byteAlign_of_matches hmodel address value 0
+  simp only [crepRuntimeStore32, holMemStore32_64, hbytes, hbig]
+  rw [haligned]
+  by_cases ha : holAligned32_64 address = true
+  · simp only [ha, if_true]
+    rw [halign]
+    by_cases hd : base.memaddrs (holByteAlign64 address) = true
+    · simp only [hd, if_true]
+      have hget0 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 0 value
+      have hget1 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 1 value
+      have hget2 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1) value
+      have hget3 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1 + 1) value
+      rw [hget0, hget1, hget2, hget3]
+      rw [crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (panTheWord (base.memory (holByteAlign64 address))) address
+            (holGetByte64 0 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 address (holGetByte64 0 value false)
+              (panTheWord (base.memory (holByteAlign64 address))) false)
+            (address + 1) (holGetByte64 1 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1) (holGetByte64 1 value false)
+              (holSetByte64 address (holGetByte64 0 value false)
+                (panTheWord (base.memory (holByteAlign64 address))) false) false)
+            (address + 1 + 1) (holGetByte64 (1 + 1) value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value false)
+              (holSetByte64 (address + 1) (holGetByte64 1 value false)
+                (holSetByte64 address (holGetByte64 0 value false)
+                  (panTheWord (base.memory (holByteAlign64 address))) false) false) false)
+            (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value false)]
+      simp only [Option.pure_def, Option.map_some]
+    · simp [hd]
+  · simp [ha]
+
+/-- HOL `mem_store_32_def` takes `hw : word32` and stores only the low 32 bits of
+the RV64 value (via `w2w`).  In little-endian mode the stored bytes come from
+byte offsets 0..3, so the 64-bit reconstruction used by production is unchanged
+when the high 32 bits are altered. -/
+theorem holMemStore32_64_high_bits_ignored
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    holMemStore32_64 domain memory false address value =
+      holMemStore32_64 domain memory false address
+        (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  unfold holMemStore32_64
+  rw [holGetByte64_low32_eq value 0 (by decide),
+      holGetByte64_low32_eq value 1 (by decide),
+      holGetByte64_low32_eq value (1 + 1) (by decide),
+      holGetByte64_low32_eq value (1 + 1 + 1) (by decide)]
+
+/-- The production RV64 `Store32` at the target depends only on the low 32 bits
+of the stored value, matching HOL `mem_store_32`'s up-front `w2w` truncation. -/
+theorem crepRuntimeStore32_low32_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      crepRuntimeStore32 base address (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  rw [crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address value,
+      crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address
+        (BitVec.ofNat 64 (value.toNat % 2^32)),
+      holMemStore32_64_high_bits_ignored base.memaddrs base.memory address value]
 
 /-- The production word store is HOL `mem_store` for any model: no memory-model
 hook is involved. -/

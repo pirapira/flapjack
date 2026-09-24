@@ -10310,9 +10310,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hsourceExceptionShape : ∃ shape,
       source.exceptionShapes sourceException = some shape ∧
       panShapeMatches (panValueShape source.structs (.word value)) shape = true)
-    (hsourcePayload : panValuePayloadWithinLimit source.structs (.word value) = true)
-    (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
-      (fun _ => none) .local handlerVariable (.word value) = true)
     (hsourceHandlerBodyRun : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel
@@ -10487,6 +10484,24 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
     localsRel context (panSemCodeStateAfter source sourceResult).locals
         handlerResult.2.locals := by
+  have hsourcePayload : panValuePayloadWithinLimit source.structs (.word value) = true := by
+    exact panValuePayloadWithinLimit_word source.structs value
+  have hsourceHandlerLookup : source.locals handlerVariableTarget = some old := by
+    simpa [FLOOKUP] using hsource
+  have hsourceHandlerCallLookup : source.locals handlerVariable = some old := by
+    simpa [hsourceHandlerVariable] using hsourceHandlerLookup
+  obtain ⟨names, words, hsourceVariableShape, _hsourceWords, _hsourceFlatten,
+      _hsourceShapeWf⟩ := hlocals.2.2 handlerVariableTarget old hsource
+  have hsourceVariableShapeEq : panValueShape [] old = Shape.one := by
+    have hpair : (panValueShape [] old, names) = (Shape.one, [slot]) :=
+      Option.some.inj (hsourceVariableShape.symm.trans hvariable)
+    exact congrArg Prod.fst hpair
+  have hsourceStructs := stateRel_structs source caller hstate
+  have hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
+      (fun _ => none) .local handlerVariable (.word value) = true := by
+    unfold panValueAssignmentValid
+    rw [hsourceStructs, hsourceHandlerCallLookup]
+    simp [panValueShape, panShapeMatches, hsourceVariableShapeEq]
   have hsourceArguments : evalPanSemStateExps source sourceExpressions = some arguments := by
     simpa [hsourceExpressions] using hsourceArgs
   have hsourceRun := panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState

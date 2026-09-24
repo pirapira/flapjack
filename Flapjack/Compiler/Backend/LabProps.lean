@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.LabLang
+import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Backend.StackToLab
@@ -60,6 +61,34 @@ def allEncOkPre {Asm Memop Addr Cmp RegImm MlString Word : Type}
     (sections : List (Section (Line (AsmOrCbw Asm Memop Addr)
       (AsmWithLab Cmp RegImm MlString) Word))) : Bool :=
   sections.all (secOkPre checks)
+
+/-- Executable Boolean counterpart of HOL `sec_ends_with_label`. The tagged
+predicate below has HOL's proposition-valued statement shape. -/
+def secEndsWithLabel {AsmOrCbw AsmWithLab Word : Type}
+    (sec : Section (Line AsmOrCbw AsmWithLab Word)) : Bool :=
+  match sec.lines.reverse with
+  | [] => false
+  | line :: _ => LabSem.isLabel line
+
+/-- HOL `labProps$sec_ends_with_label_def` (`labPropsScript.sml:81`):
+`sec_ends_with_label (Section _ ls) ⇔ ¬NULL ls ∧ is_Label (LAST ls)`. The
+reverse-head rendering has the same nonempty/final-line cases and returns a
+proposition, as HOL's predicate does. -/
+@[hol "cakeml/compiler/backend/semantics/labPropsScript.sml" "sec_ends_with_label_def"]
+def secEndsWithLabelHOL {AsmOrCbw AsmWithLab Word : Type}
+    (sec : Section (Line AsmOrCbw AsmWithLab Word)) : Prop :=
+  match sec.lines.reverse with
+  | [] => False
+  | line :: _ => LabSem.isLabel line = true
+
+/-- The executable Boolean check and HOL-shaped predicate agree. -/
+theorem secEndsWithLabelHOL_iff_bool {AsmOrCbw AsmWithLab Word : Type}
+    (sec : Section (Line AsmOrCbw AsmWithLab Word)) :
+    secEndsWithLabelHOL sec ↔ secEndsWithLabel sec = true := by
+  unfold secEndsWithLabelHOL secEndsWithLabel
+  cases sec.lines.reverse with
+  | nil => simp
+  | cons line rest => simp
 
 /-! Structural lemmas about the section/encoding predicates (needed by
 `compile_all_enc_ok_pre`). -/
@@ -1064,5 +1093,57 @@ theorem compile_all_enc_ok_pre_app (config : Flapjack.Compiler.Encoders.Asm.AsmC
     rfl
 
 end FlattenLineOkPre
+
+/-! ## `sec_ends_with_label` and the `prog_to_section` label invariant
+
+HOL `labProps$sec_ends_with_label_def` plus the proof-script corollary
+`stack_to_labProofScript.sml:3620` `EVERY_sec_ends_with_label_MAP_prog_to_section`.
+The corollary is stated as an untagged Flapjack analogue because `progToSection`
+is parameterised by `ops : FlattenOps ...`, whereas HOL `prog_to_section` uses the
+fixed global `flatten` (the same representation gap recorded for the app-list
+bridges). -/
+section SecEndsWithLabel
+
+/-- A section whose lines are an arbitrary prefix followed by a `Label` ends with
+a label. Structural core of `EVERY_sec_ends_with_label_MAP_prog_to_section`,
+independent of the `FlattenOps` parameterisation. -/
+theorem secEndsWithLabel_append_label {AsmOrCbw AsmWithLab Word : Type}
+    (lines : List (Line AsmOrCbw AsmWithLab Word)) (sectionId label length : Nat) :
+    secEndsWithLabel
+        ({ sectionId := sectionId
+           lines := lines ++ [.label sectionId label length] } :
+          Section (Line AsmOrCbw AsmWithLab Word)) = true := by
+  simp [secEndsWithLabel, LabSem.isLabel]
+
+/-- `progToSection` output ends with a label. Untagged analogue of HOL
+`EVERY_sec_ends_with_label_MAP_prog_to_section` (`stack_to_labProofScript.sml:3620`). -/
+theorem secEndsWithLabel_progToSection
+    {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : StackToLab.FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (sectionId : Nat)
+    (program : StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    secEndsWithLabel
+        (StackToLab.progToSection ops zero sectionId program) = true := by
+  simp only [StackToLab.progToSection]
+  exact secEndsWithLabel_append_label _ sectionId _ _
+
+/-- HOL `EVERY_sec_ends_with_label_MAP_prog_to_section`
+(`stack_to_labProofScript.sml:3620`): every section produced for a program list
+ends with a label. Untagged because `progToSection` carries the `FlattenOps`
+parameter absent from HOL's fixed global `flatten`. -/
+theorem everySecEndsWithLabel_map_progToSection
+    {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : StackToLab.FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (programs : List (Nat × StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString)) :
+    (programs.map
+        (fun entry => StackToLab.progToSection ops zero entry.1 entry.2)).all
+      secEndsWithLabel = true := by
+  rw [List.all_eq_true]
+  intro sec hmem
+  simp only [List.mem_map] at hmem
+  obtain ⟨entry, _hentry, rfl⟩ := hmem
+  exact secEndsWithLabel_progToSection ops zero entry.1 entry.2
+
+end SecEndsWithLabel
 
 end Flapjack.Compiler.Backend.LabProps

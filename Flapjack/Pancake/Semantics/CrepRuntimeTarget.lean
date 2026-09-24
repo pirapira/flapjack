@@ -504,6 +504,44 @@ theorem evalCrepRuntimeExp_shift_target
             (RiscV.panRiscVShift operator leftValue)) := by
   simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
 
+/-! ## The RV64 `Op` evaluator case
+
+HOL `crepSem$eval` evaluates `Op op args` by evaluating every argument and then
+applying `word_op` (`cakeml/pancake/semantics/crepSemScript.sml:90-137` and
+`cakeml/compiler/backend/wordLangScript.sml:302-311`).  For constant operands the
+argument list evaluates to exactly those words, so the production RV64 evaluator
+returns the HOL folded word.  Untagged until the whole evaluator correspondence
+is reviewed; direct oracle `scripts/hol-probes/crep_eval_op_rv64_probe.out`
+(`eval_op_add_const=SOME (Word 7w)`, `eval_op_sub_const=SOME (Word 5w)`,
+`eval_op_and_const=SOME (Word 48w)`, `eval_op_add_empty=SOME (Word 0w)`,
+`eval_op_sub_arity=NONE`). -/
+theorem evalCrepRuntimeExp_op_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.op operator (values.map CrepExp.const)) =
+      wordOpHOL operator values := by
+  have hmapM : List.mapM (fun x : RiscV.Word 64 => some x) values = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih => simp [List.mapM_cons, ih]
+  simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel,
+    RiscV.panRiscVWordOp, wordOpHOL, Function.comp_def, hmapM]
+
+theorem evalCrepRuntimeExpWordLab_op_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.op operator (values.map CrepExp.const)) =
+      (wordOpHOL operator values).map PanWordLab.word := by
+  have hmapM : List.mapM (fun x : RiscV.Word 64 => some x) values = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih => simp [List.mapM_cons, ih]
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp,
+    wordOpHOL, Function.comp_def, hmapM]
+
 /-! ## External-call byte-array reads
 
 HOL `crepSem$ExtCall` (and `panSem`) read the configuration and array arguments

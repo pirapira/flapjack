@@ -28,21 +28,33 @@ import Flapjack.RiscV.CorrectnessEncoding
 
 open Lean Elab Command Flapjack
 
-/-! Export kernel-visible declaration types, not source-text approximations.
-Binder names and metadata do not affect the proposition and are removed before
-serializing the elaborated expression. The pinned Lean toolchain determines the
-format of the structural `repr` consumed by `check_hol_type_hashes.py`. -/
-private partial def canonicalType : Expr → Expr
+/-! Export kernel-visible declaration types and definition bodies, not
+source-text approximations. Binder names and metadata do not affect the
+proposition and are removed before serializing the elaborated expression. The
+pinned Lean toolchain determines the format of the structural `repr` consumed
+by `check_hol_type_hashes.py`.
+
+Theorem proof terms are deliberately excluded: they may be refactored without
+changing the reviewed statement. Definition and `opaque` bodies are included
+because a tagged definition body can drift without changing its elaborated
+type. -/
+private partial def canonicalExpr : Expr → Expr
   | .forallE _ type body info =>
-      .forallE `_ (canonicalType type) (canonicalType body) info
+      .forallE `_ (canonicalExpr type) (canonicalExpr body) info
   | .lam _ type body info =>
-      .lam `_ (canonicalType type) (canonicalType body) info
+      .lam `_ (canonicalExpr type) (canonicalExpr body) info
   | .letE _ type value body nondep =>
-      .letE `_ (canonicalType type) (canonicalType value) (canonicalType body) nondep
-  | .app fn arg => .app (canonicalType fn) (canonicalType arg)
-  | .proj name index body => .proj name index (canonicalType body)
-  | .mdata _ body => canonicalType body
+      .letE `_ (canonicalExpr type) (canonicalExpr value) (canonicalExpr body) nondep
+  | .app fn arg => .app (canonicalExpr fn) (canonicalExpr arg)
+  | .proj name index body => .proj name index (canonicalExpr body)
+  | .mdata _ body => canonicalExpr body
   | expr => expr
+
+/-- The body of a tagged definition or `opaque` declaration, if present. -/
+private def definitionBody? : ConstantInfo → Option Expr
+  | .defnInfo value => some value.value
+  | .opaqueInfo value => some value.value
+  | _ => none
 
 elab "#emit_hol_type_hashes" : command => do
   let env ← getEnv
@@ -50,11 +62,15 @@ elab "#emit_hol_type_hashes" : command => do
     match env.find? name with
     | none => throwError "missing declaration {name}"
     | some info =>
-        let payload := Json.mkObj [
+        let mut fields : List (String × Json) := [
           ("lean_name", toJson name.toString),
           ("hol_path", toJson ref.path),
           ("hol_name", toJson ref.name),
-          ("type_expr", toJson (reprStr (canonicalType info.type)))]
-        liftIO <| IO.println payload.compress
+          ("type_expr", toJson (reprStr (canonicalExpr info.type)))]
+        match definitionBody? info with
+        | some body =>
+            fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]
+        | none => pure ()
+        liftIO <| IO.println (Json.mkObj fields).compress
 
 #emit_hol_type_hashes

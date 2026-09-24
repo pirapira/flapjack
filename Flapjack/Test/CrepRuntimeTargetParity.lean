@@ -594,6 +594,104 @@ def opMatchesGuard : Bool :=
 #guard opMatchesGuard
 #eval opMatchesGuard
 
+/-- A memory model whose `compare` hook is literally HOL `word_cmp` at 64 bits,
+    but which is otherwise not the RISC-V target model. -/
+def holCmpModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with compare := fun operator left right => evalPanCmp operator left right }
+
+def holCmpBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memoryModel := holCmpModel }
+
+theorem holCmpBaseState_matches :
+    CrepMemoryModelCmpMatchesHOL64 holCmpBaseState.memoryModel :=
+  fun _ _ _ => rfl
+
+example : CrepMemoryModelCmpMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_cmp_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holCmpBaseState
+        (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3)) =
+      some (1 : RiscV.Word 64) :=
+  evalCrepRuntimeExp_cmp_const_of_matches holCmpBaseState holCmpBaseState_matches .equal 3 3
+
+/-- Generic `Cmp` equation supports arbitrary (nested) child expressions. -/
+example :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holCmpBaseState)
+        (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3))).map PanWordLab.word =
+      holCrepEval64 holCmpBaseState (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3)) :=
+  evalCrepRuntimeExp_cmp_map_eq_holCrepEval64 holCmpBaseState .equal (.const 3) (.const 3)
+
+/-- The production evaluator over an arbitrary matching model agrees with HOL
+    `word_cmp` on comparisons, including a nested operand. -/
+def cmpMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holCmpBaseState
+      (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3)) ==
+    some (1 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holCmpBaseState
+        (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 4)) ==
+      some (0 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holCmpBaseState
+        (.cmp .lower (.const (3 : RiscV.Word 64)) (.const 4)) ==
+      some (1 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holCmpBaseState
+        (.cmp .test (.const (0 : RiscV.Word 64)) (.const (0xF0 : RiscV.Word 64))) ==
+      some (1 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holCmpBaseState
+        (.cmp .equal (.op .add ([(1 : RiscV.Word 64), 2].map CrepExp.const)) (.const 3)) ==
+      some (1 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExpWordLab holCmpBaseState
+        (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3)) ==
+      some (.word (1 : RiscV.Word 64))) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holCmpBaseState)
+        (.cmp .equal (.const (3 : RiscV.Word 64)) (.const 3)) ==
+      some (1 : RiscV.Word 64))
+
+#guard cmpMatchesGuard
+#eval cmpMatchesGuard
+
+/-- A memory model whose `byteAlign`/`getByte` hooks are literally the HOL
+    functions at 64 bits, but which is otherwise not the RISC-V target model. -/
+def holLoadByteModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with
+    byteAlign := fun _ address => holByteAlign64 address,
+    getByte := fun _ address value _ => holGetByte64 address value false }
+
+def holLoadByteBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { loadByteBaseState with memoryModel := holLoadByteModel }
+
+theorem holLoadByteBaseState_matches :
+    CrepMemoryModelLoadByteMatchesHOL64 holLoadByteBaseState.memoryModel :=
+  fun _ _ => ⟨rfl, rfl⟩
+
+example : CrepMemoryModelLoadByteMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_loadByte_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holLoadByteBaseState (.loadByte (.const (8 : RiscV.Word 64))) =
+      holMemLoadByte64 holLoadByteBaseState.memaddrs
+        (crepRuntimeMemoryView holLoadByteBaseState.memory) false 8 :=
+  evalCrepRuntimeExp_loadByte_const_of_matches holLoadByteBaseState
+    holLoadByteBaseState_matches rfl rfl 8
+
+/-- The production evaluator over an arbitrary matching byte model agrees with
+    HOL `mem_load_byte` on constant and recursively evaluated addresses. -/
+def loadByteMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holLoadByteBaseState
+      (.loadByte (.const (8 : RiscV.Word 64))) == some (136 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holLoadByteBaseState
+        (.loadByte (.const (9 : RiscV.Word 64))) == some (119 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holLoadByteBaseState
+        (.loadByte (.const (16 : RiscV.Word 64))) == none) &&
+    (evalCrepRuntimeExpWordLab holLoadByteBaseState
+        (.loadByte (.const (8 : RiscV.Word 64))) == some (.word (136 : RiscV.Word 64))) &&
+    (evalCrepRuntimeExp holLoadByteBaseState
+        (.loadByte (.op .add ([(5 : RiscV.Word 64), 3].map CrepExp.const))) ==
+      some (136 : RiscV.Word 64))
+
+#guard loadByteMatchesGuard
+#eval loadByteMatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -639,8 +737,17 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Op hook matches HOL word_op over arbitrary model and nested operands"
   else
     IO.println "FAIL crep Op hook matches HOL word_op over arbitrary model and nested operands"
+  if cmpMatchesGuard then
+    IO.println "PASS crep Cmp hook matches HOL word_cmp over arbitrary model and nested operands"
+  else
+    IO.println "FAIL crep Cmp hook matches HOL word_cmp over arbitrary model and nested operands"
+  if loadByteMatchesGuard then
+    IO.println "PASS crep LoadByte hook matches HOL mem_load_byte over arbitrary model and nested operands"
+  else
+    IO.println "FAIL crep LoadByte hook matches HOL mem_load_byte over arbitrary model and nested operands"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
-    crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard)
+    crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard && cmpMatchesGuard &&
+    loadByteMatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

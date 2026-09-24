@@ -2274,6 +2274,8 @@ theorem crepRuntimeExpHdlTwoWords
     rw [evalCrepRuntimeProg]
     rw [hload0]
     rw [hslot0]
+    simp only [setCrepRuntimeLocal_eq_update]
+    rfl
   have hslot1Value : stateAfterFirst.locals slot1 = some old1 := by
     simp [stateAfterFirst, updateCrepRuntimeLocal, hslotsNe, hslot1]
   have hload1 :
@@ -2288,6 +2290,8 @@ theorem crepRuntimeExpHdlTwoWords
     rw [evalCrepRuntimeProg]
     rw [hload1]
     rw [hslot1Value]
+    simp only [setCrepRuntimeLocal_eq_update]
+    rfl
   have hsecond :
       evalCrepRuntimeProg handler primitive 3 stateAfterFirst
         (.seq (.assign slot1 (.loadGlob (1 : BitVec 5))) .skip) =
@@ -6622,7 +6626,8 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
       targetState (compileCodeRelProg context program) =
         some (.returned [value], targetPost) := by
     rw [hcompiledCall]
-    simp only [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp]
+    simp only [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
+      setCrepRuntimeLocal_eq_update]
     rw [htargetCall']
     simp [targetPost, targetCaller, calleeState, decCrepClock,
       crepRuntimeCallerState, restoreCrepRuntimeStep, clearCrepRuntimeLocals,

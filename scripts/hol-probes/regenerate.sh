@@ -718,6 +718,9 @@ run_probe pan_sem_is_valid_value_probeScript.sml pan_sem_is_valid_value_probe.ou
 run_probe pan_sem_write_bytearray_probeScript.sml pan_sem_write_bytearray_probe.out \
   write_empty write_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_mem_store_byte_probeScript.sml pan_sem_mem_store_byte_probe.out \
+  store_byte_hit_some write_bytearray_out_of_domain \
+  "$cake_dir/pancake/semantics/panSemScript.sml" "$cake_dir/pancake/semantics"
 run_probe pan_sem_evaluate_fixed_load_probeScript.sml \
   pan_sem_evaluate_fixed_load_probe.out \
   eval_byte_hit eval_load32_alignment_failure \
@@ -1323,3 +1326,11 @@ run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_prob
   is_label_label sec_empty \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The stack_names probe observes the pure register-renaming transformation
+# (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
+# compile / names_ok) against a small renaming map.
+run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
+  ri_reg names_ok_dup \
+  "$cake_dir/compiler/backend/stack_namesScript.sml" \
+  "$cake_dir/compiler/backend"

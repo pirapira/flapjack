@@ -6555,17 +6555,17 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "set_globals_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "setCrepHolGlobals",
+    "lean_name": "setCrepHolGlobalsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61: setCrepHolGlobals gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE, co-located with the production state in CrepSem.lean. Production setCrepRuntimeGlobals routes its globals update through it via CrepRuntimeState.toHolState while preserving the three config fields (setCrepRuntimeGlobals_eq_FUPDATE, setCrepRuntimeGlobals_toHolState, CrepHolState.toHolState_toRuntime). Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61 at the word-length carrier 'a := BitVec width: setCrepHolGlobalsW gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. Generic-alpha setCrepHolGlobals stays untagged as production's implementation; kernel-checked bridge setCrepHolGlobalsW_eq_setCrepHolGlobals and production routing setCrepRuntimeGlobals -> setCrepHolGlobals via CrepRuntimeState.toHolState. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "FLOOKUP_set_globals",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "flookup_setCrepHolGlobals_locals",
+    "lean_name": "flookup_setCrepHolGlobals_localsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n, using tagged setCrepHolGlobals. The production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297 at 'a := BitVec width: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n using tagged setCrepHolGlobalsW; kernel-checked bridge flookup_setCrepHolGlobals_localsW_eq_generic. Generic-alpha flookup_setCrepHolGlobals_locals stays untagged as production's statement; the production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -8109,7 +8109,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopGlobalsRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209; unfolding of crepToLoopGlobalsRel to the same lookup implication, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209, which is an implication from globals_rel to the universally quantified lookup agreement, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopGlobalsRel_iff keeps the iff form; Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

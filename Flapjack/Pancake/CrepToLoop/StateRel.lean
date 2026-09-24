@@ -75,10 +75,20 @@ def crepToLoopGlobalsRel {width : Nat}
   ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value)
 
 /-- Exact port of HOL `globals_rel_intro`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:203-209`): the relation
-    unfolds to the same universally quantified implication. -/
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:203-209`), which is an
+    implication: assuming the relation, unpack the universally quantified
+    lookup agreement. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "globals_rel_intro"]
 theorem crepToLoopGlobalsRel_intro {width : Nat}
+    (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec width)))
+    (h : crepToLoopGlobalsRel sglobals tglobals) :
+    ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value) :=
+  fun address value hv => h address value hv
+
+/-- Untagged iff form of `crepToLoopGlobalsRel`, kept for rewriting/rewriting
+    the relation to its unfolded implication. -/
+theorem crepToLoopGlobalsRel_iff {width : Nat}
     (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
     (tglobals : BitVec 5 → Option (LoopValue (BitVec width))) :
     crepToLoopGlobalsRel sglobals tglobals ↔

@@ -262,14 +262,36 @@ theorem flookup_setCrepRuntimeGlobals_locals {α σ : Type}
     FLOOKUP (setCrepRuntimeGlobals gv w s).locals n = FLOOKUP s.locals n :=
   rfl
 
-/-- Exact HOL-shaped port of Cake `crepProps$FLOOKUP_set_globals`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:297`) over the 11-field
-    `CrepHolState`: `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
-    The globals update is the tagged `setCrepHolGlobals` (`set_globals_def`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+/-- Generic-`α` form of `crepProps$FLOOKUP_set_globals`, deliberately
+    UNTAGGED because HOL's statement is word-length indexed; the exact
+    width-indexed counterpart is `flookup_setCrepHolGlobals_localsW` below.
+    `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`
+    (crepPropsScript.sml:297). -/
 theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     (gv : BitVec 5) (w : PanWordLab α) (s : CrepHolState α σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobals gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
+
+/-- Exact width-indexed HOL-shaped port of Cake `crepProps$FLOOKUP_set_globals`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:297`) over the
+    word-length-indexed carrier `CrepHolState (BitVec width) σ` (HOL's
+    `'a crepSem$state` at `'a := BitVec width`):
+    `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
+    The globals update is the tagged width-indexed `setCrepHolGlobalsW`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
+    (gv : BitVec 5) (w : PanWordLab (BitVec width))
+    (s : CrepHolState (BitVec width) σ) (n : Nat) :
+    FLOOKUP (setCrepHolGlobalsW gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
+
+/-- Kernel-checked bridge: the width-indexed exact `FLOOKUP_set_globals`
+    counterpart agrees with the generic production statement at `BitVec width`. -/
+theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} {σ : Type}
+    (gv : BitVec 5) (w : PanWordLab (BitVec width))
+    (s : CrepHolState (BitVec width) σ) (n : Nat) :
+    FLOOKUP (setCrepHolGlobalsW gv w s).locals n =
+      FLOOKUP (setCrepHolGlobals gv w s).locals n :=
   rfl
 
 /-! Membership equations for `crepAssignedFreeVars`, exposing Cake's

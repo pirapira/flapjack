@@ -326,14 +326,23 @@ example (s : CrepHolState (BitVec 64) Unit) (t : LoopMachineState (BitVec 64) Un
     both datatypes use the single `word` constructor. -/
 example : wlabWloc (PanWordLab.word (7 : BitVec 64)) = LoopValue.word (7 : BitVec 64) := rfl
 
-/-- HOL `globals_rel_intro` (`crep_to_loopProofScript.sml:203-209`) unfolds to
-    the universally quantified lookup implication. -/
+/-- HOL `globals_rel_intro` (`crep_to_loopProofScript.sml:203-209`) is an
+    implication: from the relation, conclude the universally quantified lookup
+    agreement. -/
+example (sglobals : BitVec 5 → Option (PanWordLab (BitVec 64)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec 64)))
+    (h : crepToLoopGlobalsRel sglobals tglobals) :
+    ∀ address value, sglobals address = some value →
+        tglobals address = some (wlabWloc value) :=
+  crepToLoopGlobalsRel_intro sglobals tglobals h
+
+/-- Untagged iff form used for rewriting the relation to its unfolding. -/
 example (sglobals : BitVec 5 → Option (PanWordLab (BitVec 64)))
     (tglobals : BitVec 5 → Option (LoopValue (BitVec 64))) :
     crepToLoopGlobalsRel sglobals tglobals ↔
       ∀ address value, sglobals address = some value →
         tglobals address = some (wlabWloc value) :=
-  crepToLoopGlobalsRel_intro sglobals tglobals
+  crepToLoopGlobalsRel_iff sglobals tglobals
 
 /-- Concrete target global map for the `globals_rel` oracle row
     `globals_lookup_match=T` in `scripts/hol-probes/crep_to_loop_globals_rel_probe.out`. -/

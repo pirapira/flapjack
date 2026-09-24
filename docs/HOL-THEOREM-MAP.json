@@ -8693,7 +8693,7 @@
     "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
     "lean_name": "wRegWrite1",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite1_def` at word_to_stackScript.sml:40-43 - wRegWrite1 g r (k,f,f') = let r = r DIV 2 in if r < k then g r else Seq (g k) (StackStore k (f-1-(r-k))) - polymorphic in the word type 'a, so stated over the canonical shared-word carrier StackCarrier.ProgW with the instruction parameter InstW; HOL `'a` is arbitrary, so generic alpha is exact; emitted Seq/StackStore carry num fields only)"
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite1_def` at word_to_stackScript.sml:40-43 - wRegWrite1 g r (k,f,f') = let r = r DIV 2 in if r < k then g r else Seq (g k) (StackStore k (f-1-(r-k))) - `g : num -> stackLang$prog` returns a program directly, so the Lean parameter is `g : Nat -> ProgW alpha` and `g r`/`g k` are used unmodified (no `.inst` wrapper); polymorphic in the word type 'a, stated over the canonical shared-word carrier StackCarrier.ProgW; HOL `'a` is arbitrary, so generic alpha is exact; emitted Seq/StackStore carry num fields only)"
   },
   {
     "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
@@ -8701,7 +8701,7 @@
     "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
     "lean_name": "wRegWrite2",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite2_def` at word_to_stackScript.sml:46-49 - as wRegWrite1 biased to k+1; polymorphic in 'a, stated over StackCarrier.ProgW/InstW; generic alpha is exact since HOL 'a is arbitrary)"
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite2_def` at word_to_stackScript.sml:46-49 - as wRegWrite1 biased to k+1, with `g : num -> stackLang$prog` used unmodified (no `.inst` wrapper); polymorphic in 'a, stated over StackCarrier.ProgW; generic alpha is exact since HOL 'a is arbitrary)"
   },
   {
     "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",

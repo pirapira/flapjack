@@ -15,13 +15,14 @@ feed the Word-to-Stack `compile_semantics` theorem
 
 `wReg1`/`wReg2`/`format_var` touch only `num`/`bool`/`option`/sum/list with no
 word operation and no `dimindex (:'a)`, so their tags are unconditional.
-`wRegWrite1`/`wRegWrite2` emit `stackLang$prog` and are polymorphic in the word
-type `'a`; their exact statements are over the canonical single-word-parameter
-carrier `Flapjack.Compiler.Backend.StackCarrier.ProgW`. -/
+`wRegWrite1`/`wRegWrite2` take `g : num -> stackLang$prog` and return a
+`stackLang$prog`; they are polymorphic in the word type `'a`, and their exact
+statements are over the canonical single-word-parameter carrier
+`Flapjack.Compiler.Backend.StackCarrier.ProgW`. -/
 
 namespace Flapjack.Compiler.Backend.WordToStackRegFormat
 
-open Flapjack.Compiler.Backend.StackCarrier (ProgW InstW)
+open Flapjack.Compiler.Backend.StackCarrier (ProgW)
 
 /-- Exact port of HOL `wReg1_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:28-31`):
@@ -65,17 +66,18 @@ wRegWrite1 g r (k,f,f') =
     if r < k then g r else Seq (g k) (StackStore k (f-1 - (r - k)))
 ```
 
-    Emits the instruction produced by `g` at the assigned register, spilling the
+    Emits the program produced by `g` at the assigned register, spilling the
     frame variable with a `StackStore` when the register is above the live
     window.  HOL is polymorphic in the word type `'a` (the emitted `Seq`/
     `StackStore` carry `num` fields only); the exact statement is over the
-    canonical shared-word `ProgW` carrier. -/
+    canonical shared-word `ProgW` carrier, with `g : num -> stackLang$prog`
+    returning a program directly. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wRegWrite1_def"]
-def wRegWrite1 {α : Type} (g : Nat → InstW α)
+def wRegWrite1 {α : Type} (g : Nat → ProgW α)
     (r : Nat) (kf : Nat × Nat × Nat) : ProgW α :=
   let r := r / 2
-  if r < kf.1 then .inst (g r)
-  else .seq (.inst (g kf.1)) (.stackStore kf.1 (kf.2.1 - 1 - (r - kf.1)))
+  if r < kf.1 then g r
+  else .seq (g kf.1) (.stackStore kf.1 (kf.2.1 - 1 - (r - kf.1)))
 
 /-- Exact port of HOL `wRegWrite2_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:46-49`):
@@ -89,11 +91,11 @@ wRegWrite2 g r (k,f,f') =
     As `wRegWrite1` biased to the `k+1` frame slot, over the canonical
     shared-word `ProgW` carrier. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wRegWrite2_def"]
-def wRegWrite2 {α : Type} (g : Nat → InstW α)
+def wRegWrite2 {α : Type} (g : Nat → ProgW α)
     (r : Nat) (kf : Nat × Nat × Nat) : ProgW α :=
   let r := r / 2
-  if r < kf.1 then .inst (g r)
-  else .seq (.inst (g (kf.1 + 1))) (.stackStore (kf.1 + 1) (kf.2.1 - 1 - (r - kf.1)))
+  if r < kf.1 then g r
+  else .seq (g (kf.1 + 1)) (.stackStore (kf.1 + 1) (kf.2.1 - 1 - (r - kf.1)))
 
 /-- Exact port of HOL `format_var_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:78-80`):

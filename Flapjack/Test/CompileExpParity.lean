@@ -202,12 +202,16 @@ def runChecks : IO Bool := do
 example (context : PanToCrepHOLContext (BitVec 64)) (expression : Exp (BitVec 64)) :
     compileExpHOLW context expression = compileExpHOL context expression := rfl
 
-/-! Execution bridge (`flapjack-pxn.18.3.1.3.2`): the shipped RV64 path
-    `compileProgRiscV`/`compileProgHOL` executes the generic `compileExpHOL`,
-    which at the word carrier is the tagged `compile_exp_def` port
-    `compileExpHOLW` by `compileExpHOLW_eq_compileExpHOL`.  The rows below
-    re-check the direct HOL oracle (`scripts/hol-probes/compile_exp_probe.out`)
-    through `compileExpHOLW` at the `BitVec 64` carrier. -/
+/-! Bridge-only fixture (`flapjack-pxn.18.3.1.3.2`): the shipped RV64 path
+    `compileProgRiscV`/`compileProgHOL` still executes the generic
+    `compileExpHOL`, which at the word carrier is definitionally the tagged
+    `compile_exp_def` port `compileExpHOLW` by
+    `compileExpHOLW_eq_compileExpHOL`.  This is NOT textual routing: production
+    does not call the tagged definition, and the production-path rule is
+    therefore not met (full routing tracked by `flapjack-pxn.18.3.5.3.1.2`).
+    The rows below re-check the direct HOL oracle
+    (`scripts/hol-probes/compile_exp_probe.out`) through `compileExpHOLW` at the
+    `BitVec 64` carrier. -/
 def riscvContext : PanToCrepHOLContext (BitVec 64) :=
   { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
     funcs := FEMPTY

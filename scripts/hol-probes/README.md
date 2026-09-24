@@ -150,7 +150,15 @@ endiannesses, 8-bit/64-bit word instances, and the 24-bit cases
 `byte_align 5w = 4w`, little-endian `mem_load_byte ... {4w} F 5w = SOME 51w`,
 and big-endian `mem_load_byte ... {4w} T 5w = SOME 17w`. Those rows
 also include the width-24 32-bit load at address 4, whose `word32` result is
-`0x22113322`. They differ from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
+`0x22113322`. The added width-4 rows cover both endian branches at addresses 0
+and 1 with the nonzero four-bit word `0xB`. Little endian uses
+`address MOD 0`, so its index is the address: address 0 extracts `0xB`, while
+address 1 shifts past the word and extracts zero. Big endian uses natural
+subtraction `0 - 1 - (address MOD 0)`, which saturates to zero at both
+addresses, so both extract `0xB`. The accompanying `byte_index`/`get_byte`
+rows record the little-endian `1 MOD 0` formula directly. Matching Lean guards
+live in `Flapjack.Test.PanSemStateEvalParity`. They differ
+from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
 which misses the domain containing only address 4. RISC-V rounds by a multiple
 of three while the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The
 `holByteAlignedRiscVMemoryModel` overlay uses the source alignment formula and

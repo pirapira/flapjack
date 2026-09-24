@@ -1021,6 +1021,86 @@ theorem panSemEvaluateExactState_raise_error_of_invalid
     evalPanValueFfiProgSteps, panValueRaiseResult, evalPanValueExpCounted,
     PanSemExactState.toEvaluateState, heval, hinvalid]
 
+/-! Exact source `Call` error equations.  HOL evaluates `OPT_MMAP (eval s)
+    argexps` before looking up the callee, and rejects the call with
+    `(SOME Error, s)` with the unchanged caller state when an argument fails or
+    when the callee is not found.  These equations run the state-derived memory
+    access, so a memory-reading argument is gated by the source `memaddrs`; no
+    legacy whole-cell fallback is used. -/
+theorem panSemEvaluateExactState_call_error_of_arguments_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.call info function arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  have hle : 1 ≤ max (panSemProgFuel (Prog.call info function arguments))
+      (panSemFunctionFuel state.legacy.functions) := by
+    rw [panSemProgFuel]
+    exact Nat.le_trans (by omega) (Nat.le_max_left _ _)
+  obtain ⟨k, hk⟩ : ∃ k, state.legacy.clock +
+      max (panSemProgFuel (Prog.call info function arguments))
+        (panSemFunctionFuel state.legacy.functions) = k + 1 := by
+    cases h : state.legacy.clock +
+        max (panSemProgFuel (Prog.call info function arguments))
+          (panSemFunctionFuel state.legacy.functions) with
+    | zero => omega
+    | succ k => exact ⟨k, rfl⟩
+  rw [hk]
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, harguments]
+
+theorem panSemEvaluateExactState_call_error_of_target_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) (values : List (PanValue α))
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = some values)
+    (htarget : panValueCallTarget state.legacy.structs state.legacy.contracts
+      function state.legacy.functions values = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.call info function arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  have hle : 1 ≤ max (panSemProgFuel (Prog.call info function arguments))
+      (panSemFunctionFuel state.legacy.functions) := by
+    rw [panSemProgFuel]
+    exact Nat.le_trans (by omega) (Nat.le_max_left _ _)
+  obtain ⟨k, hk⟩ : ∃ k, state.legacy.clock +
+      max (panSemProgFuel (Prog.call info function arguments))
+        (panSemFunctionFuel state.legacy.functions) = k + 1 := by
+    cases h : state.legacy.clock +
+        max (panSemProgFuel (Prog.call info function arguments))
+          (panSemFunctionFuel state.legacy.functions) with
+    | zero => omega
+    | succ k => exact ⟨k, rfl⟩
+  rw [hk]
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, harguments, htarget]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

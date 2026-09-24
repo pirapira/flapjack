@@ -1,0 +1,165 @@
+import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Test.PanValueFfiSemantics
+
+/-!
+Direct regression for the exact source `PanSemExactState` `Call` error
+equations.  HOL evaluates the argument list with `OPT_MMAP (eval s) argexps`
+before the callee lookup, so a memory-reading argument is gated by the source
+`memaddrs`: an address outside the domain rejects the call with `SOME Error`
+over the unchanged state, even when the raw memory function holds a cell.  An
+unknown callee is likewise rejected.  The expected values are the original-HOL
+`EVAL` rows in `scripts/hol-probes/pan_sem_call_error_state_probe.out`:
+
+* `call_error_load_result=SOME Error`, `call_error_load_clock=5`,
+  `call_error_load_locals=SOME (ValWord 3w)`;
+* `call_error_domain_result=SOME Error`,
+  `call_error_domain_locals=SOME (ValWord 3w)`;
+* `call_error_missing_result=SOME Error`, `call_error_missing_clock=5`.
+
+This module is untagged infrastructure: the reduced `PanValueFfiClockResult`
+encoding is not literally HOL's `(result option # state)` type, so no `@[hol]`
+attribute is attached.
+-/
+
+namespace Flapjack.Test.PanSemCallErrorExactParity
+
+open Flapjack
+open Flapjack.RiscV
+
+private abbrev Word64 := Word 64
+
+/-- Source memory with a present word cell at address `8` and a zero fallback. -/
+private def exactMemory : Word64 → Option (PanValue Word64) :=
+  fun address =>
+    if address == 8 then some (.word (BitVec.ofNat 64 0x77)) else some (.word 0)
+
+private def exactDomain : Word64 → Bool :=
+  fun address => address == 8
+
+private def exactAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel panSemBitVec64WordModel exactDomain
+    (fun _ => false) false
+
+/-- Access whose `memaddrs`-style domain is empty, so every read misses. -/
+private def emptyAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel panSemBitVec64WordModel (fun _ => false)
+    (fun _ => false) false
+
+private def exactLegacy (clock : Nat) (locals : VarName → Option (PanValue Word64))
+    (memory : Word64 → Option (PanValue Word64))
+    (contracts : Option PanValueCallContracts) :
+    PanSemEvaluateState Word64 Unit :=
+  { structs := []
+    functions := []
+    locals := locals
+    globals := fun _ => none
+    memory := memory
+    ffi := statefulTestFfiState
+    clock := clock
+    baseAddress := 0
+    topAddress := 100
+    bytesInWord := 8
+    memoryAccess := none
+    contracts := contracts
+    memoryHandler := none }
+
+private def exactStateOfWith (access : PanValueMemoryAccess Word64)
+    (legacy : PanSemEvaluateState Word64 Unit) : PanSemExactState Word64 Unit :=
+  { legacy := legacy, memoryAccess := access }
+
+private def exactStateOf (legacy : PanSemEvaluateState Word64 Unit) :
+    PanSemExactState Word64 Unit :=
+  exactStateOfWith exactAccess legacy
+
+private def localsWithX : VarName → Option (PanValue Word64) :=
+  fun name => if name == "x" then some (.word 3) else none
+
+/-- State with a present memory cell at address `8` and local `x`. -/
+private def memoryState : PanSemExactState Word64 Unit :=
+  exactStateOf <| exactLegacy 5 localsWithX exactMemory none
+
+/-- State whose `memaddrs` domain is empty while the raw memory holds a cell. -/
+private def emptyDomainState : PanSemExactState Word64 Unit :=
+  exactStateOfWith emptyAccess <| exactLegacy 5 localsWithX exactMemory none
+
+/-- State whose source evaluation fails immediately (no locals, no memory). -/
+private def emptyState : PanSemExactState Word64 Unit :=
+  exactStateOf <| exactLegacy 5 (fun _ => none) (fun _ => none) none
+
+/-- State whose `Const` evaluation succeeds. -/
+private def wordState : PanSemExactState Word64 Unit :=
+  exactStateOf <| exactLegacy 5 (fun _ => some (.word 7)) (fun _ => none) none
+
+private def evaluate (state : PanSemExactState Word64 Unit) (program : Prog Word64) :
+    Option (PanValueFfiClockResult Word64 Unit) :=
+  panSemEvaluateExactState statefulTestContext statefulTestPrimitive
+    statefulTestHandler state program
+
+private def isWordValue (expected : Nat) : Option (PanValue Word64) → Bool
+  | some (.word value) => value == BitVec.ofNat 64 expected
+  | _ => false
+
+private def isErrorKeeping (clock localValue : Nat)
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control control, n) =>
+      match control with
+      | .error locals _ _ _ => n == clock && isWordValue localValue (locals "x")
+      | _ => false
+  | _ => false
+
+private def loadHit : Exp Word64 := .load Shape.one (.const 8)
+
+private def loadMiss : Exp Word64 := .load Shape.one (.const 11)
+
+private def missingCall : Prog Word64 := .call none "f" [.const 1]
+
+private def callLoadMissGuard : Bool :=
+  isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
+
+private def callMissingGuard : Bool :=
+  isErrorKeeping 5 3 (evaluate memoryState missingCall)
+
+private def callDomainGuard : Bool :=
+  isErrorKeeping 5 3 (evaluate emptyDomainState (.call none "f" [loadHit]))
+
+private def callGuard : Bool :=
+  callLoadMissGuard && callMissingGuard && callDomainGuard
+
+#guard callGuard
+
+/-- A `Call` whose argument fails to evaluate returns `SOME Error` over the
+    full exact state. -/
+theorem callArgsMiss_eq :
+    evaluate emptyState (.call none "f" [.var .local "z"]) =
+      some (.control (.error emptyState.legacy.locals emptyState.legacy.globals
+        emptyState.legacy.memory emptyState.legacy.ffi), emptyState.legacy.clock) := by
+  apply panSemEvaluateExactState_call_error_of_arguments_none
+  simp [emptyState, exactStateOf, exactStateOfWith, exactLegacy, evalPanValueExps,
+    evalPanValueExp.evalPanValueExps, evalPanValueExp]
+
+/-- A `Call` naming an unknown callee returns `SOME Error` over the full exact
+    state. -/
+theorem callMissing_eq :
+    evaluate wordState missingCall =
+      some (.control (.error wordState.legacy.locals wordState.legacy.globals
+        wordState.legacy.memory wordState.legacy.ffi), wordState.legacy.clock) := by
+  apply panSemEvaluateExactState_call_error_of_target_none (values := [.word 1])
+  · simp [wordState, exactStateOf, exactStateOfWith, exactLegacy, evalPanValueExps,
+      evalPanValueExp.evalPanValueExps, evalPanValueExp]
+  · simp [wordState, exactStateOf, exactStateOfWith, exactLegacy, panValueCallTarget,
+      lookupPanFunction]
+
+def runChecks : IO Bool := do
+  if callLoadMissGuard then
+    IO.println "PASS exact-state Call failing argument keeps state and clock"
+  else IO.println "FAIL exact-state Call failing argument keeps state and clock"
+  if callMissingGuard then
+    IO.println "PASS exact-state Call unknown callee keeps state and clock"
+  else IO.println "FAIL exact-state Call unknown callee keeps state and clock"
+  if callDomainGuard then
+    IO.println "PASS exact-state Call memory domain gates an argument read"
+  else IO.println "FAIL exact-state Call memory domain gates an argument read"
+  pure callGuard
+
+end Flapjack.Test.PanSemCallErrorExactParity

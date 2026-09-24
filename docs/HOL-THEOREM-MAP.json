@@ -8718,5 +8718,21 @@
     "lean_name": "memLookupFromAListSome",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_store_byte_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemStoreByteHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against panSemScript.sml:300-307; HOL total word_lab memory rendered as a total map into HolWordLab and the word set domain as a Prop predicate, as in the tagged mem_load_byte_def port; byte value is UInt8, set_byte via panSetByteHOL (standard-library helper, untagged). Direct HOL-EVAL rows store_byte_hit_some/store_byte_out/store_byte_other_unchanged reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "write_bytearray_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panWriteBytearrayHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against panSemScript.sml:309-316; tail-first recursion via panMemStoreByteHOL, a failed store keeps the original outer memory. Direct HOL-EVAL rows write_bytearray_changed/write_bytearray_other_unchanged/write_bytearray_out_of_domain reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
   }
 ]

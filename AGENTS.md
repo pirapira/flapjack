@@ -156,14 +156,9 @@ authorize changed evaluators, errors, quantified types, side conditions, or
 conclusions. If bounds or out-of-range behavior differ, leave the theorem
 untagged and document the mismatch beside it.
 
-For example, `Flapjack/RiscV/CakeRegAlloc.lean` defines the production
-`CakeNodeMap` array and `RepresentsHOLNodeList`. Its
-`ofList_representsHOLNodeList` theorem proves that the dense `ofList` embedding
-matches its source list, and `set_representsHOLNodeList` proves preservation
-for bounded updates. These are representation facts only. They do not prove
-the HOL `dec_deg` transition: HOL returns `Subscript` for an out-of-range
-degree read or write, while `cakeDecDeg` defaults the read to zero and stores
-out-of-range writes in `CakeNodeMap.outside`, so `cakeDecDeg` remains untagged.
+Representation witnesses alone do not establish transition equivalence.
+Review successful updates, invalid representations, and out-of-range errors
+separately before tagging any transition theorem.
 
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`

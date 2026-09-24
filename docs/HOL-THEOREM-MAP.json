@@ -6336,6 +6336,14 @@
     "reviewer": "Codex (clause-for-clause port of crepSemScript.sml:150-152 over the 11-field CrepHolState; direct HOL-EVAL rows fix_clock_clamps/fix_clock_keeps_lower reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "fixCrepHolClock_IMP_LESS_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL's universally quantified input-pair equality hypothesis and returned-clock bound over the 11-field CrepHolState; proof derives the bound from the exact tagged fix_clock_def)."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",

@@ -349,6 +349,19 @@ theorem fixCrepHolClock_clock_le (oldState : CrepHolState α σ)
   · simp only [fixCrepHolClock, hlt, if_false]
     exact Nat.le_of_not_lt hlt
 
+/-- HOL `fix_clock_IMP_LESS_EQ`: if `fix_clock` returns a result and state,
+    the returned clock does not exceed the original state's clock. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+theorem fixCrepHolClock_IMP_LESS_EQ (oldState : CrepHolState α σ)
+    (step : CrepRuntimeResult α ε × CrepHolState α σ)
+    (result : CrepRuntimeResult α ε) (newState : CrepHolState α σ)
+    (hfixed : fixCrepHolClock oldState step = (result, newState)) :
+    newState.clock ≤ oldState.clock := by
+  obtain ⟨stepResult, stepState⟩ := step
+  have hbound := fixCrepHolClock_clock_le oldState stepResult stepState
+  rw [hfixed] at hbound
+  exact hbound
+
 def crepRuntimeMemWidth : CrepMemOp → Nat
   | .load | .store => 0
   | .load8 | .store8 => 1

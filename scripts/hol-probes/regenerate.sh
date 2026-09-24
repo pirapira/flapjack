@@ -648,6 +648,8 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
   seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
+  while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
+  while_break_zero_eval while_break_label_eval while_continue_label_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \

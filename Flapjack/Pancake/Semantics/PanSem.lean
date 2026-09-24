@@ -1874,6 +1874,47 @@ theorem panSemEvaluateExactState_storeByte_error_of_store_none
   simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueStoreByteResult,
     evalPanValueExpCounted, haddress, hvalue, hstore]
 
+/-- HOL `If` (`panSemScript.sml:617-620`) whose condition does not evaluate to a
+    word (either the expression fails or it is not a word value) returns
+    `(SOME Error, s)` with the unchanged source state and clock.  Stated over the
+    exact source state with the state-owned memory access; untagged boundary
+    equation.  Oracle: `scripts/hol-probes/pan_sem_ite_e2e_probe.out`
+    (`if_nonword_result=SOME Error`, `if_fail_result=SOME Error`). -/
+theorem panSemEvaluateExactState_ite_error_of_condition_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (hcondition : panValueIteConditionValue state.legacy.structs
+      state.legacy.baseAddress state.legacy.topAddress state.legacy.bytesInWord
+      state.legacy.locals state.legacy.globals state.legacy.memory condition
+      (some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.ite condition thenBranch elseBranch) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  have hle : 1 ≤ max (panSemProgFuel (Prog.ite condition thenBranch elseBranch))
+      (panSemFunctionFuel state.legacy.functions) := by
+    rw [panSemProgFuel]
+    exact Nat.le_trans (by omega) (Nat.le_max_left _ _)
+  obtain ⟨k, hk⟩ : ∃ k, state.legacy.clock +
+      max (panSemProgFuel (Prog.ite condition thenBranch elseBranch))
+        (panSemFunctionFuel state.legacy.functions) = k + 1 := by
+    cases h : state.legacy.clock +
+        max (panSemProgFuel (Prog.ite condition thenBranch elseBranch))
+          (panSemFunctionFuel state.legacy.functions) with
+    | zero => omega
+    | succ k => exact ⟨k, rfl⟩
+  rw [hk]
+  rw [hcondition]
+  rfl
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

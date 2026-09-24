@@ -4752,13 +4752,223 @@ theorem compileExpHOL_cmp_ofHOLIH
               | cons _ _ => simp [hrightCompiled] at hrightLength
       | cons _ _ => simp [hleftCompiled] at hleftLength
 
-/-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and
-PanOp multiplication and Cmp over recursively supported operands, plus constant-address
-LoadByte/Load32 and one-word Local LoadByte/Load32 for the canonical RISC-V word
-target. Also support Load32 over recursively supported addresses whose compiled
-shape is explicitly One, and LoadByte over recursively supported addresses
-with the same canonical target. These cases lift through HOL `compile_args`;
-other Load forms, operators, and the full expression induction remain open. -/
+/-! The Shift constructor case for a full localized-expression IH, at the fixed
+RISC-V target. This is induction support for the HOL expression relation; the
+enclosing Call simulation remains open. -/
+theorem compileExpHOL_shift_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : Exp (RiscV.Word 64))
+    (leftWord rightWord result : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hcanonical : target = riscvCrepWordTarget target)
+    (hleftLocalized : expGlobalVars left = [])
+    (hrightLocalized : expGlobalVars right = [])
+    (hleftSource : evalPanSemStateExp source left = some (.word leftWord))
+    (hrightSource : evalPanSemStateExp source right = some (.word rightWord))
+    (hleftIH : ∀ value,
+      evalPanSemStateExp source left = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars left = [] →
+      evalCrepRuntimeExps target (compileExpHOL
+        (panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids)
+        left).1 =
+            some (panValueFlatten value) ∧
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) left).1.length =
+            Shape.shapeSize (compileExpHOL (panToCrepMkCtxtHOL context.vars
+              context.funcs context.vmax context.eids) left).2 ∧
+        panValueShape [] value = (compileExpHOL (panToCrepMkCtxtHOL context.vars
+          context.funcs context.vmax context.eids) left).2 ∧
+        isWfShape [] (compileExpHOL (panToCrepMkCtxtHOL context.vars
+          context.funcs context.vmax context.eids) left).2 = true)
+    (hrightIH : ∀ value,
+      evalPanSemStateExp source right = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars right = [] →
+      evalCrepRuntimeExps target (compileExpHOL
+        (panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids)
+        right).1 =
+            some (panValueFlatten value) ∧
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) right).1.length =
+            Shape.shapeSize (compileExpHOL (panToCrepMkCtxtHOL context.vars
+              context.funcs context.vmax context.eids) right).2 ∧
+        panValueShape [] value = (compileExpHOL (panToCrepMkCtxtHOL context.vars
+          context.funcs context.vmax context.eids) right).2 ∧
+        isWfShape [] (compileExpHOL (panToCrepMkCtxtHOL context.vars
+          context.funcs context.vmax context.eids) right).2 = true)
+    (hsourceShift : evalPanSemStateExp source (.shift operator left right) =
+      some (.word result)) :
+    evalCrepRuntimeExps target (compileExpHOL
+      (panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids)
+      (.shift operator left right)).1 = some [result] ∧
+    (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs context.vmax
+      context.eids)
+      (.shift operator left right)).1.length = Shape.shapeSize
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs context.vmax
+          context.eids)
+          (.shift operator left right)).2 ∧
+    panValueShape [] (.word result) = (compileExpHOL
+      (panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids)
+      (.shift operator left right)).2 ∧
+    isWfShape [] (compileExpHOL
+      (panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids)
+      (.shift operator left right)).2 = true := by
+  let compilerContext :=
+    panToCrepMkCtxtHOL context.vars context.funcs context.vmax context.eids
+  have hleftRel := hleftIH (.word leftWord) hleftSource hstate hcode hlocals
+    hleftLocalized
+  have hrightRel := hrightIH (.word rightWord) hrightSource hstate hcode hlocals
+    hrightLocalized
+  have hleftShape : (compileExpHOL compilerContext left).2 = .one := by
+    have h := hleftRel.2.2.1
+    simpa [compilerContext, panValueShape] using h.symm
+  have hrightShape : (compileExpHOL compilerContext right).2 = .one := by
+    have h := hrightRel.2.2.1
+    simpa [compilerContext, panValueShape] using h.symm
+  have hleftRun : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext left).1 = some [leftWord] := by
+    simpa [compilerContext, panValueFlatten] using hleftRel.1
+  have hrightRun : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext right).1 = some [rightWord] := by
+    simpa [compilerContext, panValueFlatten] using hrightRel.1
+  have hleftLength : (compileExpHOL compilerContext left).1.length = 1 := by
+    have h := hleftRel.2.1
+    rw [hleftShape] at h
+    simpa using h
+  have hrightLength : (compileExpHOL compilerContext right).1.length = 1 := by
+    have h := hrightRel.2.1
+    rw [hrightShape] at h
+    simpa using h
+  cases hleftCompiled : (compileExpHOL compilerContext left).1 with
+  | nil => simp [hleftCompiled] at hleftLength
+  | cons leftExpression leftTail =>
+      cases leftTail with
+      | nil =>
+          have hleftSingleton : (compileExpHOL compilerContext left).1 =
+              [leftExpression] := by simp [hleftCompiled]
+          have hleftPair : compileExpHOL compilerContext left =
+              ([leftExpression], .one) := by
+            apply Prod.ext
+            · exact hleftSingleton
+            · exact hleftShape
+          have hleftTarget : evalCrepRuntimeExp target leftExpression =
+              some leftWord := by
+            rw [hleftSingleton] at hleftRun
+            cases hvalue : evalCrepRuntimeExp target leftExpression with
+            | none => simp [evalCrepRuntimeExps, hvalue] at hleftRun
+            | some word =>
+                have heq : word = leftWord := by
+                  simpa [evalCrepRuntimeExps, hvalue] using hleftRun
+                simp [heq]
+          cases hrightCompiled : (compileExpHOL compilerContext right).1 with
+          | nil => simp [hrightCompiled] at hrightLength
+          | cons rightExpression rightTail =>
+              cases rightTail with
+              | nil =>
+                  have hrightSingleton : (compileExpHOL compilerContext right).1 =
+                      [rightExpression] := by simp [hrightCompiled]
+                  have hrightPair : compileExpHOL compilerContext right =
+                      ([rightExpression], .one) := by
+                    apply Prod.ext
+                    · exact hrightSingleton
+                    · exact hrightShape
+                  have hrightTarget : evalCrepRuntimeExp target rightExpression =
+                      some rightWord := by
+                    rw [hrightSingleton] at hrightRun
+                    cases hvalue : evalCrepRuntimeExp target rightExpression with
+                    | none => simp [evalCrepRuntimeExps, hvalue] at hrightRun
+                    | some word =>
+                        have heq : word = rightWord := by
+                          simpa [evalCrepRuntimeExps, hvalue] using hrightRun
+                        simp [heq]
+                  have hleftRaw : evalPanValueExp source.structs source.locals
+                      source.globals source.memory source.baseAddress source.topAddress
+                      panSemBitVec64BytesInWord left
+                      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.word leftWord) := by
+                    simpa [evalPanSemStateExp] using hleftSource
+                  have hrightRaw : evalPanValueExp source.structs source.locals
+                      source.globals source.memory source.baseAddress source.topAddress
+                      panSemBitVec64BytesInWord right
+                      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.word rightWord) := by
+                    simpa [evalPanSemStateExp] using hrightSource
+                  have hshift : (panSemBitVec64MemoryAccess source).shift
+                      operator leftWord rightWord =
+                      RiscV.panRiscVShift operator leftWord rightWord := rfl
+                  have hsourceComputed : evalPanValueExp source.structs
+                      source.locals source.globals source.memory source.baseAddress
+                      source.topAddress panSemBitVec64BytesInWord
+                      (.shift operator left right)
+                      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      (RiscV.panRiscVShift operator leftWord rightWord).map PanValue.word := by
+                    simp [evalPanValueExp, hleftRaw, hrightRaw, hshift]
+                  have hsourceShift' : evalPanValueExp source.structs source.locals
+                      source.globals source.memory source.baseAddress source.topAddress
+                      panSemBitVec64BytesInWord (.shift operator left right)
+                      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.word result) := by
+                    simpa [evalPanSemStateExp] using hsourceShift
+                  have hshiftResult : RiscV.panRiscVShift operator leftWord rightWord =
+                      some result := by
+                    cases hcomputed : RiscV.panRiscVShift operator leftWord rightWord with
+                    | none =>
+                        have hvalues := hsourceShift'.symm.trans hsourceComputed
+                        simp [hcomputed] at hvalues
+                    | some word =>
+                        have heq : PanValue.word result = PanValue.word word := by
+                          apply Option.some.inj
+                          simpa [hcomputed] using hsourceShift'.symm.trans hsourceComputed
+                        have hresult : result = word := by
+                          injection heq
+                        subst result
+                        rfl
+                  have hcompiledShift : compileExpHOL compilerContext
+                      (.shift operator left right) =
+                      ([.shift operator leftExpression rightExpression], .one) := by
+                    simp [compileExpHOL, hleftPair, hrightPair]
+                  have htargetShift : evalCrepRuntimeExp target
+                      (.shift operator leftExpression rightExpression) = some result := by
+                    have hleftTarget' : evalCrepRuntimeExp
+                        (riscvCrepWordTarget target) leftExpression = some leftWord := by
+                      rw [hcanonical] at hleftTarget
+                      exact hleftTarget
+                    have hrightTarget' : evalCrepRuntimeExp
+                        (riscvCrepWordTarget target) rightExpression = some rightWord := by
+                      rw [hcanonical] at hrightTarget
+                      exact hrightTarget
+                    rw [hcanonical,
+                      evalCrepRuntimeExp_shift_riscvWordTarget_evalPanShift]
+                    rw [hleftTarget', hrightTarget']
+                    simp only [Option.bind_some]
+                    calc
+                      evalPanShiftFull operator leftWord rightWord =
+                          RiscV.panRiscVShift operator leftWord rightWord :=
+                        (panRiscVShift_eq_evalPanShiftFull operator leftWord rightWord).symm
+                      _ = some result := hshiftResult
+                  refine ⟨?_, ?_, ?_, ?_⟩
+                  · simp [compilerContext, hcompiledShift, evalCrepRuntimeExps,
+                      htargetShift]
+                  · simp [compilerContext, hcompiledShift]
+                  · simp [compilerContext, hcompiledShift, panValueShape]
+                  · simp [compilerContext, hcompiledShift, isWfShape]
+              | cons _ _ => simp [hrightCompiled] at hrightLength
+      | cons _ _ => simp [hleftCompiled] at hleftLength
+
+/-! Full-IH constructor evidence includes Cmp, Shift, and the LoadByte/Load32
+address cases below. The separate restricted argument support composes
+Const/Local/RStruct/address/RField cases and PanOp multiplication through HOL
+`compile_args`. The general compile_exp_val_rel induction, remaining Load forms
+and operators, and the enclosing Call proof remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

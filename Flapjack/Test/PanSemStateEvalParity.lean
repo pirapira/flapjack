@@ -331,4 +331,25 @@ example :
       0).map (fun byte => BitVec.ofNat 64 byte.toNat)
     == some (BitVec.ofNat 64 (UInt8.ofNat 0x88).toNat))
 
+/-- The executed `read32` on the source state agrees with the tagged exact
+    `panMemLoad32HOL` over the word view of its `PanValue` memory. -/
+example :
+    (panSemBitVec64MemoryAccess littleEndianState).read32
+        (panSemBitVec64MemoryAccess littleEndianState).domain littleEndianState.memory
+        panSemBitVec64BytesInWord 0 =
+      (panMemLoad32HOL (width := 64) (panValueWordHOL littleEndianState.memory)
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+        0).map (fun word => BitVec.ofNat 64 word.toNat) :=
+  panSemBitVec64Read32_eq_panMemLoad32HOL littleEndianState littleEndianState.memory 0
+
+/- The adapter's right-hand side computes the expected little-endian 32-bit word
+   (`0x55667788`) of `sourceMemoryWord`. -/
+#guard
+  ((panMemLoad32HOL (width := 64) (panValueWordHOL littleEndianState.memory)
+      (fun a => littleEndianState.memaddrs a &&
+        panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+      0).map (fun word => BitVec.ofNat 64 word.toNat)
+    == some (BitVec.ofNat 64 0x55667788))
+
 end Flapjack.Test.PanSemStateEvalParity

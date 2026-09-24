@@ -417,4 +417,132 @@ theorem panSemBitVec64ReadByte_eq_panMemLoadByteHOL
       | rStruct fs => simp [panValueWordDefined, hcell]
       | nStruct nm fs => simp [panValueWordDefined, hcell]
 
+
+/-! ## Executed-path read32 widening adapter (flapjack-pxn.18.3.6.9.2.1)
+
+The executed BitVec-64 `read32` agrees with the tagged exact
+`panMemLoad32HOL` (then widened with `BitVec.ofNat 64`).  These are untagged
+production-side adapters. -/
+
+theorem panSemBitVec64Aligned4_eq_decide (address : RiscV.Word 64) :
+    panSemBitVec64WordModel.aligned 4 address =
+      decide ((address >>> 2) <<< 2 = address) := by
+  change RiscV.aligned address 4 = decide ((address >>> 2) <<< 2 = address)
+  rw [RiscV.aligned]
+  show (decide ((4 : Nat) ≠ 0) && decide (address.toNat % 4 = 0)) =
+    decide ((address >>> 2) <<< 2 = address)
+  rw [show decide ((4 : Nat) ≠ 0) = true from rfl, Bool.true_and]
+  apply Bool.eq_iff_iff.mpr
+  rw [decide_eq_true_eq, decide_eq_true_eq]
+  constructor
+  · intro h
+    change BitVec.shiftLeft (BitVec.ushiftRight address 2) 2 = address
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.shiftLeft, BitVec.ushiftRight, BitVec.toNat_ofNat,
+      BitVec.toNat_ofNatLT, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq,
+      show (2 : Nat) ^ 2 = 4 from by decide]
+    have hdvd : 4 ∣ BitVec.toNat address := Nat.dvd_of_mod_eq_zero h
+    rw [Nat.mul_comm, Nat.mul_div_cancel' hdvd, Nat.mod_eq_of_lt (BitVec.isLt address)]
+  · intro h
+    have h2 : (BitVec.toNat address / 4 * 4) % 2 ^ 64 = BitVec.toNat address := by
+      have hcong := congrArg BitVec.toNat h
+      change BitVec.toNat (BitVec.shiftLeft (BitVec.ushiftRight address 2) 2) =
+        BitVec.toNat address at hcong
+      simp only [BitVec.shiftLeft, BitVec.ushiftRight, BitVec.toNat_ofNat,
+        BitVec.toNat_ofNatLT, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq,
+        show (2 : Nat) ^ 2 = 4 from by decide] at hcong
+      exact hcong
+    rw [← h2]
+    rw [Nat.mod_mod_of_dvd _ (show 4 ∣ 2 ^ 64 from ⟨2 ^ 62, by decide⟩)]
+    rw [Nat.mul_comm (BitVec.toNat address / 4) 4]
+    exact Nat.mul_mod_right 4 _
+
+theorem panRiscVWordOfBytes64_eq_widen (be : Bool) (b0 b1 b2 b3 : RiscV.Word 64)
+    (h0 : b0.toNat < 256) (h1 : b1.toNat < 256)
+    (h2 : b2.toNat < 256) (h3 : b3.toNat < 256) :
+    RiscV.panRiscVWordOfBytes (width := 64) be [b0, b1, b2, b3] =
+      BitVec.ofNat 64
+        ((RiscV.panRiscVWordOfBytes (width := 32) be
+          [BitVec.ofNat 32 b0.toNat, BitVec.ofNat 32 b1.toNat,
+           BitVec.ofNat 32 b2.toNat, BitVec.ofNat 32 b3.toNat]).toNat) := by
+  have hs : b0.toNat + 256 * b1.toNat + 256 ^ 2 * b2.toNat + 256 ^ 3 * b3.toNat < 2 ^ 32 := by
+    omega
+  have m0 : b0.toNat % 2 ^ 32 = b0.toNat :=
+    Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h0 (by decide : 256 ≤ 2 ^ 32))
+  have m1 : b1.toNat % 2 ^ 32 = b1.toNat :=
+    Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h1 (by decide : 256 ≤ 2 ^ 32))
+  have m2 : b2.toNat % 2 ^ 32 = b2.toNat :=
+    Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h2 (by decide : 256 ≤ 2 ^ 32))
+  have m3 : b3.toNat % 2 ^ 32 = b3.toNat :=
+    Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h3 (by decide : 256 ≤ 2 ^ 32))
+  have hs' : b3.toNat + 256 * b2.toNat + 256 ^ 2 * b1.toNat + 256 ^ 3 * b0.toNat < 2 ^ 32 := by
+    omega
+  cases be
+  · simp [RiscV.panRiscVWordOfBytes, Option.getD_some,
+      m0, m1, m2, m3, Nat.mod_eq_of_lt hs]
+  · simp [RiscV.panRiscVWordOfBytes, Option.getD_some,
+      m0, m1, m2, m3, Nat.mod_eq_of_lt hs']
+
+
+theorem panSemBitVec64WordOfBytes32_eq_widen (be : Bool) (x0 x1 x2 x3 : RiscV.Word 64)
+    (h0 : x0.toNat < 256) (h1 : x1.toNat < 256)
+    (h2 : x2.toNat < 256) (h3 : x3.toNat < 256) :
+    panSemBitVec64WordModel.wordOfBytes32 be
+        [BitVec.ofNat 64 x0.toNat, BitVec.ofNat 64 x1.toNat,
+         BitVec.ofNat 64 x2.toNat, BitVec.ofNat 64 x3.toNat] =
+      BitVec.ofNat 64
+        ((RiscV.panRiscVWordOfBytes (width := 32) be
+          [BitVec.ofNat 32 x0.toNat, BitVec.ofNat 32 x1.toNat,
+           BitVec.ofNat 32 x2.toNat, BitVec.ofNat 32 x3.toNat]).toNat) := by
+  change RiscV.panRiscVWordOfBytes (width := 64) be
+      [BitVec.ofNat 64 x0.toNat, BitVec.ofNat 64 x1.toNat,
+       BitVec.ofNat 64 x2.toNat, BitVec.ofNat 64 x3.toNat] = _
+  rw [panRiscVWordOfBytes64_eq_widen be (BitVec.ofNat 64 x0.toNat) (BitVec.ofNat 64 x1.toNat)
+        (BitVec.ofNat 64 x2.toNat) (BitVec.ofNat 64 x3.toNat)
+        (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (BitVec.isLt x0)]; exact h0)
+        (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (BitVec.isLt x1)]; exact h1)
+        (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (BitVec.isLt x2)]; exact h2)
+        (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (BitVec.isLt x3)]; exact h3)]
+  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (BitVec.isLt x0),
+    Nat.mod_eq_of_lt (BitVec.isLt x1), Nat.mod_eq_of_lt (BitVec.isLt x2),
+    Nat.mod_eq_of_lt (BitVec.isLt x3)]
+
+theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) (address : RiscV.Word 64) :
+    (panSemBitVec64MemoryAccess state).read32
+        (panSemBitVec64MemoryAccess state).domain memory panSemBitVec64BytesInWord address
+      = (panMemLoad32HOL (width := 64) (panValueWordHOL memory)
+          (fun a => state.memaddrs a && panValueWordDefined memory a = true) state.be
+          address).map (fun word => BitVec.ofNat 64 word.toNat) := by
+  simp only [panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+    panSemBitVec64BytesInWord, panModelRead32, panMemLoad32HOL, panValueWordMemory]
+  rw [panSemBitVec64ByteAlign_eq_panByteAlignHOL address, panSemBitVec64Aligned4_eq_decide address]
+  cases hcell : memory (panByteAlignHOL (width := 64) address) with
+  | none => simp [panValueWordDefined, hcell]
+  | some cell =>
+      cases cell with
+      | word w =>
+          simp only [panValueWordHOL, panValueWordDefined, hcell]
+          simp
+          simp only [show (8#64 : RiscV.Word 64) = (8 : RiscV.Word 64) from rfl,
+            show (1#64 : RiscV.Word 64) = (1 : RiscV.Word 64) from rfl,
+            show (2#64 : RiscV.Word 64) = (2 : RiscV.Word 64) from rfl,
+            show (3#64 : RiscV.Word 64) = (3 : RiscV.Word 64) from rfl]
+          simp only [panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
+          cases hb : state.memaddrs (panByteAlignHOL (width := 64) address)
+          · simp
+          · rw [panSemBitVec64WordOfBytes32_eq_widen state.be
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be)
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) (address + 1) w state.be)
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) (address + 2) w state.be)
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) (address + 3) w state.be)
+              (panRiscVGetByteEndian_toNat_lt_256 address w state.be)
+              (panRiscVGetByteEndian_toNat_lt_256 (address + 1) w state.be)
+              (panRiscVGetByteEndian_toNat_lt_256 (address + 2) w state.be)
+              (panRiscVGetByteEndian_toNat_lt_256 (address + 3) w state.be)]
+            by_cases hg : address >>> 2 <<< 2 = address <;> simp
+      | rStruct fs => simp [panValueWordDefined, hcell]
+      | nStruct nm fs => simp [panValueWordDefined, hcell]
+
+
 end Flapjack

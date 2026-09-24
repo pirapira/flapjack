@@ -67,15 +67,20 @@ inductive LoopArith where
   | div (destination dividend divisor : Nat)
   deriving Repr, DecidableEq
 
-/-- Exact Cake `loopLang$prog` over a fixed word width and the faithful
-`mlstring` carrier. HOL's `num_set` fields are represented by the accepted
-`FiniteMap Nat Unit` model of `unit spt` (order-insensitive; see
-`docs/NUM-SET-AUDIT.md`), and the FFI name is the exact `MlString` carrier
-rather than the executable `FunName = String`. The executable `LoopProg` is a
-one-parameter superset (`LoopExp` adds `crepOp`/`cmp`, `shMem` uses `CrepMemOp`,
-FFI names are `String`), so it is not itself an exact rendering of this
-datatype; the executable/faithful bridge is tracked by the same bead. -/
-@[hol "cakeml/pancake/loopLangScript.sml" "prog"]
+/-- **Untagged approximation** of Cake `loopLang$prog` over a fixed word width.
+Not claimed as an exact HOL port: the `num_set` fields use `FiniteMap Nat Unit`,
+whereas HOL `num_set` is `unit spt` (`miscScript.sml:787`); a finite map is an
+unrestricted function and loses the `sptree` well-formedness/structure, so only
+order-insensitive domain predicates bridge across (`docs/NUM-SET-AUDIT.md`), and
+a datatype tag would over-claim. The exact `spt`-backed carrier is tracked by
+bead `flapjack-pxn.18.5.17.1.1.1`. The other carriers here are faithful: word
+width is fixed at `BitVec width`, `shMem` uses `CrepMemOp`, whose eight
+constructors (`load/load8/load16/load32/store/store8/store16/store32`) match
+`asm$memop` (`asmScript.sml:125-128`) name for name, and the FFI name is the
+exact `MlString` carrier rather than the executable `FunName = String`. The
+executable `LoopProg` is itself a one-parameter superset (`LoopExp` adds
+`crepOp`/`cmp`; FFI names are `String`), so the executable/faithful bridge is
+also tracked by bead `flapjack-pxn.18.5.17.1.1`. -/
 inductive HolLoopProg (width : Nat) [NeZero width] where
   | skip
   | assign (name : Nat) (value : HolLoopExp width)

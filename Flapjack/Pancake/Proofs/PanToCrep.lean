@@ -1913,6 +1913,68 @@ theorem firstCompileToCrepAllDistinct
       fun (name, _, _) => name).Nodup := by
   simpa [compileToCrepHOL, List.map_map, Function.comp_def] using hdistinct
 
+/-- `compileToCrepHOL` is the source function list mapped through `comp_func`
+    and `crep_vars`, with the context built from the same declaration list. -/
+theorem compileToCrepHOL_eq_map
+    (declarations : List (Decl (BitVec width))) :
+    compileToCrepHOL declarations =
+      (functionEntries declarations).map
+        (fun entry =>
+          (entry.1,
+           (panToCrepVars entry.2.1,
+            panToCrepCompFuncRiscV
+              (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+                (panToCrepGetEidsFromDeclsHOL declarations))
+              entry.2.1 entry.2.2.1))) := by
+  simp only [compileToCrepHOL]
+
+/-- Exact port of HOL `alookup_compile_prog_code`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575`): a source
+    function entry with empty parameters and body `prog` is compiled to the
+    Crepe entry whose argument slots are `crep_vars []` and whose body is
+    `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)
+    [] prog`.  Here `compileToCrepHOL`, `functionInfosHOL`,
+    `panToCrepGetEidsFromDeclsHOL`, `panToCrepVars` and
+    `panToCrepCompFuncRiscV` are the tagged HOL counterparts of
+    `compile_to_crep`, `make_funcs`, `get_eids_from_decls`, `crep_vars` and
+    `comp_func`; `List.lookup` on the nested-pair triple list is HOL's
+    `ALOOKUP`. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
+theorem alookupCompileToCrepCode
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (prog : Prog (BitVec width)) (rshape : Shape)
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some ([], (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some ([], panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) [] prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := ([], panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) [] prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
+    simp [panToCrepVars, Shape.shapeSize]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
+
 /-- Exact port of HOL `first_compile_prog_all_distinct`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original
     premise is distinct names from `functions prog`; `compile_prog` preserves

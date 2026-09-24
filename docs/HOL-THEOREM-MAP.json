@@ -6598,5 +6598,21 @@
     "lean_name": "compileExpListHOL_heads_eq_compileArgs_of_singleton",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only list representation bridge: if every expression compiles to one word expression, cexpHeads over mapped compileExpHOL results equals compileArgsHOL. This is reusable induction infrastructure, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "alookup_compile_prog_code",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "alookupCompileToCrepCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; compileToCrepHOL/functionInfosHOL/panToCrepGetEidsFromDeclsHOL/panToCrepVars/panToCrepCompFuncRiscV are the tagged HOL counterparts of compile_to_crep/make_funcs/get_eids_from_decls/crep_vars/comp_func; panToCrepVars [] = []. Executable guard in Flapjack/Test/PanToCrepCodeRelParity.lean (alookupGuard) and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileToCrepHOL_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper: compileToCrepHOL is the source function list mapped through comp_func/crep_vars with the context built from the same declarations; used to move ALOOKUP over compile_to_crep onto the source table."
   }
 ]

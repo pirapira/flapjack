@@ -435,6 +435,36 @@ def set {α : Type u} (m : CakeNodeMap α) (i : Nat) (v : α) : CakeNodeMap α :
 def ofSize {α : Type u} (n : Nat) : CakeNodeMap α :=
   { slots := Array.replicate n none }
 
+/-- Embed a HOL node-field list as a dense in-range CakeNodeMap.  Each HOL
+    `EL` value becomes a present slot and the extension map stays empty. -/
+def ofList {α : Type u} (values : List α) : CakeNodeMap α :=
+  { slots := values.toArray.map some, outside := [] }
+
+/-! HOL's `st_ex_MAP_*_sub` facts read node fields with `EL i xs` under an
+    explicit `i < LENGTH xs` premise.  This bridge covers that same in-range
+    lookup when the Lean array-backed map is the dense embedding `ofList xs`.
+    It does not identify arbitrary `CakeNodeMap`s with HOL lists: Lean also
+    permits keys in `outside`, which have no HOL `EL` counterpart, and HOL
+    `EL` is only read under its bounds premise. -/
+theorem get_ofList_of_lt {α : Type u} (values : List α) (i : Nat)
+    (hi : i < values.length) :
+    get (ofList values) i = some values[i] := by
+  simp [get, ofList, hi]
+
+/-- Out-of-range reads are `none` in the dense list embedding.  This is a
+    Lean-side default and deliberately makes no claim about HOL `EL` outside
+    its list-length premise. -/
+theorem get_ofList_of_ge {α : Type u} (values : List α) (i : Nat)
+    (hi : values.length ≤ i) :
+    get (ofList values) i = none := by
+  simp [get, ofList, hi, cakeMapLookup, Flapjack.lookupNatInfo]
+
+/-- An empty HOL node field has no in-range index; its dense embedding also
+    returns no value at every index. -/
+theorem get_ofList_empty (i : Nat) :
+    get (ofList ([] : List α)) i = none := by
+  simp [get, ofList, cakeMapLookup, Flapjack.lookupNatInfo]
+
 /-- The association list read as a node-indexed field.  `cakeMapLookup`
     returns the *first* binding for a key, so the earlier entries must win;
     folding from the right lets them overwrite the later ones. -/

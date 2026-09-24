@@ -22,6 +22,31 @@ namespace Flapjack.Test.CakeRegAlloc
 
 open Flapjack.RiscV.CakeRegAlloc
 
+/-! HOL `st_ex_MAP_node_tag_sub` reads the node list with `EL` only for
+    indices below its length.  The dense CakeNodeMap bridge agrees at the
+    first and last valid indices and documents Lean's `none` outside the
+    represented range. -/
+def cakeNodeMapHolListLookupGuard : Bool :=
+  let nodes : List Nat := [7, 11, 13]
+  CakeNodeMap.get (CakeNodeMap.ofList nodes) 0 == some 7 &&
+    CakeNodeMap.get (CakeNodeMap.ofList nodes) 2 == some 13 &&
+    CakeNodeMap.get (CakeNodeMap.ofList nodes) 3 == none &&
+    CakeNodeMap.get (CakeNodeMap.ofList ([] : List Nat)) 0 == none
+
+#guard cakeNodeMapHolListLookupGuard
+
+example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 0 = some 7 := by
+  exact CakeNodeMap.get_ofList_of_lt _ _ (by decide)
+
+example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 2 = some 13 := by
+  exact CakeNodeMap.get_ofList_of_lt _ _ (by decide)
+
+example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 3 = none := by
+  exact CakeNodeMap.get_ofList_of_ge _ _ (by decide)
+
+example : CakeNodeMap.get (CakeNodeMap.ofList ([] : List Nat)) 0 = none := by
+  exact CakeNodeMap.get_ofList_empty _
+
 /-- Move chain whose second element writes the allocatable variable 9
     from the stack variable 7: 9 becomes forced-stack (`{9}`). -/
 def moveChainGuard : Bool :=
@@ -1673,6 +1698,7 @@ def parityGuard : Bool :=
    select and repair without blocking the whole build on stale expectations. -/
 def runChecks : IO Bool := do
   let results := [
+    cakeNodeMapHolListLookupGuard,
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
@@ -1722,7 +1748,8 @@ def runChecks : IO Bool := do
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
   let names := [
-    "get_stack_only move chain", "get_stack_only move from reg",
+    "CakeNodeMap HOL-list lookup range", "get_stack_only move chain",
+    "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
     "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
     "get_stack_only call merge",

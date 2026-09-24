@@ -2,6 +2,7 @@ leaves=(([Const 7w],One),([Const 0w],One),([BaseAddr],One),[TopAddr],One)
 bytes_in_word=([Const (n2w (dimindex (:word64) DIV 8))],One)
 nstruct=([Const 0w],One)
 nfield=([Const 0w],One)
+load_one=([Load (Const 3w)],One)
 struct_field=(([Const 1w; Const 2w],Comb [One; One]),[Const 2w],One)
 loads_ops=(([Load32 (Const 3w)],One),([LoadByte (Const 4w)],One),
  ([Op Add [Const 1w; Const 2w]],One),[Crepop Mul [Const 5w; Const 6w]],One)

@@ -590,7 +590,7 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves bytes_in_word nstruct nfield struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
+  leaves bytes_in_word nstruct nfield load_one struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
   finite_map_load_byte_local loadbyte_recursive_address \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \

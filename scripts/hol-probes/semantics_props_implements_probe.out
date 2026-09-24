@@ -1,0 +1,1 @@
+implements_prime_trans=∀x y z b. implements' b y z ∧ implements' b x y ⇒ implements' b x z

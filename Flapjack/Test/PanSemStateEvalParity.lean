@@ -541,4 +541,83 @@ example (hwf : isWfShape ([] : StructContext) Shape.one = true) :
   panValueFlatLoad_eq_panMemLoadHOL littleEndianState littleEndianState.memory
     ([] : StructContext) Shape.one 0 hwf
 
+/-! ## Exact `panSem$eval_def` evaluator parity (flapjack-pxn.18.3.6.9.3)
+
+The HOL rows are the `word_load_hit`, `byte_little_first`, `word32_little`,
+`op_add_fold_three`, and `op_sub_wrong_arity` lines of
+`scripts/hol-probes/pan_sem_state_eval_probe.out` (direct HOL EVAL of
+`panSem$eval`). -/
+
+abbrev holEvalState : PanSemHolState 64 Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := fun _ => none
+    eshapes := fun _ => none
+    memory := fun address => if address == 0 then .word sourceMemoryWord else .word 0
+    memaddrs := fun address => address = 0
+    shMemaddrs := fun _ => False
+    clock := 0
+    be := false
+    ffi := sourceFfiState
+    baseAddr := 0
+    topAddr := 0 }
+
+def evalWordResult (result : Option (HolValue 64)) : Option Word64 :=
+  match result with
+  | some (.val (.word value)) => some value
+  | _ => none
+
+#guard evalWordResult (evalHOL holEvalState (.const 7)) == some 7
+#guard evalWordResult (evalHOL holEvalState (.load Shape.one (.const 0))) ==
+  some sourceMemoryWord
+#guard evalWordResult (evalHOL holEvalState (.loadByte (.const 0))) ==
+  some (BitVec.ofNat 64 136)
+#guard evalWordResult (evalHOL holEvalState (.load32 (.const 0))) ==
+  some (BitVec.ofNat 64 0x55667788)
+#guard evalWordResult (evalHOL holEvalState (.op .add [.const 1, .const 2, .const 3])) ==
+  some 6
+#guard evalWordResult (evalHOL holEvalState (.op .sub [.const 1])) == none
+
+/-- State with a single `Pair` struct (field `f : One`), matching the
+    `nstruct_*` rows of `scripts/hol-probes/pan_sem_state_eval_probe.out`. -/
+abbrev holEvalStateWithPair : PanSemHolState 64 Unit :=
+  { holEvalState with
+    structs := [("Pair", { fields := [("f", Shape.one)], size := 1 })] }
+
+/-- Projection of the field word from a `NStruct` result (single field). -/
+def nstructFieldWord (result : Option (HolValue 64)) : Option Word64 :=
+  match result with
+  | some (.nStruct _ [(_, .val (.word value))]) => some value
+  | _ => none
+
+def evalResultIsNone (result : Option (HolValue 64)) : Bool :=
+  match result with
+  | none => true
+  | some _ => false
+
+#guard nstructFieldWord
+    (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .const 7)])) == some 7
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .rStruct [])]))
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("g", .const 7)]))
+#guard evalResultIsNone (evalHOL holEvalState (.nStruct "Pair" [("f", .const 7)]))
+
+/- Bridge: production `panValueShape` agrees with `holShapeOf` on the `HolValue`
+   image used by tagged `evalHOL` (bead flapjack-pxn.18.3.6.9.4). -/
+example (value : PanValue (BitVec 64)) :
+    holShapeOf value.toHolValue = panValueShape ([] : StructContext) value :=
+  holShapeOf_toHolValue ([] : StructContext) value
+
+example :
+    (([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+        PanValue.toHolValue).map holShapeOf
+      = ([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+          (panValueShape ([] : StructContext)) :=
+  holShapeOf_map_toHolValue ([] : StructContext) _
+
+example (shape : Shape) (value : PanValue (BitVec 64)) :
+    panShapeMatches shape (holShapeOf value.toHolValue) =
+      panShapeMatches shape (panValueShape ([] : StructContext) value) :=
+  panShapeMatches_holShapeOf_toHolValue ([] : StructContext) shape value
+
 end Flapjack.Test.PanSemStateEvalParity

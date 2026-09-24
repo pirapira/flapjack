@@ -208,7 +208,7 @@ theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
       simpa [isWfShape] using ih context n h')
     (by
       intro name context n h
-      simp only [isWfShape] at h ⊢
+      simp only [isWfShape, isWfShapeHOL_named, lookupInfo_toHOL_isSome] at h ⊢
       exact lookupInfo_isSome_drop name context n h))
     shape context n
 

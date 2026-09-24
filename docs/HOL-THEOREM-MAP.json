@@ -8841,22 +8841,6 @@
   },
   {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
-    "hol_name": "find_lab_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "findLabHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
-  },
-  {
-    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
-    "hol_name": "mk_ctxt_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "mkCtxtHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against mk_ctxt_def at crep_to_loopScript.sml:221; constructs the finite-map context record with the same four fields target/vars/funcs/vmax; direct HOL-EVAL rows mk_ctxt_vars/mk_ctxt_funcs/mk_ctxt_vmax/mk_ctxt_target=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "make_vmap_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "makeVmapHOL",

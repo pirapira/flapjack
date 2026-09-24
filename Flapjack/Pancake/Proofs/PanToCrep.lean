@@ -1649,14 +1649,15 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The target runtime `exp_hdl` execution is already proved for one-word and
-two-word Call exception payloads, together with each resulting `locals_rel`
-postcondition: see `EvaluateCases.crepRuntimeExpHdlOneWord` /
+The target runtime evaluator's `exp_hdl` local-update cases are proved for
+one-word and two-word Call exception payloads, including their resulting
+`locals_rel` postconditions; see `EvaluateCases.crepRuntimeExpHdlOneWord` /
 `EvaluateCases.crepRuntimeExpHdlOneWord_localsRel` and
 `EvaluateCases.crepRuntimeExpHdlTwoWords` /
-`EvaluateCases.crepRuntimeExpHdlTwoWords_localsRel`. This lemma provides the
-map update used by those proofs. The full HOL Call simulation and payload
-shapes beyond those helpers remain open. -/
+`EvaluateCases.crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the
+map-update relation used by those cases. These helpers do not complete the
+HOL `pc_compile_correct[Call_Ret_Exception]` simulation: its general Call
+state transition and payload-shape obligations remain open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -2489,7 +2490,8 @@ theorem panValueFfiSharedLoad_stateRel_target
        simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
          riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
          riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
-         crepRuntimeSharedMem, hvalid, if_true, hcallBase, ← hvalue])
+         crepRuntimeSharedMem, setCrepRuntimeLocal_eq_update, hvalid, if_true,
+         hcallBase, ← hvalue])
   · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
       nextFfi hstate
 

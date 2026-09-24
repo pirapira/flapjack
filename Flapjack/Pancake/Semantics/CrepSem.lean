@@ -285,6 +285,37 @@ def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=
   fun candidate => if name == candidate then some value else locals candidate
 
+/-- The runtime local-cell update is HOL's finite-map `|+`/`FUPDATE` on the
+    function-represented locals map, i.e. exactly the body of
+    `crepSem$set_var_def` before the enclosing record write. -/
+theorem updateCrepRuntimeLocal_eq_FUPDATE
+    (locals : Nat → Option (PanWordLab α)) (name : Nat) (value : PanWordLab α) :
+    updateCrepRuntimeLocal locals name value = FUPDATE locals (name, value) := rfl
+
+/-- Production local-binding on the 14-field `CrepRuntimeState`, routed through
+    the tagged HOL `setCrepHolVar` applied to the 11-field projection, so the
+    three runtime configuration fields are preserved exactly as a record
+    update leaves them. It is NOT itself tagged (HOL's state has 11 fields);
+    `setCrepRuntimeLocal_eq_update` and `setCrepRuntimeLocal_toHolState` are
+    the kernel-checked adapters. -/
+def setCrepRuntimeLocal (name : Nat) (value : PanWordLab α)
+    (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
+  { state with locals := (setCrepHolVar name value state.toHolState).locals }
+
+/-- `setCrepRuntimeLocal` has HOL's `set_var` locals component. -/
+@[simp] theorem setCrepRuntimeLocal_eq_update
+    (name : Nat) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    setCrepRuntimeLocal name value state =
+      { state with locals := updateCrepRuntimeLocal state.locals name value } := rfl
+
+/-- Kernel-checked adapter: routing production locals through the tagged HOL
+    `setCrepHolVar` leaves the 11 encoded fields equal to the HOL-shaped
+    update. -/
+theorem setCrepRuntimeLocal_toHolState
+    (name : Nat) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    (setCrepRuntimeLocal name value state).toHolState =
+      setCrepHolVar name value state.toHolState := rfl
+
 /-- Flapjack update of the total HOL-shaped memory function. -/
 def updateCrepRuntimeMemory [BEq α] (memory : α → PanWordLab α)
     (address : α) (value : PanWordLab α) : α → PanWordLab α :=
@@ -296,6 +327,11 @@ def updateCrepRuntimeMemory [BEq α] (memory : α → PanWordLab α)
    the caller's transient locals. -/
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
+
+/-- Kernel-checked adapter: the production local-clear agrees with the tagged
+    HOL `emptyCrepHolLocals` under the 11-field projection. -/
+theorem clearCrepRuntimeLocals_toHolState (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).toHolState = emptyCrepHolLocals state.toHolState := rfl
 
 /-- Flapjack-only projection lemma for the local-clear operation. -/
 @[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
@@ -311,6 +347,60 @@ def assignCrepRuntimeLocals (locals : Nat → Option (PanWordLab α))
     some ((names.zip values).foldl
       (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
       locals)
+
+/-- Folding the runtime local-cell update over a list of `(name, value)` pairs
+    is the HOL finite-map `|++`/`FUPDATE_LIST` over the same pairs with the raw
+    values wrapped as `word_lab` cells. -/
+theorem foldl_updateCrepRuntimeLocal_eq
+    (entries : List (Nat × α)) (locals : Nat → Option (PanWordLab α)) :
+    entries.foldl
+        (fun acc entry => updateCrepRuntimeLocal acc entry.1 (.word entry.2))
+        locals =
+      (entries.map (fun entry => (entry.1, PanWordLab.word entry.2))).foldl
+        FUPDATE locals := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry rest ih =>
+      simp only [List.foldl_cons, List.map_cons]
+      rw [updateCrepRuntimeLocal_eq_FUPDATE, ih]
+
+/-- Production `assignCrepRuntimeLocals` is exactly HOL's `|++` (`FUPDATE_LIST`)
+    over the zipped `(name, word value)` bindings, with the same length guard. -/
+theorem assignCrepRuntimeLocals_eq_FUPDATE_LIST
+    (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
+    assignCrepRuntimeLocals locals names values =
+      (if names.length != values.length then none
+       else some (FUPDATE_LIST locals
+         ((names.zip values).map (fun entry => (entry.1, PanWordLab.word entry.2))))) := by
+  unfold assignCrepRuntimeLocals
+  cases hb : names.length != values.length with
+  | true => rfl
+  | false =>
+      rw [foldl_updateCrepRuntimeLocal_eq]
+      rfl
+
+/-- Production callee-local setup starts from the empty map (the `Call` clause),
+    so it is HOL's `upd_locals` body `FEMPTY |++ varargs`. -/
+theorem assignCrepRuntimeLocals_empty_eq
+    (names : List Nat) (values : List α) (h : names.length = values.length) :
+    assignCrepRuntimeLocals (fun _ => none) names values =
+      some (FUPDATE_LIST FEMPTY
+        ((names.zip values).map (fun entry => (entry.1, PanWordLab.word entry.2)))) := by
+  rw [assignCrepRuntimeLocals_eq_FUPDATE_LIST]
+  have hfalse : (names.length != values.length) = false := by
+    cases hb : names.length != values.length with
+    | false => rfl
+    | true => exact (bne_iff_ne.mp hb h).elim
+  rw [hfalse]
+  rfl
+
+/-- Kernel-checked adapter: writing the callee-locals map produced from the
+    empty map into a runtime state projects to the tagged HOL `updCrepHolLocals`
+    on the 11-field state. -/
+theorem setCrepRuntimeLocalsFEMPTY_toHolState
+    (varargs : List (Nat × PanWordLab α)) (state : CrepRuntimeState α σ) :
+    ({ state with locals := FUPDATE_LIST FEMPTY varargs }).toHolState =
+      updCrepHolLocals varargs state.toHolState := rfl
 
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
@@ -598,6 +688,50 @@ def crepRuntimeAssignExisting
       (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
       locals)
 
+/-- State-level `crepRuntimeAssignExisting` whose fold routes through the tagged
+    HOL `set_var` definition via `setCrepRuntimeLocal`. -/
+def setCrepRuntimeLocalsExisting (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) : Option (CrepRuntimeState α σ) :=
+  if names.length != values.length then none
+  else if !names.all (fun name => (state.locals name).isSome) then none
+  else if names.eraseDups.length != names.length then none
+  else
+    some ((names.zip values).foldl
+      (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state) state)
+
+theorem foldl_setCrepRuntimeLocal_eq (entries : List (Nat × α))
+    (state : CrepRuntimeState α σ) :
+    entries.foldl (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state)
+        state =
+      { state with
+        locals :=
+          entries.foldl
+            (fun locals pair => updateCrepRuntimeLocal locals pair.1 (.word pair.2))
+            state.locals } := by
+  induction entries generalizing state with
+  | nil => rfl
+  | cons pair rest ih =>
+      simp only [List.foldl_cons]
+      rw [setCrepRuntimeLocal_eq_update, ih]
+
+theorem setCrepRuntimeLocalsExisting_eq (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) :
+    setCrepRuntimeLocalsExisting names values state =
+      (crepRuntimeAssignExisting state.locals names values).map
+        (fun locals => { state with locals := locals }) := by
+  unfold setCrepRuntimeLocalsExisting crepRuntimeAssignExisting
+  cases hlen : names.length != values.length with
+  | true => rfl
+  | false =>
+      cases hall : !names.all (fun name => (state.locals name).isSome) with
+      | true => rfl
+      | false =>
+          cases hdup : names.eraseDups.length != names.length with
+          | true => rfl
+          | false =>
+              rw [foldl_setCrepRuntimeLocal_eq]
+              rfl
+
 def crepRuntimeReadBytes [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Nat → Option (List UInt8)
   | 0 => some []
@@ -663,7 +797,7 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
             let state := { state with ffi := ffi }
-            (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+            (.normal, setCrepRuntimeLocal name (.word value) state)
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
         match (state.locals name).map panTheWord with
@@ -1196,8 +1330,7 @@ mutual
         match evalCrepRuntimeExp state value with
         | none => some (.error, state)
         | some value =>
-            let nextState :=
-              { state with locals := updateCrepRuntimeLocal state.locals name (.word value) }
+            let nextState := setCrepRuntimeLocal name (.word value) state
             match evalCrepRuntimeProg handler primitive fuel nextState body with
             | none => none
             | some result => some (restoreCrepRuntimeStep name (state.locals name) result)
@@ -1207,7 +1340,7 @@ mutual
         | some value =>
             match state.locals name with
             | some _ =>
-                some (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+                some (.normal, setCrepRuntimeLocal name (.word value) state)
             | none => some (.error, state)
     | _fuel + 1, state, .primitive names operator arguments =>
         match arguments.mapM (fun name => (state.locals name).map panTheWord) with
@@ -1216,8 +1349,8 @@ mutual
             match primitive operator arguments with
             | none => some (.error, state)
             | some values =>
-                match crepRuntimeAssignExisting state.locals names values with
-                | some locals => some (.normal, { state with locals := locals })
+                match setCrepRuntimeLocalsExisting names values state with
+                | some state' => some (.normal, state')
                 | none => some (.error, state)
     | _fuel + 1, state, .store address value =>
         match evalCrepRuntimeExp state address, evalCrepRuntimeExp state value with

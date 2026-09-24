@@ -712,6 +712,22 @@
     "reviewer": "Codex (source comparison; MEM x (MAP2 f l1 l2) => exists y1 y2, x = f y1 y2 /\\ MEM y1 l1 /\\ MEM y2 l2; panMap2 is the exact MAP2 port; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "not_some_is_none",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "not_some_is_none",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; forall a. (forall v. a <> SOME v) <=> a = NONE, exact statement over Option alpha; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdom_eq_flookup_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdom_eq_flookup_thm",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; FDOM equality iff pointwise FLOOKUP support conditions; FDOM is the repo finite-map domain predicate, statement has no extra hypotheses)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",

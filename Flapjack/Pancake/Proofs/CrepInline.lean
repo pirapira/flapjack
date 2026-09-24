@@ -97,6 +97,56 @@ theorem panMap2_mem {α β γ : Type} {f : α → β → γ} {l1 : List α} {l2 
           · obtain ⟨y1, y2, heq, h1, h2⟩ := ih hmem
             exact ⟨y1, y2, heq, by simp [h1], by simp [h2]⟩
 
+/-- CakeML's `not_some_is_none` (`crep_inlineProofScript.sml:778`): an option
+    with no `SOME` inhabitant is `NONE`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "not_some_is_none"]
+theorem not_some_is_none {α : Type u} (a : Option α) :
+    (∀ v, a ≠ some v) ↔ a = none := by
+  cases a <;> simp
+
+/-- CakeML's `fdom_eq_flookup_thm` (`crep_inlineProofScript.sml:784`): two
+    finite maps have the same domain iff each lookup in one is supported in the
+    other and a missing lookup in the first is missing in the second.  `FDOM`
+    is the repo finite-map domain predicate (`Flapjack/FiniteMap/Basic.lean`). -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdom_eq_flookup_thm"]
+theorem fdom_eq_flookup_thm {α : Type} {β : Type} (f1 f2 : FiniteMap α β) :
+    FDOM f1 = FDOM f2 ↔
+      (∀ x, (∃ v, FLOOKUP f1 x = some v) → (∃ v, FLOOKUP f2 x = some v)) ∧
+      (∀ x, FLOOKUP f1 x = none → FLOOKUP f2 x = none) := by
+  constructor
+  · intro h
+    constructor
+    · intro x hx
+      obtain ⟨v, hv⟩ := hx
+      have hv' : f1 x = some v := hv
+      have h1 : f1 x ≠ none := by rw [hv']; exact Option.some_ne_none v
+      have h2 : f2 x ≠ none := (congrFun h x).mp h1
+      cases hf2 : f2 x with
+      | none => exact absurd hf2 h2
+      | some w => exact ⟨w, hf2⟩
+    · intro x hx
+      have hx' : f1 x = none := hx
+      have h1 : ¬ (f1 x ≠ none) := fun hc => hc hx'
+      have h2 : ¬ (f2 x ≠ none) := fun hc => h1 ((congrFun h x).mpr hc)
+      cases hf2 : f2 x with
+      | none => exact hf2
+      | some w => exact (h2 (by rw [hf2]; exact Option.some_ne_none w)).elim
+  · rintro ⟨h12, hnone⟩
+    funext x
+    apply propext
+    constructor
+    · intro h1
+      have hx : ∃ v, f1 x = some v := by
+        cases hf1 : f1 x with
+        | none => exact absurd hf1 h1
+        | some v => exact ⟨v, rfl⟩
+      obtain ⟨w, hw⟩ := h12 x hx
+      change f2 x ≠ none
+      rw [show f2 x = some w from hw]
+      exact Option.some_ne_none w
+    · intro h2 hf1
+      exact h2 (hnone x hf1)
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

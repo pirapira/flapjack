@@ -110,6 +110,33 @@ def crepInlineMap2Guard : Bool :=
 
 #guard crepInlineMap2Guard
 
+/-! Regression for the exact `not_some_is_none` and `fdom_eq_flookup_thm`
+    ports. -/
+
+theorem crepInlineNotSomeNone :
+    (∀ v : Nat, (some 3 : Option Nat) ≠ some v) ↔
+      (some 3 : Option Nat) = none :=
+  not_some_is_none (some 3)
+
+theorem crepInlineFdomEq_self (f : FiniteMap Nat Nat) :
+    FDOM f = FDOM f ↔
+      (∀ x, (∃ v, FLOOKUP f x = some v) → (∃ v, FLOOKUP f x = some v)) ∧
+      (∀ x, FLOOKUP f x = none → FLOOKUP f x = none) :=
+  fdom_eq_flookup_thm f f
+
+def crepInlineFdomMap : FiniteMap Nat Nat :=
+  fun k => if k = 1 then some 10 else none
+
+def crepInlineFdomGuard : Bool :=
+  (match FLOOKUP crepInlineFdomMap 1 with
+    | some v => v == 10
+    | none => false) &&
+    (match FLOOKUP crepInlineFdomMap 2 with
+      | some _ => false
+      | none => true)
+
+#guard crepInlineFdomGuard
+
 def runChecks : IO Bool := do
   let genlistOk ←
     if crepInlineGenlistIntervalGuard then
@@ -146,6 +173,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline MEM_MAP2_IMP"
       pure false
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok)
+  let fdomOk ←
+    if crepInlineFdomGuard then
+      IO.println "PASS crep_inline not_some_is_none and fdom_eq_flookup_thm"
+      pure true
+    else
+      IO.println "FAIL crep_inline not_some_is_none and fdom_eq_flookup_thm"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

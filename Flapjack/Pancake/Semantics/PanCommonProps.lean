@@ -133,4 +133,26 @@ theorem MAX_LIST_add_not_mem (values : List Nat) : maxList values + 1 ∉ values
 theorem MAX_LIST_i_genlist (n : Nat) : maxList (List.range n) = n - 1 :=
   maxList_range n
 
+/-- Exact port of HOL `max_foldr_lt`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:768`): a member of a
+    list is strictly below the fold with `max` (starting from `n`) plus any
+    positive slack `m`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "max_foldr_lt"]
+theorem max_foldr_lt (values : List Nat) (x n m : Nat) (hmem : x ∈ values)
+    (hle : n ≤ x) (hm : 0 < m) : x < values.foldr max n + m :=
+  mem_lt_foldr_max_add values x n m hmem hle hm
+
+/-- Exact port of HOL `MAP3_MAP2`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:827`): a three-way
+    pointwise map is a two-way pointwise map over the first two zipped lists
+    when the lengths agree; `UNCURRY f` is `fun p z => f p.1 p.2 z`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "MAP3_MAP2"]
+theorem MAP3_MAP2 {α β γ δ : Type} (f : α → β → γ → δ) (l1 : List α)
+    (l2 : List β) (l3 : List γ) (h1 : l1.length = l3.length)
+    (h2 : l2.length = l3.length) :
+    panMap3 f l1 l2 l3 =
+      panMap2 (fun (pair : α × β) (z : γ) => f pair.1 pair.2 z)
+        (l1.zip l2) l3 :=
+  panMap3_eq_map2_zip f l1 l2 l3 h1 h2
+
 end Flapjack

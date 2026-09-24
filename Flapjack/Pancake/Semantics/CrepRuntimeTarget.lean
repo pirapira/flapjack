@@ -330,6 +330,43 @@ theorem panRiscVWordOp_eq_wordOpHOL [NeZero width]
     (operator : BinOp) (values : List (RiscV.Word width)) :
     RiscV.panRiscVWordOp operator values = wordOpHOL operator values := rfl
 
+/-! The production `Op` constructor evaluates the full expression list and
+then applies the width-generic HOL `word_op_def` port. This is an evaluator
+constructor bridge for the canonical RISC-V word target, not the whole HOL
+`crepSem$eval` relation: the runtime state and other evaluator constructors
+still require their own correspondence proofs. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (wordOpHOL operator) := by
+  simp only [evalCrepRuntimeExp, riscvCrepWordTarget,
+    RiscV.panRiscVMemoryModelForEndian]
+  change (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (fun values => RiscV.panRiscVWordOp operator values) =
+    (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (wordOpHOL operator)
+  apply congrArg
+    (fun operation =>
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind operation)
+  funext values
+  exact panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- The same all-width `Op` constructor equation with HOL's complete
+`Option (word_lab word)` result projection. This is still only one evaluator
+case for the target-adapted runtime, not a claim that its entire state is a
+HOL `crepSem$state`. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions)).map
+        PanWordLab.word =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (fun values => (wordOpHOL operator values).map PanWordLab.word) := by
+  rw [evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL]
+  simp [Option.map_bind, Function.comp_def]
+
 theorem crepRuntimeWordTarget_compare [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Cmp)
     (left right : RiscV.Word width) :
@@ -385,6 +422,85 @@ theorem panRiscVCmp_eq_evalPanCmp [NeZero width]
       · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_less, h]
   | test => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
   | notTest => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
+
+/-! These constructor equations expose the production target's generic
+    comparison and shift primitives through the evaluator's recursive child
+    evaluations. They remain untagged support: the target-adapted state is not
+    yet identified with arbitrary HOL `crepSem$state`. -/
+private theorem evalCrepRuntimeExp_cmp_raw
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Cmp)
+    (left right : CrepExp α) :
+    evalCrepRuntimeExp state (.cmp operator left right) =
+      (evalCrepRuntimeExp state left).bind (fun leftValue =>
+      (evalCrepRuntimeExp state right).bind (fun rightValue =>
+          some (state.memoryModel.compare operator leftValue rightValue))) := by
+  simp [evalCrepRuntimeExp]
+
+private theorem evalCrepRuntimeExp_shift_raw
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Shift)
+    (left right : CrepExp α) :
+    evalCrepRuntimeExp state (.shift operator left right) =
+      (evalCrepRuntimeExp state left).bind (fun leftValue =>
+      (evalCrepRuntimeExp state right).bind (fun rightValue =>
+          state.memoryModel.shift operator leftValue rightValue)) := by
+  simp [evalCrepRuntimeExp]
+
+theorem evalCrepRuntimeExp_cmp_riscvWordTarget_evalPanCmp [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word width)) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.cmp operator left right) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+            (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+              (fun rightValue => some (evalPanCmp operator leftValue rightValue))) := by
+  rw [evalCrepRuntimeExp_cmp_raw]
+  simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian,
+    panRiscVCmp_eq_evalPanCmp]
+
+theorem evalCrepRuntimeExp_shift_riscvWordTarget_evalPanShift [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Shift) (left right : CrepExp (RiscV.Word width)) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.shift operator left right) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue => evalPanShiftFull operator leftValue rightValue)) := by
+  rw [evalCrepRuntimeExp_shift_raw]
+  simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian,
+    panRiscVShift_eq_evalPanShiftFull]
+
+theorem evalCrepRuntimeExp_cmp_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word width)) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.cmp operator left right)).map
+      PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue => some (.word (evalPanCmp operator leftValue rightValue)))) := by
+  rw [evalCrepRuntimeExp_cmp_riscvWordTarget_evalPanCmp]
+  simp [Option.map_bind, Function.comp_def]
+
+theorem evalCrepRuntimeExp_shift_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Shift) (left right : CrepExp (RiscV.Word width)) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.shift operator left right)).map
+      PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue =>
+              (evalPanShiftFull operator leftValue rightValue).map PanWordLab.word)) := by
+  rw [evalCrepRuntimeExp_shift_riscvWordTarget_evalPanShift]
+  simp [Option.map_bind, Function.comp_def]
 
 /-- `updateMemory` (production, `Flapjack.Semantics`) and
     `panModelUpdateMemory` (the memory-model helper) are definitionally the same

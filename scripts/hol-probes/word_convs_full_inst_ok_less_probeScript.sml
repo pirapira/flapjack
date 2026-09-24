@@ -44,6 +44,7 @@ val _ = print_eval "fiol_if" ``full_inst_ok_less ^cfg (wordLang$If asm$Equal 1 (
 val _ = print_eval "fiol_must_terminate" ``full_inst_ok_less ^cfg (wordLang$MustTerminate ^goodInst)``;
 val _ = print_eval "fiol_call_ret_bad" ``full_inst_ok_less ^cfg (wordLang$Call (SOME ([1], (sptree$LN,sptree$LN), ^badInst, 10, 11)) NONE [] NONE)``;
 val _ = print_eval "fiol_call_handler_bad" ``full_inst_ok_less ^cfg (wordLang$Call (SOME ([1], (sptree$LN,sptree$LN), ^goodInst, 10, 11)) NONE [] (SOME (2, ^badInst, 20, 21)))``;
+val _ = print_eval "fiol_call_none_handler_bad" ``full_inst_ok_less ^cfg (wordLang$Call NONE NONE [] (SOME (2, ^badInst, 20, 21)))``;
 val _ = print_eval "fiol_call_ok" ``full_inst_ok_less ^cfg (wordLang$Call NONE NONE [] NONE)``;
 val _ = print_eval "fiol_share_load" ``full_inst_ok_less ^cfg (wordLang$ShareInst asm$Load 1 (wordLang$Var 3))``;
 val _ = print_eval "fiol_share_load_big" ``full_inst_ok_less ^cfg (wordLang$ShareInst asm$Load 1 (wordLang$Op asm$Add [wordLang$Var 3; wordLang$Const (150w:8 word)]))``;

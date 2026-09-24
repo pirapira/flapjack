@@ -11,6 +11,7 @@ fiol_if=T
 fiol_must_terminate=T
 fiol_call_ret_bad=F
 fiol_call_handler_bad=F
+fiol_call_none_handler_bad=T
 fiol_call_ok=T
 fiol_share_load=T
 fiol_share_load_big=F

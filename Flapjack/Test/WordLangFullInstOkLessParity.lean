@@ -61,6 +61,9 @@ private def callHandlerBadProg : WordLangProg W :=
   .call (some ([1], cutsets, goodInstProg, 10, 11)) none []
     (some (2, badProg, 20, 21))
 
+private def callNoneHandlerBadProg : WordLangProg W :=
+  .call none none [] (some (2, badProg, 20, 21))
+
 private def callOkProg : WordLangProg W := .call none none [] none
 
 private def shareLoadProg : WordLangProg W := .shareInst .load 1 (.var 3)
@@ -98,6 +101,7 @@ example : fullInstOkLess cfg ifProg = true := by decide
 example : fullInstOkLess cfg mustTerminateProg = true := by decide
 example : fullInstOkLess cfg callRetBadProg = false := by decide
 example : fullInstOkLess cfg callHandlerBadProg = false := by decide
+example : fullInstOkLess cfg callNoneHandlerBadProg = true := by decide
 example : fullInstOkLess cfg callOkProg = true := by decide
 example : fullInstOkLess cfg shareLoadProg = true := by decide
 example : fullInstOkLess cfg shareLoadBigProg = false := by decide
@@ -117,6 +121,7 @@ private def guards : List Bool :=
   , fullInstOkLess cfg mustTerminateProg
   , fullInstOkLess cfg callRetBadProg
   , fullInstOkLess cfg callHandlerBadProg
+  , fullInstOkLess cfg callNoneHandlerBadProg
   , fullInstOkLess cfg callOkProg
   , fullInstOkLess cfg shareLoadProg
   , fullInstOkLess cfg shareLoadBigProg
@@ -127,13 +132,13 @@ private def guards : List Bool :=
   , fullInstOkLess cfg allocProg ]
 
 private def expected : List Bool :=
-  [true, true, false, false, true, true, true, false, false, true,
+  [true, true, false, false, true, true, true, false, false, true, true,
    true, false, true, true, false, true, true]
 
 def runChecks : IO Bool := do
   let ok := guards == expected
   if ok then
-    IO.println "PASS wordConvs full_inst_ok_less matches all 21 oracle rows"
+    IO.println "PASS wordConvs full_inst_ok_less matches all 22 oracle rows"
   else
     IO.println "FAIL wordConvs full_inst_ok_less rows"
   pure ok

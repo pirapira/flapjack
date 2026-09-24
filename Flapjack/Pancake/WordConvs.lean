@@ -273,12 +273,13 @@ def fullInstOkLess {width : Nat} (config : AsmConfig width) :
       fullInstOkLess config thenBranch && fullInstOkLess config elseBranch
   | .mustTerminate body => fullInstOkLess config body
   | .call returns _ _ handler =>
-      (match returns with
-        | none => true
-        | some (_, _, returnHandler, _, _) => fullInstOkLess config returnHandler) &&
-      (match handler with
-        | none => true
-        | some (_, handlerProg, _, _) => fullInstOkLess config handlerProg)
+      match returns with
+      | none => true
+      | some (_, _, returnHandler, _, _) =>
+          fullInstOkLess config returnHandler &&
+            match handler with
+            | none => true
+            | some (_, handlerProg, _, _) => fullInstOkLess config handlerProg
   | .shareInst operator _ address =>
       match expToAddr address with
       | some (.addr _ offset) =>

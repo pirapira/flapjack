@@ -9094,5 +9094,13 @@
   "lean_name": "NumSet",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/loopLangScript.sml",
+  "hol_name": "prog",
+  "lean_path": "Flapjack/Pancake/LoopLang.lean",
+  "lean_name": "HolLoopProg",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

@@ -2059,6 +2059,38 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEval {ι : Type} {σ : Type}
             congrArg (Option.map PanWordLab.word)
               (evalCrepRuntimeExp_sourceWord_eq dimension state expression)
 
+/-- Full `word_lab` result form of the source-evaluator preservation theorem.
+    Since `PanWordLab` has only its `word` constructor, this strengthens the
+    payload-projected helper above to equality of the complete optional result.
+    It remains untagged until the source evaluator and state operations are
+    proved identical to HOL `crepSem$eval` for its implicit finite-index
+    instance. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceFull {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExp dimension state expression ≠ none) :
+    evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) =
+    evalCrepHolFiniteWordSourceExp dimension state expression := by
+  have hmap : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none := by
+    cases heval : evalCrepHolFiniteWordSourceExp dimension state expression <;>
+      simp_all
+  have hprojected := crepSimpExpCorrect1HolFiniteWordSourceEval
+    dimension f state expression hmap
+  cases hleft : evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) <;>
+    cases hright : evalCrepHolFiniteWordSourceExp dimension state expression <;>
+    simp_all
+
 /-! Canonical `Fin width` all-width instance of the source-runtime result.
     Unlike the arbitrary `HolFiniteDimension` theorem above, this fixes the
     index-to-bit map to Lean's standard `Fin` ordering for every positive

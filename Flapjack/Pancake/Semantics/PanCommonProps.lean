@@ -377,12 +377,20 @@ theorem opt_mmap_opt_map {α β γ : Type} (l : List α) (f : α → Option β)
                 Option.map_some]
               rfl
 
-/-- Exact port of HOL `set_eq_membership`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:624`): membership
-    transports along an equality (the list reading of HOL `MEM`). -/
-@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "set_eq_membership"]
-theorem set_eq_membership {α : Type} {a b : List α} {x : α}
+/-- FLAPJACK-SPECIFIC (not an exact HOL port): the list reading of HOL
+    `MEM`, kept for existing clients.  The exact tagged HOL statement is
+    `set_eq_membership` below. -/
+theorem memTransportsOfEq {α : Type} {a b : List α} {x : α}
     (h : a = b ∧ x ∈ a) : x ∈ b := h.1 ▸ h.2
+
+/-- Exact port of HOL `set_eq_membership`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:624`):
+    `a = b ∧ x ∈ a ==> x ∈ b`, over HOL sets.  HOL sets are predicates
+    `'a set = 'a -> bool`, so membership `x ∈ a` is rendered as the
+    proposition `a x`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "set_eq_membership"]
+theorem set_eq_membership {α : Type} {a b : α → Prop} {x : α}
+    (h : a = b ∧ a x) : b x := h.1 ▸ h.2
 
 /-- Exact port of HOL `fm_empty_zip_flookup_el`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:479`): looking up the

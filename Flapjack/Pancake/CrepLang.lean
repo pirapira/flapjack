@@ -203,12 +203,15 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
 
-/-- Faithful port of `crepLang$load_shape_def`
-    (`cakeml/pancake/crepLangScript.sml:82-86`): load `count` consecutive words
-    starting at `address`, stepping by the fixed machine byte width.  Unlike the
-    pipeline's `loadShape`, the stride is not a parameter; it is the fixed
-    `byte$bytes_in_word` supplied by the `CrepBytesInWord` instance. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+/-- Faithful fixed-stride loading: load `count` consecutive words starting at
+    `address`, stepping by the fixed machine byte width supplied by the
+    `CrepBytesInWord` instance.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over the
+    word element type, while HOL `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`) is indexed by the word length
+    (`address : 'a word`, `0w`, `byte$bytes_in_word`).  The exact width-indexed
+    tag is on `loadShapeBytesW` below. -/
 def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (address : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -216,6 +219,16 @@ def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
   | count + 1 =>
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
+
+/-- Exact width-indexed port of `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`).  Carrier `BitVec width` with
+    `[NeZero width]` because HOL word types have positive `dimindex`; body is the
+    fixed-stride helper instantiated at the concrete word carrier. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+def loadShapeBytesW {width : Nat} [NeZero width]
+    (address : BitVec width) (count : Nat) (value : CrepExp (BitVec width)) :
+    List (CrepExp (BitVec width)) :=
+  loadShapeBytes address count value
 
 /-- Checked invariant connecting the pipeline's parameterized `loadShape` to the
     faithful fixed-width `loadShapeBytes`: when the explicit stride is the
@@ -544,18 +557,38 @@ theorem crepExpsOf_argLoad (tmpVars : List Nat) (args : List (CrepExp α))
       exact Or.inr (Or.inl ⟨c, hc, heq.symm⟩)
     · exact Or.inr (Or.inr hbody)
 
-@[hol "cakeml/pancake/crepLangScript.sml" "store_globals_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepProg α`/
+   `CrepExp α`, while HOL `prog`/`exp` are indexed by the word length. The exact
+   width-indexed tag is on `storeGlobalsW` below. -/
 def storeGlobals {α : Type u}
     (address : BitVec 5) : List (CrepExp α) → List (CrepProg α)
   | [] => []
   | value :: values => .storeGlob address value :: storeGlobals (address + 1) values
 
-@[hol "cakeml/pancake/crepLangScript.sml" "load_globals_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepExp α`; the
+   exact width-indexed tag is on `loadGlobalsW` below. -/
 def loadGlobals {α : Type u}
     (address : BitVec 5) (count : Nat) : List (CrepExp α) :=
   match count with
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobals (address + 1) count
+
+/-- Exact width-indexed port of HOL `store_globals_def`
+    (`cakeml/pancake/crepLangScript.sml:109-113`).  Carrier `BitVec width` with
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "store_globals_def"]
+def storeGlobalsW {width : Nat} [NeZero width]
+    (address : BitVec 5) (values : List (CrepExp (BitVec width))) :
+    List (CrepProg (BitVec width)) :=
+  storeGlobals address values
+
+/-- Exact width-indexed port of HOL `load_globals_def`
+    (`cakeml/pancake/crepLangScript.sml:116-119`).  Carrier `BitVec width` with
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_globals_def"]
+def loadGlobalsW {width : Nat} [NeZero width]
+    (address : BitVec 5) (count : Nat) : List (CrepExp (BitVec width)) :=
+  loadGlobals address count
 
 /-- Faithful port of Cake `crepProps$assigned_free_vars_seq_store_empty`
     (`cakeml/pancake/semantics/crepPropsScript.sml:439`). -/
@@ -650,11 +683,20 @@ theorem crepAssignedVars_nestedSeq_stores [BEq α] [OfNat α 0] [Add α]
   | cons value values ih =>
       simp [stores, crepNestedSeq, crepAssignedVars, ih]
 
-@[hol "cakeml/pancake/crepLangScript.sml" "assign_ret_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepProg α`; the
+   exact width-indexed tag is on `assignRetW` below. -/
 def assignRet {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]
     (names : List Nat) : CrepProg α :=
   crepNestedSeq (names.zipWith (fun name value => .assign name value)
     (loadGlobals (0 : BitVec 5) names.length))
+
+/-- Exact width-indexed port of HOL `assign_ret_def`
+    (`cakeml/pancake/crepLangScript.sml:122-125`).  Carrier `BitVec width` with
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "assign_ret_def"]
+def assignRetW {width : Nat} [NeZero width] (names : List Nat) :
+    CrepProg (BitVec width) :=
+  assignRet names
 
 /-- The assignments emitted by `assignRet` assign exactly `names`, so their
     free-variable set is `names`.  Used by the call-handler branch of Cake's

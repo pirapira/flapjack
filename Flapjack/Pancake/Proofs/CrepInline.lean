@@ -302,7 +302,9 @@ theorem fdoms_eq_opt_mmap_flookup_some {α : Type} {β : Type} (vs : List α)
     state, and base/top addresses.  `CrepHolState` is the exact 11-field
     encoding of `crepSem$state`, so this is a field-by-field port; like HOL it
     leaves `locals` to `locals_rel`/`locals_strong_rel`. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineStateRelW below.
 def crepInlineStateRel (s t : CrepHolState α σ) : Prop :=
   s.globals = t.globals ∧
   s.code = t.code ∧
@@ -416,19 +418,25 @@ theorem FOLDL_res_var_ZIP_lookup [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α
 
 /-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
     `s.locals SUBMAP t.locals`. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineLocalsRelW below.
 def crepInlineLocalsRel (s t : CrepHolState α σ) : Prop :=
   crepHolSubmap s.locals t.locals
 
 /-- CakeML's `locals_strong_rel` (`crep_inlineProofScript.sml:31`):
     `s.locals = t.locals`. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_strong_rel_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineLocalsStrongRelW below.
 def crepInlineLocalsStrongRel (s t : CrepHolState α σ) : Prop :=
   s.locals = t.locals
 
 /-- CakeML's `locals_rel_dec_clock` (`crep_inlineProofScript.sml:167`): both
     relations are preserved by `dec_clock`, since only `clock` changes. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_dec_clock"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineLocalsRel_decClockW below.
 theorem crepInlineLocalsRel_decClock (s t : CrepHolState α σ)
     (hlocals : crepInlineLocalsRel s t) (hstate : crepInlineStateRel s t) :
     crepInlineLocalsRel (decCrepHolClock s) (decCrepHolClock t) ∧
@@ -460,7 +468,9 @@ def crepHolFdiff (f : Nat → Option β) (s : Nat → Bool) : Nat → Option β 
     added when running from `a` to `a'` equal those added from `b` to `b'`,
     i.e. `FDIFF a'.locals (FDOM a.locals) = FDIFF b'.locals (FDOM b.locals)`.
     `crepHolFdiff`/`crepHolFdom` render HOL's `FDIFF`/`FDOM` extensionally. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_ext_rel_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineLocalsExtRelW below.
 def crepInlineLocalsExtRel (a b a' b' : CrepHolState α σ) : Prop :=
   crepHolFdiff a'.locals (crepHolFdom a.locals) =
     crepHolFdiff b'.locals (crepHolFdom b.locals)
@@ -468,7 +478,9 @@ def crepInlineLocalsExtRel (a b a' b' : CrepHolState α σ) : Prop :=
 /-- CakeML's `state_rel_code` (`crep_inlineProofScript.sml:1442`): `state_rel`
     without the `code` conjunct, used by the inlining simulation because
     inlining changes `code` but preserves the rest of the state. -/
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_code_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL
+-- crepSem$state is indexed by the word length. The exact width-indexed tag is on
+-- crepInlineStateRelCodeW below.
 def crepInlineStateRelCode (s t : CrepHolState α σ) : Prop :=
   s.globals = t.globals ∧
   s.memory = t.memory ∧
@@ -754,5 +766,46 @@ theorem crepInlineRuntimeSkip
     exact congrArg Prod.snd (Option.some.inj hq)
   rw [hs', crepInlineProgFmap_skip inlFs]
   exact ⟨t, evalCrepRuntimeResult_skip handler primitive fuel t, hstate, hlocals, hcode⟩
+
+/-! ## Width-indexed wrappers for the crep_inline state relations
+
+HOL `crepSem$state` is indexed by the word length, so the exact `state_rel`-family
+tags are carried by the `...W` declarations over `CrepHolState (BitVec width) σ`
+(with `[NeZero width]`); the generic-`α` relations above stay untagged. -/
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_def"]
+def crepInlineStateRelW {width : Nat} [NeZero width] {σ : Type}
+    (s t : CrepHolState (BitVec width) σ) : Prop :=
+  crepInlineStateRel s t
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_def"]
+def crepInlineLocalsRelW {width : Nat} [NeZero width] {σ : Type}
+    (s t : CrepHolState (BitVec width) σ) : Prop :=
+  crepInlineLocalsRel s t
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_strong_rel_def"]
+def crepInlineLocalsStrongRelW {width : Nat} [NeZero width] {σ : Type}
+    (s t : CrepHolState (BitVec width) σ) : Prop :=
+  crepInlineLocalsStrongRel s t
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_dec_clock"]
+theorem crepInlineLocalsRel_decClockW {width : Nat} [NeZero width] {σ : Type}
+    (s t : CrepHolState (BitVec width) σ)
+    (hlocals : crepInlineLocalsRelW s t) (hstate : crepInlineStateRelW s t) :
+    crepInlineLocalsRelW (decCrepHolClockW s) (decCrepHolClockW t) ∧
+    crepInlineStateRelW (decCrepHolClockW s) (decCrepHolClockW t) := by
+  have h := crepInlineLocalsRel_decClock s t hlocals hstate
+  simpa only [crepInlineLocalsRelW, crepInlineStateRelW,
+    decCrepHolClockW_eq_decCrepHolClock] using h
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_ext_rel_def"]
+def crepInlineLocalsExtRelW {width : Nat} [NeZero width] {σ : Type}
+    (a b a' b' : CrepHolState (BitVec width) σ) : Prop :=
+  crepInlineLocalsExtRel a b a' b'
+
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "state_rel_code_def"]
+def crepInlineStateRelCodeW {width : Nat} [NeZero width] {σ : Type}
+    (s t : CrepHolState (BitVec width) σ) : Prop :=
+  crepInlineStateRelCode s t
 
 end Flapjack

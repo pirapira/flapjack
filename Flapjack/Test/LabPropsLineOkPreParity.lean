@@ -138,6 +138,14 @@ example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
         (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.tick : P) = true) :=
   stackAsmOk_asmChecksOfConfig_call_some_inl_some cfg8 _ 7 1 0 2 _ 3 4
 
+/-- The top-level flat `flatten_line_ok_pre` fires on a concrete program. -/
+example : ((Flapjack.Compiler.Backend.StackToLab.flatten (flattenOps (width := 8)) (0 : W) false
+      (.tick : P) 0 0 [] []).1.all (lineOkPreConfig cfg8)) = true :=
+  flatten_line_ok_pre cfg8 (.tick : P) false 0 0 [] []
+    (by decide)
+    (by simp [Flapjack.Compiler.Backend.StackProps.stackAsmOk,
+      Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig])
+
 def runChecks : IO Bool := do
   let guards : List Bool :=
     [ decide (lineOkPreConfig cfg8 asmSkipLine = true)

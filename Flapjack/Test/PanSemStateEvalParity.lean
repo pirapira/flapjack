@@ -434,4 +434,58 @@ example :
 #guard decide (panValueFlatShapeFuel Shape.one ≤
   panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)))
 
+/- The per-node word read agrees with the exact domain/memory pair. -/
+example :
+    panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+        (some (panSemBitVec64MemoryAccess littleEndianState)) 0 =
+      (if littleEndianState.memaddrs 0 &&
+          panValueWordDefined littleEndianState.memory 0 = true
+        then some (panValueWordHOL littleEndianState.memory 0) else none).map
+        (fun lab => match lab with | .word value => value) :=
+  panValueFlatReadWord_eq_panValueWordHOL littleEndianState
+    littleEndianState.memory 0
+
+#guard
+  (panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 0 ==
+    some sourceMemoryWord)
+
+/-! Structured `.load` Comb/Named induction prerequisites (flapjack-pxn.18.3.6.9.2.2.1). -/
+
+example : 1 ≤ panValueFlatShapeFuel Shape.one := panValueFlatShapeFuel_pos Shape.one
+
+example : 1 ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.one] :=
+  panValueFlatShapeListFuel_pos Shape.one []
+
+example : 1 ≤ panValueFlatFieldsFuel [("f", Shape.one)] :=
+  panValueFlatFieldsFuel_pos ("f", Shape.one) []
+
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext)) = none :=
+  panMemLoadHOL_named_none "S" ([] : StructContext) 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory) (by simp [lookupInfoWithRest])
+
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)) =
+      (panMemLoadFldsHOL [("f", Shape.one)]
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map
+        (fun fields => HolValue.nStruct "S" fields) :=
+  panMemLoadHOL_named_some "S" [("S", { fields := [("f", Shape.one)], size := 1 })] 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory)
+    { fields := [("f", Shape.one)], size := 1 } []
+    (by simp [lookupInfoWithRest])
+
 end Flapjack.Test.PanSemStateEvalParity

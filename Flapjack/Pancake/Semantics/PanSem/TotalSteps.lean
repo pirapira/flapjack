@@ -166,9 +166,10 @@ theorem panSemTotalAssignClause_invalid [NeZero 64] [BEq (RiscV.Word 64)]
     panSemTotalAssignClause state kind name expression = (some .error, state) := by
   simp [panSemTotalAssignClause, panSemTotalExprStep, heval, hvalid]
 
-/-- HOL `Return` (`panSemScript.sml:625-627`): evaluate the source and return
-    `SOME (Return v)` with the state unchanged, or `SOME Error` when the source
-    fails. -/
+/-- HOL `Return` (`panSemScript.sml:638-644`): evaluate the source, accept it
+    only when `size_of_sh_with_ctxt structs (shape_of value) ≤ 32`, and clear
+    locals on success. Failed evaluation or an oversized value returns
+    `SOME Error` with the state unchanged. -/
 def panSemTotalReturnClause [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
@@ -183,7 +184,11 @@ def panSemTotalReturnClause [NeZero 64]
     (expression : Exp (RiscV.Word 64)) :
     Option (PanSemHOLResult (RiscV.Word 64)) ×
       PanSemState (RiscV.Word 64) (FfiState σ) :=
-  panSemTotalExprStep state expression (fun value => (some (.returned value), state))
+  panSemTotalExprStep state expression (fun value =>
+    if sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
+      (some (.returned value), panEmptyLocals state)
+    else
+      (some .error, state))
 
 theorem panSemTotalReturnClause_some [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
@@ -198,8 +203,11 @@ theorem panSemTotalReturnClause_some [NeZero 64]
     (state : PanSemState (RiscV.Word 64) (FfiState σ))
     (expression : Exp (RiscV.Word 64)) (value : PanValue (RiscV.Word 64))
     (heval : evalPanSemStateExp state expression = some value) :
-    panSemTotalReturnClause state expression = (some (.returned value), state) := by
-  simp [panSemTotalReturnClause, panSemTotalExprStep, heval]
+    sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 →
+    panSemTotalReturnClause state expression =
+      (some (.returned value), panEmptyLocals state) := by
+  intro hsize
+  simp [panSemTotalReturnClause, panSemTotalExprStep, heval, hsize]
 
 theorem panSemTotalReturnClause_none [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
@@ -217,9 +225,10 @@ theorem panSemTotalReturnClause_none [NeZero 64]
     panSemTotalReturnClause state expression = (some .error, state) := by
   simp [panSemTotalReturnClause, panSemTotalExprStep, heval]
 
-/-- HOL `Raise` (`panSemScript.sml:628-630`): evaluate the source and return
-    `SOME (Exception eid v)` with the state unchanged, or `SOME Error` when the
-    source fails. -/
+/-- HOL `Raise` (`panSemScript.sml:645-653`): require an exception shape for
+    `eid`, evaluate the source, and accept only a value with that shape and at
+    most 32 words. Success clears locals; every failed check returns
+    `SOME Error` with the state unchanged. -/
 def panSemTotalRaiseClause [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
@@ -234,8 +243,15 @@ def panSemTotalRaiseClause [NeZero 64]
     (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64)) :
     Option (PanSemHOLResult (RiscV.Word 64)) ×
       PanSemState (RiscV.Word 64) (FfiState σ) :=
-  panSemTotalExprStep state expression
-    (fun value => (some (.exception exceptionId value), state))
+  panSemTotalExprStep state expression (fun value =>
+    match state.exceptionShapes exceptionId with
+    | some shape =>
+        if panShapeMatches shape (panSemShapeOf value) &&
+            sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
+          (some (.exception exceptionId value), panEmptyLocals state)
+        else
+          (some .error, state)
+    | none => (some .error, state))
 
 theorem panSemTotalRaiseClause_some [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
@@ -250,10 +266,14 @@ theorem panSemTotalRaiseClause_some [NeZero 64]
     (state : PanSemState (RiscV.Word 64) (FfiState σ))
     (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
     (value : PanValue (RiscV.Word 64))
-    (heval : evalPanSemStateExp state expression = some value) :
+    (shape : Shape)
+    (heval : evalPanSemStateExp state expression = some value)
+    (hshape : state.exceptionShapes exceptionId = some shape)
+    (hvalue : panShapeMatches shape (panSemShapeOf value) = true)
+    (hsize : sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32) :
     panSemTotalRaiseClause state exceptionId expression =
-      (some (.exception exceptionId value), state) := by
-  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval]
+      (some (.exception exceptionId value), panEmptyLocals state) := by
+  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval, hshape, hvalue, hsize]
 
 theorem panSemTotalRaiseClause_none [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]

@@ -271,4 +271,197 @@ theorem panSemTotalRaiseClause_none [NeZero 64]
     panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
   simp [panSemTotalRaiseClause, panSemTotalExprStep, heval]
 
+/-- Shared list-expression glue: evaluate a list of source expressions from the
+    complete state; on produced values hand them to the continuation, and on a
+    failed evaluation return `SOME Error` with the state unchanged (HOL's
+    `case OPT_MMAP (eval s) es of SOME vs => ... | _ => (SOME Error, s)`
+    pattern). -/
+def panSemTotalExprListStep [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expressions : List (Exp (RiscV.Word 64)))
+    (onValues : List (PanValue (RiscV.Word 64)) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  match evalPanSemStateExps state expressions with
+  | some values => onValues values
+  | none => (some .error, state)
+
+@[simp] theorem panSemTotalExprListStep_some [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expressions : List (Exp (RiscV.Word 64)))
+    (onValues : List (PanValue (RiscV.Word 64)) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (values : List (PanValue (RiscV.Word 64)))
+    (heval : evalPanSemStateExps state expressions = some values) :
+    panSemTotalExprListStep state expressions onValues = onValues values := by
+  simp [panSemTotalExprListStep, heval]
+
+theorem panSemTotalExprListStep_none [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expressions : List (Exp (RiscV.Word 64)))
+    (onValues : List (PanValue (RiscV.Word 64)) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (heval : evalPanSemStateExps state expressions = none) :
+    panSemTotalExprListStep state expressions onValues = (some .error, state) := by
+  simp [panSemTotalExprListStep, heval]
+
+/-- HOL `Primitive` (`cakeml/pancake/semantics/panSemScript.sml:576`): evaluate
+    the argument expressions, run the primitive handler, and, when the produced
+    value is a valid new binding for the local name, install it; otherwise
+    `SOME Error` with the state unchanged. -/
+def panSemTotalPrimitiveClause [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprListStep state arguments (fun values =>
+    match primitive operator values with
+    | some value =>
+        if panValueAssignmentValid state.structs state.locals state.globals
+            .local name value then
+          (none, { state with locals := updatePanValueMap state.locals name value })
+        else (some .error, state)
+    | none => (some .error, state))
+
+theorem panSemTotalPrimitiveClause_none [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (heval : evalPanSemStateExps state arguments = none) :
+    panSemTotalPrimitiveClause state name operator arguments primitive =
+      (some .error, state) := by
+  simp [panSemTotalPrimitiveClause, panSemTotalExprListStep, heval]
+
+theorem panSemTotalPrimitiveClause_ok [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (values : List (PanValue (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExps state arguments = some values)
+    (hprim : primitive operator values = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals
+      .local name value = true) :
+    panSemTotalPrimitiveClause state name operator arguments primitive =
+      (none, { state with locals := updatePanValueMap state.locals name value }) := by
+  simp [panSemTotalPrimitiveClause, panSemTotalExprListStep, heval, hprim, hvalid]
+
+theorem panSemTotalPrimitiveClause_invalid [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (values : List (PanValue (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExps state arguments = some values)
+    (hprim : primitive operator values = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals
+      .local name value = false) :
+    panSemTotalPrimitiveClause state name operator arguments primitive =
+      (some .error, state) := by
+  simp [panSemTotalPrimitiveClause, panSemTotalExprListStep, heval, hprim, hvalid]
+
+theorem panSemTotalPrimitiveClause_primNone [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (name : VarName) (operator : PrimOp)
+    (arguments : List (Exp (RiscV.Word 64)))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (values : List (PanValue (RiscV.Word 64)))
+    (heval : evalPanSemStateExps state arguments = some values)
+    (hprim : primitive operator values = none) :
+    panSemTotalPrimitiveClause state name operator arguments primitive =
+      (some .error, state) := by
+  simp [panSemTotalPrimitiveClause, panSemTotalExprListStep, heval, hprim]
+
+/-- HOL `Annot` (`cakeml/pancake/semantics/panSemScript.sml:641`): annotation is
+    erased; normal completion with the state carried verbatim. -/
+def panSemTotalAnnotClause {α : Type u} {σ : Type u}
+    (state : PanSemState α (FfiState σ)) (_tag _text : String) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  (none, state)
+
+@[simp] theorem panSemTotalAnnotClause_eq {α : Type u} {σ : Type u}
+    (state : PanSemState α (FfiState σ)) (tag text : String) :
+    panSemTotalAnnotClause state tag text = (none, state) := rfl
+
 end Flapjack

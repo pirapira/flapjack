@@ -1409,3 +1409,10 @@ run_probe loop_sem_state_carrier_probeScript.sml loop_sem_state_carrier_probe.ou
   locals_0 base_self \
   "$cake_dir/pancake/semantics/loopSemScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The stackLang prog-carrier probe pins the exact `prog` datatype FFI field
+# (mlstring) and representative constructor shapes at word type 64.
+run_probe stack_lang_prog_carrier_probeScript.sml stack_lang_prog_carrier_probe.out \
+  pg_skip pg_ffi_eq \
+  "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"

@@ -487,16 +487,16 @@ example : (evalCrepRuntimeExp
 /-! This also instantiates the arbitrary-index HOL-shaped source evaluator
    theorem on the expression with direct HOL result `SOME (Word 40w)`. -/
 example :
-    (evalCrepHolFiniteWordSourceExp
+    evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := 64))
       (crepArithHolFiniteDimensionMapCode id holWordBitsState64WithLocal)
       (crepSimpExp
         (fun value => bitVecToHolWord
           (instFinHolFiniteDimension (width := 64))
-          (BitVec.ofNat 64 value)) holWordBitsMulEight)).map PanWordLab.word =
-    (evalCrepHolFiniteWordSourceExp
+          (BitVec.ofNat 64 value)) holWordBitsMulEight) =
+    evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := 64))
-      holWordBitsState64WithLocal holWordBitsMulEight).map PanWordLab.word := by
+      holWordBitsState64WithLocal holWordBitsMulEight := by
   have hRuntime : evalCrepRuntimeExp
       (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
         (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight ≠ none := by
@@ -521,7 +521,7 @@ example :
         (instFinHolFiniteDimension (width := 64))
         holWordBitsState64WithLocal holWordBitsMulEight)]
     exact hRuntimeWordLab
-  exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass id
+  exact crepSimpExpCorrect1HolFiniteWordSourceWordLab id
     holWordBitsState64WithLocal holWordBitsMulEight
     (.word (holWordBits64 40)) hSource
 

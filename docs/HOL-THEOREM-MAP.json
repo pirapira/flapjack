@@ -468,16 +468,16 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstHolFiniteWordSourceCase",
-    "statement_status": "documented_mismatch",
-    "reviewer": "All-finite-dimension Const case support with HOL's unused result binder, success premise, code-map update, and complete Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval, even though this constructor reduces directly to the same word value."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact Const constructor case of local simp_exp_correct1. HolFiniteDimension encodes the implicit finite-index word dictionary; this case reduces only through the matching eval_def Const clause and preserves the unused result binder, success premise, code-map update, and full Option word_lab equality. The assembling simp_exp_correct1 theorem and all other evaluator cases remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1VarHolFiniteWordSourceCase",
-    "statement_status": "documented_mismatch",
-    "reviewer": "All-finite-dimension Var case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact Var constructor case of local simp_exp_correct1. HOL eval_def is FLOOKUP s.locals v; Lean's explicit partial-function locals and PanWordLab.word projection/reconstruction give the same lookup equation. The unused result binder, success premise, code-map update, and full Option word_lab equality match this constructor case. Other evaluator cases and the assembled theorem remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

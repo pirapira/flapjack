@@ -1152,22 +1152,6 @@ theorem evalCrepRuntimeExp_crepOp_eq
                   simp [evalCrepRuntimeExp, crepOpValue, h1, h2]
           | cons extra tail => simp [evalCrepRuntimeExp]
 
-/-- Canonical RISC-V64 multiplication route definition for the tagged
-    `crepOpCrep` at width 64. This is a route *definition* only: the executed
-    production evaluator `evalCrepRuntimeExp` still routes `.crepOp` through the
-    generic `crepOpValue`, so execution does not yet call this definition
-    (bead `flapjack-pxn.18.4.3.48.1.20`). The generic `crepOpValue` remains for
-    non-word clients; `crepOpRV64_eq_crepOpValue` records that the two agree on
-    the RISC-V64 carrier. -/
-def crepOpRV64 (operator : CrepOp) (arguments : List (BitVec 64)) :
-    Option (BitVec 64) :=
-  crepOpCrep 64 operator arguments
-
-theorem crepOpRV64_eq_crepOpValue (operator : CrepOp)
-    (arguments : List (BitVec 64)) :
-    crepOpRV64 operator arguments = crepOpValue operator arguments :=
-  crepOpCrep_eq_crepOpValue 64 operator arguments
-
 /-- Projection equation for `BaseAddr`; Flapjack-only because its state is
 target-extended. -/
 theorem evalCrepRuntimeExp_baseAddr_wordLab

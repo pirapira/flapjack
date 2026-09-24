@@ -475,37 +475,17 @@ example :
 #guard evalCrepRuntimeExp bv64State
     (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
 
-/-- Executed-path canonical route: `crepOpRV64` is the reviewed tagged
-    `crepOpCrep 64`, and agrees with the generic evaluator operation. -/
-example : crepOpRV64 .mul [(7 : RiscV.Word 64), 3] = some 21 := by rfl
-
-example : crepOpRV64 .mul [(7 : RiscV.Word 64), 3] =
-    crepOpValue .mul [(7 : RiscV.Word 64), 3] :=
-  crepOpRV64_eq_crepOpValue .mul [(7 : RiscV.Word 64), 3]
-
-#guard (crepOpRV64 .mul [(7 : RiscV.Word 64), 3] == some 21) &&
-  ((crepOpRV64 .mul ([] : List (RiscV.Word 64))).isNone)
-
-/-- Executed width-specialized RV64 evaluator: its `.crepOp .mul` clause calls
-    the tagged `crepOpCrep 64` directly and evaluates the operands. -/
+/-- The executed generic `.crepOp` branch at `BitVec 64` computes the reviewed
+    tagged `crepOpCrep 64`: a bridge between the executed semantics and the HOL
+    definition, not a second evaluator. -/
 example :
-    evalCrepRuntimeExpRV64 bv64State
+    evalCrepRuntimeExp bv64State
         (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
-      some (21 : RiscV.Word 64) := by
-  simp only [evalCrepRuntimeExpRV64, crepOpCrep]
-  rfl
-
-/-- The width-specialized RV64 evaluator agrees with the generic production
-    evaluator on the `BitVec 64` carrier. -/
-example :
-    evalCrepRuntimeExpRV64 bv64State
-        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
-      evalCrepRuntimeExp bv64State
-        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) :=
-  evalCrepRuntimeExpRV64_eq bv64State
-    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)])
-
-#guard evalCrepRuntimeExpRV64 bv64State
-    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
+      (do
+        let leftValue ← evalCrepRuntimeExp bv64State (.const (7 : RiscV.Word 64))
+        let rightValue ← evalCrepRuntimeExp bv64State (.const (3 : RiscV.Word 64))
+        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) :=
+  evalCrepRuntimeExp_crepOp_bitVec64 bv64State
+    (.const (7 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))
 
 end Flapjack.Test.CrepGlobalShapeParity

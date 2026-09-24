@@ -3161,117 +3161,30 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
 
-/-! ## Width-specialized RISC-V64 Crep evaluator (proof-only, not the executed route)
+/-! ## BitVec 64 `crepOp` branch computes the tagged definition
 
-The definition below is a width-specialized RISC-V64 evaluator whose `.crepOp`
-constructor dispatches to the reviewed tagged `crepOpCrep 64` directly, rather
-than the generic `crepOpValue`. **It is not the executed production route.** The
-production evaluator actually used by the correctness chain remains the generic
-`evalCrepRuntimeExp`, which still routes `.crepOp` through `crepOpValue`; wiring
-execution itself through the tagged definition remains open
-(bead `flapjack-pxn.18.4.3.48.1.20`). `evalCrepRuntimeExpRV64_eq` only proves the
-two evaluators agree on the `BitVec 64` carrier, i.e. that this proof-only
-duplicate denotes the same function. -/
+The executed Crep expression evaluator `evalCrepRuntimeExp` is carrier-generic:
+its `.crepOp` clause routes through the generic helper `crepOpValue`, because a
+generic `α` cannot syntactically call the width-polymorphic tagged `crepOpCrep`.
+On the canonical RISC-V 64 target the two agree; the theorem below records that
+the executed branch at `BitVec 64` computes exactly the reviewed tagged
+definition. This keeps the compiler/semantics distinction explicit: the tagged
+`crepOpCrep` is the HOL semantics of `crep_op`, the generic `crepOpValue` is what
+the Lean evaluator executes, and this theorem is the bridge between them (it does
+not introduce a second evaluator). -/
 
-/-- Proof-only width-specialized RISC-V64 Crep expression evaluator. It mirrors
-    the generic `evalCrepRuntimeExp` constructor-for-constructor but its
-    `.crepOp` clause dispatches to the reviewed tagged `crepOpCrep 64` directly
-    (rather than the generic `crepOpValue`). It is Flapjack-only infrastructure
-    and is NOT wired to the executed evaluator; the generic `evalCrepRuntimeExp`
-    remains the production route. The state is target-extended. -/
-def evalCrepRuntimeExpRV64 (state : CrepRuntimeState (BitVec 64) σ) :
-    CrepExp (BitVec 64) → Option (BitVec 64)
-  | .const value => some value
-  | .var name => (state.locals name).map panTheWord
-  | .load address => do
-      let address ← evalCrepRuntimeExpRV64 state address
-      crepRuntimeLoad state address
-  | .load32 address => do
-      let address ← evalCrepRuntimeExpRV64 state address
-      crepRuntimeLoad32 state address
-  | .loadByte address => do
-      let address ← evalCrepRuntimeExpRV64 state address
-      crepRuntimeLoadByte state address
-  | .loadGlob address => (state.globals address).map panTheWord
-  | .op operator expressions => do
-      let values ← expressions.mapM (evalCrepRuntimeExpRV64 state)
-      state.memoryModel.wordOp operator values
-  | .crepOp .mul [left, right] => do
-      let left ← evalCrepRuntimeExpRV64 state left
-      let right ← evalCrepRuntimeExpRV64 state right
-      crepOpCrep 64 .mul [left, right]
-  | .cmp operator left right => do
-      let left ← evalCrepRuntimeExpRV64 state left
-      let right ← evalCrepRuntimeExpRV64 state right
-      pure (state.memoryModel.compare operator left right)
-  | .shift operator left right => do
-      let left ← evalCrepRuntimeExpRV64 state left
-      let right ← evalCrepRuntimeExpRV64 state right
-      state.memoryModel.shift operator left right
-  | .baseAddr => some state.baseAddress
-  | .topAddr => some state.topAddress
-  | _ => none
-termination_by expression => sizeOf expression
-
-/-- The width-specialized RISC-V64 evaluator computes the same value as the
-    generic production evaluator: the two definitions differ only in the
-    `.crepOp .mul` clause, where `crepOpCrep_eq_crepOpValue` shows the tagged
-    `crepOpCrep 64` agrees with the generic `crepOpValue` on `BitVec 64`. -/
-theorem evalCrepRuntimeExpRV64_eq (state : CrepRuntimeState (BitVec 64) σ)
-    (expression : CrepExp (BitVec 64)) :
-    evalCrepRuntimeExpRV64 state expression = evalCrepRuntimeExp state expression := by
-  induction expression using evalCrepRuntimeExpRV64.induct with
-  | case1 value => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-  | case2 name => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-  | case3 address ih => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ih]
-  | case4 address ih => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ih]
-  | case5 address ih => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ih]
-  | case6 address => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-  | case7 operator expressions ih =>
-      simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-      have hmap : expressions.mapM (evalCrepRuntimeExpRV64 state) =
-          expressions.mapM (evalCrepRuntimeExp state) := by
-        induction expressions with
-        | nil => rfl
-        | cons x xs ihxs =>
-            have hx := ih x (by simp)
-            have hxs := ihxs (fun y hy => ih y (by simp [hy]))
-            simp only [List.mapM_cons, hx, hxs]
-      rw [hmap]
-  | case8 left right ihl ihr =>
-      simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ihl, ihr,
-        crepOpCrep_eq_crepOpValue]
-  | case9 operator left right ihl ihr =>
-      simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ihl, ihr]
-  | case10 operator left right ihl ihr =>
-      simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp, ihl, ihr]
-  | case11 => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-  | case12 => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-  | case13 x h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 =>
-      cases x with
-      | const value => exact absurd rfl (h1 value)
-      | var name => exact absurd rfl (h2 name)
-      | load address => exact absurd rfl (h3 address)
-      | load32 address => exact absurd rfl (h4 address)
-      | loadByte address => exact absurd rfl (h5 address)
-      | loadGlob address => exact absurd rfl (h6 address)
-      | op operator expressions => exact absurd rfl (h7 operator expressions)
-      | crepOp operator arguments =>
-          cases operator with
-          | mul =>
-              cases arguments with
-              | nil => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-              | cons left rest =>
-                  cases rest with
-                  | nil => simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-                  | cons right rest =>
-                      cases rest with
-                      | nil => exact absurd rfl (h8 left right)
-                      | cons extra tail =>
-                          simp only [evalCrepRuntimeExpRV64, evalCrepRuntimeExp]
-      | cmp operator left right => exact absurd rfl (h9 operator left right)
-      | shift operator left right => exact absurd rfl (h10 operator left right)
-      | baseAddr => exact absurd rfl h11
-      | topAddr => exact absurd rfl h12
+/-- On the `BitVec 64` carrier the executed `.crepOp .mul [left, right]` branch
+    of `evalCrepRuntimeExp` computes the reviewed tagged `crepOpCrep 64`. -/
+theorem evalCrepRuntimeExp_crepOp_bitVec64 (state : CrepRuntimeState (BitVec 64) σ)
+    (left right : CrepExp (BitVec 64)) :
+    evalCrepRuntimeExp state (.crepOp CrepOp.mul [left, right]) =
+      (do
+        let leftValue ← evalCrepRuntimeExp state left
+        let rightValue ← evalCrepRuntimeExp state right
+        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) := by
+  rw [evalCrepRuntimeExp_crepOp_eq]
+  cases hleft : evalCrepRuntimeExp state left <;>
+    cases hright : evalCrepRuntimeExp state right <;>
+      simp [hleft, hright, crepOpCrep]
 
 end Flapjack

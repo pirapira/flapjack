@@ -552,6 +552,31 @@ example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
   · intro vname v hv
     exact absurd hv (fun h => Option.some_ne_none v h.symm)
 
+/-- HOL `locals_rel_insert_gt_vmax` oracle rows (`insert_same`,
+    `insert_other_unchanged`, `gt_vmax_bounded_survives`, `subset_preserved` in
+    `scripts/hol-probes/crep_to_loop_locals_insert_probe.out`): inserting a
+    fresh `num_map` binding above `ctxt.vmax` preserves the tagged relation and
+    is visible at its own key. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun m => if m = 7 then some (LoopValue.word (5 : BitVec 64)) else none) :=
+  crepToLoopLocalsRelHOL_insert_gt_vmax localsRelHOLContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    7 (LoopValue.word (5 : BitVec 64))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by decide)
+
 /-- The `∃n` clause of the tagged exact relation for a present binding: source
     local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
     `wlab` value in the target map. -/
@@ -560,6 +585,43 @@ example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some 
     (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
       some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
   ⟨5, by simp [FLOOKUP, FUPDATE], by decide, by simp [wlabWloc]⟩
+
+/-- HOL `locals_rel_cutset_prop` oracle rows (`cutset_sub_0`, `cutset_sub_1`,
+    `cutset_sub_absent`, `cutset_lookup_preserved`, `cutset_lookup_other`,
+    `cutset_domain_trans` in
+    `scripts/hol-probes/crep_to_loop_locals_cutset_probe.out`): shrinking the
+    live set (`subspt cset cset'` rendered as `live n = true → live' n = true`)
+    preserves the tagged relation against the same target locals. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun _ => (none : Option (LoopValue (BitVec 64)))) :=
+  crepToLoopLocalsRelHOL_cutset_prop localsRelHOLContext
+    (fun _ => false) (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by intro n hn; exact absurd hn Bool.false_ne_true)
 
 /-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
     local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target

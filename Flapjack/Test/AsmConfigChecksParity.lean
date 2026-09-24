@@ -1,6 +1,5 @@
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.StackLang
-import Flapjack.Compiler.Backend.StackProgW
 
 /-!
 Kernel-checked parity guards for the assembler configuration validity
@@ -244,7 +243,5 @@ example :
     HolInst.ofWordLangInst
         (HolInst.toWordLangInst (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64)) =
       .mem .load 2 (.addr 3 (w64 5)) := rfl
-
-example : Flapjack.Compiler.Backend.StackLang.ProgW 64 := .skip
 
 end Flapjack.Test.AsmConfigChecksParity

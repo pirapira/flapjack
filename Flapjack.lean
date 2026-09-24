@@ -81,6 +81,7 @@ import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.Semantics.CrepProps
+import Flapjack.Pancake.WordConvs
 import Flapjack.Pancake.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds

@@ -83,3 +83,17 @@ val _ = print_eval "return_empty_eval"
 val _ = print_eval "return_missing_eval"
   ``evaluate ((Return [Var 9]) : 64 crepLang$prog, ^s) =
       (SOME Error, ^s)``;
+val _ = print_eval "raise_eval"
+  ``evaluate ((Raise (9w:64 word)) : 64 crepLang$prog, ^s) =
+      (SOME (Exception (9w:64 word)), empty_locals ^s)``;
+val _ = print_eval "dec_shadow_eval"
+  ``FST (evaluate ((Dec 0 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s)) = NONE /\
+    FLOOKUP (SND (evaluate
+      ((Dec 0 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s))).locals 0 =
+        SOME (Word (7w:64 word))``;
+val _ = print_eval "dec_new_local_eval"
+  ``evaluate ((Dec 1 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s) =
+      (NONE, ^s)``;
+val _ = print_eval "dec_error_eval"
+  ``evaluate ((Dec 0 (Var 9) Skip) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;

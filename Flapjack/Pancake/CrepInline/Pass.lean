@@ -28,6 +28,9 @@ def crepInlineRemove [BEq FunName] (name : FunName) :
       if entry.1 == name then crepInlineRemove name entries
       else entry :: crepInlineRemove name entries
 
+/-- Temporary-name generator.  Calls the generic `crepExpVars`; the tagged
+    width-indexed `crepExpVarsW` is a definitional delegation of it, so this
+    executed use computes the identical function (`flapjack-pxn.18.4.3.82`). -/
 def crepInlineTmpNames (arguments argumentNames : List Nat) : List Nat :=
   let maximum := max (arguments.foldl max 0) (argumentNames.foldl max 0)
   (List.range argumentNames.length).map (fun offset => offset + maximum + 1)

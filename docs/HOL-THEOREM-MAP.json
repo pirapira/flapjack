@@ -1213,7 +1213,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "decCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of dec_clock_def crepSemScript.sml:145-148 at the word-length carrier 'a := BitVec width: decCrepHolClockW s = s with clock := s.clock - 1. Generic-alpha decCrepHolClock stays untagged as production's implementation; kernel-checked bridge decCrepHolClockW_eq_decCrepHolClock; the width-indexed theorem decCrepHolClock_simp (Flapjack/Pancake/Semantics/CrepProps.lean) uses the generic def instantiated at BitVec width; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of dec_clock_def crepSemScript.sml:145-148 at the word-length carrier 'a := BitVec width: decCrepHolClockW s = s with clock := s.clock - 1. Generic-alpha decCrepHolClock stays untagged as production's implementation; kernel-checked bridge decCrepHolClockW_eq_decCrepHolClock; the width-indexed theorem decCrepHolClock_simp (Flapjack/Pancake/Semantics/CrepProps.lean) uses the generic def instantiated at BitVec width; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -4340,16 +4340,16 @@
     "hol_name": "ctxt_max_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "ctxtMax",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek (source comparison against pan_commonPropsScript.sml:11 ctxt_max_def; HOL fm is polymorphic in key and value, value is (a, xs) with a arbitrary, so Lean is generic in alpha and beta over FiniteMap alpha (beta x List Nat) with FLOOKUP as the extensional finite-map model; 0 <= n and MEM x xs ==> x <= n rendered literally)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "no_overlap_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "noOverlap",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek (source comparison against pan_commonPropsScript.sml:18 no_overlap_def; generic in alpha and beta over FiniteMap alpha (beta x List Nat); ALL_DISTINCT xs rendered as xs.Nodup; ~DISJOINT (set xs) (set ys) rendered as exists z, z in xs and z in ys)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6621,7 +6621,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "setCrepHolGlobalsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61 at the word-length carrier 'a := BitVec width: setCrepHolGlobalsW gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. Generic-alpha setCrepHolGlobals stays untagged as production's implementation; kernel-checked bridge setCrepHolGlobalsW_eq_setCrepHolGlobals and production routing setCrepRuntimeGlobals -> setCrepHolGlobals via CrepRuntimeState.toHolState. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61 at the word-length carrier 'a := BitVec width: setCrepHolGlobalsW gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. Generic-alpha setCrepHolGlobals stays untagged as production's implementation; kernel-checked bridge setCrepHolGlobalsW_eq_setCrepHolGlobals and production routing setCrepRuntimeGlobals -> setCrepHolGlobals via CrepRuntimeState.toHolState. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -6629,7 +6629,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "flookup_setCrepHolGlobals_localsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297 at 'a := BitVec width: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n using tagged setCrepHolGlobalsW; kernel-checked bridge flookup_setCrepHolGlobals_localsW_eq_generic. Generic-alpha flookup_setCrepHolGlobals_locals stays untagged as production's statement; the production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297 at 'a := BitVec width: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n using tagged setCrepHolGlobalsW; kernel-checked bridge flookup_setCrepHolGlobals_localsW_eq_generic. Generic-alpha flookup_setCrepHolGlobals_locals stays untagged as production's statement; the production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -7045,15 +7045,15 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "fixCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width; the result component is RESULT-POLYMORPHIC in beta exactly as HOL leaves `res` unconstrained, and the returned clock is clamped to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation (result fixed to CrepRuntimeResult); kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock at beta := CrepRuntimeResult; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width; the result component is RESULT-POLYMORPHIC in beta exactly as HOL leaves `res` unconstrained, and the returned clock is clamped to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation (result fixed to CrepRuntimeResult); kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock at beta := CrepRuntimeResult; the width-indexed result-polymorphic bound is tagged as fixCrepHolClock_IMP_LESS_EQW (fix_clock_IMP_LESS_EQ); untagged generic fixCrepHolClock_clock_le is production's helper; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "fix_clock_IMP_LESS_EQ",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "fixCrepHolClock_IMP_LESS_EQ",
+    "lean_name": "fixCrepHolClock_IMP_LESS_EQW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (HOL's universally quantified input-pair equality hypothesis and returned-clock bound over the 11-field CrepHolState; proof derives the bound from the exact tagged fix_clock_def)."
+    "reviewer": "Codex (width-indexed exact HOL-shaped `fix_clock_IMP_LESS_EQ` crepSemScript.sml:155-157 over the word-length-indexed carrier CrepHolState (BitVec width) sigma; the clamped clock of the tagged fixCrepHolClockW never exceeds the old state's clock, with an arbitrary RESULT-POLYMORPHIC component beta exactly as HOL leaves `res`/`s1` unconstrained. The generic-alpha theorem fixCrepHolClock_IMP_LESS_EQ stays untagged as production's generic-clock helper, with a FLAPJACK-SPECIFIC note pointing here.) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,
@@ -7109,7 +7109,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "setCrepHolVarW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_var_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha setCrepHolVar stays untagged as production's implementation with kernel-checked bridge setCrepHolVarW_eq_setCrepHolVar. Exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_var_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha setCrepHolVar stays untagged as production's implementation with kernel-checked bridge setCrepHolVarW_eq_setCrepHolVar. Exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -7117,7 +7117,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "updCrepHolLocalsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of upd_locals_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha updCrepHolLocals stays untagged as production's implementation with kernel-checked bridge updCrepHolLocalsW_eq_updCrepHolLocals. Exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of upd_locals_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha updCrepHolLocals stays untagged as production's implementation with kernel-checked bridge updCrepHolLocalsW_eq_updCrepHolLocals. Exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -7125,7 +7125,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "emptyCrepHolLocalsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of empty_locals_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha emptyCrepHolLocals stays untagged as production's implementation with kernel-checked bridge emptyCrepHolLocalsW_eq_emptyCrepHolLocals. Exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of empty_locals_def crepSemScript.sml at the word-length carrier 'a := BitVec width over CrepHolState (BitVec width) sigma; generic-alpha emptyCrepHolLocals stays untagged as production's implementation with kernel-checked bridge emptyCrepHolLocalsW_eq_emptyCrepHolLocals. Exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,
@@ -8141,7 +8141,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8149,7 +8149,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8157,7 +8157,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "decCrepHolClock_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the clock decrement is the tagged width-indexed decCrepHolClockW (dec_clock_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out (all T) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the clock decrement is the tagged width-indexed decCrepHolClockW (dec_clock_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out (all T) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8165,7 +8165,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "emptyCrepHolLocals_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the locals clear is the tagged width-indexed emptyCrepHolLocalsW (empty_locals_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the locals clear is the tagged width-indexed emptyCrepHolLocalsW (empty_locals_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8173,7 +8173,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "wlabWloc",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (definition compared against wlab_wloc_def at crep_to_loopProofScript.sml:45-47; panSem$Word/wordLang$Word rendered as PanWordLab.word/LoopValue.word single-constructor maps; direct HOL-EVAL row wlab_wloc_word=T reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (definition compared against wlab_wloc_def at crep_to_loopProofScript.sml:45-47; panSem$Word/wordLang$Word rendered as PanWordLab.word/LoopValue.word single-constructor maps; direct HOL-EVAL row wlab_wloc_word=T reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8181,7 +8181,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopGlobalsRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (definition compared against globals_rel_def at crep_to_loopProofScript.sml:54-58; both globals fields are BitVec 5-indexed option finite maps so HOL FLOOKUP is the field application; direct HOL-EVAL rows globals_lookup_match=T/globals_lookup_absent=T and negative globals_lookup_wrong=F reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (definition compared against globals_rel_def at crep_to_loopProofScript.sml:54-58; both globals fields are BitVec 5-indexed option finite maps so HOL FLOOKUP is the field application; direct HOL-EVAL rows globals_lookup_match=T/globals_lookup_absent=T and negative globals_lookup_wrong=F reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8189,7 +8189,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopGlobalsRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209, which is an implication from globals_rel to the universally quantified lookup agreement, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopGlobalsRel_iff keeps the iff form; Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209, which is an implication from globals_rel to the universally quantified lookup agreement, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopGlobalsRel_iff keeps the iff form; Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8197,7 +8197,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel_clock_add_zero",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8213,7 +8213,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopMemRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact HOL mem_rel_def crep_to_loopProofScript.sml:49-52 port: mem_rel smem tmem dom <=> !ad. ad IN dom ==> wlab_wloc (smem ad) = tmem ad. Stated over TOTAL memories because HOL loopSem$state.memory is total ('a word -> 'a word_loc) and crepSem$state.memory is already total; LoopMachineState.memory is Option-valued so production uses the total view loopMemoryTotal. ad IN dom is the set-as-predicate rendering dom ad = true. Direct HOL oracle scripts/hol-probes/crep_to_loop_mem_rel_probe.out rows mem_rel_match=T/mem_rel_wrong=F/mem_rel_out_of_domain=T/mem_rel_dom_present=T/mem_rel_dom_absent=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (exact HOL mem_rel_def crep_to_loopProofScript.sml:49-52 port: mem_rel smem tmem dom <=> !ad. ad IN dom ==> wlab_wloc (smem ad) = tmem ad. Stated over TOTAL memories because HOL loopSem$state.memory is total ('a word -> 'a word_loc) and crepSem$state.memory is already total; LoopMachineState.memory is Option-valued so production uses the total view loopMemoryTotal. ad IN dom is the set-as-predicate rendering dom ad = true. Direct HOL oracle scripts/hol-probes/crep_to_loop_mem_rel_probe.out rows mem_rel_match=T/mem_rel_wrong=F/mem_rel_out_of_domain=T/mem_rel_dom_present=T/mem_rel_dom_absent=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8221,7 +8221,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopMemRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact HOL mem_rel_intro crep_to_loopProofScript.sml:203-209 port, which is an implication from mem_rel to the pointwise equation, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopMemRel_iff keeps the iff form; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (exact HOL mem_rel_intro crep_to_loopProofScript.sml:203-209 port, which is an implication from mem_rel to the pointwise equation, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopMemRel_iff keeps the iff form; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -8229,7 +8229,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "resVarW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact port of res_var_def crepSemScript.sml:163 at HOL's carrier: num keys, 'a word_lab values with 'a := BitVec width; res_var lc (n,NONE) = lc \\\\ n and res_var lc (n,SOME v) = lc |+ (n,v) with FDOMSUB/FUPDATE. The width-indexed def is the width-specialized production resVar, so bridge resVarW_eq_resVar is definitional. Generic-alpha resVar stays untagged as production's form)"
+    "reviewer": "Codex (width-indexed exact port of res_var_def crepSemScript.sml:163 at HOL's carrier: num keys, 'a word_lab values with 'a := BitVec width; res_var lc (n,NONE) = lc \\\\ n and res_var lc (n,SOME v) = lc |+ (n,v) with FDOMSUB/FUPDATE. The width-indexed def is the width-specialized production resVar, so bridge resVarW_eq_resVar is definitional. Generic-alpha resVar stays untagged as production's form) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -8237,7 +8237,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "memLoadCrepHolW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of mem_load_def crepSemScript.sml:48-52 at 'a := BitVec width: mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE, with membership rendered as the memaddrs Bool map. Generic-alpha memLoadCrepHol stays untagged as production's form; kernel bridge memLoadCrepHolW_eq_memLoadCrepHol; direct HOL oracle and Lean guards unchanged)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of mem_load_def crepSemScript.sml:48-52 at 'a := BitVec width: mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE, with membership rendered as the memaddrs Bool map. Generic-alpha memLoadCrepHol stays untagged as production's form; kernel bridge memLoadCrepHolW_eq_memLoadCrepHol; direct HOL oracle and Lean guards unchanged) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -8245,7 +8245,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "lookupCrepHolCodeW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

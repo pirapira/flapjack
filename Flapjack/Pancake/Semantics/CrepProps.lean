@@ -321,7 +321,7 @@ theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
     The globals update is the tagged width-indexed `setCrepHolGlobalsW`. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
-theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
+theorem flookup_setCrepHolGlobals_localsW {width : Nat} [NeZero width] {σ : Type}
     (gv : BitVec 5) (w : PanWordLab (BitVec width))
     (s : CrepHolState (BitVec width) σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobalsW gv w s).locals n = FLOOKUP s.locals n :=
@@ -329,7 +329,7 @@ theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
 
 /-- Kernel-checked bridge: the width-indexed exact `FLOOKUP_set_globals`
     counterpart agrees with the generic production statement at `BitVec width`. -/
-theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} {σ : Type}
+theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} [NeZero width] {σ : Type}
     (gv : BitVec 5) (w : PanWordLab (BitVec width))
     (s : CrepHolState (BitVec width) σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobalsW gv w s).locals n =
@@ -405,7 +405,7 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     leaves every other field of the 11-field state unchanged. The clock
     decrement is the tagged width-indexed `decCrepHolClockW` (`dec_clock_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
-theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
+theorem decCrepHolClock_simp {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ) :
     (decCrepHolClockW s).locals = s.locals ∧
       (decCrepHolClockW s).globals = s.globals ∧
       (decCrepHolClockW s).code = s.code ∧
@@ -423,7 +423,7 @@ theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec
     leaves every other field of the 11-field state unchanged. The locals clear
     is the tagged width-indexed `emptyCrepHolLocalsW` (`empty_locals_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
-theorem emptyCrepHolLocals_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
+theorem emptyCrepHolLocals_simp {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ) :
     (emptyCrepHolLocalsW s).globals = s.globals ∧
       (emptyCrepHolLocalsW s).code = s.code ∧
       (emptyCrepHolLocalsW s).memory = s.memory ∧

@@ -11,6 +11,9 @@ that an inline candidate has no unreachable tail.
 
 namespace Flapjack
 
+/-- Variable occurrence analysis.  Calls the generic `crepExpVars`; the tagged
+    width-indexed `crepExpVarsW` is a definitional delegation of it, so this
+    executed use is the identical computation (`flapjack-pxn.18.4.3.82`). -/
 def crepVarProg : CrepProg α → List Nat
   | .dec name value body => [name] ++ crepExpVars value ++ crepVarProg body
   | .assign name value => [name] ++ crepExpVars value
@@ -147,6 +150,9 @@ def crepMergeExit : Option CrepEarlyExit → Option CrepEarlyExit → Option Cre
   | first, some .loopExit => first
   | none, none => none
 
+/-- Argument loading for inlining.  Calls the generic `nestedDecs`; the tagged
+    width-indexed `nestedDecsW` is a definitional delegation of it, so this
+    executed use is the identical computation (`flapjack-pxn.18.4.3.82`). -/
 def crepArgLoad (temporaryNames : List Nat) (arguments : List (CrepExp α))
     (argumentNames : List Nat) (program : CrepProg α) : CrepProg α :=
   nestedDecs temporaryNames arguments

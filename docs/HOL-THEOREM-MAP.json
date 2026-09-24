@@ -8705,59 +8705,11 @@
   },
   {
     "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "wRegWrite1_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "wRegWrite1",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite1_def` at word_to_stackScript.sml:40-43 - wRegWrite1 g r (k,f,f') = let r = r DIV 2 in if r < k then g r else Seq (g k) (StackStore k (f-1-(r-k))) - `g : num -> stackLang$prog` returns a program directly, so the Lean parameter is `g : Nat -> ProgW alpha` and `g r`/`g k` are used unmodified (no `.inst` wrapper); polymorphic in the word type 'a, stated over the canonical shared-word carrier StackCarrier.ProgW; HOL `'a` is arbitrary, so generic alpha is exact; emitted Seq/StackStore carry num fields only)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "wRegWrite2_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "wRegWrite2",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wRegWrite2_def` at word_to_stackScript.sml:46-49 - as wRegWrite1 biased to k+1, with `g : num -> stackLang$prog` used unmodified (no `.inst` wrapper); polymorphic in 'a, stated over StackCarrier.ProgW; generic alpha is exact since HOL 'a is arbitrary)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
     "hol_name": "format_var_def",
     "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
     "lean_name": "formatVar",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `format_var_def` at word_to_stackScript.sml:78-80 - format_var k NONE = INL (k+1) /\\ format_var k (SOME x) = if x < k then INL x else INR x - pure num/option/sum, no word operation or dimindex, exact with no width index; HOL-EVAL rows rf_format_var_none=INL 6/rf_format_var_some_reg=INL 2/rf_format_var_some_frame=INR 7 in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "stack_move_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "stackMove",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_move_def` at word_to_stackScript.sml:288-291 - stack_move 0 start offset i p = p /\\ stack_move (SUC n) start offset i p = Seq (stack_move n (start+1) offset i p) (Seq (StackLoad i (start+offset)) (StackStore i start)). HOL is fully polymorphic in the word type 'a and the body uses only Seq/StackLoad/StackStore with num fields, so the Lean def is exact stated over the canonical single-word-parameter carrier Flapjack.Compiler.Backend.StackCarrier.ProgW alpha with generic alpha; no word operation or dimindex. HOL-EVAL rows sm_zero/sm_one/sm_two in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "StackArgs_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "stackArgs",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `StackArgs_def` at word_to_stackScript.sml:293-297 - StackArgs dest arg_count (k,f,f') = let n = stack_arg_count dest arg_count k in stack_move n 0 f k (StackAlloc n). HOL is fully polymorphic in the word type and the body uses only stack_arg_count (already ported exact) and stackMove over StackAlloc (num field), so the Lean def is exact over Flapjack.Compiler.Backend.StackCarrier.ProgW gamma with generic alpha/beta/gamma. HOL-EVAL rows sa_inr/sa_inl in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "wMoveSingle_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "wMoveSingle",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wMoveSingle_def` at word_to_stackScript.sml:62-69 - four-way case on the formatted pair: (INL r1, INL r2) -> Inst (Arith (Binop Or r1 r2 (Reg r2))); (INL r1, INR r2) -> StackLoad r1 (f-1-(r2-k)); (INR r1, INL r2) -> StackStore r2 (f-1-(r1-k)); (INR r1, INR r2) -> Seq (StackLoad k (f-1-(r2-k))) (StackStore k (f-1-(r1-k))). HOL is fully polymorphic in the word type 'a and the fragment uses only Inst/Arith/Binop/Reg (num fields) plus Seq/StackLoad/StackStore; the exact statement is over the canonical shared-word carrier Flapjack.Compiler.Backend.StackCarrier.ProgW with generic alpha. HOL-EVAL rows wms_reg_reg/wms_reg_frame/wms_frame_reg/wms_frame_frame in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
-    "hol_name": "wMoveAux_def",
-    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
-    "lean_name": "wMoveAux",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wMoveAux_def` at word_to_stackScript.sml:71-76 - wMoveAux [] kf = Skip; wMoveAux [xy] kf = wMoveSingle xy kf; wMoveAux (xy::xys) kf = Seq (wMoveSingle xy kf) (wMoveAux xys kf). HOL is fully polymorphic in the word type 'a and the body sequences wMoveSingle over Seq; the exact statement is over Flapjack.Compiler.Backend.StackCarrier.ProgW with generic alpha. HOL-EVAL rows wma_empty/wma_two in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean. NOTE: HOL `wMove_def` itself needs parmove (reg_alloc/parmoveScript.sml) and DIV2 (HOL arithmetic), out of scope here.)"
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",

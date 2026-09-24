@@ -15,11 +15,16 @@ feed the Word-to-Stack `compile_semantics` theorem
 
 `wReg1`/`wReg2`/`format_var` touch only `num`/`bool`/`option`/sum/list with no
 word operation and no `dimindex (:'a)`, so their tags are unconditional.
+
 `wRegWrite1`/`wRegWrite2` take `g : num -> stackLang$prog` and return a
-`stackLang$prog`; they are polymorphic in the word type `'a`, and their exact
-statements are over the canonical single-word-parameter carrier
-`Flapjack.Compiler.Backend.StackCarrier.ProgW`.  The same carrier is used for
-`stack_move`, `StackArgs`, `wMoveSingle` and `wMoveAux`. -/
+`stackLang$prog`, and `stack_move`/`StackArgs`/`wMoveSingle`/`wMoveAux` likewise
+produce `stackLang$prog`.  They are NOT tagged: the only shared-word carrier
+available, `Flapjack.Compiler.Backend.StackCarrier.ProgW`, uses Lean `String`
+in its FFI constructor, whereas HOL `stackLang$prog` uses `mlstring` (an opaque
+wrapper of HOL `char list`).  The equations match HOL, but the conclusion carrier
+type is not yet exact, so per the repo exactness rule these stay untagged until
+the faithful `mlstring`/`char` carrier and shared-word program exist
+(`flapjack-pxn.18.5.15.3.11.2`).  The definitions are kept as Flapjack support. -/
 
 namespace Flapjack.Compiler.Backend.WordToStackRegFormat
 
@@ -58,8 +63,7 @@ def wReg2 (r : Nat) (kf : Nat × Nat × Nat) : List (Nat × Nat) × Nat :=
   let r := r / 2
   if r < kf.1 then ([], r) else ([(kf.1 + 1, kf.2.1 - 1 - (r - kf.1))], kf.1 + 1)
 
-/-- Exact port of HOL `wRegWrite1_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:40-43`):
+/-- NOT TAGGED. Structural analogue of HOL `wRegWrite1_def`
 
 ```
 wRegWrite1 g r (k,f,f') =
@@ -69,19 +73,17 @@ wRegWrite1 g r (k,f,f') =
 
     Emits the program produced by `g` at the assigned register, spilling the
     frame variable with a `StackStore` when the register is above the live
-    window.  HOL is polymorphic in the word type `'a` (the emitted `Seq`/
-    `StackStore` carry `num` fields only); the exact statement is over the
-    canonical shared-word `ProgW` carrier, with `g : num -> stackLang$prog`
-    returning a program directly. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wRegWrite1_def"]
+    window.  The equations match HOL, but the conclusion carrier
+    `ProgW α` uses Lean `String` in the FFI field while HOL `stackLang$prog`
+    uses `mlstring`; the exact tag requires the faithful mlstring carrier
+    (`flapjack-pxn.18.5.15.3.11.2`), so this stays untagged. -/
 def wRegWrite1 {α : Type} (g : Nat → ProgW α)
     (r : Nat) (kf : Nat × Nat × Nat) : ProgW α :=
   let r := r / 2
   if r < kf.1 then g r
   else .seq (g kf.1) (.stackStore kf.1 (kf.2.1 - 1 - (r - kf.1)))
 
-/-- Exact port of HOL `wRegWrite2_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:46-49`):
+/-- NOT TAGGED. Structural analogue of HOL `wRegWrite2_def`
 
 ```
 wRegWrite2 g r (k,f,f') =
@@ -89,9 +91,8 @@ wRegWrite2 g r (k,f,f') =
     if r < k then g r else Seq (g (k+1)) (StackStore (k+1) (f-1 - (r - k)))
 ```
 
-    As `wRegWrite1` biased to the `k+1` frame slot, over the canonical
-    shared-word `ProgW` carrier. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wRegWrite2_def"]
+    As `wRegWrite1` biased to the `k+1` frame slot; untagged for the same
+    mlstring-carrier reason (`flapjack-pxn.18.5.15.3.11.2`). -/
 def wRegWrite2 {α : Type} (g : Nat → ProgW α)
     (r : Nat) (kf : Nat × Nat × Nat) : ProgW α :=
   let r := r / 2
@@ -114,8 +115,7 @@ def formatVar (k : Nat) : Option Nat → Sum Nat Nat
   | none => .inl (k + 1)
   | some x => if x < k then .inl x else .inr x
 
-/-- Exact port of HOL `stack_move_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:288-291`):
+/-- NOT TAGGED. Structural analogue of HOL `stack_move_def`
 
 ```
 (stack_move 0 start offset i p = p) /\
@@ -125,10 +125,9 @@ def formatVar (k : Nat) : Option Nat → Sum Nat Nat
 ```
 
     Builds the `StackLoad`/`StackStore` chain that moves `n` argument slots.
-    HOL is polymorphic in the word type `'a`; only `Seq`/`StackLoad`/`StackStore`
-    (num fields) are used, so the exact statement is over the canonical
-    shared-word `ProgW` carrier. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_move_def"]
+    The equations match HOL, but the conclusion carrier `ProgW α` uses Lean
+    `String` in its FFI field while HOL uses `mlstring`, so this stays untagged
+    until the faithful carrier exists (`flapjack-pxn.18.5.15.3.11.2`). -/
 def stackMove {α : Type} (n start offset i : Nat) (p : ProgW α) : ProgW α :=
   match n with
   | 0 => p
@@ -136,8 +135,7 @@ def stackMove {α : Type} (n start offset i : Nat) (p : ProgW α) : ProgW α :=
     .seq (stackMove n (start + 1) offset i p)
       (.seq (.stackLoad i (start + offset)) (.stackStore i start))
 
-/-- Exact port of HOL `StackArgs_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:293-297`):
+/-- NOT TAGGED. Structural analogue of HOL `StackArgs_def`
 
 ```
 StackArgs dest arg_count (k,f,f') =
@@ -146,17 +144,16 @@ StackArgs dest arg_count (k,f,f') =
 ```
 
     Allocates the argument slots and moves the return/argument registers into
-    them.  Uses the already-ported `stackArgCount` and `stackMove`; HOL is
-    polymorphic in the word type `'a`, so the exact statement is over the
-    canonical shared-word `ProgW` carrier. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "StackArgs_def"]
+    them.  Uses the already-ported `stackArgCount` and `stackMove`; the
+    equations match HOL but the conclusion carrier `ProgW γ` is not exact
+    (`String` vs `mlstring`), so this stays untagged
+    (`flapjack-pxn.18.5.15.3.11.2`). -/
 def stackArgs {α β γ : Type} (dest : Sum α β) (argCount : Nat)
     (kf : Nat × Nat × Nat) : ProgW γ :=
   let n := Flapjack.Compiler.Backend.WordToStack.stackArgCount dest argCount kf.1
   stackMove n 0 kf.2.1 kf.1 (.stackAlloc n)
 
-/-- Exact port of HOL `wMoveSingle_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:62-69`):
+/-- NOT TAGGED. Structural analogue of HOL `wMoveSingle_def`
 
 ```
 wMoveSingle (x,y) (k,f,f') =
@@ -169,12 +166,10 @@ wMoveSingle (x,y) (k,f,f') =
 ```
 
     Lowers one formatted move pair to the register-format `stackLang$prog`
-    fragment: a register-to-register `Or` (the canonical no-op move), a
-    `StackLoad`/`StackStore`, or a load-then-store through the scratch register
-    `k`.  HOL is polymorphic in the word type `'a` and the fragment uses only
-    `Inst`/`Arith`/`Binop`/`Reg` (num fields), `Seq`, `StackLoad`, `StackStore`;
-    the exact statement is over the canonical shared-word `ProgW` carrier. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wMoveSingle_def"]
+    fragment.  The case equations match HOL, but the conclusion carrier
+    `ProgW α` uses Lean `String` in its FFI field while HOL uses `mlstring`,
+    so this stays untagged until the faithful carrier exists
+    (`flapjack-pxn.18.5.15.3.11.2`). -/
 def wMoveSingle {α : Type} (xy : Sum Nat Nat × Sum Nat Nat)
     (kf : Nat × Nat × Nat) : ProgW α :=
   match xy with
@@ -185,8 +180,7 @@ def wMoveSingle {α : Type} (xy : Sum Nat Nat × Sum Nat Nat)
     .seq (.stackLoad kf.1 (kf.2.1 - 1 - (r2 - kf.1)))
       (.stackStore kf.1 (kf.2.1 - 1 - (r1 - kf.1)))
 
-/-- Exact port of HOL `wMoveAux_def`
-    (`cakeml/compiler/backend/word_to_stackScript.sml:71-76`):
+/-- NOT TAGGED. Structural analogue of HOL `wMoveAux_def`
 
 ```
 (wMoveAux [] kf = Skip) /\
@@ -195,9 +189,9 @@ def wMoveSingle {α : Type} (xy : Sum Nat Nat × Sum Nat Nat)
 ```
 
     Sequences the register-format fragments of a list of formatted move pairs.
-    HOL is polymorphic in the word type `'a`; the exact statement is over the
-    canonical shared-word `ProgW` carrier. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wMoveAux_def"]
+    The equations match HOL but the conclusion carrier `ProgW α` is not exact
+    (`String` vs `mlstring`), so this stays untagged
+    (`flapjack-pxn.18.5.15.3.11.2`). -/
 def wMoveAux {α : Type} : List (Sum Nat Nat × Sum Nat Nat) → Nat × Nat × Nat → ProgW α
   | [], _ => .skip
   | [xy], kf => wMoveSingle xy kf

@@ -5219,6 +5219,14 @@
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectLoad32Case",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Load32-constructor specialization with a recursive address IH and all three parent conclusion roles, stated over evalPanValueExpFull with an explicit PanValueMemoryAccess. The test installs the RISC-V model-backed access, whose read32 performs alignment, byte-domain checking, four-byte extraction, and endian assembly; the paired original-HOL EVAL row checks an aligned 64-bit cell and little-endian result. Intentionally untagged: HOL has only universal compile_exp_correct; Lean exposes the memory access and bytesInWord explicitly and translates context equality and FEVERY/FMAP_MAP2 through projected views and total-function adapters. The default full-evaluator whole-cell Load32 branch is not used."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectBaseAddrCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked BaseAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case."

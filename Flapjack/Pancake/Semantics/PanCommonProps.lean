@@ -21,14 +21,14 @@ namespace Flapjack
     the slot bound is non-negative and every slot assigned by the context map
     is at most `n`. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "ctxt_max_def"]
-def ctxtMax {α : Type} (n : Nat) (fm : FiniteMap α (Shape × List Nat)) : Prop :=
+def ctxtMax {α β : Type} (n : Nat) (fm : FiniteMap α (β × List Nat)) : Prop :=
   0 ≤ n ∧ ∀ v a xs, FLOOKUP fm v = some (a, xs) → ∀ x ∈ xs, x ≤ n
 
 /-- HOL `no_overlap_def` (`cakeml/pancake/semantics/pan_commonPropsScript.sml:18`):
     every variable's slot list is duplicate-free, and variables whose slot sets
     intersect are the same variable. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_def"]
-def noOverlap {α : Type} (fm : FiniteMap α (Shape × List Nat)) : Prop :=
+def noOverlap {α β : Type} (fm : FiniteMap α (β × List Nat)) : Prop :=
   (∀ x a xs, FLOOKUP fm x = some (a, xs) → xs.Nodup) ∧
     ∀ x y a b xs ys, FLOOKUP fm x = some (a, xs) → FLOOKUP fm y = some (b, ys) →
       (∃ z, z ∈ xs ∧ z ∈ ys) → x = y

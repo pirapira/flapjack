@@ -36,6 +36,21 @@ def wordOpHOL [NeZero width] (operator : BinOp)
     (values : List (BitVec width)) : Option (BitVec width) :=
   wordOp operator values
 
+/-! Exact width-indexed source counterpart of CakeML
+`wordLang$word_sh_def` (`cakeml/compiler/backend/wordLangScript.sml:313-321`).
+The shift amount is natural because HOL `word_sh` receives `w2n w2` from the
+Crep evaluator. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_sh_def"]
+def wordShiftHOL [NeZero width] (operator : Shift)
+    (value : BitVec width) (amount : Nat) : Option (BitVec width) :=
+  if amount ≠ 0 ∧ width ≤ amount then none
+  else
+    match operator with
+    | .lsl => some (value <<< amount)
+    | .lsr => some (value >>> amount)
+    | .asr => some (BitVec.sshiftRight value amount)
+    | .ror => some (BitVec.rotateRight value amount)
+
 /-! ## Faithful backend WordLang syntax
 
 `cakeml/compiler/backend/wordLangScript.sml:14-68` defines the register-level

@@ -527,6 +527,18 @@ def holWordBitsCmpResult (operator : Cmp) (left right : Nat) :
 #guard holWordBitsCmpResult .test 0xF0 0x0F == some (.word (holWordBits64 1))
 #guard holWordBitsCmpResult .notTest 0xF0 0x10 == some (.word (holWordBits64 1))
 
+/-! Direct `word_sh_def` parity against the HOL observations in
+`crep_eval_shift_rv64_probe.out`, including the zero-amount and width-bound
+cases. -/
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 1) 3 == some (BitVec.ofNat 64 8)
+#guard wordShiftHOL .lsr (BitVec.ofNat 64 16) 2 == some (BitVec.ofNat 64 4)
+#guard wordShiftHOL .asr (BitVec.ofNat 64 0x8000000000000000) 4 ==
+  some (BitVec.ofNat 64 0xF800000000000000)
+#guard wordShiftHOL .ror (BitVec.ofNat 64 1) 1 ==
+  some (BitVec.ofNat 64 0x8000000000000000)
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 7) 0 == some (BitVec.ofNat 64 7)
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 7) 64 == none
+
 def holWordBitsMulEight : CrepExp (Fin 64 → Bool) :=
   .crepOp .mul [.var 2, .const (holWordBits64 8)]
 

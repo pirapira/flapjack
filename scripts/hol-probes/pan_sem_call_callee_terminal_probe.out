@@ -1,0 +1,7 @@
+call_break_result=SOME Error
+call_break_param_locals=SOME (ValWord 1w)
+call_break_caller_locals=NONE
+call_break_clock=4
+call_continue_result=SOME Error
+call_continue_param_locals=SOME (ValWord 1w)
+call_continue_clock=4

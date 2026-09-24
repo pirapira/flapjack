@@ -444,6 +444,12 @@ run_probe pan_sem_call_arity_probeScript.sml pan_sem_call_arity_probe.out \
 run_probe pan_sem_call_callee_normal_probeScript.sml pan_sem_call_callee_normal_probe.out \
   call_normal_result call_normal_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call callee-terminal probe observes that a callee whose body finishes with
+# `Break` or `Continue` rejects the call with `SOME Error`, preserving the
+# callee's bound parameter locals and the decremented clock.
+run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_terminal_probe.out \
+  call_break_result call_continue_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.

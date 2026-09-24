@@ -243,6 +243,41 @@ def decErrorGuard : Bool :=
   isErrorResult (panSemTotalDecClause stepsState "x" Shape.one
     (.var .local "missing") decBody).1
 
+/-- `Break` result check. -/
+def isBreakResult (result : Option (PanSemHOLResult Word64)) : Bool :=
+  match result with
+  | some .break => true
+  | _ => false
+
+/-- Partial total-evaluate dispatcher on a clock leaf: `Skip` completes normally. -/
+def partialSkipGuard : Bool :=
+  isNoneResult (panSemTotalEvaluatePartial (fun _ _ => none) stepsState .skip).1
+
+/-- The dispatcher returns `Break` for `Break`. -/
+def partialBreakGuard : Bool :=
+  isBreakResult (panSemTotalEvaluatePartial (fun _ _ => none) stepsState .break).1
+
+/-- The dispatcher handles `Assign` to a bound local, updating the binding. -/
+def partialAssignGuard : Bool :=
+  let result := panSemTotalEvaluatePartial (fun _ _ => none) stepsState
+    (.assign .local "x" (.const (BitVec.ofNat 64 9)))
+  isNoneResult result.1 && wordAt result.2.locals "x" 9
+
+/-- The dispatcher recurses into the `Dec` body and restores the previous local. -/
+def partialDecGuard : Bool :=
+  let result := panSemTotalEvaluatePartial (fun _ _ => none) stepsState
+    (.dec "x" Shape.one (.const (BitVec.ofNat 64 9)) (.return (.var .local "x")))
+  isReturnedWord 9 result.1 && wordAt result.2.locals "x" 7
+
+/-- A not-yet-assembled clause (`Seq`) returns `SOME Error` unchanged. -/
+def partialSeqGuard : Bool :=
+  isErrorResult (panSemTotalEvaluatePartial (fun _ _ => none) stepsState
+    (.seq .skip .skip)).1
+
+def partialEvaluateGuard : Bool :=
+  partialSkipGuard && partialBreakGuard && partialAssignGuard &&
+    partialDecGuard && partialSeqGuard
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -252,7 +287,8 @@ def stepsGuard : Bool :=
     primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
     storeGuard && storeNonWordGuard && storeErrorGuard &&
     store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard &&
-    decOkGuard && decShapeErrorGuard && decErrorGuard
+    decOkGuard && decShapeErrorGuard && decErrorGuard &&
+    partialEvaluateGuard
 
 #eval stepsGuard
 #guard stepsGuard

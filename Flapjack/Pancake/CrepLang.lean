@@ -422,20 +422,20 @@ def nestedDecs : List Nat → List (CrepExp α) → CrepProg α → CrepProg α
 HOL `crepLangScript.sml` indexes `prog`/`exp` by the word length (`Const ('a
 word)`), so the exact tagged declarations are stated over `BitVec width`
 (`= RiscV.Word width`); the generic helpers above remain untagged Flapjack
-infrastructure.  None of these definitions inspects the word value, so no
-`[NeZero width]` side condition is needed. -/
-
+infrastructure.  Every HOL `word` type has a positive `dimindex`, so the exact
+wrappers carry `[NeZero width]` (as the WordLang/CrepArith tagged ports do),
+even though their bodies never inspect the word bits. -/
 /-- Exact width-indexed port of HOL `crepLang$nested_seq_def`
     (`cakeml/pancake/crepLangScript.sml:89`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]
-def crepNestedSeqW {width : Nat} (statements : List (CrepProg (BitVec width))) :
+def crepNestedSeqW {width : Nat} [NeZero width] (statements : List (CrepProg (BitVec width))) :
     CrepProg (BitVec width) :=
   crepNestedSeq statements
 
 /-- Exact width-indexed port of HOL `crepLang$nested_decs_def`
     (`cakeml/pancake/crepLangScript.sml:102`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "nested_decs_def"]
-def nestedDecsW {width : Nat} (names : List Nat)
+def nestedDecsW {width : Nat} [NeZero width] (names : List Nat)
     (values : List (CrepExp (BitVec width))) (body : CrepProg (BitVec width)) :
     CrepProg (BitVec width) :=
   nestedDecs names values body
@@ -443,25 +443,32 @@ def nestedDecsW {width : Nat} (names : List Nat)
 /-- Exact width-indexed port of HOL `crepLang$assigned_free_vars_def`
     (`cakeml/pancake/crepLangScript.sml:149`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "assigned_free_vars_def"]
-def crepAssignedFreeVarsW {width : Nat} (program : CrepProg (BitVec width)) : List Nat :=
+def crepAssignedFreeVarsW {width : Nat} [NeZero width] (program : CrepProg (BitVec width)) : List Nat :=
   crepAssignedFreeVars program
 
 /-- Exact width-indexed port of HOL `crepLang$assigned_vars_def`
     (`cakeml/pancake/crepLangScript.sml:164`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "assigned_vars_def"]
-def crepAssignedVarsW {width : Nat} (program : CrepProg (BitVec width)) : List Nat :=
+def crepAssignedVarsW {width : Nat} [NeZero width] (program : CrepProg (BitVec width)) : List Nat :=
   crepAssignedVars program
 
 /-- Exact width-indexed port of HOL `crepLang$var_cexp_def`
-    (`cakeml/pancake/crepLangScript.sml:128`). -/
+    (`cakeml/pancake/crepLangScript.sml:128`).  Note: the source file spells the
+    last equation `var_cexp TopAddrl = []`, but `TopAddrl` is the
+    overload-disambiguated *printing* of the `crepLang$exp` constructor
+    `TopAddr` (fetched `crepLangTheory` `var_cexp_def` reads
+    `var_cexp BaseAddr = [] \/\ var_cexp TopAddr = []`), so the Lean `.topAddr`
+    clause is the exact counterpart; oracle
+    `scripts/hol-probes/crep_var_cexp_probe.out` row `base_top=([],[])`
+    confirms. -/
 @[hol "cakeml/pancake/crepLangScript.sml" "var_cexp_def"]
-def crepExpVarsW {width : Nat} (expression : CrepExp (BitVec width)) : List Nat :=
+def crepExpVarsW {width : Nat} [NeZero width] (expression : CrepExp (BitVec width)) : List Nat :=
   crepExpVars expression
 
 /-- Exact width-indexed port of HOL `crepLang$exps_def`
     (`cakeml/pancake/crepLangScript.sml:193`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "exps_def"]
-def crepExpsW {width : Nat} (expression : CrepExp (BitVec width)) :
+def crepExpsW {width : Nat} [NeZero width] (expression : CrepExp (BitVec width)) :
     List (CrepExp (BitVec width)) :=
   crepExps expression
 

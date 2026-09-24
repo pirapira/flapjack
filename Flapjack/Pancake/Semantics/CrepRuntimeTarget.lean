@@ -330,6 +330,43 @@ theorem panRiscVWordOp_eq_wordOpHOL [NeZero width]
     (operator : BinOp) (values : List (RiscV.Word width)) :
     RiscV.panRiscVWordOp operator values = wordOpHOL operator values := rfl
 
+/-! The production `Op` constructor evaluates the full expression list and
+then applies the width-generic HOL `word_op_def` port. This is an evaluator
+constructor bridge for the canonical RISC-V word target, not the whole HOL
+`crepSem$eval` relation: the runtime state and other evaluator constructors
+still require their own correspondence proofs. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (wordOpHOL operator) := by
+  simp only [evalCrepRuntimeExp, riscvCrepWordTarget,
+    RiscV.panRiscVMemoryModelForEndian]
+  change (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (fun values => RiscV.panRiscVWordOp operator values) =
+    (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (wordOpHOL operator)
+  apply congrArg
+    (fun operation =>
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind operation)
+  funext values
+  exact panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- The same all-width `Op` constructor equation with HOL's complete
+`Option (word_lab word)` result projection. This is still only one evaluator
+case for the target-adapted runtime, not a claim that its entire state is a
+HOL `crepSem$state`. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions)).map
+        PanWordLab.word =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (fun values => (wordOpHOL operator values).map PanWordLab.word) := by
+  rw [evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL]
+  simp [Option.map_bind, Function.comp_def]
+
 theorem crepRuntimeWordTarget_compare [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Cmp)
     (left right : RiscV.Word width) :

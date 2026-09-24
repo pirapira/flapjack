@@ -648,4 +648,47 @@ example (info : StructInfo) (actual : List (FieldName × PanValue (BitVec 64))) 
     List.all [(Shape.one, (PanValue.word (7 : BitVec 64)).toHolValue)]
       (fun pair => panShapeMatches pair.1 (holShapeOf pair.2)))
 
+/- Modular production-to-`evalHOL` bridges at a concrete state (bead
+   flapjack-pxn.18.3.6.9.2); the per-expression agreement is supplied by the
+   `Const` clause for these concrete single-element lists. -/
+example (value : BitVec 64) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.const value)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.const value)).map HolValue.toPanValue :=
+  evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) value
+
+example (value : BitVec 64) :
+    evalPanValueExp.evalPanValueExps ([] : StructContext) (fun _ => none) (fun _ => none)
+        (fun _ => none) 0 0 panSemBitVec64BytesInWord [.const value]
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalListHOL holEvalState [.const value]).map (List.map HolValue.toPanValue) :=
+  evalPanValueExps_eq_evalListHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) [.const value]
+    (fun expression hmem => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      subst hmem
+      exact evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext)
+        (fun _ => none) (fun _ => none) (fun _ => none) 0 0
+        panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) value)
+
+example (value : BitVec 64) :
+    evalPanValueExp.evalPanValueFields ([] : StructContext) (fun _ => none) (fun _ => none)
+        (fun _ => none) 0 0 panSemBitVec64BytesInWord [("f", .const value)]
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalFieldsHOL holEvalState [("f", .const value)]).map
+          (List.map (fun pair => (pair.1, HolValue.toPanValue pair.2))) :=
+  evalPanValueFields_eq_evalFieldsHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) [("f", .const value)]
+    (fun pair hmem => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      subst hmem
+      exact evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext)
+        (fun _ => none) (fun _ => none) (fun _ => none) 0 0
+        panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) value)
+
 end Flapjack.Test.PanSemStateEvalParity

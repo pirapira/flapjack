@@ -6627,49 +6627,49 @@
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "state_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineStateRel",
+    "lean_name": "crepInlineStateRelW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "locals_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineLocalsRel",
+    "lean_name": "crepInlineLocalsRelW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "locals_strong_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineLocalsStrongRel",
+    "lean_name": "crepInlineLocalsStrongRelW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "locals_rel_dec_clock",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineLocalsRel_decClock",
+    "lean_name": "crepInlineLocalsRel_decClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour)"
+    "reviewer": "Codex (field-by-field source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, finite-map SUBMAP is represented extensionally by crepHolSubmap, and Flapjack/Test/CrepInlineRelParity.lean exercises submap/strong/dec_clock behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "locals_ext_rel_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineLocalsExtRel",
+    "lean_name": "crepInlineLocalsExtRelW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour)"
+    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "state_rel_code_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
-    "lean_name": "crepInlineStateRelCode",
+    "lean_name": "crepInlineStateRelCodeW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour)"
+    "reviewer": "Codex (source comparison against crep_inlineProofScript.sml; CrepHolState is the exact 11-field crepSem$state encoding, HOL FDOM/FDIFF are rendered extensionally by crepHolFdom/crepHolFdiff, and Flapjack/Test/CrepInlineRelParity.lean exercises agree/disagree behaviour) Carrier is width-indexed over CrepHolState (BitVec width) σ with [NeZero width] because HOL crepSem$state is word-length indexed; the generic-α relation stays untagged."
   },
   {
     "hol_path": null,
@@ -8350,5 +8350,13 @@
     "lean_name": "storesW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against stores_def at crepLangScript.sml:95-100; HOL address/offset are 'a word and the stride is the fixed byte$bytes_in_word (BitVec.ofNat width (width/8) here); clause-for-clause identical to the untagged stride-parametric stores, with the untagged bridge storesW_eq_stores; direct HOL-EVAL rows empty/zero_two/nonzero_two in scripts/hol-probes/crep_stores_probe.out reproduced by guards in Flapjack/Test/CrepeStoresParity.lean; carrier `BitVec width` with `[NeZero width]` because HOL word types have positive dimindex)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineLocalsRel_decClock",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only generic-α helper (untagged): the exact width-indexed tag is on crepInlineLocalsRel_decClockW."
   }
 ]

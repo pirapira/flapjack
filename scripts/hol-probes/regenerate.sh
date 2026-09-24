@@ -483,10 +483,10 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-# The If probe observes the then branch, the else branch, a non-word condition,
-# and a condition whose own evaluation fails (empty memory domain).
+# The If probe observes the then/else branches, non-word and failed conditions,
+# plus Const and Var Local branch selection in the restricted total evaluator.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result if_fail_locals \
+  if_true_result if_local_zero_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If memory probe observes a memory-reading condition: a nonzero cell
 # selecting the then branch, a zero cell selecting the else branch, an address

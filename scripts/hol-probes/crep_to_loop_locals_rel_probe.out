@@ -1,0 +1,6 @@
+ctxt_vars_lookup=T
+distinct_component=T
+ctxt_max_component=T
+set_domain_mem=T
+map_lookup=T
+subset_domain_component=T

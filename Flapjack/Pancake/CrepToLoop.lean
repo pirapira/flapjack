@@ -1,3 +1,5 @@
+import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.LoopLang
 import Flapjack.Pancake.PanStatic
 import Flapjack.RiscV.Model
@@ -569,5 +571,47 @@ theorem loopCompileExp_load32 [OfNat α 0] [OfNat α 1]
     (address : CrepExp α) :
     (loopCompileExp context tmp live (.load32 address)).nextTemp = tmp + 1 := by
   simp [loopCompileExp]
+
+/-! ## Pure-num helpers of Cake's `crep_to_loop_def`
+
+These four HOL definitions carry no word-typed fields, so they are ported
+exactly.  `rt_var`/`rt_vars` are polymorphic in the finite-map key, matching
+the un-annotated HOL `Definition`s (`fm : 'a |-> num`). -/
+
+/-- Exact port of HOL `gen_temps_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:101`):
+    `gen_temps n l = GENLIST (λx. n + x) l`. -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "gen_temps_def"]
+def genTemps (n l : Nat) : List Nat := (List.range l).map (fun x => n + x)
+
+/-- Exact port of HOL `first_name_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:243`): the first generated loop
+    function number. -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "first_name_def"]
+def firstLoopName : Nat := 64
+
+/-- Exact port of HOL `rt_var_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:105-111`): resolve a return
+    variable, mapping the "impossible" out-of-map case to `mx + 1`, which is
+    greater than every live temporary.  The key type is polymorphic exactly as
+    HOL infers (`fm : 'a |-> num`). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "rt_var_def"]
+def rtVar {κ : Type} (fm : FiniteMap κ Nat) (v : Option κ) (n mx : Nat) : Nat :=
+  match v with
+  | none => n
+  | some w =>
+      match FLOOKUP fm w with
+      | none => mx + 1
+      | some m => m
+
+/-- Exact port of HOL `rt_vars_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:113-118`): resolve a list of
+    return variables; a missing variable yields the sentinel `[mx + 1]`. -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "rt_vars_def"]
+def rtVars {κ : Type} (fm : FiniteMap κ Nat) (vs : List κ) (mx : Nat) : List Nat :=
+  match vs.mapM (fun v => FLOOKUP fm v) with
+  | none => [mx + 1]
+  | some m => m
+
 
 end Flapjack

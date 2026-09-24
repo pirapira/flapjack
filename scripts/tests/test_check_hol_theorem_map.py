@@ -71,7 +71,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         }
         key = (
             "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
-            "genlistVmaxDistinctListsCompiledExps",
+            "genlistVmaxDistinctListsCompiledExpsW",
         )
         self.assertEqual(
             inventory[key]["hol_name"],

@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.RiscV.Model
 
@@ -12,9 +13,34 @@ that inspect intermediate artifacts.
 
 namespace Flapjack
 
+/-- Generic Flapjack helper for extracting a value from a Const node.
+    This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
+    stores an `'a word`, while this production helper accepts arbitrary `α`.
+    The exact word-carrier definition is tagged below; this generic helper is
+    retained for the executable simplifier and connected to it on word values. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
+
+/-- Word-valued counterpart of CakeML's `crep_arith$dest_const_def`
+    (`crep_arithScript.sml:10-12`). HOL's `Const` payload is an `'a word`,
+    represented here by the Boolean function `Fin width → Bool`; `NeZero`
+    records HOL's nonempty finite index requirement. Width-specializing the
+    tagged declaration avoids claiming that an arbitrary Boolean function
+    carrier is a HOL word. -/
+@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+def crepDestConstHolWord {width : Nat} [NeZero width] :
+    CrepExp (Fin width → Bool) → Option (Fin width → Bool)
+  | .const value => some value
+  | _ => none
+
+/-- The executable arbitrary-carrier extractor reduces to the tagged HOL
+    word definition whenever its carrier is a word. This keeps the production
+    simp implementation reusable while exposing its exact word behavior. -/
+theorem crepDestConstHolWord_eq_production {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool)) :
+    crepDestConstHolWord expression = crepDestConst expression := by
+  cases expression <;> rfl
 
 def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat
@@ -61,11 +87,19 @@ def crepSimpExp [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
   | .crepOp operator expressions =>
       let expressions := expressions.map (crepSimpExp fromNat)
       match operator, expressions with
-      | .mul, [.const left, .const right] => .const (left * right)
+      | .mul, [.const left, .const right] =>
+          match crepDestConst (.const left), crepDestConst (.const right) with
+          | some leftConstant, some rightConstant =>
+              .const (leftConstant * rightConstant)
+          | _, _ => .crepOp operator expressions
       | .mul, [.const constant, expression] =>
-          crepMulConst fromNat expression constant
+          match crepDestConst (.const constant) with
+          | some value => crepMulConst fromNat expression value
+          | none => .crepOp operator expressions
       | .mul, [expression, .const constant] =>
-          crepMulConst fromNat expression constant
+          match crepDestConst (.const constant) with
+          | some value => crepMulConst fromNat expression value
+          | none => .crepOp operator expressions
       | _, _ => .crepOp operator expressions
   | .cmp operator left right =>
       .cmp operator (crepSimpExp fromNat left) (crepSimpExp fromNat right)

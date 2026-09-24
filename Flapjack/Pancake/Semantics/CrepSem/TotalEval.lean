@@ -1,14 +1,16 @@
 import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
-# Total HOL-shaped Crep clock leaves
+# Total HOL-shaped Crep control subset
 
-This module ports only the four leaf clauses `Skip`, `Break`, `Continue`, and
-`Tick` of `crepSem$evaluate_def` to the 11-field `CrepHolState`. The restricted
-syntax makes the implemented domain explicit: this is not a whole-program
-evaluator, and it assigns no behavior to the remaining `CrepProg` constructors.
-The result carrier is `option crepSem$result`, so ordinary completion is `none`
-and the control results retain their HOL constructors.
+This module ports the leaf clauses `Skip`, `Break`, `Continue`, and `Tick`,
+plus the `Assign`, `If`, `Seq`, `Return`, `Raise`, and `Dec` clauses over its
+restricted recursive syntax, from `crepSem$evaluate_def` to the 11-field
+`CrepHolState`. The
+restricted syntax makes the implemented domain explicit: this is not a
+whole-program evaluator and assigns no behavior to the remaining `CrepProg`
+constructors. The result carrier is `option crepSem$result`, so ordinary
+completion is `none` and control results retain their HOL constructors.
 -/
 
 namespace Flapjack
@@ -30,9 +32,38 @@ def CrepClockLeaf.toCrepProg {width : Nat} :
   | .continueAt label => .continue label
   | .tick => .tick
 
-/-- Total result/state equations for the four matching HOL `evaluate_def`
-    constructors. This restricted function deliberately has no `Option` fuel
-    wrapper and does not depend on `evalCrepRuntimeResult`. -/
+/-- Recursive program fragment for the total clock/control evaluator. Its
+    `Assign` and `If` nodes evaluate source `CrepExp` terms in the current HOL
+    state, and its `Seq` nodes use the HOL `fix_clock` boundary between
+    recursively evaluated programs. Return nodes evaluate their expression
+    list in the current HOL state. -/
+inductive CrepClockProg (width : Nat) where
+  | leaf (value : CrepClockLeaf)
+  | raiseException (value : BitVec width)
+  | assignLocal (name : Nat) (value : CrepExp (BitVec width))
+  | decLocal (name : Nat) (value : CrepExp (BitVec width))
+      (body : CrepClockProg width)
+  | seq (first second : CrepClockProg width)
+  | returnValues (values : List (CrepExp (BitVec width)))
+  | ite (condition : CrepExp (BitVec width))
+      (thenBranch elseBranch : CrepClockProg width)
+
+/-- Embed the restricted recursive syntax into production Crep syntax. -/
+def CrepClockProg.toCrepProg {width : Nat} :
+  CrepClockProg width → CrepProg (BitVec width)
+  | .leaf value => value.toCrepProg
+  | .raiseException value => .raise value
+  | .assignLocal name value => .assign name value
+  | .decLocal name value body => .dec name value body.toCrepProg
+  | .seq first second => .seq first.toCrepProg second.toCrepProg
+  | .returnValues values => .return values
+  | .ite condition thenBranch elseBranch =>
+      .ite condition thenBranch.toCrepProg elseBranch.toCrepProg
+
+/-- Total result/state equations for the matching HOL `evaluate_def` leaves,
+    `Assign`, `If`, `Seq`, `Return`, `Raise`, and `Dec`. This restricted
+    function deliberately has no `Option` fuel wrapper and does not depend on
+    `evalCrepRuntimeResult`. -/
 def evalCrepClockLeaf {width : Nat} {σ : Type _}
     (leaf : CrepClockLeaf) (state : CrepHolState (BitVec width) σ) :
     Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
@@ -46,6 +77,174 @@ def evalCrepClockLeaf {width : Nat} {σ : Type _}
         (some .timeOut, emptyCrepHolLocals state)
       else
         (none, decCrepHolClock state)
+
+/-- Total recursive evaluator for the implemented source-shaped Crep fragment.
+    `Assign` requires an existing destination and uses HOL `set_var` on success;
+    expression and destination errors preserve the input state. `If` selects
+    the then branch for nonzero words and the else branch for zero. `Seq`
+    applies HOL `fix_clock` between recursively evaluated programs. No fuel,
+    partial result, or branch-run assumption is exposed. Remaining constructors
+    are not assigned behavior by this restricted evaluator. -/
+def evalCrepClockProg [NeZero width] {σ : Type _}
+  : CrepClockProg width → CrepHolState (BitVec width) σ →
+    Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
+      CrepHolState (BitVec width) σ
+  | .leaf value, state => evalCrepClockLeaf value state
+  | .raiseException value, state =>
+      (some (.exception value), emptyCrepHolLocals state)
+  | .assignLocal name value, state =>
+      match evalCrepHolExpWordLab state value with
+      | none => (some .error, state)
+      | some value =>
+          match state.locals name with
+          | none => (some .error, state)
+          | some _ => (none, setCrepHolVarW name value state)
+  | .decLocal name value body, state =>
+      match evalCrepHolExpWordLab state value with
+      | none => (some .error, state)
+      | some value =>
+          let oldValue := state.locals name
+          let (result, bodyState) := evalCrepClockProg body
+            (setCrepHolVarW name value state)
+          (result, { bodyState with
+            locals := resVarW bodyState.locals (name, oldValue) })
+  | .seq first second, state =>
+      match evalCrepClockProg first state with
+      | (none, firstState) =>
+          evalCrepClockProg second
+            (fixCrepHolClockW state
+              ((none : Option (CrepResultHOL (BitVec width) FfiFinalEvent)),
+                firstState)).2
+      | (some result, firstState) =>
+          (some result, (fixCrepHolClockW state (some result, firstState)).2)
+  | .returnValues values, state =>
+      match values.mapM (evalCrepHolExpWordLab state) with
+      | some words => (some (.return words), emptyCrepHolLocals state)
+      | none => (some .error, state)
+  | .ite condition thenBranch elseBranch, state =>
+      match evalCrepHolExp state condition with
+      | some value =>
+          if value = 0 then evalCrepClockProg elseBranch state
+          else evalCrepClockProg thenBranch state
+      | none => (some .error, state)
+termination_by program _state => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem evalCrepClockProg_return_success [NeZero width] {σ : Type _}
+    (values : List (CrepExp (BitVec width)))
+    (words : List (PanWordLab (BitVec width)))
+    (state : CrepHolState (BitVec width) σ)
+    (heval : values.mapM (evalCrepHolExpWordLab state) = some words) :
+    evalCrepClockProg (.returnValues values) state =
+      (some (.return words), emptyCrepHolLocals state) := by
+  simp [evalCrepClockProg, heval]
+
+theorem evalCrepClockProg_raise [NeZero width] {σ : Type _}
+  (value : BitVec width) (state : CrepHolState (BitVec width) σ) :
+    evalCrepClockProg (.raiseException value) state =
+      (some (.exception value), emptyCrepHolLocals state) := by
+  simp [evalCrepClockProg]
+
+theorem evalCrepClockProg_assign_error [NeZero width] {σ : Type _}
+    (name : Nat) (value : CrepExp (BitVec width))
+    (state : CrepHolState (BitVec width) σ)
+    (hvalue : evalCrepHolExpWordLab state value = none) :
+    evalCrepClockProg (.assignLocal name value) state = (some .error, state) := by
+  simp [evalCrepClockProg, hvalue]
+
+theorem evalCrepClockProg_assign_missing [NeZero width] {σ : Type _}
+    (name : Nat) (value : CrepExp (BitVec width))
+    (state : CrepHolState (BitVec width) σ)
+    (wordLab : PanWordLab (BitVec width))
+    (hvalue : evalCrepHolExpWordLab state value = some wordLab)
+    (hmissing : state.locals name = none) :
+    evalCrepClockProg (.assignLocal name value) state = (some .error, state) := by
+  simp [evalCrepClockProg, hvalue, hmissing]
+
+theorem evalCrepClockProg_assign_success [NeZero width] {σ : Type _}
+    (name : Nat) (value : CrepExp (BitVec width))
+    (state : CrepHolState (BitVec width) σ)
+    (wordLab : PanWordLab (BitVec width))
+    (hvalue : evalCrepHolExpWordLab state value = some wordLab)
+    (hbound : ∃ old, state.locals name = some old) :
+    evalCrepClockProg (.assignLocal name value) state =
+      (none, setCrepHolVarW name wordLab state) := by
+  obtain ⟨old, hold⟩ := hbound
+  simp [evalCrepClockProg, hvalue, hold]
+
+theorem evalCrepClockProg_dec_error [NeZero width] {σ : Type _}
+    (name : Nat) (value : CrepExp (BitVec width))
+    (body : CrepClockProg width) (state : CrepHolState (BitVec width) σ)
+    (hvalue : evalCrepHolExpWordLab state value = none) :
+    evalCrepClockProg (.decLocal name value body) state = (some .error, state) := by
+  simp [evalCrepClockProg, hvalue]
+
+theorem evalCrepClockProg_dec_success [NeZero width] {σ : Type _}
+    (name : Nat) (value : CrepExp (BitVec width))
+    (body : CrepClockProg width) (state : CrepHolState (BitVec width) σ)
+    (wordLab : PanWordLab (BitVec width))
+    (hvalue : evalCrepHolExpWordLab state value = some wordLab) :
+    evalCrepClockProg (.decLocal name value body) state =
+      let oldValue := state.locals name
+      let (result, bodyState) :=
+        evalCrepClockProg body (setCrepHolVarW name wordLab state)
+      (result, { bodyState with locals := resVarW bodyState.locals (name, oldValue) }) := by
+  simp [evalCrepClockProg, hvalue]
+
+theorem evalCrepClockProg_return_error [NeZero width] {σ : Type _}
+    (values : List (CrepExp (BitVec width)))
+    (state : CrepHolState (BitVec width) σ)
+    (heval : values.mapM (evalCrepHolExpWordLab state) = none) :
+    evalCrepClockProg (.returnValues values) state = (some .error, state) := by
+  simp [evalCrepClockProg, heval]
+
+theorem evalCrepClockProg_seq_normal [NeZero width] {σ : Type _}
+    (first second : CrepClockProg width)
+    (state firstState : CrepHolState (BitVec width) σ)
+    (hfirst : evalCrepClockProg first state = (none, firstState)) :
+    evalCrepClockProg (.seq first second) state =
+      evalCrepClockProg second
+        (fixCrepHolClockW state
+          ((none : Option (CrepResultHOL (BitVec width) FfiFinalEvent)),
+            firstState)).2 := by
+  simp [evalCrepClockProg, hfirst]
+
+theorem evalCrepClockProg_seq_control [NeZero width] {σ : Type _}
+    (first second : CrepClockProg width)
+    (state firstState : CrepHolState (BitVec width) σ)
+    (result : CrepResultHOL (BitVec width) FfiFinalEvent)
+    (hfirst : evalCrepClockProg first state = (some result, firstState)) :
+    evalCrepClockProg (.seq first second) state =
+      (some result, (fixCrepHolClockW state (some result, firstState)).2) := by
+  simp [evalCrepClockProg, hfirst]
+
+theorem evalCrepClockProg_seq_skip_break [NeZero width] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (label : Nat) :
+    evalCrepClockProg (.seq (.leaf .skip) (.leaf (.breakAt label))) state =
+      (some (.break label), state) := by
+  simp [evalCrepClockProg, evalCrepClockLeaf, fixCrepHolClockW]
+
+theorem evalCrepClockProg_seq_break_stops [NeZero width] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (label nextLabel : Nat) :
+    evalCrepClockProg
+        (.seq (.leaf (.breakAt label)) (.leaf (.breakAt nextLabel))) state =
+      (some (.break label), state) := by
+  simp [evalCrepClockProg, evalCrepClockLeaf, fixCrepHolClockW]
+
+theorem evalCrepClockProg_seq_tick_zero [NeZero width] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (hclock : state.clock = 0) :
+    evalCrepClockProg (.seq (.leaf .tick) (.leaf .skip)) state =
+      (some .timeOut, emptyCrepHolLocals state) := by
+  simp [evalCrepClockProg, evalCrepClockLeaf, fixCrepHolClockW,
+    emptyCrepHolLocals, hclock]
+
+theorem evalCrepClockProg_seq_tick_positive [NeZero width] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (hclock : state.clock ≠ 0) :
+    evalCrepClockProg (.seq (.leaf .tick) (.leaf .skip)) state =
+      (none, decCrepHolClock state) := by
+  have hnot : ¬ state.clock < state.clock - 1 := by omega
+  simp [evalCrepClockProg, evalCrepClockLeaf, fixCrepHolClockW,
+    decCrepHolClock, hclock, hnot]
 
 @[simp] theorem evalCrepClockLeaf_skip {width : Nat} {σ : Type _}
     (state : CrepHolState (BitVec width) σ) :
@@ -70,5 +269,32 @@ theorem evalCrepClockLeaf_tick_positive {width : Nat} {σ : Type _}
     (state : CrepHolState (BitVec width) σ) (hclock : state.clock ≠ 0) :
     evalCrepClockLeaf .tick state = (none, decCrepHolClock state) := by
   simp [evalCrepClockLeaf, hclock]
+
+theorem evalCrepClockProg_ite_zero [NeZero width] {σ : Type _}
+    (condition : CrepExp (BitVec width)) (thenBranch elseBranch : CrepClockProg width)
+    (state : CrepHolState (BitVec width) σ)
+    (hcondition : evalCrepHolExp state condition = some 0) :
+    evalCrepClockProg (.ite condition thenBranch elseBranch) state =
+      evalCrepClockProg elseBranch state := by
+  simp [evalCrepClockProg, hcondition]
+
+theorem evalCrepClockProg_ite_nonzero [NeZero width] {σ : Type _}
+    (condition : CrepExp (BitVec width)) (thenBranch elseBranch : CrepClockProg width)
+    (state : CrepHolState (BitVec width) σ) (value : BitVec width)
+    (hcondition : evalCrepHolExp state condition = some value) (hnonzero : value ≠ 0) :
+    evalCrepClockProg (.ite condition thenBranch elseBranch) state =
+      evalCrepClockProg thenBranch state := by
+  simp only [evalCrepClockProg, hcondition]
+  by_cases hzero : value = 0
+  · exact False.elim (hnonzero hzero)
+  · rw [if_neg hzero]
+
+theorem evalCrepClockProg_ite_error [NeZero width] {σ : Type _}
+    (condition : CrepExp (BitVec width)) (thenBranch elseBranch : CrepClockProg width)
+    (state : CrepHolState (BitVec width) σ)
+    (hcondition : evalCrepHolExp state condition = none) :
+    evalCrepClockProg (.ite condition thenBranch elseBranch) state =
+      (some .error, state) := by
+  simp [evalCrepClockProg, hcondition]
 
 end Flapjack

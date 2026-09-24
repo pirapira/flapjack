@@ -308,4 +308,435 @@ private abbrev dom24 : RiscV.Word 24 → Prop := fun address => address = 4
 #guard panMemLoad32HOL (width := 24) mem24 dom24 false (BitVec.ofNat 24 4) =
   some (BitVec.ofNat 32 0x22331122)
 
+/-- Direct HOL width-4 parity with nonzero word 0xB: little endian uses
+    `address MOD 0`, while big endian's natural subtraction saturates to zero. -/
+private def mem4 : RiscV.Word 4 → HolWordLab 4 := fun _ => .word 1
+private abbrev dom4 : RiscV.Word 4 → Prop := fun address => address = 1
+
+#guard panMemLoadByteHOL (width := 4) mem4 dom4 false 1 == some (UInt8.ofNat 0)
+example : panMemLoadByteHOL (width := 4) mem4 dom4 false 1 =
+    some (UInt8.ofNat 0) := by decide
+
+private def mem4Nonzero : RiscV.Word 4 → HolWordLab 4 := fun _ => .word 11
+private abbrev dom4All : RiscV.Word 4 → Prop := fun _ => True
+
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All false 0 ==
+  some (UInt8.ofNat 11)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All false 1 ==
+  some (UInt8.ofNat 0)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All true 0 ==
+  some (UInt8.ofNat 11)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All true 1 ==
+  some (UInt8.ofNat 11)
+
+/- Direct HOL mem_load_32 rows distinguish the little-endian 0,0,0,0 MOD 0
+   byte indices from the big-endian saturating subtraction case. -/
+#guard panMemLoad32HOL (width := 4) mem4Nonzero dom4All false 0 ==
+  some (BitVec.ofNat 32 11)
+#guard panMemLoad32HOL (width := 4) mem4Nonzero dom4All true 0 ==
+  some (BitVec.ofNat 32 0x0B0B0B0B)
+
+/-! ### Executed-path widening adapter (flapjack-pxn.18.3.6.9.2) -/
+
+/-- The executed `readByte` on the source state agrees with the tagged exact
+    `panMemLoadByteHOL` over the word view of its `PanValue` memory. -/
+example :
+    (panSemBitVec64MemoryAccess littleEndianState).readByte
+        (panSemBitVec64MemoryAccess littleEndianState).domain littleEndianState.memory
+        panSemBitVec64BytesInWord 0 =
+      (panMemLoadByteHOL (width := 64) (panValueWordHOL littleEndianState.memory)
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+        0).map (fun byte => BitVec.ofNat 64 byte.toNat) :=
+  panSemBitVec64ReadByte_eq_panMemLoadByteHOL littleEndianState littleEndianState.memory 0
+
+/- The adapter's right-hand side computes the expected little-endian first byte
+   (`0x88`) of `sourceMemoryWord`. -/
+#guard
+  ((panMemLoadByteHOL (width := 64) (panValueWordHOL littleEndianState.memory)
+      (fun a => littleEndianState.memaddrs a &&
+        panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+      0).map (fun byte => BitVec.ofNat 64 byte.toNat)
+    == some (BitVec.ofNat 64 (UInt8.ofNat 0x88).toNat))
+
+/-- The executed `read32` on the source state agrees with the tagged exact
+    `panMemLoad32HOL` over the word view of its `PanValue` memory. -/
+example :
+    (panSemBitVec64MemoryAccess littleEndianState).read32
+        (panSemBitVec64MemoryAccess littleEndianState).domain littleEndianState.memory
+        panSemBitVec64BytesInWord 0 =
+      (panMemLoad32HOL (width := 64) (panValueWordHOL littleEndianState.memory)
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+        0).map (fun word => BitVec.ofNat 64 word.toNat) :=
+  panSemBitVec64Read32_eq_panMemLoad32HOL littleEndianState littleEndianState.memory 0
+
+/- The adapter's right-hand side computes the expected little-endian 32-bit word
+   (`0x55667788`) of `sourceMemoryWord`. -/
+#guard
+  ((panMemLoad32HOL (width := 64) (panValueWordHOL littleEndianState.memory)
+      (fun a => littleEndianState.memaddrs a &&
+        panValueWordDefined littleEndianState.memory a = true) littleEndianState.be
+      0).map (fun word => BitVec.ofNat 64 word.toNat)
+    == some (BitVec.ofNat 64 0x55667788))
+
+/-- The structured `.load` on a `One` shape agrees with the tagged exact
+    `panMemLoadHOL` over the word view of the `PanValue` memory. -/
+example :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 .one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) .one 0
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_one_eq_panMemLoadHOL littleEndianState
+    littleEndianState.memory ([] : StructContext) 0
+
+/- The structured `One` load returns the source word. -/
+#guard
+  isWordResult
+    (panValueFlatLoad ([] : StructContext) littleEndianState.memory
+      panSemBitVec64BytesInWord 0 .one
+      (some (panSemBitVec64MemoryAccess littleEndianState)))
+    sourceMemoryWord
+
+/- The production context-size agrees with the exact HOL context-size. -/
+example : shapeSizeWithContext ([] : StructContext) Shape.one =
+    sizeOfShWithCtxt (StructContext.toHOL ([] : StructContext)) Shape.one :=
+  panValueFlatShapeSize_eq_sizeOfShWithCtxt ([] : StructContext) Shape.one
+
+/- The production offset agrees with the exact `address + bytes_in_word * n`. -/
+example : panValueFlatOffset (8 : RiscV.Word 64) (16 : RiscV.Word 64) 3 =
+    (16 : RiscV.Word 64) + BitVec.ofNat 64 8 * BitVec.ofNat 64 3 :=
+  panValueFlatOffset_eq_widen 16 3
+
+/- The nested `Comb` sub-shape fuel stays within the shape's list fuel. -/
+example :
+    panValueFlatShapeFuel Shape.one ≤
+      panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.named "S", Shape.one] :=
+  panValueFlatShapeFuel_le_listFuel (by simp)
+
+/- The `Named` field-shape fuel stays within the field-list fuel. -/
+example :
+    panValueFlatShapeFuel Shape.one ≤
+      panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)) :=
+  panValueFlatFieldsFuel_shapeFuel_le (field := ("f", Shape.one)) (by simp)
+
+/-- The `Named` lookup fuel bound: the matched struct's field fuel plus the
+    remaining context fuel stays below the whole-context fuel. -/
+example :
+    panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)) +
+        panValueFlatContextFuel ([] : StructContext) ≤
+      panValueFlatContextFuel
+        ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext) :=
+  panValueFlatContextFuel_lookupInfoWithRest_le "S"
+    ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)
+    { fields := [("f", Shape.one)], size := 1 } [] (by simp [lookupInfoWithRest])
+
+#guard decide (panValueFlatShapeFuel Shape.one ≤
+  panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.named "S", Shape.one])
+
+#guard decide (panValueFlatShapeFuel Shape.one ≤
+  panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)))
+
+/- The per-node word read agrees with the exact domain/memory pair. -/
+example :
+    panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+        (some (panSemBitVec64MemoryAccess littleEndianState)) 0 =
+      (if littleEndianState.memaddrs 0 &&
+          panValueWordDefined littleEndianState.memory 0 = true
+        then some (panValueWordHOL littleEndianState.memory 0) else none).map
+        (fun lab => match lab with | .word value => value) :=
+  panValueFlatReadWord_eq_panValueWordHOL littleEndianState
+    littleEndianState.memory 0
+
+#guard
+  (panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 0 ==
+    some sourceMemoryWord)
+
+/-! Structured `.load` Comb/Named induction prerequisites (flapjack-pxn.18.3.6.9.2.2.1). -/
+
+example : 1 ≤ panValueFlatShapeFuel Shape.one := panValueFlatShapeFuel_pos Shape.one
+
+example : 1 ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.one] :=
+  panValueFlatShapeListFuel_pos Shape.one []
+
+example : 1 ≤ panValueFlatFieldsFuel [("f", Shape.one)] :=
+  panValueFlatFieldsFuel_pos ("f", Shape.one) []
+
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext)) = none :=
+  panMemLoadHOL_named_none "S" ([] : StructContext) 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory) (by simp [lookupInfoWithRest])
+
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)) =
+      (panMemLoadFldsHOL [("f", Shape.one)]
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map
+        (fun fields => HolValue.nStruct "S" fields) :=
+  panMemLoadHOL_named_some "S" [("S", { fields := [("f", Shape.one)], size := 1 })] 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory)
+    { fields := [("f", Shape.one)], size := 1 } []
+    (by simp [lookupInfoWithRest])
+
+/-- Equation lemmas of the exact-HOL `HolValue.toPanValue` isomorphism. -/
+example :
+    HolValue.toPanValue (width := 64) (HolValue.val (HolWordLab.word (7 : RiscV.Word 64))) =
+      PanValue.word (7 : RiscV.Word 64) :=
+  HolValue.toPanValue_val (7 : RiscV.Word 64)
+
+example :
+    HolValue.toPanValue (width := 64) (HolValue.rStruct []) =
+      PanValue.rStruct ([] : List (PanValue (RiscV.Word 64))) :=
+  HolValue.toPanValue_rStruct ([] : List (HolValue 64))
+
+example :
+    HolValue.toPanValue (width := 64)
+        (HolValue.nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]) =
+      PanValue.nStruct "S" [("f", PanValue.word (7 : RiscV.Word 64))] :=
+  by
+    simpa [HolValue.toPanValue_val] using
+      HolValue.toPanValue_nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]
+
+/-- Fuel-indexed Comb/List/Fields/Named equivalence with the tagged exact `mem_load_def`
+port, extracted from the conjunction produced by the mutual fuel induction. -/
+example :
+    panValueFlatLoadFuel ([] : StructContext)
+        (panValueFlatMachineReadWord littleEndianState littleEndianState.memory)
+        panSemBitVec64BytesInWord 3 (.comb [Shape.one]) 0 =
+      (panMemLoadHOL (width := 64) (.comb [Shape.one]) 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory) (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  (panValueFlatLoadFuel_eq_panMemLoadHOL littleEndianState littleEndianState.memory 3).1
+    [] (.comb [Shape.one]) 0 (by decide)
+
+
+/-- Capstone: the guarded production `panValueFlatLoad` over the executed RV64
+memory-access state equals the tagged exact `panMemLoadHOL` mapped by
+`HolValue.toPanValue`. -/
+example (hwf : isWfShape ([] : StructContext) Shape.one = true) :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 Shape.one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) Shape.one 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_eq_panMemLoadHOL littleEndianState littleEndianState.memory
+    ([] : StructContext) Shape.one 0 hwf
+
+/-! ## Exact `panSem$eval_def` evaluator parity (flapjack-pxn.18.3.6.9.3)
+
+The HOL rows are the `word_load_hit`, `byte_little_first`, `word32_little`,
+`op_add_fold_three`, and `op_sub_wrong_arity` lines of
+`scripts/hol-probes/pan_sem_state_eval_probe.out` (direct HOL EVAL of
+`panSem$eval`). -/
+
+abbrev holEvalState : PanSemHolState 64 Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := fun _ => none
+    eshapes := fun _ => none
+    memory := fun address => if address == 0 then .word sourceMemoryWord else .word 0
+    memaddrs := fun address => address = 0
+    shMemaddrs := fun _ => False
+    clock := 0
+    be := false
+    ffi := sourceFfiState
+    baseAddr := 0
+    topAddr := 0 }
+
+def evalWordResult (result : Option (HolValue 64)) : Option Word64 :=
+  match result with
+  | some (.val (.word value)) => some value
+  | _ => none
+
+#guard evalWordResult (evalHOL holEvalState (.const 7)) == some 7
+#guard evalWordResult (evalHOL holEvalState (.load Shape.one (.const 0))) ==
+  some sourceMemoryWord
+#guard evalWordResult (evalHOL holEvalState (.loadByte (.const 0))) ==
+  some (BitVec.ofNat 64 136)
+#guard evalWordResult (evalHOL holEvalState (.load32 (.const 0))) ==
+  some (BitVec.ofNat 64 0x55667788)
+#guard evalWordResult (evalHOL holEvalState (.op .add [.const 1, .const 2, .const 3])) ==
+  some 6
+#guard evalWordResult (evalHOL holEvalState (.op .sub [.const 1])) == none
+
+/-- State with a single `Pair` struct (field `f : One`), matching the
+    `nstruct_*` rows of `scripts/hol-probes/pan_sem_state_eval_probe.out`. -/
+abbrev holEvalStateWithPair : PanSemHolState 64 Unit :=
+  { holEvalState with
+    structs := [("Pair", { fields := [("f", Shape.one)], size := 1 })] }
+
+/-- Projection of the field word from a `NStruct` result (single field). -/
+def nstructFieldWord (result : Option (HolValue 64)) : Option Word64 :=
+  match result with
+  | some (.nStruct _ [(_, .val (.word value))]) => some value
+  | _ => none
+
+def evalResultIsNone (result : Option (HolValue 64)) : Bool :=
+  match result with
+  | none => true
+  | some _ => false
+
+#guard nstructFieldWord
+    (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .const 7)])) == some 7
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .rStruct [])]))
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("g", .const 7)]))
+#guard evalResultIsNone (evalHOL holEvalState (.nStruct "Pair" [("f", .const 7)]))
+
+/- Bridge: production `panValueShape` agrees with `holShapeOf` on the `HolValue`
+   image used by tagged `evalHOL` (bead flapjack-pxn.18.3.6.9.4). -/
+example (value : PanValue (BitVec 64)) :
+    holShapeOf value.toHolValue = panValueShape ([] : StructContext) value :=
+  holShapeOf_toHolValue ([] : StructContext) value
+
+example :
+    (([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+        PanValue.toHolValue).map holShapeOf
+      = ([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+          (panValueShape ([] : StructContext)) :=
+  holShapeOf_map_toHolValue ([] : StructContext) _
+
+example (shape : Shape) (value : PanValue (BitVec 64)) :
+    panShapeMatches shape (holShapeOf value.toHolValue) =
+      panShapeMatches shape (panValueShape ([] : StructContext) value) :=
+  panShapeMatches_holShapeOf_toHolValue ([] : StructContext) shape value
+
+/- Bridges: the production `NStruct` field check equals the inline `evalHOL`
+   predicate over the `HolValue` image (bead flapjack-pxn.18.3.6.9.5). -/
+example (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue (BitVec 64))) :
+    List.all
+        ((expected.map Prod.snd).zip
+          ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))
+      = List.all
+        ((expected.map Prod.snd).zip (actual.map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (panValueShape ([] : StructContext) pair.2)) :=
+  panValueFieldsShapeHOL_eq ([] : StructContext) expected actual
+
+example (info : StructInfo) (actual : List (FieldName × PanValue (BitVec 64))) :
+    panValueFieldsExactHOL ([] : StructContext) info.fields actual =
+      (decide (info.fields.map Prod.fst = actual.map Prod.fst) &&
+        List.all
+          ((info.fields.map Prod.snd).zip
+            ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+          (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))) :=
+  panValueFieldsExactHOL_eq_evalHOL ([] : StructContext) info actual
+
+#guard panValueFieldsExactHOL ([] : StructContext) [("f", Shape.one)]
+    [("f", PanValue.word (7 : BitVec 64))] ==
+  (decide ((["f"] : List FieldName) = ["f"]) &&
+    List.all [(Shape.one, (PanValue.word (7 : BitVec 64)).toHolValue)]
+      (fun pair => panShapeMatches pair.1 (holShapeOf pair.2)))
+
+/- Modular production-to-`evalHOL` bridges at a concrete state (bead
+   flapjack-pxn.18.3.6.9.2); the per-expression agreement is supplied by the
+   `Const` clause for these concrete single-element lists. -/
+example (value : BitVec 64) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.const value)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.const value)).map HolValue.toPanValue :=
+  evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) value
+
+example (value : BitVec 64) :
+    evalPanValueExp.evalPanValueExps ([] : StructContext) (fun _ => none) (fun _ => none)
+        (fun _ => none) 0 0 panSemBitVec64BytesInWord [.const value]
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalListHOL holEvalState [.const value]).map (List.map HolValue.toPanValue) :=
+  evalPanValueExps_eq_evalListHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) [.const value]
+    (fun expression hmem => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      subst hmem
+      exact evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext)
+        (fun _ => none) (fun _ => none) (fun _ => none) 0 0
+        panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) value)
+
+example (value : BitVec 64) :
+    evalPanValueExp.evalPanValueFields ([] : StructContext) (fun _ => none) (fun _ => none)
+        (fun _ => none) 0 0 panSemBitVec64BytesInWord [("f", .const value)]
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalFieldsHOL holEvalState [("f", .const value)]).map
+          (List.map (fun pair => (pair.1, HolValue.toPanValue pair.2))) :=
+  evalPanValueFields_eq_evalFieldsHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) [("f", .const value)]
+    (fun pair hmem => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      subst hmem
+      exact evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext)
+        (fun _ => none) (fun _ => none) (fun _ => none) 0 0
+        panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) value)
+
+
+/- State-projection clause bridges (bead flapjack-pxn.18.3.6.9.2.6): the leaf
+   clauses agree given the environment/state agreement hypotheses. -/
+example (name : VarName) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.var .local name)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.var .local name)).map HolValue.toPanValue :=
+  evalPanValueExp_var_local_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) name (fun _ => rfl)
+
+example (name : VarName) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.var .global name)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.var .global name)).map HolValue.toPanValue :=
+  evalPanValueExp_var_global_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) name (fun _ => rfl)
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .baseAddr
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .baseAddr).map HolValue.toPanValue :=
+  evalPanValueExp_baseAddr_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .topAddr
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .topAddr).map HolValue.toPanValue :=
+  evalPanValueExp_topAddr_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .bytesInWord
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .bytesInWord).map HolValue.toPanValue :=
+  evalPanValueExp_bytesInWord_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
 end Flapjack.Test.PanSemStateEvalParity

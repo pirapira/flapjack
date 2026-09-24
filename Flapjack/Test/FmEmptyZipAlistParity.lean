@@ -74,7 +74,7 @@ example (fm : FiniteMap String (Shape × List Nat)) (x : String) (y : Shape)
 example (fm : FiniteMap String (Shape × List Nat)) (x y : String) (a b : Shape)
     (xs ys : List Nat) (hno : noOverlap fm) (hxy : x ≠ y)
     (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
-    distinctLists xs ys = true :=
+    distinctListsHol xs ys = true :=
   noOverlapFlookupDistinct fm x y a b xs ys hno hxy hx hy
 
 /-- The concrete context used by the HOL oracle: `x ↦ [1,2]`, `y ↦ [3,4]`. -/

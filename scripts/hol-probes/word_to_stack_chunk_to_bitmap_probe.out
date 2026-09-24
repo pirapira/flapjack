@@ -1,0 +1,7 @@
+cbm_empty=[1w]
+cbm_two=[5w; 0w; 9w]
+cbm_payload=[3w; 7w]
+cwb_empty=[1w]
+cwb_short=[5w; 0w; 9w]
+cwb_boundary8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 1w]
+cwb_split8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 2w; 8w]

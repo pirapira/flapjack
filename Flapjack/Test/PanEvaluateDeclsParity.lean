@@ -191,4 +191,16 @@ example : (sampleFunction).params.all
         state' h (by simp)
         (by decide)
 
+/-! Finite-map bridge for the declaration updates: `panSemDeclUpdateGlobal` is
+    the repo `FUPDATE` and `panSemDeclUpdateInfo` agrees with `FUPDATE` on the
+    finite-map view of the association list. -/
+example : panSemDeclUpdateGlobal (fun _ => (none : Option (PanValue Nat)))
+      "g" (.word 7) = FUPDATE (fun _ => none) ("g", .word 7) :=
+  panSemDeclUpdateGlobal_eq_FUPDATE _ _ _
+
+example :
+    lookupInfo "h" (panSemDeclUpdateInfo [("g", (1 : Nat))] "g" 2) =
+      FLOOKUP (FUPDATE (fun k => lookupInfo k [("g", (1 : Nat))]) ("g", 2)) "h" :=
+  lookupInfo_panSemDeclUpdateInfo _ _ _ _
+
 end Flapjack.Test.PanEvaluateDeclsParity

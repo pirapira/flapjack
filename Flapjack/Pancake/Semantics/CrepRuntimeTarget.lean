@@ -382,6 +382,11 @@ theorem crepRuntimeWordTarget_shift [NeZero width]
 /-! `evalPanShiftFull` is the width-parametric Lean counterpart of HOL's
 `word_sh_def`. The canonical production target uses `panRiscVShift`; this
 lemma proves those two interfaces agree for every positive word width. -/
+theorem wordShiftHOL_eq_evalPanShiftFull [NeZero width]
+    (operator : Shift) (left right : RiscV.Word width) :
+    wordShiftHOL operator left right.toNat = evalPanShiftFull operator left right := by
+  cases operator <;> rfl
+
 theorem panRiscVShift_eq_evalPanShiftFull [NeZero width]
     (operator : Shift) (left right : RiscV.Word width) :
     RiscV.panRiscVShift operator left right = evalPanShiftFull operator left right := by
@@ -2800,7 +2805,7 @@ theorem evalCrepRuntimeExp_crepOpMul_rv64_const
       | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
       | cons right tail =>
           cases tail with
-          | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+          | nil => simp [evalCrepRuntimeExp, crepOpCrep, holCrepOpMul64]
           | cons extra more => simp [evalCrepRuntimeExp, holCrepOpMul64]
 
 /-- Word_lab evaluator case: the production word_lab core's `Crepop Mul` over
@@ -3008,13 +3013,15 @@ mutual
                             rw [hl, Option.map_some] at ihl
                             have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
                             rw [hr, Option.map_none] at ihr
-                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                            simp [evalCrepRuntimeExp, crepOpCrep, holCrepEval64,
+                              hl, hr, ← ihl, ← ihr]
                         | some rightWord =>
                             have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
                             rw [hl, Option.map_some] at ihl
                             have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
                             rw [hr, Option.map_some] at ihr
-                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                            simp [evalCrepRuntimeExp, crepOpCrep, holCrepEval64,
+                              hl, hr, ← ihl, ← ihr]
                 | cons extra more => simp [evalCrepRuntimeExp, holCrepEval64]
     | cmp operator left right =>
         cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with

@@ -33,6 +33,42 @@ namespace Flapjack.Compiler.Encoders.Asm
 
 open Flapjack
 
+/-! HOL's signed word order as a Boolean on the width-indexed Lean word.
+This is the two's-complement interpretation of HOL's polymorphic word `<`;
+it is kept local to the assembler counterpart rather than importing a
+particular target's comparison instance. -/
+def holAsmSignedLess {width : Nat} (left right : BitVec width) : Bool :=
+  let sign := 2 ^ (width - 1)
+  if left.toNat < sign then
+    if right.toNat < sign then decide (left.toNat < right.toNat) else false
+  else if right.toNat < sign then
+    true
+  else
+    decide (left.toNat < right.toNat)
+
+/-! Exact width-indexed source counterpart of CakeML
+`asm$word_cmp_def` (`cakeml/compiler/encoders/asm/asmScript.sml:313-321`).
+The result is Boolean as in HOL; the Crep evaluator separately embeds it as
+a word. -/
+@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "word_cmp_def"]
+def wordCmpHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : Bool :=
+  match operator with
+  | .equal => left == right
+  | .less => holAsmSignedLess left right
+  | .lower => decide (left < right)
+  | .test => AndOp.and left right == 0
+  | .notEqual => !(left == right)
+  | .notLess => !(holAsmSignedLess left right)
+  | .notLower => !(decide (left < right))
+  | .notTest => AndOp.and left right != 0
+
+/-! Flapjack's word-valued encoding of the Boolean result used by
+`crepSem$eval`'s `bitstring$v2w [word_cmp ...]` clause. -/
+def wordCmpResultHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : BitVec width :=
+  if wordCmpHOL operator left right then 1 else 0
+
 /-- HOL `architecture` (`asmScript.sml:149-151`).  Distinct from the RISC-V
 state-model `Flapjack.RiscV.Architecture`. -/
 inductive AsmArchitecture where
@@ -256,5 +292,70 @@ def asmOk {width : Nat} (config : AsmConfig width) : AsmData width → Bool
         asmJumpOffsetOk config target
   | .jumpReg target => asmRegOk config target
   | .loc register offset => asmRegOk config register && asmLocOffsetOk config offset
+
+
+/-! ## RISC-V configuration
+
+Exact 64-bit field values of HOL `riscv_config_def`
+(`cakeml/compiler/encoders/riscv/riscv_targetScript.sml:277-304`).
+
+`encode` is carried with the HOL field type but is a placeholder, so the
+definition is named `riscvConfigForChecks`: the HOL value is
+`riscv_enc = LIST_BIND riscv_encode ∘ riscv_ast`, whose instruction encoder is
+not ported here, and a caller that read `encode` would silently emit empty
+code. No validity predicate in this module (or in `stackProps$stack_asm_ok`)
+reads `encode`, so every check-relevant projection is exact, but the record as
+a whole is NOT a complete port and no `@[hol]` tag is attached. The exact
+`riscv_ast`/`riscv_enc` field and production bridge is tracked by bead
+`flapjack-pxn.18.5.15.9.11.1`. -/
+
+/-- HOL `min12` (`sw2sw (INT_MINw : word12) : word64`). -/
+def riscvMin12 : BitVec 64 := BitVec.ofInt 64 (-2048)
+
+/-- HOL `max12` (`sw2sw (INT_MAXw : word12) : word64`). -/
+def riscvMax12 : BitVec 64 := BitVec.ofInt 64 2047
+
+/-- HOL `min21` (`sw2sw (INT_MINw : 21 word) : word64`). -/
+def riscvMin21 : BitVec 64 := BitVec.ofInt 64 (-1048576)
+
+/-- HOL `max21` (`sw2sw (INT_MAXw : 21 word) : word64`). -/
+def riscvMax21 : BitVec 64 := BitVec.ofInt 64 1048575
+
+/-- HOL `min32` (`sw2sw (INT_MINw : word32) : word64`). -/
+def riscvMin32 : BitVec 64 := BitVec.ofInt 64 (-2147483648)
+
+/-- The `jump_offset`/`loc_offset` maximum `0x7FFFF7FFw`. -/
+def riscvJumpMax : BitVec 64 := BitVec.ofNat 64 0x7FFFF7FF
+
+/-- HOL `riscv_config.valid_imm`: `Sub` uses a strict lower bound, everything
+else a non-strict one, both signed word comparisons. -/
+def riscvValidImm : Sum BinOp Cmp → BitVec 64 → Bool := fun operator value =>
+  (match operator with
+    | .inl .sub => decide (riscvMin12.toInt < value.toInt)
+    | _ => decide (riscvMin12.toInt ≤ value.toInt)) &&
+  decide (value.toInt ≤ riscvMax12.toInt)
+
+/-- The RISC-V assembler configuration at 64-bit, for the check predicates
+only. Check fields match HOL `riscv_config` exactly (see
+`scripts/hol-probes/riscv_config_probe.out`); `encode` is the documented
+placeholder, so this record is not a complete HOL `riscv_config` port and
+carries no `@[hol]` tag. -/
+def riscvConfigForChecks : AsmConfig 64 where
+  isa := .riscv
+  encode := fun _ => []
+  bigEndian := false
+  codeAlignment := 2
+  linkReg := some 1
+  avoidRegs := [0, 2, 3, 4, 31]
+  regCount := 32
+  fpRegCount := 0
+  twoRegArith := false
+  validImm := riscvValidImm
+  addrOffset := (riscvMin12, riscvMax12)
+  hwOffset := (riscvMin12, riscvMax12)
+  byteOffset := (riscvMin12, riscvMax12)
+  jumpOffset := (riscvMin32, riscvJumpMax)
+  cjumpOffset := (riscvMin21 + 8, riscvMax21 + 4)
+  locOffset := (riscvMin32, riscvJumpMax)
 
 end Flapjack.Compiler.Encoders.Asm

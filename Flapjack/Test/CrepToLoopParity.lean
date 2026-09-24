@@ -366,4 +366,334 @@ example (s : CrepHolState (BitVec 64) Unit) (t : LoopMachineState (BitVec 64) Un
     ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
   crepToLoopStateRel_clock_add_zero s t h
 
+/-- HOL `mem_rel_intro` (`crep_to_loopProofScript.sml:203-209`) is an
+    implication: from the total-memory relation, conclude the pointwise
+    equation. -/
+example (smem : BitVec 64 → PanWordLab (BitVec 64))
+    (tmem : BitVec 64 → LoopValue (BitVec 64)) (dom : BitVec 64 → Bool)
+    (h : crepToLoopMemRel smem tmem dom) :
+    ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  crepToLoopMemRel_intro smem tmem dom h
+
+/-- Untagged iff form of `crepToLoopMemRel`. -/
+example (smem : BitVec 64 → PanWordLab (BitVec 64))
+    (tmem : BitVec 64 → LoopValue (BitVec 64)) (dom : BitVec 64 → Bool) :
+    crepToLoopMemRel smem tmem dom ↔
+      ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  crepToLoopMemRel_iff smem tmem dom
+
+/-- Total-view bridge: the total HOL memory agrees with the Option-valued
+    `LoopMachineState.memory` at a defined address. -/
+example (default : LoopValue (BitVec 64)) (t : LoopMachineState (BitVec 64) Unit)
+    (ad : BitVec 64) (v : LoopValue (BitVec 64)) (h : t.memory ad = some v) :
+    loopMemoryTotal default t ad = v :=
+  loopMemoryTotal_eq_some default t ad v h
+
+/-- Concrete total loop memory used to reproduce the `mem_rel_match`/
+    `mem_rel_wrong` oracle rows: `4 ↦ .word 7`, other addresses defaulting. -/
+def memRelFixture : LoopMachineState (BitVec 64) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun ad => if ad == (4 : BitVec 64) then some (.word (7 : BitVec 64)) else none
+    mdomain := fun _ => false
+    shMdomain := fun _ => false
+    clock := 0
+    code := []
+    be := false
+    ffi := trivialFfiState Unit ()
+    baseAddr := 0
+    topAddr := 0 }
+
+/-- Reproduces the `mem_rel_match=T` / `mem_rel_wrong=F` oracle rows via the
+    total view of the Option-valued loop memory. -/
+def memRelGuard : Bool :=
+  let t := loopMemoryTotal (LoopValue.word (0 : BitVec 64)) memRelFixture
+  (t 4 == LoopValue.word (7 : BitVec 64)) && (t 9 == LoopValue.word (0 : BitVec 64))
+
+#guard memRelGuard
+
+/-- Concrete function table used to reproduce the `distinct_funcs_*` oracle
+    rows: `«a» ↦ (1,10)`, `«b» ↦ (2,20)`, `«c» ↦ (1,30)`. -/
+def distinctFuncsFm : FiniteMap String (Nat × Nat) :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap String (Nat × Nat)) ("a", (1, 10)))
+      ("b", (2, 20)))
+    ("c", (1, 30))
+
+/-- `distinct_funcs_sep=T`: two entries with different labels satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctFuncs distinctFuncsFm) :
+    (1 : Nat) = 2 → (("a" : String) = "b") :=
+  h "a" "b" 1 2 10 20
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+
+/-- `distinct_funcs_collision=F`: two distinct keys with the same label violate
+    the relation, so it does not hold for a colliding table. -/
+example : ¬ crepToLoopDistinctFuncs distinctFuncsFm := by
+  intro h
+  have hkey : ("a" : String) = "c" :=
+    h "a" "c" 1 1 10 30
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
+/-- Concrete variable map used to reproduce the `distinct_vars_*` oracle rows:
+    `1 ↦ 10`, `2 ↦ 20`, `3 ↦ 10`. -/
+def distinctVarsFm : FiniteMap Nat Nat :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10))
+      (2, 20))
+    (3, 10)
+
+/-- `distinct_vars_sep=T`: two entries with different slots satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctVars distinctVarsFm) :
+    (10 : Nat) = 20 → ((1 : Nat) = 2) :=
+  h 1 2 10 20
+    (by simp [distinctVarsFm, FLOOKUP_update])
+    (by simp [distinctVarsFm, FLOOKUP_update])
+
+/-- `distinct_vars_collision=F`: two distinct keys sharing a slot violate the
+    relation. -/
+example : ¬ crepToLoopDistinctVars distinctVarsFm := by
+  intro h
+  have hkey : (1 : Nat) = 3 :=
+    h 1 3 10 10
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
+/-- HOL `ctxt_max_def` (`crep_to_loopProofScript.sml:90-93`) on the concrete
+    table `1 ↦ 10`, matching oracle rows `ctxt_max_within=T` and
+    `ctxt_max_absent=T` (absent keys are vacuous). -/
+def ctxtMaxFm : FiniteMap Nat Nat :=
+  FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)
+
+example : crepToLoopCtxtMax 20 ctxtMaxFm := by
+  intro v m h
+  rw [ctxtMaxFm, FLOOKUP_update] at h
+  split at h
+  · simp_all
+    omega
+  · simp at h
+
+/-- Oracle row `ctxt_max_exceeds=F`: the bound `5` does not admit the stored
+    value `10`. -/
+example : ¬ crepToLoopCtxtMax 5 ctxtMaxFm := by
+  intro h
+  have hle := h 1 10 (by simp [ctxtMaxFm, FLOOKUP_update])
+  omega
+
+/-- Polymorphism witnesses pinning the exact HOL inferred types of the three
+    un-annotated HOL `Definition`s.  `distinct_funcs` is polymorphic in the key
+    and both tuple components (`'a |-> ('b # 'c)`); `distinct_vars` in the key
+    and value (`'a |-> 'b`); `ctxt_max` in the key only (`'a |-> num`).  Empty
+    maps satisfy each relation vacuously. -/
+example : crepToLoopDistinctFuncs
+    (fun _ : Bool => none : FiniteMap Bool (Bool × Bool)) := by
+  intro x y n m rm rm' hx
+  change (fun _ : Bool => none) x = some (n, rm) at hx
+  simp at hx
+
+example : crepToLoopDistinctVars (fun _ : Bool => none : FiniteMap Bool Bool) := by
+  intro x y n m hx
+  change (fun _ : Bool => none) x = some n at hx
+  simp at hx
+
+example : crepToLoopCtxtMax (κ := String) 5
+    (fun _ : String => none : FiniteMap String Nat) := by
+  intro v m hv
+  change (fun _ : String => none) v = some m at hv
+  simp at hv
+
+/-- Untagged `locals_rel` rendering (bead `flapjack-pxn.18.5.6.9`): the empty
+    context/source/target tuple satisfies every side condition vacuously. -/
+def localsRelContext : LoopContext Unit :=
+  { vars := [], functions := [], maxVar := 0, target := .rv64i }
+
+example : crepToLoopLocalsRel localsRelContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => none) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y n m hx
+    simp [localsRelContext, lookupNatInfo] at hx
+  · intro v m hv
+    simp [localsRelContext, lookupNatInfo] at hv
+  · intro n hn
+    simp at hn
+  · intro vname v hv
+    simp [FLOOKUP, FEMPTY] at hv
+
+/-- Finite-map context carrier for the tagged exact `locals_rel_def` port
+    (bead `flapjack-pxn.18.5.6.9.1`); empty vars/maxVar satisfy the two
+    context clauses vacuously. -/
+def localsRelHOLContext : CrepToLoopFiniteMapContext :=
+  { vars := (FEMPTY : FiniteMap Nat Nat),
+    funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
+    vmax := 5, target := .riscv }
+
+/-- The tagged exact `locals_rel_def` port satisfies every clause vacuously for
+    an empty context and empty source locals. -/
+example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+    (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64)))) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y n m hx
+    exact absurd hx (fun h => Option.some_ne_none n h.symm)
+  · intro v m hv
+    exact absurd hv (fun h => Option.some_ne_none m h.symm)
+  · intro n hn
+    exact absurd hn (Bool.false_ne_true)
+  · intro vname v hv
+    exact absurd hv (fun h => Option.some_ne_none v h.symm)
+
+/-- The `∃n` clause of the tagged exact relation for a present binding: source
+    local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
+    `wlab` value in the target map. -/
+example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some n ∧
+    (fun m => m == 5) n = true ∧
+    (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
+      some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
+  ⟨5, by simp [FLOOKUP, FUPDATE], by decide, by simp [wlabWloc]⟩
+
+/-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
+    local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
+    locals hold `wlab 9` at `5`. -/
+def localsRelLive : Nat → Bool := fun n => n == 5
+
+example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true ∧
+    (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
+      some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
+  ⟨5, rfl, by decide, by simp [wlabWloc]⟩
+
+/-! `find_var`/`find_lab` over the finite-map context carrier, mirroring
+    `scripts/hol-probes/crep_to_loop_context_defs_probe.out`. -/
+def contextDefsContext : CrepToLoopFiniteMapContext :=
+  { vars := FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7),
+    funcs := FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2)),
+    vmax := 9, target := .riscv }
+
+example : findVarHOL contextDefsContext 1 = 7 := by
+  simp [findVarHOL, contextDefsContext, FLOOKUP_update]
+
+example : findVarHOL contextDefsContext 2 = 0 := by
+  simp [findVarHOL, contextDefsContext, FLOOKUP_update]
+
+example : findLabHOL contextDefsContext "f" = 3 := by
+  simp [findLabHOL, contextDefsContext, FLOOKUP_update]
+
+example : findLabHOL contextDefsContext "g" = 0 := by
+  simp [findLabHOL, contextDefsContext, FLOOKUP_update]
+
+/-! `mk_ctxt`/`make_vmap` over the finite-map carrier, mirroring
+    `scripts/hol-probes/crep_to_loop_mk_ctxt_probe.out`. -/
+example :
+    (mkCtxtHOL .riscv (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
+      (FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2))) 9).vars =
+      FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7) := rfl
+
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).vmax = 9 := rfl
+
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .riscv := rfl
+
+example : (mkCtxtHOL .armv7 (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .armv7 := rfl
+
+example : FLOOKUP (makeVmapHOL [5]) 5 = some 0 := by
+  simp [makeVmapHOL, FUPDATE_LIST, FUPDATE, FLOOKUP]
+
+example : makeVmapHOL [5, 6] =
+    FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (5, 0)) (6, 1) := rfl
+
+example : FLOOKUP (makeVmapHOL [5, 6]) 6 = some 1 := by
+  rw [show makeVmapHOL [5, 6] =
+    FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (5, 0)) (6, 1) from rfl]
+  simp [FLOOKUP_update]
+
+example : FLOOKUP (makeVmapHOL []) 5 = none := rfl
+
+/-- HOL `make_funcs` oracle rows (`mkf_*` in
+    `scripts/hol-probes/crep_to_loop_make_funcs_probe.out`). -/
+example :
+    FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 2) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "g" = some (65, 0) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "h" = none := by decide
+
+/-- Duplicate names keep the first-inserted binding (`alist_to_fmap`). -/
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1], ()), ("f", [1, 2, 3], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 1) := by decide
+
+/-! The following proofs exercise the *relation itself* on the same 8-bit
+    cases as the checked-in HOL oracle, rather than only its total-memory view. -/
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 7)
+    (fun ad => ad == 4) := by
+  intro ad _
+  rfl
+
+example : ¬ crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun ad => ad == 4) := by
+  intro h
+  have h4 := h 4 (by decide)
+  simp [wlabWloc] at h4
+
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun _ => false) := by
+  intro _ h
+  cases h
+
+/-! Pure-num `crep_to_loopScript.sml` helper definitions (`gen_temps_def`,
+    `rt_var_def`, `rt_vars_def`, `first_name_def`), matching oracle rows
+    `gen_temps_3`, `first_name`, `rt_var_some/none/absent`,
+    `rt_vars_some/absent` in `scripts/hol-probes/crep_to_loop_helpers_probe.out`. -/
+example : genTemps 5 3 = [5, 6, 7] := by decide
+
+example : firstLoopName = 64 := rfl
+
+def rtVarFm : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)) (2, 7)
+
+example : rtVar rtVarFm (some 2) 9 99 = 7 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVar rtVarFm none 9 99 = 9 := rfl
+
+example : rtVar rtVarFm (some 4) 9 99 = 100 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 2] 99 = [10, 7] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 4] 99 = [100] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+/-- Polymorphism witness: `rtVar`/`rtVars` accept any finite-map key, exactly the
+    inferred HOL type `'a |-> num`. -/
+example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 := by
+  simp [rtVar, FLOOKUP]
+
+example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
+  simp [rtVars, FLOOKUP]
+
 end Flapjack.Test.CrepToLoopParity

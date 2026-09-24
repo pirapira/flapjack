@@ -17,18 +17,32 @@ universe u
     (`cakeml/pancake/semantics/crepPropsScript.sml:11`). HOL rejects the
     argument when any inner list is empty, then maps total `HD` over the lists.
     The Lean default `.var 0` gives `headD` a total empty-list value; the guard
-    makes that value unreachable in the result. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+    makes that value unreachable in the result.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepExp α`, while
+    HOL `crepLang$exp` is indexed by the word length. The exact width-indexed
+    tag is on `cexpHeadsSimpW` below. -/
 def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
   | expressions =>
       if expressions.any List.isEmpty then none
       else some (expressions.map (fun expression => expression.headD (.var 0)))
 
+/-- Exact width-indexed counterpart of HOL `cexp_heads_simp_def` over
+    `CrepExp (BitVec width)`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+def cexpHeadsSimpW {width : Nat} [NeZero width]
+    (expressions : List (List (CrepExp (BitVec width)))) :
+    Option (List (CrepExp (BitVec width))) :=
+  cexpHeadsSimp expressions
+
 mutual
 /-- Faithful port of Cake `crepProps$every_exp` from
     `cakeml/pancake/semantics/crepPropsScript.sml:1300`: `every_exp P e`
-    holds when `P` holds of `e` and of every subexpression of `e`. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+    holds when `P` holds of `e` and of every subexpression of `e`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepExp α`, while
+    HOL `crepLang$exp` is indexed by the word length. The exact width-indexed
+    tag is on `crepEveryExpW` below. -/
 def crepEveryExp (predicate : CrepExp α → Bool) : CrepExp α → Bool
   | .const value => predicate (.const value)
   | .var name => predicate (.var name)
@@ -55,9 +69,19 @@ def crepEveryExpList (predicate : CrepExp α → Bool) : List (CrepExp α) → B
       crepEveryExp predicate expression && crepEveryExpList predicate expressions
 end
 
+/-- Exact width-indexed counterpart of HOL `every_exp_def` over
+    `CrepExp (BitVec width)`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+def crepEveryExpW {width : Nat} [NeZero width]
+    (predicate : CrepExp (BitVec width) → Bool)
+    (expression : CrepExp (BitVec width)) : Bool :=
+  crepEveryExp predicate expression
+
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "map_var_cexp_eq_var"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `map_var_crepExpVars_eqW` declaration below.
 theorem map_var_crepExpVars_eq {α : Type} (names : List Nat) :
     (names.map (CrepExp.var (α := α))).flatMap crepExpVars = names := by
   induction names with
@@ -78,7 +102,9 @@ theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
     (`cakeml/pancake/semantics/crepPropsScript.sml:30`), stated over the fixed
     `byte$bytes_in_word` stride.  The `CrepBytesInWord` instance supplies the
     fixed byte width, so the explicit quantified variables are HOL's `n a e`. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `length_loadShape_eq_shapeW` declaration below.
 theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (count : Nat) (address : α) (value : CrepExp α) :
     (loadShapeBytes address count value).length = count := by
@@ -88,7 +114,9 @@ theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWor
 
 /-! Faithful port of Cake `crepProps$length_load_globals_eq_read_size`
     (`cakeml/pancake/semantics/crepPropsScript.sml:467`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `loadGlobals_lengthW` declaration below.
 theorem loadGlobals_length {α : Type u}
     (address : BitVec 5) (count : Nat) :
     (loadGlobals (α := α) address count).length = count := by
@@ -101,7 +129,9 @@ theorem loadGlobals_length {α : Type u}
     (`cakeml/pancake/semantics/crepPropsScript.sml:474`). The Lean `BitVec`
     specializes HOL's polymorphic word, `BitVec.ofNat` represents `n2w`, and
     the bound lets Lean use total list indexing just as HOL's `EL` does. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "el_load_globals_elem"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `loadGlobals_getElemW` declaration below.
 theorem loadGlobals_getElem
     (address : BitVec 5) (count n : Nat) (h : n < count) :
     (loadGlobals (α := α) address count)[n]'(by
@@ -127,7 +157,9 @@ theorem loadGlobals_getElem
 /-- Faithful port of Cake `crepProps$var_cexp_load_globals_empty`
     (`cakeml/pancake/semantics/crepPropsScript.sml:698`): the loads generated by
     `load_globals` contain no local variables. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "var_cexp_load_globals_empty"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `loadGlobals_crepExpVars_emptyW` declaration below.
 theorem loadGlobals_crepExpVars_empty {α : Type u}
     (address : BitVec 5) (count : Nat) :
     (loadGlobals (α := α) address count).flatMap crepExpVars = [] := by
@@ -137,7 +169,9 @@ theorem loadGlobals_crepExpVars_empty {α : Type u}
 
 /-! Faithful port of Cake `crepProps$assigned_free_vars_store_globals_empty`
     (`cakeml/pancake/semantics/crepPropsScript.sml:458`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_store_globals_empty"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `crepAssignedFreeVars_nestedSeq_storeGlobalsW` declaration below.
 theorem crepAssignedFreeVars_nestedSeq_storeGlobals {α : Type u}
     (address : BitVec 5) (values : List (CrepExp α)) :
     crepAssignedFreeVars (crepNestedSeq (storeGlobals (α := α) address values)) = [] := by
@@ -148,7 +182,9 @@ theorem crepAssignedFreeVars_nestedSeq_storeGlobals {α : Type u}
 
 /-! Faithful port of Cake `crepProps$assigned_vars_store_globals_empty`
     (`cakeml/pancake/semantics/crepPropsScript.sml:449`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_store_globals_empty"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `crepAssignedVars_nestedSeq_storeGlobalsW` declaration below.
 theorem crepAssignedVars_nestedSeq_storeGlobals {α : Type u}
     (address : BitVec 5) (values : List (CrepExp α)) :
     crepAssignedVars (crepNestedSeq (storeGlobals (α := α) address values)) = [] := by
@@ -160,7 +196,9 @@ theorem crepAssignedVars_nestedSeq_storeGlobals {α : Type u}
 /-- Faithful port of Cake `crepProps$assigned_free_vars_IMP_assigned_vars`
     (`cakeml/pancake/semantics/crepPropsScript.sml:373`): every free variable of
     a program is an assigned variable of that program. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_IMP_assigned_vars"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW` declaration below.
 theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars (program : CrepProg α) (name : Nat)
     (h : name ∈ crepAssignedFreeVars program) : name ∈ crepAssignedVars program := by
   revert h
@@ -189,7 +227,9 @@ theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars (program : CrepProg α
 /-- Faithful port of Cake `crepProps$nested_seq_assigned_vars_eq`
     (`cakeml/pancake/semantics/crepPropsScript.sml:411`): the assignments
     generated by `nested_seq (MAP2 Assign ns vs)` assign exactly `ns`. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_vars_eq"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `crepAssignedVars_nestedSeq_assign_zipWithW` declaration below.
 theorem crepAssignedVars_nestedSeq_assign_zipWith (names : List Nat)
     (values : List (CrepExp α)) (h : names.length = values.length) :
     crepAssignedVars
@@ -211,7 +251,9 @@ theorem crepAssignedVars_nestedSeq_assign_zipWith (names : List Nat)
 /-- Faithful port of Cake `crepProps$nested_seq_assigned_free_vars_eq`
     (`cakeml/pancake/semantics/crepPropsScript.sml:420`): the assignments
     generated by `nested_seq (MAP2 Assign ns vs)` assign exactly `ns`. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_free_vars_eq"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
+-- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
+-- tag is on the corresponding `crepAssignedFreeVars_nestedSeq_assign_zipWithW` declaration below.
 theorem crepAssignedFreeVars_nestedSeq_assign_zipWith {α : Type u} (names : List Nat)
     (values : List (CrepExp α)) (h : names.length = values.length) :
     crepAssignedFreeVars
@@ -279,7 +321,7 @@ theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
     The globals update is the tagged width-indexed `setCrepHolGlobalsW`. -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
-theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
+theorem flookup_setCrepHolGlobals_localsW {width : Nat} [NeZero width] {σ : Type}
     (gv : BitVec 5) (w : PanWordLab (BitVec width))
     (s : CrepHolState (BitVec width) σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobalsW gv w s).locals n = FLOOKUP s.locals n :=
@@ -287,7 +329,7 @@ theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
 
 /-- Kernel-checked bridge: the width-indexed exact `FLOOKUP_set_globals`
     counterpart agrees with the generic production statement at `BitVec width`. -/
-theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} {σ : Type}
+theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} [NeZero width] {σ : Type}
     (gv : BitVec 5) (w : PanWordLab (BitVec width))
     (s : CrepHolState (BitVec width) σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobalsW gv w s).locals n =
@@ -361,37 +403,115 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
 /-- Exact HOL-shaped port of Cake `crepProps$dec_clock_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:267`): decrementing the clock
     leaves every other field of the 11-field state unchanged. The clock
-    decrement is the tagged `decCrepHolClock` (`dec_clock_def`). -/
+    decrement is the tagged width-indexed `decCrepHolClockW` (`dec_clock_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
-theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
-    (decCrepHolClock s).locals = s.locals ∧
-      (decCrepHolClock s).globals = s.globals ∧
-      (decCrepHolClock s).code = s.code ∧
-      (decCrepHolClock s).memory = s.memory ∧
-      (decCrepHolClock s).memaddrs = s.memaddrs ∧
-      (decCrepHolClock s).shMemaddrs = s.shMemaddrs ∧
-      (decCrepHolClock s).bigEndian = s.bigEndian ∧
-      (decCrepHolClock s).ffi = s.ffi ∧
-      (decCrepHolClock s).baseAddress = s.baseAddress ∧
-      (decCrepHolClock s).topAddress = s.topAddress := by
-  simp [decCrepHolClock]
+theorem decCrepHolClock_simp {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ) :
+    (decCrepHolClockW s).locals = s.locals ∧
+      (decCrepHolClockW s).globals = s.globals ∧
+      (decCrepHolClockW s).code = s.code ∧
+      (decCrepHolClockW s).memory = s.memory ∧
+      (decCrepHolClockW s).memaddrs = s.memaddrs ∧
+      (decCrepHolClockW s).shMemaddrs = s.shMemaddrs ∧
+      (decCrepHolClockW s).bigEndian = s.bigEndian ∧
+      (decCrepHolClockW s).ffi = s.ffi ∧
+      (decCrepHolClockW s).baseAddress = s.baseAddress ∧
+      (decCrepHolClockW s).topAddress = s.topAddress := by
+  simp [decCrepHolClockW]
 
 /-- Exact HOL-shaped port of Cake `crepProps$empty_locals_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:282`): clearing the locals
     leaves every other field of the 11-field state unchanged. The locals clear
-    is the tagged `emptyCrepHolLocals` (`empty_locals_def`). -/
+    is the tagged width-indexed `emptyCrepHolLocalsW` (`empty_locals_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
-theorem emptyCrepHolLocals_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
-    (emptyCrepHolLocals s).globals = s.globals ∧
-      (emptyCrepHolLocals s).code = s.code ∧
-      (emptyCrepHolLocals s).memory = s.memory ∧
-      (emptyCrepHolLocals s).memaddrs = s.memaddrs ∧
-      (emptyCrepHolLocals s).shMemaddrs = s.shMemaddrs ∧
-      (emptyCrepHolLocals s).clock = s.clock ∧
-      (emptyCrepHolLocals s).bigEndian = s.bigEndian ∧
-      (emptyCrepHolLocals s).ffi = s.ffi ∧
-      (emptyCrepHolLocals s).baseAddress = s.baseAddress ∧
-      (emptyCrepHolLocals s).topAddress = s.topAddress := by
-  simp [emptyCrepHolLocals]
+theorem emptyCrepHolLocals_simp {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ) :
+    (emptyCrepHolLocalsW s).globals = s.globals ∧
+      (emptyCrepHolLocalsW s).code = s.code ∧
+      (emptyCrepHolLocalsW s).memory = s.memory ∧
+      (emptyCrepHolLocalsW s).memaddrs = s.memaddrs ∧
+      (emptyCrepHolLocalsW s).shMemaddrs = s.shMemaddrs ∧
+      (emptyCrepHolLocalsW s).clock = s.clock ∧
+      (emptyCrepHolLocalsW s).bigEndian = s.bigEndian ∧
+      (emptyCrepHolLocalsW s).ffi = s.ffi ∧
+      (emptyCrepHolLocalsW s).baseAddress = s.baseAddress ∧
+      (emptyCrepHolLocalsW s).topAddress = s.topAddress := by
+  simp [emptyCrepHolLocalsW]
+
+/-! ## Width-indexed wrappers for the remaining crepProps HOL tags
+
+HOL `crepPropsScript.sml` `prog`/`exp` are word-length indexed (`'a word`), so the
+generic-over-`α` helper theorems above are not exact counterparts (the carrier
+`BitVec 0` has no HOL word type).  These `W` wrappers restate each HOL theorem
+over `CrepProg (BitVec width)`/`CrepExp (BitVec width)` with `[NeZero width]`;
+each body is a definitional delegation to the already-proved generic theorem.
+The generic helpers stay available untagged for the pipeline proofs. -/
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "map_var_cexp_eq_var"]
+theorem map_var_crepExpVars_eqW {width : Nat} [NeZero width] (names : List Nat) :
+    (names.map (CrepExp.var (α := BitVec width))).flatMap crepExpVarsW = names :=
+  map_var_crepExpVars_eq names
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
+theorem length_loadShape_eq_shapeW {width : Nat} [NeZero width]
+    (count : Nat) (address : BitVec width) (value : CrepExp (BitVec width)) :
+    (loadShapeBytesW address count value).length = count := by
+  simpa [loadShapeBytesW] using length_loadShape_eq_shape count address value
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]
+theorem loadGlobals_lengthW {width : Nat} [NeZero width]
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobalsW (width := width) address count).length = count :=
+  loadGlobals_length address count
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "el_load_globals_elem"]
+theorem loadGlobals_getElemW {width : Nat} [NeZero width]
+    (address : BitVec 5) (count n : Nat) (h : n < count) :
+    (loadGlobalsW (width := width) address count)[n]'(by
+      simpa only [loadGlobals_lengthW] using h) =
+        .loadGlob (address + BitVec.ofNat 5 n) :=
+  loadGlobals_getElem address count n h
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "var_cexp_load_globals_empty"]
+theorem loadGlobals_crepExpVars_emptyW {width : Nat} [NeZero width]
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobalsW (width := width) address count).flatMap crepExpVarsW = [] :=
+  loadGlobals_crepExpVars_empty address count
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_store_globals_empty"]
+theorem crepAssignedFreeVars_nestedSeq_storeGlobalsW {width : Nat} [NeZero width]
+    (address : BitVec 5) (values : List (CrepExp (BitVec width))) :
+    crepAssignedFreeVarsW (crepNestedSeqW (storeGlobalsW address values)) = [] :=
+  crepAssignedFreeVars_nestedSeq_storeGlobals address values
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_store_globals_empty"]
+theorem crepAssignedVars_nestedSeq_storeGlobalsW {width : Nat} [NeZero width]
+    (address : BitVec 5) (values : List (CrepExp (BitVec width))) :
+    crepAssignedVarsW (crepNestedSeqW (storeGlobalsW address values)) = [] :=
+  crepAssignedVars_nestedSeq_storeGlobals address values
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_IMP_assigned_vars"]
+theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW {width : Nat} [NeZero width]
+    (program : CrepProg (BitVec width)) (name : Nat)
+    (h : name ∈ crepAssignedFreeVarsW program) : name ∈ crepAssignedVarsW program :=
+  mem_crepAssignedFreeVars_imp_mem_crepAssignedVars program name h
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_vars_eq"]
+theorem crepAssignedVars_nestedSeq_assign_zipWithW {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width)))
+    (h : names.length = values.length) :
+    crepAssignedVarsW
+        (crepNestedSeqW
+          (names.zipWith (fun name value => CrepProg.assign name value) values)) =
+      names :=
+  crepAssignedVars_nestedSeq_assign_zipWith names values h
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_free_vars_eq"]
+theorem crepAssignedFreeVars_nestedSeq_assign_zipWithW {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width)))
+    (h : names.length = values.length) :
+    crepAssignedFreeVarsW
+        (crepNestedSeqW
+          (names.zipWith (fun name value => CrepProg.assign name value) values)) =
+      names :=
+  crepAssignedFreeVars_nestedSeq_assign_zipWith names values h
 
 end Flapjack

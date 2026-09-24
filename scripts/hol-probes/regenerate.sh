@@ -134,6 +134,11 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+run_probe semantics_props_implements_probeScript.sml semantics_props_implements_probe.out \
+  implements_prime_trans \
+  "$cake_dir/semantics/proofs/semanticsPropsScript.sml" \
+  "$cake_dir/semantics/proofs"
 run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_conversion_probe.out \
   mem_load_conversion_one mem_load_conversion_comb_multiword \
   mem_load_conversion_named_nested_struct_infos_ok \
@@ -241,12 +246,56 @@ run_probe crep_to_loop_state_rel_probeScript.sml crep_to_loop_state_rel_probe.ou
 run_probe crep_to_loop_globals_rel_probeScript.sml crep_to_loop_globals_rel_probe.out \
   wlab_wloc_word globals_lookup_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_mem_rel_probeScript.sml crep_to_loop_mem_rel_probe.out \
+  mem_rel_match mem_rel_dom_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_distinct_funcs_probeScript.sml crep_to_loop_distinct_funcs_probe.out \
+  distinct_funcs_sep distinct_funcs_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_distinct_vars_probeScript.sml crep_to_loop_distinct_vars_probe.out \
+  distinct_vars_sep distinct_vars_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_ctxt_max_probeScript.sml crep_to_loop_ctxt_max_probe.out \
+  ctxt_max_within ctxt_max_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_locals_rel_probeScript.sml crep_to_loop_locals_rel_probe.out \
+  ctxt_vars_lookup subset_domain_component \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
+  find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
+  mk_ctxt_vars make_vmap_empty_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
+  mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
+  gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake"
 run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq zip_lookup_witness "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overlap_probe.out \
   slot_nodup_x nested_zip_lookup "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_probe.out \
+  distinct_true distinct_eq_disjoint genlist_vmax_bound genlist_vmax_hit \
+  genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
+  "$cake_dir/pancake"
+run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
+  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
+  wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_chunk_to_bits_probeScript.sml word_to_stack_chunk_to_bits_probe.out \
+  cb_empty cb_ignores_word "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_chunk_to_bitmap_probeScript.sml word_to_stack_chunk_to_bitmap_probe.out \
+  cbm_empty cwb_split8 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -465,10 +514,11 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-# The If probe observes the then branch, the else branch, a non-word condition,
-# and a condition whose own evaluation fails (empty memory domain).
+# The If probe observes the then/else branches, non-word and failed conditions,
+# plus Const, Var Local, and operator-expression branch selection in the
+# restricted total evaluators.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result if_fail_locals \
+  if_true_result if_op_sub_zero_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If memory probe observes a memory-reading condition: a nonzero cell
 # selecting the then branch, a zero cell selecting the else branch, an address
@@ -563,6 +613,13 @@ run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
+  if_true_eval if_false_eval if_error_eval if_nested_eval \
+  seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
+  seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
+  return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
+  assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
@@ -821,7 +878,8 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion bound_eight \
+  "$cake_dir/pancake/crep_arithScript.sml"
 run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
   n2w_zero_word bit_high6 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"
@@ -1195,3 +1253,38 @@ run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out 
   line_ok_asm_skip cbw_to_asm_sharemem \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The stack_to_lab flatten-ops probe observes the config-independent embedded
+# constructors (negate table and compile_jump).
+run_probe stack_to_lab_flatten_ops_probeScript.sml stack_to_lab_flatten_ops_probe.out \
+  negate_less compile_jump_reg \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The flatten base probe observes the non-recursive flatten constructors.
+run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_probe.out \
+  flatten_tick flatten_halt \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The RISC-V configuration probe observes the exact `riscv_config` field
+# values at 64-bit (register file, offsets, immediates) used by the stack
+# assembler checks.
+run_probe riscv_config_probeScript.sml riscv_config_probe.out \
+  cfg_isa valid_imm_add_max12p1 \
+  "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
+  "$cake_dir/compiler/encoders/riscv"
+
+# The misc app_list probe observes HOL `append_aux`/`append` flattening the
+# `app_list` concatenation tree used by the stack_to_lab flatten statement.
+run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
+  append_aux_list append_aux_suffix \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"
+
+# The flatten app_list probe observes `misc$append` flattening the HOL
+# `stack_to_lab$flatten` app_list output to the production flat list.
+run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app_list_probe.out \
+  flatten_app_tick flatten_app_ite_tick \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"

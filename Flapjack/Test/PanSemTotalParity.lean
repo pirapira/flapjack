@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem.Total
+import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -21,6 +22,28 @@ the total HOL-shaped base cases:
   verbatim;
 * `Tick` at clock zero is a timeout with cleared locals;
 * `Tick` above clock zero decrements the clock and preserves the locals.
+
+The If checks below pair with `scripts/hol-probes/pan_sem_ite_e2e_probe.out`.
+They evaluate the condition from the complete source state before invoking
+the selected total branch callback. The oracle includes a condition that
+successfully evaluates to `RStruct []` as well as an unbound local and a failed
+load; each produces `SOME Error` without changing the state.
+
+The recursive sequence-fragment checks below pair with
+`scripts/hol-probes/pan_sem_seq_e2e_probe.out` (`panSemScript.sml:615-618`):
+two `Skip`s, first-command `Break`/`Continue`, and `Tick` followed by `Skip`.
+The fragment evaluator is structural on those source syntax forms and returns
+HOL's result option with the complete source state.
+
+Its restricted recursive `If` checks also pair with
+`scripts/hol-probes/pan_sem_ite_e2e_probe.out` (`panSemScript.sml:618-620`):
+Const and direct Local conditions select Tick/Skip branches, while missing or
+non-word locals produce Error without changing the state.
+
+The RV64 expression-`If` fragment also checks `Op Add` and zero-valued `Op Sub`
+conditions, plus failed-load and non-word errors, against the same direct HOL
+oracle. Its branch recursion is structural, but the fragment omits other
+`Prog` constructors and is not the full HOL `evaluate_def` port.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -98,6 +121,93 @@ def totalTickZeroClauseGuard : Bool :=
   | (some .timeOut, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
+def totalIfThenBranch (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  (some (.returned (.word (BitVec.ofNat 64 13))), state)
+
+def totalIfElseBranch (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  (some (.returned (.word (BitVec.ofNat 64 99))), state)
+
+def totalIfState : PanSemState Word64 (FfiState Unit) :=
+  { totalState 5 with
+    locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 3)) }
+
+def totalIfNonwordState : PanSemState Word64 (FfiState Unit) :=
+  { totalIfState with
+    locals := updatePanValueMap totalIfState.locals "nonword" (.rStruct []) }
+
+def totalIfEvaluateProgram (program : Prog Word64)
+    (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  match program with
+  | .skip => (none, state)
+  | .assign .local "x" (.const value) =>
+      (none, { state with locals := updatePanValueMap state.locals "x" (.word value) })
+  | _ => (some .error, state)
+
+def totalIfNonzeroGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 1)))
+      totalIfThenBranch totalIfElseBranch with
+  | (some (.returned (.word value)), state) =>
+      value == BitVec.ofNat 64 13 && state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfZeroGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 0)))
+      totalIfThenBranch totalIfElseBranch with
+  | (some (.returned (.word value)), state) =>
+      value == BitVec.ofNat 64 99 && state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfMissingGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) none totalIfThenBranch totalIfElseBranch with
+  | (some .error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionNonzeroGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.const (BitVec.ofNat 64 1))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (none, state) =>
+      state.clock == 5 && isWordOption 9 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionZeroGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.const (BitVec.ofNat 64 0))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (none, state) =>
+      state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionNonwordGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.var .local "missing")
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+/-- Unlike an unbound local, this condition evaluates successfully to a
+    structured value; HOL still rejects it because `If` requires a word. -/
+def totalIfExpressionNonwordValueGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfNonwordState
+      (.var .local "nonword")
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) =>
+      state.clock == 5 && isWordOption 3 (state.locals "x") &&
+        (match state.locals "nonword" with
+         | some (.rStruct []) => true
+         | _ => false)
+  | _ => false
+
+def totalIfExpressionLoadFailureGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.load .one (.const (BitVec.ofNat 64 0)))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
 /-- The compositional HOL `Seq` step applied to base-case first-command results
     (this is not a whole-program evaluator): compile `Skip ; Skip` by pairing the
     `Skip` base case with a `Skip` continuation. -/
@@ -143,6 +253,118 @@ def seqContinueGuard : Bool :=
   | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
+def totalSeqFragmentState : PanSemState Word64 (FfiState Unit) :=
+  { totalState 5 with
+    locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 3)) }
+
+def totalSeqFragmentNormal : PanSemSeqFragment Word64 :=
+  .seq (.leaf .skip) (.leaf .skip)
+
+def totalSeqFragmentBreak : PanSemSeqFragment Word64 :=
+  .seq (.leaf .break) (.leaf .skip)
+
+def totalSeqFragmentContinue : PanSemSeqFragment Word64 :=
+  .seq (.leaf .continue) (.leaf .skip)
+
+def totalSeqFragmentTick : PanSemSeqFragment Word64 :=
+  .seq (.leaf .tick) (.leaf .skip)
+
+def totalSeqFragmentGuard : Bool :=
+  (match panSemEvaluateSeqFragment totalSeqFragmentNormal totalSeqFragmentState with
+   | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentBreak totalSeqFragmentState with
+   | (some .break, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentContinue totalSeqFragmentState with
+   | (some .continue, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentTick totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false)
+
+def totalSeqFragmentZeroState : PanSemState Word64 (FfiState Unit) :=
+  { totalSeqFragmentState with
+    locals := updatePanValueMap totalSeqFragmentState.locals "x" (.word 0) }
+
+def totalSeqFragmentNonwordState : PanSemState Word64 (FfiState Unit) :=
+  { totalSeqFragmentState with
+    locals := updatePanValueMap totalSeqFragmentState.locals "y" (.rStruct []) }
+
+def totalIfFragmentTrueGuard : Bool :=
+  match panSemEvaluateSeqFragment
+      (.iteConst (BitVec.ofNat 64 1) (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentFalseGuard : Bool :=
+  match panSemEvaluateSeqFragment
+      (.iteConst (BitVec.ofNat 64 0) (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentLocalTrueGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "x" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentLocalZeroGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "x" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentZeroState with
+  | (none, state) => state.clock == 5 && isWordOption 0 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentMissingGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "missing" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentNonwordGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "y" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentNonwordState with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentGuard : Bool :=
+  totalIfFragmentTrueGuard && totalIfFragmentFalseGuard &&
+    totalIfFragmentLocalTrueGuard && totalIfFragmentLocalZeroGuard &&
+    totalIfFragmentMissingGuard && totalIfFragmentNonwordGuard
+
+def totalExprIfAddTrue : PanSemExprIfFragmentRiscV64 :=
+  .ite (.op .add [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2)])
+    (.leaf .tick) (.leaf .skip)
+
+def totalExprIfSubZero : PanSemExprIfFragmentRiscV64 :=
+  .ite (.op .sub [.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 3)])
+    (.leaf .tick) (.leaf .skip)
+
+def totalExprIfFailedLoad : PanSemExprIfFragmentRiscV64 :=
+  .ite (.load .one (.const (BitVec.ofNat 64 0))) (.leaf .tick) (.leaf .skip)
+
+def totalExprIfNonwordLocal : PanSemExprIfFragmentRiscV64 :=
+  .ite (.var .local "y") (.leaf .tick) (.leaf .skip)
+
+def totalExprIfFragmentGuard : Bool :=
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfAddTrue totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfSubZero totalSeqFragmentState with
+   | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfFailedLoad totalSeqFragmentState with
+   | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfNonwordLocal
+      totalSeqFragmentNonwordState with
+   | (some .error, state) =>
+       state.clock == 5 && isWordOption 3 (state.locals "x") &&
+         (match state.locals "y" with | some (.rStruct []) => true | _ => false)
+   | _ => false)
+
 /-- A state whose global `g` is bound, for the global-assignment case. -/
 def totalAssignState : PanSemState Word64 (FfiState Unit) :=
   { totalState 5 with
@@ -176,10 +398,47 @@ def totalGuard : Bool :=
   skipGuard && tickSuccGuard && tickZeroGuard && totalSkipClauseGuard &&
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
-    seqContinueGuard && seqTickGuard && assignLocalGuard && assignGlobalGuard &&
+    seqContinueGuard && seqTickGuard && totalSeqFragmentGuard && totalIfFragmentGuard &&
+    totalExprIfFragmentGuard &&
+    totalIfNonzeroGuard && totalIfZeroGuard &&
+    totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
+    totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&
+    totalIfExpressionLoadFailureGuard &&
+    assignLocalGuard && assignGlobalGuard &&
     assignFreshGuard && assignMissingGuard
 
 #guard totalGuard
+
+example :
+    panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 1)))
+        totalIfThenBranch totalIfElseBranch = totalIfThenBranch (totalState 5) := by
+  apply panSemTotalIfStep_nonzero
+  decide
+
+example :
+    panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 0)))
+        totalIfThenBranch totalIfElseBranch = totalIfElseBranch (totalState 5) := by
+  apply panSemTotalIfStep_zero
+
+example :
+    panSemTotalIfStep (totalState 5) none totalIfThenBranch totalIfElseBranch =
+        (some .error, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfNonwordState
+        (.var .local "nonword")
+        (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip =
+      (some .error, totalIfNonwordState) := by
+  apply panSemEvaluateIfClauseRiscV64_eval_nonword
+  change (evalPanValueExp totalIfNonwordState.structs totalIfNonwordState.locals
+      totalIfNonwordState.globals totalIfNonwordState.memory
+      totalIfNonwordState.baseAddress totalIfNonwordState.topAddress
+      panSemBitVec64BytesInWord (.var .local "nonword")
+      (memoryAccess := some (panSemBitVec64MemoryAccess totalIfNonwordState))) =
+    some (.rStruct [])
+  simp [totalIfNonwordState, totalIfState, totalState, updatePanValueMap,
+    evalPanValueExp]
 
 example :
     panSemEvaluateClockLeaf .skip (totalState 5) =

@@ -9,6 +9,14 @@ implementations. A parity fixture may be used to close a porting bead only
 when it records the original source definition, the probe source, and the
 command used to regenerate its output.
 
+`semantics_props_implements_probe.out` prints the proved HOL
+`semanticsPropsTheory.implements'_trans` conclusion from
+`cakeml/semantics/proofs/semanticsPropsScript.sml:285-295`. The structural
+Lean analogue and behavior-extension regressions are in
+`Flapjack.Test.SemanticsPropsParity`; the HOL `llist` to Lean
+`CakeLazyList` carrier bridge remains unproved, so this evidence does not
+qualify those declarations for exact HOL tags.
+
 The probes currently cover the small `loop_to_word` slice used by
 `Flapjack.Test.LoopToWord`, the `panSem$mem_load` boundary used by
 `Flapjack.Test.PanMemoryParity`, the fixed-width load boundary used by
@@ -92,6 +100,10 @@ uses the exact `lookupCrepHolCode` path in
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean
 destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
+The fixture also evaluates representative instances of the proof helper
+`dest_2exp_bound` at `cakeml/pancake/proofs/crep_arithProofScript.sml:10`;
+the Lean all-dimension support theorem remains untagged until its explicit
+finite-index and `word_log2` encodings are reviewed against HOL.
 `hol_fcp_index_n2w_probe.out` records direct HOL EVAL of `n2w` plus concrete
 instances of `word_index_n2w` and the underlying `BIT` values for zero, one,
 and the highest bit of an 8-bit word; it also records `dimindex (:8) = 8` to
@@ -150,7 +162,19 @@ endiannesses, 8-bit/64-bit word instances, and the 24-bit cases
 `byte_align 5w = 4w`, little-endian `mem_load_byte ... {4w} F 5w = SOME 51w`,
 and big-endian `mem_load_byte ... {4w} T 5w = SOME 17w`. Those rows
 also include the width-24 32-bit load at address 4, whose `word32` result is
-`0x22113322`. They differ from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
+`0x22113322`. The added width-4 rows cover both endian branches at addresses 0
+and 1 with the nonzero four-bit word `0xB`. Little endian uses
+`address MOD 0`, so its index is the address: address 0 extracts `0xB`, while
+address 1 shifts past the word and extracts zero. Big endian uses natural
+subtraction `0 - 1 - (address MOD 0)`, which saturates to zero at both
+addresses, so both extract `0xB`. The accompanying `byte_index`/`get_byte`
+rows record the little-endian `1 MOD 0` formula directly. Matching Lean guards
+live in `Flapjack.Test.PanSemStateEvalParity`. The width-4 `mem_load_32` rows
+exercise the same formulas over addresses 0 through 3: little endian packs the
+four bytes `[0xB, 0, 0, 0]` to `0xB`, while big endian packs `[0xB, 0xB, 0xB,
+0xB]` to `0x0B0B0B0B`. The direct `word_of_bytes` EVAL rows reduce those packed
+results to `11w` and `0xB0B0B0Bw`. They differ
+from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
 which misses the domain containing only address 4. RISC-V rounds by a multiple
 of three while the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The
 `holByteAlignedRiscVMemoryModel` overlay uses the source alignment formula and

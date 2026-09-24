@@ -197,4 +197,56 @@ def runChecks : IO Bool := do
     IO.println "FAIL compile_exp parity"
   pure parityGuard
 
+/-- The exact width-indexed tag `compileExpHOLW` is definitionally the generic
+    `compileExpHOL` instantiated at the `BitVec` carrier. -/
+example (context : PanToCrepHOLContext (BitVec 64)) (expression : Exp (BitVec 64)) :
+    compileExpHOLW context expression = compileExpHOL context expression := rfl
+
+/-! Bridge-only fixture (`flapjack-pxn.18.3.1.3.2`): the shipped RV64 path
+    `compileProgRiscV`/`compileProgHOL` still executes the generic
+    `compileExpHOL`, which at the word carrier is definitionally the tagged
+    `compile_exp_def` port `compileExpHOLW` by
+    `compileExpHOLW_eq_compileExpHOL`.  This is NOT textual routing: production
+    does not call the tagged definition, and the production-path rule is
+    therefore not met (full routing tracked by `flapjack-pxn.18.3.5.3.1.2`).
+    The rows below re-check the direct HOL oracle
+    (`scripts/hol-probes/compile_exp_probe.out`) through `compileExpHOLW` at the
+    `BitVec 64` carrier. -/
+def riscvContext : PanToCrepHOLContext (BitVec 64) :=
+  { vars := FUPDATE (FUPDATE FEMPTY ("p", (.one, [3]))) ("p", (.one, [5]))
+    funcs := FEMPTY
+    eids := FEMPTY
+    vmax := 5 }
+
+def holWOneOK (expected : List (CrepExp (BitVec 64))) :
+    List (CrepExp (BitVec 64)) × Shape → Bool
+  | (actual, .one) => actual == expected
+  | _ => false
+
+def holWCombTwoOK (expected : List (CrepExp (BitVec 64))) :
+    List (CrepExp (BitVec 64)) × Shape → Bool
+  | (actual, .comb [.one, .one]) => actual == expected
+  | _ => false
+
+def holWParityOK : Bool :=
+  holWOneOK [.const 7] (compileExpHOLW riscvContext (.const 7)) &&
+  holWOneOK [.var 5] (compileExpHOLW riscvContext (.var .local "p")) &&
+  holWOneOK [.load32 (.var 5)]
+    (compileExpHOLW riscvContext (.load32 (.var .local "p"))) &&
+  holWOneOK [.op .add [.const 1, .const 2]]
+    (compileExpHOLW riscvContext (.op .add [.const 1, .const 2])) &&
+  holWCombTwoOK [.load (.const 3), .load (.op .add [.const 3, .const 8])]
+    (compileExpHOLW riscvContext (.load (.comb [.one, .one]) (.const 3)))
+
+example : compileExpHOLW riscvContext (.load32 (.var .local "p")) =
+    ([.load32 (.var 5)], .one) := by
+  simp [compileExpHOLW, compileExpHOL, riscvContext, FLOOKUP, FUPDATE]
+
+example (context : PanToCrepHOLContext (BitVec 64)) (expression : Exp (BitVec 64)) :
+    compileExpHOLW context expression = compileExpHOL context expression :=
+  compileExpHOLW_eq_compileExpHOL context expression
+
+#eval holWParityOK
+#guard holWParityOK
+
 end Flapjack.Test.CompileExpParity

@@ -26,4 +26,25 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+example (value : RiscV.Word 8) :
+    (.const value : CrepExp (RiscV.Word 8)) = .const value := by
+  exact crepDestConstWord_eq_const (.const value) value rfl
+
+example (expression : CrepExp (RiscV.Word 8)) (value : RiscV.Word 8)
+    (h : crepDestConst expression = some value) :
+    expression = .const value :=
+  crepDestConstWord_eq_const expression value h
+
+example (value : Fin 4 → Bool) :
+    crepDestConstHolWord (.const value) = some value := rfl
+
+example (expression : CrepExp (Fin 4 → Bool)) :
+    crepDestConstHolWord expression = crepDestConst expression :=
+  crepDestConstHolWord_eq_production expression
+
+example (expression : CrepExp (Fin 4 → Bool)) (value : Fin 4 → Bool)
+    (h : crepDestConstHolWord expression = some value) :
+    expression = .const value :=
+  crepDestConstHolWord_eq_const expression value h
+
 end Flapjack.Test.CrepeDestConstParity

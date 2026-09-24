@@ -25,6 +25,7 @@ import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity
 import Flapjack.Test.CrepSemTotalClockLeavesParity
+import Flapjack.Test.CrepSemTotalAssignParity
 import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -231,6 +232,11 @@ import Flapjack.Test.NumSetAuditParity
 import Flapjack.Test.WordLangEveryNameParity
 import Flapjack.Test.WordLangAllocConventionsParity
 import Flapjack.Test.LabPropsLineOkPreParity
+import Flapjack.Test.RiscvConfigParity
+import Flapjack.Test.MiscAppListParity
+import Flapjack.Test.StackToLabFlattenOpsParity
+import Flapjack.Test.StackToLabFlattenBaseParity
+import Flapjack.Test.StackToLabFlattenAppParity
 import Flapjack.Test.AsmConfigChecksParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
@@ -843,6 +849,11 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.WordLangEveryNameParity.runChecks,
     Flapjack.Test.WordLangAllocConventionsParity.runChecks,
     Flapjack.Test.LabPropsLineOkPreParity.runChecks,
+    Flapjack.Test.RiscvConfigParity.runChecks,
+    Flapjack.Test.MiscAppListParity.runChecks,
+    Flapjack.Test.StackToLabFlattenOpsParity.runChecks,
+    Flapjack.Test.StackToLabFlattenBaseParity.runChecks,
+    Flapjack.Test.StackToLabFlattenAppParity.runChecks,
     Flapjack.Test.AsmConfigChecksParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
@@ -898,7 +909,8 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepLocalsWordLabParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
     Flapjack.Test.CrepFuelCutoffParity.runChecks,
-    Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks
+    Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
+    Flapjack.Test.CrepSemTotalAssignParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

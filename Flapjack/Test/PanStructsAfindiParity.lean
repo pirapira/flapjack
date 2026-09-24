@@ -221,8 +221,7 @@ theorem lookupInfo_drop_helper_fixture :
 theorem isWfShape_of_mem_fixture : isWfShape context (.named "s") = true :=
   isWfShape_of_mem (context := context) (shapes := [Shape.one, .named "s"])
     (by
-      simp only [isWfShape.isWfShapeList.eq_def, isWfShape, context, lookupInfo]
-      rfl) (by simp)
+      simp [isWfShape.isWfShapeList.eq_def, isWfShape, context, lookupInfo]) (by simp)
 
 theorem shapeSizeWithContext_drop_fixture :
     shapeSizeWithContext (context.drop 1) (.named "s") =

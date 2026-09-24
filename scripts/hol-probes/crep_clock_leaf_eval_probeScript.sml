@@ -1,5 +1,5 @@
-(* Direct Cake/HOL observations for the total Crep evaluate leaf clauses
-   Skip, Break, Continue, and Tick over the exact 11-field Crep state. *)
+(* Direct Cake/HOL observations for total Crep evaluate clock leaves and the
+   recursive If clause over the exact 11-field Crep state. *)
 
 load "bossLib";
 load "preamble";
@@ -47,3 +47,53 @@ val _ = print_eval "tick_zero_eval"
 val _ = print_eval "tick_positive_eval"
   ``evaluate ((Tick) : 64 crepLang$prog, ^s) =
       (NONE, dec_clock ^s)``;
+val _ = print_eval "if_true_eval"
+  ``evaluate ((If (Const (5w:64 word)) (Break 3) Skip) : 64 crepLang$prog, ^s) =
+      (SOME (Break 3), ^s)``;
+val _ = print_eval "if_false_eval"
+  ``evaluate ((If (Const (0w:64 word)) (Break 3) (Continue 4)) : 64 crepLang$prog, ^s) =
+      (SOME (Continue 4), ^s)``;
+val _ = print_eval "if_error_eval"
+  ``evaluate ((If (Var 9) Skip (Break 5)) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;
+val _ = print_eval "if_nested_eval"
+  ``evaluate ((If (Const (1w:64 word))
+      (If (Const (0w:64 word)) Skip (Break 6)) (Continue 4)) : 64 crepLang$prog, ^s) =
+      (SOME (Break 6), ^s)``;
+val _ = print_eval "seq_skip_break_eval"
+  ``evaluate ((Seq Skip (Break 7)) : 64 crepLang$prog, ^s) =
+      (SOME (Break 7), ^s)``;
+val _ = print_eval "seq_break_stops_eval"
+  ``evaluate ((Seq (Break 8) Tick) : 64 crepLang$prog, ^s) =
+      (SOME (Break 8), ^s)``;
+val _ = print_eval "seq_tick_skip_eval"
+  ``evaluate ((Seq Tick Skip) : 64 crepLang$prog, ^s) =
+      (NONE, dec_clock ^s)``;
+val _ = print_eval "seq_tick_zero_eval"
+  ``evaluate ((Seq Tick Skip) : 64 crepLang$prog, ^s0) =
+      (SOME TimeOut, empty_locals ^s0)``;
+val _ = print_eval "seq_fix_clock_upper_clamp_eval"
+  ``fix_clock ^s (NONE, ^s with clock := 7) = (NONE, ^s)``;
+val _ = print_eval "return_word_eval"
+  ``evaluate ((Return [Const (9w:64 word)]) : 64 crepLang$prog, ^s) =
+      (SOME (Return [Word (9w:64 word)]), empty_locals ^s)``;
+val _ = print_eval "return_empty_eval"
+  ``evaluate ((Return []) : 64 crepLang$prog, ^s) =
+      (SOME (Return []), empty_locals ^s)``;
+val _ = print_eval "return_missing_eval"
+  ``evaluate ((Return [Var 9]) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;
+val _ = print_eval "raise_eval"
+  ``evaluate ((Raise (9w:64 word)) : 64 crepLang$prog, ^s) =
+      (SOME (Exception (9w:64 word)), empty_locals ^s)``;
+val _ = print_eval "dec_shadow_eval"
+  ``FST (evaluate ((Dec 0 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s)) = NONE /\
+    FLOOKUP (SND (evaluate
+      ((Dec 0 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s))).locals 0 =
+        SOME (Word (7w:64 word))``;
+val _ = print_eval "dec_new_local_eval"
+  ``evaluate ((Dec 1 (Const (9w:64 word)) Skip) : 64 crepLang$prog, ^s) =
+      (NONE, ^s)``;
+val _ = print_eval "dec_error_eval"
+  ``evaluate ((Dec 0 (Var 9) Skip) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;

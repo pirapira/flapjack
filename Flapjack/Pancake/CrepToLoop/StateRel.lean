@@ -538,4 +538,27 @@ theorem mapMap2FstHOL {α β γ : Type} (h : List Nat → β → γ)
       Prod.fst = xs :=
   panMap2_fst_eq (fun _ y => (List.range y.2.1.length, h y.2.1 y.2.2)) xs ys hlen
 
+/-! ## Association-list entry agreement
+
+`crep_to_loopProofScript.sml`'s `alookup_el_pair_eq_el` (`:3921`): in a
+program association list with distinct first components, the entry at an index
+whose first component is `start` and whose parameter list is empty is exactly
+the pair recorded by `ALOOKUP prog start`.  The Lean counterpart is the
+untagged `getElem_eq_of_lookup_eq` (`Flapjack/Pancake/PanLang.lean`); HOL's
+`EL n prog = (start, [], SND (SND (EL n prog)))` premise is rendered literally
+as `prog[n] = (start, [], (prog[n]).2.2)` over the right-associated triple. -/
+
+/-- Exact port of HOL `alookup_el_pair_eq_el`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3921`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "alookup_el_pair_eq_el"]
+theorem alookupElPairEqEl {α β : Type} [BEq α] [LawfulBEq α]
+    (prog : List (α × List Nat × β)) (start : α) (cp : β) (n : Nat)
+    (hn : n < prog.length)
+    (hshape : prog[n]'hn = (start, [], (prog[n]'hn).2.2))
+    (hdistinct : (prog.map Prod.fst).Nodup)
+    (hlookup : prog.lookup start = some ([], cp)) :
+    prog[n]'hn = (start, [], cp) := by
+  have hhead : (prog[n]'hn).1 = start := congrArg Prod.fst hshape
+  exact getElem_eq_of_lookup_eq hdistinct hn hhead hlookup
+
 end Flapjack

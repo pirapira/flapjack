@@ -253,6 +253,10 @@ run_probe crep_to_loop_distinct_vars_probeScript.sml crep_to_loop_distinct_vars_
 run_probe crep_to_loop_ctxt_max_probeScript.sml crep_to_loop_ctxt_max_probe.out \
   ctxt_max_within ctxt_max_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_locals_rel_probeScript.sml crep_to_loop_locals_rel_probe.out \
+  ctxt_vars_lookup subset_domain_component \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
   gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake"

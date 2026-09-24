@@ -2239,7 +2239,6 @@ theorem alookupCompileToCrepCodeGeneral
     (declarations : List (Decl (BitVec width)))
     (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog (BitVec width))
     (rshape : Shape)
-    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
     (hlookup : List.lookup start (functionEntries declarations) =
       some (vshs, (prog, rshape))) :
     List.lookup start (compileToCrepHOL declarations) =

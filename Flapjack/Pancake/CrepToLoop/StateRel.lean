@@ -519,4 +519,23 @@ theorem memLookupFromAListSome {β : Type} [BEq Nat] [LawfulBEq Nat]
     entries.lookup n = some x :=
   list_lookup_of_mem_of_nodup hnodup hmem
 
+/-! ## Association-list map projection
+
+`crep_to_loopProofScript.sml`'s `map_map2_fst` (`:3799`): when two lists have
+equal length, projecting the first component of the pointwise `MAP2` that keeps
+its first argument recovers the first list.  HOL states this for the concrete
+`MAP2` of the program-triple shape `(n, p, b)`; only the projection is
+observed, so the wrapped Lean theorem `panMap2_fst_eq` is stated for an
+arbitrary second component. -/
+
+/-- Exact port of HOL `map_map2_fst`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "map_map2_fst"]
+theorem mapMap2FstHOL {α β γ : Type} (h : List Nat → β → γ)
+    (xs : List α) (ys : List (Nat × List Nat × β))
+    (hlen : xs.length = ys.length) :
+    (panMap2 (fun x y => (x, List.range y.2.1.length, h y.2.1 y.2.2)) xs ys).map
+      Prod.fst = xs :=
+  panMap2_fst_eq (fun _ y => (List.range y.2.1.length, h y.2.1 y.2.2)) xs ys hlen
+
 end Flapjack

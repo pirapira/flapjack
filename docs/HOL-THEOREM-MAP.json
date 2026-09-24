@@ -8671,7 +8671,7 @@
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `store_name` at stackLangScript.sml:18-25 - NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase | CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart | CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd | Temp (5 word). store_name is monomorphic in HOL and its only payload is the fixed 5-bit Temp field, so the Lean inductive with the same 17 nullary constructors plus Temp (BitVec 5) is shape-exact with no side condition. Direct HOL-EVAL rows sn_count=18 (every constructor name), sn_temp_w2n=3, sn_temp_word_bits=31 in scripts/hol-probes/stack_lang_store_name_probe.out are reproduced by Lean constructor checks in Flapjack/Test/WordToStackBitsParity.lean. NOTE: the separate HOL `prog` datatype is NOT yet exact in Lean - it is parameterised by a single shared 'a whereas the Lean Prog carrier has seven independent type parameters - so Prog stays untagged; see flapjack-pxn.18.5.15.3.11)"
   },
-   {
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -8743,38 +8743,38 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
   },
-{
-  "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
-  "hol_name": "is_Label_def",
-  "lean_path": "Flapjack/Compiler/Backend/LabSem.lean",
-  "lean_name": "isLabel",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (labSemScript.sml:47 is_Label returns T exactly on Label, F otherwise; Lean pattern match preserves all constructors)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/semantics/labPropsScript.sml",
-  "hol_name": "sec_ends_with_label_def",
-  "lean_path": "Flapjack/Compiler/Backend/LabProps.lean",
-  "lean_name": "secEndsWithLabelHOL",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (labPropsScript.sml:81 is a HOL predicate, not a Boolean result; the tagged Lean declaration returns Prop with nonempty and final-label conditions, while secEndsWithLabel is an untagged executable Bool counterpart)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "dest_find_name_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "destFindName",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (stack_namesScript.sml:51-54 INR register renamed, other destination unchanged)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "names_ok_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "namesOkHOL",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (stack_namesScript.sml:111-116 names_ok is a HOL predicate; tagged Lean declaration returns Prop with ALL_DISTINCT/Nodup and EVERY/all-members conditions, while namesOk is an untagged executable Bool counterpart)"
-},
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
+    "hol_name": "is_Label_def",
+    "lean_path": "Flapjack/Compiler/Backend/LabSem.lean",
+    "lean_name": "isLabel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (labSemScript.sml:47 is_Label returns T exactly on Label, F otherwise; Lean pattern match preserves all constructors)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/labPropsScript.sml",
+    "hol_name": "sec_ends_with_label_def",
+    "lean_path": "Flapjack/Compiler/Backend/LabProps.lean",
+    "lean_name": "secEndsWithLabelHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (labPropsScript.sml:81 is a HOL predicate, not a Boolean result; the tagged Lean declaration returns Prop with nonempty and final-label conditions, while secEndsWithLabel is an untagged executable Bool counterpart)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "dest_find_name_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "destFindName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (stack_namesScript.sml:51-54 INR register renamed, other destination unchanged)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "names_ok_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "namesOkHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (stack_namesScript.sml:111-116 names_ok is a HOL predicate; tagged Lean declaration returns Prop with ALL_DISTINCT/Nodup and EVERY/all-members conditions, while namesOk is an untagged executable Bool counterpart)"
+  },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "mem_store_byte_def",
@@ -8790,5 +8790,13 @@
     "lean_name": "panWriteBytearrayHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against panSemScript.sml:309-316; tail-first recursion via panMemStoreByteHOL, a failed store keeps the original outer memory. Direct HOL-EVAL rows write_bytearray_changed/write_bytearray_other_unchanged/write_bytearray_out_of_domain reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "map_map2_fst",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "mapMap2FstHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against map_map2_fst at crep_to_loopProofScript.sml:3799; HOL MAP2/GENLIST I (LENGTH p) rendered over panMap2 with the program-triple shape; delegates to the untagged panMap2_fst_eq; direct HOL-EVAL rows mm2_pair_eq/mm2_empty=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

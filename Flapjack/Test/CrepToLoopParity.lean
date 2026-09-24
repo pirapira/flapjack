@@ -774,4 +774,14 @@ example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = some 1 := by decide
 example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = FLOOKUP (makeVmapHOL [7, 7]) 7 :=
   lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL [7, 7] 7
 
+/-- HOL `map_map2_fst` oracle rows (`mm2_*` in
+    `scripts/hol-probes/crep_to_loop_map_map2_fst_probe.out`). -/
+example :
+    (panMap2
+        (fun x y =>
+          (x, List.range y.2.1.length, (fun (_ : List Nat) (_ : Unit) => true) y.2.1 y.2.2))
+        [1, 2] ([(0, [], ()), (1, [7, 8], ())] : List (Nat × List Nat × Unit))).map
+      Prod.fst = [1, 2] :=
+  mapMap2FstHOL (fun _ _ => true) [1, 2] [(0, [], ()), (1, [7, 8], ())] rfl
+
 end Flapjack.Test.CrepToLoopParity

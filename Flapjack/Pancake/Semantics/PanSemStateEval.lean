@@ -136,8 +136,8 @@ theorem evalPanSemStateExp_op
     alignment lives in the standard library, outside the CakeML submodule, so
     this helper is untagged. -/
 def panByteAlignHOL {width : Nat} (address : RiscV.Word width) : RiscV.Word width :=
-  let bits := Nat.log2 (width / 8)
-  (address >>> bits) <<< bits
+  let alignment := 2 ^ Nat.log2 (width / 8)
+  BitVec.ofNat width ((address.toNat / alignment) * alignment)
 
 /-- Exact port of HOL `mem_load_byte_def` (`panSemScript.sml:86`) over the
 faithful source memory shape: `m` is a total `'a word → 'a word_lab` map
@@ -146,6 +146,18 @@ the result is the exact `word8` option.  The executed
 `PanValueMemoryAccess.readByte` widens the decoded byte to the word carrier;
 that widening is the separate production adapter, tracked by
 flapjack-pxn.18.3.6.9.2. -/
+def panGetByteHOL {width : Nat} (address value : RiscV.Word width)
+    (bigEndian : Bool) : UInt8 :=
+  let bytesPerWord := width / 8
+  let byteIndex := if bigEndian then
+      bytesPerWord - 1 - (address.toNat % bytesPerWord)
+    else address.toNat % bytesPerWord
+  UInt8.ofNat ((value.toNat / 256 ^ byteIndex) % 256)
+
+/-- HOL `byte$get_byte_def`/`byte_index_def` specialized to the source word
+    width. In particular, the little-endian `w2n address MOD 0` case keeps the
+    address as the shift index for dimensions below one byte. The RISC-V
+    memory helper returns index zero when `bytesInWord = 0`, which differs. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_byte_def"]
 def panMemLoadByteHOL {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)
@@ -155,9 +167,7 @@ def panMemLoadByteHOL {width : Nat} [NeZero width]
   match memory aligned with
   | .word value =>
       if domain aligned then
-        some (UInt8.ofNat
-          (RiscV.panRiscVGetByteEndian (BitVec.ofNat width (width / 8)) address
-            value bigEndian).toNat)
+        some (panGetByteHOL address value bigEndian)
       else none
 
 /-- Exact port of HOL `mem_load_32_def`
@@ -333,19 +343,7 @@ def panValueWordDefined
 theorem panSemBitVec64ByteAlign_eq_panByteAlignHOL (address : RiscV.Word 64) :
     panSemBitVec64WordModel.byteAlign (8 : RiscV.Word 64) address =
       panByteAlignHOL (width := 64) address := by
-  have h8 : BitVec.toNat (8 : RiscV.Word 64) = 8 := by decide
-  change RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address =
-    panByteAlignHOL (width := 64) address
-  simp only [RiscV.panRiscVByteAlign, panByteAlignHOL]
-  rw [show Nat.log2 8 = 3 from rfl]
-  apply BitVec.eq_of_toNat_eq
-  have hlt : BitVec.toNat address / 8 * 8 < 2 ^ 64 := by
-    have hle := Nat.div_mul_le_self (BitVec.toNat address) 8
-    have his := BitVec.isLt address
-    omega
-  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft,
-    Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, h8]
-  rw [if_neg (by decide : ¬ (8 = 0)), BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlt]
+  rfl
 
 /-- The model's `getByte` at width 64 equals the exact HOL `get_byte` codec
     `panRiscVGetByteEndian`, as a width-64 word. -/
@@ -403,8 +401,21 @@ theorem panSemBitVec64ReadByte_eq_panMemLoadByteHOL
             panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
           cases hb : state.memaddrs (panByteAlignHOL (width := 64) address)
           · simp
-          · simp only [(by decide : BitVec.ofNat 64 (64 / 8) = (8 : RiscV.Word 64))]
-            simp
+          · simp
+            have hbyte : panGetByteHOL address w state.be =
+                UInt8.ofNat
+                  (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                    address w state.be).toNat := by
+              unfold panGetByteHOL
+              apply congrArg UInt8.ofNat
+              simp [RiscV.panRiscVGetByteEndian, RiscV.panRiscVByteIndex]
+              have hsmall :
+                  (w.toNat / 256 ^
+                    (if state.be = true then 7 - address.toNat % 8
+                     else address.toNat % 8)) % 256 < 2 ^ 64 := by
+                exact Nat.lt_trans (Nat.mod_lt _ (by decide)) (by decide)
+              rw [Nat.mod_eq_of_lt hsmall]
+            rw [hbyte]
             change RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be =
               BitVec.ofNat 64 (BitVec.toNat
                 (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be) % 256)

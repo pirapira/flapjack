@@ -1076,6 +1076,11 @@ run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
 run_probe loop_sem_get_var_imm_probeScript.sml \
   loop_sem_get_var_imm_probe.out \
   reg_hit reg_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_props_get_vars_probeScript.sml \
+  loop_props_get_vars_probe.out \
+  get_vars_two get_var_imm_add_clk_eq \
+  "$cake_dir/pancake/semantics/loopPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe loop_sem_call_env_probeScript.sml \
   loop_sem_call_env_probe.out \
   arg_zero arg_missing "$cake_dir/pancake/semantics/loopSemScript.sml"

@@ -29,6 +29,7 @@ import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepSem.Primop
+import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.Pancake.Semantics.LoopSem
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps

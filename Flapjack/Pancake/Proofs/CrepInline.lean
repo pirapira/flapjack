@@ -203,6 +203,28 @@ theorem res_var_foldl_commutes_strong [BEq α] [LawfulBEq α]
       rw [ih (resVar lc1 (v, FLOOKUP lc2 v)),
         (res_var_commutes_strong lc1 lc2 v h).symm]
 
+/-- CakeML's `flookup_res_var_is_mem_zip_eq` (`crep_inlineProofScript.sml:802`):
+    folding `res_var` over the `ZIP`ped lookup list and then looking up a member
+    `x` of the key list reproduces `lc2`'s binding for `x`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "flookup_res_var_is_mem_zip_eq"]
+theorem flookup_res_var_is_mem_zip_eq [BEq α] [LawfulBEq α]
+    (xs : List α) (x : α) (lc1 lc2 : FiniteMap α β) (hx : x ∈ xs) :
+    FLOOKUP ((xs.zip (xs.map (FLOOKUP lc2))).foldl resVar lc1) x =
+      FLOOKUP lc2 x := by
+  induction xs with
+  | nil => simp at hx
+  | cons a as ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [← res_var_foldl_commutes_strong a as lc1 lc2, FLOOKUP_resVar]
+      rcases List.mem_cons.mp hx with hxa | hxas
+      · subst hxa
+        simp
+      · by_cases hxa : x = a
+        · subst hxa
+          simp
+        · rw [if_neg (by rw [beq_eq_false_iff_ne.mpr hxa]; simp)]
+          exact ih hxas
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

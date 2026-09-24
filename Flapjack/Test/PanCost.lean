@@ -45,6 +45,22 @@ def panCostReturned41 : PanValueControlResult Nat → Bool
     panCostTestFunctions 0 100 1 20 (fun _ => none) (fun _ => none) panCostTestMemory
     (.call none "id" [.const 41])).map panCostReturned41
 
+/- A callee whose return payload exceeds the CakeML 32-word limit is rejected
+   by the callee `Return`, so the enclosing call still fails even though the
+   Call itself now checks only the return shape (as in HOL). -/
+def panCostOversizedReturn : Prog Nat :=
+  .return (.rStruct (List.replicate 33 (.const 0)))
+
+#guard
+  (evalPanValueCostProg panCostTestPrimitive panCostTestFfi []
+    [("big", [], panCostOversizedReturn)] 0 100 1 20 (fun _ => none) (fun _ => none)
+    panCostTestMemory (.call none "big" [])).isNone
+
+#guard
+  (evalPanValueProgWithPrimitiveCallsAndFfi panCostTestPrimitive panCostTestFfi []
+    [("big", [], panCostOversizedReturn)] 0 100 1 20 (fun _ => none) (fun _ => none)
+    panCostTestMemory (.call none "big" [])).isNone
+
 /- CakeML turns all non-returning terminal results from an ordinary callee into
    an error, including the callee's normal, break, and continue results. -/
 #guard

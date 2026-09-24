@@ -391,6 +391,21 @@ example :
     simp [freshContext] at hlk
   · decide
 
+/-- The exact HOL `not_mem_context_assigned_mem_gt` shape: a slot fresh for a
+    `ctxtMax` context and absent from every recorded slot list cannot occur
+    among the assigned free variables of any compiled program. -/
+example : (5 : Nat) ∉ crepAssignedFreeVars
+    (compileProgHOL freshContext
+      (Prog.dec "n" Shape.one (.const (0 : Nat)) Prog.skip)) := by
+  refine notMemContextAssignedMemGt freshContext
+    (Prog.dec "n" Shape.one (.const (0 : Nat)) Prog.skip) 5 ?_ ?_ ?_
+  · refine ⟨Nat.zero_le _, ?_⟩
+    intro v a xs hlk
+    simp [freshContext] at hlk
+  · intro v sh ns' hlk
+    simp [freshContext] at hlk
+  · decide
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),

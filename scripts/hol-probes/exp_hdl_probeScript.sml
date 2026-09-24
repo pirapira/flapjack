@@ -23,6 +23,10 @@ val _ = print_eval "missing"
 val _ = print_eval "known"
   ``pan_to_crep$exp_hdl ^vars «x»``;
 
+val vars_three = ``(FEMPTY |+ («x», (One, [(3:num); 4; 5])))``;
+val _ = print_eval "three_words"
+  ``pan_to_crep$exp_hdl ^vars_three «x»``;
+
 (* Duplicate updates: the last update wins, so only the final binding's
    flattened list is lowered. *)
 val dup_update =

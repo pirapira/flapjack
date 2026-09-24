@@ -39,6 +39,11 @@ Its restricted recursive `If` checks also pair with
 `scripts/hol-probes/pan_sem_ite_e2e_probe.out` (`panSemScript.sml:618-620`):
 Const and direct Local conditions select Tick/Skip branches, while missing or
 non-word locals produce Error without changing the state.
+
+The RV64 expression-`If` fragment also checks `Op Add` and zero-valued `Op Sub`
+conditions, plus failed-load and non-word errors, against the same direct HOL
+oracle. Its branch recursion is structural, but the fragment omits other
+`Prog` constructors and is not the full HOL `evaluate_def` port.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -329,6 +334,37 @@ def totalIfFragmentGuard : Bool :=
     totalIfFragmentLocalTrueGuard && totalIfFragmentLocalZeroGuard &&
     totalIfFragmentMissingGuard && totalIfFragmentNonwordGuard
 
+def totalExprIfAddTrue : PanSemExprIfFragmentRiscV64 :=
+  .ite (.op .add [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2)])
+    (.leaf .tick) (.leaf .skip)
+
+def totalExprIfSubZero : PanSemExprIfFragmentRiscV64 :=
+  .ite (.op .sub [.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 3)])
+    (.leaf .tick) (.leaf .skip)
+
+def totalExprIfFailedLoad : PanSemExprIfFragmentRiscV64 :=
+  .ite (.load .one (.const (BitVec.ofNat 64 0))) (.leaf .tick) (.leaf .skip)
+
+def totalExprIfNonwordLocal : PanSemExprIfFragmentRiscV64 :=
+  .ite (.var .local "y") (.leaf .tick) (.leaf .skip)
+
+def totalExprIfFragmentGuard : Bool :=
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfAddTrue totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfSubZero totalSeqFragmentState with
+   | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfFailedLoad totalSeqFragmentState with
+   | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfNonwordLocal
+      totalSeqFragmentNonwordState with
+   | (some .error, state) =>
+       state.clock == 5 && isWordOption 3 (state.locals "x") &&
+         (match state.locals "y" with | some (.rStruct []) => true | _ => false)
+   | _ => false)
+
 /-- A state whose global `g` is bound, for the global-assignment case. -/
 def totalAssignState : PanSemState Word64 (FfiState Unit) :=
   { totalState 5 with
@@ -363,6 +399,7 @@ def totalGuard : Bool :=
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
     seqContinueGuard && seqTickGuard && totalSeqFragmentGuard && totalIfFragmentGuard &&
+    totalExprIfFragmentGuard &&
     totalIfNonzeroGuard && totalIfZeroGuard &&
     totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
     totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&

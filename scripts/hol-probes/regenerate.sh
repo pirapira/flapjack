@@ -103,7 +103,7 @@ run_probe riscv_word_extract_6_probeScript.sml riscv_word_extract_6_probe.out \
   "$cake_dir/compiler/encoders/riscv"
 run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
   riscv_encode_length_addi riscv_encode_length_add riscv_encode_length_branch \
-  riscv_encode_length_load \
+  riscv_encode_bytes_addi riscv_encode_bytes_add \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
@@ -311,7 +311,7 @@ run_probe word_alloc_live_colour_noalias_probeScript.sml \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
-  total_colour_alloc apply_colour_alias_assign apply_colour_loop_live \
+  total_colour_alloc apply_colour_alias_assign apply_colour_alias_const \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 # The legacy allocator-map probe checks the existing WordBijection path too.

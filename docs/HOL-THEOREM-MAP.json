@@ -6272,6 +6272,22 @@
     "reviewer": "Codex (statement compared against fm_empty_zip_alist at pan_commonPropsScript.sml:426; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "MAX_LIST_add_not_mem",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "MAX_LIST_add_not_mem",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact statement, maxList is the faithful rich_list$MAX_LIST port, List.range n is GENLIST I n)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "MAX_LIST_i_genlist",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "MAX_LIST_i_genlist",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact statement, maxList is the faithful rich_list$MAX_LIST port, List.range n is GENLIST I n)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_exp_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",

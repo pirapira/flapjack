@@ -1,5 +1,6 @@
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
+import Flapjack.PanToCrepMaxList
 import Flapjack.Pancake.PanLang
 
 /-!
@@ -116,5 +117,20 @@ theorem fmEmptyZipAlist [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
           have hnotin : x ∉ (xs.zip ys).map Prod.fst := by
             rw [hkeys]; exact hmem
           exact (FUPDATE_FUPDATE_LIST_commutes FEMPTY x y (xs.zip ys) hnotin).symm
+
+/-- Exact port of HOL `MAX_LIST_add_not_mem`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:642`): `MAX_LIST xs + 1`
+    is never a member of `xs`.  `maxList` is the faithful `rich_list$MAX_LIST`
+    port (`Flapjack/PanToCrepMaxList.lean`). -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "MAX_LIST_add_not_mem"]
+theorem MAX_LIST_add_not_mem (values : List Nat) : maxList values + 1 ∉ values :=
+  maxList_add_one_not_mem values
+
+/-- Exact port of HOL `MAX_LIST_i_genlist`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:712`): the maximum of
+    `GENLIST I n` is `n - 1`; `List.range n` is `GENLIST I n`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "MAX_LIST_i_genlist"]
+theorem MAX_LIST_i_genlist (n : Nat) : maxList (List.range n) = n - 1 :=
+  maxList_range n
 
 end Flapjack

@@ -2342,6 +2342,39 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
       PanWordLab.word := by
   exact crepSimpExpCorrect1HolFiniteWordSourceEval dimension f state expression h
 
+/-- Full `Option word_lab` statement shape for all explicit finite word
+    dimensions. This is the Lean source-evaluator translation of HOL's local
+    `simp_exp_correct1`: the finite-index dictionary is implicit, the success
+    premise is on the evaluator result, `f` updates only the code map, and the
+    entire wrapped result is preserved. It stays untagged because the source
+    evaluator's operations and `HolFiniteDimension` dictionary have not yet
+    been formally identified with HOL's native `crepSem$eval` and
+    `finite_index` instances. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension state expression ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state expression := by
+  change (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none at h
+  change (evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word
+  exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
+    f state expression _v h
+
 /-- Successful-result form of the all-finite-index source-evaluator theorem.
     This follows HOL `simp_exp_correct`'s premise and conclusion, with the
     same arbitrary code-map update and full `word_lab` value. It remains

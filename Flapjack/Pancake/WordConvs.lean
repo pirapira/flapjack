@@ -399,4 +399,24 @@ def noShareInstSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : 
     (fun q => q ≠ .shareInst wordLangArbMemOp 0 (.var 0))
     program
 
+/-- HOL `wordConvs$good_handlers_def`: every handler label in the program equals
+the enclosing code-table label `n`.  Purely structural (no `num_set`). -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "good_handlers_def"]
+def goodHandlers {width : Nat} (n : Nat) : WordLangProg (BitVec width) -> Bool
+  | .call returns _ _ handler =>
+      match returns with
+      | none => true
+      | some (_, _, returnHandler, _, _) =>
+          goodHandlers n returnHandler &&
+            (match handler with
+             | some (_, handlerProg, handlerLabel, _) =>
+                 handlerLabel == n && goodHandlers n handlerProg
+             | none => true)
+  | .seq first second => goodHandlers n first && goodHandlers n second
+  | .loop _ body _ => goodHandlers n body
+  | .ite _ _ _ thenBranch elseBranch =>
+      goodHandlers n thenBranch && goodHandlers n elseBranch
+  | .mustTerminate body => goodHandlers n body
+  | _ => true
+
 end Flapjack

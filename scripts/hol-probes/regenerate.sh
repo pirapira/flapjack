@@ -1386,3 +1386,10 @@ run_probe stack_lang_inst_overloads_probeScript.sml stack_lang_inst_overloads_pr
   left_shift_inst_2_3 halt_inst_0 \
   "$cake_dir/compiler/backend/stack_removeScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The loopSem state-carrier probe pins the exact field shapes of a concrete
+# (8,'ffi) loopSem$state: num_map locals/code, total memory, set domain, clock, be.
+run_probe loop_sem_state_carrier_probeScript.sml loop_sem_state_carrier_probe.out \
+  locals_0 base_self \
+  "$cake_dir/pancake/semantics/loopSemScript.sml" \
+  "$cake_dir/pancake/semantics"

@@ -1087,6 +1087,47 @@ def holValueIsWord {width : Nat} : HolValue width → Bool
   | .val (.word _) => true
   | _ => false
 
+/-- Bridge for the production-to-`evalHOL` adapter: the exact HOL-shaped
+    `holShapeOf` on the `HolValue` image `value.toHolValue` of a production
+    value equals the production `panValueShape` (whose `StructContext` argument
+    is vacuous).  Untagged: this is a Flapjack-specific adapter, not a HOL
+    statement. -/
+theorem holShapeOf_toHolValue {width : Nat} (context : StructContext)
+    (value : PanValue (BitVec width)) :
+    holShapeOf value.toHolValue = panValueShape context value := by
+  induction value using PanValue.toHolValue.induct with
+  | case1 bits =>
+      unfold PanValue.toHolValue holShapeOf panValueShape
+      rfl
+  | case2 fields ih =>
+      unfold PanValue.toHolValue holShapeOf panValueShape
+      rw [List.map_map]
+      apply congrArg Shape.comb
+      apply List.map_congr_left
+      intro x hx
+      exact ih x hx
+  | case3 name fields ih =>
+      unfold PanValue.toHolValue holShapeOf panValueShape
+      rfl
+
+/-- List lift of `holShapeOf_toHolValue`. -/
+theorem holShapeOf_map_toHolValue {width : Nat} (context : StructContext)
+    (values : List (PanValue (BitVec width))) :
+    (values.map PanValue.toHolValue).map holShapeOf = values.map (panValueShape context) := by
+  rw [List.map_map]
+  apply List.map_congr_left
+  intro value _
+  exact holShapeOf_toHolValue context value
+
+/-- Pointwise corollary: matching a shape against the HOL shape of
+    `value.toHolValue` agrees with matching it against the production
+    `panValueShape`. -/
+theorem panShapeMatches_holShapeOf_toHolValue {width : Nat} (context : StructContext)
+    (shape : Shape) (value : PanValue (BitVec width)) :
+    panShapeMatches shape (holShapeOf value.toHolValue) =
+      panShapeMatches shape (panValueShape context value) := by
+  rw [holShapeOf_toHolValue context value]
+
 /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL `theValWord`
     (`cakeml/pancake/semantics/panSemScript.sml:39`) is a *partial* function
     (`theValWord (ValWord w) = w`, undefined otherwise); this Lean helper is the

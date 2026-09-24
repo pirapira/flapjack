@@ -602,4 +602,22 @@ def evalResultIsNone (result : Option (HolValue 64)) : Bool :=
 #guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("g", .const 7)]))
 #guard evalResultIsNone (evalHOL holEvalState (.nStruct "Pair" [("f", .const 7)]))
 
+/- Bridge: production `panValueShape` agrees with `holShapeOf` on the `HolValue`
+   image used by tagged `evalHOL` (bead flapjack-pxn.18.3.6.9.4). -/
+example (value : PanValue (BitVec 64)) :
+    holShapeOf value.toHolValue = panValueShape ([] : StructContext) value :=
+  holShapeOf_toHolValue ([] : StructContext) value
+
+example :
+    (([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+        PanValue.toHolValue).map holShapeOf
+      = ([PanValue.word (3 : BitVec 64), PanValue.rStruct []] : List (PanValue (BitVec 64))).map
+          (panValueShape ([] : StructContext)) :=
+  holShapeOf_map_toHolValue ([] : StructContext) _
+
+example (shape : Shape) (value : PanValue (BitVec 64)) :
+    panShapeMatches shape (holShapeOf value.toHolValue) =
+      panShapeMatches shape (panValueShape ([] : StructContext) value) :=
+  panShapeMatches_holShapeOf_toHolValue ([] : StructContext) shape value
+
 end Flapjack.Test.PanSemStateEvalParity

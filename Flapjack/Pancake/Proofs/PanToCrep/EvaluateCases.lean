@@ -4722,14 +4722,32 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH
           (ctxtFc context.funcs context.eids
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
-          sourceBody, targetLocals) := by
+          sourceBody, targetLocals) ∧
+      targetLocals = tlcWordLab
+        (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
   have harguments := compileArgsHOL_eval_flatten_of_compileExpRel context source
     target expressions values hstate hcode hlocals hlocalized hsource heach
-  obtain ⟨targetLocals, hlookup, _⟩ :=
+  obtain ⟨targetLocals, hlookup, htargetFold⟩ :=
     lookupCrepRuntimeCode_ofCodeRel context source target function parameters
       sourceBody returnShape (values.flatMap panValueFlatten) hcode hentry
       hargumentLength
-  exact ⟨targetLocals, harguments, hlookup⟩
+  have htargetMap : targetLocals = tlcWordLab
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
+    calc
+      targetLocals = ((List.range
+          (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+          (values.flatMap panValueFlatten)).foldl
+            (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
+            (FEMPTY : Nat → Option (PanWordLab (RiscV.Word 64))) := htargetFold
+      _ = FUPDATE_LIST FEMPTY
+          ((List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+            ((values.flatMap panValueFlatten).map PanWordLab.word)) :=
+        crepRuntimeLocals_zip_eq_fupdateList
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+          (values.flatMap panValueFlatten) FEMPTY
+      _ = tlcWordLab
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := rfl
+  exact ⟨targetLocals, harguments, hlookup, htargetMap⟩
 
 /-! Derive the actual Call-entry `locals_rel` premise from the successful
 state-owned source lookup and the production target code lookup. The source
@@ -4781,6 +4799,120 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel
     lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source target function
       parameters sourceBody returnShape expressions arguments hstate hcode hlocals
       hsupported hsourceArgs hentry hargumentLength
+  have hstateForWf := hstate
+  obtain ⟨_, _, _, hstructs, _, _, _, _, _, _⟩ := hstate
+  have hmatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
+    simpa [hstructs] using hmatch
+  have hshapeMapRaw := panSemCodeArgumentsMatch_shapeMapEq [] parameters arguments
+    hmatchEmpty
+  have hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf := by
+    calc
+      parameters.map Prod.snd = arguments.map (panValueShape []) := hshapeMapRaw
+      _ = arguments.map panSemShapeOf :=
+        (panSemShapeOfMapPanValueShapeNil arguments).symm
+  have hparameterLength := panSemCodeArgumentsMatch_length [] parameters arguments
+    hmatchEmpty
+  have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
+    target.locals expressions arguments hsourceArgs hstateForWf hlocals
+  have hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true := by
+    intro value hmem
+    obtain ⟨index, hindex, hvalue⟩ := List.mem_iff_getElem.mp hmem
+    have hget : arguments[index]? = some value := by
+      rw [List.getElem?_eq_getElem hindex, hvalue]
+    have hvalueWf := panValueIsWfValues_getElem? hvaluesWf hget
+    have hshapeWf := panValueIsWf_isWfShape_panValueShape [] value hvalueWf
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hshapeWf
+  have hslots :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).Nodup :=
+    List.nodup_range
+  have hslotsLength :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).length =
+        (arguments.flatMap panValueFlatten).length := by
+    simpa using hargumentLength
+  have hlocalsRel := bindPanValueParametersLocalsRelOfPanSem context parameters
+    arguments (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+    sourceCalleeLocals hnames hparameterLength hshapeMap hslots hslotsLength hwf hbind
+  refine ⟨targetCalleeLocals, htargetLookup, ?_⟩
+  simpa [htargetMap] using hlocalsRel
+
+/-! Full-expression-IH variant of the actual Call-entry relation boundary.
+It composes the arbitrary `compile_exp_val_rel`-shaped argument IH with the
+state-owned source Call lookup and production target code lookup, then proves
+the callee `locals_rel` for the real bound source locals and target slot map.
+The Call body and handler recursive IHs remain separate. -/
+theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length)
+    (heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    ∃ targetCalleeLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+            (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetCalleeLocals) ∧
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceCalleeLocals targetCalleeLocals := by
+  have hmatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
+    source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  obtain ⟨hnames, hbind⟩ := bindPanValueParameters_of_lookup_success
+    source.structs source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  obtain ⟨targetCalleeLocals, _harguments, htargetLookup, htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source target
+      function parameters sourceBody returnShape expressions arguments hstate hcode
+      hlocals hlocalized hsourceArgs hentry hargumentLength heach
   have hstateForWf := hstate
   obtain ⟨_, _, _, hstructs, _, _, _, _, _, _⟩ := hstate
   have hmatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by

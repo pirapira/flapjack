@@ -1158,4 +1158,40 @@ example :
   simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8, holExpression8,
     updateCrepRuntimeLocal, panTheWord, word8]
 
+/-! Direct HOL `eval_def` oracle `eval_const=SOME (Word 5w)` from
+    `scripts/hol-probes/crep_eval_probe.out`. Check the full `Option word_lab`
+    result through the source/runtime bridge, not only the raw word
+    projection. -/
+private def holWord64 (value : Nat) : Fin 64 → Bool :=
+  bitVecToHolWordBits (BitVec.ofNat 64 value)
+
+private def holWord64EvalState : CrepHolState (Fin 64 → Bool) Unit where
+  locals := fun _ => none
+  globals := fun _ => none
+  code := fun _ => none
+  memory := fun _ => .word (holWord64 0)
+  memaddrs := fun _ => false
+  shMemaddrs := fun _ => false
+  clock := 10
+  bigEndian := false
+  ffi := natCrepRuntimeFfiState
+  baseAddress := holWord64 0
+  topAddress := holWord64 0
+
+example :
+    (evalCrepRuntimeExp
+      (holWord64EvalState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64)))
+      (.const (holWord64 5))).map PanWordLab.word =
+      some (.word (holWord64 5)) := by
+  calc
+    _ = evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := 64)) holWord64EvalState
+        (.const (holWord64 5)) :=
+          evalCrepRuntimeExp_sourceWordLab_eq
+            (instFinHolFiniteDimension (width := 64)) holWord64EvalState _
+    _ = some (.word (holWord64 5)) := by
+      simp [evalCrepHolFiniteWordSourceExpWordLab,
+        evalCrepHolFiniteWordSourceExp]
+
 end Flapjack.Test.CrepeSimpExpParity

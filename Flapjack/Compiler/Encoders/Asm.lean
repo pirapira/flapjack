@@ -299,13 +299,15 @@ def asmOk {width : Nat} (config : AsmConfig width) : AsmData width → Bool
 Exact 64-bit field values of HOL `riscv_config_def`
 (`cakeml/compiler/encoders/riscv/riscv_targetScript.sml:277-304`).
 
-`encode` is carried with the HOL field type but is a placeholder: the HOL
-value is `riscv_enc = LIST_BIND riscv_encode ∘ riscv_ast`, whose instruction
-encoder is not ported here. No validity predicate in this module (or in
-`stackProps$stack_asm_ok`) reads `encode`, so every check-relevant projection
-is exact; the encoder port is tracked by bead `flapjack-pxn.18.5.15.9.11`.
-Because one field still differs from the HOL record value no `@[hol]` tag is
-attached. -/
+`encode` is carried with the HOL field type but is a placeholder, so the
+definition is named `riscvConfigForChecks`: the HOL value is
+`riscv_enc = LIST_BIND riscv_encode ∘ riscv_ast`, whose instruction encoder is
+not ported here, and a caller that read `encode` would silently emit empty
+code. No validity predicate in this module (or in `stackProps$stack_asm_ok`)
+reads `encode`, so every check-relevant projection is exact, but the record as
+a whole is NOT a complete port and no `@[hol]` tag is attached. The exact
+`riscv_ast`/`riscv_enc` field and production bridge is tracked by bead
+`flapjack-pxn.18.5.15.9.11.1`. -/
 
 /-- HOL `min12` (`sw2sw (INT_MINw : word12) : word64`). -/
 def riscvMin12 : BitVec 64 := BitVec.ofInt 64 (-2048)
@@ -333,10 +335,12 @@ def riscvValidImm : Sum BinOp Cmp → BitVec 64 → Bool := fun operator value =
     | _ => decide (riscvMin12.toInt ≤ value.toInt)) &&
   decide (value.toInt ≤ riscvMax12.toInt)
 
-/-- The RISC-V assembler configuration at 64-bit. Check fields match HOL
-`riscv_config` exactly (see `scripts/hol-probes/riscv_config_probe.out`);
-`encode` is the documented placeholder. -/
-def riscvConfig : AsmConfig 64 where
+/-- The RISC-V assembler configuration at 64-bit, for the check predicates
+only. Check fields match HOL `riscv_config` exactly (see
+`scripts/hol-probes/riscv_config_probe.out`); `encode` is the documented
+placeholder, so this record is not a complete HOL `riscv_config` port and
+carries no `@[hol]` tag. -/
+def riscvConfigForChecks : AsmConfig 64 where
   isa := .riscv
   encode := fun _ => []
   bigEndian := false

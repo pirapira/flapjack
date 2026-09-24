@@ -8354,7 +8354,7 @@
 {
   "hol_path": "cakeml/pancake/pan_commonScript.sml",
   "hol_name": "distinct_lists_def",
-  "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+  "lean_path": "Flapjack/Pancake/PanCommon.lean",
   "lean_name": "distinctListsHol",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"

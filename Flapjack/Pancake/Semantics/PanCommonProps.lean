@@ -2,6 +2,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.PanToCrepMaxList
+import Flapjack.Pancake.PanCommon
 import Flapjack.Pancake.PanLang
 
 /-!
@@ -168,29 +169,6 @@ theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat)
     (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) : zs.Nodup :=
   hno.1 x y zs hlookup
 
-/-- Exact port of HOL `distinct_lists_def` (`cakeml/pancake/pan_commonScript.sml:8`):
-    `distinct_lists xs ys = EVERY (\x. ~MEM x ys) xs`, a Boolean predicate.  The
-    Lean rendering uses `List.contains` for HOL `MEM` under a `LawfulBEq`
-    instance. -/
-@[hol "cakeml/pancake/pan_commonScript.sml" "distinct_lists_def"]
-def distinctListsHol {α : Type} [BEq α] (xs ys : List α) : Bool :=
-  xs.all (fun x => !(ys.contains x))
-
-/-- Bridge between the exact Boolean predicate `distinctListsHol` and the
-    propositional `ListDisjoint` used by `no_overlap` and production code. -/
-theorem distinctListsHol_eq_true_iff_listDisjoint {α : Type} [BEq α] [LawfulBEq α]
-    (xs ys : List α) : distinctListsHol xs ys = true ↔ ListDisjoint xs ys := by
-  simp only [distinctListsHol, List.all_eq_true, ListDisjoint]
-  constructor
-  · intro h value hv hw
-    have hv' := h value hv
-    rw [Bool.not_eq_true', List.contains_eq_mem, decide_eq_false_iff_not] at hv'
-    exact hv' hw
-  · intro h value hv
-    have : ¬ value ∈ ys := fun hw => h value hv hw
-    rw [Bool.not_eq_true', List.contains_eq_mem, decide_eq_false_iff_not]
-    exact this
-
 /-- Exact port of HOL `no_overlap_flookup_distinct`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
     variables in a `no_overlap` context have `distinct_lists` slot lists. -/
@@ -261,14 +239,14 @@ theorem all_distinct_drop {α : Type} (ns : List α) (n : Nat) (h : ns.Nodup)
 /-- Exact port of HOL `distinct_lists_append`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append"]
-theorem distinct_lists_append {α : Type} [BEq α] [LawfulBEq α] (xs ys : List α)
+theorem distinct_lists_append {α : Type} [DecidableEq α] (xs ys : List α)
     (h : (xs ++ ys).Nodup) : distinctListsHol xs ys = true :=
   (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr (listDisjoint_append xs ys h)
 
 /-- Exact port of HOL `distinct_lists_cons`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_cons"]
-theorem distinct_lists_cons {α : Type} [BEq α] [LawfulBEq α] (ns xs ys zs : List α)
+theorem distinct_lists_cons {α : Type} [DecidableEq α] (ns xs ys zs : List α)
     (h : distinctListsHol (ns ++ xs) (ys ++ zs) = true) : distinctListsHol xs zs = true :=
   (distinctListsHol_eq_true_iff_listDisjoint xs zs).mpr
     (listDisjoint_of_append_left ns xs ys zs
@@ -277,7 +255,7 @@ theorem distinct_lists_cons {α : Type} [BEq α] [LawfulBEq α] (ns xs ys zs : L
 /-- Exact port of HOL `distinct_lists_simp_cons`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_simp_cons"]
-theorem distinct_lists_simp_cons {α : Type} [BEq α] [LawfulBEq α] (xs : List α) (y : α)
+theorem distinct_lists_simp_cons {α : Type} [DecidableEq α] (xs : List α) (y : α)
     (ys : List α) (h : distinctListsHol xs (y :: ys) = true) : distinctListsHol xs ys = true :=
   (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr
     (listDisjoint_of_cons_right xs y ys
@@ -287,7 +265,7 @@ theorem distinct_lists_simp_cons {α : Type} [BEq α] [LawfulBEq α] (xs : List 
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`), stated as the
     Boolean equality HOL uses. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_commutes"]
-theorem distinct_lists_commutes {α : Type} [BEq α] [LawfulBEq α] (xs ys : List α) :
+theorem distinct_lists_commutes {α : Type} [DecidableEq α] (xs ys : List α) :
     distinctListsHol xs ys = distinctListsHol ys xs := by
   rw [Bool.eq_iff_iff]
   constructor
@@ -301,7 +279,7 @@ theorem distinct_lists_commutes {α : Type} [BEq α] [LawfulBEq α] (xs ys : Lis
 /-- Exact port of HOL `distinct_lists_append_intro`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_intro"]
-theorem distinct_lists_append_intro {α : Type} [BEq α] [LawfulBEq α] (xs ys zs : List α)
+theorem distinct_lists_append_intro {α : Type} [DecidableEq α] (xs ys zs : List α)
     (h : distinctListsHol xs ys = true ∧ distinctListsHol xs zs = true) :
     distinctListsHol xs (ys ++ zs) = true :=
   (distinctListsHol_eq_true_iff_listDisjoint xs (ys ++ zs)).mpr
@@ -312,7 +290,7 @@ theorem distinct_lists_append_intro {α : Type} [BEq α] [LawfulBEq α] (xs ys z
 /-- Exact port of HOL `distinct_lists_append_right_elim`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_right_elim"]
-theorem distinct_lists_append_right_elim {α : Type} [BEq α] [LawfulBEq α] (xs ys zs : List α)
+theorem distinct_lists_append_right_elim {α : Type} [DecidableEq α] (xs ys zs : List α)
     (h : distinctListsHol xs (ys ++ zs) = true) :
     distinctListsHol xs ys = true ∧ distinctListsHol xs zs = true := by
   have hd := (distinctListsHol_eq_true_iff_listDisjoint xs (ys ++ zs)).mp h

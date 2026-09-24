@@ -9672,6 +9672,13 @@ private theorem panShapeListMatches_self_forSourceCall :
         panShapeListMatches_self_forSourceCall shapes]
 end
 
+/-! Compose a production source Call with its recursive callee and handler
+    simulation hypotheses for a matching raised payload of any supported shape.
+    Both recursive source evaluations use the parent Call's canonical budget
+    minus its two dispatch steps; `panSemCodeEvaluateFuel_call_two_le` derives
+    the source evaluator fuel equation internally. The relation boundary is
+    width-indexed `codeRelW`. This is an untagged induction-case lemma: the
+    enclosing `pc_compile_correct` theorem and its full induction remain open. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
@@ -9692,7 +9699,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceCalleeLocals calleeRaisedLocals calleeGlobals :
       String → Option (PanValue (RiscV.Word 64)))
     (calleeMemory : (RiscV.Word 64) → Option (PanValue (RiscV.Word 64)))
-    (calleeFfi : FfiState σ) (calleeClock fuel : Nat)
+    (calleeFfi : FfiState σ) (calleeClock : Nat)
     (context : PanToCrepProofContext (RiscV.Word 64))
     (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
     (primitive : CrepPrimitiveHandler (RiscV.Word 64))
@@ -9704,14 +9711,14 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
     (hsourceCalleeBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
-      source.topAddress panSemBitVec64BytesInWord fuel sourceCalleeLocals
+      source.topAddress panSemBitVec64BytesInWord
+      (panSemCodeEvaluateFuel source
+        (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+          function expressions) - 2) sourceCalleeLocals
       source.globals source.memory source.ffi (decPanClock source.clock) sourceBody
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
         sourceException payload), calleeClock))
-    (hsourceFuel : panSemCodeEvaluateFuel source
-      (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
-        function expressions) = fuel + 2)
     (hsourceExceptionValid : panValueExceptionValid source.structs none
       sourceException payload = true)
     (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
@@ -9721,7 +9728,10 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       handlerVariable payload = true)
     (hsourceHandlerBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
-      source.topAddress panSemBitVec64BytesInWord fuel
+      source.topAddress panSemBitVec64BytesInWord
+      (panSemCodeEvaluateFuel source
+        (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+          function expressions) - 2)
       (updatePanValueMap source.locals handlerVariable payload)
       calleeGlobals calleeMemory calleeFfi
       (min (decPanClock source.clock) calleeClock) handlerProgram
@@ -9739,7 +9749,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (hcontextException : FLOOKUP context.eids sourceException = some exceptionCode)
     (hcompiledHandlerBody : compileCodeRelProg context handlerProgram = handlerBody)
     (hinitialState : stateRel source caller)
-    (hcallCode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hcallCode : codeRelW 64 context (panSemCodeAsLookup source.code) caller.code)
     (hexcp : excpRel context.eids source.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hvariable : FLOOKUP context.vars handlerVariable = some (shape, slots))
@@ -9789,7 +9799,10 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       FLOOKUP context.eids sourceException = some exceptionCode →
       (evalPanValueFfiClockCodeProg sourceContext sourcePrimitive sourceHandler
         source.structs source.code source.exceptionShapes source.baseAddress
-        source.topAddress panSemBitVec64BytesInWord fuel sourceCalleeLocals
+        source.topAddress panSemBitVec64BytesInWord
+        (panSemCodeEvaluateFuel source
+          (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+            function expressions) - 2) sourceCalleeLocals
         source.globals source.memory source.ffi (decPanClock source.clock) sourceBody
         (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
@@ -9805,7 +9818,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         ({ { source with locals := sourceCalleeLocals } with
           clock := decPanClock source.clock })
         (decCrepClock { caller with locals := targetLocals }) →
-      codeRel
+      codeRelW 64
         (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
           (parameters.map Prod.snd)
           (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
@@ -9828,20 +9841,27 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
           sourceBody) = some (.raised exceptionCode, calleeState) ∧
       stateRel sourceAfterCallee calleeState ∧
-      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
+      codeRelW 64 context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
       excpRel context.eids sourceAfterCallee.exceptionShapes ∧
       crepRuntimeGlobalWordsRel
         (crepRuntimeCallerState caller calleeState) 0 slots values)
     (hhandlerIH : ∀ targetPost,
-      evalCrepRuntimeProg handler primitive (slots.length + 2)
-        (crepRuntimeCallerState caller calleeState)
-        (expHdlFiniteMap context.vars handlerVariable) = some (.normal, targetPost) →
+      evalPanValueFfiClockCodeProg sourceContext sourcePrimitive sourceHandler
+        source.structs source.code source.exceptionShapes source.baseAddress
+        source.topAddress panSemBitVec64BytesInWord
+        (panSemCodeEvaluateFuel source
+          (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+            function expressions) - 2)
+        (updatePanValueMap source.locals handlerVariable payload)
+        calleeGlobals calleeMemory calleeFfi
+        (min (decPanClock source.clock) calleeClock) handlerProgram
+        (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some sourceResult →
       stateRel
         { sourceAfterCallee with
           locals := updatePanValueMap source.locals handlerVariable
             payload }
         targetPost →
-      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) targetPost.code →
+      codeRelW 64 context (panSemCodeAsLookup sourceAfterCallee.code) targetPost.code →
       excpRel context.eids sourceAfterCallee.exceptionShapes →
       localsRel context
         (updatePanValueMap source.locals handlerVariable payload) targetPost.locals →
@@ -9850,7 +9870,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           (crepRuntimeCallerState caller calleeState) (.normal, targetPost)).2
         handlerBody = some handlerResult ∧
       stateRel (panSemCodeStateAfter source sourceResult) handlerResult.2 ∧
-      codeRel context
+      codeRelW 64 context
         (panSemCodeAsLookup (panSemCodeStateAfter source sourceResult).code)
         handlerResult.2.code ∧
       excpRel context.eids
@@ -9870,7 +9890,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           eids := context.eids, vmax := context.vmax }
         expressions) = some handlerResult ∧
     stateRel (panSemCodeStateAfter source sourceResult) handlerResult.2 ∧
-    codeRel context
+    codeRelW 64 context
       (panSemCodeAsLookup (panSemCodeStateAfter source sourceResult).code)
       handlerResult.2.code ∧
     excpRel context.eids
@@ -9894,6 +9914,17 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     intro hzero
     apply hclock
     simpa [hclockRel] using hzero
+  let fuel := panSemCodeEvaluateFuel source
+    (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+      function expressions) - 2
+  have hsourceFuel : panSemCodeEvaluateFuel source
+      (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+        function expressions) = fuel + 2 := by
+    dsimp [fuel]
+    have htwo := panSemCodeEvaluateFuel_call_two_le source
+      (some (none, some (sourceException, handlerVariable, handlerProgram)))
+      function expressions
+    omega
   have hsourceRun := panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     sourceContext sourcePrimitive sourceHandler source fuel function sourceException
     handlerVariable expressions arguments returnShape sourceBody sourceCalleeLocals
@@ -9925,7 +9956,9 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
   obtain ⟨hcalleeRun, hcalleeStateRel, hcalleeCodeRel, hcalleeExcpRel,
       hcalleeGlobals⟩ :=
     hcalleeTargetIH hsourceExceptionShape hcontextException hsourceCalleeBody targetLocals
-      htargetLookup hcalleeEntryState (by simpa [decCrepClock] using hcalleeEntryCode)
+      htargetLookup hcalleeEntryState
+      ((codeRelW_iff_codeRel 64 _ _ _).mpr
+        (by simpa [decCrepClock] using hcalleeEntryCode))
       (by simpa using hcalleeEntryExcp) hcalleeEntryLocals
   have hcalleeIH : ∀ targetLocals',
       lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
@@ -9953,7 +9986,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       old payload values hcalleeStateRel hcalleeCodeRel hcalleeExcpRel hlocals
       hsourceHandlerLocal hshape hvariable hpayloadShape hflatten hslots hcalleeGlobals
   obtain ⟨hhandlerRun, hpostState, hpostCode, hpostExcp, hpostLocals⟩ :=
-    hhandlerIH targetPost hpayload hpayloadState hpayloadCode hpayloadExcp
+    hhandlerIH targetPost hsourceHandlerBody hpayloadState hpayloadCode hpayloadExcp
       hpayloadLocals
   have htarget := evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
     context handler primitive source sourceAfterCallee caller function handlerVariable
@@ -9963,8 +9996,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     hcalleeExcpRel hlocals hsourceHandlerLocal hshape hvariable hpayloadShape hflatten
     hslots hcalleeGlobals hlocalized hsourceArgs hentry
     hargumentLength heach hinfoValid hclock hmatch hcalleeIH
-    (fun targetPost' hrun hstate' hcode' hexcp' hlocals' =>
-      (hhandlerIH targetPost' hrun hstate' hcode' hexcp' hlocals').1)
+    (fun targetPost' _hrun hstate' hcode' hexcp' hlocals' =>
+      (hhandlerIH targetPost' hsourceHandlerBody hstate' hcode' hexcp' hlocals').1)
   exact ⟨hsourceCallRun, by simpa [hcompiledHandlerBody] using htarget,
     hpostState, hpostCode, hpostExcp, hpostLocals⟩
 

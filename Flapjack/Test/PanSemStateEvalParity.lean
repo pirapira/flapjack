@@ -891,4 +891,43 @@ instance : DecidablePred storeDomain := fun x => by
 #guard ((panWriteBytearrayHOL (width := 8) (5 : RiscV.Word 8) [0x11] storeMem
       storeDomain false) 1) == storeMem 1
 
+
+def holCodecAccess (state : PanSemState (RiscV.Word 64) Unit) :
+    PanValueMemoryAccess (RiscV.Word 64) :=
+  { panSemBitVec64MemoryAccess state with
+    compare := fun op l r => (if Flapjack.Compiler.Encoders.Asm.wordCmpHOL op l r then 1 else 0)
+    shift := fun op l r => wordShiftHOL op l r.toNat }
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.cmp .equal (.const 3) (.const 3))
+        (memoryAccess := some (holCodecAccess littleEndianState))
+      = (evalHOL holEvalState (.cmp .equal (.const 3) (.const 3))).map HolValue.toPanValue :=
+  evalPanValueExp_cmp_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (holCodecAccess littleEndianState) .equal (.const 3) (.const 3)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holCodecAccess littleEndianState)) 3)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holCodecAccess littleEndianState)) 3)
+    (by intro op l r; rfl)
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.shift .lsl (.const 1) (.const 2))
+        (memoryAccess := some (holCodecAccess littleEndianState))
+      = (evalHOL holEvalState (.shift .lsl (.const 1) (.const 2))).map HolValue.toPanValue :=
+  evalPanValueExp_shift_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (holCodecAccess littleEndianState) .lsl (.const 1) (.const 2)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holCodecAccess littleEndianState)) 1)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holCodecAccess littleEndianState)) 2)
+    (by intro op l r; rfl)
+
 end Flapjack.Test.PanSemStateEvalParity

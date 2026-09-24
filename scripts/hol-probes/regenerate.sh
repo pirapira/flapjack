@@ -407,6 +407,12 @@ run_probe pan_sem_assign_e2e_probeScript.sml pan_sem_assign_e2e_probe.out \
 # The Dec probe observes the accepted declaration with local restoration, the
 # shape-mismatch rejection, and the initialiser-evaluation-failure rejection,
 # including the unchanged post-state of both rejection branches.
+# The Primitive-error probe observes `pan_primop` failure (wrong arity) and a
+# destination shape mismatch, both yielding `SOME Error` with unchanged state.
+run_probe pan_sem_primitive_error_probeScript.sml pan_sem_primitive_error_probe.out \
+  prim_wrong_arity_result prim_shape_mismatch_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
 run_probe pan_sem_dec_e2e_probeScript.sml pan_sem_dec_e2e_probe.out \
   dec_ok_result dec_eval_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"

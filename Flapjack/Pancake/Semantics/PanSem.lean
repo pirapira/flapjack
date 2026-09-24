@@ -1498,6 +1498,104 @@ theorem panSemEvaluateExactState_dec_error_of_shape_mismatch
   rw [hk]
   simp [panValueDecAcceptedValue, heval, hshape]
 
+theorem panSemEvaluateExactState_primitive_error_of_arguments_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (operator : PrimOp) (arguments : List (Exp α))
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.primitive name operator arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+    evalPanValueExpsCounted, harguments]
+
+theorem panSemEvaluateExactState_primitive_error_of_operator_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (operator : PrimOp) (arguments : List (Exp α))
+    (values : List (PanValue α))
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = some values)
+    (hprim : primitive operator values = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.primitive name operator arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+    evalPanValueExpsCounted, harguments, hprim]
+
+theorem panSemEvaluateExactState_primitive_error_of_destination_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (operator : PrimOp) (arguments : List (Exp α))
+    (values : List (PanValue α)) (evaluated : PanValue α)
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = some values)
+    (hprim : primitive operator values = some evaluated)
+    (hlocal : state.legacy.locals name = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.primitive name operator arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+    evalPanValueExpsCounted, harguments, hprim, hlocal]
+
+theorem panSemEvaluateExactState_primitive_error_of_shape_mismatch
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (operator : PrimOp) (arguments : List (Exp α))
+    (values : List (PanValue α)) (evaluated oldValue : PanValue α)
+    (harguments : evalPanValueExps state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord arguments
+      (memoryAccess := some state.memoryAccess) = some values)
+    (hprim : primitive operator values = some evaluated)
+    (hlocal : state.legacy.locals name = some oldValue)
+    (hshape : panShapeMatches (panValueShape state.legacy.structs evaluated)
+      (panValueShape state.legacy.structs oldValue) = false) :
+    panSemEvaluateExactState context primitive handler state
+        (.primitive name operator arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
+    evalPanValueExpsCounted, harguments, hprim, hlocal, hshape]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

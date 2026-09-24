@@ -208,6 +208,7 @@ import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.PanSemDecErrorExactParity
+import Flapjack.Test.PanSemPrimitiveErrorExactParity
 import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.WordConvsLabelsRelParity
 import Flapjack.Test.WordLangExtractLabelsParity
@@ -802,6 +803,7 @@ def main : IO Unit := do
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
 Flapjack.Test.PanSemDecErrorExactParity.runChecks,
+Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.WordConvsLabelsRelParity.runChecks,
     Flapjack.Test.WordLangExtractLabelsParity.runChecks,

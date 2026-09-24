@@ -5,9 +5,9 @@ import Flapjack.HolRef
 
 Lean counterpart of `cakeml/compiler/backend/word_to_stackScript.sml`, the
 Word-to-Stack pass of the CakeML RISC-V backend.  This module currently ports
-the pure bitmap prerequisite `bits_to_word`, which the pass uses to build the
-GC/liveness bitmaps consumed by `compile_word_to_stack` and, eventually, by the
-Word-to-Stack `compile_semantics` theorem
+the pure bitmap prerequisites `bits_to_word` and `word_list`, which the pass uses
+to build the GC/liveness bitmaps consumed by `compile_word_to_stack` and,
+eventually, by the Word-to-Stack `compile_semantics` theorem
 (`word_to_stackProofScript.sml:10709`).
 
 HOL's `bits_to_word` is polymorphic over the word carrier (`'a word`) and has
@@ -39,5 +39,28 @@ def bitsToWordW {width : Nat} [NeZero width] : List Bool → BitVec width
   | [] => 0
   | true :: bits => (bitsToWordW bits) <<< 1 ||| 1
   | false :: bits => (bitsToWordW bits) <<< 1
+
+/-- Exact port of HOL `word_list_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:231`):
+
+```
+word_list (xs:bool list) d =
+  if LENGTH xs <= d \/ (d = 0) then [bits_to_word xs]
+  else bits_to_word (TAKE d xs ++ [T]) :: word_list (DROP d xs) d
+```
+
+HOL terminates by `measure (LENGTH o FST)`: the recursive argument is
+`DROP d xs`, strictly shorter whenever the `else` branch is taken.  As with
+`bitsToWordW`, the faithful carrier is `BitVec width` with `[NeZero width]`
+(HOL's `'a word`); a zero-length chunk still emits one word (`0w` via
+`bitsToWordW []`). -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "word_list_def"]
+def wordListW {width : Nat} [NeZero width] (xs : List Bool) (d : Nat) : List (BitVec width) :=
+  if xs.length ≤ d ∨ d = 0 then [bitsToWordW xs]
+  else bitsToWordW (xs.take d ++ [true]) :: wordListW (xs.drop d) d
+termination_by xs.length
+decreasing_by
+  simp only [List.length_drop]
+  omega
 
 end Flapjack.Compiler.Backend.WordToStack

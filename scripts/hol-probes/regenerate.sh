@@ -276,6 +276,9 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
   bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
+  wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

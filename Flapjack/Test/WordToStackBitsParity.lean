@@ -42,4 +42,31 @@ example : bitsToWordW (width := 64) [true, false, true] = (5 : BitVec 64) := by 
 example : (bitsToWordW (width := 8) [true, false, true]).toNat =
     Flapjack.RiscV.CakeAlloc.bitsToWord [true, false, true] := by decide
 
+/-! ## `word_list` parity
+
+Rows for the width-indexed `wordListW`, tagged against HOL `word_list_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:231`; bead
+`flapjack-pxn.18.5.15.3.2`), from
+`scripts/hol-probes/word_to_stack_word_list_probe.out`:
+
+```
+wl_empty_d3=[0w]  wl_empty_d0=[0w]  wl_d0=[5w]
+wl_short=[5w]  wl_split=[5w; 3w]  wl_twostep=[7w; 7w; 1w]
+```
+-/
+
+def wordListParityGuard : Bool :=
+  (wordListW (width := 64) ([] : List Bool) 3 == [0]) &&
+  (wordListW (width := 64) ([] : List Bool) 0 == [0]) &&
+  (wordListW (width := 64) [true, false, true] 0 == [5]) &&
+  (wordListW (width := 64) [true, false, true] 5 == [5]) &&
+  (wordListW (width := 64) [true, false, true, true] 2 == [5, 3]) &&
+  (wordListW (width := 64) [true, true, true, true, true] 2 == [7, 7, 1])
+
+#eval wordListParityGuard
+#guard wordListParityGuard
+
+example : wordListW (width := 64) [true, false, true, true] 2 =
+    ([5, 3] : List (BitVec 64)) := by native_decide
+
 end Flapjack.Test.WordToStackBitsParity

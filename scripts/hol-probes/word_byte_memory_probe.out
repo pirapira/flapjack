@@ -19,8 +19,16 @@ word_of_bytes_definition=(∀be a. word_of_bytes be a [] = 0w) ∧
 natural_mod_zero_theorem=k MOD 0 = k ∧ 0 MOD n = 0
 byte_index_width5_little=byte_index 1w F = 8 * (1 MOD 0)
 byte_index_width5_big=byte_index 1w T = 0
-get_byte_width5_little=get_byte 1w 31w F = w2w (31w ⋙ (8 * (1 MOD 0)))
-get_byte_width5_big=get_byte 1w 31w T = 31w
+get_byte_width5_little=get_byte 1w 31w F =
+w2w
+  (FCP i.
+     i + (let d = 0 in 8 * (1 MOD d)) < 5 ∧
+     31w ' (i + (let d = 0 in 8 * (1 MOD d))))
+get_byte_width5_big=get_byte 1w 31w T =
+w2w
+  (FCP i.
+     i + (let d = 0 in 8 * (d − (1 MOD d + 1))) < 5 ∧
+     31w ' (i + (let d = 0 in 8 * (d − (1 MOD d + 1)))))
 word_of_bytes_width17_little=word_of_bytes F 0w [17w; 50w; 17w; 50w] =
 set_byte 0w 17w
   (set_byte 1w 50w (set_byte 2w 17w (set_byte 3w 50w 0w F) F) F) F

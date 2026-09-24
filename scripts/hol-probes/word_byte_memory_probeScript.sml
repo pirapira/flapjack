@@ -24,6 +24,15 @@ fun print_simp label q =
     print (label ^ "="); print_term (concl th); print "\n"
   end
 
+fun print_get_byte_simp label q =
+  let
+    val th = SIMP_CONV (srw_ss() ++ wordsLib.WORD_BIT_EQ_ss)
+      [byteTheory.get_byte_def, byteTheory.byte_index_def,
+        arithmeticTheory.MOD_0] q
+  in
+    print (label ^ "="); print_term (concl th); print "\n"
+  end
+
 val _ = print_thm "byte_index_definition" byteTheory.byte_index_def;
 val _ = print_thm "get_byte_definition" byteTheory.get_byte_def;
 val _ = print_thm "set_byte_definition" byteTheory.set_byte_def;
@@ -33,9 +42,9 @@ val _ = print_eval "byte_index_width5_little"
   ``byte_index (1w:5 word) F``;
 val _ = print_eval "byte_index_width5_big"
   ``byte_index (1w:5 word) T``;
-val _ = print_eval "get_byte_width5_little"
+val _ = print_get_byte_simp "get_byte_width5_little"
   ``get_byte (1w:5 word) (31w:5 word) F``;
-val _ = print_eval "get_byte_width5_big"
+val _ = print_get_byte_simp "get_byte_width5_big"
   ``get_byte (1w:5 word) (31w:5 word) T``;
 
 val _ = print_eval "word_of_bytes_width17_little"

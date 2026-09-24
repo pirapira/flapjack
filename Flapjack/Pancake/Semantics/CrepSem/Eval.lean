@@ -936,6 +936,8 @@ def holFiniteWordSourceByteAlign {ι : Type u}
   exact bitVecToHolWord dimension
     (holByteAlignBitVec (holWordToBitVec dimension address))
 
+/-- Byte-slot component of HOL `byte_index_def`, preserving HOL natural
+    `MOD_0` when the dimension has fewer than eight bits. -/
 def holFiniteWordSourceByteIndex {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool)
     (bigEndian : Bool) : Nat :=
@@ -947,14 +949,19 @@ def holFiniteWordSourceByteIndex {ι : Type u}
     else addressIndex % bytesPerWord
   if bigEndian then bytesPerWord - 1 - byteIndex else byteIndex
 
+/-- Pointwise form of HOL `get_byte_def`: output bit `j` is source bit
+    `j + 8 * byteIndex`, provided `j` belongs to the result `word8`. -/
 def holFiniteWordSourceGetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address value : ι → Bool)
-    (bigEndian : Bool) : ι → Bool := by
-  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+    (bigEndian : Bool) : ι → Bool :=
   let byteIndex := holFiniteWordSourceByteIndex dimension address bigEndian
-  exact bitVecToHolWord dimension <| BitVec.ofNat dimension.width
-    (((holWordToBitVec dimension value).toNat / (256 ^ byteIndex)) % 256)
+  let bitOffset := 8 * byteIndex
+  let valueBits := holWordToBitVec dimension value
+  fun index =>
+    let bit := (dimension.encode index).val
+    decide (bit < 8) && valueBits.getLsbD (bit + bitOffset)
 
+/-- Pointwise `word_slice_alt`/shift/or expansion of HOL `set_byte_def`. -/
 def holFiniteWordSourceSetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address byte value : ι → Bool)
     (bigEndian : Bool) : ι → Bool :=

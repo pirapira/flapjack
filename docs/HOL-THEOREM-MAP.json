@@ -5373,7 +5373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectShiftCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. The full evaluator uses evalPanShiftFull to implement LSL/LSR/ASR/ROR and HOL's nonzero amount < word-width cutoff; direct HOL and Lean fixtures cover LSL, ASR, ROR, and the cutoff. It remains untagged because the public Lean statement translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
+    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. One explicit PanValueMemoryAccess is shared by source, IHs, and converted execution; because this adapter supplies its own shift operation, the theorem also requires that operation to agree with evalPanShiftFull for the evaluated operands. Direct HOL and Lean fixtures cover LSL, ASR, ROR, and the width cutoff. It remains untagged because this adapter compatibility premise is Lean-specific, and the public statement also translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
   },
   {
     "hol_path": null,

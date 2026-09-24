@@ -101,4 +101,32 @@ def evalPanSemStateExps [NeZero 64]
     state.baseAddress state.topAddress panSemBitVec64BytesInWord expressions
     (memoryAccess := some (panSemBitVec64MemoryAccess state))
 
+
+/-- The executed 64-bit source `.op` branch consults exactly the tagged
+`wordOpHOL` list fold. `panSemBitVec64MemoryAccess` is built from
+`RiscV.panRiscVMemoryModel`, whose `wordOp` is `panRiscVWordOp = wordOpHOL`;
+this is the arbitrary-operand-list delegation used by the exact-state path.
+The generic `memoryAccess := none` compatibility branch remains untagged and
+is tracked separately as a mismatch. -/
+theorem panSemBitVec64MemoryAccess_wordOp
+    (state : PanSemState (RiscV.Word 64) ffi) (operator : BinOp)
+    (values : List (RiscV.Word 64)) :
+    (panSemBitVec64MemoryAccess state).wordOp operator values =
+      wordOpHOL operator values := rfl
+
+/-- Unfolding of the executed source `.op` clause: for an arbitrary operand
+list it evaluates the arguments and then applies the tagged `wordOpHOL`
+fold. This pins the exact-state path to `wordOpHOL` without changing the
+generic compatibility branch. -/
+theorem evalPanSemStateExp_op
+    (state : PanSemState (RiscV.Word 64) ffi) (operator : BinOp)
+    (arguments : List (Exp (RiscV.Word 64))) :
+    evalPanSemStateExp state (.op operator arguments) =
+      (evalPanSemStateExps state arguments).bind (fun values =>
+        (values.mapM panValueWordProjection).bind (fun words =>
+          (wordOpHOL operator words).map PanValue.word)) := by
+  simp only [evalPanSemStateExp, evalPanSemStateExps, evalPanValueExp.eq_def,
+    panSemBitVec64MemoryAccess_wordOp]
+  rfl
+
 end Flapjack

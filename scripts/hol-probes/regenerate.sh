@@ -1159,3 +1159,10 @@ run_probe num_set_audit_probeScript.sml num_set_audit_probe.out \
   ns_empty nsmap_insert_last \
   "$cake_dir/misc/miscScript.sml" \
   "$cake_dir/misc"
+
+# Every name/var/stack-var predicates (num_set domain model): the probe also
+# shows every_stack_var ignores the scalar FFI registers (only every_name / body).
+run_probe word_lang_every_name_probeScript.sml word_lang_every_name_probe.out \
+  en_empty esv_seq_bad \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

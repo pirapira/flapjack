@@ -37,6 +37,10 @@ def finiteMapRuntime : PanSemState Word64 (FfiState Unit) where
   baseAddress := BitVec.ofNat 64 0
   topAddress := BitVec.ofNat 64 100
 
+def finiteMapMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    finiteMapRuntime.memaddrs finiteMapRuntime.sharedMemaddrs finiteMapRuntime.be
+
 def finiteMapContext : StructPassContext where
   structs := []
   locals := [("local", .one)]
@@ -1282,8 +1286,14 @@ example :
 example :
     structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =
         .comb [.one, .one] ∧
+    panSemShapeOf rstructCompileCaseValue = .comb [.one, .one] ∧
     panStructValueFieldsOkBool finiteMapRuntime.structs rstructCompileCaseValue = true ∧
-    evalPanValueExp
+    evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
+      finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+      finiteMapRuntime.topAddress (BitVec.ofNat 64 8)
+      (.rStruct rstructCompileCaseExpressions)
+      (memoryAccess := some finiteMapMemoryAccess) = some rstructCompileCaseValue ∧
+    evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
@@ -1291,13 +1301,15 @@ example :
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
         (BitVec.ofNat 64 8)
-        (structCompileExp emptyStructCompileContext (.rStruct rstructCompileCaseExpressions)) =
+        (structCompileExp emptyStructCompileContext (.rStruct rstructCompileCaseExpressions))
+        (memoryAccess := some finiteMapMemoryAccess) =
       some (.rStruct [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)]) := by
-  have hsource : evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+  have hsource : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
       finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
       finiteMapRuntime.topAddress (BitVec.ofNat 64 8)
-      (.rStruct rstructCompileCaseExpressions) = some rstructCompileCaseValue := by
-    simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+      (.rStruct rstructCompileCaseExpressions)
+      (memoryAccess := some finiteMapMemoryAccess) = some rstructCompileCaseValue := by
+    simp [evalPanValueExpFull, evalPanValueExpsFull,
       rstructCompileCaseExpressions, rstructCompileCaseValue]
   have hstructs : panStructContextShapeView emptyStructCompileContext.structs =
       panStructContextShapeView finiteMapRuntime.structs := by
@@ -1321,9 +1333,10 @@ example :
     intro name
     simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
   have hconstant : ∀ word, ∀ subvalue,
-      evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
         finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
-        finiteMapRuntime.topAddress (BitVec.ofNat 64 8) (.const word) = some subvalue →
+        finiteMapRuntime.topAddress (BitVec.ofNat 64 8) (.const word)
+        (memoryAccess := some finiteMapMemoryAccess) = some subvalue →
       panStructContextShapeView emptyStructCompileContext.structs =
         panStructContextShapeView finiteMapRuntime.structs →
       panStructEveryValueFieldsOkBool finiteMapRuntime.structs finiteMapRuntime.locals →
@@ -1333,7 +1346,7 @@ example :
       panStructShapeMapEq emptyStructCompileContext.globals finiteMapRuntime.globals →
       structOldExpShape emptyStructCompileContext (.const word) = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs subvalue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
@@ -1341,19 +1354,21 @@ example :
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
           (BitVec.ofNat 64 8)
-          (structCompileExp emptyStructCompileContext (.const word)) =
+          (structCompileExp emptyStructCompileContext (.const word))
+          (memoryAccess := some finiteMapMemoryAccess) =
         some (panStructConvertValue subvalue) := by
     intro word subvalue hevalSub _hstructs _hlocalsFields _hglobalsFields
       _hstructInfos _hlocalsMap _hglobalsMap
-    simp [evalPanValueExp] at hevalSub
+    simp [evalPanValueExpFull] at hevalSub
     cases hevalSub
     simp [structOldExpShape, panSemShapeOf, panStructValueFieldsOkBool,
-      evalPanValueExp, panStructConvertState,
+      evalPanValueExpFull, panStructConvertState,
       panStructConvertValue, emptyStructCompileContext]
   have hinduction : PanStructAll (fun expression => ∀ subvalue,
-      evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
         finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
-        finiteMapRuntime.topAddress (BitVec.ofNat 64 8) expression = some subvalue →
+        finiteMapRuntime.topAddress (BitVec.ofNat 64 8) expression
+        (memoryAccess := some finiteMapMemoryAccess) = some subvalue →
       panStructContextShapeView emptyStructCompileContext.structs =
         panStructContextShapeView finiteMapRuntime.structs →
       panStructEveryValueFieldsOkBool finiteMapRuntime.structs finiteMapRuntime.locals →
@@ -1363,14 +1378,15 @@ example :
       panStructShapeMapEq emptyStructCompileContext.globals finiteMapRuntime.globals →
       structOldExpShape emptyStructCompileContext expression = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs subvalue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
           (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
-          (BitVec.ofNat 64 8) (structCompileExp emptyStructCompileContext expression) =
+          (BitVec.ofNat 64 8) (structCompileExp emptyStructCompileContext expression)
+          (memoryAccess := some finiteMapMemoryAccess) =
         some (panStructConvertValue subvalue)) rstructCompileCaseExpressions := by
     apply PanStructAll.cons
     · exact hconstant (BitVec.ofNat 64 3)
@@ -1378,14 +1394,16 @@ example :
       · exact hconstant (BitVec.ofNat 64 5)
       · exact PanStructAll.nil
   have hcase := panStructCompileExpCorrectRStructCase emptyStructCompileContext
-    finiteMapRuntime (BitVec.ofNat 64 8) rstructCompileCaseExpressions
+    finiteMapRuntime (BitVec.ofNat 64 8) finiteMapMemoryAccess rstructCompileCaseExpressions
     rstructCompileCaseValue hsource hstructs hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap hinduction
-  simpa [rstructCompileCaseExpressions, rstructCompileCaseValue,
-    emptyStructCompileContext, finiteMapRuntime, panSemShapeOf,
-    panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    panStructConvertValue, panStructConvertValues, evalPanValueExp,
-    structCompileExp] using hcase
+  refine ⟨?_, by simp [panSemShapeOf, rstructCompileCaseValue], ?_, hsource, ?_⟩
+  · simpa [rstructCompileCaseExpressions, rstructCompileCaseValue,
+      emptyStructCompileContext, panSemShapeOf, structOldExpShape] using hcase.1
+  · exact hcase.2.1
+  · simpa [rstructCompileCaseExpressions, rstructCompileCaseValue,
+      emptyStructCompileContext, finiteMapRuntime, panStructConvertValue,
+      panStructConvertValues, evalPanValueExpFull, structCompileExp] using hcase.2.2
 
 def pairCompileInfo : StructInfo where
   fields := [("left", .one), ("right", .one)]

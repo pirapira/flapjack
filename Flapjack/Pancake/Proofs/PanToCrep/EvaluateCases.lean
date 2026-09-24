@@ -5491,6 +5491,243 @@ address cases below. The separate restricted argument support composes
 Const/Local/RStruct/address/RField cases and PanOp multiplication through HOL
 `compile_args`. The general compile_exp_val_rel induction, remaining Load forms
 and operators, and the enclosing Call proof remain open. -/
+private theorem evalPanSemStateExp_panOpMul_inv
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (left right : Exp (RiscV.Word 64)) (result : RiscV.Word 64)
+    (hsource : evalPanSemStateExp source (.panOp .mul [left, right]) =
+      some (.word result)) :
+    ∃ leftWord rightWord,
+      evalPanSemStateExp source left = some (.word leftWord) ∧
+      evalPanSemStateExp source right = some (.word rightWord) ∧
+      result = leftWord * rightWord := by
+  have hsourceValue : evalPanValueExp source.structs source.locals source.globals
+      source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+      (.panOp .mul [left, right])
+      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+      some (.word result) := by
+    simpa [evalPanSemStateExp] using hsource
+  cases hleft : evalPanSemStateExp source left with
+  | none =>
+      have hleftValue : evalPanValueExp source.structs source.locals source.globals
+          source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+          left (memoryAccess := some (panSemBitVec64MemoryAccess source)) = none := by
+        simpa [evalPanSemStateExp] using hleft
+      simp [evalPanValueExp, evalPanValueExp.evalPanValueExps, hleftValue,
+        evalPanOp] at hsourceValue
+  | some leftValue =>
+      have hleftValue : evalPanValueExp source.structs source.locals source.globals
+          source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+          left (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+          some leftValue := by
+        simpa [evalPanSemStateExp] using hleft
+      cases hright : evalPanSemStateExp source right with
+      | none =>
+          have hrightValue : evalPanValueExp source.structs source.locals source.globals
+              source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+              right (memoryAccess := some (panSemBitVec64MemoryAccess source)) = none := by
+            simpa [evalPanSemStateExp] using hright
+          simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+            hleftValue, hrightValue, evalPanOp] at hsourceValue
+      | some rightValue =>
+          have hrightValue : evalPanValueExp source.structs source.locals source.globals
+              source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+              right (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+              some rightValue := by
+            simpa [evalPanSemStateExp] using hright
+          cases leftValue with
+          | word leftWord =>
+              cases rightValue with
+              | word rightWord =>
+                  have hcomputed : evalPanValueExp source.structs source.locals
+                      source.globals source.memory source.baseAddress source.topAddress
+                      panSemBitVec64BytesInWord (.panOp .mul [left, right])
+                      (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.word (leftWord * rightWord)) := by
+                    simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                      hleftValue, hrightValue, evalPanOp]
+                  have hwords : PanValue.word result =
+                      PanValue.word (leftWord * rightWord) :=
+                    Option.some.inj (hsourceValue.symm.trans hcomputed)
+                  exact ⟨leftWord, rightWord, rfl, rfl,
+                    PanValue.word.inj hwords⟩
+              | rStruct _ =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleftValue, hrightValue, evalPanOp] at hsourceValue
+              | nStruct _ _ =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleftValue, hrightValue, evalPanOp] at hsourceValue
+          | rStruct _ =>
+              simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                hleftValue, hrightValue, evalPanOp] at hsourceValue
+          | nStruct _ _ =>
+              simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                hleftValue, hrightValue, evalPanOp] at hsourceValue
+
+/-! The supported PanOp Mul constructor case for the full localized expression
+relation. The successful source evaluator forces exactly two word operands;
+their full IHs determine singleton compiled target operands, after which the
+production Crep Mul node computes the same word. -/
+theorem compileExpHOL_panOpMul_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (left right : Exp (RiscV.Word 64))
+    (result : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hleftLocalized : expGlobalVars left = [])
+    (hrightLocalized : expGlobalVars right = [])
+    (hsource : evalPanSemStateExp source (.panOp .mul [left, right]) =
+      some (.word result))
+    (hleftIH : ∀ value,
+      evalPanSemStateExp source left = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars left = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            left).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          left).1.length = Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            left).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          left).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          left).2 = true)
+    (hrightIH : ∀ value,
+      evalPanSemStateExp source right = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars right = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            right).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          right).1.length = Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            right).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          right).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          right).2 = true) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.panOp .mul [left, right])).1 =
+        some (panValueFlatten (.word result)) ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.panOp .mul [left, right])).1.length = Shape.shapeSize
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.panOp .mul [left, right])).2 ∧
+      panValueShape [] (.word result) = (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.panOp .mul [left, right])).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.panOp .mul [left, right])).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  obtain ⟨leftWord, rightWord, hleft, hright, hresult⟩ :=
+    evalPanSemStateExp_panOpMul_inv source left right result hsource
+  have hleftRel := hleftIH (.word leftWord) hleft hstate hcode hlocals hleftLocalized
+  have hrightRel := hrightIH (.word rightWord) hright hstate hcode hlocals hrightLocalized
+  have hleftShape : (compileExpHOL compilerContext left).2 = .one := by
+    simpa [compilerContext, panValueShape] using hleftRel.2.2.1.symm
+  have hrightShape : (compileExpHOL compilerContext right).2 = .one := by
+    simpa [compilerContext, panValueShape] using hrightRel.2.2.1.symm
+  have hleftRun : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext left).1 = some [leftWord] := by
+    simpa [compilerContext, panValueFlatten] using hleftRel.1
+  have hrightRun : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext right).1 = some [rightWord] := by
+    simpa [compilerContext, panValueFlatten] using hrightRel.1
+  have hleftLength : (compileExpHOL compilerContext left).1.length = 1 := by
+    simpa using (evalCrepRuntimeExps_length_of_some target
+      (compileExpHOL compilerContext left).1 [leftWord] hleftRun).symm
+  have hrightLength : (compileExpHOL compilerContext right).1.length = 1 := by
+    simpa using (evalCrepRuntimeExps_length_of_some target
+      (compileExpHOL compilerContext right).1 [rightWord] hrightRun).symm
+  cases hleftCompiled : (compileExpHOL compilerContext left).1 with
+  | nil => simp [hleftCompiled] at hleftLength
+  | cons leftExpression leftTail =>
+      cases leftTail with
+      | nil =>
+          have hleftSingleton : (compileExpHOL compilerContext left).1 =
+              [leftExpression] := by simp [hleftCompiled]
+          have hleftExpressionRun :
+              evalCrepRuntimeExp target leftExpression = some leftWord := by
+            rw [hleftSingleton] at hleftRun
+            cases hword : evalCrepRuntimeExp target leftExpression with
+            | none => simp [evalCrepRuntimeExps, hword] at hleftRun
+            | some word =>
+                have hwordEq : word = leftWord := by
+                  simpa [evalCrepRuntimeExps, hword] using hleftRun
+                simp [hwordEq]
+          cases hrightCompiled : (compileExpHOL compilerContext right).1 with
+          | nil => simp [hrightCompiled] at hrightLength
+          | cons rightExpression rightTail =>
+              cases rightTail with
+              | nil =>
+                  have hrightSingleton : (compileExpHOL compilerContext right).1 =
+                      [rightExpression] := by simp [hrightCompiled]
+                  have hrightExpressionRun :
+                      evalCrepRuntimeExp target rightExpression = some rightWord := by
+                    rw [hrightSingleton] at hrightRun
+                    cases hword : evalCrepRuntimeExp target rightExpression with
+                    | none => simp [evalCrepRuntimeExps, hword] at hrightRun
+                    | some word =>
+                        have hwordEq : word = rightWord := by
+                          simpa [evalCrepRuntimeExps, hword] using hrightRun
+                        simp [hwordEq]
+                  have hcompiled : compileExpHOL compilerContext
+                      (.panOp .mul [left, right]) =
+                      ([.crepOp .mul [leftExpression, rightExpression]], .one) := by
+                    simp [compileExpHOL, compileExpHOL.compileExpListHOL,
+                      hleftSingleton, hrightSingleton, cexpHeads, compilePanOp]
+                  have htargetMul : evalCrepRuntimeExps target
+                      (compileExpHOL compilerContext (.panOp .mul [left, right])).1 =
+                      some [leftWord * rightWord] := by
+                    rw [hcompiled]
+                    simp [evalCrepRuntimeExps, evalCrepRuntimeExp,
+                      hleftExpressionRun, hrightExpressionRun]
+                  refine ⟨?_, ?_, ?_, ?_⟩
+                  · simpa [compilerContext, hresult, panValueFlatten] using htargetMul
+                  · simp [compilerContext, hcompiled]
+                  · simp [compilerContext, hcompiled, panValueShape]
+                  · simp [compilerContext, hcompiled, isWfShape]
+              | cons _ _ => simp [hrightCompiled] at hrightLength
+      | cons _ _ => simp [hleftCompiled] at hleftLength
+
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

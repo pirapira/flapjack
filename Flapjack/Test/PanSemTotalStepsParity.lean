@@ -312,6 +312,56 @@ def shMemStoreNonWordGuard : Bool :=
   isErrorResult (panSemTotalShMemStoreClause shMemTestState .opW
     (.const (BitVec.ofNat 64 0)) (.rStruct ([] : List (Exp Word64)))).1
 
+/-- `TimeOut` result check. -/
+def isTimeOutResult (result : Option (PanSemHOLResult Word64)) : Bool :=
+  match result with
+  | some .timeOut => true
+  | _ => false
+
+/-- A body/loop continuation stub that ignores the incoming state. -/
+def whileStub (result : Option (PanSemHOLResult Word64))
+    (next : PanSemState Word64 (FfiState Unit)) :
+    PanSemState Word64 (FfiState Unit) →
+      Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  fun _ => (result, next)
+
+/-- HOL `While` with a zero condition completes normally with the state unchanged. -/
+def whileCondZeroGuard : Bool :=
+  isNoneResult (panSemTotalWhileStep stepsState (some (.word (BitVec.ofNat 64 0)))
+    (whileStub none stepsState) (whileStub none stepsState)).1
+
+/-- A failed condition evaluation is `SOME Error`. -/
+def whileCondErrorGuard : Bool :=
+  isErrorResult (panSemTotalWhileStep stepsState none
+    (whileStub none stepsState) (whileStub none stepsState)).1
+
+/-- A non-word condition is `SOME Error`. -/
+def whileCondNonWordGuard : Bool :=
+  isErrorResult (panSemTotalWhileStep stepsState (some (.rStruct []))
+    (whileStub none stepsState) (whileStub none stepsState)).1
+
+/-- A nonzero condition at clock zero times out with cleared locals. -/
+def whileTimeoutGuard : Bool :=
+  let result := panSemTotalWhileStep { stepsState with clock := 0 }
+    (some (.word (BitVec.ofNat 64 1)))
+    (whileStub none stepsState) (whileStub none stepsState)
+  isTimeOutResult result.1 && result.2.clock == 0 && (result.2.locals "x").isNone
+
+/-- A `Break` from the body stops the loop normally with the clamped clock. -/
+def whileBreakGuard : Bool :=
+  let result := panSemTotalWhileStep stepsState (some (.word (BitVec.ofNat 64 1)))
+    (whileStub (some .break) stepsState) (whileStub none stepsState)
+  isNoneResult result.1 && result.2.clock == 4
+
+/-- A `Continue` from the body recurses into the loop continuation. -/
+def whileContinueGuard : Bool :=
+  isTimeOutResult (panSemTotalWhileStep stepsState (some (.word (BitVec.ofNat 64 1)))
+    (whileStub (some .continue) stepsState) (whileStub (some .timeOut) stepsState)).1
+
+def whileGuard : Bool :=
+  whileCondZeroGuard && whileCondErrorGuard && whileCondNonWordGuard &&
+    whileTimeoutGuard && whileBreakGuard && whileContinueGuard
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -324,14 +374,14 @@ def stepsGuard : Bool :=
     decOkGuard && decShapeErrorGuard && decErrorGuard &&
     partialEvaluateGuard &&
     shMemLoadGuard && shMemLoadMissingGuard && shMemLoadUnsharedGuard &&
-    shMemStoreGuard && shMemStoreNonWordGuard
+    shMemStoreGuard && shMemStoreNonWordGuard && whileGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem/While)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

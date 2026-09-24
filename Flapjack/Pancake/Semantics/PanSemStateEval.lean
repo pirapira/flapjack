@@ -748,4 +748,33 @@ theorem panMemLoadHOL_named_none (name : StructName) (structs : StructContext)
         simp only [hc, Bool.false_eq_true, if_false]
         exact ih hrest
 
+/-- Named-scan agreement, found case: when `lookupInfoWithRest` finds the name with tail `rest`,
+the tagged exact structured load of `.named name` over the HOL-shaped context loads the fields of
+the found `info` under the tail context `rest`.  The result is stated through `Option.map` (rather
+than a `match`) so that the equality is well-defined for `rfl`/`simp` comparisons. -/
+theorem panMemLoadHOL_named_some (name : StructName) (structs : StructContext)
+    (address : RiscV.Word 64) (domain : RiscV.Word 64 → Prop) [DecidablePred domain]
+    (memory : RiscV.Word 64 → HolWordLab 64) (info : StructInfo) (rest : StructContext)
+    (h : lookupInfoWithRest name structs = some (info, rest)) :
+    panMemLoadHOL (width := 64) (.named name) address domain memory structs.toHOL =
+      (panMemLoadFldsHOL info.fields address domain memory rest.toHOL).map
+        (fun fields => HolValue.nStruct name fields) := by
+  induction structs with
+  | nil => simp [lookupInfoWithRest] at h
+  | cons entry rest' ih =>
+      obtain ⟨candidate, info'⟩ := entry
+      simp only [StructContext.toHOL, List.map_cons] at h ⊢
+      cases hb : candidate == name
+      · simp only [lookupInfoWithRest, hb] at h
+        rw [panMemLoadHOL.eq_def]
+        simp only [hb, Bool.false_eq_true, if_false]
+        exact ih h
+      · simp only [lookupInfoWithRest, hb, if_true] at h
+        obtain ⟨rfl, rfl⟩ := Option.some.inj h
+        have hc : candidate = name := beq_iff_eq.mp hb
+        subst hc
+        rw [panMemLoadHOL.eq_def]
+        simp only [hb, if_true]
+        split <;> simp_all [Option.map]
+
 end Flapjack

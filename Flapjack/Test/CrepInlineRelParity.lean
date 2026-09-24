@@ -413,6 +413,28 @@ def inlineSkipGuard : Bool :=
 
 #guard inlineSkipGuard
 
+/-- Width-indexed crep_inline relations agree with their generic-α forms at BitVec 64. -/
+example (s t : CrepHolState (BitVec 64) Unit) :
+    crepInlineStateRelW s t ↔ crepInlineStateRel s t := Iff.rfl
+
+example (s t : CrepHolState (BitVec 64) Unit) :
+    crepInlineLocalsRelW s t ↔ crepInlineLocalsRel s t := Iff.rfl
+
+example (s t : CrepHolState (BitVec 64) Unit) :
+    crepInlineLocalsStrongRelW s t ↔ crepInlineLocalsStrongRel s t := Iff.rfl
+
+example (a b a' b' : CrepHolState (BitVec 64) Unit) :
+    crepInlineLocalsExtRelW a b a' b' ↔ crepInlineLocalsExtRel a b a' b' := Iff.rfl
+
+example (s t : CrepHolState (BitVec 64) Unit) :
+    crepInlineStateRelCodeW s t ↔ crepInlineStateRelCode s t := Iff.rfl
+
+example (s t : CrepHolState (BitVec 64) Unit)
+    (hl : crepInlineLocalsRelW s t) (hs : crepInlineStateRelW s t) :
+    crepInlineLocalsRelW (decCrepHolClockW s) (decCrepHolClockW t) ∧
+    crepInlineStateRelW (decCrepHolClockW s) (decCrepHolClockW t) :=
+  crepInlineLocalsRel_decClockW s t hl hs
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then

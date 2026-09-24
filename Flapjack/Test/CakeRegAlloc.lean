@@ -35,6 +35,52 @@ def cakeNodeMapHolListLookupGuard : Bool :=
 
 #guard cakeNodeMapHolListLookupGuard
 
+/-! The same-index and non-updated-index observations mirror bounded HOL
+    `LUPDATE`.  Persistent Lean updates retain the original value, preserve
+    array length, and explicitly expose the extra outside-map behavior. -/
+def cakeNodeMapHolListUpdateGuard : Bool :=
+  let nodes : List Nat := [7, 11, 13]
+  let original := CakeNodeMap.ofList nodes
+  let updated := CakeNodeMap.set original 1 99
+  let sibling := CakeNodeMap.set original 1 77
+  let extended := CakeNodeMap.set original 3 99
+  CakeNodeMap.get updated 1 == some 99 &&
+    CakeNodeMap.get sibling 1 == some 77 &&
+    CakeNodeMap.get updated 0 == some 7 &&
+    CakeNodeMap.get original 1 == some 11 &&
+    updated.slots.size == nodes.length &&
+    CakeNodeMap.get extended 3 == some 99 &&
+    extended.slots.size == nodes.length
+
+#guard cakeNodeMapHolListUpdateGuard
+
+example :
+    CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      [7, 99, 13] := by
+  have h := CakeNodeMap.set_representsHOLNodeList
+    (CakeNodeMap.ofList [7, 11, 13]) [7, 11, 13]
+    (CakeNodeMap.ofList_representsHOLNodeList [7, 11, 13]) 1 99 (by decide)
+  simpa using h
+
+example :
+    CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set
+        (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99) 2 88)
+      [7, 99, 88] := by
+  have h₁ : CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      [7, 99, 13] := by
+    exact (show CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      (List.set [7, 11, 13] 1 99) from
+        CakeNodeMap.set_representsHOLNodeList _ _
+          (CakeNodeMap.ofList_representsHOLNodeList _) _ _ (by decide))
+  have h₂ := CakeNodeMap.set_representsHOLNodeList
+    (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+    [7, 99, 13] h₁ 2 88 (by decide)
+  simpa using h₂
+
 example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 0 = some 7 := by
   exact CakeNodeMap.get_ofList_of_lt _ _ (by decide)
 
@@ -46,6 +92,26 @@ example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 3 = none := by
 
 example : CakeNodeMap.get (CakeNodeMap.ofList ([] : List Nat)) 0 = none := by
   exact CakeNodeMap.get_ofList_empty _
+
+example :
+    CakeNodeMap.get (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99) 1 =
+      some 99 := by
+  exact CakeNodeMap.get_set_ofList_same _ _ _ (by decide)
+
+example :
+    CakeNodeMap.get (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99) 0 =
+      some 7 := by
+  exact CakeNodeMap.get_set_ofList_other _ _ _ _ (by decide) (by decide)
+    (by decide)
+
+example :
+    (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99).slots.size = 3 := by
+  simpa using CakeNodeMap.set_ofList_slots_size [7, 11, 13] 1 99
+
+example :
+    CakeNodeMap.get (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 3 99) 3 =
+      some 99 := by
+  exact CakeNodeMap.get_set_ofList_outside _ _ _ (by decide)
 
 /-- Move chain whose second element writes the allocatable variable 9
     from the stack variable 7: 9 becomes forced-stack (`{9}`). -/
@@ -1698,7 +1764,7 @@ def parityGuard : Bool :=
    select and repair without blocking the whole build on stale expectations. -/
 def runChecks : IO Bool := do
   let results := [
-    cakeNodeMapHolListLookupGuard,
+    cakeNodeMapHolListLookupGuard, cakeNodeMapHolListUpdateGuard,
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
@@ -1748,8 +1814,8 @@ def runChecks : IO Bool := do
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
   let names := [
-    "CakeNodeMap HOL-list lookup range", "get_stack_only move chain",
-    "get_stack_only move from reg",
+    "CakeNodeMap HOL-list lookup range", "CakeNodeMap HOL-list update range",
+    "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
     "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
     "get_stack_only call merge",

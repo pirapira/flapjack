@@ -16,3 +16,7 @@ node_list_first=7
 node_list_last=13
 node_list_last_in_range=T
 node_list_out_of_range=F
+node_list_lupdate_same=T
+node_list_lupdate_other=T
+node_list_lupdate_length=T
+node_list_lupdate_outside=T

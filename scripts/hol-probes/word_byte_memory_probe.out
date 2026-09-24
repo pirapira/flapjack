@@ -1,0 +1,51 @@
+byte_index_definition=∀a is_bigendian.
+  byte_index a is_bigendian =
+  (let
+     d = dimindex (:α) DIV 8
+   in
+     if is_bigendian then 8 * (d − 1 − w2n a MOD d) else 8 * (w2n a MOD d))
+get_byte_definition=∀a w is_bigendian.
+  get_byte a w is_bigendian = w2w (w ⋙ byte_index a is_bigendian)
+set_byte_definition=∀a b w is_bigendian.
+  set_byte a b w is_bigendian =
+  (let
+     i = byte_index a is_bigendian
+   in
+     word_slice_alt (dimindex (:α)) (i + 8) w ‖ w2w b ≪ i ‖
+     word_slice_alt i 0 w)
+word_of_bytes_definition=(∀be a. word_of_bytes be a [] = 0w) ∧
+∀be a b bs.
+  word_of_bytes be a (b::bs) = set_byte a b (word_of_bytes be (a + 1w) bs) be
+natural_mod_zero_theorem=k MOD 0 = k ∧ 0 MOD n = 0
+byte_index_width5_little=byte_index 1w F = 8 * (1 MOD 0)
+byte_index_width5_big=byte_index 1w T = 0
+get_byte_width5_little=get_byte 1w 31w F =
+w2w
+  (FCP i.
+     i + (let d = 0 in 8 * (1 MOD d)) < 5 ∧
+     31w ' (i + (let d = 0 in 8 * (1 MOD d))))
+get_byte_width5_big=get_byte 1w 31w T =
+w2w
+  (FCP i.
+     i + (let d = 0 in 8 * (d − (1 MOD d + 1))) < 5 ∧
+     31w ' (i + (let d = 0 in 8 * (d − (1 MOD d + 1)))))
+word_of_bytes_width17_little=word_of_bytes F 0w [17w; 34w; 51w; 68w] =
+set_byte 0w 17w
+  (set_byte 1w 34w (set_byte 2w 51w (set_byte 3w 68w 0w F) F) F) F
+word_of_bytes_width17_big=word_of_bytes T 0w [17w; 34w; 51w; 68w] =
+set_byte 0w 17w
+  (set_byte 1w 34w (set_byte 2w 51w (set_byte 3w 68w 0w T) T) T) T
+word_of_bytes_width17_little_numeric=bit_field_insert (byte_index 0w F + 7) (byte_index 0w F) 17w
+  (bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 34w
+     (bit_field_insert (byte_index 2w F + 7) (byte_index 2w F) 51w
+        (bit_field_insert (byte_index 3w F + 7) (byte_index 3w F) 68w 0w))) =
+8721w
+word_of_bytes_width17_big_numeric=bit_field_insert (byte_index 0w T + 7) (byte_index 0w T) 17w
+  (bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 34w
+     (bit_field_insert (byte_index 2w T + 7) (byte_index 2w T) 51w
+        (bit_field_insert (byte_index 3w T + 7) (byte_index 3w T) 68w 0w))) =
+4386w
+set_byte_width17_little_nonzero_numeric=bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 165w 0x1ABCDw =
+0x1A5CDw
+set_byte_width17_big_nonzero_numeric=bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 165w 0x1ABCDw =
+0x1ABA5w

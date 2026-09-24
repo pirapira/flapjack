@@ -296,6 +296,23 @@ example :
   fixCrepHolClockW_eq_fixCrepHolClock localBase
     ((CrepRuntimeResult.normal : CrepRuntimeResult (BitVec 64) Unit), localBase)
 
+example :
+    memLoadCrepHolW (0 : BitVec 64) localBase = memLoadCrepHol (0 : BitVec 64) localBase :=
+  memLoadCrepHolW_eq_memLoadCrepHol (0 : BitVec 64) localBase
+
+example :
+    lookupCrepHolCodeW (fun _ => none) "f" ([] : List (PanWordLab (BitVec 64))) 0 =
+      lookupCrepHolCode (fun _ => none) "f" ([] : List (PanWordLab (BitVec 64))) 0 :=
+  lookupCrepHolCodeW_eq_lookupCrepHolCode (fun _ => none) "f" [] 0
+
+example :
+    resVarW (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+        (1, some (PanWordLab.word (7 : BitVec 64))) =
+      resVar (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+        (1, some (PanWordLab.word (7 : BitVec 64))) :=
+  resVarW_eq_resVar (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (1, some (PanWordLab.word (7 : BitVec 64)))
+
 /-! ## Production local-update adapters to the tagged HOL local defs
 
 These are Flapjack-only (untagged) bridge lemmas connecting the runtime

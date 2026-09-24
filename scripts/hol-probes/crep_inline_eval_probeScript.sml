@@ -84,3 +84,9 @@ val _ = print_eval "mmap_eq"
 (* Skip evaluation is the identity on the state, matching HOL `evaluate_def`. *)
 val _ = print_eval "skip_eval"
   ``evaluate ((Skip) : 64 crepLang$prog, ^s) = (NONE, ^s)``;
+
+(* Break/Continue evaluation is the identity on the state (HOL result names). *)
+val _ = print_eval "break_eval"
+  ``evaluate ((Break (1:num)) : 64 crepLang$prog, ^s) = (SOME (Break (1:num)), ^s)``;
+val _ = print_eval "continue_eval"
+  ``evaluate ((Continue (2:num)) : 64 crepLang$prog, ^s) = (SOME (Continue (2:num)), ^s)``;

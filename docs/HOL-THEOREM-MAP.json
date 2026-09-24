@@ -6318,5 +6318,13 @@
     "lean_name": "panValueFlatLoadFuel_shape_fields",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked production prerequisite: successful panValueFlatLoadFuel yields the requested panSemShapeOf and production panStructValueFieldsOkBool predicates for well-formed shapes in structInfosOk contexts. It is intentionally untagged: this is support for HOL mem_load_conversion, not its complete converted-memory theorem; Lean uses explicit fuel and an arbitrary readWord callback, while HOL mem_load uses a finite-address-domain word-memory relation and the HOL v_flds_ok predicate. The nested named-load regression exercises this theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "fix_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "fixCrepHolClock",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause port of crepSemScript.sml:150-152 over the 11-field CrepHolState; direct HOL-EVAL rows fix_clock_clamps/fix_clock_keeps_lower reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)."
   }
 ]

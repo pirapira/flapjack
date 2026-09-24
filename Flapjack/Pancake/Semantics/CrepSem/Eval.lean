@@ -2641,4 +2641,84 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
 
+/-!
+## Clocked crepSem evaluator over `CrepHolState`
+
+HOL `crepSem$evaluate` is a **total** clock-based program evaluator over the
+11-field crepSem state, returning a `(result, state)` pair
+(`crepSemScript.sml:240-448`).  The declarations in this section are **not**
+that evaluator: `evalCrepHolProg` is untagged, fuel-bounded infrastructure that
+`Option.map`s the runtime evaluator `evalCrepRuntimeResult` (which itself
+implements the clock checks `state.clock = 0` and `dec_clock`) and projects the
+result back with `toHolState`.
+
+This wrapper does **not** establish a faithful HOL-shaped evaluator and cannot
+by itself support exact `inline_prog_correct` shape: its result is an `Option`
+and it takes an explicit fuel argument, whereas HOL `evaluate` is total in the
+clock.  It is kept only as clearly separate infrastructure for the
+per-constructor observations below; the genuine total constructor recursion is
+tracked separately (see the parent bead `flapjack-pxn.18.5.5.7.7`).
+
+Declaration-local mismatch notes: (a) the evaluator takes an explicit fuel
+budget (the runtime evaluator is fuel-bounded); the `Skip` equation uses the
+clock-derived budget `state.clock + 1`, not HOL's literal clock recursion;
+(b) the evaluator is fixed-width `[NeZero width]` over `RiscV.Word width`, not
+HOL's arbitrary word carrier; (c) only per-constructor equations are proved,
+not general agreement with HOL `evaluate`.  Hence the declaration is untagged.
+-/
+
+/-- Fuel-bounded program evaluator over the 11-field `CrepHolState`, bridging
+    the runtime evaluator.  This is **not** HOL's total `evaluate`: the result is
+    an `Option` and the fuel is explicit.  The `Skip` case below instantiates
+    the budget with the clock-derived `state.clock + 1`. -/
+def evalCrepHolProg [NeZero width] (fuel : Nat)
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ)
+    (program : CrepProg (RiscV.Word width)) :
+    Option (CrepRuntimeResult (RiscV.Word width) ε × CrepHolState (RiscV.Word width) σ) :=
+  (evalCrepRuntimeResult handler primitive fuel state.toRuntime program).map
+    (fun pair => (pair.1, pair.2.toHolState))
+
+/-- `Skip` constructor observation on the fuel-bounded wrapper, matching HOL
+    `evaluate_def`'s `evaluate (Skip,s) = (NONE, s)`.  The target state is
+    derived from the source run (the runtime evaluator is invoked, not
+    assumed), with clock-derived budget. -/
+theorem evalCrepHolProg_skip [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) :
+    evalCrepHolProg (state.clock + 1) handler primitive state .skip =
+      some (.normal, state) := by
+  unfold evalCrepHolProg
+  rw [evalCrepRuntimeResult_skip handler primitive state.clock]
+  simp only [Option.map_some, CrepHolState.toHolState_toRuntime]
+
+/-- `Break` constructor observation on the fuel-bounded wrapper, matching HOL
+    `evaluate_def`'s `evaluate (Break n, s) = (SOME (Break n), s)` with the
+    state unchanged.  Declaration-local mismatch note: same budget and
+    fixed-width caveats as `evalCrepHolProg_skip`; only this constructor is
+    observed. -/
+theorem evalCrepHolProg_break [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) (label : Nat) :
+    evalCrepHolProg (state.clock + 1) handler primitive state (.break label) =
+      some (.broke label, state) := by
+  unfold evalCrepHolProg
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, CrepHolState.toHolState_toRuntime]
+
+/-- `Continue` constructor observation on the fuel-bounded wrapper, matching HOL
+    `evaluate_def`'s `evaluate (Continue n, s) = (SOME (Continue n), s)` with the
+    state unchanged.  Same declaration-local mismatch caveats as the `Break`
+    case. -/
+theorem evalCrepHolProg_continue [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) (label : Nat) :
+    evalCrepHolProg (state.clock + 1) handler primitive state (.continue label) =
+      some (.continued label, state) := by
+  unfold evalCrepHolProg
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, CrepHolState.toHolState_toRuntime]
+
 end Flapjack

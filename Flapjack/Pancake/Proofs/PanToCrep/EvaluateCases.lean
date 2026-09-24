@@ -4147,6 +4147,8 @@ inductive compileArgConstLocalAddressOrStruct : Exp (RiscV.Word 64) → Prop whe
       (supported : ∀ expression, expression ∈ fields →
         compileArgConstLocalAddress expression) :
       compileArgConstLocalAddressOrStruct (.rStruct fields)
+  | loadOneConst (address : RiscV.Word 64) :
+      compileArgConstLocalAddressOrStruct (.load .one (.const address))
 
 private theorem compileArgConstLocalAddressOrStruct_localized
     {expression : Exp (RiscV.Word 64)}
@@ -4154,6 +4156,7 @@ private theorem compileArgConstLocalAddressOrStruct_localized
     expGlobalVars expression = [] := by
   cases supported with
   | existing _ supported => exact compileArgConstLocalAddress_localized supported
+  | loadOneConst _ => simp [expGlobalVars]
   | rStruct fields hfields =>
       induction fields with
       | nil => simp [expGlobalVars, expGlobalVars.expGlobalVarsList]
@@ -4390,8 +4393,9 @@ theorem compileExpHOL_rStruct_ofHOLIH
     by simpa [compilerContext] using hcompiledWf⟩
 
 /-! Four-conclusion expression IH for one-level `RStruct` arguments whose
-fields are Const/Local/address leaves. This composes the existing HOL-shaped
-RStruct case with the complete leaf IH proved above. -/
+fields are Const/Local/address leaves, and for one-word loads from constant
+addresses. The load case composes the existing HOL-shaped Load constructor
+with the Const IH. -/
 theorem compileExpHOL_constLocalAddressOrStruct_ofHOLIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -4419,6 +4423,36 @@ theorem compileExpHOL_constLocalAddressOrStruct_ofHOLIH
       simpa [compilerContext] using
         compileExpHOL_constLocalAddress_ofHOLIH context source target expression value
           hstate hcode hlocals leafSupport heval
+  | loadOneConst address =>
+      have hsourceLoad : evalPanSemStateExp source
+          (.load .one (.const address)) =
+          (evalCrepRuntimeExp target (.load (.const address))).map PanValue.word := by
+        rcases hstate with ⟨hmemory, hdomain, _, _, _, _, _, _, _, _⟩
+        simp [evalPanSemStateExp, evalPanValueExp, panValueFlatLoad,
+          panValueFlatLoadFuel, panValueFlatReadWord, panSemBitVec64MemoryAccess,
+          panValueMemoryAccessOfModel, evalCrepRuntimeExp, crepRuntimeLoad,
+          isWfShape, hmemory, hdomain]
+      rw [hsourceLoad] at heval
+      cases value with
+      | word loaded =>
+          have htarget : evalCrepRuntimeExp target (.load (.const address)) =
+              some loaded := by simpa using heval
+          have hcompiled : compileExpHOL compilerContext
+              (.load .one (.const address)) =
+              ([.load (.const address)], .one) := by
+            simp [compileExpHOL, compilerContext, loadShape,
+              CrepBytesInWord.bytesInWord]
+          refine ⟨?_, ?_, ?_, ?_⟩
+          · rw [hcompiled]
+            simp [evalCrepRuntimeExps, htarget, panValueFlatten]
+          · rw [hcompiled]
+            simp
+          · rw [hcompiled]
+            simp [panValueShape]
+          · rw [hcompiled]
+            simp [isWfShape]
+      | rStruct _ => simp at heval
+      | nStruct _ _ => simp at heval
   | rStruct fields hfields =>
       cases value with
       | word word => simp [evalPanSemStateExp, evalPanValueExp] at heval

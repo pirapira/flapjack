@@ -66,6 +66,8 @@ def wordListParityGuard : Bool :=
 #eval wordListParityGuard
 #guard wordListParityGuard
 
+example : wordListW (width := 64) [true, false, true, true] 2 =
+    ([5, 3] : List (BitVec 64)) := by decide +kernel
 /-! ## `chunk_to_bits` parity
 
 Rows for the width-indexed `chunkToBitsW`, tagged against HOL
@@ -129,4 +131,7 @@ def chunkToBitmapParityGuard : Bool :=
 #eval chunkToBitmapParityGuard
 #guard chunkToBitmapParityGuard
 
+example : constWordsToBitmapW (width := 8)
+    [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
+    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by decide +kernel
 end Flapjack.Test.WordToStackBitsParity

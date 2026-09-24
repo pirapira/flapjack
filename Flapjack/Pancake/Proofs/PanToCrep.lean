@@ -2403,6 +2403,37 @@ theorem mkCtxtCodeImpCodeRel
     rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
     rfl
 
+/-- Consumption adapter: a width-indexed `codeRelW` hypothesis is the generic
+    `codeRel` at `BitVec width` (`codeRelW_iff_codeRel`), so the existing
+    generic `codeRel` helper lemmas apply unchanged when the full correctness
+    theorem is stated with `codeRelW`. -/
+theorem codeRel_of_codeRelW (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width)))
+    (h : codeRelW width context sourceCode targetCode) :
+    codeRel context sourceCode targetCode :=
+  (codeRelW_iff_codeRel width context sourceCode targetCode).mp h
+
+/-- The `mk_ctxt` initial-context code relation in the width-indexed exact HOL
+    `code_rel_def` form (`codeRelW`), derived from the existing tagged
+    `mk_ctxt_code_imp_code_rel` port via `codeRelW_iff_codeRel`. This is the
+    relation used at the start of the full `pc_compile_correct` statement. -/
+theorem mkCtxtCodeImpCodeRelW (declarations : List (Decl (BitVec width)))
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlocalised : ∀ entry ∈ functionEntries declarations,
+      localisedProg entry.2.2.1) :
+    codeRelW width
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := functionInfosHOL declarations
+        eids := panToCrepGetEidsFromDeclsHOL declarations
+        vmax := 0 }
+      (FUPDATE_LIST FEMPTY (functionEntries declarations).reverse)
+      (FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse) :=
+  (codeRelW_iff_codeRel width _ _ _).mpr
+    (mkCtxtCodeImpCodeRel declarations _hdistinct hlocalised)
+
 /-- Exact port of HOL `el_compile_prog_el_prog_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
     entry at index `n` comes from the source table at the same index, with

@@ -1596,6 +1596,56 @@ theorem panSemEvaluateExactState_primitive_error_of_shape_mismatch
   simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
     evalPanValueExpsCounted, harguments, hprim, hlocal, hshape]
 
+/-- HOL `panSemScript$evaluate_def` `Assign` returns `SOME Error` with the
+unchanged state when the source expression does not evaluate. -/
+theorem panSemEvaluateExactState_assign_error_of_eval_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (state : PanSemExactState α σ)
+    (kind : VarKind) (name : VarName) (value : Exp α)
+    (heval : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.assign kind name value) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  cases kind <;>
+    simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+      panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState] <;>
+    simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+      panValueAssignLocalResult, panValueAssignGlobalResult,
+      evalPanValueExpCounted, heval]
+
+/-- HOL `panSemScript$evaluate_def` `Assign` returns `SOME Error` with the
+unchanged state when the destination fails `is_valid_value`. -/
+theorem panSemEvaluateExactState_assign_error_of_invalid
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (state : PanSemExactState α σ)
+    (kind : VarKind) (name : VarName) (value : Exp α) (evaluated : PanValue α)
+    (heval : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = some evaluated)
+    (hinvalid : panValueAssignmentValid state.legacy.structs state.legacy.locals
+      state.legacy.globals kind name evaluated = false) :
+    panSemEvaluateExactState context primitive handler state
+        (.assign kind name value) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  cases kind <;>
+    simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+      panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState] <;>
+    simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
+      panValueAssignLocalResult, panValueAssignGlobalResult,
+      evalPanValueExpCounted, heval, hinvalid]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

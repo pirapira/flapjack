@@ -1,12 +1,12 @@
-import Flapjack.Compiler.Backend.MlString
+import Flapjack.Basis.Pure.MlString
 
 /-! Regression for the untagged Lean `String` <-> exact `mlstring` byte codec in
-`Flapjack/Compiler/Backend/MlString.lean` (bead `flapjack-pxn.18.5.15.3.11.2.3`).
+`Flapjack/Basis/Pure/MlString.lean` (bead `flapjack-pxn.18.5.15.3.11.2.3`).
 -/
 
 namespace Flapjack.Test.MlStringCodecParity
 
-open Flapjack.Compiler.Backend.MlString
+open Flapjack.Basis.Pure.MlString
 
 private def b (n : Nat) : BitVec 8 := BitVec.ofNat 8 n
 

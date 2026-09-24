@@ -314,7 +314,7 @@ sm_zero=T   sm_one=T   sm_two=T   sa_inr=T   sa_inl=T
 matching over the `Seq`/`StackLoad`/`StackStore`/`StackAlloc` fragment.
 -/
 
-abbrev StackMoveProg := Flapjack.Compiler.Backend.StackCarrier.ProgW (BitVec 64)
+abbrev StackMoveProg := Flapjack.Compiler.Backend.StackLang.ProgM (BitVec 64)
 
 /-- Structural equality for the `stack_move`/`StackArgs` fragment of `ProgW`. -/
 def stackMoveProgBEq : StackMoveProg → StackMoveProg → Bool

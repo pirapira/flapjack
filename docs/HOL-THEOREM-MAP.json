@@ -5029,7 +5029,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelUpdateExistingValue",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; one-word exp_hdl execution and its relation-aware handler prestate are composed in EvaluateCases, while other payload widths and the source/target Call theorem remain open"
+    "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; arbitrary-width finite-map exp_hdl execution, its locals_rel update, and actual-state matching-handler prestate composition are available as untagged induction support in EvaluateCases; the recursive callee/handler induction hypotheses are not yet composed into the source/target Call theorem"
   },
   {
     "hol_path": null,

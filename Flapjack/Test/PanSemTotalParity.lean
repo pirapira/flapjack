@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem.Total
+import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -21,6 +22,10 @@ the total HOL-shaped base cases:
   verbatim;
 * `Tick` at clock zero is a timeout with cleared locals;
 * `Tick` above clock zero decrements the clock and preserves the locals.
+
+The If checks below pair with `scripts/hol-probes/pan_sem_ite_e2e_probe.out`.
+They evaluate the condition from the complete source state before invoking
+the selected total branch callback.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -96,6 +101,76 @@ def totalTickClauseGuard : Bool :=
 def totalTickZeroClauseGuard : Bool :=
   match panSemEvaluateClockLeaf .tick (totalState 0) with
   | (some .timeOut, state) => state.clock == 0 && (state.locals "x").isNone
+  | _ => false
+
+def totalIfThenBranch (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  (some (.returned (.word (BitVec.ofNat 64 13))), state)
+
+def totalIfElseBranch (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  (some (.returned (.word (BitVec.ofNat 64 99))), state)
+
+def totalIfState : PanSemState Word64 (FfiState Unit) :=
+  { totalState 5 with
+    locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 3)) }
+
+def totalIfEvaluateProgram (program : Prog Word64)
+    (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  match program with
+  | .skip => (none, state)
+  | .assign .local "x" (.const value) =>
+      (none, { state with locals := updatePanValueMap state.locals "x" (.word value) })
+  | _ => (some .error, state)
+
+def totalIfNonzeroGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 1)))
+      totalIfThenBranch totalIfElseBranch with
+  | (some (.returned (.word value)), state) =>
+      value == BitVec.ofNat 64 13 && state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfZeroGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 0)))
+      totalIfThenBranch totalIfElseBranch with
+  | (some (.returned (.word value)), state) =>
+      value == BitVec.ofNat 64 99 && state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfMissingGuard : Bool :=
+  match panSemTotalIfStep (totalState 5) none totalIfThenBranch totalIfElseBranch with
+  | (some .error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionNonzeroGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.const (BitVec.ofNat 64 1))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (none, state) =>
+      state.clock == 5 && isWordOption 9 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionZeroGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.const (BitVec.ofNat 64 0))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (none, state) =>
+      state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionNonwordGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.var .local "missing")
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfExpressionLoadFailureGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfState
+      (.load .one (.const (BitVec.ofNat 64 0)))
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
   | _ => false
 
 /-- The compositional HOL `Seq` step applied to base-case first-command results
@@ -176,10 +251,29 @@ def totalGuard : Bool :=
   skipGuard && tickSuccGuard && tickZeroGuard && totalSkipClauseGuard &&
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
-    seqContinueGuard && seqTickGuard && assignLocalGuard && assignGlobalGuard &&
+    seqContinueGuard && seqTickGuard && totalIfNonzeroGuard && totalIfZeroGuard &&
+    totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
+    totalIfExpressionNonwordGuard && totalIfExpressionLoadFailureGuard &&
+    assignLocalGuard && assignGlobalGuard &&
     assignFreshGuard && assignMissingGuard
 
 #guard totalGuard
+
+example :
+    panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 1)))
+        totalIfThenBranch totalIfElseBranch = totalIfThenBranch (totalState 5) := by
+  apply panSemTotalIfStep_nonzero
+  decide
+
+example :
+    panSemTotalIfStep (totalState 5) (some (.word (BitVec.ofNat 64 0)))
+        totalIfThenBranch totalIfElseBranch = totalIfElseBranch (totalState 5) := by
+  apply panSemTotalIfStep_zero
+
+example :
+    panSemTotalIfStep (totalState 5) none totalIfThenBranch totalIfElseBranch =
+        (some .error, totalState 5) := by
+  rfl
 
 example :
     panSemEvaluateClockLeaf .skip (totalState 5) =

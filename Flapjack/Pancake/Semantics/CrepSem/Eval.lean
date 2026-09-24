@@ -2939,6 +2939,7 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
         | nil =>
           simp only [evalCrepRuntimeExp, evalCrepHolExp]
           rw [ih.1 head (by simp) state, ih.1 second (by simp) state]
+          simp
         | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolExp]
   case cmp operator left right ihl ihr =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]

@@ -475,4 +475,15 @@ example :
 #guard evalCrepRuntimeExp bv64State
     (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
 
+/-- Executed-path canonical route: `crepOpRV64` is the reviewed tagged
+    `crepOpCrep 64`, and agrees with the generic evaluator operation. -/
+example : crepOpRV64 .mul [(7 : RiscV.Word 64), 3] = some 21 := by rfl
+
+example : crepOpRV64 .mul [(7 : RiscV.Word 64), 3] =
+    crepOpValue .mul [(7 : RiscV.Word 64), 3] :=
+  crepOpRV64_eq_crepOpValue .mul [(7 : RiscV.Word 64), 3]
+
+#guard (crepOpRV64 .mul [(7 : RiscV.Word 64), 3] == some 21) &&
+  ((crepOpRV64 .mul ([] : List (RiscV.Word 64))).isNone)
+
 end Flapjack.Test.CrepGlobalShapeParity

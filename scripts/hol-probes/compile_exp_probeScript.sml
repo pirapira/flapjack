@@ -37,6 +37,9 @@ val _ = print_eval "loads_ops"
       (Op Add [Const (1w : 8 word); Const 2w]),
     pan_to_crep$compile_exp ^ctxt
       (Panop Mul [Const (5w : 8 word); Const 6w]))``;
+val _ = print_eval "op_nary"
+  ``pan_to_crep$compile_exp ^ctxt
+      (Op Add [Const (1w : 8 word); Const 2w; Const 3w])``;
 val _ = print_eval "cmp_shift"
   ``(pan_to_crep$compile_exp ^ctxt
       (Cmp Equal (Const (1w : 8 word)) (Const 0w)),

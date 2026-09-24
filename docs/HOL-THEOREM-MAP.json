@@ -6606,5 +6606,53 @@
     "lean_name": "compileExpListHOL_heads_eq_compileArgs_of_singleton",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only list representation bridge: if every expression compiles to one word expression, cexpHeads over mapped compileExpHOL results equals compileArgsHOL. This is reusable induction infrastructure, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_map_fst_eq_map_compileExp",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only compile_exp_list projection lemma used by the Op induction case; it relates the generated recursive list compiler to mapping the single-expression compiler."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panValues_eq_words_map_of_wordProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only list inversion helper: successful word projection of source PanValues implies the list consists exactly of the corresponding PanValue.word entries."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_op_inv",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source Op inversion helper over PanSemState: successful evaluation yields source word operands and the matching HOL word_op result, but is not a standalone HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExps_member_word",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only source list-evaluation helper deriving a successful word value for each member of an argument list whose evaluation is word-valued."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panValueFlatten_wordList",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only flattening identity for lists of source words; reusable list proof infrastructure, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_op_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-arity Op induction case for compile_exp_val_rel. It consumes full operand IHs and state-owned source evaluation to prove target RISC-V Op evaluation and shape conclusions; the assumptions and conclusion are not the standalone HOL theorem statement."
   }
 ]

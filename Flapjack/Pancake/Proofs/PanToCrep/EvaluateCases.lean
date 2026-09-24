@@ -3408,6 +3408,102 @@ theorem compileExpHOL_const_ofHOLIH
   simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
     panValueShape, isWfShape] at hsource' ⊢
 
+/-! Full localized-expression IH cases for the two address leaves and the
+    fixed RV64 word-size leaf. These support general Call-argument induction;
+    they are Flapjack-only constructor proofs, not standalone HOL theorem
+    ports. -/
+theorem compileExpHOL_baseAddr_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : expGlobalVars (.baseAddr : Exp (RiscV.Word 64)) = [])
+    (hsource : evalPanSemStateExp source .baseAddr =
+      some (.word source.baseAddress)) :
+    evalCrepRuntimeExps target
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .baseAddr).1 = some [source.baseAddress] ∧
+      (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+        context.vmax context.eids) .baseAddr).1.length =
+          Shape.shapeSize (compileExpHOL (panToCrepMkCtxtHOL context.vars
+            context.funcs context.vmax context.eids) .baseAddr).2 ∧
+      panValueShape [] (.word source.baseAddress) =
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .baseAddr).2 ∧
+      isWfShape [] (compileExpHOL (panToCrepMkCtxtHOL context.vars
+        context.funcs context.vmax context.eids) .baseAddr).2 = true := by
+  rcases hstate with ⟨_, _, _, _, _, _, _, _, hbase, _⟩
+  have _ := hcode
+  have _ := hlocals
+  have _ := hlocalized
+  have _ := hsource
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+    panValueShape, isWfShape, hbase]
+
+theorem compileExpHOL_topAddr_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : expGlobalVars (.topAddr : Exp (RiscV.Word 64)) = [])
+    (hsource : evalPanSemStateExp source .topAddr =
+      some (.word source.topAddress)) :
+    evalCrepRuntimeExps target
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .topAddr).1 = some [source.topAddress] ∧
+      (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+        context.vmax context.eids) .topAddr).1.length =
+          Shape.shapeSize (compileExpHOL (panToCrepMkCtxtHOL context.vars
+            context.funcs context.vmax context.eids) .topAddr).2 ∧
+      panValueShape [] (.word source.topAddress) =
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .topAddr).2 ∧
+      isWfShape [] (compileExpHOL (panToCrepMkCtxtHOL context.vars
+        context.funcs context.vmax context.eids) .topAddr).2 = true := by
+  rcases hstate with ⟨_, _, _, _, _, _, _, _, _, htop⟩
+  have _ := hcode
+  have _ := hlocals
+  have _ := hlocalized
+  have _ := hsource
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+    panValueShape, isWfShape, htop]
+
+theorem compileExpHOL_bytesInWord_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : expGlobalVars (.bytesInWord : Exp (RiscV.Word 64)) = [])
+    (hsource : evalPanSemStateExp source .bytesInWord =
+      some (.word panSemBitVec64BytesInWord)) :
+    evalCrepRuntimeExps target
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .bytesInWord).1 =
+            some [panSemBitVec64BytesInWord] ∧
+      (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+        context.vmax context.eids) .bytesInWord).1.length =
+          Shape.shapeSize (compileExpHOL (panToCrepMkCtxtHOL context.vars
+            context.funcs context.vmax context.eids) .bytesInWord).2 ∧
+      panValueShape [] (.word panSemBitVec64BytesInWord) =
+        (compileExpHOL (panToCrepMkCtxtHOL context.vars context.funcs
+          context.vmax context.eids) .bytesInWord).2 ∧
+      isWfShape [] (compileExpHOL (panToCrepMkCtxtHOL context.vars
+        context.funcs context.vmax context.eids) .bytesInWord).2 = true := by
+  have _ := hstate
+  have _ := hcode
+  have _ := hlocals
+  have _ := hlocalized
+  have _ := hsource
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+    panSemBitVec64BytesInWord, CrepBytesInWord.bytesInWord,
+    panValueShape, isWfShape]
+
 inductive compileArgConstOrLocal : Exp (RiscV.Word 64) → Prop where
   | const (value : RiscV.Word 64) : compileArgConstOrLocal (.const value)
   | localVar (name : String) : compileArgConstOrLocal (.var .local name)

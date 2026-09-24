@@ -25,6 +25,9 @@ val _ = print_eval "leaves"
     pan_to_crep$compile_exp ^ctxt (Var Global «g»),
     pan_to_crep$compile_exp ^ctxt BaseAddr,
     pan_to_crep$compile_exp ^ctxt TopAddr)``;
+val _ = print_eval "bytes_in_word"
+  ``(pan_to_crep$compile_exp ^ctxt panLang$BytesInWord :
+      64 word crepLang$exp list # panLang$shape)``;
 val _ = print_eval "struct_field"
   ``(pan_to_crep$compile_exp ^ctxt
       (RStruct [Const (1w : 8 word); Const 2w]),

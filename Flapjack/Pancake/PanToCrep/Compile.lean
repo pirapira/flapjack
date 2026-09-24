@@ -507,6 +507,30 @@ def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × 
 def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
   panToCrepMakeFuncs
 
+/-! Exact HOL `make_funcs_def` (`cakeml/pancake/pan_to_crepScript.sml:366`) over
+    the extracted function table: pair every name with its parameter list and
+    return shape, then build the finite map with `alist_to_fmap` (first
+    duplicate name wins; rendered as `FUPDATE_LIST FEMPTY` over the reversed
+    association list, since `FUPDATE_LIST` is a left fold). -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "make_funcs_def"]
+def makeFuncsHOL
+    (functions : List (FunName × List (VarName × Shape) × Prog α × Shape)) :
+    FiniteMap FunName (List (VarName × Shape) × Shape) :=
+  FUPDATE_LIST FEMPTY
+    ((functions.map fun entry => (entry.1, (entry.2.1, entry.2.2.2))).reverse)
+
+/-- `panToCrepMakeFuncs` maps exactly the extracted function entries through the
+    HOL `make_funcs` projection. -/
+theorem panToCrepMakeFuncs_eq_map (declarations : List (Decl α)) :
+    panToCrepMakeFuncs declarations =
+      (functionEntries declarations).map
+        (fun entry => (entry.1, (entry.2.1, entry.2.2.2))) := by
+  induction declarations with
+  | nil => simp [panToCrepMakeFuncs, functionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [panToCrepMakeFuncs, functionEntries, ih]
+
 /-! Source-named port of CakeML Pancake's `crep_vars_def`
     (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
     consecutive slot for every flattened parameter word. -/
@@ -746,6 +770,12 @@ def functionInfosHOL (declarations : List (Decl α)) :
      function name wins. `FUPDATE_LIST` is a left fold and needs reversal. -/
   FUPDATE_LIST FEMPTY (panToCrepMakeFuncs declarations).reverse
 
+/-- `functionInfosHOL` (the declaration-list adapter) builds exactly the exact
+    HOL `make_funcs` finite map of the extracted function entries. -/
+theorem functionInfosHOL_eq_makeFuncsHOL (declarations : List (Decl α)) :
+    functionInfosHOL declarations = makeFuncsHOL (functionEntries declarations) := by
+  rw [functionInfosHOL, makeFuncsHOL, panToCrepMakeFuncs_eq_map]
+
 def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
     (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
     CrepProg (BitVec width) :=
@@ -754,6 +784,29 @@ def panToCrepCompFuncRiscV (context : PanToCrepHOLContext (BitVec width))
   compileProgRiscV
     (panToCrepMkCtxtHOL (panToCrepMakeVmapHOL params)
       context.funcs vmax context.eids) body
+
+/-- Exact HOL `comp_func_def` (`cakeml/pancake/pan_to_crepScript.sml:337`): build
+    the parameter variable map, take the maximum source slot from the combined
+    parameter shapes, and compile the body in the resulting context. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_func_def"]
+def compFuncHOL
+    (compilerFunctions : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (exceptionCodes : FiniteMap ExceptionId (BitVec width))
+    (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
+    CrepProg (BitVec width) :=
+  let vmap := panToCrepMakeVmapHOL params
+  let shapes := params.map Prod.snd
+  let vmax := Shape.shapeSize (.comb shapes) - 1
+  compileProgRiscV
+    (panToCrepMkCtxtHOL vmap compilerFunctions vmax exceptionCodes) body
+
+/-- `panToCrepCompFuncRiscV` (the record-context adapter) is `compFuncHOL` at
+    the context's function and exception maps. -/
+theorem panToCrepCompFuncRiscV_eq_compFuncHOL
+    (context : PanToCrepHOLContext (BitVec width))
+    (params : List (VarName × Shape)) (body : Prog (BitVec width)) :
+    panToCrepCompFuncRiscV context params body =
+      compFuncHOL context.funcs context.eids params body := rfl
 
 /-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
 order and turn their zero-based indices into words. HOL `alist_to_fmap` uses

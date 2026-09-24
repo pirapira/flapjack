@@ -24,6 +24,15 @@ def assignExact : Bool :=
 
 #guard assignExact
 
+def aliasColour (name : Nat) : Nat := if name = 0 then 0 else 1
+
+def applyColourAliasedAssignExact : Bool :=
+  match wordApplyColour aliasColour (.assign 2 (.var 1) : WordProg Nat) with
+  | .assign name (.var source) => name == 1 && source == 1
+  | _ => false
+
+#guard applyColourAliasedAssignExact
+
 def returnRaiseExact : Bool :=
   match wordApplyTotalColour oracle
       (.seq (.return 1 [3, 5]) (.raise 7) : WordProg Nat) with
@@ -61,7 +70,8 @@ def loopLiveExact : Bool :=
 #guard loopLiveExact
 
 def parityGuard : Bool :=
-  totalColourExact && assignExact && returnRaiseExact &&
+  totalColourExact && assignExact && applyColourAliasedAssignExact &&
+    returnRaiseExact &&
     callHandlerExact && loopLiveExact
 
 #guard parityGuard

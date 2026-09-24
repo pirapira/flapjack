@@ -7726,5 +7726,29 @@
     "lean_name": "fmEmptyZipFlookupEl",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against fm_empty_zip_flookup_el at pan_commonPropsScript.sml:479; HOL EL n rendered as bounded getElem as in elLoadGlobals, nested ZIP as (ys.zip zs); direct HOL-EVAL row nested_zip_lookup=T reproduced by Lean guard nestedZipLookupEl in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_name": "el_reduc_tl",
+    "lean_name": "el_reduc_tl",
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL EL rendered as bounded getElem, ALL_DISTINCT as List.Nodup; wraps the reviewed PanLang getElem_tail_eq/getElem_map_fst/getElem_fst_inj counterparts)"
+  },
+  {
+    "hol_name": "el_pair_map_fst_el",
+    "lean_name": "el_pair_map_fst_el",
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL EL rendered as bounded getElem, ALL_DISTINCT as List.Nodup; wraps the reviewed PanLang getElem_tail_eq/getElem_map_fst/getElem_fst_inj counterparts)"
+  },
+  {
+    "hol_name": "all_distinct_el_fst_same_eq",
+    "lean_name": "all_distinct_el_fst_same_eq",
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL EL rendered as bounded getElem, ALL_DISTINCT as List.Nodup; wraps the reviewed PanLang getElem_tail_eq/getElem_map_fst/getElem_fst_inj counterparts)"
   }
 ]

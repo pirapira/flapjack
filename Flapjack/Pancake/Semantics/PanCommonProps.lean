@@ -380,4 +380,37 @@ theorem fmEmptyZipFlookupEl [BEq α] [LawfulBEq α] (xs : List α) (ys zs : List
     (by rw [List.length_zip]; omega) hn]
   simp only [List.getElem_zip]
 
+/-- Exact port of HOL `el_reduc_tl`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:360`): an index of the
+    tail is an index of the original list, shifted by one. HOL `EL` is rendered
+    as a bounded `getElem`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "el_reduc_tl"]
+theorem el_reduc_tl {α : Type} (l : List α) (n : Nat) (hn : 0 < n)
+    (hbound : n < l.length) :
+    l[n]'hbound = (l.tail)[n - 1]'(by rw [List.length_tail]; omega) :=
+  getElem_tail_eq l n hn hbound
+
+/-- Exact port of HOL `el_pair_map_fst_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:722`): the first
+    component of an indexed triple is the indexed first projection. HOL `EL` is
+    rendered as a bounded `getElem`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "el_pair_map_fst_el"]
+theorem el_pair_map_fst_el {α β γ : Type} (xs : List (α × β × γ)) (n : Nat)
+    (hbound : n < xs.length) {x : α} {y : β} {z : γ}
+    (heq : xs[n]'hbound = (x, y, z)) :
+    x = (xs.map Prod.fst)[n]'(by rwa [List.length_map]) :=
+  getElem_map_fst xs n hbound heq
+
+/-- Exact port of HOL `all_distinct_el_fst_same_eq`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:732`): in a list whose
+    first projections are distinct, equal first components force equal indices.
+    HOL `ALL_DISTINCT` is rendered as `List.Nodup` and `EL` as a bounded
+    `getElem`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_el_fst_same_eq"]
+theorem all_distinct_el_fst_same_eq {α β : Type} (xs : List (α × β)) (n n' : Nat)
+    (hnodup : (xs.map Prod.fst).Nodup) (hn : n < xs.length) (hn' : n' < xs.length)
+    {x : α} {y y' : β} (heq : xs[n]'hn = (x, y)) (heq' : xs[n']'hn' = (x, y')) :
+    n = n' :=
+  getElem_fst_inj xs n n' hnodup hn hn' heq heq'
+
 end Flapjack

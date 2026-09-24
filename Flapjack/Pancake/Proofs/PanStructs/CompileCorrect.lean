@@ -2553,9 +2553,10 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   exact lookupInfo_eq_panPropsALookupEq key entries
 
 /-- Untagged derived Local/Global Var-constructor specialization of HOL
-    `compile_exp_correct`; this note applies to this theorem only. HOL has only
-    the universally quantified theorem, not a separately named Var-case
-    declaration, and this Lean statement is not an exact statement port. It
+    `compile_exp_correct`; this note documents only the following declaration.
+    HOL has only the universally quantified theorem, not a separately named
+    Var-case declaration, and this Lean statement is not an exact statement
+    port. It
     keeps successful source evaluation but re-encodes the HOL premises: the
     direct `ctxt.structs = MAP ... s.structs` equality is replaced by equality
     of shape views (which observes names and fields, not the full Lean struct
@@ -2569,8 +2570,7 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     not inspect, and its evaluator takes an explicit `bytesInWord` parameter.
     Its three conclusions are the Var instance of HOL's old-shape,
     `v_flds_ok`, and converted-evaluation conclusions. Other expression
-    constructors remain open. This note documents only the Var theorem below;
-    the preceding private lookup bridge has its own separate comment. -/
+    constructors remain open. -/
 theorem panStructCompileExpCorrectVarCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

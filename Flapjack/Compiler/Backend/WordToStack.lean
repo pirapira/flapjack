@@ -16,7 +16,7 @@ and `stack_free` used by the return/argument path of `comp`, plus the
 perf/handler-slot constants `perf_rsp`, `perf_rbp` and `handler_slots` used by
 the exception-handler sizing path (`raise_stub`/`PushHandler`/`copy_ret`), and
 the word-independent program combinators `SeqStackFree`, `wStackLoad` and
-`wStackStore` over the faithful HOL stackLang `prog` carrier
+`wStackStore` over the currently broader Lean stackLang `Prog` carrier
 (`Flapjack.Compiler.Backend.StackLang`), which build the stackLang program
 emitted by the pass; eventually these feed the Word-to-Stack `compile_semantics`
 theorem (`word_to_stackProofScript.sml:10709`).
@@ -312,7 +312,7 @@ def handlerSlots (perf : Bool) : Nat := if perf then 5 else 3
 
 open Flapjack.Compiler.Backend.StackLang (Prog)
 
-/-- Exact port of HOL `SeqStackFree_def`
+/-- Untagged structural analogue of HOL `SeqStackFree_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:260`):
 
 ```
@@ -323,14 +323,14 @@ SeqStackFree n p = if n = 0 then p else Seq (StackFree n) p
     polymorphic in the word type `'a` and touches only the word-independent
     `Skip`/`Seq`/`StackFree` constructors (whose fields are `num`); the Lean
     definition is correspondingly polymorphic in the carrier's type parameters
-    and uses none of the word-indexed constructors. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "SeqStackFree_def"]
+    and uses none of the word-indexed constructors. This is not tagged because
+    Lean's seven-parameter `Prog` is broader than HOL's one-word-type `prog`. -/
 def seqStackFree {Inst Cmp RegImm Binop Memop Addr MlString : Type}
     (n : Nat) (p : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
     Prog Inst Cmp RegImm Binop Memop Addr MlString :=
   if n = 0 then p else .seq (.stackFree n) p
 
-/-- Exact port of HOL `wStackLoad_def`
+/-- Untagged structural analogue of HOL `wStackLoad_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:52`):
 
 ```
@@ -341,15 +341,15 @@ def seqStackFree {Inst Cmp RegImm Binop Memop Addr MlString : Type}
     Loads the register/frame-slot pairs of `ps` in order, wrapping the body `x`
     in nested `Seq`/`StackLoad`.  HOL is polymorphic in the word type `'a` and
     touches only word-independent constructors whose fields are `num`; the Lean
-    definition is correspondingly polymorphic in the carrier's type parameters. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackLoad_def"]
+    definition is correspondingly polymorphic in the carrier's type parameters;
+    the exact tag awaits a one-word-type `prog` carrier. -/
 def wStackLoad {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
       Prog Inst Cmp RegImm Binop Memop Addr MlString
   | [], x => x
   | (r, i) :: ps, x => .seq (.stackLoad r i) (wStackLoad ps x)
 
-/-- Exact port of HOL `wStackStore_def`
+/-- Untagged structural analogue of HOL `wStackStore_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:57`):
 
 ```
@@ -360,8 +360,8 @@ def wStackLoad {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     Stores the register/frame-slot pairs of `ps` onto the stack, building the
     `Seq` chain tail-first.  HOL is polymorphic in the word type `'a` and
     touches only word-independent constructors whose fields are `num`; the Lean
-    definition is correspondingly polymorphic in the carrier's type parameters. -/
-@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackStore_def"]
+    definition is correspondingly polymorphic in the carrier's type parameters;
+    the exact tag awaits a one-word-type `prog` carrier. -/
 def wStackStore {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
       Prog Inst Cmp RegImm Binop Memop Addr MlString

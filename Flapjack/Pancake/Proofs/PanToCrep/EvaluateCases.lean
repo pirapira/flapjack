@@ -3499,6 +3499,56 @@ private theorem evalPanSemStateExp_loadByte_const_riscvTarget
           (.loadByte (.const address))).map PanValue.word := by
       simp [evalCrepRuntimeExp, crepRuntimeLoadByte_wordTarget_eq_riscv]
 
+private theorem evalPanSemStateExp_load32_const_riscvTarget
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64)
+    (hstate : stateRel source target) :
+    evalPanSemStateExp source (.load32 (.const address)) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget target)
+        (.load32 (.const address))).map PanValue.word := by
+  rcases hstate with ⟨hmemory, hdomain, _, _, _, _, hbe, _, _, _⟩
+  have hmemoryView : panValueWordMemory source.memory =
+      crepRuntimeMemoryView target.memory := by
+    funext query
+    simp [panValueWordMemory, crepRuntimeMemoryView, hmemory]
+  have hread :
+      panModelRead32 panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be =
+        panModelRead32 (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian := by
+    rw [← hdomain, ← hmemoryView, ← hbe]
+    cases source.be with
+    | false =>
+        simp [panModelRead32, panSemBitVec64WordModel,
+          panSemBitVec64BytesInWord, RiscV.panRiscVMemoryModelForEndian,
+          RiscV.panRiscVMemoryModel, RiscV.panRiscVGetByteEndian,
+          RiscV.panRiscVGetByte, RiscV.panRiscVByteIndex]
+    | true =>
+        have hindex : ∀ index : Nat, 8 - index - 1 = 7 - index := by
+          intro index
+          omega
+        simp [panModelRead32, panSemBitVec64WordModel,
+        panSemBitVec64BytesInWord, RiscV.panRiscVMemoryModelForEndian,
+        RiscV.panRiscVMemoryModel, RiscV.panRiscVGetByteEndian,
+        RiscV.panRiscVGetByte, RiscV.panRiscVByteIndex, hindex]
+  calc
+    evalPanSemStateExp source (.load32 (.const address)) =
+        (panModelRead32 panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be).map
+            PanValue.word := by
+      simp [evalPanSemStateExp, evalPanValueExp,
+        panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+        panSemBitVec64BytesInWord]
+    _ = (panModelRead32 (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian).map PanValue.word := by
+      rw [hread]
+    _ = (evalCrepRuntimeExp (riscvCrepWordTarget target)
+          (.load32 (.const address))).map PanValue.word := by
+      simp [evalCrepRuntimeExp, crepRuntimeLoad32_wordTarget_eq_riscv]
+
 inductive compileArgConstLocalStructAddressOrRFieldInnerIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -3536,6 +3586,10 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.loadByte (.const address))
+  | load32ConstCanonicalTarget (address : RiscV.Word 64)
+      (hcanonical : target = riscvCrepWordTarget target) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.load32 (.const address))
   | panOpMul (left right : Exp (RiscV.Word 64))
       (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
       (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
@@ -3667,6 +3721,23 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       | word word =>
           have htarget : evalCrepRuntimeExp target
               (.loadByte (.const address)) = some word := by
+            simpa using heval
+          simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
+      | rStruct fields => simp at heval
+      | nStruct name fields => simp at heval
+  | load32ConstCanonicalTarget address hcanonical =>
+      intro value heval
+      have hsourceTarget := evalPanSemStateExp_load32_const_riscvTarget
+        source target address hstate
+      have hsourceTarget' : evalPanSemStateExp source
+          (.load32 (.const address)) =
+        (evalCrepRuntimeExp target (.load32 (.const address))).map PanValue.word := by
+        simpa [hcanonical.symm] using hsourceTarget
+      rw [hsourceTarget'] at heval
+      cases value with
+      | word word =>
+          have htarget : evalCrepRuntimeExp target
+              (.load32 (.const address)) = some word := by
             simpa using heval
           simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
       | rStruct fields => simp at heval

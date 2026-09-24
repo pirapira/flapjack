@@ -8566,5 +8566,13 @@
     "lean_name": "crepToLoopMakeFuncsHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against make_funcs_def at crep_to_loopScript.sml:247; HOL fnames=MAP FST prog, fnums=GENLIST (n. n + first_name) (LENGTH prog), lens=MAP (LENGTH o FST o SND) prog, fs=MAP2 pairs, alist_to_fmap rendered as FUPDATE_LIST FEMPTY entries.reverse with first-inserted-binding-wins; carriers alpha/beta/gamma kept polymorphic as in HOL; first_name is the tagged firstLoopName; direct HOL-EVAL rows mkf_f/mkf_g/mkf_absent/mkf_dup_first=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "prog_if_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "lean_name": "progIfW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared clause-by-clause against prog_if_def at crep_to_loopScript.sml:34; width-indexed over List (LoopProg (BitVec width))/LoopExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex and Const 1w/Const 0w are 'a word; generic progIf stays untagged. Direct HOL-EVAL row prog_if_basic=T reproduced by the width-indexed example in Flapjack/Test/CrepProgIfParity.lean. Production-path note in the docstring: loopCompileExp's .cmp case inlines the identical statement list and is generic over the word element type, pending the deferred width-indexing migration.)"
   }
 ]

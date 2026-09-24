@@ -30,6 +30,20 @@ def parityGuard : Bool :=
        [1, 2, 3, 4]] => true
   | _ => false
 
+/-- Width-indexed exact port `progIfW` (`@[hol ... "prog_if_def"]`) reproduces
+    the same HOL oracle row `prog_if_basic`
+    (`scripts/hol-probes/prog_if_probe.out`) at `BitVec 8`. -/
+example :
+    progIfW .notEqual [.skip] [.tick]
+        (.const (2 : BitVec 8)) (.const (3 : BitVec 8)) 3 4 [1, 2] =
+      ([.skip, .tick,
+        .assign 3 (.const (2 : BitVec 8)),
+        .assign 4 (.const (3 : BitVec 8)),
+        .ite .notEqual 3 (.reg 4)
+          (.assign 3 (.const (1 : BitVec 8)))
+          (.assign 3 (.const (0 : BitVec 8)))
+          [1, 2, 3, 4]] : List (LoopProg (BitVec 8))) := rfl
+
 #eval leanProgIf
 #guard parityGuard
 

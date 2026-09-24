@@ -1557,4 +1557,141 @@ theorem evalPanValueExp_rField_eq_evalHOL {width : Nat} [NeZero width] [LawfulBE
       | rStruct values => simp [HolValue.toPanValue_rStruct, List.getElem?_map]
       | nStruct name fields => simp [HolValue.toPanValue_nStruct]
 
+/-! ### `nStruct`/`nField` clause bridges (flapjack-pxn.18.3.6.9.2.8) -/
+
+/-- `HolValue.toPanValue` undoes `PanValue.toHolValue` on field lists. -/
+theorem map_toPanValue_toHolValue {width : Nat} (fieldValues : List (FieldName × HolValue width)) :
+    (fieldValues.map (fun pair => (pair.1, HolValue.toPanValue pair.2))).map
+        (fun pair => (pair.1, pair.2.toHolValue)) = fieldValues := by
+  rw [List.map_map]
+  have hcong :
+      List.map ((fun pair => (pair.fst, pair.snd.toHolValue)) ∘
+        fun pair => (pair.fst, pair.snd.toPanValue)) fieldValues = List.map id fieldValues := by
+    apply List.map_congr_left
+    intro pair _
+    obtain ⟨name, value⟩ := pair
+    simp [Function.comp_apply, HolValue.toPanValue_toHolValue]
+  rw [hcong]
+  simp
+
+/-- `lookupPanValueField` over the `toPanValue` image is `lookupInfo` mapped by
+`HolValue.toPanValue`. -/
+theorem lookupPanValueField_map_toPanValue {width : Nat} [LawfulBEq String] (name : FieldName)
+    (fields : List (FieldName × HolValue width)) :
+    lookupPanValueField name (fields.map (fun pair => (pair.1, HolValue.toPanValue pair.2))) =
+      (lookupInfo name fields).map HolValue.toPanValue := by
+  induction fields with
+  | nil => simp [lookupPanValueField, lookupInfo]
+  | cons head rest ih =>
+      obtain ⟨n, v⟩ := head
+      by_cases h : n == name <;> simp [lookupPanValueField, lookupInfo, h, ih]
+
+/-- Evaluating a field list preserves the field names. -/
+theorem evalFieldsHOL_fieldNames {width : Nat} [NeZero width] [LawfulBEq String]
+    {state : PanSemHolState width σ} [DecidablePred state.memaddrs]
+    {fields : List (FieldName × Exp (RiscV.Word width))}
+    {fieldValues : List (FieldName × HolValue width)}
+    (h : evalFieldsHOL state fields = some fieldValues) :
+    fieldValues.map Prod.fst = fields.map Prod.fst := by
+  induction fields generalizing fieldValues with
+  | nil => simp [evalFieldsHOL] at h; subst h; simp
+  | cons head rest ih =>
+      obtain ⟨name, expression⟩ := head
+      cases hv : evalHOL state expression with
+      | none => rw [evalFieldsHOL, hv] at h; simp at h
+      | some value =>
+          cases hr : evalFieldsHOL state rest with
+          | none => rw [evalFieldsHOL, hv, hr] at h; simp at h
+          | some restValues =>
+              rw [evalFieldsHOL, hv, hr] at h
+              simp only [Option.some.injEq] at h
+              subst h
+              simpa using ih hr
+
+/-- `.nStruct` clause bridge: under production agreement on the field expressions and
+the state/struct-context relation `state.structs = structs.toHOL`, production
+`.nStruct` agrees with tagged `evalHOL`. -/
+theorem evalPanValueExp_nStruct_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (name : StructName) (fields : List (FieldName × Exp (RiscV.Word width)))
+    (hstructs : state.structs = structs.toHOL)
+    (hfields : ∀ pair ∈ fields,
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+          pair.2 (memoryAccess := access)
+        = (evalHOL state pair.2).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.nStruct name fields) (memoryAccess := access)
+      = (evalHOL state (.nStruct name fields)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [hstructs, lookupInfo_toHOL]
+  cases hlook : lookupInfo name structs with
+  | none => simp
+  | some info =>
+      simp only [Option.map_some]
+      rw [evalPanValueFields_eq_evalFieldsHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord access fields hfields]
+      cases hfv : evalFieldsHOL state fields with
+      | none => simp
+      | some fieldValues =>
+          simp
+          rw [panValueFieldsExactHOL_eq_evalHOL structs info
+            (fieldValues.map (fun pair => (pair.1, HolValue.toPanValue pair.2)))]
+          rw [map_toPanValue_toHolValue fieldValues]
+          have hname := evalFieldsHOL_fieldNames hfv
+          have hfst : List.map Prod.fst
+              (List.map (fun pair => (pair.1, HolValue.toPanValue pair.2)) fieldValues) =
+              List.map Prod.fst fields := by
+            rw [List.map_map]
+            have hcomp : (Prod.fst ∘ fun pair : FieldName × HolValue width =>
+                (pair.1, HolValue.toPanValue pair.2)) =
+                (Prod.fst : FieldName × HolValue width → FieldName) := by
+              funext pair
+              rfl
+            rw [hcomp]
+            exact hname
+          rw [hfst]
+          by_cases hfn : info.fields.map Prod.fst = fields.map Prod.fst
+          · simp only [hfn, decide_true, Bool.true_and]
+            by_cases hall : List.all
+                ((info.fields.map Prod.snd).zip (fieldValues.map Prod.snd))
+                (fun pair => panShapeMatches pair.1 (holShapeOf pair.2)) = true
+            · simp [hall, HolValue.toPanValue_nStruct]
+            · simp [hall]
+          · simp [hfn]
+
+/-- `.nField` clause bridge: under production agreement on the structure expression and
+the state/struct-context relation, production `.nField` agrees with tagged `evalHOL`. -/
+theorem evalPanValueExp_nField_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (name : FieldName) (value : Exp (RiscV.Word width))
+    (hstructs : state.structs = structs.toHOL)
+    (hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        value (memoryAccess := access)
+      = (evalHOL state value).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.nField name value) (memoryAccess := access)
+      = (evalHOL state (.nField name value)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [hvalue, hstructs]
+  cases hv : evalHOL state value with
+  | none => simp
+  | some holValue =>
+      cases holValue with
+      | val word => cases word with | word bits => simp [HolValue.toPanValue_val]
+      | rStruct values => simp [HolValue.toPanValue_rStruct]
+      | nStruct structName values =>
+          cases hs : lookupInfo structName structs with
+          | none => simp [hs, lookupInfo_toHOL_isSome, HolValue.toPanValue_nStruct]
+          | some info =>
+              simp [hs, lookupInfo_toHOL_isSome, lookupPanValueField_map_toPanValue name values,
+                HolValue.toPanValue_nStruct]
+
 end Flapjack

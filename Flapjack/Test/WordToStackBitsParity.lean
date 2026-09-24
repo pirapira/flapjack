@@ -68,7 +68,6 @@ def wordListParityGuard : Bool :=
 
 example : wordListW (width := 64) [true, false, true, true] 2 =
     ([5, 3] : List (BitVec 64)) := by decide +kernel
-
 /-! ## `chunk_to_bits` parity
 
 Rows for the width-indexed `chunkToBitsW`, tagged against HOL

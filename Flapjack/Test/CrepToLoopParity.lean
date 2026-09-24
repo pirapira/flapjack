@@ -552,6 +552,31 @@ example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
   · intro vname v hv
     exact absurd hv (fun h => Option.some_ne_none v h.symm)
 
+/-- HOL `locals_rel_insert_gt_vmax` oracle rows (`insert_same`,
+    `insert_other_unchanged`, `gt_vmax_bounded_survives`, `subset_preserved` in
+    `scripts/hol-probes/crep_to_loop_locals_insert_probe.out`): inserting a
+    fresh `num_map` binding above `ctxt.vmax` preserves the tagged relation and
+    is visible at its own key. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun m => if m = 7 then some (LoopValue.word (5 : BitVec 64)) else none) :=
+  crepToLoopLocalsRelHOL_insert_gt_vmax localsRelHOLContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    7 (LoopValue.word (5 : BitVec 64))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by decide)
+
 /-- The `∃n` clause of the tagged exact relation for a present binding: source
     local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
     `wlab` value in the target map. -/

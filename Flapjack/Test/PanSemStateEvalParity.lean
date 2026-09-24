@@ -602,6 +602,40 @@ def evalResultIsNone (result : Option (HolValue 64)) : Bool :=
 #guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("g", .const 7)]))
 #guard evalResultIsNone (evalHOL holEvalState (.nStruct "Pair" [("f", .const 7)]))
 
+/-- Production struct context matching `holEvalStateWithPair`. -/
+abbrev pairStructContext : StructContext :=
+  [("Pair", { fields := [("f", Shape.one)], size := 1 })]
+
+example :
+    evalPanValueExp pairStructContext (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.nStruct "Pair" [("f", .const 7)])
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .const 7)])).map
+          HolValue.toPanValue :=
+  evalPanValueExp_nStruct_eq_evalHOL holEvalStateWithPair pairStructContext (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) "Pair" [("f", .const 7)]
+    (by simp [pairStructContext, StructContext.toHOL])
+    (fun pair hmem => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl
+      exact evalPanValueExp_const_eq_evalHOL holEvalStateWithPair pairStructContext
+        (fun _ => none) (fun _ => none) (fun _ => none) 0 0
+        panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) 7)
+
+example :
+    evalPanValueExp pairStructContext (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.nField "f" (.const 7))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalStateWithPair (.nField "f" (.const 7))).map HolValue.toPanValue :=
+  evalPanValueExp_nField_eq_evalHOL holEvalStateWithPair pairStructContext (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) "f" (.const 7)
+    (by simp [pairStructContext, StructContext.toHOL])
+    (evalPanValueExp_const_eq_evalHOL holEvalStateWithPair pairStructContext (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 7)
+
 /- Bridge: production `panValueShape` agrees with `holShapeOf` on the `HolValue`
    image used by tagged `evalHOL` (bead flapjack-pxn.18.3.6.9.4). -/
 example (value : PanValue (BitVec 64)) :

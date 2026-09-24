@@ -6550,5 +6550,13 @@
     "lean_name": "compileExpHOL_panOpMul_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only binary PanOp Mul constructor case for localized Call arguments. It consumes full operand IHs and source evaluation, proves production Crep operation evaluation, shape-size, source shape, and well-formedness; it is not tagged as a standalone HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "crepOpCrep",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause port of crepSem$crep_op_def: crep_op Mul [w1;w2]=SOME(w1*w2), otherwise NONE, width-polymorphic over the HOL word carrier; direct HOL-EVAL rows mirrored by Lean guards."
   }
 ]

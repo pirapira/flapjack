@@ -454,4 +454,25 @@ example :
   (crepOpCrep 64 .mul [(7 : BitVec 64), 3, 1]).isNone &&
   (crepOpCrep 64 .mul ([] : List (BitVec 64))).isNone
 
+/-- Canonical RISC-V 64 runtime state used for the executed `.crepOp` path. -/
+def bv64State : CrepRuntimeState (RiscV.Word 64) Unit :=
+  ({ locals := fun _ => none, globals := FEMPTY, code := FEMPTY,
+     memory := fun _ => .word 0, memaddrs := fun _ => false,
+     shMemaddrs := fun _ => false, clock := 1, bigEndian := false,
+     ffi := natCrepRuntimeFfiState, baseAddress := 0, topAddress := 0 } :
+    CrepHolState (RiscV.Word 64) Unit).toRuntime
+
+/-- Canonical RV64 executed-path instantiation: evaluating `.crepOp .mul` on a
+    `BitVec 64` runtime state is the tagged `crepOpCrep 64`, via the generic
+    `crepOpValue` helper and `crepOpCrep_eq_crepOpValue`. -/
+example :
+    evalCrepRuntimeExp bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      crepOpCrep 64 .mul [(7 : RiscV.Word 64), 3] := by
+  rw [evalCrepRuntimeExp_crepOp_eq, crepOpCrep_eq_crepOpValue]
+  simp only [evalCrepRuntimeExp]
+
+#guard evalCrepRuntimeExp bv64State
+    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
+
 end Flapjack.Test.CrepGlobalShapeParity

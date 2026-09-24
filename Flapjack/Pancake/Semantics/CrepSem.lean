@@ -231,11 +231,13 @@ def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option �
 /-- Exact HOL-shaped port of `crepSem$crep_op_def` (crepSemScript.sml:85-88):
     `crep_op crepLang$Mul [w1;w2] = SOME (w1 * w2)` and `crep_op _ _ = NONE`.
     HOL's carrier is `'a word`, so the tagged port is width-polymorphic over
-    `BitVec width` rather than an arbitrary `[Mul α]`. The wildcard clause
+    `BitVec width` with the positive-width side condition `[NeZero width]`
+    (HOL's `:'a word` requires a nonempty index type) rather than an arbitrary
+    `[Mul α]`. The wildcard clause
     covers `.mul` at every other arity, matching HOL's total-over-malformed-
     operand-lists `crep_op _ _ = NONE`. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
-def crepOpCrep (width : Nat) : CrepOp → List (BitVec width) → Option (BitVec width)
+def crepOpCrep (width : Nat) [NeZero width] : CrepOp → List (BitVec width) → Option (BitVec width)
   | .mul, [left, right] => some (left * right)
   | _, _ => none
 
@@ -247,7 +249,7 @@ def crepOpValue [Mul α] : CrepOp → List α → Option α
   | _, _ => none
 
 /-- The width-polymorphic tagged port is the generic helper at `BitVec width`. -/
-theorem crepOpCrep_eq_crepOpValue (width : Nat) (operator : CrepOp)
+theorem crepOpCrep_eq_crepOpValue (width : Nat) [NeZero width] (operator : CrepOp)
     (arguments : List (BitVec width)) :
     crepOpCrep width operator arguments = crepOpValue operator arguments := by
   cases operator

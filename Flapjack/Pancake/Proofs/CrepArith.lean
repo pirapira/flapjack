@@ -2659,6 +2659,118 @@ theorem crepSimpExpCorrect1LoadHolFiniteWordSourceCase
   simp [crepArithHolFiniteDimensionMapCode]
   rfl
 
+/-! The recursive word32-load case is proved against the source-shaped
+    finite-word evaluator. Its memory primitive still lacks a proved equation
+    to native HOL `mem_load_32` over the implicit finite_index word model, so
+    this support theorem is deliberately untagged. -/
+theorem crepSimpExpCorrect1Load32HolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (address : CrepExp (ι → Bool))
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.load32 address) ≠ none)
+    (ih : ∀ (source : CrepHolState (ι → Bool) σ)
+      (_value : PanWordLab (ι → Bool)),
+      evalCrepHolFiniteWordSourceExpWordLab dimension source address ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (crepArithHolFiniteDimensionMapCode f source)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          address) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension source address) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.load32 address)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.load32 address) := by
+  have hAddress : evalCrepHolFiniteWordSourceExp dimension state address ≠ none := by
+    intro hNone
+    apply _h
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, hNone]
+  have hAddressWordLab :
+      evalCrepHolFiniteWordSourceExpWordLab dimension state address ≠ none := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hAddress
+  have hInduction := ih state _result hAddressWordLab
+  have hWordInjective : Function.Injective
+      (PanWordLab.word : (ι → Bool) → PanWordLab (ι → Bool)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hAddressEval :
+      evalCrepHolFiniteWordSourceExp dimension
+          (crepArithHolFiniteDimensionMapCode f state)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension
+              (BitVec.ofNat dimension.width n)) address) =
+        evalCrepHolFiniteWordSourceExp dimension state address := by
+    apply Option.map_injective hWordInjective
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hInduction
+  simp only [crepSimpExp.eq_2,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+  rw [hAddressEval]
+  simp [crepArithHolFiniteDimensionMapCode]
+  rfl
+
+/-! The byte-load case follows the same recursive address argument. It remains
+    untagged because its explicit `byteAlign`/`getByte` source model has not
+    been proved equal to native HOL `mem_load_byte` for every finite_index
+    instance. -/
+theorem crepSimpExpCorrect1LoadByteHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (address : CrepExp (ι → Bool))
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.loadByte address) ≠ none)
+    (ih : ∀ (source : CrepHolState (ι → Bool) σ)
+      (_value : PanWordLab (ι → Bool)),
+      evalCrepHolFiniteWordSourceExpWordLab dimension source address ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (crepArithHolFiniteDimensionMapCode f source)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          address) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension source address) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.loadByte address)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.loadByte address) := by
+  have hAddress : evalCrepHolFiniteWordSourceExp dimension state address ≠ none := by
+    intro hNone
+    apply _h
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, hNone]
+  have hAddressWordLab :
+      evalCrepHolFiniteWordSourceExpWordLab dimension state address ≠ none := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hAddress
+  have hInduction := ih state _result hAddressWordLab
+  have hWordInjective : Function.Injective
+      (PanWordLab.word : (ι → Bool) → PanWordLab (ι → Bool)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hAddressEval :
+      evalCrepHolFiniteWordSourceExp dimension
+          (crepArithHolFiniteDimensionMapCode f state)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension
+              (BitVec.ofNat dimension.width n)) address) =
+        evalCrepHolFiniteWordSourceExp dimension state address := by
+    apply Option.map_injective hWordInjective
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hInduction
+  simp only [crepSimpExp.eq_3,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+  rw [hAddressEval]
+  simp [crepArithHolFiniteDimensionMapCode]
+  rfl
+
 /-- Exact LoadGlob constructor case of HOL's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). HOL `eval_def` returns
     `FLOOKUP s.globals gadr`; the Lean source clause performs the same

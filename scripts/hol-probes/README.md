@@ -204,6 +204,11 @@ projection equations live beside `evalCrepRuntimeExp` in
 `Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
 scope slice only: the target-extended runtime state and the remaining
 word-operation and byte-load cases still need an evaluator correspondence.
+`crep_eval_cmp_rv64_probe.out` records direct HOL `crepSem$eval` results for all
+eight `asm$word_cmp_def` constructors, including signed-versus-unsigned order,
+negations, and overlapping/disjoint bit tests. Matching source-runtime
+comparisons are checked in `Flapjack.Test.CrepeSimpExpParity`; the generic
+finite-index-to-BitVec comparison equation is `holFiniteWord_evalPanCmp_toBitVec`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

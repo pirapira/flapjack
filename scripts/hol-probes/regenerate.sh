@@ -779,7 +779,7 @@ run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \
 # The eval Cmp probe observes HOL word_cmp over constant operands for the RV64
 # target (Equal/Lower/Test true and false).
 run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
-  eval_cmp_equal_true eval_cmp_test_disjoint \
+  eval_cmp_equal_true eval_cmp_not_test_overlap \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 # The eval Shift probe observes HOL word_sh over constant operands for the RV64

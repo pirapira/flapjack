@@ -60,6 +60,30 @@ example : storesW (width := 32) (.var 3) [.const 7, .const 9] (0 : BitVec 32) =
 
 #guard widthParityGuard
 
+/-- `storeGlobalsW` oracle shape: store-globals at 5-bit addresses 0 then 1. -/
+def globalsShape : List (CrepProg (BitVec 32)) → Bool
+  | [.storeGlob a0 (.const v0), .storeGlob a1 (.const v1)] =>
+      a0 == (0 : BitVec 5) && a1 == (1 : BitVec 5) &&
+      v0 == (7 : BitVec 32) && v1 == (9 : BitVec 32)
+  | _ => false
+
+/-- `loadGlobalsW` oracle shape: load-globals at 5-bit addresses 0 then 1. -/
+def loadShapeW : List (CrepExp (BitVec 32)) → Bool
+  | [.loadGlob a0, .loadGlob a1] =>
+      a0 == (0 : BitVec 5) && a1 == (1 : BitVec 5)
+  | _ => false
+
+def globalsParityGuard : Bool :=
+  globalsShape (storeGlobalsW (width := 32) (0 : BitVec 5)
+      [CrepExp.const (7 : BitVec 32), CrepExp.const (9 : BitVec 32)]) &&
+    loadShapeW (loadGlobalsW (width := 32) (0 : BitVec 5) 2)
+
+/-- Bridge: the width-indexed `assignRetW` is the generic `assignRet` at the
+    word carrier. -/
+example : assignRetW (width := 32) [1, 2] = assignRet (α := BitVec 32) [1, 2] := rfl
+
+#guard globalsParityGuard
+
 def parityGuard : Bool :=
   isEmpty (stores (.var 3) [] 0 4) &&
   isZeroTwo (stores (.var 3) [.const 7, .const 9] 0 4) &&
@@ -73,14 +97,16 @@ def runChecks : IO Bool := do
     isEmpty (stores (.var 3) [] 0 4),
     isZeroTwo (stores (.var 3) [.const 7, .const 9] 0 4),
     isNonzeroTwo (stores (.var 3) [.const 7, .const 9] 4 4),
-    widthParityGuard]
+    widthParityGuard,
+    globalsParityGuard]
   match results with
-  | [empty, zeroTwo, nonzeroTwo, widthOk] =>
+  | [empty, zeroTwo, nonzeroTwo, widthOk, globalsOk] =>
       if empty then IO.println "PASS crep stores empty" else IO.println "FAIL crep stores empty"
       if zeroTwo then IO.println "PASS crep stores zero offset" else IO.println "FAIL crep stores zero offset"
       if nonzeroTwo then IO.println "PASS crep stores nonzero offset" else IO.println "FAIL crep stores nonzero offset"
       if widthOk then IO.println "PASS crep stores width-indexed fixed stride" else IO.println "FAIL crep stores width-indexed fixed stride"
-      pure (empty && zeroTwo && nonzeroTwo && widthOk)
+      if globalsOk then IO.println "PASS crep store_globals/load_globals width-indexed" else IO.println "FAIL crep store_globals/load_globals width-indexed"
+      pure (empty && zeroTwo && nonzeroTwo && widthOk && globalsOk)
   | _ =>
       IO.println "FAIL crep stores result arity"
       pure false

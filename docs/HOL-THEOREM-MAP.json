@@ -1003,17 +1003,17 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "assignRet",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "assignRetW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assign_ret_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "loadGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against load_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
@@ -1027,9 +1027,9 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "storeGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "storeGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against store_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",

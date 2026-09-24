@@ -4565,7 +4565,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "genlistVmaxDistinctListsCompiledExps",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "flapjack-deepseek-three (independent source comparison vs pan_to_crepProofScript.sml:3094; HOL distinct_lists rendered as exact Boolean distinctListsHol with DecidableEq, same quantifiers and ctxt_max premise; direct HOL probe scripts/hol-probes/pan_common_distinct_lists_probeScript.sml; type lock updated)"
   },
   {
     "hol_path": null,

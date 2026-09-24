@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.PanCommon
 import Flapjack.Pancake.Semantics.PanCommonProps
 
 /-!
@@ -348,18 +349,19 @@ theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`). HOL's
     `GENLIST (λx. SUC x + ctxt.vmax) count` is `List.range count` mapped to
     `i + 1 + context.vmax`; `var_cexp` is represented by `crepExpVars`, and
-    HOL `distinct_lists` is the proposition `ListDisjoint`. The only premise
-    is the original `ctxt_max` bound on the context variables. -/
+    HOL `distinct_lists` is the exact Boolean `distinctListsHol`. The only
+    premise is the original `ctxt_max` bound on the context variables. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
 theorem genlistVmaxDistinctListsCompiledExps
-    [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    [DecidableEq α] [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (count : Nat)
     (argExpressions : List (Exp α))
     (hmax : ctxtMax context.vmax context.vars) :
-    ListDisjoint
+    distinctListsHol
       ((List.range count).map (fun i => i + 1 + context.vmax))
       ((argExpressions.map (compileExpHOL context)).flatMap
-        (fun compiled => compiled.1.flatMap crepExpVars)) := by
+        (fun compiled => compiled.1.flatMap crepExpVars)) = true := by
+  rw [distinctListsHol_eq_true_iff_listDisjoint]
   apply listDisjoint_range_add count context.vmax _
   intro name hname
   simp only [List.mem_flatMap] at hname

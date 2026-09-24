@@ -327,6 +327,11 @@ run_probe stack_to_lab_flatten_probeScript.sml stack_to_lab_flatten_probe.out \
   flat_code_buffer_write flat_default section_skip section_seq section_if \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe lab_props_preconditions_probeScript.sml lab_props_preconditions_probe.out \
+  pre_label pre_labasm pre_asmi_skip pre_cbw_to_asm pre_share_to_asm \
+  pre_empty_sections pre_label_section pre_skip_asm_section \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"

@@ -1,0 +1,5 @@
+eval_op_add_const=SOME (Word 7w)
+eval_op_sub_const=SOME (Word 5w)
+eval_op_and_const=SOME (Word 48w)
+eval_op_add_empty=SOME (Word 0w)
+eval_op_sub_arity=NONE

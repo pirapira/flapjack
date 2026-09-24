@@ -727,6 +727,12 @@ run_probe crep_eval_load_rv64_probeScript.sml crep_eval_load_rv64_probe.out \
   mem_load_valid eval_load_outside_domain \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval Op probe observes HOL word_op folding over constant operands for the
+# RV64 target (Add/Sub/And, plus the empty-Add neutral and the Sub arity failure).
+run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \
+  eval_op_add_const eval_op_sub_arity \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

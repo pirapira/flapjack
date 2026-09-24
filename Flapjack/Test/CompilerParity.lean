@@ -207,11 +207,19 @@ import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
+import Flapjack.Test.PanSemDecErrorExactParity
+import Flapjack.Test.PanSemPrimitiveErrorExactParity
+import Flapjack.Test.PanSemAssignErrorExactParity
+import Flapjack.Test.PanSemStoreErrorExactParity
+import Flapjack.Test.PanSemStore32ErrorExactParity
+import Flapjack.Test.PanSemIteErrorExactParity
+import Flapjack.Test.PanSemFuelDecompositionParity
 import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.WordConvsLabelsRelParity
 import Flapjack.Test.WordLangExtractLabelsParity
 import Flapjack.Test.WordLangInstPredsParity
 import Flapjack.Test.WordLangFlatExpParity
+import Flapjack.Test.AsmConfigChecksParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
@@ -800,11 +808,19 @@ def main : IO Unit := do
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
+Flapjack.Test.PanSemDecErrorExactParity.runChecks,
+Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,
+Flapjack.Test.PanSemAssignErrorExactParity.runChecks,
+Flapjack.Test.PanSemStoreErrorExactParity.runChecks,
+Flapjack.Test.PanSemStore32ErrorExactParity.runChecks,
+Flapjack.Test.PanSemIteErrorExactParity.runChecks,
+Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.WordConvsLabelsRelParity.runChecks,
     Flapjack.Test.WordLangExtractLabelsParity.runChecks,
     Flapjack.Test.WordLangInstPredsParity.runChecks,
     Flapjack.Test.WordLangFlatExpParity.runChecks,
+    Flapjack.Test.AsmConfigChecksParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,

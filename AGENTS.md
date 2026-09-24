@@ -129,8 +129,12 @@ Lean declarations' definitions, quantified variables, hypotheses, side
 conditions, and conclusions. A different evaluator, an extra successful-pass
 assumption, a weaker result, or a key comparison that does not implement HOL
 equality is a mismatch even if a proof builds and the reference checker accepts
-the name. Fix such a mismatch when tractable. Otherwise, remove the `@[hol]`
-tag, explain the precise mismatch and missing HOL result in the declaration's
+the name. Also compare the imported datatype carriers: constructor arity, field
+types, and fixed word widths must match before a definition or theorem using
+them is tagged as an exact HOL port. A generic parameter in place of a fixed
+HOL width is a mismatch, even when the function ignores that field. Fix such a
+mismatch when tractable. Otherwise, remove the `@[hol]` tag, explain the precise
+mismatch and missing HOL result in the declaration's
 docstring, and file a bead for the faithful port. Preserve useful Flapjack-only
 infrastructure; delete a declaration only when it is unsalvageable or itself
 implements behavior that must be replaced. Do not merge a known mismatch as a

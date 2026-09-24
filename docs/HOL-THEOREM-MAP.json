@@ -5731,9 +5731,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "evalMapCompileArgsFlat_of_each",
+    "lean_name": "compileArgsHOL_eval_flatten_of_each",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only compile_args list induction: lifts a separately supplied per-expression flattening result over the production source and target list evaluators; per-expression correctness for all HOL-localised constructors is not yet proved."
+    "reviewer": "Flapjack-only generic HOL compile_args list induction over state-owned PanSem source evaluation and production Crep evaluation. Consumes the per-expression compiled-evaluation relation corresponding to compile_exp_val_rel as an explicit premise; it does not prove that relation for unsupported constructors or claim the enclosing Call theorem."
   },
   {
     "hol_path": null,

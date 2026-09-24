@@ -2570,10 +2570,13 @@ private theorem evalPanSemStateExps_cons
       (some (panSemBitVec64MemoryAccess source)) <;>
     simp [evalPanValueExp.evalPanValueExps, hhead, htail]
 
-/-! HOL `eval_map_comp_exp_flat_eq` lifts the per-expression compiler value
-relation over argument lists. This helper proves that list induction step
-without claiming the per-expression theorem for unsupported constructors. -/
-private theorem evalMapCompileArgsFlat_of_each
+/-! Generic list induction for HOL `eval_map_comp_exp_flat_eq`: if every
+argument satisfies the per-expression compiled-evaluation relation, successful
+state-owned PanSem list evaluation lifts to production Crep evaluation of
+`compileArgsHOL` and the flattened source results. The per-expression relation
+is an explicit premise; this theorem does not claim its `compile_exp_val_rel`
+proof for unsupported constructors or the enclosing Call theorem. -/
+theorem compileArgsHOL_eval_flatten_of_each
     (compilerContext : PanToCrepHOLContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
     (target : CrepRuntimeState (RiscV.Word 64) σ)
@@ -3034,7 +3037,7 @@ theorem compileArgsHOL_rFieldInnerIH_eval_flatten
           hstate hcode hlocals hsourceInner hsourceField hindex hlocalized
           hcompileInner hinnerIH
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 /-! State-owned local specialization of the generic RField case above. It
@@ -3159,7 +3162,7 @@ theorem compileArgsHOL_constOrLocal_eval_flatten
         exact compileExpHOL_local_eval_flatten context source target name value
           hlocals heval
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 /-! One additional `compile_exp_val_rel` constructor: an `RStruct` whose
@@ -3256,7 +3259,7 @@ theorem compileArgsHOL_constLocalOrStruct_eval_flatten
         | nStruct name fields =>
             simp [evalPanSemStateExp, evalPanValueExp] at heval
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 inductive compileArgConstLocalStructAddress
@@ -3411,7 +3414,7 @@ private theorem compileArgsHOL_constOrRFieldInnerIH_eval_flatten
     exact compileExpHOL_constOrRFieldInnerIH_eval_flatten context source target
       expression value hstate hcode hlocals (hsupported expression hmem) heval
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 private theorem compileExpHOL_rStruct_constOrRFieldInnerIH_eval_flatten
@@ -3707,7 +3710,7 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
                   some (panValueFlatten fieldValue) := by
             intro field hmem fieldValue hfield
             exact ih field hmem fieldValue hfield
-          have hcompiled := evalMapCompileArgsFlat_of_each compilerContext
+          have hcompiled := compileArgsHOL_eval_flatten_of_each compilerContext
             source target fields fieldValues hsourceFields heach
           simpa [compilerContext, compileExpHOL,
             compileExpListHOL_flatMap_eq_compileArgsHOL,
@@ -4171,7 +4174,7 @@ theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
       context source target (hsupported expression hmem) hstate hcode hlocals
       value heval
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 /-! Call argument results for all already-proved Const/Local/RStruct cases,
@@ -4204,7 +4207,7 @@ theorem compileArgsHOL_constLocalStructAddress_eval_flatten
     exact compileExpHOL_constLocalStructAddress_eval_flatten context source target
       expression value hstate hlocals (hsupported expression hmem) heval
   simpa [compilerContext] using
-    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
 
 /-! A successful source parameter-shape match preserves `Shape.shapeSize`.

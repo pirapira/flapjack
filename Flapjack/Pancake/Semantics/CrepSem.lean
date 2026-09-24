@@ -1229,7 +1229,27 @@ theorem evalCrepRuntimeExps_wordLab_projection
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>
-      (result, { state with locals := fun candidate => if name == candidate then oldValue else state.locals candidate })
+      (result, { state with locals := resVar state.locals (name, oldValue) })
+
+/-- Pointwise form of the tagged HOL `res_var` update used by the production
+    `restoreCrepRuntimeStep`: restoring a variable is an `|+`/`\\` update. -/
+@[simp] theorem resVar_locals_apply [BEq α] [LawfulBEq α] (name : Nat)
+    (oldValue : Option (PanWordLab α)) (locals : Nat → Option (PanWordLab α)) :
+    resVar locals (name, oldValue) =
+      fun candidate => if name == candidate then oldValue else locals candidate := by
+  cases oldValue with
+  | none =>
+      funext candidate
+      simp only [resVar, FDOMSUB]
+  | some v =>
+      funext candidate
+      simp only [resVar, FUPDATE]
+
+/-- The production Dec restore is the tagged HOL `res_var` update. -/
+theorem restoreCrepRuntimeStep_eq_resVar (name : Nat) (oldValue : Option (PanWordLab α))
+    (result : CrepRuntimeResult α ε) (state : CrepRuntimeState α σ) :
+    restoreCrepRuntimeStep name oldValue (result, state) =
+      (result, { state with locals := resVar state.locals (name, oldValue) }) := rfl
 
 def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=

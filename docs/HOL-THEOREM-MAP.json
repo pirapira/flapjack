@@ -6430,5 +6430,13 @@
     "lean_name": "compileExpHOL_cmp_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only RISC-V-specialized Cmp constructor case for the full compile_exp_val_rel induction hypotheses. It consumes full left/right relation hypotheses and proves evaluation, length, shape, and well-formedness, but has a canonical-target premise and is not a standalone HOL declaration or complete expression induction; no @[hol] tag claimed. The matching direct compile_exp Cmp output is covered by the cmp_shift row in scripts/hol-probes/compile_exp_probe.out and CompileExpParity.holCmpShiftOK."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "res_var_def",
+    "lean_path": "Flapjack/FiniteMap/Basic.lean",
+    "lean_name": "resVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause port of crepSem$res_var_def: res_var lc (n,NONE)=lc\\\\n becomes FDOMSUB, res_var lc (n,SOME v)=lc|+(n,v) becomes FUPDATE; [LawfulBEq] ties Boolean equality to HOL propositional equality; oracle rows crep_res_var_probe.out res_var_delete_hit=NONE and res_var_update_hit=SOME (Word 7w) reproduced by Lean guards in Flapjack/Test/FiniteMapParity.lean; production restoreCrepRuntimeStep now routes through resVar via resVar_locals_apply)"
   }
 ]

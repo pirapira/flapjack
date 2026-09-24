@@ -123,6 +123,13 @@ theorem flookup_resVar_fixture :
   · rw [FLOOKUP_resVar_diff_eq _ _ _ 40 (by decide)]
     simp [resVarBase, FLOOKUP, FUPDATE_LIST, FUPDATE]
 
+/-- Direct HOL-oracle mirror of `crep_res_var_probe.out`: `res_var` with
+    `NONE` deletes the key, with `SOME v` updates it. -/
+def resVarProbeBase : FiniteMap Nat Nat := FUPDATE FEMPTY (1, 3)
+
+#guard FLOOKUP (resVar resVarProbeBase (1, none)) 1 == none
+#guard FLOOKUP (resVar resVarProbeBase (1, some 7)) 1 == some 7
+
 /-- Cake `res_var_commutes` on a concrete map. -/
 theorem resVar_commutes_fixture :
     resVar (resVar resVarBase (2, some 20)) (3, some 30)

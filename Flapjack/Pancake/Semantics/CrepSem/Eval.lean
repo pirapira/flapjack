@@ -885,6 +885,8 @@ def holWordBitsRiscVMemoryModel [NeZero width] (bigEndian : Bool) :
       (holWordBitsToBitVec address)
     wordOfBytes := fun be bytes => bitVecToHolWordBits
       (model.wordOfBytes be (bytes.map holWordBitsToBitVec))
+    wordOfBytes32 := fun be bytes => bitVecToHolWordBits
+      (model.wordOfBytes32 be (bytes.map holWordBitsToBitVec))
     wordOp := fun operator values =>
       (model.wordOp operator (values.map holWordBitsToBitVec)).map
         bitVecToHolWordBits
@@ -1020,6 +1022,8 @@ def transportPanMemoryModel {α : Type u} {β : Type v} (convert : α → β)
   aligned := fun alignment address => model.aligned alignment (retract address)
   wordOfBytes := fun bigEndian bytes => convert
     (model.wordOfBytes bigEndian (bytes.map retract))
+  wordOfBytes32 := fun bigEndian bytes => convert
+    (model.wordOfBytes32 bigEndian (bytes.map retract))
   wordOp := fun operator values =>
     (model.wordOp operator (values.map retract)).map convert
   compare := fun operator left right => convert
@@ -1251,6 +1255,23 @@ def holFiniteWordSourceWordOfBytes {ι : Type u}
   holFiniteWordSourceWordOfBytesAt dimension bigEndian
     (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)) bytes
 
+/-- HOL `mem_load_32` builds `word_of_bytes` at the fixed `word32` width and
+    only then applies `w2w` to the carrier word. The generic byte-list helper
+    above intentionally uses its own carrier width; this adapter models the
+    fixed-width load result for arbitrary finite source dimensions. -/
+def holFiniteWordSourceWordOfBytes32 {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (bytes : List (ι → Bool)) : ι → Bool := by
+  let dimension32 : HolFiniteDimension (Fin 32) :=
+    instFinHolFiniteDimension (width := 32)
+  let bytes32 := bytes.map fun byte =>
+    bitVecToHolWord dimension32
+      (BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256))
+  exact bitVecToHolWord dimension
+    (BitVec.ofNat dimension.width
+      (holWordToBitVec dimension32
+        (holFiniteWordSourceWordOfBytes dimension32 bigEndian bytes32)).toNat)
+
 private def holFiniteWordSourceWordOfBytesBitVecAt {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
     (address : ι → Bool) : List (BitVec dimension.width) → BitVec dimension.width
@@ -1310,6 +1331,8 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
       holFiniteWordSourceAligned dimension alignment address
     wordOfBytes := fun be bytes =>
       holFiniteWordSourceWordOfBytes dimension be bytes
+    wordOfBytes32 := fun be bytes =>
+      holFiniteWordSourceWordOfBytes32 dimension be bytes
     wordOp := wordOp
     compare := evalPanCmp
     shift := evalPanShiftFull }

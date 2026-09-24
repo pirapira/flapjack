@@ -138,7 +138,7 @@ def crepHolEvalMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
     match state.memory alignedAddress with
     | .word value =>
         if state.memaddrs alignedAddress then
-          some (model.wordOfBytes state.bigEndian
+          some (model.wordOfBytes32 state.bigEndian
             [model.getByte bytesInWord address value state.bigEndian,
              model.getByte bytesInWord (address + 1) value state.bigEndian,
              model.getByte bytesInWord (address + 2) value state.bigEndian,
@@ -513,7 +513,7 @@ def crepRuntimeLoad32 [Add α] [OfNat α 1]
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
     if state.memaddrs alignedAddress then
       let value := panTheWord (state.memory alignedAddress)
-      pure (state.memoryModel.wordOfBytes state.bigEndian
+      pure (state.memoryModel.wordOfBytes32 state.bigEndian
         [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1 + 1) value state.bigEndian,

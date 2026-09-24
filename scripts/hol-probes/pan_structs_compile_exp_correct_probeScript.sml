@@ -363,6 +363,40 @@ val _ = print_eval "compile_exp_correct_shift_lsl"
        (pan_structs$compile_exp ^ctxt ^shift_expression) =
        SOME (pan_structsProof$convert_v ^shift_value))``;
 
+val shift_asr_value = ``ValWord (192w:8 word)``;
+val shift_asr_expression =
+  ``(panLang$Shift Asr (panLang$Const (128w:8 word))
+       (panLang$Const (1w:8 word)) : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_shift_asr"
+  ``(pan_structs$old_exp_shape ^ctxt ^shift_asr_expression,
+     panSem$shape_of ^shift_asr_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^shift_asr_value,
+     panSem$eval ^local_state ^shift_asr_expression = SOME ^shift_asr_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^shift_asr_expression) =
+       SOME (pan_structsProof$convert_v ^shift_asr_value))``;
+
+val shift_ror_value = ``ValWord (192w:8 word)``;
+val shift_ror_expression =
+  ``(panLang$Shift Ror (panLang$Const (129w:8 word))
+       (panLang$Const (1w:8 word)) : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_shift_ror"
+  ``(pan_structs$old_exp_shape ^ctxt ^shift_ror_expression,
+     panSem$shape_of ^shift_ror_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^shift_ror_value,
+     panSem$eval ^local_state ^shift_ror_expression = SOME ^shift_ror_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^shift_ror_expression) =
+       SOME (pan_structsProof$convert_v ^shift_ror_value))``;
+
+val shift_width_expression =
+  ``(panLang$Shift Lsl (panLang$Const (3w:8 word))
+       (panLang$Const (8w:8 word)) : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_shift_width_cutoff"
+  ``(panSem$eval ^local_state ^shift_width_expression,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^shift_width_expression))``;
+
 val _ = print_eval "size_of_compile_shape_comb"
   ``(is_wf_shape [] (Comb [One; One]),
      struct_infos_ok [],

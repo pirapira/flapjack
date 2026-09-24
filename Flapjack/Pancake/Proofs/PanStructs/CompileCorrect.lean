@@ -4252,25 +4252,23 @@ theorem panStructCompileExpCorrectCmpCase
 /-- Derived binary Shift-constructor specialization of HOL
     `compile_exp_correct`. The left and right recursive hypotheses retain the
     translated context, FEVERY, FMAP_MAP2, and `struct_infos_ok` premise roles
-    and all three conclusions. Successful Shift evaluation forces word
-    operands, and compiling preserves the same `evalPanShift` result. It
-    remains untagged: HOL has only the universal theorem, while this Lean
-    interface uses projected context views, total lookup/Bool adapters, and
-    explicit `bytesInWord`. The compact production `evalPanShift` currently
-    implements LSL/LSR and returns `none` for HOL's ASR/ROR cases; this case
-    evaluator also does not reject nonzero shift amounts at or above the HOL
-    word width. This case proves the transported theorem for successful
-    executions of that Lean evaluator, not a claim that the evaluator itself
-    is a complete HOL port. -/
+    and all three conclusions. It is now stated over the mutually recursive
+    full evaluator, whose `evalPanShiftFull` implements HOL's LSL/LSR/ASR/ROR
+    operations and rejects nonzero amounts at or above its configured word
+    width. The theorem remains untagged because HOL has only the universal
+    theorem, while Lean translates finite-map premises through projected
+    context views and total lookup/Bool adapters and passes `bytesInWord`
+    explicitly. -/
 theorem panStructCompileExpCorrectShiftCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext) (state : PanSemState α ffi)
     (bytesInWord : α) (operator : Shift) (left right : Exp α)
     (value : PanValue α)
-    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+    (heval : evalPanValueExpFull state.structs state.locals state.globals state.memory
       state.baseAddress state.topAddress bytesInWord (.shift operator left right) = some value)
     (hstructs : panStructContextShapeView context.structs =
       panStructContextShapeView state.structs)
@@ -4280,7 +4278,7 @@ theorem panStructCompileExpCorrectShiftCase
     (hlocalsMap : panStructShapeMapEq context.locals state.locals)
     (hglobalsMap : panStructShapeMapEq context.globals state.globals)
     (hinductionLeft : ∀ subvalue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
         state.baseAddress state.topAddress bytesInWord left = some subvalue →
       panStructContextShapeView context.structs = panStructContextShapeView state.structs →
       panStructEveryValueFieldsOkBool state.structs state.locals →
@@ -4290,7 +4288,7 @@ theorem panStructCompileExpCorrectShiftCase
       panStructShapeMapEq context.globals state.globals →
       structOldExpShape context left = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool state.structs subvalue = true ∧
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
@@ -4298,7 +4296,7 @@ theorem panStructCompileExpCorrectShiftCase
         (panStructConvertState context state).topAddress bytesInWord
         (structCompileExp context left) = some (panStructConvertValue subvalue))
     (hinductionRight : ∀ subvalue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
         state.baseAddress state.topAddress bytesInWord right = some subvalue →
       panStructContextShapeView context.structs = panStructContextShapeView state.structs →
       panStructEveryValueFieldsOkBool state.structs state.locals →
@@ -4308,7 +4306,7 @@ theorem panStructCompileExpCorrectShiftCase
       panStructShapeMapEq context.globals state.globals →
       structOldExpShape context right = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool state.structs subvalue = true ∧
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
@@ -4317,7 +4315,7 @@ theorem panStructCompileExpCorrectShiftCase
         (structCompileExp context right) = some (panStructConvertValue subvalue)) :
     structOldExpShape context (.shift operator left right) = panSemShapeOf value ∧
     panStructValueFieldsOkBool state.structs value = true ∧
-    evalPanValueExp (panStructConvertState context state).structs
+    evalPanValueExpFull (panStructConvertState context state).structs
       (panStructConvertState context state).locals
       (panStructConvertState context state).globals
       (panStructConvertState context state).memory
@@ -4325,28 +4323,28 @@ theorem panStructCompileExpCorrectShiftCase
       (panStructConvertState context state).topAddress bytesInWord
       (structCompileExp context (.shift operator left right)) =
         some (panStructConvertValue value) := by
-  cases hleft : evalPanValueExp state.structs state.locals state.globals state.memory
+  cases hleft : evalPanValueExpFull state.structs state.locals state.globals state.memory
       state.baseAddress state.topAddress bytesInWord left with
-  | none => simp [evalPanValueExp, hleft] at heval
+  | none => simp [evalPanValueExpFull, hleft] at heval
   | some leftValue =>
       cases leftValue with
-      | rStruct fields => simp [evalPanValueExp, hleft] at heval
-      | nStruct name fields => simp [evalPanValueExp, hleft] at heval
+      | rStruct fields => simp [evalPanValueExpFull, hleft] at heval
+      | nStruct name fields => simp [evalPanValueExpFull, hleft] at heval
       | word leftWord =>
-          cases hright : evalPanValueExp state.structs state.locals state.globals
+          cases hright : evalPanValueExpFull state.structs state.locals state.globals
               state.memory state.baseAddress state.topAddress bytesInWord right with
-          | none => simp [evalPanValueExp, hleft, hright] at heval
+          | none => simp [evalPanValueExpFull, hleft, hright] at heval
           | some rightValue =>
               cases rightValue with
-              | rStruct fields => simp [evalPanValueExp, hleft, hright] at heval
-              | nStruct name fields => simp [evalPanValueExp, hleft, hright] at heval
+              | rStruct fields => simp [evalPanValueExpFull, hleft, hright] at heval
+              | nStruct name fields => simp [evalPanValueExpFull, hleft, hright] at heval
               | word rightWord =>
-                  cases hshift : evalPanShift operator leftWord rightWord with
-                  | none => simp [evalPanValueExp, hleft, hright, hshift] at heval
+                  cases hshift : evalPanShiftFull operator leftWord rightWord with
+                  | none => simp [evalPanValueExpFull, hleft, hright, hshift] at heval
                   | some result =>
                       have hvalue : value = .word result := by
                         have hsource := heval
-                        simp [evalPanValueExp, hleft, hright, hshift] at hsource
+                        simp [evalPanValueExpFull, hleft, hright, hshift] at hsource
                         exact hsource.symm
                       have hleftIH := hinductionLeft (.word leftWord) hleft
                         hstructs hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap
@@ -4361,7 +4359,7 @@ theorem panStructCompileExpCorrectShiftCase
                                 (structCompileExp context right) := by
                           simp [structCompileExp]
                         rw [hcompiledShift, hvalue]
-                        simp [evalPanValueExp, hleftIH.2.2, hrightIH.2.2,
+                        simp [evalPanValueExpFull, hleftIH.2.2, hrightIH.2.2,
                           hshift, panStructConvertValue]
 
 end Flapjack

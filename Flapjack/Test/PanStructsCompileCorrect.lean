@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Proofs.PanStructs.CompileCorrect
+import Flapjack.RiscV.Model
 import Flapjack.Test.PanValueFfiSemantics
 
 /-! Regression cases paired with
@@ -510,11 +511,11 @@ example :
       (.shift .lsl shiftCompileCaseLeft shiftCompileCaseRight) =
         panSemShapeOf shiftCompileCaseValue ∧
     panStructValueFieldsOkBool finiteMapRuntime.structs shiftCompileCaseValue = true ∧
-    evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+    evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
       finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
       finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
       (.shift .lsl shiftCompileCaseLeft shiftCompileCaseRight) = some shiftCompileCaseValue ∧
-    evalPanValueExp
+    evalPanValueExpFull
       (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
       (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
       (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
@@ -527,13 +528,15 @@ example :
         some (panStructConvertValue shiftCompileCaseValue) := by
   have hlsl : ShiftLeft.shiftLeft (BitVec.ofNat 64 3) (BitVec.ofNat 64 1) =
       BitVec.ofNat 64 6 := by decide
-  have hsource : evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+  have hvalid : PanShiftWidth.amount (α := Word64) (BitVec.ofNat 64 1) <
+      PanShiftWidth.width (α := Word64) := by decide
+  have hsource : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
       finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
       finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
       (.shift .lsl shiftCompileCaseLeft shiftCompileCaseRight) =
         some shiftCompileCaseValue := by
-    simp [evalPanValueExp, evalPanShift, shiftCompileCaseLeft, shiftCompileCaseRight,
-      shiftCompileCaseValue, finiteMapRuntime, hlsl]
+    simp [evalPanValueExpFull, evalPanShiftFull, shiftCompileCaseLeft, shiftCompileCaseRight,
+      shiftCompileCaseValue, finiteMapRuntime, hlsl, hvalid]
   have hlocalsFields : panStructEveryValueFieldsOkBool
       finiteMapRuntime.structs finiteMapRuntime.locals := by
     intro name value hvalue
@@ -553,7 +556,7 @@ example :
     intro name
     simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
   have hleft : ∀ subvalue,
-      evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
         finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
         finiteMapRuntime.topAddress (BitVec.ofNat 64 1) shiftCompileCaseLeft = some subvalue →
       panStructContextShapeView emptyStructCompileContext.structs =
@@ -566,7 +569,7 @@ example :
       structOldExpShape emptyStructCompileContext shiftCompileCaseLeft =
         panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs subvalue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
@@ -578,14 +581,14 @@ example :
           some (panStructConvertValue subvalue) := by
     intro subvalue heval _ _ _ _ _ _
     have hvalue : subvalue = .word (BitVec.ofNat 64 3) := by
-      simpa [evalPanValueExp, shiftCompileCaseLeft] using heval.symm
+      simpa [evalPanValueExpFull, shiftCompileCaseLeft] using heval.symm
     subst subvalue
     exact ⟨by simp [structOldExpShape, panSemShapeOf, shiftCompileCaseLeft],
       by simp [panStructValueFieldsOkBool],
-      by simp [evalPanValueExp, panStructConvertState, panStructConvertValue,
+      by simp [evalPanValueExpFull, panStructConvertState, panStructConvertValue,
         shiftCompileCaseLeft]⟩
   have hright : ∀ subvalue,
-      evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
         finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
         finiteMapRuntime.topAddress (BitVec.ofNat 64 1) shiftCompileCaseRight = some subvalue →
       panStructContextShapeView emptyStructCompileContext.structs =
@@ -598,7 +601,7 @@ example :
       structOldExpShape emptyStructCompileContext shiftCompileCaseRight =
         panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs subvalue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
@@ -610,17 +613,53 @@ example :
           some (panStructConvertValue subvalue) := by
     intro subvalue heval _ _ _ _ _ _
     have hvalue : subvalue = .word (BitVec.ofNat 64 1) := by
-      simpa [evalPanValueExp, shiftCompileCaseRight] using heval.symm
+      simpa [evalPanValueExpFull, shiftCompileCaseRight] using heval.symm
     subst subvalue
     exact ⟨by simp [structOldExpShape, panSemShapeOf, shiftCompileCaseRight],
       by simp [panStructValueFieldsOkBool],
-      by simp [evalPanValueExp, panStructConvertState, panStructConvertValue,
+      by simp [evalPanValueExpFull, panStructConvertState, panStructConvertValue,
         shiftCompileCaseRight]⟩
   have hcase := panStructCompileExpCorrectShiftCase
     emptyStructCompileContext finiteMapRuntime (BitVec.ofNat 64 1) .lsl
     shiftCompileCaseLeft shiftCompileCaseRight shiftCompileCaseValue hsource rfl
     hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap hleft hright
   exact ⟨hcase.1, hcase.2.1, hsource, hcase.2.2⟩
+
+example : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
+    finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+    finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
+    (.shift .asr (.const (BitVec.ofNat 64 0x8000000000000000))
+      (.const (BitVec.ofNat 64 1))) =
+    some (.word (BitVec.ofNat 64 0xc000000000000000)) := by
+  have hvalid : PanShiftWidth.amount (α := Word64) (BitVec.ofNat 64 1) <
+      PanShiftWidth.width (α := Word64) := by decide
+  have hasr : ArithmeticShiftRight.arithmeticShiftRight
+      (BitVec.ofNat 64 0x8000000000000000) (BitVec.ofNat 64 1) =
+        BitVec.ofNat 64 0xc000000000000000 := by decide
+  simp [evalPanValueExpFull, evalPanShiftFull, finiteMapRuntime, hvalid, hasr]
+
+example : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
+    finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+    finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
+    (.shift .ror (.const (BitVec.ofNat 64 0x8000000000000001))
+      (.const (BitVec.ofNat 64 1))) =
+    some (.word (BitVec.ofNat 64 0xc000000000000000)) := by
+  have hvalid : PanShiftWidth.amount (α := Word64) (BitVec.ofNat 64 1) <
+      PanShiftWidth.width (α := Word64) := by decide
+  have hror : RotateRightOp.rotateRight
+      (BitVec.ofNat 64 0x8000000000000001) (BitVec.ofNat 64 1) =
+        BitVec.ofNat 64 0xc000000000000000 := by decide
+  simp [evalPanValueExpFull, evalPanShiftFull, finiteMapRuntime, hvalid, hror]
+
+example : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
+    finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+    finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
+    (.shift .lsl (.const (BitVec.ofNat 64 3))
+      (.const (BitVec.ofNat 64 64))) = none := by
+  have hcutoff : PanShiftWidth.amount (α := Word64) (BitVec.ofNat 64 64) ≠ 0 ∧
+      PanShiftWidth.width (α := Word64) ≤
+        PanShiftWidth.amount (α := Word64) (BitVec.ofNat 64 64) := by decide
+  simp [evalPanValueExpFull, evalPanShiftFull, finiteMapRuntime, hcutoff]
 
 /-! Direct Lean counterpart of the One and multiword Comb rows in
 `pan_structs_mem_load_conversion_probe.out`. The conversion proof below uses

@@ -21,6 +21,8 @@ import Flapjack.Test.PanNestedSeqParity
 import Flapjack.Test.PanExpIdsParity
 import Flapjack.Test.PanLangFunIdsParity
 import Flapjack.Test.PanLangFreeVarIdsParity
+import Flapjack.Test.PanLangShapeHOLParity
+import Flapjack.Test.PanLangExpHOLParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity

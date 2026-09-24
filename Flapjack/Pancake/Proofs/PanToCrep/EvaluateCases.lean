@@ -4515,6 +4515,15 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
   | globalVar (name : String) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.var .global name)
+  | baseAddr :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .baseAddr
+  | topAddr :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .topAddr
+  | bytesInWord :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .bytesInWord
   | nStruct (name : String) (fields : List (FieldName × Exp (RiscV.Word 64))) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.nStruct name fields)
@@ -4806,6 +4815,39 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       intro value heval
       have hglobals := stateRel_globals source target hstate
       simp [evalPanSemStateExp, evalPanValueExp, hglobals, FEMPTY] at heval
+  | baseAddr =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .baseAddr =
+          some (.word source.baseAddress) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word source.baseAddress :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_baseAddr_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
+  | topAddr =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .topAddr =
+          some (.word source.topAddress) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word source.topAddress :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_topAddr_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
+  | bytesInWord =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .bytesInWord =
+          some (.word panSemBitVec64BytesInWord) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word panSemBitVec64BytesInWord :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_bytesInWord_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
   | nStruct name fields =>
       intro value heval
       have hstructs := stateRel_structs source target hstate
@@ -8915,6 +8957,24 @@ recursive target callee IH supplies the related post-state and state-owned
 global words used by the actual finite-map `exp_hdl`. The handler IH supplies
 the final post-state relations; recursive simulations remain premises, so
 this is not the full HOL `pc_compile_correct[Call_Ret_Exception]` theorem. -/
+mutual
+private theorem panShapeMatches_self_forSourceCall :
+    ∀ shape, panShapeMatches shape shape = true
+  | .one => by simp [panShapeMatches]
+  | .named _ => by simp [panShapeMatches]
+  | .comb shapes => by
+      simp only [panShapeMatches]
+      exact panShapeListMatches_self_forSourceCall shapes
+
+private theorem panShapeListMatches_self_forSourceCall :
+    ∀ shapes, panShapeMatches.panShapeListMatches shapes shapes = true
+  | [] => by simp [panShapeMatches.panShapeListMatches]
+  | shape :: shapes => by
+      simp [panShapeMatches.panShapeListMatches,
+        panShapeMatches_self_forSourceCall shape,
+        panShapeListMatches_self_forSourceCall shapes]
+end
+
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
@@ -8957,8 +9017,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         function expressions) = fuel + 2)
     (hsourceExceptionValid : panValueExceptionValid source.structs none
       sourceException payload = true)
-    (hsourceExceptionShapeMatches : panShapeMatches
-      (panValueShape source.structs payload) shape = true)
     (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
     (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
       (fun _ => none) .local handlerVariable payload = true)
@@ -9112,6 +9170,11 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       with clock := min (decPanClock source.clock) calleeClock }
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
+  have hsourceStructs := stateRel_structs source caller hinitialState
+  have hsourceShapeMatch : panShapeMatches
+      (panValueShape source.structs payload) shape = true := by
+    rw [hsourceStructs, hpayloadShape]
+    exact panShapeMatches_self_forSourceCall shape
   have hsourceClock : source.clock ≠ 0 := by
     rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
     intro hzero
@@ -9122,7 +9185,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     handlerVariable expressions arguments returnShape sourceBody sourceCalleeLocals
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi payload calleeClock
     handlerProgram sourceResult hsourceFuel hsourceArgs hsourceCall hsourceClock
-    hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceExceptionShapeMatches⟩
+    hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceShapeMatch⟩
     hsourceExceptionValid hsourcePayloadWithinLimit hsourceHandlerAssignment
     hsourceHandlerContract hsourceHandlerBody
   have hsourceCallRun := hsourceRun.1

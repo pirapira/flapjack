@@ -5304,6 +5304,14 @@
     "reviewer": "Kernel-checked Cmp constructor specialization with distinct recursive left/right induction hypotheses, successful-evaluation premises, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three conclusions of HOL compile_exp_correct. Successful source evaluation forces two word operands; conversion preserves each word so both evaluators compute the same evalPanCmp result. Intentionally untagged because HOL has only the universal theorem and Lean uses projected context views, total lookup/Bool adapters, and explicit bytesInWord."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectShiftCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. The full evaluator uses evalPanShiftFull to implement LSL/LSR/ASR/ROR and HOL's nonzero amount < word-width cutoff; direct HOL and Lean fixtures cover LSL, ASR, ROR, and the cutoff. It remains untagged because the public Lean statement translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

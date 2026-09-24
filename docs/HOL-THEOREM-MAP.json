@@ -457,6 +457,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceWordLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This strengthens the source-evaluator theorem to equality of complete Option PanWordLab results with an implicit finite-dimension instance, unused v binder, success premise, and arbitrary code-map update. It remains untagged because the source evaluator, state adapter, and primitive word-operation dictionary are not yet proved identical to HOL crepSem eval and finite_index."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",

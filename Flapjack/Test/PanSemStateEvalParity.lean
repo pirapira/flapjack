@@ -215,4 +215,25 @@ theorem evalPanSemStateExp_op_delegates (operator : BinOp)
   (evalPanSemStateExp littleEndianState (.op .sub [.const 3, .const 5]))
   (BitVec.ofNat 64 0xFFFFFFFFFFFFFFFE)
 
+/- Exact `mem_load_byte_def` port over the faithful total word-cell memory.
+   The expected values are the checked-in direct HOL rows
+   `mem_load_byte_def_little_first/little_last/big_first/missing` in
+   `scripts/hol-probes/pan_sem_state_eval_probe.out`. -/
+def holMemory64 : Word64 → HolWordLab 64 :=
+  fun address => if address = 0 then .word sourceMemoryWord else .word 0
+
+#guard panMemLoadByteHOL (width := 64) holMemory64 (fun a => a = 0) false 0 ==
+  some (UInt8.ofNat 136)
+#guard panMemLoadByteHOL (width := 64) holMemory64 (fun a => a = 0) false 7 ==
+  some (UInt8.ofNat 17)
+#guard panMemLoadByteHOL (width := 64) holMemory64 (fun a => a = 0) true 0 ==
+  some (UInt8.ofNat 17)
+#guard panMemLoadByteHOL (width := 64) holMemory64 (fun _ => False) false 0 ==
+  none
+
+example : panMemLoadByteHOL (width := 64) holMemory64 (fun a => a = 0) false 0 =
+    some (UInt8.ofNat 136) := by decide
+example : panMemLoadByteHOL (width := 64) holMemory64 (fun _ => False) false 0 =
+    none := by decide
+
 end Flapjack.Test.PanSemStateEvalParity

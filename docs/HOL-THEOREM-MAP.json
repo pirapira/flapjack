@@ -8062,5 +8062,13 @@
     "lean_name": "HolValue",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL Datatype v (panSemScript.sml:22, Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list))) is width-indexed over BitVec width in the panSemScript.sml counterpart; production PanValue related by checked round-trip isomorphism theorems PanValue.toHolValue_toPanValue / HolValue.toPanValue_toHolValue)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_load_byte_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemLoadByteHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL mem_load_byte_def (panSemScript.sml:86) case m (byte_align w) of Word v => if in dm then SOME (get_byte w v be); HOL total word_lab memory and word set rendered as a total HolWordLab map and Prop/DecidablePred domain; HOL byte_align/get_byte via panRiscVByteAlign/panRiscVGetByteEndian; direct HOL EVAL rows mem_load_byte_def_little_first/little_last/big_first/missing in pan_sem_state_eval_probe.out; the executed widening adapter is tracked by flapjack-pxn.18.3.6.9.2)"
   }
 ]

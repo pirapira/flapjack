@@ -116,6 +116,14 @@ evaluators (no clock, no memory domain, compile-and-execute "semantics") are
 not ports of HOL theorems about the faithful semantics and must not carry
 the tag of one.
 
+**Reviewed statements are pinned.** `docs/HOL-TYPE-HASHES.json` records the
+elaborated Lean type of each `reviewed_exact` entry in
+`docs/HOL-THEOREM-MAP.json`. CI runs `scripts/check_hol_type_hashes.py` and
+rejects statement drift. After comparing a changed Lean statement with its HOL
+source, run `python3 scripts/check_hol_type_hashes.py --update` and review the
+lock-file diff. The hash gate detects Lean statement changes; it does not prove
+HOL-to-Lean equivalence or replace source-level review.
+
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side
 conditions, and conclusions. A different evaluator, an extra successful-pass

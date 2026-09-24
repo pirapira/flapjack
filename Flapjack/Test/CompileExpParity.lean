@@ -110,6 +110,12 @@ def holNamedFallbackOK : Bool :=
   oneResultOK [.const 0]
     (compileExpHOL finiteMapContext (.nField "x" (.const 1)))
 
+/-! Direct HOL `load_one` observation for `Load One (Const 3w)` in
+    `compile_exp_probe.out`. -/
+def holLoadOneOK : Bool :=
+  oneResultOK [.load (.const 3)]
+    (compileExpHOL finiteMapContext (.load .one (.const 3)))
+
 def holStructFieldOK : Bool :=
   combTwoResultOK [.const 1, .const 2]
       (compileExpHOL finiteMapContext (.rStruct [.const 1, .const 2])) &&
@@ -141,7 +147,7 @@ def holCmpShiftOK : Bool :=
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
   finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
-  holLeavesOK && holNamedFallbackOK && holStructFieldOK && holLoadsOpsOK &&
+  holLeavesOK && holNamedFallbackOK && holLoadOneOK && holStructFieldOK && holLoadsOpsOK &&
   holNaryOpOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =

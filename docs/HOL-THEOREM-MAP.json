@@ -701,7 +701,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "contResHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; all five HOL equations, CrepRuntimeResult is the exact crepSem$result encoding; direct HOL EVAL rows in crep_inline_cont_res_probe.out)"
+    "reviewer": "Codex (source comparison; all five HOL equations over the exact crepSem$result carrier CrepResultHOL, which has no Flapjack-only normal constructor; direct HOL EVAL rows in crep_inline_cont_res_probe.out)"
   },
   {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",

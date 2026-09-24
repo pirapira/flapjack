@@ -66,14 +66,15 @@ theorem max_list_genlist_add_suc_val (k : Nat) :
 /-- CakeML's `cont_res` (`crep_inlineProofScript.sml:2168`): a finite,
     "continuous" result predicate.  `NONE` and `SOME` results that stop the
     walk (`Break`, `Continue`, `Error`) are `T`; all other results
-    (`TimeOut`, `Return`, `Exception`, `FinalFFI`) are `F`.  `CrepRuntimeResult`
-    is the exact constructor-by-constructor encoding of `crepSem$result`, so the
-    fourth HOL equation `cont_res _ = F` is the four remaining constructors. -/
+    (`TimeOut`, `Return`, `Exception`, `FinalFFI`) are `F`.  The carrier is
+    `CrepResultHOL`, the exact constructor-by-constructor encoding of
+    `crepSem$result` (`crepSemScript.sml:37-44`), so the fourth HOL equation
+    `cont_res _ = F` is the four remaining constructors. -/
 @[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "cont_res_def"]
-def contResHOL : Option (CrepRuntimeResult α ε) → Bool
+def contResHOL : Option (CrepResultHOL α ε) → Bool
   | none => true
-  | some (.broke _) => true
-  | some (.continued _) => true
+  | some (.break _) => true
+  | some (.continue _) => true
   | some .error => true
   | some _ => false
 

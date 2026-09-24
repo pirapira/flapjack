@@ -59,27 +59,35 @@ theorem crepInlineContRes_none :
     contResHOL (α := Nat) (ε := Nat) none = true := rfl
 
 theorem crepInlineContRes_break :
-    contResHOL (α := Nat) (ε := Nat) (some (.broke 3)) = true := rfl
+    contResHOL (α := Nat) (ε := Nat) (some (.break 3)) = true := rfl
 
 theorem crepInlineContRes_continue :
-    contResHOL (α := Nat) (ε := Nat) (some (.continued 2)) = true := rfl
+    contResHOL (α := Nat) (ε := Nat) (some (.continue 2)) = true := rfl
 
 theorem crepInlineContRes_error :
     contResHOL (α := Nat) (ε := Nat) (some .error) = true := rfl
 
 theorem crepInlineContRes_returned :
-    contResHOL (α := Nat) (ε := Nat) (some (.returned [])) = false := rfl
+    contResHOL (α := Nat) (ε := Nat) (some (.return [])) = false := rfl
 
 theorem crepInlineContRes_timeout :
-    contResHOL (α := Nat) (ε := Nat) (some .timeout) = false := rfl
+    contResHOL (α := Nat) (ε := Nat) (some .timeOut) = false := rfl
+
+theorem crepInlineContRes_exception :
+    contResHOL (α := Nat) (ε := Nat) (some (.exception 0)) = false := rfl
+
+theorem crepInlineContRes_finalFfi :
+    contResHOL (α := Nat) (ε := Nat) (some (.finalFfi 0)) = false := rfl
 
 def crepInlineContResGuard : Bool :=
   contResHOL (α := Nat) (ε := Nat) none &&
-    contResHOL (α := Nat) (ε := Nat) (some (.broke 3)) &&
-    contResHOL (α := Nat) (ε := Nat) (some (.continued 2)) &&
+    contResHOL (α := Nat) (ε := Nat) (some (.break 3)) &&
+    contResHOL (α := Nat) (ε := Nat) (some (.continue 2)) &&
     contResHOL (α := Nat) (ε := Nat) (some .error) &&
-    !contResHOL (α := Nat) (ε := Nat) (some (.returned [])) &&
-    !contResHOL (α := Nat) (ε := Nat) (some .timeout)
+    !contResHOL (α := Nat) (ε := Nat) (some (.return [])) &&
+    !contResHOL (α := Nat) (ε := Nat) (some .timeOut) &&
+    !contResHOL (α := Nat) (ε := Nat) (some (.exception 0)) &&
+    !contResHOL (α := Nat) (ε := Nat) (some (.finalFfi 0))
 
 #guard crepInlineContResGuard
 

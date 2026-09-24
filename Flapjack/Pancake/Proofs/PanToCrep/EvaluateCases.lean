@@ -10353,9 +10353,41 @@ applies the callee induction hypothesis to the source body run and the
 callee-entry relations derived from the actual code lookups; its conclusion
 provides the target callee-body run and post-state, code, exception, and
 payload-global facts needed by `exp_hdl`. The relation-aware handler IH also
-provides its target result and post-state relations. The recursive body
-simulations remain induction premises, so this is a Call-case composition
-step, not the complete `pc_compile_correct[Call_Ret_Exception]` theorem. -/
+provides its target result and post-state relations. The target destination list
+is tied to `functionReturnNamesHOL`; runtime call-info validity is derived from
+that metadata. The recursive body simulations remain induction premises, so
+this is a Call-case composition step, not the complete
+`pc_compile_correct[Call_Ret_Exception]` theorem. -/
+/-! Compiler-generated function return destinations are a mapped `List.range`,
+so the target runtime's duplicate-destination guard follows from function
+metadata itself. -/
+private theorem allocatedNamesHOL_nodup
+    (context : PanToCrepHOLContext α) (shape : Shape) :
+    (allocatedNamesHOL context shape).Nodup := by
+  unfold allocatedNamesHOL
+  apply List.nodup_iff_pairwise_ne.mpr
+  exact (List.nodup_iff_pairwise_ne.mp
+      (List.nodup_range (n := Shape.shapeSize shape))).map
+    (fun offset => context.vmax + 1 + offset)
+    (by
+      intro left right hne heq
+      apply hne
+      omega)
+
+theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
+    (context : PanToCrepHOLContext α) (function : FunName)
+    (handler : Option (α × CrepProg α)) :
+    crepRuntimeCallInfoValid
+      (some (functionReturnNamesHOL context function, handler)) = true := by
+  cases hlookup : FLOOKUP context.funcs function with
+  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+  | some metadata =>
+      rcases metadata with ⟨_, shape⟩
+      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+      apply decide_eq_true
+      exact (eraseDups_length_eq_iff_nodup _).2
+        (allocatedNamesHOL_nodup context shape)
+
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
@@ -10461,9 +10493,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
           { vars := context.vars, funcs := context.funcs,
             eids := context.eids, vmax := context.vmax }
           expression).2 = true)
-    (hinfoValid : crepRuntimeCallInfoValid
-      (some (destinations, some (caught,
-        .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true)
+    (hdestinations : destinations =
+      functionReturnNamesHOL context.toHOLContext function)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
     (hcalleeTargetBodyIH : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
@@ -10572,6 +10603,12 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
     localsRel context (panSemCodeStateAfter source sourceResult).locals
         handlerResult.2.locals := by
+  have hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))) = true := by
+    rw [hdestinations]
+    exact crepRuntimeCallInfoValid_functionReturnNamesHOL context.toHOLContext function
+      (some (caught, .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))
   have hsourcePayload : panValuePayloadWithinLimit source.structs (.word value) = true := by
     exact panValuePayloadWithinLimit_word source.structs value
   have hsourceHandlerLookup : source.locals handlerVariableTarget = some old := by
@@ -10675,38 +10712,6 @@ handler. The source call and target callee both resolve through their
 state-owned code maps; the target handler reads the raised payload through
 `exp_hdl`/`globals_lookup` and returns its flattened word. This is untagged
 induction support for HOL `pc_compile_correct[Call_Ret_Exception]`. -/
-/-! Compiler-generated function return destinations are a mapped `List.range`,
-so the target runtime's duplicate-destination guard follows from the function
-metadata itself. This keeps `crepRuntimeCallInfoValid` derived from the same
-HOL context that supplies `functionReturnNamesHOL`, rather than a free Call
-well-formedness premise. -/
-private theorem allocatedNamesHOL_nodup
-    (context : PanToCrepHOLContext α) (shape : Shape) :
-    (allocatedNamesHOL context shape).Nodup := by
-  unfold allocatedNamesHOL
-  apply List.nodup_iff_pairwise_ne.mpr
-  exact (List.nodup_iff_pairwise_ne.mp
-      (List.nodup_range (n := Shape.shapeSize shape))).map
-    (fun offset => context.vmax + 1 + offset)
-    (by
-      intro left right hne heq
-      apply hne
-      omega)
-
-theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
-    (context : PanToCrepHOLContext α) (function : FunName)
-    (handler : Option (α × CrepProg α)) :
-    crepRuntimeCallInfoValid
-      (some (functionReturnNamesHOL context function, handler)) = true := by
-  cases hlookup : FLOOKUP context.funcs function with
-  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-  | some metadata =>
-      rcases metadata with ⟨_, shape⟩
-      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-      apply decide_eq_true
-      exact (eraseDups_length_eq_iff_nodup _).2
-        (allocatedNamesHOL_nodup context shape)
-
 theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     (context : PanToCrepProofContext (RiscV.Word 64))
     (sourceContext : PanValueFfiContext (RiscV.Word 64))

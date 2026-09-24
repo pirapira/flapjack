@@ -1,0 +1,17 @@
+load "preamble";
+load "stack_to_labTheory";
+open bossLib;
+open HolKernel Parse;
+open preamble;
+open stack_to_labTheory;
+fun print_eval label q = (print label; print "="; print_term (rconc (EVAL q)); print "\n");
+val _ = print_eval "negate_less" ``stack_to_lab$negate asm$Less : asm$cmp``;
+val _ = print_eval "negate_equal" ``stack_to_lab$negate asm$Equal : asm$cmp``;
+val _ = print_eval "negate_lower" ``stack_to_lab$negate asm$Lower : asm$cmp``;
+val _ = print_eval "negate_test" ``stack_to_lab$negate asm$Test : asm$cmp``;
+val _ = print_eval "negate_notless" ``stack_to_lab$negate asm$NotLess : asm$cmp``;
+val _ = print_eval "negate_notequal" ``stack_to_lab$negate asm$NotEqual : asm$cmp``;
+val _ = print_eval "negate_notlower" ``stack_to_lab$negate asm$NotLower : asm$cmp``;
+val _ = print_eval "negate_nottest" ``stack_to_lab$negate asm$NotTest : asm$cmp``;
+val _ = print_eval "compile_jump_lab" ``stack_to_lab$compile_jump (INL 7) : (8 word) labLang$line``;
+val _ = print_eval "compile_jump_reg" ``stack_to_lab$compile_jump (INR 3) : (8 word) labLang$line``;

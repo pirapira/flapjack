@@ -1,6 +1,7 @@
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
+import Flapjack.Compiler.Backend.StackToLab
 
 /-!
 # Cake labProps pre-encoding predicates
@@ -112,4 +113,124 @@ def allEncOkPreConfig {width : Nat}
       (AsmWithLab Cmp Nat MlString) (BitVec width)))) : Bool :=
   allEncOkPre (asmConfigChecks config) sections
 
+
+/-- Concrete `FlattenOps` for the pipeline's assembler carrier: the embedded
+constructors are `asm$Skip`, `asm$Inst`, `asm$JumpReg`, `asm$Reg`, `asm$Lower`
+and the `negate` table from `cakeml/compiler/backend/stack_to_labScript.sml:24-32`,
+all over the faithful `AsmData`/`WordLangInst`/`WordRegImm` carriers. These
+constructors are independent of the `asm_config` record, so no configuration
+argument is required. -/
+def flattenOps {width : Nat} :
+    StackToLab.FlattenOps (WordLangInst (BitVec width)) Flapjack.Cmp
+      (WordRegImm (BitVec width)) (Encoders.Asm.AsmData width) where
+  skip := .inst .skip
+  embedInst := fun instruction => .inst instruction
+  jumpReg := fun register => .jumpReg register
+  reg := fun register => .reg register
+  lower := .lower
+  negate := fun operator =>
+    match operator with
+    | .less => .notLess
+    | .equal => .notEqual
+    | .lower => .notLower
+    | .test => .notTest
+    | .notLess => .less
+    | .notEqual => .equal
+    | .notLower => .lower
+    | .notTest => .test
+
+
+/-! ## `line_ok_pre` reductions at a concrete configuration
+
+These evaluate HOL `line_ok_pre` on the line shapes emitted by `flatten`,
+tying the emitted assembler constructors to `asm_ok`. -/
+section LineOkPreReductions
+
+private abbrev LineC (width : Nat) (MlString : Type) : Type :=
+  Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width) WordMemOp
+      (WordLangAddr (BitVec width)))
+    (AsmWithLab Cmp Nat MlString) (BitVec width)
+
+variable {width : Nat} {MlString : Type}
+
+theorem lineOkPreConfig_asm_asmi (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (asm : Flapjack.Compiler.Encoders.Asm.AsmData width) (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi asm) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmOk config asm := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm]
+
+theorem lineOkPreConfig_asm_cbw (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (left right : Nat) (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.cbw left right) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmOk config (.inst (.mem .store8 right (.addr left 0))) := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm]
+
+theorem lineOkPreConfig_asm_shareMem (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (operator : WordMemOp) (register : Nat) (address : WordLangAddr (BitVec width))
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.shareMem operator register address) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmOk config (.inst (.mem operator register address)) := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm]
+
+theorem lineOkPreConfig_label (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (sectionId label length : Nat) :
+    lineOkPreConfig config (.label sectionId label length : LineC width MlString) = true := by
+  simp [lineOkPreConfig, lineOkPre]
+
+theorem lineOkPreConfig_asm_asmi_inst (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) (instruction : WordLangInst (BitVec width))
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (.inst instruction)) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmInstOk config instruction := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_asm_asmi_jump (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) (target : BitVec width)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (.jump target)) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmJumpOffsetOk config target := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_asm_asmi_jumpReg (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) (target : Nat)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (.jumpReg target)) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmRegOk config target := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_asm_asmi_loc (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) (register : Nat) (offset : BitVec width)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (.loc register offset)) bytes length : LineC width MlString) =
+      (Flapjack.Compiler.Encoders.Asm.asmRegOk config register && Flapjack.Compiler.Encoders.Asm.asmLocOffsetOk config offset) := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_asm_asmi_inst_skip (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (.inst .skip)) bytes length : LineC width MlString) = true := by
+  simp [lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk, Encoders.Asm.asmInstOk]
+
+theorem lineOkPreConfig_flattenOps_skip (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi flattenOps.skip) bytes length : LineC width MlString) = true := by
+  simp [flattenOps, lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk, Encoders.Asm.asmInstOk]
+
+theorem lineOkPreConfig_flattenOps_embedInst (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (instruction : WordLangInst (BitVec width)) (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (flattenOps.embedInst instruction)) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmInstOk config instruction := by
+  simp [flattenOps, lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_flattenOps_jumpReg (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) (register : Nat)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.asm (.asmi (flattenOps.jumpReg register)) bytes length : LineC width MlString) =
+      Flapjack.Compiler.Encoders.Asm.asmRegOk config register := by
+  simp [flattenOps, lineOkPreConfig, lineOkPre, asmConfigChecks, cbwToAsm, Encoders.Asm.asmOk]
+
+theorem lineOkPreConfig_labAsm (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (instruction : AsmWithLab Cmp Nat MlString) (zero : BitVec width)
+    (bytes : List (BitVec 8)) (length : Nat) :
+    lineOkPreConfig config (.labAsm instruction zero bytes length : LineC width MlString) = true := by
+  simp [lineOkPreConfig, lineOkPre]
+
+end LineOkPreReductions
+
 end Flapjack.Compiler.Backend.LabProps
+
+

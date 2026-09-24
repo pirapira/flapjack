@@ -86,6 +86,13 @@ example :
       flatten (flattenOps (width := 8)) (0 : W) true (.tick : P) 0 0 [] [] :=
   flattenApp_tick (flattenOps (width := 8)) (0 : W) true 0 0 [] []
 
+example :
+    appListFlatten (flattenApp (flattenOps (width := 8)) (0 : W) true
+        (.call (some ((.skip : P), 0, 0, 0)) (.inl 1) (some ((.skip : P), 0, 0))) 0 0 [] []) =
+      flatten (flattenOps (width := 8)) (0 : W) true
+        (.call (some ((.skip : P), 0, 0, 0)) (.inl 1) (some ((.skip : P), 0, 0))) 0 0 [] [] :=
+  flattenApp_appListFlatten_eq_flatten (flattenOps (width := 8)) (0 : W) true _ 0 0 [] []
+
 def runChecks : IO Bool := do
   IO.println "PASS stack_to_lab flattenApp app_list bridge matches all 7 oracle rows"
   pure true

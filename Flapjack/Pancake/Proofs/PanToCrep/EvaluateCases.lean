@@ -9883,7 +9883,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           with ffi := calleeFfi }
         with clock := min (decPanClock source.clock) calleeClock })
     (hsourceHandlerLocal : FLOOKUP source.locals handlerVariable = some old)
-    (hshape : panValueShape [] old = panValueShape [] payload)
     (hpayloadShape : panValueShape [] payload = shape)
     (hflatten : panValueFlatten payload = values)
     (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
@@ -10047,6 +10046,15 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
   have hsourceStructs := stateRel_structs source caller hinitialState
+  obtain ⟨handlerSlots, handlerWords, hsourceVariableShape, _hsourceHandlerWords,
+      _hsourceHandlerFlatten, _hsourceHandlerShapeWf⟩ :=
+    hlocals.2.2 handlerVariable old hsourceHandlerLocal
+  have hsourceVariableShapeEq : panValueShape [] old = shape := by
+    have hpair : (panValueShape [] old, handlerSlots) = (shape, slots) :=
+      Option.some.inj (hsourceVariableShape.symm.trans hvariable)
+    exact congrArg Prod.fst hpair
+  have hshape : panValueShape [] old = panValueShape [] payload := by
+    rw [hsourceVariableShapeEq, hpayloadShape]
   have hsourceShapeMatch : panShapeMatches
       (panValueShape source.structs payload) shape = true := by
     rw [hsourceStructs, hpayloadShape]
@@ -10058,8 +10066,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     unfold panValueAssignmentValid
     rw [hsourceStructs, hsourceHandlerLookup]
     change panShapeMatches (panValueShape [] payload) (panValueShape [] old) = true
-    rw [← hshape]
-    exact panShapeMatches_self_forSourceCall (panValueShape [] old)
+    rw [hsourceVariableShapeEq, hpayloadShape]
+    exact panShapeMatches_self_forSourceCall shape
   have hsourceClock : source.clock ≠ 0 := by
     rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
     intro hzero

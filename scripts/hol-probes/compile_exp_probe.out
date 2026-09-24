@@ -5,3 +5,6 @@ loads_ops=(([Load32 (Const 3w)],One),([LoadByte (Const 4w)],One),
 cmp_shift=(([Cmp Equal (Const 1w) (Const 0w)],One),[Shift Lsl (Const 2w) (Const 1w)],
  One)
 finite_map_shadow=([Var 5],One)
+finite_map_load32_local=([Load32 (Var 5)],One)
+finite_map_load_byte_local=([LoadByte (Var 5)],One)
+loadbyte_recursive_address=([LoadByte (Op Add [Const 1w; Const 2w])],One)

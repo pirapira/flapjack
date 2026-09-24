@@ -22,6 +22,8 @@ import Flapjack.Test.PanLangFunIdsParity
 import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
+import Flapjack.Test.CrepInlineRelParity
+import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
 import Flapjack.Test.PanGlobalsFreshNameParity
@@ -196,6 +198,11 @@ import Flapjack.Test.PanSemDecParity
 import Flapjack.Test.PanSemPrimitiveParity
 import Flapjack.Test.PanSemErrorPropagationParity
 import Flapjack.Test.PanSemWhileErrorParity
+import Flapjack.Test.PanSemReturnRaiseErrorParity
+import Flapjack.Test.PanSemExtCallErrorParity
+import Flapjack.Test.PanSemSeqParity
+import Flapjack.Test.PanSemIteParity
+import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
@@ -665,6 +672,8 @@ def main : IO Unit := do
     Flapjack.Test.PanExpIdsParity.runChecks,
     Flapjack.Test.PanWithShapeParity.runChecks,
     Flapjack.Test.CrepInlineGenlistParity.runChecks,
+    Flapjack.Test.CrepInlineFmapParity.runChecks,
+    Flapjack.Test.CrepInlineRelParity.runChecks,
     Flapjack.Test.PanGlobalsExceptionsAppendParity.runChecks,
     Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity.runChecks,
     Flapjack.Test.PanGlobalsDeclPredicateParity.runChecks,
@@ -770,6 +779,11 @@ def main : IO Unit := do
     Flapjack.Test.PanSemPrimitiveParity.runChecks,
     Flapjack.Test.PanSemErrorPropagationParity.runChecks,
     Flapjack.Test.PanSemWhileErrorParity.runChecks,
+    Flapjack.Test.PanSemReturnRaiseErrorParity.runChecks,
+    Flapjack.Test.PanSemExtCallErrorParity.runChecks,
+    Flapjack.Test.PanSemSeqParity.runChecks,
+    Flapjack.Test.PanSemIteParity.runChecks,
+    Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,

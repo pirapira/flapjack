@@ -79,6 +79,19 @@ compile_exp_global_hit=Load One (Op Sub [TopAddr; Const 7w])
 compile_exp_nstruct=Const 0w
 compile_assign_global_hit=Store (Op Sub [TopAddr; Const 7w]) (Const 5w)
 compile_assign_global_miss=Skip
+compile_def_handled_global=Dec «» One (Const 0w)
+  (Dec «vn''» One (Const 0w)
+     (Seq
+        (AssignCall (Local,«»)
+           (SOME
+              («e»,«ev»,
+               Seq
+                 (Seq (Assign Local «x» (Const 1w))
+                    (Assign Local «vn'» (Const 2w)))
+                 (Assign Local «vn''» (Const 1w)))) «f»
+           [Load One (Op Sub [TopAddr; Const 7w])])
+        (If (Var Local «vn''») Skip
+           (Store (Op Sub [TopAddr; Const 7w]) (Var Local «»)))))
 fresh_name_clear=«x»
 fresh_name_missing_empty=«»
 fresh_name_hit=«'''»

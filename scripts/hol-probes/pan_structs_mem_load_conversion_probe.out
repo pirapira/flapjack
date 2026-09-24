@@ -1,0 +1,9 @@
+mem_load_conversion_one=(T,(∀i nm info. T),T,T)
+mem_load_conversion_comb_multiword=(T,(∀i nm info. T),T,T,T)
+mem_load_conversion_named_nested_struct_infos_ok=T
+mem_load_conversion_named_nested=(T,
+ SOME
+   (NStruct «Pair»
+      [(«inner»,NStruct «Inner» [(«left»,ValWord 7w); («right»,ValWord 11w)]);
+       («last»,ValWord 13w)]),
+ SOME (RStruct [RStruct [ValWord 7w; ValWord 11w]; ValWord 13w]),T,T,T,T)

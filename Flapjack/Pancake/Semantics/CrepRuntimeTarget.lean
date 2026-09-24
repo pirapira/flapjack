@@ -330,6 +330,43 @@ theorem panRiscVWordOp_eq_wordOpHOL [NeZero width]
     (operator : BinOp) (values : List (RiscV.Word width)) :
     RiscV.panRiscVWordOp operator values = wordOpHOL operator values := rfl
 
+/-! The production `Op` constructor evaluates the full expression list and
+then applies the width-generic HOL `word_op_def` port. This is an evaluator
+constructor bridge for the canonical RISC-V word target, not the whole HOL
+`crepSem$eval` relation: the runtime state and other evaluator constructors
+still require their own correspondence proofs. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (wordOpHOL operator) := by
+  simp only [evalCrepRuntimeExp, riscvCrepWordTarget,
+    RiscV.panRiscVMemoryModelForEndian]
+  change (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (fun values => RiscV.panRiscVWordOp operator values) =
+    (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+      (wordOpHOL operator)
+  apply congrArg
+    (fun operation =>
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind operation)
+  funext values
+  exact panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- The same all-width `Op` constructor equation with HOL's complete
+`Option (word_lab word)` result projection. This is still only one evaluator
+case for the target-adapted runtime, not a claim that its entire state is a
+HOL `crepSem$state`. -/
+theorem evalCrepRuntimeExp_op_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word width))) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.op operator expressions)).map
+        PanWordLab.word =
+      (expressions.mapM (evalCrepRuntimeExp (riscvCrepWordTarget base))).bind
+        (fun values => (wordOpHOL operator values).map PanWordLab.word) := by
+  rw [evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL]
+  simp [Option.map_bind, Function.comp_def]
+
 theorem crepRuntimeWordTarget_compare [NeZero width]
     (base : CrepRuntimeState (RiscV.Word width) σ) (operator : Cmp)
     (left right : RiscV.Word width) :
@@ -385,6 +422,85 @@ theorem panRiscVCmp_eq_evalPanCmp [NeZero width]
       · simp [RiscV.panRiscVCmp, evalPanCmp, RiscV.panCmp_word_less, h]
   | test => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
   | notTest => simp [RiscV.panRiscVCmp, evalPanCmp] <;> split <;> rfl
+
+/-! These constructor equations expose the production target's generic
+    comparison and shift primitives through the evaluator's recursive child
+    evaluations. They remain untagged support: the target-adapted state is not
+    yet identified with arbitrary HOL `crepSem$state`. -/
+private theorem evalCrepRuntimeExp_cmp_raw
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Cmp)
+    (left right : CrepExp α) :
+    evalCrepRuntimeExp state (.cmp operator left right) =
+      (evalCrepRuntimeExp state left).bind (fun leftValue =>
+      (evalCrepRuntimeExp state right).bind (fun rightValue =>
+          some (state.memoryModel.compare operator leftValue rightValue))) := by
+  simp [evalCrepRuntimeExp]
+
+private theorem evalCrepRuntimeExp_shift_raw
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : Shift)
+    (left right : CrepExp α) :
+    evalCrepRuntimeExp state (.shift operator left right) =
+      (evalCrepRuntimeExp state left).bind (fun leftValue =>
+      (evalCrepRuntimeExp state right).bind (fun rightValue =>
+          state.memoryModel.shift operator leftValue rightValue)) := by
+  simp [evalCrepRuntimeExp]
+
+theorem evalCrepRuntimeExp_cmp_riscvWordTarget_evalPanCmp [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word width)) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.cmp operator left right) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+            (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+              (fun rightValue => some (evalPanCmp operator leftValue rightValue))) := by
+  rw [evalCrepRuntimeExp_cmp_raw]
+  simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian,
+    panRiscVCmp_eq_evalPanCmp]
+
+theorem evalCrepRuntimeExp_shift_riscvWordTarget_evalPanShift [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Shift) (left right : CrepExp (RiscV.Word width)) :
+    evalCrepRuntimeExp (riscvCrepWordTarget base) (.shift operator left right) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue => evalPanShiftFull operator leftValue rightValue)) := by
+  rw [evalCrepRuntimeExp_shift_raw]
+  simp [riscvCrepWordTarget, RiscV.panRiscVMemoryModelForEndian,
+    panRiscVShift_eq_evalPanShiftFull]
+
+theorem evalCrepRuntimeExp_cmp_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word width)) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.cmp operator left right)).map
+      PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue => some (.word (evalPanCmp operator leftValue rightValue)))) := by
+  rw [evalCrepRuntimeExp_cmp_riscvWordTarget_evalPanCmp]
+  simp [Option.map_bind, Function.comp_def]
+
+theorem evalCrepRuntimeExp_shift_riscvWordTarget_wordLab [NeZero width]
+    (base : CrepRuntimeState (RiscV.Word width) σ)
+    (operator : Shift) (left right : CrepExp (RiscV.Word width)) :
+    (evalCrepRuntimeExp (riscvCrepWordTarget base) (.shift operator left right)).map
+      PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget base) left).bind
+        (fun leftValue =>
+          (evalCrepRuntimeExp (riscvCrepWordTarget base) right).bind
+            (fun rightValue =>
+              (evalPanShiftFull operator leftValue rightValue).map PanWordLab.word)) := by
+  rw [evalCrepRuntimeExp_shift_riscvWordTarget_evalPanShift]
+  simp [Option.map_bind, Function.comp_def]
 
 /-- `updateMemory` (production, `Flapjack.Semantics`) and
     `panModelUpdateMemory` (the memory-model helper) are definitionally the same
@@ -503,6 +619,73 @@ theorem evalCrepRuntimeExp_shift_target
           (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right).bind
             (RiscV.panRiscVShift operator leftValue)) := by
   simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
+/-! ## The RV64 `Op` evaluator case
+
+HOL `crepSem$eval` evaluates `Op op args` by evaluating every argument and then
+applying `word_op` (`cakeml/pancake/semantics/crepSemScript.sml:90-137` and
+`cakeml/compiler/backend/wordLangScript.sml:302-311`).  For constant operands the
+argument list evaluates to exactly those words, so the production RV64 evaluator
+returns the HOL folded word.  Untagged until the whole evaluator correspondence
+is reviewed; direct oracle `scripts/hol-probes/crep_eval_op_rv64_probe.out`
+(`eval_op_add_const=SOME (Word 7w)`, `eval_op_sub_const=SOME (Word 5w)`,
+`eval_op_and_const=SOME (Word 48w)`, `eval_op_add_empty=SOME (Word 0w)`,
+`eval_op_sub_arity=NONE`). -/
+theorem evalCrepRuntimeExp_op_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.op operator (values.map CrepExp.const)) =
+      wordOpHOL operator values := by
+  have hmapM : List.mapM (fun x : RiscV.Word 64 => some x) values = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih => simp [List.mapM_cons, ih]
+  simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel,
+    RiscV.panRiscVWordOp, wordOpHOL, Function.comp_def, hmapM]
+
+theorem evalCrepRuntimeExpWordLab_op_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.op operator (values.map CrepExp.const)) =
+      (wordOpHOL operator values).map PanWordLab.word := by
+  have hmapM : List.mapM (fun x : RiscV.Word 64 => some x) values = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih => simp [List.mapM_cons, ih]
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp,
+    wordOpHOL, Function.comp_def, hmapM]
+
+/-! ## The RV64 `Cmp` evaluator case
+
+HOL `crepSem$eval` evaluates `Cmp op e1 e2` by evaluating both operands and then
+applying `word_cmp` (`cakeml/pancake/semantics/crepSemScript.sml:90-137` and
+`cakeml/compiler/encoders/asm/asmScript.sml:83`).  For constant operands the
+production RV64 evaluator returns exactly the fixed target comparison
+`RiscV.panRiscVCmp`; the remaining link from that primitive to HOL `word_cmp` is
+the existing untagged `panRiscVCmp_eq_evalPanCmp` bridge, so no `@[hol]` tag is
+attached yet.  Direct oracle `scripts/hol-probes/crep_eval_cmp_rv64_probe.out`
+(`eval_cmp_equal_true=SOME (Word (v2w [T]))`, `eval_cmp_equal_false=SOME (Word (v2w [F]))`,
+`eval_cmp_lower_true=SOME (Word (v2w [T]))`, `eval_cmp_test_zero=SOME (Word (v2w [F]))`,
+`eval_cmp_test_disjoint=SOME (Word (v2w [T]))`). -/
+theorem evalCrepRuntimeExp_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (RiscV.panRiscVCmp operator left right) := by
+  simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
+theorem evalCrepRuntimeExpWordLab_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (.word (RiscV.panRiscVCmp operator left right)) := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
 
 /-! ## External-call byte-array reads
 
@@ -1482,5 +1665,1576 @@ theorem isRiscV64CrepRuntimeTarget_crepRuntimeExtCall
                   exact isRiscV64CrepRuntimeTarget_crepRuntimeExtCallValues handler
                     function (panTheWord c) (panTheWord cl) (panTheWord a)
                     (panTheWord al) h
+
+/-! ## HOL `get_byte`/`byte_align` bridge for the RV64 `LoadByte` evaluator case
+
+HOL `panSem$mem_load_byte_def` reads the aligned cell and extracts a byte with
+`byte$get_byte`/`byte$byte_align`, stated directly on the word type
+(`dimindex(:'a) DIV 8` bytes per word).  The RISC-V model's `panRiscVGetByte`
+uses base-256 arithmetic instead of HOL's shift, so the two only agree because
+`256 ^ k = 2 ^ (8 * k)`.  The definitions below render the HOL primitives at
+`Word 64` so the production evaluator's `LoadByte` case can be stated against
+them.  All declarations here are untagged while the statement shape is under
+review (bead `flapjack-pxn.18.4.3.48.1.2`). -/
+
+/-- HOL `byte$byte_align` at `Word 64`: clear the low three bits. -/
+def holByteAlign64 (address : RiscV.Word 64) : RiscV.Word 64 :=
+  BitVec.ofNat 64 ((address.toNat / 8) * 8)
+
+/-- HOL `byte$byte_index` at `Word 64` (little-endian when `bigEndian = false`). -/
+def holByteIndex64 (address : RiscV.Word 64) (bigEndian : Bool) : Nat :=
+  let d := 8
+  if bigEndian then 8 * ((d - 1) - address.toNat % d) else 8 * (address.toNat % d)
+
+/-- HOL `byte$get_byte` at `Word 64`, widened back to a word. -/
+def holGetByte64 (address value : RiscV.Word 64) (bigEndian : Bool) : RiscV.Word 64 :=
+  BitVec.ofNat 64 ((value.toNat >>> holByteIndex64 address bigEndian) % 256)
+
+/-- HOL `panSem$mem_load_byte` at `Word 64` over a total `word -> word_lab`
+memory viewed through `crepRuntimeMemoryView`. -/
+def holMemLoadByte64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (bigEndian : Bool)
+    (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  let aligned := holByteAlign64 address
+  match memory aligned with
+  | some value => if domain aligned then some (holGetByte64 address value bigEndian) else none
+  | none => none
+
+theorem panRiscVByteAlign_eight_eq_holByteAlign64 (address : RiscV.Word 64) :
+    RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address = holByteAlign64 address := by
+  simp [RiscV.panRiscVByteAlign, holByteAlign64]
+
+theorem panRiscVByteIndex_eight (address : RiscV.Word 64) :
+    RiscV.panRiscVByteIndex (8 : RiscV.Word 64) address = address.toNat % 8 := by
+  simp [RiscV.panRiscVByteIndex]
+
+theorem panRiscVGetByte_eight_eq_holGetByte64 (address value : RiscV.Word 64) :
+    RiscV.panRiscVGetByte (8 : RiscV.Word 64) address value =
+      holGetByte64 address value false := by
+  rw [RiscV.panRiscVGetByte, panRiscVByteIndex_eight, holGetByte64, holByteIndex64]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  apply BitVec.eq_of_toNat_eq
+  have hpow : (256 : Nat) ^ (BitVec.toNat address % 8) =
+      2 ^ (8 * (BitVec.toNat address % 8)) := by
+    rw [show (256 : Nat) = 2 ^ 8 by decide, Nat.pow_mul]
+  rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, hpow, Nat.shiftRight_eq_div_pow]
+
+/-- Arithmetic core of the HOL `w2w` truncation relation: extracting a byte at
+byte offset `k ≤ 24` does not see the high 32 bits. -/
+theorem nat_shiftRight_mod_low32 (x k : Nat) (hk : k ≤ 24) :
+    (x >>> k) % 256 = ((x % 2^32) >>> k) % 256 := by
+  rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow]
+  rw [← Nat.mod_mul_right_div_self x (2^k) 256,
+      ← Nat.mod_mul_right_div_self (x % 2^32) (2^k) 256]
+  have hdvd : 2^k * 256 ∣ 2^32 := by
+    have h : 2^k * 256 = 2^(k+8) := by rw [show (256 : Nat) = 2^8 by decide, ← Nat.pow_add]
+    rw [h]
+    exact ⟨2^(32-(k+8)), by rw [← Nat.pow_add]; congr 1; omega⟩
+  rw [Nat.mod_mod_of_dvd x hdvd]
+
+/-- HOL `w2w` truncation of a `Word 64` to a `Word 32`: only the low 32 bits are
+kept, matching the `hw : word32` argument of HOL `panSemScript.sml`
+`mem_store_32_def`. -/
+def holW2w32_64 (value : RiscV.Word 64) : BitVec 32 :=
+  BitVec.ofNat 32 (value.toNat % 2^32)
+
+/-- HOL `w2w` commutation: at a byte offset within the low half (indices 0..3),
+HOL `get_byte` does not distinguish a `Word 64` from its `w2w` truncation to
+`Word 32`. -/
+theorem holGetByte64_low32_eq (value index : RiscV.Word 64)
+    (hindex : index.toNat % 8 < 4) :
+    holGetByte64 index value false =
+      holGetByte64 index (BitVec.ofNat 64 (value.toNat % 2^32)) false := by
+  have hbyte : (value.toNat >>> holByteIndex64 index false) % 256 =
+      ((BitVec.ofNat 64 (value.toNat % 2^32)).toNat >>>
+        holByteIndex64 index false) % 256 := by
+    simp only [holByteIndex64, Bool.false_eq_true, ↓reduceIte]
+    have hk : 8 * (index.toNat % 8) ≤ 24 := by omega
+    have hval : (BitVec.ofNat 64 (value.toNat % 2^32)).toNat = value.toNat % 2^32 := by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    rw [hval]
+    exact nat_shiftRight_mod_low32 value.toNat (8 * (index.toNat % 8)) hk
+  simp only [holGetByte64]
+  rw [hbyte]
+
+theorem panRiscVReadByte_eight_eq_holMemLoadByte64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVReadByte domain memory (8 : RiscV.Word 64) address =
+      holMemLoadByte64 domain memory false address := by
+  simp only [RiscV.panRiscVReadByte, panModelReadByte, RiscV.panRiscVMemoryModel,
+    panRiscVByteAlign_eight_eq_holByteAlign64, holMemLoadByte64,
+    panRiscVGetByte_eight_eq_holGetByte64]
+  by_cases hd : domain (holByteAlign64 address) = true <;>
+    cases hm : memory (holByteAlign64 address) <;>
+    simp_all
+
+/-- The production `LoadByte` at the RV64 target equals HOL `mem_load_byte` over
+the memory view.  This is the genuine evaluator-case bridge for the `LoadByte`
+constructor with a constant address. -/
+theorem crepRuntimeLoadByte_rv64_eq_holMemLoadByte64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoadByte (riscv64CrepRuntimeTarget base) address =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  rw [crepRuntimeLoadByte_target_eq_riscv, panRiscVReadByte_eight_eq_holMemLoadByte64]
+
+/-- Evaluator case: `evalCrepRuntimeExp` of `LoadByte (Const address)` at the
+RV64 target is exactly HOL `mem_load_byte`. -/
+theorem evalCrepRuntimeExp_loadByte_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.loadByte (.const address)) =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+
+/-- Word_lab evaluator case: the production word_lab core's `LoadByte (Const
+address)` at the RV64 target is HOL `mem_load_byte` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_loadByte_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.loadByte (.const address)) =
+      (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address).map
+        PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+
+/-- HOL-shaped 4-byte alignment predicate at RV64: HOL `aligned 2 w`, i.e.
+`w2n w MOD 2^2 = 0`. -/
+def holAligned32_64 (address : RiscV.Word 64) : Bool :=
+  address.toNat % 4 = 0
+
+/-- HOL-shaped little/big-endian byte combination corresponding to
+`word_of_bytes` over the four bytes of a 32-bit read, widened back to the word
+carrier. -/
+def holWordOfBytes64 (bigEndian : Bool) (bytes : List (RiscV.Word 64)) :
+    RiscV.Word 64 :=
+  let byte0 := bytes[0]?.getD 0
+  let byte1 := bytes[1]?.getD 0
+  let byte2 := bytes[2]?.getD 0
+  let byte3 := bytes[3]?.getD 0
+  if bigEndian then
+    BitVec.ofNat 64
+      (byte3.toNat + 256 * byte2.toNat + 256 ^ 2 * byte1.toNat +
+        256 ^ 3 * byte0.toNat)
+  else
+    BitVec.ofNat 64
+      (byte0.toNat + 256 * byte1.toNat + 256 ^ 2 * byte2.toNat +
+        256 ^ 3 * byte3.toNat)
+
+/-- HOL-shaped `mem_load_32` at RV64: alignment guard, aligned cell lookup,
+domain guard, four byte reads and the endian word combination. -/
+def holMemLoad32_64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (bigEndian : Bool)
+    (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  if holAligned32_64 address then
+    let aligned := holByteAlign64 address
+    match memory aligned with
+    | some value =>
+        if domain aligned then
+          some (holWordOfBytes64 bigEndian
+            [holGetByte64 address value bigEndian,
+             holGetByte64 (address + 1) value bigEndian,
+             holGetByte64 (address + 2) value bigEndian,
+             holGetByte64 (address + 3) value bigEndian])
+        else none
+    | none => none
+  else none
+
+theorem panRiscVAligned32_eq_holAligned32 (address : RiscV.Word 64) :
+    RiscV.aligned address 4 = holAligned32_64 address := by
+  simp [RiscV.aligned, holAligned32_64]
+
+theorem holWordOfBytes64_eq_panRiscVWordOfBytes (bigEndian : Bool)
+    (bytes : List (RiscV.Word 64)) :
+    holWordOfBytes64 bigEndian bytes =
+      RiscV.panRiscVWordOfBytes bigEndian bytes := by
+  unfold holWordOfBytes64 RiscV.panRiscVWordOfBytes
+  cases bytes with
+  | nil => rfl
+  | cons b0 rest =>
+      cases rest with
+      | nil => rfl
+      | cons b1 rest =>
+          cases rest with
+          | nil => rfl
+          | cons b2 rest =>
+              cases rest with
+              | nil => rfl
+              | cons b3 rest => rfl
+
+/-- The RISC-V model `panRiscVRead32` at the fixed 8-byte width equals the
+HOL-shaped `mem_load_32` primitive over the memory view. -/
+theorem panRiscVRead32_eight_eq_holMemLoad32_64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVRead32 domain memory (8 : RiscV.Word 64) address =
+      holMemLoad32_64 domain memory false address := by
+  simp only [RiscV.panRiscVRead32, panModelRead32, RiscV.panRiscVMemoryModel,
+    panRiscVAligned32_eq_holAligned32, panRiscVByteAlign_eight_eq_holByteAlign64,
+    holMemLoad32_64, holWordOfBytes64_eq_panRiscVWordOfBytes,
+    panRiscVGetByte_eight_eq_holGetByte64]
+  by_cases ha : holAligned32_64 address = true <;>
+    cases hm : memory (holByteAlign64 address) <;>
+    by_cases hd : domain (holByteAlign64 address) = true <;>
+    simp_all
+
+/-- The production `Load32` at the RV64 target equals HOL `mem_load_32` over
+the memory view.  This is the genuine evaluator-case bridge for the `Load32`
+constructor with a constant address. -/
+theorem crepRuntimeLoad32_rv64_eq_holMemLoad32_64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoad32 (riscv64CrepRuntimeTarget base) address =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address := by
+  rw [crepRuntimeLoad32_target_eq_riscv, panRiscVRead32_eight_eq_holMemLoad32_64]
+
+/-- Evaluator case: `evalCrepRuntimeExp` of `Load32 (Const address)` at the
+RV64 target is exactly HOL `mem_load_32`. -/
+theorem evalCrepRuntimeExp_load32_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load32 (.const address)) =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Load32 (Const
+address)` at the RV64 target is HOL `mem_load_32` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_load32_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.load32 (.const address)) =
+      (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address).map PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+
+/-- HOL-shaped word-cell load primitive for the RV64 target, mirroring
+`crepSem$mem_load_def` (`if addr IN s.memaddrs then SOME (s.memory addr) else
+NONE`) over a total `word -> word_lab`-viewed memory.  Flapjack-only adapter;
+untagged pending full statement-shape review. -/
+def holMemLoad64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    Option (RiscV.Word 64) :=
+  if domain address then memory address else none
+
+/-- The RISC-V word-cell read primitive is exactly the HOL `mem_load` shape. -/
+theorem panRiscVReadWord_eight_eq_holMemLoad64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVReadWord domain memory address = holMemLoad64 domain memory address := rfl
+
+/-- Production `crepRuntimeLoad` at the RV64 target equals the HOL-shaped
+`mem_load` primitive over the total memory view. -/
+theorem crepRuntimeLoad_rv64_eq_holMemLoad64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoad (riscv64CrepRuntimeTarget base) address =
+      holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address := by
+  rw [crepRuntimeLoad_target_eq_riscv, panRiscVReadWord_eight_eq_holMemLoad64]
+
+/-- Plain evaluator case: the production evaluator's `Load (Const address)` at
+the RV64 target is the HOL-shaped `mem_load` primitive. -/
+theorem evalCrepRuntimeExp_load_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load (.const address)) =
+      holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoad_rv64_eq_holMemLoad64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Load (Const
+address)` at the RV64 target is HOL `mem_load` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_load_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.load (.const address)) =
+      (holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address).map
+        PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoad_rv64_eq_holMemLoad64]
+
+/-! ## The RV64 `Shift` evaluator case
+
+HOL `crepSem$eval` evaluates `Shift sh e1 e2` by evaluating both operands and
+then applying `word_sh sh w1 (w2n w2)` (`cakeml/pancake/semantics/crepSemScript.sml:131-133`).
+`word_sh` (`cakeml/compiler/backend/wordLangScript.sml:313-321`) rejects an
+amount that is nonzero and at least the word width, keeps amount zero, and
+selects `Lsl`/`Lsr`/`Asr`/`Ror`.  The constant-operand case below is exactly
+that primitive over the RV64 target.  Declaration notes: Flapjack-specific
+bridge, intentionally untagged while the arbitrary runtime `memoryModel` hook
+is only definitionally the fixed HOL primitive at this instantiation. -/
+
+/-- The RV64 instance of HOL `word_sh`: amount zero is valid, a nonzero amount
+at least the word width is invalid. -/
+def holWordShift64 (operator : Shift) (value : RiscV.Word 64) (amount : Nat) :
+    Option (RiscV.Word 64) :=
+  if amount ≠ 0 ∧ 64 ≤ amount then none
+  else
+    match operator with
+    | .lsl => some (value <<< amount)
+    | .lsr => some (value >>> amount)
+    | .asr => some (BitVec.sshiftRight value amount)
+    | .ror => some (BitVec.rotateRight value amount)
+
+theorem panRiscVShift_eight_eq_holWordShift64
+    (operator : Shift) (left right : RiscV.Word 64) :
+    RiscV.panRiscVShift operator left right =
+      holWordShift64 operator left right.toNat := by
+  unfold RiscV.panRiscVShift holWordShift64
+  by_cases h : right.toNat < 64
+  · have hnot : ¬ (right.toNat ≠ 0 ∧ 64 ≤ right.toNat) := by omega
+    simp only [h, if_true, hnot, if_false]
+    rfl
+  · have hge : 64 ≤ right.toNat := by omega
+    have hnz : right.toNat ≠ 0 := by omega
+    simp [h, hnz, hge]
+
+theorem crepRuntimeShift_rv64_eq_holWordShift64
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    (riscv64CrepRuntimeTarget base).memoryModel.shift operator left right =
+      holWordShift64 operator left right.toNat := by
+  change RiscV.panRiscVShift operator left right =
+    holWordShift64 operator left right.toNat
+  exact panRiscVShift_eight_eq_holWordShift64 operator left right
+
+/-- Evaluator case: the production `Shift` over two constant operands at the
+RV64 target is HOL `word_sh`. -/
+theorem evalCrepRuntimeExp_shift_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.shift operator (.const left) (.const right)) =
+      holWordShift64 operator left right.toNat := by
+  simp [evalCrepRuntimeExp, crepRuntimeShift_rv64_eq_holWordShift64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Shift` over two
+constant operands at the RV64 target is HOL `word_sh` wrapped in
+`PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_shift_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.shift operator (.const left) (.const right)) =
+      (holWordShift64 operator left right.toNat).map PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeShift_rv64_eq_holWordShift64]
+
+/-- Exact condition under which the production `Shift` hook coincides with
+HOL's fixed `word_sh` at 64 bits.  `crepRuntimeShift_rv64_eq_holWordShift64`
+is the `riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need
+not satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelShiftMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : Shift) (left right : RiscV.Word 64),
+    model.shift operator left right = holWordShift64 operator left right.toNat
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelShiftMatchesHOL64` computes `Shift` as HOL `word_sh`. -/
+theorem crepMemoryModelShift_eq_holWordShift64_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 model)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    model.shift operator left right = holWordShift64 operator left right.toNat :=
+  hmodel operator left right
+
+/-- The RV64 target's memory model satisfies the shift/HOL-`word_sh` predicate. -/
+theorem riscv64CrepRuntimeTarget_shift_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelShiftMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator left right => crepRuntimeShift_rv64_eq_holWordShift64 base operator left right
+
+/-- Generic production equation for `Shift` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_sh` predicate, the hook is resolved as the HOL
+primitive.  This composes the recursive evaluator; it is not a constant
+specialization. -/
+theorem evalCrepRuntimeExp_shift_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.shift operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          holWordShift64 operator leftWord rightWord.toNat)) := by
+  simp only [CrepMemoryModelShiftMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_shift_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_shift_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.shift operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          (holWordShift64 operator leftWord rightWord.toNat).map PanWordLab.word)) := by
+  simp only [CrepMemoryModelShiftMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_shift_of_matches`. -/
+theorem evalCrepRuntimeExp_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.shift operator (.const left) (.const right)) =
+      holWordShift64 operator left right.toNat := by
+  simpa [evalCrepRuntimeExp] using
+    evalCrepRuntimeExp_shift_of_matches base hmodel operator (.const left) (.const right)
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_shift_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.shift operator (.const left) (.const right)) =
+      (holWordShift64 operator left right.toNat).map PanWordLab.word := by
+  simpa [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp] using
+    evalCrepRuntimeExpWordLab_shift_of_matches base hmodel operator (.const left) (.const right)
+
+/-- Exact condition under which the production `Op` hook coincides with HOL's
+fixed `word_op` at 64 bits.  `panRiscVWordOp_eq_wordOpHOL` is the
+`riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need not
+satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelOpMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : BinOp) (values : List (RiscV.Word 64)),
+    model.wordOp operator values = wordOpHOL operator values
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelOpMatchesHOL64` computes `Op` as HOL `word_op`. -/
+theorem crepMemoryModelOp_eq_wordOpHOL_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelOpMatchesHOL64 model)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    model.wordOp operator values = wordOpHOL operator values :=
+  hmodel operator values
+
+/-- The RV64 target's memory model satisfies the `Op`/HOL-`word_op` predicate. -/
+theorem riscv64CrepRuntimeTarget_op_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelOpMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator values => panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- Generic production equation for `Op` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_op` predicate, the hook is resolved as the HOL
+primitive. -/
+theorem evalCrepRuntimeExp_op_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    evalCrepRuntimeExp base (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp base)).bind
+        (fun values => wordOpHOL operator values) := by
+  simp only [CrepMemoryModelOpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_op_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_op_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    evalCrepRuntimeExpWordLab base (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp base)).bind
+        (fun values => (wordOpHOL operator values).map PanWordLab.word) := by
+  simp only [CrepMemoryModelOpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_op_of_matches`. -/
+theorem evalCrepRuntimeExp_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.op operator (values.map CrepExp.const)) =
+      wordOpHOL operator values := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  rw [evalCrepRuntimeExp_op_of_matches base hmodel operator (values.map CrepExp.const), hmapConst]
+  rfl
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_op_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.op operator (values.map CrepExp.const)) =
+      (wordOpHOL operator values).map PanWordLab.word := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  rw [evalCrepRuntimeExpWordLab_op_of_matches base hmodel operator (values.map CrepExp.const), hmapConst]
+  rfl
+
+/-- Source/production relation: the exact condition under which an arbitrary
+`PanMemoryModel` `compare` hook coincides with HOL's fixed `word_cmp`. -/
+def CrepMemoryModelCmpMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : Cmp) (left right : RiscV.Word 64),
+    model.compare operator left right = evalPanCmp operator left right
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelCmpMatchesHOL64` computes `Cmp` as HOL `word_cmp`. -/
+theorem crepMemoryModelCmp_eq_evalPanCmp_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 model)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    model.compare operator left right = evalPanCmp operator left right :=
+  hmodel operator left right
+
+/-- The RV64 target's memory model satisfies the `Cmp`/HOL-`word_cmp` predicate. -/
+theorem riscv64CrepRuntimeTarget_cmp_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelCmpMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator left right => panRiscVCmp_eq_evalPanCmp operator left right
+
+/-- Generic production equation for `Cmp` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_cmp` predicate, the hook is resolved as the HOL
+primitive. -/
+theorem evalCrepRuntimeExp_cmp_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.cmp operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          some (evalPanCmp operator leftWord rightWord))) := by
+  simp only [CrepMemoryModelCmpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_cmp_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_cmp_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.cmp operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          some (.word (evalPanCmp operator leftWord rightWord)))) := by
+  simp only [CrepMemoryModelCmpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_cmp_of_matches`. -/
+theorem evalCrepRuntimeExp_cmp_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.cmp operator (.const left) (.const right)) =
+      some (evalPanCmp operator left right) := by
+  rw [evalCrepRuntimeExp_cmp_of_matches base hmodel operator (.const left) (.const right)]
+  simp [evalCrepRuntimeExp]
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_cmp_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_cmp_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.cmp operator (.const left) (.const right)) =
+      some (.word (evalPanCmp operator left right)) := by
+  rw [evalCrepRuntimeExpWordLab_cmp_of_matches base hmodel operator (.const left) (.const right)]
+  simp [evalCrepRuntimeExp]
+
+/-- HOL `byte$byte_align`/`byte$get_byte` hooks at 64 bits: a `PanMemoryModel`
+whose 8-byte alignment and little-endian byte extraction agree with HOL.  This
+is the exact condition under which an arbitrary `LoadByte` model coincides with
+HOL `panSem$mem_load_byte`. -/
+def CrepMemoryModelLoadByteMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address value : RiscV.Word 64),
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    model.getByte (8 : RiscV.Word 64) address value false = holGetByte64 address value false
+
+theorem crepMemoryModelLoadByte_align_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address value).1
+
+theorem crepMemoryModelLoadByte_getByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    model.getByte (8 : RiscV.Word 64) address value false =
+      holGetByte64 address value false :=
+  (hmodel address value).2
+
+theorem riscv64CrepRuntimeTarget_loadByte_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelLoadByteMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address value =>
+    ⟨panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      panRiscVGetByte_eight_eq_holGetByte64 address value⟩
+
+/-- For any model matching the HOL byte hooks, and a state with an 8-byte
+little-endian word, the production `LoadByte` is HOL `mem_load_byte`. -/
+theorem crepRuntimeLoadByte_eq_holMemLoadByte64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false)
+    (address : RiscV.Word 64) :
+    crepRuntimeLoadByte base address =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  have halb := crepMemoryModelLoadByte_align_of_matches hmodel address 0
+  simp only [crepRuntimeLoadByte, holMemLoadByte64, crepRuntimeMemoryView, hbytes, hbig]
+  rw [halb]
+  by_cases hd : base.memaddrs (holByteAlign64 address) = true
+  · have hget := crepMemoryModelLoadByte_getByte_of_matches hmodel address
+        (panTheWord (base.memory (holByteAlign64 address)))
+    simp only [hd, hget, Option.pure_def]
+  · simp [hd]
+
+/-- Generic evaluator equation for `LoadByte` with an arbitrary address
+expression, over any model matching the HOL byte hooks. -/
+theorem evalCrepRuntimeExp_loadByte_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false)
+    (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.loadByte address) =
+      (evalCrepRuntimeExp base address).bind (fun addressWord =>
+        holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false addressWord) := by
+  simp only [evalCrepRuntimeExp,
+    crepRuntimeLoadByte_eq_holMemLoadByte64_of_matches base hmodel hbytes hbig]
+  rfl
+
+theorem evalCrepRuntimeExpWordLab_loadByte_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false)
+    (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.loadByte address) =
+      (evalCrepRuntimeExp base address).bind (fun addressWord =>
+        (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          addressWord).map PanWordLab.word) := by
+  simp only [evalCrepRuntimeExpWordLab,
+    crepRuntimeLoadByte_eq_holMemLoadByte64_of_matches base hmodel hbytes hbig]
+  rfl
+
+theorem evalCrepRuntimeExp_loadByte_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false)
+    (address : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.loadByte (.const address)) =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  rw [evalCrepRuntimeExp_loadByte_of_matches base hmodel hbytes hbig (.const address)]
+  simp [evalCrepRuntimeExp]
+
+theorem evalCrepRuntimeExpWordLab_loadByte_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoadByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false)
+    (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.loadByte (.const address)) =
+      (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address).map
+        PanWordLab.word := by
+  rw [evalCrepRuntimeExpWordLab_loadByte_of_matches base hmodel hbytes hbig (.const address)]
+  simp [evalCrepRuntimeExp]
+
+/-- The plain `Load` constructor uses only the `memaddrs` guard and the memory
+cells, with no memory-model hook, so its arbitrary-address evaluator equation
+holds for every RV64 runtime state. -/
+theorem evalCrepRuntimeExp_load_rv64
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load address) =
+      (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address).bind
+        (fun addressWord => holMemLoad64 base.memaddrs
+          (crepRuntimeMemoryView base.memory) addressWord) := by
+  simp only [evalCrepRuntimeExp, crepRuntimeLoad_rv64_eq_holMemLoad64]
+  rfl
+
+/-- Word_lab version of the arbitrary-address plain `Load` equation. -/
+theorem evalCrepRuntimeExpWordLab_load_rv64
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.load address) =
+      (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address).bind
+        (fun addressWord => (holMemLoad64 base.memaddrs
+          (crepRuntimeMemoryView base.memory) addressWord).map PanWordLab.word) := by
+  simp only [evalCrepRuntimeExpWordLab, crepRuntimeLoad_rv64_eq_holMemLoad64]
+  rfl
+
+/-- The exact hook-matching condition under which an arbitrary `PanMemoryModel`
+at RV64 reproduces HOL `mem_load_32`: alignment, byte alignment, byte reads, and
+the four-byte endian combination all coincide with the HOL primitives. -/
+def CrepMemoryModelLoad32MatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address value : RiscV.Word 64),
+    model.aligned 4 address = holAligned32_64 address ∧
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    (∀ (byteAddress : RiscV.Word 64),
+      model.getByte (8 : RiscV.Word 64) byteAddress value false =
+        holGetByte64 byteAddress value false) ∧
+    model.wordOfBytes32 false
+        [holGetByte64 address value false, holGetByte64 (address + 1) value false,
+         holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false] =
+      holWordOfBytes64 false
+        [holGetByte64 address value false, holGetByte64 (address + 1) value false,
+         holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false]
+
+theorem crepMemoryModelLoad32_aligned_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    model.aligned 4 address = holAligned32_64 address := (hmodel address value).1
+
+theorem crepMemoryModelLoad32_byteAlign_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address value).2.1
+
+theorem crepMemoryModelLoad32_getByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    ∀ (byteAddress : RiscV.Word 64),
+      model.getByte (8 : RiscV.Word 64) byteAddress value false =
+        holGetByte64 byteAddress value false :=
+  (hmodel address value).2.2.1
+
+theorem crepMemoryModelLoad32_wordOfBytes_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 model)
+    (address value : RiscV.Word 64) :
+    model.wordOfBytes32 false
+        [holGetByte64 address value false, holGetByte64 (address + 1) value false,
+         holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false] =
+      holWordOfBytes64 false
+        [holGetByte64 address value false, holGetByte64 (address + 1) value false,
+         holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false] :=
+  (hmodel address value).2.2.2
+
+theorem riscv64CrepRuntimeTarget_load32_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelLoad32MatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address value =>
+    ⟨panRiscVAligned32_eq_holAligned32 address,
+      panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      fun byteAddress => panRiscVGetByte_eight_eq_holGetByte64 byteAddress value,
+      (holWordOfBytes64_eq_panRiscVWordOfBytes false _).symm⟩
+
+theorem crepRuntimeLoad32_eq_holMemLoad32_64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address : RiscV.Word 64) :
+    crepRuntimeLoad32 base address =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  have haligned := crepMemoryModelLoad32_aligned_of_matches hmodel address 0
+  have hbyteAlign := crepMemoryModelLoad32_byteAlign_of_matches hmodel address 0
+  have hgetByte := crepMemoryModelLoad32_getByte_of_matches hmodel address
+    (panTheWord (base.memory (holByteAlign64 address)))
+  have hwordOfBytes := crepMemoryModelLoad32_wordOfBytes_of_matches hmodel address
+    (panTheWord (base.memory (holByteAlign64 address)))
+  have h2 : (address + 1 + 1 : RiscV.Word 64) = address + 2 := by
+    rw [BitVec.add_assoc, show (1 + 1 : RiscV.Word 64) = 2 from by decide]
+  have h3 : (address + 1 + 1 + 1 : RiscV.Word 64) = address + 3 := by
+    rw [BitVec.add_assoc, show (1 + 1 : RiscV.Word 64) = 2 from by decide, BitVec.add_assoc,
+      show (1 + 2 : RiscV.Word 64) = 3 from by decide]
+  simp only [crepRuntimeLoad32, holMemLoad32_64, crepRuntimeMemoryView, hbytes, hbig]
+  rw [haligned, hbyteAlign]
+  by_cases ha : holAligned32_64 address = true
+  · simp only [ha, if_true]
+    by_cases hd : base.memaddrs (holByteAlign64 address) = true
+    · simp only [hd, if_true]
+      rw [hgetByte address, hgetByte (address + 1), hgetByte (address + 1 + 1),
+        hgetByte (address + 1 + 1 + 1), h3, h2, hwordOfBytes]
+      simp only [Option.pure_def]
+    · simp [hd]
+  · simp [ha]
+
+/-- Arbitrary-address `Load32` equation for any hook-matching model: the address
+child is evaluated recursively, then HOL `mem_load_32` is applied. -/
+theorem evalCrepRuntimeExp_load32_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.load32 address) =
+      (evalCrepRuntimeExp base address).bind (fun addressWord =>
+        holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false addressWord) := by
+  simp only [evalCrepRuntimeExp,
+    crepRuntimeLoad32_eq_holMemLoad32_64_of_matches base hmodel hbytes hbig]
+  rfl
+
+/-- Word_lab version of the arbitrary-address `Load32` equation. -/
+theorem evalCrepRuntimeExpWordLab_load32_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.load32 address) =
+      (evalCrepRuntimeExp base address).bind (fun addressWord =>
+        (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          addressWord).map PanWordLab.word) := by
+  simp only [evalCrepRuntimeExpWordLab,
+    crepRuntimeLoad32_eq_holMemLoad32_64_of_matches base hmodel hbytes hbig]
+  rfl
+
+/-- Constant-address corollary of the arbitrary-address `Load32` equation. -/
+theorem evalCrepRuntimeExp_load32_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.load32 (.const address)) =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  rw [evalCrepRuntimeExp_load32_of_matches base hmodel hbytes hbig (.const address)]
+  simp [evalCrepRuntimeExp]
+
+/-- Word_lab constant-address corollary of the arbitrary-address `Load32` equation. -/
+theorem evalCrepRuntimeExpWordLab_load32_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelLoad32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.load32 (.const address)) =
+      (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false address).map
+        PanWordLab.word := by
+  rw [evalCrepRuntimeExpWordLab_load32_of_matches base hmodel hbytes hbig (.const address)]
+  simp [evalCrepRuntimeExp]
+
+/-! ### Store family hook relations
+
+HOL `panSemScript.sml` `mem_store_def` inserts a word directly, while
+`mem_store_byte_def`/`mem_store_32_def` read the cell, replace a byte with
+`set_byte`, and write the cell back.  The production store hooks are
+`PanMemoryModel.byteAlign`/`setByte`; the predicates below name exactly when an
+arbitrary runtime model coincides with the HOL fixed primitives. -/
+
+/-- HOL `set_byte_def` at the fixed 8-byte width, with the byte index measured
+in bytes (HOL reverses it for big endian). -/
+def holSetByte64 (address byteValue cell : RiscV.Word 64) (bigEndian : Bool) : RiscV.Word 64 :=
+  let byteCount := 8
+  let byteIndex := if bigEndian then byteCount - 1 - address.toNat % byteCount
+    else address.toNat % byteCount
+  let offset := 256 ^ byteIndex
+  let block := offset * 256
+  let low := cell.toNat % offset
+  let high := cell.toNat / block
+  BitVec.ofNat 64 (low + (byteValue.toNat % 256) * offset + high * block)
+
+theorem panRiscVSetByte_eight_eq_holSetByte64 (address byteValue cell : RiscV.Word 64) :
+    RiscV.panRiscVSetByte (8 : RiscV.Word 64) address byteValue cell =
+      holSetByte64 address byteValue cell false := by
+  simp only [RiscV.panRiscVSetByte, panRiscVByteIndex_eight, holSetByte64, Bool.false_eq_true,
+    if_false]
+
+/-- HOL `panSemScript.sml` `mem_store_def`: guarded insertion of a word-labelled
+value into the total memory function. -/
+def holMemStore64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  if domain address then some (updateCrepRuntimeMemory memory address (.word value)) else none
+
+/-- HOL `panSemScript.sml` `mem_store_byte_def`: guarded byte replacement in the
+aligned cell of the total memory function. -/
+def holMemStoreByte64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (bigEndian : Bool) (address byteValue : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  let alignedAddress := holByteAlign64 address
+  if domain alignedAddress then
+    some (updateCrepRuntimeMemory memory alignedAddress
+      (.word (holSetByte64 address byteValue (panTheWord (memory alignedAddress)) bigEndian)))
+  else none
+
+def CrepMemoryModelStoreByteMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address byteValue cell : RiscV.Word 64),
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    model.setByte (8 : RiscV.Word 64) address byteValue cell false =
+      holSetByte64 address byteValue cell false
+
+theorem crepMemoryModelStoreByte_align_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 model)
+    (address byteValue cell : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address byteValue cell).1
+
+theorem crepMemoryModelStoreByte_setByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 model)
+    (address byteValue cell : RiscV.Word 64) :
+    model.setByte (8 : RiscV.Word 64) address byteValue cell false =
+      holSetByte64 address byteValue cell false :=
+  (hmodel address byteValue cell).2
+
+theorem riscv64CrepRuntimeTarget_storeByte_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelStoreByteMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address byteValue cell =>
+    ⟨panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      panRiscVSetByte_eight_eq_holSetByte64 address byteValue cell⟩
+
+/-- The production word store at the RV64 target is HOL `mem_store`: the memory
+function is updated at the guarded address.  No memory-model hook is involved. -/
+theorem crepRuntimeStore_rv64_eq_holMemStore64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address value : RiscV.Word 64) :
+    crepRuntimeStore (riscv64CrepRuntimeTarget base) address value =
+      (holMemStore64 base.memaddrs base.memory address value).map
+        (fun memory => { riscv64CrepRuntimeTarget base with memory := memory }) := by
+  simp only [crepRuntimeStore, holMemStore64, riscv64CrepRuntimeTarget]
+  by_cases h : base.memaddrs address = true
+  · simp only [h, if_true, Option.map_some]
+  · simp [h]
+
+/-- The production byte store is HOL `mem_store_byte` under the `setByte`
+matching predicate. -/
+theorem crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address byteValue : RiscV.Word 64) :
+    crepRuntimeStoreByte base address byteValue =
+      (holMemStoreByte64 base.memaddrs base.memory false address byteValue).map
+        (fun memory => { base with memory := memory }) := by
+  have halign := crepMemoryModelStoreByte_align_of_matches hmodel address byteValue
+    (panTheWord (base.memory (holByteAlign64 address)))
+  have hset := crepMemoryModelStoreByte_setByte_of_matches hmodel address byteValue
+    (panTheWord (base.memory (holByteAlign64 address)))
+  simp only [crepRuntimeStoreByte, holMemStoreByte64, hbytes, hbig]
+  rw [halign]
+  by_cases hd : base.memaddrs (holByteAlign64 address) = true
+  · simp only [hd, if_true]
+    rw [hset]
+    simp only [Option.pure_def, Option.map_some]
+  · simp [hd]
+
+/-- RV64-lifted counterpart of HOL `panSemScript.sml` `mem_store_32_def`.  HOL
+`mem_store_32` takes a `word32` value; this definition takes an RV64 word and
+performs the same four-byte replacement through the low 32 bits (`w2w`, modelled
+by `holW2w32_64`), so it is not the exact HOL signature.  The relation between
+the two is `holGetByte64_low32_eq` (byte indices 0..3 commute with the
+truncation) and `holMemStore32_64_high_bits_ignored` (the high RV64 bits do not
+affect the resulting cell). -/
+def holMemStore32_64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (bigEndian : Bool) (address value : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  if holAligned32_64 address then
+    let alignedAddress := holByteAlign64 address
+    if domain alignedAddress then
+      let cell := panTheWord (memory alignedAddress)
+      let cell0 := holSetByte64 address (holGetByte64 0 value bigEndian) cell bigEndian
+      let cell1 := holSetByte64 (address + 1) (holGetByte64 1 value bigEndian) cell0 bigEndian
+      let cell2 := holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value bigEndian) cell1 bigEndian
+      let cell3 := holSetByte64 (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value bigEndian) cell2 bigEndian
+      some (updateCrepRuntimeMemory memory alignedAddress (.word cell3))
+    else none
+  else none
+
+def CrepMemoryModelStore32MatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address _value cell : RiscV.Word 64),
+    model.aligned 4 address = holAligned32_64 address ∧
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+        holGetByte64 byteAddress byteValue false) ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+        holSetByte64 byteAddress byteValue cell false)
+
+theorem crepMemoryModelStore32_aligned_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.aligned 4 address = holAligned32_64 address :=
+  (hmodel address value cell).1
+
+theorem crepMemoryModelStore32_byteAlign_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address value cell).2.1
+
+theorem crepMemoryModelStore32_getByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+      holGetByte64 byteAddress byteValue false :=
+  (hmodel address value cell).2.2.1 byteAddress byteValue
+
+theorem crepMemoryModelStore32_setByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+      holSetByte64 byteAddress byteValue cell false :=
+  (hmodel address value cell).2.2.2 byteAddress byteValue
+
+theorem riscv64CrepRuntimeTarget_store32_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelStore32MatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address _value cell =>
+    ⟨panRiscVAligned32_eq_holAligned32 address,
+      panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      fun byteAddress byteValue => panRiscVGetByte_eight_eq_holGetByte64 byteAddress byteValue,
+      fun byteAddress byteValue => panRiscVSetByte_eight_eq_holSetByte64 byteAddress byteValue cell⟩
+
+theorem crepRuntimeStore32_eq_holMemStore32_64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      (holMemStore32_64 base.memaddrs base.memory false address value).map
+        (fun memory => { base with memory := memory }) := by
+  have haligned := crepMemoryModelStore32_aligned_of_matches hmodel address value 0
+  have halign := crepMemoryModelStore32_byteAlign_of_matches hmodel address value 0
+  simp only [crepRuntimeStore32, holMemStore32_64, hbytes, hbig]
+  rw [haligned]
+  by_cases ha : holAligned32_64 address = true
+  · simp only [ha, if_true]
+    rw [halign]
+    by_cases hd : base.memaddrs (holByteAlign64 address) = true
+    · simp only [hd, if_true]
+      have hget0 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 0 value
+      have hget1 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 1 value
+      have hget2 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1) value
+      have hget3 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1 + 1) value
+      rw [hget0, hget1, hget2, hget3]
+      rw [crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (panTheWord (base.memory (holByteAlign64 address))) address
+            (holGetByte64 0 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 address (holGetByte64 0 value false)
+              (panTheWord (base.memory (holByteAlign64 address))) false)
+            (address + 1) (holGetByte64 1 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1) (holGetByte64 1 value false)
+              (holSetByte64 address (holGetByte64 0 value false)
+                (panTheWord (base.memory (holByteAlign64 address))) false) false)
+            (address + 1 + 1) (holGetByte64 (1 + 1) value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value false)
+              (holSetByte64 (address + 1) (holGetByte64 1 value false)
+                (holSetByte64 address (holGetByte64 0 value false)
+                  (panTheWord (base.memory (holByteAlign64 address))) false) false) false)
+            (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value false)]
+      simp only [Option.pure_def, Option.map_some]
+    · simp [hd]
+  · simp [ha]
+
+/-- HOL `mem_store_32_def` takes `hw : word32` and stores only the low 32 bits of
+the RV64 value (via `w2w`).  In little-endian mode the stored bytes come from
+byte offsets 0..3, so the 64-bit reconstruction used by production is unchanged
+when the high 32 bits are altered. -/
+theorem holMemStore32_64_high_bits_ignored
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    holMemStore32_64 domain memory false address value =
+      holMemStore32_64 domain memory false address
+        (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  unfold holMemStore32_64
+  rw [holGetByte64_low32_eq value 0 (by decide),
+      holGetByte64_low32_eq value 1 (by decide),
+      holGetByte64_low32_eq value (1 + 1) (by decide),
+      holGetByte64_low32_eq value (1 + 1 + 1) (by decide)]
+
+/-- The production RV64 `Store32` at the target depends only on the low 32 bits
+of the stored value, matching HOL `mem_store_32`'s up-front `w2w` truncation. -/
+theorem crepRuntimeStore32_low32_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      crepRuntimeStore32 base address (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  rw [crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address value,
+      crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address
+        (BitVec.ofNat 64 (value.toNat % 2^32)),
+      holMemStore32_64_high_bits_ignored base.memaddrs base.memory address value]
+
+/-- The production word store is HOL `mem_store` for any model: no memory-model
+hook is involved. -/
+theorem crepRuntimeStore_eq_holMemStore64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address value : RiscV.Word 64) :
+    crepRuntimeStore base address value =
+      (holMemStore64 base.memaddrs base.memory address value).map
+        (fun memory => { base with memory := memory }) := by
+  simp only [crepRuntimeStore, holMemStore64]
+  by_cases h : base.memaddrs address = true
+  · simp only [h, if_true, Option.map_some]
+  · simp [h]
+
+/-! HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
+two word operands yields their product, any other arity is a failure. -/
+def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
+  match values with
+  | [left, right] => some (left * right)
+  | _ => none
+
+/-- Evaluator case: the production `Crepop Mul` over constant operands at the
+RV64 target is HOL `crep_op`. -/
+theorem evalCrepRuntimeExp_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      holCrepOpMul64 args := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExp, holCrepOpMul64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Crepop Mul` over
+constant operands at the RV64 target is HOL `crep_op` wrapped in
+`PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      (holCrepOpMul64 args).map PanWordLab.word := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+
+/- HOL-shaped total 64-bit reference evaluator over the production RV64 Crep
+runtime state.  It uses the reviewed `holMemLoad*`/`holWordShift64`/`wordOpHOL`
+primitives and HOL `crepSem$eval`'s recursive structure (children are re-evaluated
+by the reference itself).  It is Flapjack-only adapter infrastructure, not a HOL
+port: the production evaluator's `Op`/`Cmp`/`Shift`/byte-load arms still delegate
+to the arbitrary runtime `memoryModel` hooks rather than HOL fixed primitives, so
+no `@[hol]` tag is attached (tracked by bead flapjack-pxn.18.4.3.48.1). -/
+mutual
+  def holCrepEval64 (base : CrepRuntimeState (RiscV.Word 64) Unit) :
+      CrepExp (RiscV.Word 64) → Option (PanWordLab (RiscV.Word 64))
+    | .const value => some (.word value)
+    | .var name => base.locals name
+    | .loadGlob name => base.globals name
+    | .load address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) word).map
+          PanWordLab.word
+    | .load32 address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          word).map PanWordLab.word
+    | .loadByte address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          word).map PanWordLab.word
+    | .op operator expressions => do
+        let cells ← holCrepEvals64 base expressions
+        let words ← cells.mapM (fun cell => (let .word word := cell; some word))
+        (wordOpHOL operator words).map PanWordLab.word
+    | .crepOp .mul [left, right] => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        pure (.word (leftWord * rightWord))
+    | .cmp operator left right => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        pure (.word (RiscV.panRiscVCmp operator leftWord rightWord))
+    | .shift operator left right => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        (holWordShift64 operator leftWord rightWord.toNat).map PanWordLab.word
+    | .baseAddr => some (.word base.baseAddress)
+    | .topAddr => some (.word base.topAddress)
+    | _ => none
+  def holCrepEvals64 (base : CrepRuntimeState (RiscV.Word 64) Unit) :
+      List (CrepExp (RiscV.Word 64)) → Option (List (PanWordLab (RiscV.Word 64)))
+    | [] => some []
+    | expression :: expressions => do
+        let cell ← holCrepEval64 base expression
+        let cells ← holCrepEvals64 base expressions
+        pure (cell :: cells)
+end
+
+/-- The reference list evaluator is the `mapM` of the reference expression evaluator. -/
+theorem holCrepEvals64_eq_mapM (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (expressions : List (CrepExp (RiscV.Word 64))) :
+    holCrepEvals64 base expressions = expressions.mapM (holCrepEval64 base) := by
+  induction expressions with
+  | nil => rfl
+  | cons expression expressions ih =>
+      simp only [holCrepEvals64, List.mapM_cons]
+      cases h : holCrepEval64 base expression <;> simp [ih]
+
+/-- Unwrapping a list of `word_lab` cells that were all built by `PanWordLab.word`
+recovers the original bare words. -/
+theorem mapM_unwrap_mapWord (values : List (RiscV.Word 64)) :
+    (values.map PanWordLab.word).mapM
+        (fun cell => (let .word word := cell; some word)) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.map_cons, List.mapM_cons, ih]
+
+/-- The first-field projection of a `word_lab` cell list built by `PanWordLab.word`
+recovers the original bare words. -/
+theorem mapM_some_fst_map_word (values : List (RiscV.Word 64)) :
+    (values.map PanWordLab.word).mapM (fun cell => some cell.1) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.map_cons, List.mapM_cons, ih]
+
+/-- `mapM` of `some` is `some` of the list. -/
+theorem list_mapM_some (values : List (RiscV.Word 64)) :
+    values.mapM (fun value => some value) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.mapM_cons, ih]
+
+/-- The production list evaluator is the `mapM` of the expression evaluator. -/
+theorem evalCrepRuntimeExps_eq_mapM_of
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expressions : List (CrepExp α)) :
+    evalCrepRuntimeExps state expressions = expressions.mapM (evalCrepRuntimeExp state) := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons expression expressions ih =>
+      simp only [evalCrepRuntimeExps, List.mapM_cons]
+      cases h : evalCrepRuntimeExp state expression <;> simp [ih]
+
+mutual
+  /-- Production/bare RV64 Crep evaluator correspondence with the HOL-shaped
+  reference evaluator, read back through `PanWordLab.word`.  Flapjack-only
+  adapter theorem (no `@[hol]` tag): the production `Op`/`Cmp`/`Shift`/byte-load
+  arms still go through the runtime `memoryModel` hooks, which the correspondence
+  identifies with the reviewed HOL-shaped primitives only at this RV64 target. -/
+  theorem evalCrepRuntimeExp_map_eq_holCrepEval64
+      (base : CrepRuntimeState (RiscV.Word 64) Unit)
+      (expression : CrepExp (RiscV.Word 64)) :
+      (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) expression).map PanWordLab.word =
+        holCrepEval64 base expression := by
+    cases expression with
+    | const value => simp [evalCrepRuntimeExp, holCrepEval64]
+    | var name =>
+        simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget,
+          Function.comp_def, optionMapWordPanTheWord]
+    | loadGlob name =>
+        simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget,
+          Function.comp_def, optionMapWordPanTheWord]
+    | baseAddr => simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget]
+    | topAddr => simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget]
+    | load address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoad_rv64_eq_holMemLoad64]
+    | load32 address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+    | loadByte address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+    | op operator expressions =>
+        simp only [evalCrepRuntimeExp, holCrepEval64]
+        rw [← evalCrepRuntimeExps_map_eq_holCrepEvals64 base expressions]
+        rw [← evalCrepRuntimeExps_eq_mapM_of (riscv64CrepRuntimeTarget base) expressions]
+        simp [Option.bind_map, Option.map_bind, Option.bind_some, Function.comp_def,
+          list_mapM_some, riscv64CrepRuntimeTarget_memoryModel,
+          RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp, wordOpHOL]
+    | crepOp operator expressions =>
+        cases operator
+        cases expressions with
+        | nil => simp [evalCrepRuntimeExp, holCrepEval64]
+        | cons left rest =>
+            cases rest with
+            | nil => simp [evalCrepRuntimeExp, holCrepEval64]
+            | cons right tail =>
+                cases tail with
+                | nil =>
+                    cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+                    | none =>
+                        have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                        rw [hl, Option.map_none] at ihl
+                        simp [evalCrepRuntimeExp, holCrepEval64, hl, ← ihl]
+                    | some leftWord =>
+                        cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+                        | none =>
+                            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                            rw [hl, Option.map_some] at ihl
+                            have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                            rw [hr, Option.map_none] at ihr
+                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                        | some rightWord =>
+                            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                            rw [hl, Option.map_some] at ihl
+                            have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                            rw [hr, Option.map_some] at ihr
+                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                | cons extra more => simp [evalCrepRuntimeExp, holCrepEval64]
+    | cmp operator left right =>
+        cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+        | none =>
+            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+            rw [hl, Option.map_none] at ihl
+            simp [evalCrepRuntimeExp, holCrepEval64, hl, ← ihl]
+        | some leftWord =>
+            cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+            | none =>
+                have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                rw [hl, Option.map_some] at ihl
+                have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                rw [hr, Option.map_none] at ihr
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+            | some rightWord =>
+                have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                rw [hl, Option.map_some] at ihl
+                have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                rw [hr, Option.map_some] at ihr
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr,
+                  riscv64CrepRuntimeTarget_memoryModel, RiscV.panRiscVMemoryModel]
+    | shift operator left right =>
+        cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, hl,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left]
+        | some leftWord =>
+            cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+            | none =>
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base right]
+            | some rightWord =>
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base right,
+                  crepRuntimeShift_rv64_eq_holWordShift64, Option.bind_some]
+
+  /-- Production/bare RV64 Crep list-evaluator correspondence with the
+  HOL-shaped reference list evaluator. -/
+  theorem evalCrepRuntimeExps_map_eq_holCrepEvals64
+      (base : CrepRuntimeState (RiscV.Word 64) Unit)
+      (expressions : List (CrepExp (RiscV.Word 64))) :
+      (evalCrepRuntimeExps (riscv64CrepRuntimeTarget base) expressions).map
+          (List.map PanWordLab.word) =
+        holCrepEvals64 base expressions := by
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExps, holCrepEvals64]
+    | cons expression expressions =>
+        simp only [evalCrepRuntimeExps, holCrepEvals64]
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) expression with
+        | none =>
+            have he := evalCrepRuntimeExp_map_eq_holCrepEval64 base expression
+            rw [h, Option.map_none] at he
+            rw [← he]
+            rfl
+        | some value =>
+            have he := evalCrepRuntimeExp_map_eq_holCrepEval64 base expression
+            rw [h, Option.map_some] at he
+            have ht := evalCrepRuntimeExps_map_eq_holCrepEvals64 base expressions
+            rw [← he, ← ht]
+            simp [Option.map_bind, Option.bind_map, Function.comp_def]
+end
+
+/-- Composition of the generic `Shift` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Shift` expressions at the
+RV64 target, whose model satisfies the HOL-`word_sh` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_shift_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.shift operator left right)).map PanWordLab.word =
+      holCrepEval64 base (.shift operator left right) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition of the generic `Op` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Op` expressions at the RV64
+target, whose model satisfies the HOL-`word_op` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_op_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.op operator expressions)).map PanWordLab.word =
+      holCrepEval64 base (.op operator expressions) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition of the generic `Cmp` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Cmp` expressions at the RV64
+target, whose model satisfies the HOL-`word_cmp` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_cmp_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.cmp operator left right)).map PanWordLab.word =
+      holCrepEval64 base (.cmp operator left right) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition corollary: an arbitrary-address plain `Load` at the RV64 target
+composes with the all-expression correspondence to `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_load_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load address)).map
+        PanWordLab.word =
+      holCrepEval64 base (.load address) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition corollary: an arbitrary-address `Load32` at the RV64 target
+composes with the all-expression correspondence to `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_load32_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load32 address)).map
+        PanWordLab.word =
+      holCrepEval64 base (.load32 address) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-! Generic program equations for the store family.  The production store arms
+of `evalCrepRuntimeProg` evaluate both operands and then call the corresponding
+`crepRuntimeStore*`; these equations expose that structure for arbitrary
+operands (the `holCrepEval64` reference evaluator only covers expressions). -/
+
+theorem evalCrepRuntimeProg_store
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.store address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStore base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStore base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
+
+theorem evalCrepRuntimeProg_store32
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.store32 address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStore32 base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStore32 base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
+
+theorem evalCrepRuntimeProg_storeByte
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.storeByte address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStoreByte base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStoreByte base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
 
 end Flapjack

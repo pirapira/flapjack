@@ -32,6 +32,30 @@ structure StructInfo where
 abbrev StructContext := List (StructName × StructInfo)
 abbrev InfoMap (α : Type u) := List (String × α)
 
+/-- HOL-shaped `struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
+    component of the contexts that `pan_structsProof$v_flds_ok` and
+    `panProps$is_wf_shape_v` range over (via `ALOOKUP`). It carries exactly the
+    HOL fields `fields` and `size`, without the production
+    `StructInfo.shapedFields` cache that has no HOL counterpart. -/
+structure StructInfoHOL where
+  fields : List (FieldName × Shape)
+  size : Nat
+  deriving Repr
+
+/-- HOL-shaped struct context: the association list `(stcname # struct_info)
+    list` used by `v_flds_ok`/`is_wf_shape_v` and `ALOOKUP`. -/
+abbrev StructContextHOL := List (StructName × StructInfoHOL)
+
+/-- Projection of the production cache-augmented `StructContext` onto the
+    HOL-shaped `StructContextHOL`, keeping the HOL `struct_info` fields `fields`
+    and `size` and dropping the production-only `StructInfo.shapedFields`
+    cache. This is the context adapter used to relate the exact HOL-shaped
+    predicates (`panValueFldsOk`, `panIsWfShapeValueHOL`) to the production
+    predicates over `StructContext`. Because both lookups are first-match, the
+    projection preserves shadowing of duplicate struct names. -/
+def StructContext.toHOL (context : StructContext) : StructContextHOL :=
+  context.map (fun entry => (entry.1, { fields := entry.2.fields, size := entry.2.size }))
+
 /-- Key-polymorphic first-match association-list lookup: the Lean counterpart
     of HOL `alist$ALOOKUP`.  The association list may use any key type with
     `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
@@ -41,6 +65,33 @@ def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
   | [] => none
   | (candidate, value) :: entries =>
       if candidate == key then some value else lookupInfo key entries
+
+/-- Lookup commutes with the `StructContext.toHOL` projection: the projected
+    context yields the same first-match entry, with its `struct_info` viewed
+    through the projection. -/
+theorem lookupInfo_toHOL [BEq String] (name : String) (context : StructContext) :
+    lookupInfo name context.toHOL =
+      (lookupInfo name context).map
+        (fun info => { fields := info.fields, size := info.size }) := by
+  induction context with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨structName, info⟩ := entry
+      by_cases h : structName == name
+      · simp [StructContext.toHOL, lookupInfo, h]
+      · rw [show StructContext.toHOL ((structName, info) :: entries) =
+            ((structName, { fields := info.fields, size := info.size }) : StructName × StructInfoHOL)
+              :: StructContext.toHOL entries from rfl]
+        simp only [lookupInfo]
+        simp only [if_neg h]
+        exact ih
+
+/-- The `isSome` corollary of `lookupInfo_toHOL`: the HOL `ALOOKUP sctxt nm <>
+    NONE` condition is projection-invariant. -/
+theorem lookupInfo_toHOL_isSome [BEq String] (name : String) (context : StructContext) :
+    (lookupInfo name context.toHOL).isSome = (lookupInfo name context).isSome := by
+  rw [lookupInfo_toHOL]
+  cases lookupInfo name context <;> rfl
 
 /-- Cake's `ALOOKUP_MAP3` (`pan_globalsProofScript.sml:2841`): mapping a
     function over the value component of every entry commutes with the

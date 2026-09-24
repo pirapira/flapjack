@@ -1,0 +1,82 @@
+(*
+  Minimal source-execution probe for the original CakeML Pancake `If`
+  equation.  The probe observes result, clock, and locals directly, so the
+  expected result is independent of the Lean evaluator:
+
+  * a nonzero word condition runs the then branch;
+  * a zero word condition runs the else branch;
+  * a non-word (unbound local) condition is rejected with `SOME Error` leaving
+    the state unchanged;
+  * a condition expression that itself fails to evaluate (a load from an empty
+    memory domain) is rejected with `SOME Error` leaving the state unchanged.
+
+  Reference: cakeml/pancake/semantics/panSemScript.sml:617-620.
+*)
+load "bossLib";
+load "preamble";
+load "../semantics/panSemTheory";
+open bossLib;
+open HolKernel Parse;
+open preamble;
+open panSemTheory;
+
+fun print_eval label q =
+  let
+    val th = EVAL q
+  in
+    print (label ^ "=");
+    print_term (rconc th);
+    print "\n"
+  end
+
+val s = ``(s:(8,'ffi) panSem$state)``;
+
+val baseState = ``(^s with <| clock := 5;
+  locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word));
+  globals := FEMPTY;
+  memory := (\(_ : 8 word). Word (0w:8 word));
+  memaddrs := {};
+  sh_memaddrs := {} |>)``;
+
+val thenAssign = ``panLang$Assign Local (strlit "x") (panLang$Const (9w:8 word))``;
+
+val _ = print_eval "if_true_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) ^thenAssign panLang$Skip, ^baseState))``;
+val _ = print_eval "if_true_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) ^thenAssign panLang$Skip, ^baseState))).clock``;
+val _ = print_eval "if_true_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) ^thenAssign panLang$Skip, ^baseState))).locals
+      (strlit "x")``;
+val _ = print_eval "if_false_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) ^thenAssign panLang$Skip, ^baseState))``;
+val _ = print_eval "if_false_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) ^thenAssign panLang$Skip, ^baseState))).clock``;
+val _ = print_eval "if_false_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) ^thenAssign panLang$Skip, ^baseState))).locals
+      (strlit "x")``;
+val _ = print_eval "if_nonword_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip, ^baseState))``;
+val _ = print_eval "if_nonword_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip, ^baseState))).locals
+      (strlit "x")``;
+val _ = print_eval "if_fail_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Load panLang$One (panLang$Const (0w:8 word))) ^thenAssign panLang$Skip,
+        ^baseState))``;
+val _ = print_eval "if_fail_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Load panLang$One (panLang$Const (0w:8 word))) ^thenAssign panLang$Skip,
+        ^baseState))).clock``;
+val _ = print_eval "if_fail_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Load panLang$One (panLang$Const (0w:8 word))) ^thenAssign panLang$Skip,
+        ^baseState))).locals
+      (strlit "x")``;

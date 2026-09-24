@@ -57,13 +57,81 @@ theorem elLoadGlobals {α : Type u}
 /-- Flapjack-specific bridge: the source-semantics shape function agrees with
     the pre-existing value shape function at the empty structure context.
     HOL has one `shape_of` function, so this bridge has no HOL original. -/
-private theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
+theorem panSemShapeOf_eq_panValueShape_nil (value : PanValue α) :
     panSemShapeOf value = panValueShape [] value := by
   induction value using panSemShapeOf.induct with
   | case1 _ => simp [panSemShapeOf, panValueShape]
   | case2 values ih =>
       simpa [panSemShapeOf, panValueShape] using ih
   | case3 _ _ => simp [panSemShapeOf, panValueShape]
+
+/-- Flapjack bridge from HOL source `shape_of` over evaluated Call arguments
+to the proof context's empty-struct shape function. The HOL premise
+`EVERY is_wf_shape_v_nil args` uses exactly this context; named-struct values
+do not satisfy that premise in the empty context. -/
+theorem panSemShapeOfMapPanValueShapeNil (arguments : List (PanValue α)) :
+    arguments.map panSemShapeOf = arguments.map (panValueShape []) := by
+  exact List.map_congr_left (fun value _ => panSemShapeOf_eq_panValueShape_nil value)
+
+/- Indexed-list form of the HOL Call premise
+`LIST_REL (fun formal arg => formal.shape = shape_of arg) parameters arguments`.
+The source-facing equality is kept untagged until the complete Call theorem is
+ported. -/
+/-! Flapjack support: `panShapeMatches` is an exact structural shape check, so
+success entails equality of its two shape arguments. This is used to expose
+the indexed formal/argument shape fact from `lookup_code`'s successful check. -/
+mutual
+  theorem panShapeMatches_eq (left right : Shape)
+      (hmatch : panShapeMatches left right = true) : left = right := by
+    cases left with
+    | one => cases right <;> simp [panShapeMatches] at hmatch ⊢
+    | named leftName =>
+        cases right with
+        | named rightName =>
+            simp only [panShapeMatches] at hmatch
+            have hname : leftName = rightName := beq_iff_eq.mp hmatch
+            subst rightName
+            rfl
+        | one => simp [panShapeMatches] at hmatch
+        | comb _ => simp [panShapeMatches] at hmatch
+    | comb leftFields =>
+        cases right with
+        | comb rightFields =>
+            simp only [panShapeMatches] at hmatch
+            have hfields := panShapeListMatches_eq leftFields rightFields hmatch
+            subst rightFields
+            rfl
+        | one => simp [panShapeMatches] at hmatch
+        | named _ => simp [panShapeMatches] at hmatch
+
+  theorem panShapeListMatches_eq (left right : List Shape)
+      (hmatch : panShapeMatches.panShapeListMatches left right = true) :
+      left = right := by
+    cases left with
+    | nil => cases right <;> simp [panShapeMatches.panShapeListMatches] at hmatch ⊢
+    | cons leftHead leftTail =>
+        cases right with
+        | nil => simp [panShapeMatches.panShapeListMatches] at hmatch
+        | cons rightHead rightTail =>
+            simp only [panShapeMatches.panShapeListMatches, Bool.and_eq_true]
+              at hmatch
+            rcases hmatch with ⟨hhead, htail⟩
+            rw [panShapeMatches_eq leftHead rightHead hhead,
+              panShapeListMatches_eq leftTail rightTail htail]
+end
+
+theorem callParameterShapeMapEqPanSem
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (hlength : parameters.length = arguments.length)
+    (hshape : ∀ index (hparams : index < parameters.length)
+      (hargs : index < arguments.length),
+      (parameters[index]'hparams).2 = panSemShapeOf (arguments[index]'hargs)) :
+    parameters.map Prod.snd = arguments.map panSemShapeOf := by
+  apply List.ext_getElem
+  · simp [hlength]
+  · intro index hleft hright
+    simpa only [List.getElem_map] using hshape index
+      (by simpa using hleft) (by simpa using hright)
 
 /-! A successful `globalsLookup` exposes each state-owned return-global cell.
 This generic projection is useful when `exp_hdl` copies a multiword exception
@@ -451,6 +519,33 @@ def ctxtFc
     eids := exceptionCodes
     vmax := maxList names }
 
+/-! Indexed projection of the parameter variable map constructed by HOL
+`ctxtFc`. This support lemma exposes the corresponding `withShape` slot window
+without claiming the complete Call `locals_rel` theorem. -/
+theorem ctxtFcVarsLookupGetElem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (slots : List Nat) (index : Nat)
+    (hdistinct : (parameters.map Prod.fst).Nodup)
+    (hindex : index < parameters.length) :
+    FLOOKUP
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars
+      ((parameters.map Prod.fst)[index]'(by simpa using hindex)) =
+    some ((parameters.map Prod.snd)[index]'(by simpa using hindex),
+      (withShape (parameters.map Prod.snd) slots)[index]'(by
+        rw [withShape_length]
+        simpa using hindex)) := by
+  let names := parameters.map Prod.fst
+  let shapes := parameters.map Prod.snd
+  let slotGroups := withShape shapes slots
+  have hindexNames : index < names.length := by simpa [names] using hindex
+  have hdistinctNames : names.Nodup := by simpa [names] using hdistinct
+  have hvaluesLength : names.length = (shapes.zip slotGroups).length := by
+    simp [names, shapes, slotGroups, withShape_length]
+  have hlookup := FLOOKUP_FUPDATE_LIST_zip_getElem names
+    (shapes.zip slotGroups) FEMPTY index hdistinctNames hvaluesLength hindexNames
+  simpa [ctxtFc, names, shapes, slotGroups] using hlookup
+
 /-- HOL `ctxt_fc_funcs_eq`: constructing a function context preserves the
     supplied function map. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "ctxt_fc_funcs_eq"]
@@ -512,6 +607,655 @@ theorem slcTlcRw
       slc parameters arguments) ∧
     (FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten)) =
       tlc slots arguments) := ⟨rfl, rfl⟩
+
+private theorem updatePanValueMap_eq_FUPDATE
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (value : PanValue α) :
+    updatePanValueMap locals name value = FUPDATE locals (name, value) := by
+  funext key
+  by_cases hkey : key = name
+  · subst key
+    simp [updatePanValueMap, FUPDATE]
+  · have hkeyName : (key == name) = false :=
+      beq_eq_false_iff_ne.mpr hkey
+    have hnameKey : (name == key) = false :=
+      beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+    simp [updatePanValueMap, FUPDATE, hkeyName, hnameKey]
+
+private theorem updatePanValueMap_fold_eq_FUPDATE_LIST
+    (entries : List (VarName × PanValue α))
+    (locals : VarName → Option (PanValue α)) :
+    entries.foldl
+        (fun current (name, value) => updatePanValueMap current name value) locals =
+      FUPDATE_LIST locals entries := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry entries ih =>
+      simp only [List.foldl_cons, FUPDATE_LIST]
+      rw [updatePanValueMap_eq_FUPDATE, ih]
+      rfl
+
+/-! Flapjack source-entry bridge: the actual evaluator binder and HOL `slc`
+produce extensionally identical source-local maps. -/
+theorem bindPanValueParameters_eq_slc
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (hlength : parameters.length = arguments.length) :
+    bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some (slc parameters arguments) := by
+  have hnamesLength : (parameters.map Prod.fst).length = arguments.length := by
+    simpa using hlength
+  unfold bindPanValueParameters
+  have hfold := updatePanValueMap_fold_eq_FUPDATE_LIST
+    ((parameters.map Prod.fst).zip arguments)
+    (FEMPTY : VarName → Option (PanValue α))
+  have hlengthCheck :
+      ¬ ((parameters.map Prod.fst).length != arguments.length) := by
+    simp [hnamesLength]
+  rw [if_neg hlengthCheck]
+  apply congrArg some
+  have hempty : (FEMPTY : VarName → Option (PanValue α)) = fun _ => none := rfl
+  rw [hempty] at hfold
+  change _ = FUPDATE_LIST (FEMPTY : VarName → Option (PanValue α))
+    ((parameters.map Prod.fst).zip arguments)
+  exact hfold
+
+/-! A successful source-local lookup after `slc` comes from one of the zipped
+formal/argument pairs. This Flapjack finite-map support lemma is used to expose
+the source-side parameter index in the Call-entry `locals_rel` proof; it does
+not claim the full HOL `call_preserve_state_code_locals_rel` theorem. -/
+theorem slcLookupGetElem
+    (parameters : List (String × Shape)) (arguments : List (PanValue α))
+    (name : String) (value : PanValue α)
+    (hlookup : FLOOKUP (slc parameters arguments) name = some value) :
+    ∃ i, ∃ (hi : i < (parameters.map Prod.fst).length),
+      ∃ (harg : i < arguments.length),
+      (parameters.map Prod.fst)[i]'hi = name ∧ arguments[i]'harg = value := by
+  have hsource := flookupFupdateList_mem_or_base
+    (FEMPTY : FiniteMap String (PanValue α))
+    ((parameters.map Prod.fst).zip arguments) name value (by
+      simpa [slc] using hlookup)
+  rcases hsource with hentry | hempty
+  · obtain ⟨entry, hmem, hname, hvalue⟩ := hentry
+    obtain ⟨i, hi, harg, hnameIndex, hvalueIndex⟩ :=
+      mem_zip_getElem (parameters.map Prod.fst) arguments entry hmem
+    refine ⟨i, ⟨hi, ⟨harg, ?_⟩⟩⟩
+    constructor
+    · simpa [hname] using hnameIndex
+    · simpa [hvalue] using hvalueIndex
+  · simp [FLOOKUP_empty] at hempty
+
+/-! Partitioning the concatenated flattenings by each argument's shape
+reconstructs the per-argument flattenings. This supports matching the
+`withShape` slot windows in HOL `ctxtFc` to their source arguments. -/
+theorem withShape_mapPanValueFlatten (arguments : List (PanValue α))
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true) :
+    withShape (arguments.map (panValueShape []))
+        ((arguments.map panValueFlatten).flatten) =
+      arguments.map panValueFlatten := by
+  induction arguments with
+  | nil => simp [withShape]
+  | cons value values ih =>
+      have hwfValue := hwf value (by simp)
+      have hwfValues : ∀ other, other ∈ values →
+          isWfShape [] (panValueShape [] other) = true := by
+        intro other hmem
+        exact hwf other (by simp [hmem])
+      have hlength := panValueFlatten_length_eq_shapeSize value hwfValue
+      have htail := ih hwfValues
+      simp only [List.map_cons, List.flatten_cons]
+      rw [withShape]
+      have htake :
+          (panValueFlatten value ++ (values.map panValueFlatten).flatten).take
+              (Shape.shapeSize (panValueShape [] value)) = panValueFlatten value := by
+        rw [← hlength]
+        rw [List.take_append_of_le_length (Nat.le_refl _), List.take_length]
+      have hdrop :
+          (panValueFlatten value ++ (values.map panValueFlatten).flatten).drop
+              (Shape.shapeSize (panValueShape [] value)) =
+            (values.map panValueFlatten).flatten := by
+        rw [← hlength]
+        simp
+      rw [htake, hdrop, htail]
+
+/-- Source-facing form of `withShape_mapPanValueFlatten`: its shapes and
+well-formedness premise use the HOL `panSem$shape_of` and
+`is_wf_shape_v_nil` boundary. -/
+theorem withShape_mapPanValueFlattenOfPanSem
+    (arguments : List (PanValue α))
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    withShape (arguments.map panSemShapeOf)
+        ((arguments.map panValueFlatten).flatten) =
+      arguments.map panValueFlatten := by
+  rw [panSemShapeOfMapPanValueShapeNil]
+  apply withShape_mapPanValueFlatten
+  intro value hmem
+  simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+
+/-! These list facts support the generated `ctxtFc` invariants: each
+`withShape` slot group inherits duplicate-freedom and membership from its flat
+source slot list. -/
+theorem withShapeGetElemNodupOfSlotsNodup (shapes : List Shape) (slots : List Nat)
+    (index : Nat) (hslots : slots.Nodup)
+    (hsize : slots.length = Shape.shapeSize (.comb shapes))
+    (hindex : index < shapes.length) :
+    ((withShape shapes slots)[index]'(by rw [withShape_length]; exact hindex)).Nodup := by
+  rw [withShape_getElem_eq_take_drop shapes slots index hsize hindex]
+  exact (List.take_sublist _ _).nodup ((List.drop_sublist _ _).nodup hslots)
+
+theorem withShapeGetElemMemOfSlotsMem (shapes : List Shape) (slots : List Nat)
+    (index slot : Nat) (hsize : slots.length = Shape.shapeSize (.comb shapes))
+    (hindex : index < shapes.length)
+    (hmem : slot ∈ (withShape shapes slots)[index]'
+      (by rw [withShape_length]; exact hindex)) :
+    slot ∈ slots := by
+  rw [withShape_getElem_eq_take_drop shapes slots index hsize hindex] at hmem
+  exact (List.drop_sublist _ _).subset ((List.take_sublist _ _).subset hmem)
+
+theorem withShapeMap (shapes : List Shape) (values : List α) (f : α → β) :
+    withShape shapes (values.map f) = (withShape shapes values).map (List.map f) := by
+  induction shapes generalizing values with
+  | nil => simp [withShape]
+  | cons shape shapes ih =>
+      simp only [withShape, List.map_cons, List.map_take]
+      rw [← List.map_drop]
+      congr 1
+      exact ih (values.drop (Shape.shapeSize shape))
+
+/-- The generated `ctxtFc` variable map has HOL `no_overlap` when its flat
+target slot list is duplicate-free. This is untagged support for
+`call_preserve_state_code_locals_rel`. -/
+theorem ctxtFcNoOverlapOfDistinctSlots
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (slots : List Nat) (hslots : slots.Nodup)
+    (hsize : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd))) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars := by
+  let names := parameters.map Prod.fst
+  let shapes := parameters.map Prod.snd
+  let groups := withShape shapes slots
+  let entries := names.zip (shapes.zip groups)
+  have hnamesShape : names.length = shapes.length := by simp [names, shapes]
+  have hshapeGroups : shapes.length = groups.length := by
+    simp [groups, withShape_length]
+  have hvars :
+      (ctxtFc context.funcs context.eids names shapes slots).vars =
+        FUPDATE_LIST FEMPTY entries := by
+    simp [ctxtFc, entries, names, shapes, groups]
+  have hsourceSize : slots.length = Shape.shapeSize (.comb shapes) := by
+    simpa [shapes] using hsize
+  unfold noOverlap
+  constructor
+  · intro name shape ns hlookup
+    rw [hvars] at hlookup
+    dsimp only [entries] at hlookup
+    rcases flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) name (shape, ns) hlookup with hmem | hbase
+    · rcases hmem with ⟨entry, hentry, hname, hvalue⟩
+      rcases entry with ⟨entryName, entryValue⟩
+      rcases entryValue with ⟨entryShape, entrySlots⟩
+      have hentryEq : (entryName, (entryShape, entrySlots)) = (name, (shape, ns)) := by
+        cases hname
+        cases hvalue
+        rfl
+      rw [hentryEq] at hentry
+      have hzipMem : (name, (shape, ns)) ∈ names.zip (shapes.zip groups) := by
+        simpa using hentry
+      obtain ⟨index, hindexName, hindexPair, hnameAt, hpairAt⟩ :=
+        mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hzipMem
+      have hindexZip : index < (shapes.zip groups).length := hindexPair
+      rw [List.length_zip] at hindexZip
+      have hindexShape : index < shapes.length := by omega
+      have hindexGroup : index < groups.length := by omega
+      have hpairAt' :
+          (shapes[index]'hindexShape, groups[index]'hindexGroup) = (shape, ns) := by
+        simpa using hpairAt
+      have hslotsAt : groups[index]'hindexGroup = ns := congrArg Prod.snd hpairAt'
+      rw [← hslotsAt]
+      exact withShapeGetElemNodupOfSlotsNodup shapes slots index hslots hsourceSize hindexShape
+    · simp at hbase
+  · intro name other shape otherShape ns otherSlots hnameLookup hotherLookup ⟨slot, hslot, hotherSlot⟩
+    by_cases hnamesEq : name = other
+    · exact hnamesEq
+    rw [hvars] at hnameLookup hotherLookup
+    dsimp only [entries] at hnameLookup hotherLookup
+    have hiLookup := flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) name (shape, ns) hnameLookup
+    have hjLookup := flookupFupdateList_mem_or_base FEMPTY
+      (names.zip (shapes.zip groups)) other (otherShape, otherSlots) hotherLookup
+    rcases hiLookup with ⟨iEntry, hnameEntry, hnameKey, hnameValue⟩ | hbase
+    · rcases hjLookup with ⟨jEntry, hotherEntry, hotherKey, hotherValue⟩ | hotherBase
+      · rcases iEntry with ⟨iName, iPair⟩
+        rcases iPair with ⟨iShape, iSlots⟩
+        rcases jEntry with ⟨jName, jPair⟩
+        rcases jPair with ⟨jShape, jSlots⟩
+        have hiEntryEq : (iName, (iShape, iSlots)) = (name, (shape, ns)) := by
+          cases hnameKey
+          cases hnameValue
+          rfl
+        have hjEntryEq : (jName, (jShape, jSlots)) = (other, (otherShape, otherSlots)) := by
+          cases hotherKey
+          cases hotherValue
+          rfl
+        rw [hiEntryEq] at hnameEntry
+        rw [hjEntryEq] at hotherEntry
+        obtain ⟨i, hiName, hiPair, hiNameAt, hiPairAt⟩ :=
+          mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hnameEntry
+        obtain ⟨j, hjName, hjPair, hjNameAt, hjPairAt⟩ :=
+          mem_zip_getElem names (shapes.zip groups) (other, (otherShape, otherSlots)) hotherEntry
+        have hiPairBound : i < min shapes.length groups.length := by
+          simpa [List.length_zip] using hiPair
+        have hjPairBound : j < min shapes.length groups.length := by
+          simpa [List.length_zip] using hjPair
+        have hiShape : i < shapes.length := Nat.lt_of_lt_of_le hiPairBound (Nat.min_le_left ..)
+        have hjShape : j < shapes.length := Nat.lt_of_lt_of_le hjPairBound (Nat.min_le_left ..)
+        have hiGroup : i < groups.length := Nat.lt_of_lt_of_le hiPairBound (Nat.min_le_right ..)
+        have hjGroup : j < groups.length := Nat.lt_of_lt_of_le hjPairBound (Nat.min_le_right ..)
+        have hiPair' : (shapes[i]'hiShape, groups[i]'hiGroup) = (shape, ns) := by
+          simpa using hiPairAt
+        have hjPair' : (shapes[j]'hjShape, groups[j]'hjGroup) = (otherShape, otherSlots) := by
+          simpa using hjPairAt
+        have hns : groups[i]'hiGroup = ns := congrArg Prod.snd hiPair'
+        have hotherNs : groups[j]'hjGroup = otherSlots := congrArg Prod.snd hjPair'
+        have hindexNe : i ≠ j := by
+          intro heq
+          subst j
+          exact hnamesEq (calc
+            name = names[i]'hiName := hiNameAt.symm
+            _ = other := hjNameAt)
+        have hdisjoint := listDisjoint_withShape_getElem shapes slots i j hslots
+          hiShape hjShape hindexNe hsourceSize
+        exact False.elim (hdisjoint slot (hns.symm ▸ hslot) (hotherNs.symm ▸ hotherSlot))
+      · simp at hotherBase
+    · simp at hbase
+
+/-- The `ctxt_fc` slot bound is `MAX_LIST slots`, as in HOL `ctxt_fc_vmax`;
+every generated component is a slice of that flat slot list. -/
+theorem ctxtFcCtxtMaxOfSlots
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (slots : List Nat)
+    (hsize : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd))) :
+    ctxtMax (maxList slots)
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars := by
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro name shape ns hlookup slot hslot
+  let names := parameters.map Prod.fst
+  let shapes := parameters.map Prod.snd
+  let groups := withShape shapes slots
+  let entries := names.zip (shapes.zip groups)
+  have hsourceSize : slots.length = Shape.shapeSize (.comb shapes) := by
+    simpa [shapes] using hsize
+  have hlookup' : FLOOKUP (FUPDATE_LIST FEMPTY entries) name = some (shape, ns) := by
+    simpa [ctxtFc, names, shapes, groups, entries] using hlookup
+  rcases flookupFupdateList_mem_or_base FEMPTY entries name (shape, ns) hlookup' with
+      ⟨entry, hentry, hname, hvalue⟩ | hbase
+  · rcases entry with ⟨entryName, entryValue⟩
+    rcases entryValue with ⟨entryShape, entrySlots⟩
+    have hentryEq : (entryName, (entryShape, entrySlots)) = (name, (shape, ns)) := by
+      cases hname
+      cases hvalue
+      rfl
+    rw [hentryEq] at hentry
+    obtain ⟨index, hindexName, hindexPair, hnameAt, hpairAt⟩ :=
+      mem_zip_getElem names (shapes.zip groups) (name, (shape, ns)) hentry
+    have hpairBound : index < min shapes.length groups.length := by
+      simpa [List.length_zip] using hindexPair
+    have hindexShape : index < shapes.length :=
+      Nat.lt_of_lt_of_le hpairBound (Nat.min_le_left ..)
+    have hindexGroup : index < groups.length :=
+      Nat.lt_of_lt_of_le hpairBound (Nat.min_le_right ..)
+    have hpairAt' :
+        (shapes[index]'hindexShape, groups[index]'hindexGroup) = (shape, ns) := by
+      simpa using hpairAt
+    have hslotsAt : groups[index]'hindexGroup = ns := congrArg Prod.snd hpairAt'
+    have hslotGroup : slot ∈ groups[index]'hindexGroup := hslotsAt.symm ▸ hslot
+    have hslotFlat := withShapeGetElemMemOfSlotsMem shapes slots index slot
+      hsourceSize hindexShape hslotGroup
+    exact maxList_ge_of_mem slots slot hslotFlat
+  · simp at hbase
+
+/-! The target `tlc` map returns exactly the flattened words in the slot window
+assigned by `withShape` to a given well-formed argument. This is the target
+half of the Call formal/flattened `locals_rel` proof. -/
+theorem tlcWithShapeGetElemMap
+    (arguments : List (PanValue α)) (slots : List Nat) (index : Nat)
+    (hdistinct : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true)
+    (hindex : index < arguments.length) :
+    ((withShape (arguments.map (panValueShape [])) slots)[index]'(by
+      rw [withShape_length]
+      simpa using hindex)).mapM (FLOOKUP (tlc slots arguments)) =
+      some (panValueFlatten (arguments[index]'hindex)) := by
+  let shapes := arguments.map (panValueShape [])
+  let words := arguments.flatMap panValueFlatten
+  have hshapeSize : Shape.shapeSize (.comb shapes) = words.length := by
+    simpa [shapes, words, Function.comp_def, List.length_flatMap] using
+      shapeSize_comb_map_panValueShape_eq_flatten_length arguments hwf
+  have hslotsShape : slots.length = Shape.shapeSize (.comb shapes) :=
+    hslotsLength.trans hshapeSize.symm
+  have hindexShapes : index < shapes.length := by simpa [shapes] using hindex
+  have hslotsWindow := withShape_getElem_eq_take_drop shapes slots index
+    hslotsShape hindexShapes
+  have hwordsWindow := withShape_getElem_eq_take_drop shapes words index
+    hshapeSize.symm hindexShapes
+  have hwhole : slots.mapM (FLOOKUP (tlc slots arguments)) = some words := by
+    have hlookup : FLOOKUP (tlc slots arguments) =
+        fun key => FLOOKUP (FUPDATE_LIST FEMPTY
+          (slots.zip (arguments.flatMap panValueFlatten))) key := by
+      funext key
+      unfold tlc
+      rfl
+    rw [hlookup]
+    simpa [words] using
+      (opt_mmap_some_eq_zip_flookup slots FEMPTY words hdistinct hslotsLength)
+  have hwindow := list_mapM_takeDrop_of_success (FLOOKUP (tlc slots arguments))
+    slots words (Shape.shapeSize (.comb (shapes.take index)))
+    (Shape.shapeSize (shapes[index]'hindexShapes)) hwhole
+  have hpartition := withShape_mapPanValueFlatten arguments hwf
+  have hgroupBound : index < (withShape shapes words).length := by
+    rw [withShape_length]
+    exact hindexShapes
+  have hpartitionIndex :
+      (withShape shapes words)[index]'hgroupBound =
+        panValueFlatten (arguments[index]'hindex) := by
+    have hpartition' : withShape shapes words = arguments.map panValueFlatten := by
+      simpa only [shapes, words, List.flatten_eq_flatMap, List.flatMap_map,
+        id] using hpartition
+    have hindexMap : index < (arguments.map panValueFlatten).length := by
+      simpa only [List.length_map] using hindex
+    have hindexed := congrArg (fun groups : List (List α) => groups[index]?) hpartition'
+    have hindexedLeft : (withShape shapes words)[index]? =
+        some ((withShape shapes words)[index]'hgroupBound) :=
+      List.getElem?_eq_getElem hgroupBound
+    have hindexedRight : (arguments.map panValueFlatten)[index]? =
+        some ((arguments.map panValueFlatten)[index]'hindexMap) :=
+      List.getElem?_eq_getElem hindexMap
+    rw [hindexedLeft, hindexedRight] at hindexed
+    have hmapElem : (arguments.map panValueFlatten)[index]'hindexMap =
+        panValueFlatten (arguments[index]'hindex) := by
+      rw [List.getElem_map]
+    exact (Option.some.inj hindexed).trans hmapElem
+  rw [hslotsWindow, hwindow]
+  rw [← hwordsWindow, hpartitionIndex]
+
+/-- Source-facing `tlc` slot projection. The slot grouping is expressed with
+HOL `panSem$shape_of`, and its well-formedness premise is the empty-context
+`is_wf_shape_v_nil` condition from the Call theorem. -/
+theorem tlcWithShapeGetElemMapOfPanSem
+    (arguments : List (PanValue α)) (slots : List Nat) (index : Nat)
+    (hdistinct : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hindex : index < arguments.length) :
+    ((withShape (arguments.map panSemShapeOf) slots)[index]'(by
+      rw [withShape_length]
+      simpa using hindex)).mapM (FLOOKUP (tlc slots arguments)) =
+      some (panValueFlatten (arguments[index]'hindex)) := by
+  have hwf' : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+  simpa only [panSemShapeOfMapPanValueShapeNil] using
+    (tlcWithShapeGetElemMap arguments slots index hdistinct hslotsLength hwf' hindex)
+
+/-- Target-state view of `tlc`: the finite map stores the HOL `word_lab`
+constructor required by `locals_rel`, while the source-facing shape premise
+remains `panSem$shape_of`/`is_wf_shape_v_nil`. -/
+def tlcWordLab (slots : List Nat) (arguments : List (PanValue α)) :
+    FiniteMap Nat (PanWordLab α) :=
+  FUPDATE_LIST FEMPTY
+    (slots.zip ((arguments.flatMap panValueFlatten).map PanWordLab.word))
+
+theorem tlcWordLabWithShapeGetElemMapOfPanSem
+    (arguments : List (PanValue α)) (slots : List Nat) (index : Nat)
+    (hdistinct : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hindex : index < arguments.length) :
+    ((withShape (arguments.map panSemShapeOf) slots)[index]'(by
+      rw [withShape_length]
+      simpa using hindex)).mapM (FLOOKUP (tlcWordLab slots arguments)) =
+      some ((panValueFlatten (arguments[index]'hindex)).map PanWordLab.word) := by
+  let shapes := arguments.map panSemShapeOf
+  let words := arguments.flatMap panValueFlatten
+  have hwf' : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+  have hshapeSize : Shape.shapeSize (.comb shapes) = words.length := by
+    simpa [shapes, words, panSemShapeOfMapPanValueShapeNil,
+      Function.comp_def, List.length_flatMap] using
+      shapeSize_comb_map_panValueShape_eq_flatten_length arguments hwf'
+  have hslotsShape : slots.length = Shape.shapeSize (.comb shapes) :=
+    hslotsLength.trans hshapeSize.symm
+  have hindexShapes : index < shapes.length := by simpa [shapes] using hindex
+  have hslotsWindow := withShape_getElem_eq_take_drop shapes slots index
+    hslotsShape hindexShapes
+  have hwhole : slots.mapM (FLOOKUP (tlcWordLab slots arguments)) =
+      some (words.map PanWordLab.word) := by
+    have hlookup : FLOOKUP (tlcWordLab slots arguments) =
+        fun key => FLOOKUP (FUPDATE_LIST FEMPTY (slots.zip (words.map PanWordLab.word))) key := by
+      funext key
+      rfl
+    rw [hlookup]
+    exact opt_mmap_some_eq_zip_flookup slots FEMPTY (words.map PanWordLab.word)
+      hdistinct (by simpa [words] using hslotsLength)
+  have hwindow := list_mapM_takeDrop_of_success
+    (FLOOKUP (tlcWordLab slots arguments)) slots (words.map PanWordLab.word)
+    (Shape.shapeSize (.comb (shapes.take index)))
+    (Shape.shapeSize (shapes[index]'hindexShapes)) hwhole
+  have hpartition := withShape_mapPanValueFlattenOfPanSem arguments hwf
+  have hpartitionLab :
+      withShape shapes (words.map PanWordLab.word) =
+        arguments.map (fun value => (panValueFlatten value).map PanWordLab.word) := by
+    have hpartition' : withShape shapes words = arguments.map panValueFlatten := by
+      simpa only [shapes, words, List.flatten_eq_flatMap, List.flatMap_map, id] using hpartition
+    rw [withShapeMap, hpartition']
+    simp only [List.map_map, Function.comp_def]
+  let wordGroups := arguments.map (fun value => (panValueFlatten value).map PanWordLab.word)
+  have hgroupBound : index < (withShape shapes (words.map PanWordLab.word)).length := by
+    rw [withShape_length]
+    exact hindexShapes
+  have hpartitionIndex :
+      (withShape shapes (words.map PanWordLab.word))[index]'hgroupBound =
+        (panValueFlatten (arguments[index]'hindex)).map PanWordLab.word := by
+    have hindexed := congrArg
+      (fun groups : List (List (PanWordLab α)) => groups[index]?) hpartitionLab
+    have hindexedLeft := List.getElem?_eq_getElem hgroupBound
+    have hindexMap : index < wordGroups.length := by
+      simpa only [wordGroups, List.length_map] using hindex
+    have hindexedRight :
+        wordGroups[index]? = some (wordGroups[index]'hindexMap) :=
+      List.getElem?_eq_getElem hindexMap
+    rw [hindexedLeft, hindexedRight] at hindexed
+    have hmapElem : wordGroups[index]'hindexMap =
+        (panValueFlatten (arguments[index]'hindex)).map PanWordLab.word := by
+      rw [List.getElem_map]
+    exact (Option.some.inj hindexed).trans hmapElem
+  have hwordLabSize : (words.map PanWordLab.word).length =
+      Shape.shapeSize (.comb shapes) := by
+    calc
+      (words.map PanWordLab.word).length = words.length := by simp
+      _ = Shape.shapeSize (.comb shapes) := hshapeSize.symm
+  rw [hslotsWindow, hwindow]
+  rw [← withShape_getElem_eq_take_drop shapes (words.map PanWordLab.word) index
+    hwordLabSize hindexShapes, hpartitionIndex]
+
+/-- The third conjunct of the Call entry `locals_rel` proof for one source
+`slc` lookup. The indexed source formal selects the corresponding `ctxtFc`
+slot group, whose actual word_lab `tlc` map yields the flattened value. -/
+theorem slcTlcWordLabLocalsRelMemberOfPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (name : String) (value : PanValue α)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hlookup : FLOOKUP (slc parameters arguments) name = some value) :
+    ∃ names words,
+      FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars name =
+          some (panValueShape [] value, names) ∧
+      names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+      (panValueFlatten value).map PanWordLab.word = words ∧
+      isWfShape [] (panValueShape [] value) = true := by
+  obtain ⟨index, hindexName, hindexArg, hnameAt, hargAt⟩ :=
+    slcLookupGetElem parameters arguments name value hlookup
+  have hindexShape : index < (parameters.map Prod.snd).length := by
+    simpa only [List.length_map] using hindexName
+  have hindexPanSemShape : index < (arguments.map panSemShapeOf).length := by
+    simpa only [List.length_map] using hindexArg
+  have hshapeAtMap := congrArg (fun shapes : List Shape => shapes[index]?) hshapeMap
+  have hshapeAtSource : (parameters.map Prod.snd)[index]? =
+      some ((parameters.map Prod.snd)[index]'hindexShape) :=
+    List.getElem?_eq_getElem hindexShape
+  have hshapeAtArgs : (arguments.map panSemShapeOf)[index]? =
+      some ((arguments.map panSemShapeOf)[index]'hindexPanSemShape) :=
+    List.getElem?_eq_getElem hindexPanSemShape
+  rw [hshapeAtSource, hshapeAtArgs] at hshapeAtMap
+  have hshapeAt : (parameters.map Prod.snd)[index]'hindexShape =
+      panSemShapeOf (arguments[index]'hindexArg) := by
+    simpa only [List.getElem_map] using Option.some.inj hshapeAtMap
+  have hshapeValue : (parameters.map Prod.snd)[index]'hindexShape =
+      panValueShape [] value := by
+    calc
+      (parameters.map Prod.snd)[index]'hindexShape =
+          panSemShapeOf (arguments[index]'hindexArg) := hshapeAt
+      _ = panValueShape [] (arguments[index]'hindexArg) :=
+        panSemShapeOf_eq_panValueShape_nil _
+      _ = panValueShape [] value := by rw [hargAt]
+  have hindexParameter : index < parameters.length := by
+    simpa only [List.length_map] using hindexName
+  have hcontext := ctxtFcVarsLookupGetElem context parameters slots index hnames hindexParameter
+  rw [hnameAt, hshapeValue] at hcontext
+  have hgroupsEq := congrArg (fun shapes : List Shape => withShape shapes slots) hshapeMap
+  have hindexSourceGroup : index <
+      (withShape (parameters.map Prod.snd) slots).length := by
+    rw [withShape_length]
+    exact hindexShape
+  have hindexTargetGroup : index <
+      (withShape (arguments.map panSemShapeOf) slots).length := by
+    rw [withShape_length]
+    exact hindexPanSemShape
+  have hgroupsAt := congrArg
+    (fun groups : List (List Nat) => groups[index]?) hgroupsEq
+  have hsourceGroupSome := List.getElem?_eq_getElem hindexSourceGroup
+  have htargetGroupSome := List.getElem?_eq_getElem hindexTargetGroup
+  rw [hsourceGroupSome, htargetGroupSome] at hgroupsAt
+  have hgroupsAt' :
+      (withShape (parameters.map Prod.snd) slots)[index]'hindexSourceGroup =
+        (withShape (arguments.map panSemShapeOf) slots)[index]'hindexTargetGroup :=
+    Option.some.inj hgroupsAt
+  have hmap := tlcWordLabWithShapeGetElemMapOfPanSem arguments slots index hslots
+    hslotsLength hwf hindexArg
+  rw [← hgroupsAt'] at hmap
+  rw [hargAt] at hmap
+  have hwfValue : isWfShape [] (panValueShape [] value) = true := by
+    rw [← hargAt]
+    simpa [panSemShapeOf_eq_panValueShape_nil] using
+      hwf (arguments[index]'hindexArg) (List.getElem_mem hindexArg)
+  exact ⟨(withShape (parameters.map Prod.snd) slots)[index]'hindexSourceGroup,
+    (panValueFlatten value).map PanWordLab.word, hcontext, hmap, rfl, hwfValue⟩
+
+/-- The complete `locals_rel` conjunct for the Call-entry bindings, expressed
+at the source panSem shape/empty-context premise and the target state's
+`word_lab` locals map. This remains untagged support until the enclosing HOL
+Call preservation theorem is ported with its state/code/excp conclusions. -/
+theorem slcTlcWordLabLocalsRelOfPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars ∧
+    ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars ∧
+    (∀ name value, FLOOKUP (slc parameters arguments) name = some value →
+      ∃ names words,
+        FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots).vars name =
+            some (panValueShape [] value, names) ∧
+        names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+        (panValueFlatten value).map PanWordLab.word = words ∧
+        isWfShape [] (panValueShape [] value) = true) := by
+  have hwfNil : ∀ value, value ∈ arguments →
+      isWfShape [] (panValueShape [] value) = true := by
+    intro value hmem
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hwf value hmem
+  have hshapeMapNil : parameters.map Prod.snd = arguments.map (panValueShape []) := by
+    calc
+      parameters.map Prod.snd = arguments.map panSemShapeOf := hshapeMap
+      _ = arguments.map (panValueShape []) := panSemShapeOfMapPanValueShapeNil arguments
+  have hshapeSize : Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+      (arguments.flatMap panValueFlatten).length := by
+    rw [hshapeMapNil]
+    simpa [Function.comp_def, List.length_flatMap] using
+      shapeSize_comb_map_panValueShape_eq_flatten_length arguments hwfNil
+  have hslotsShape : slots.length = Shape.shapeSize (.comb (parameters.map Prod.snd)) :=
+    hslotsLength.trans hshapeSize.symm
+  have hnoOverlap := ctxtFcNoOverlapOfDistinctSlots context parameters slots hslots hslotsShape
+  have hmax := ctxtFcCtxtMaxOfSlots context parameters slots hslotsShape
+  have hcontextMax : ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars := by
+    simpa [ctxtFc] using hmax
+  refine ⟨hnoOverlap, hcontextMax, ?_⟩
+  intro name value hlookup
+  exact slcTlcWordLabLocalsRelMemberOfPanSem context parameters arguments slots
+    name value hnames hshapeMap hslots hslotsLength hwf hlookup
+
+/-- HOL-`LIST_REL` presentation of the Call-entry `locals_rel` conjunct.
+`hshapeAt` is the indexed form supplied by `LIST_REL_EL_EQN`; this theorem
+constructs the source shape-map bridge explicitly before applying the
+`panSem$shape_of`/`is_wf_shape_v_nil` proof above. -/
+theorem slcTlcWordLabLocalsRelOfIndexedPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    noOverlap (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+      (parameters.map Prod.snd) slots).vars ∧
+    ctxtMax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vmax
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots).vars ∧
+    (∀ name value, FLOOKUP (slc parameters arguments) name = some value →
+      ∃ names words,
+        FLOOKUP (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd) slots).vars name =
+            some (panValueShape [] value, names) ∧
+        names.mapM (FLOOKUP (tlcWordLab slots arguments)) = some words ∧
+        (panValueFlatten value).map PanWordLab.word = words ∧
+        isWfShape [] (panValueShape [] value) = true) := by
+  exact slcTlcWordLabLocalsRelOfPanSem context parameters arguments slots hnames
+    (callParameterShapeMapEqPanSem parameters arguments hlength hshapeAt)
+    hslots hslotsLength hwf
 
 /-! HOL `state_rel_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:45`).
     The source Pancake state and target Crepe state agree on their memory
@@ -645,6 +1389,59 @@ def localsRel (context : PanToCrepProofContext α)
         ns.mapM (FLOOKUP tLocals) = some vs ∧
         (panValueFlatten v).map PanWordLab.word = vs ∧
         isWfShape [] (panValueShape [] v) = true
+
+/-! The preceding Call-entry bridge is phrased as the expanded body of
+`locals_rel_def`, so it can also be supplied directly wherever the recursive
+Call case asks for the relation itself. This wrapper keeps the literal HOL
+relation at the callee-entry boundary; it adds no premise or HOL tag. -/
+theorem slcTlcWordLabLocalsRelOfIndexedPanSem_exact
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeAt : ∀ index (hparam : index < parameters.length)
+      (harg : index < arguments.length),
+      (parameters[index]'hparam).2 = panSemShapeOf (arguments[index]'harg))
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true) :
+    localsRel
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots)
+      (slc parameters arguments) (tlcWordLab slots arguments) := by
+  unfold localsRel
+  exact slcTlcWordLabLocalsRelOfIndexedPanSem context parameters arguments slots
+    hnames hlength hshapeAt hslots hslotsLength hwf
+
+/-! Relate the successful source evaluator binder directly to the target
+callee-entry word_lab locals. This is the state-owned Call boundary: the
+source's `bindPanValueParameters` result is identified with HOL `slc`, then
+the exact expanded `locals_rel` proof above applies. It remains support for the
+enclosing recursive Call case and is not itself a HOL theorem port. -/
+theorem bindPanValueParametersLocalsRelOfPanSem
+    (context : PanToCrepProofContext α) (parameters : List (String × Shape))
+    (arguments : List (PanValue α)) (slots : List Nat)
+    (sourceLocals : String → Option (PanValue α))
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hlength : parameters.length = arguments.length)
+    (hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf)
+    (hslots : slots.Nodup)
+    (hslotsLength : slots.length = (arguments.flatMap panValueFlatten).length)
+    (hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true)
+    (hbind : bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some sourceLocals) :
+    localsRel
+      (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+        (parameters.map Prod.snd) slots)
+      sourceLocals (tlcWordLab slots arguments) := by
+  have hbindSlc := bindPanValueParameters_eq_slc parameters arguments hlength
+  have hsourceLocals : sourceLocals = slc parameters arguments :=
+    Option.some.inj (hbind.symm.trans hbindSlc)
+  rw [hsourceLocals]
+  exact slcTlcWordLabLocalsRelOfPanSem context parameters arguments slots
+    hnames hshapeMap hslots hslotsLength hwf
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
@@ -852,11 +1649,15 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-This is the map-level update lemma. The one-word target `exp_hdl` execution
-and its `locals_rel` postcondition are separately established for the Call
-exception case by `EvaluateCases.crepRuntimeExpHdlOneWord` and
-`EvaluateCases.crepRuntimeExpHdlOneWord_localsRel`. The enclosing HOL Call
-relation and payloads wider than one word remain to be proved. -/
+For one-word and two-word payloads, the paired
+`EvaluateCases.crepRuntimeExpHdlOneWord` / `crepRuntimeExpHdlOneWord_localsRel`
+and `crepRuntimeExpHdlTwoWords` / `crepRuntimeExpHdlTwoWords_localsRel`
+lemmas prove execution of the target finite-map `exp_hdl` program and its
+resulting `locals_rel` postcondition. This lemma supplies the source-to-target
+map-update relation used there. The full HOL
+`pc_compile_correct[Call_Ret_Exception]` simulation remains open: the general
+Call state transition and arbitrary payload-shape cases are not yet
+established. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1689,7 +2490,8 @@ theorem panValueFfiSharedLoad_stateRel_target
        simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
          riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
          riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
-         crepRuntimeSharedMem, hvalid, if_true, hcallBase, ← hvalue])
+         crepRuntimeSharedMem, setCrepRuntimeLocal_eq_update, hvalid, if_true,
+         hcallBase, ← hvalue])
   · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
       nextFfi hstate
 
@@ -1863,5 +2665,28 @@ theorem panValueFfiSharedStore_stateRel_final
          crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
        erw [hcallGoal])
   · simpa only [stateRel] using hstate
+
+/-- Flapjack-specific analogue of HOL `pan_to_crepProofScript.sml:3051`
+`evaluate_replicate_const`.  NOT a port: the production Crep evaluator
+`evalCrepRuntimeExp`/`evalCrepRuntimeExps` returns the bare `α` carried by a
+`word_lab` cell, and this statement is proved over the separate word_lab core
+`evalCrepRuntimeExpsWordLab`, whose recursive children still call the bare
+`evalCrepRuntimeExp` and whose arithmetic/`crepOp` cases delegate to the
+arbitrary runtime `memoryModel` hooks rather than HOL's fixed `crepSem$eval`.
+So it is not yet kernel-checked equal to `crepSem$eval` and must not carry a
+`@[hol]` tag.  Establishing a faithful production evaluator/projection and
+revisiting the tag is tracked by bead `flapjack-pxn.18.4.3.48.1`. -/
+theorem evaluateReplicateConst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (count : Nat) (state : CrepRuntimeState α σ) :
+    evalCrepRuntimeExpsWordLab state (List.replicate count (.const (0 : α))) =
+      some (List.replicate count (.word (0 : α))) := by
+  induction count with
+  | zero => simp [evalCrepRuntimeExpsWordLab]
+  | succ count ih =>
+      simp [List.replicate_succ, evalCrepRuntimeExpsWordLab, evalCrepRuntimeExpWordLab, ih]
 
 end Flapjack

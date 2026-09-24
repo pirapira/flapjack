@@ -53,6 +53,12 @@ private def isNoneResult {α : Type} (result : Option α) : Bool :=
   | none => true
   | some _ => false
 
+private def isErrorControlResult
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
 def littleEndianState : PanSemState Word64 Unit := sourceState false true true
 def bigEndianState : PanSemState Word64 Unit := sourceState true true true
 
@@ -103,7 +109,7 @@ private def observesReturnedWord
   (panSemEvaluateRiscV64CodeState sourceFfiContext sourcePrimitive sourceFfiHandler
     (sourceCodeState false true) (.return (.loadByte (.const 0))))
   (BitVec.ofNat 64 0x88)
-#guard isNoneResult
+#guard isErrorControlResult
   (panSemEvaluateRiscV64CodeState sourceFfiContext sourcePrimitive sourceFfiHandler
     (sourceCodeState false false) (.return (.loadByte (.const 0))))
 

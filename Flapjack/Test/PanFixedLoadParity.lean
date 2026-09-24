@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PanMemory
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-!
 # Fixed-width Pancake load parity
@@ -33,6 +34,10 @@ def originalByteHit : Option (Word 64) := some (BitVec.ofNat 64 2)
 def originalByteMiss : Option (Word 64) := none
 def originalLoad32Hit : Option (Word 64) := some (BitVec.ofNat 64 0x04030201)
 def originalLoad32Unaligned : Option (Word 64) := none
+def originalByteBigEndian : Option (Word 64) := some (BitVec.ofNat 64 7)
+def originalLoad32BigEndian : Option (Word 64) :=
+  some (BitVec.ofNat 64 0x08070605)
+def originalLoad32DomainMiss : Option (Word 64) := none
 
 def byteHit : Option (Word 64) :=
   panRiscVReadByte domain memory (BitVec.ofNat 64 8) (BitVec.ofNat 64 9)
@@ -46,11 +51,159 @@ def load32Hit : Option (Word 64) :=
 def load32Unaligned : Option (Word 64) :=
   panRiscVRead32 domain memory (BitVec.ofNat 64 8) (BitVec.ofNat 64 9)
 
+def bigEndianModel : PanMemoryModel (Word 64) :=
+  panRiscVMemoryModelForEndian true
+
+def byteBigEndian : Option (Word 64) :=
+  panModelReadByte bigEndianModel domain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) true
+
+def load32BigEndian : Option (Word 64) :=
+  panModelRead32 bigEndianModel domain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) true
+
+def load32DomainMiss : Option (Word 64) :=
+  panModelRead32 (panRiscVMemoryModelForEndian false)
+    (fun _ => false) memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
+
+/-! HOL words are not restricted to the production target width. This small
+    word probe checks that the same source-shaped model operations also retain
+    the 8-bit result projection used after HOL mem_load_32 returns word32. -/
+def word8Model : PanMemoryModel (Word 8) := panRiscVMemoryModelForEndian false
+def word8Domain : PanMemoryDomain (Word 8) := fun _ => true
+def word8Memory : PanFlatMemory (Word 8) :=
+  fun _ => some (BitVec.ofNat 8 0xa5)
+def word8BytesInWord : Word 8 := BitVec.ofNat 8 1
+def byteHitWidth8 : Option (Word 8) :=
+  panModelReadByte word8Model word8Domain word8Memory
+    word8BytesInWord (BitVec.ofNat 8 0) false
+def load32HitWidth8 : Option (Word 8) :=
+  panModelRead32 word8Model word8Domain word8Memory
+    word8BytesInWord (BitVec.ofNat 8 0) false
+
+/-! HOL `byte_align_def` is `align (LOG2 (dimindex DIV 8))`, while the
+RISC-V target rounds down by the supplied `bytesInWord`. For a 24-bit word,
+HOL therefore uses exponent `LOG2 3 = 1` and aligns address 5 to 4; the
+production target divides by 3 and aligns it to 3. This direct width-24
+oracle counterexample shows why the all-width theorem cannot silently reuse
+the RISC-V target. -/
+def holByteAlignWidth24Address5 : Word 24 := BitVec.ofNat 24 4
+def riscvByteAlignWidth24Address5 : Word 24 :=
+  panRiscVByteAlign (BitVec.ofNat 24 3) (BitVec.ofNat 24 5)
+def width24Domain : PanMemoryDomain (Word 24) :=
+  fun address => address == BitVec.ofNat 24 4
+def width24Memory : PanFlatMemory (Word 24) :=
+  fun _ => some (BitVec.ofNat 24 0x332211)
+def holWidth24ByteLoad : Option (Word 24) :=
+  panModelReadByte (holByteAlignedRiscVMemoryModel false)
+    width24Domain width24Memory (BitVec.ofNat 24 3) (BitVec.ofNat 24 5) false
+def riscvWidth24ByteLoad : Option (Word 24) :=
+  panModelReadByte (RiscV.panRiscVMemoryModelForEndian false)
+    width24Domain width24Memory (BitVec.ofNat 24 3) (BitVec.ofNat 24 5) false
+
+/-! The finite-word source adapter makes the HOL byte_align operation explicit
+    after the generic carrier/BitVec transport. This exercises the same
+    non-power-of-two width through the model that an arbitrary-carrier
+    evaluator can use, without asserting the other transported operations are
+    already proved equal to HOL. -/
+@[instance_reducible] def dimension24 : HolFiniteDimension (Fin 24) := inferInstance
+def finiteWord24 (value : Nat) : Fin 24 → Bool :=
+  bitVecToHolWord dimension24 (BitVec.ofNat 24 value)
+def finiteWord24ByteAlign : Fin 24 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension24 false).byteAlign
+    (finiteWord24 3) (finiteWord24 5)
+def finiteWord24Domain : (Fin 24 → Bool) → Bool :=
+  fun address => address == finiteWord24 4
+def finiteWord24Memory : PanWordMemory (Fin 24 → Bool) :=
+  fun _ => some (finiteWord24 0x332211)
+def finiteWord24ByteLoad : Option (Fin 24 → Bool) :=
+  panModelReadByte (holFiniteWordSourceMemoryModel dimension24 false)
+    finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 5) false
+def finiteWord24BigEndianByteLoad : Option (Fin 24 → Bool) :=
+  panModelReadByte (holFiniteWordSourceMemoryModel dimension24 true)
+    finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 5) true
+def finiteWord24Load32 : Option (Fin 24 → Bool) :=
+  panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
+    finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
+/-! HOL `mem_load_32` assembles the four extracted bytes at width 32, then
+    `crepSem.eval` widens or truncates that result into the source word width. -/
+def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=
+  [finiteWord24 0x22, finiteWord24 0x33, finiteWord24 0x11, finiteWord24 0x22]
+def finiteWord24Fixed32Load : Fin 24 → Bool :=
+  holFiniteWordSourceWordOfBytes32 dimension24 false finiteWord24Fixed32Bytes
+
+/-! A 17-bit source word has two full byte slots. HOL `word_of_bytes` applies
+    four recursive `set_byte` calls, so later byte addresses wrap onto slots
+    0 and 1 and the outer first two bytes take precedence. -/
+@[instance_reducible] def dimension17 : HolFiniteDimension (Fin 17) := inferInstance
+def finiteWord17 (value : Nat) : Fin 17 → Bool :=
+  bitVecToHolWord dimension17 (BitVec.ofNat 17 value)
+def finiteWord17WordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 false).wordOfBytes false
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
+def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 true).wordOfBytes true
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
+def finiteWord17SetByteLittle : Fin 17 → Bool :=
+  holFiniteWordSourceSetByte dimension17 (finiteWord17 1) (finiteWord17 0xA5)
+    (finiteWord17 0x1ABCD) false
+
+/-! HOL natural MOD has x MOD 0 = x. A width-5 word has no full byte slots,
+    so this checks the imported byte_index zero-divisor branch directly. -/
+@[instance_reducible] def dimension5 : HolFiniteDimension (Fin 5) := inferInstance
+def finiteWord5 (value : Nat) : Fin 5 → Bool :=
+  bitVecToHolWord dimension5 (BitVec.ofNat 5 value)
+def finiteWord5LittleGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) false
+def finiteWord5BigGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) true
+
+/-! Whole-word transport for `get_byte` remains valid when the carrier is
+    narrower than one byte: the result is truncated to the five-bit carrier. -/
+#guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
+
+example :
+    holWordToBitVec dimension5
+        ((holFiniteWordSourceMemoryModel dimension5 false).getByte
+          (finiteWord5 1) (finiteWord5 1) (finiteWord5 31) false) =
+      BitVec.ofNat 5
+        ((holWordToBitVec dimension5 (finiteWord5 31) >>> 8).toNat % 2^8) :=
+  holFiniteWordSourceMemoryModel_getByte_toBitVec dimension5 false false
+    (finiteWord5 1) (finiteWord5 1) (finiteWord5 31)
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
 #guard byteMiss == originalByteMiss
 #guard load32Hit == originalLoad32Hit
 #guard load32Unaligned == originalLoad32Unaligned
+#guard byteBigEndian == originalByteBigEndian
+#guard load32BigEndian == originalLoad32BigEndian
+#guard load32DomainMiss == originalLoad32DomainMiss
+#guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard holByteAlignWidth24Address5 == BitVec.ofNat 24 4
+#guard riscvByteAlignWidth24Address5 == BitVec.ofNat 24 3
+#guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5
+#guard holWidth24ByteLoad == some (BitVec.ofNat 24 0x33)
+#guard riscvWidth24ByteLoad == none
+#guard holWordToBitVec dimension24 finiteWord24ByteAlign == BitVec.ofNat 24 4
+#guard (finiteWord24ByteLoad.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x33)
+#guard (finiteWord24BigEndianByteLoad.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x11)
+#guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x113322)
+#guard holWordToBitVec dimension24 finiteWord24Fixed32Load ==
+  BitVec.ofNat 24 0x113322
+#guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
+  BitVec.ofNat 17 0x2211
+#guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==
+  BitVec.ofNat 17 0x1122
+#guard holWordToBitVec dimension17 finiteWord17SetByteLittle ==
+  BitVec.ofNat 17 0x1A5CD
+#guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
+#guard holWordToBitVec dimension5 finiteWord5BigGetByte == BitVec.ofNat 5 31
 
 end Flapjack.Test.PanFixedLoadParity

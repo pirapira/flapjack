@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 
 /-!
 The core Flapjack syntax.
@@ -571,11 +572,6 @@ theorem mem_compField_imp_mem_of_any (index : Nat) (shapes : List Shape)
           simp only [compField, Nat.succ_ne_zero, if_false] at hmem
           exact List.mem_of_mem_drop
             (ih k (values.drop (Shape.shapeSize shape)) hmem)
-
-/-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
-    lists because `List` membership already expresses the element relation. -/
-def ListDisjoint (left right : List α) : Prop :=
-  ∀ value, value ∈ left → value ∈ right → False
 
 /-! Counterpart of Cake's `all_distinct_take`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:384`). -/
@@ -1282,9 +1278,12 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-! Direct source-shaped counterpart of `panLang$free_var_ids`.  The
-    expression helper is the existing `expLocalVars`, which mirrors the
-    source `var_exp` distinction between local and global variables. -/
+/-! Exact clause-structured port of HOL `panLang$free_var_ids`
+    (`panLangScript.sml:347`).  The expression helper is the tagged
+    `expLocalVars` port of HOL `var_exp`, preserving the source distinction
+    between local and global variables; the `Dec` filter uses `!=`, which
+    implements HOL `$≠` because String equality is lawful. -/
+@[hol "cakeml/pancake/panLangScript.sml" "free_var_ids_def"]
 def freeVarIds : Prog α → List VarName
   | .dec name _ value body =>
       expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)

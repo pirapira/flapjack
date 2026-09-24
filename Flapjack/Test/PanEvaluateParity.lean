@@ -75,6 +75,32 @@ def evaluateCall :=
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
 
+/-! The non-clocked Call evaluator receives declaration-derived returnShapes
+through PanValueCallContracts. A malformed callee return must produce Error
+with the callee post-state, matching the direct HOL malformed-return oracle. -/
+def nonClockedBadReturnFunctions :
+    List (FunName × List VarName × Prog (Word 64)) :=
+  [("badret", ["x"], .return (.const (BitVec.ofNat 64 7)))]
+
+def nonClockedBadReturnContracts : PanValueCallContracts :=
+  PanValueCallContracts.mk
+    [("badret", .comb [.one, .one])] []
+    [("badret", [("x", .one)])]
+
+def evaluateNonClockedCallBadReturnShape :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] nonClockedBadReturnFunctions
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 8
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState
+    (.call none "badret" [.const (BitVec.ofNat 64 4)] : Prog (Word 64))
+    (contracts := some nonClockedBadReturnContracts)
+
+def observeNonClockedCallBadReturnShape : Bool :=
+  match evaluateNonClockedCallBadReturnShape with
+  | some (.error locals _ _ _, _) =>
+      (locals "x").isNone
+  | _ => false
+
 private abbrev Word64 := Word 64
 
 def emptyPanSourceState (clock : Nat)
@@ -100,9 +126,21 @@ def sourcePairCode : PanSemCodeMap Word64 :=
   [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
     .comb [.one, .one]))]
 
+def sourceCallMiddlePairCode : PanSemCodeMap Word64 :=
+  [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
+    .comb [.one, .one]))]
+
+def sourceNestedPairCode : PanSemCodeMap Word64 :=
+  [("nestedPair", ([ ("p", .comb [.comb [.one], .one]) ],
+    .return (.var .local "p"), .comb [.comb [.one], .one]))]
+
 def sourceRecursiveCode : PanSemCodeMap Word64 :=
   [("f", ([], .decCall "nested" .one "g" []
       (.return (.var .local "nested")), .one)),
+    ("g", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
+def sourceNestedCallCode : PanSemCodeMap Word64 :=
+  [("f", ([], .call none "g" [], .one)),
     ("g", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
 
 def sourceCallSelfCode : PanSemCodeMap Word64 :=
@@ -116,6 +154,9 @@ def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
 
 def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
   [("constant", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
+def sourceBadReturnShapeCallCode : PanSemCodeMap Word64 :=
+  [("badret", ([], .return (.const (BitVec.ofNat 64 7)), .comb [.one, .one]))]
 
 def sourceRaiseExceptionCallCode : PanSemCodeMap Word64 :=
   [("raiseE", ([], .raise "E" (.const (BitVec.ofNat 64 7)), .one))]
@@ -146,6 +187,43 @@ def evaluateSourceCallFirstRecordField :=
             some (.rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 8)])
           else none })
     (.call none "id" [.rField 0 (.var .local "pair")] : Prog Word64)
+
+def evaluateSourceCallMiddlePairField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceCallMiddlePairCode with
+        locals := fun name =>
+          if name == "record" then
+            some (.rStruct [.word (BitVec.ofNat 64 3),
+              .rStruct [.word (BitVec.ofNat 64 7), .word (BitVec.ofNat 64 8)],
+              .word (BitVec.ofNat 64 10)])
+          else none })
+    (.call none "pair" [.rField 1 (.var .local "record")] : Prog Word64)
+
+def evaluateSourceCallConstructedMiddlePairField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceCallMiddlePairCode)
+    (.call none "pair"
+      [.rField 1 (.rStruct [.const (BitVec.ofNat 64 3),
+        .rStruct [.const (BitVec.ofNat 64 7), .const (BitVec.ofNat 64 8)],
+        .const (BitVec.ofNat 64 10)])] : Prog Word64)
+
+def evaluateSourceCallStructFieldRField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceCallMiddlePairCode)
+    (.call none "pair"
+      [.rStruct [.rField 0 (.rStruct [.const (BitVec.ofNat 64 7),
+        .const (BitVec.ofNat 64 9)]), .const (BitVec.ofNat 64 8)]] : Prog Word64)
+
+def evaluateSourceCallNestedStructFieldRField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceNestedPairCode)
+    (.call none "nestedPair"
+      [.rStruct [.rStruct [.rField 0 (.rStruct [.const (BitVec.ofNat 64 7),
+        .const (BitVec.ofNat 64 9)])], .const (BitVec.ofNat 64 8)]] : Prog Word64)
 
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -201,6 +279,12 @@ def evaluateSourceNestedCall :=
     (emptyPanSourceState 10 sourceRecursiveCode)
     (.call none "f" [] : Prog Word64)
 
+def evaluateSourceNestedOrdinaryCall :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceNestedCallCode)
+    (.call none "f" [] : Prog Word64)
+
 def evaluateSourceNestedCallWithPostState :=
   panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8)
@@ -233,6 +317,20 @@ def evaluateSourceConstReturnCall :=
     (emptyPanSourceState 10 sourceConstReturnCallCode)
     (.call none "constant" [] : Prog Word64)
 
+def sourceBadReturnShapeState :=
+  { emptyPanSourceState 10 sourceBadReturnShapeCallCode with
+      locals := updatePanValueMap (fun _ => none) "caller" (.word (BitVec.ofNat 64 3)) }
+
+def evaluateSourceCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.call none "badret" [] : Prog Word64)
+
+def evaluateSourceDecCallBadReturnShape :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadReturnShapeState
+    (.decCall "dest" .one "badret" [] .skip : Prog Word64)
+
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
     (expected : Word64) (expectedClock : Nat) : Bool :=
@@ -259,6 +357,31 @@ def observeSourceCallStructArgument : Bool :=
 
 def observeSourceCallFirstRecordField := isSourceReturnedWord
   evaluateSourceCallFirstRecordField (BitVec.ofNat 64 7) 9
+
+def observeSourceCallMiddlePairField : Bool :=
+  match evaluateSourceCallMiddlePairField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
+def observeSourceCallConstructedMiddlePairField : Bool :=
+  match evaluateSourceCallConstructedMiddlePairField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
+def observeSourceCallStructFieldRField : Bool :=
+  match evaluateSourceCallStructFieldRField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
+def observeSourceCallNestedStructFieldRField : Bool :=
+  match evaluateSourceCallNestedStructFieldRField with
+  | some (.control (.returned _ _ _ _
+      [.rStruct [.rStruct [.word first], .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
 
 def observeSourceCallAssigned : Bool :=
   match evaluateSourceCallAssigned with
@@ -291,6 +414,9 @@ def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
 def observeSourceNestedCodeCall := isSourceReturnedWord evaluateSourceNestedCall
   (BitVec.ofNat 64 7) 8
 
+def observeSourceNestedOrdinaryCall := isSourceReturnedWord
+  evaluateSourceNestedOrdinaryCall (BitVec.ofNat 64 7) 8
+
 def observeSourceCodePreservedAfterRecursion : Bool :=
   match evaluateSourceNestedCallWithPostState with
   | some (_, postState) =>
@@ -318,6 +444,22 @@ def observeSourceZeroClockCallTimeout : Bool :=
 def observeSourceConstReturnCall := isSourceReturnedWord
   evaluateSourceConstReturnCall (BitVec.ofNat 64 7) 9
 
+def observeSourceCallBadReturnShape : Bool :=
+  match evaluateSourceCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
+def observeSourceDecCallBadReturnShape : Bool :=
+  match evaluateSourceDecCallBadReturnShape with
+  | some (.control (.error locals _ _ _), clock) =>
+      match locals "caller" with
+      | none => clock == 9
+      | some _ => false
+  | _ => false
+
 #guard observeSourceCodeCall
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
@@ -325,13 +467,18 @@ def observeSourceConstReturnCall := isSourceReturnedWord
 #guard observeSourceCallRaisesException
 #guard observeSourceCallHandlesException
 #guard observeSourceCallHandlesPairException
+#guard observeSourceCallStructFieldRField
+#guard observeSourceCallNestedStructFieldRField
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
+#guard observeSourceNestedOrdinaryCall
 #guard observeSourceCodePreservedAfterRecursion
 #guard observeSourceRecursiveCallTimeout
 #guard observeSourceRecursiveDecCallTimeout
 #guard observeSourceZeroClockCallTimeout
 #guard observeSourceConstReturnCall
+#guard observeSourceCallBadReturnShape
+#guard observeSourceDecCallBadReturnShape
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -532,6 +679,10 @@ def observeNestedRaise : Bool :=
         third == BitVec.ofNat 64 5
   | _ => false
 
+def isErrorResult {α σ : Type} : Option (PanValueFfiClockResult α σ) → Bool
+  | some (.control (.error _ _ _ _), _) => true
+  | _ => false
+
 def observeFixedLoads : Bool :=
   match evaluateFixedByte, evaluateFixedWord32 with
   | some (.control (.returned _ _ _ _ [(.word byte)]), 4),
@@ -540,7 +691,7 @@ def observeFixedLoads : Bool :=
   | _, _ => false
 
 def observeFixedLoadDomainFailure : Bool :=
-  evaluateFixedByteDomainFailure.isNone
+  isErrorResult evaluateFixedByteDomainFailure
 
 def observeExactProgramMemoryAccess : Bool :=
   match evaluateExactProgramWord32 with
@@ -557,10 +708,6 @@ def isWordOption (expected : Nat) : Option (PanValue (Word 64)) → Bool
 
 def isNoneOption : Option (PanValue (Word 64)) → Bool
   | none => true
-  | _ => false
-
-def isErrorResult {α σ : Type} : Option (PanValueFfiClockResult α σ) → Bool
-  | some (.control (.error _ _ _ _), _) => true
   | _ => false
 
 def observeFixedStore : Bool :=
@@ -632,6 +779,7 @@ def observeShMemStoreDomainFailure : Bool :=
 #guard observeShMemLoadUnbound
 #guard observeShMemLoadDomainFailure
 #guard observeShMemStoreDomainFailure
+#guard observeNonClockedCallBadReturnShape
 
 def runChecks : IO Bool := do
   if observeSkip then IO.println "PASS evaluate skip" else IO.println "FAIL evaluate skip"
@@ -656,10 +804,24 @@ def runChecks : IO Bool := do
   if observeSourceCallHandlesPairException then
     IO.println "PASS state-owned Call handler returns a two-word exception payload like HOL"
   else IO.println "FAIL state-owned Call handler returns a two-word exception payload like HOL"
+  if observeSourceCallMiddlePairField then
+    IO.println "PASS state-owned Call evaluates a middle RField pair like original HOL"
+  else IO.println "FAIL state-owned Call evaluates a middle RField pair like original HOL"
+  if observeSourceCallConstructedMiddlePairField then
+    IO.println "PASS state-owned Call selects a nested pair from a constructed RStruct like original HOL"
+  else IO.println "FAIL state-owned Call selects a nested pair from a constructed RStruct like original HOL"
+  if observeSourceCallStructFieldRField then
+    IO.println "PASS state-owned Call constructs a record with an RField field like original HOL"
+  else IO.println "FAIL state-owned Call constructs a record with an RField field like original HOL"
+  if observeSourceCallNestedStructFieldRField then
+    IO.println "PASS state-owned Call recursively compiles nested records with an RField field like original HOL"
+  else IO.println "FAIL state-owned Call recursively compiles nested records with an RField field like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
     IO.println "FAIL state-owned nested Call and DecCall match HOL recursive oracle"
+  if observeSourceNestedOrdinaryCall then IO.println "PASS state-owned ordinary Call recursively resolves nested code entry" else
+    IO.println "FAIL state-owned ordinary Call recursively resolves nested code entry"
   if observeSourceCodePreservedAfterRecursion then IO.println "PASS recursive code-map evaluation preserves source code" else
     IO.println "FAIL recursive code-map evaluation preserves source code"
   if observeSourceRecursiveCallTimeout then IO.println "PASS recursive state-owned Call times out at source clock zero" else
@@ -670,6 +832,15 @@ def runChecks : IO Bool := do
     IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
   if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
     IO.println "FAIL zero-argument state-owned Call returns its code-map word constant"
+  if observeSourceCallBadReturnShape then
+    IO.println "PASS state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned Call returns HOL Error and callee state on return-shape mismatch"
+  if observeSourceDecCallBadReturnShape then
+    IO.println "PASS state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  else IO.println "FAIL state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  if observeNonClockedCallBadReturnShape then
+    IO.println "PASS non-clocked Call returns Error with callee post-state on return-shape mismatch"
+  else IO.println "FAIL non-clocked Call returns Error with callee post-state on return-shape mismatch"
   if observeNestedRaise then IO.println "PASS evaluate nested structured raise" else
     IO.println "FAIL evaluate nested structured raise"
   if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
@@ -700,11 +871,15 @@ def runChecks : IO Bool := do
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
     observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
+    observeSourceCallMiddlePairField &&
+    observeSourceCallConstructedMiddlePairField &&
     observeSourceCodeDecCall &&
     observeSourceNestedCodeCall &&
+    observeSourceNestedOrdinaryCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
+    observeSourceCallBadReturnShape && observeSourceDecCallBadReturnShape &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

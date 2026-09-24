@@ -93,6 +93,204 @@ structure CrepRuntimeState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
+/-- Flapjack's field-only encoding of HOL `crepSem$state` for a fixed
+    `RiscV.Word width` carrier. Finite maps are represented extensionally by
+    lookup functions, and the three target-configuration fields
+    (`memoryModel`, `bytesInWord`, `ffiContext`) of the executable
+    `CrepRuntimeState` are absent, matching HOL's 11-field state. It is
+    untagged because it does not quantify over HOL's arbitrary word carrier. -/
+structure CrepHolState (α σ : Type u) where
+  locals : Nat → Option (PanWordLab α)
+  globals : BitVec 5 → Option (PanWordLab α)
+  code : FunName → Option (List Nat × CrepProg α)
+  memory : α → PanWordLab α
+  memaddrs : α → Bool
+  shMemaddrs : α → Bool
+  clock : Nat
+  bigEndian : Bool
+  ffi : FfiState σ
+  baseAddress : α
+  topAddress : α
+
+/-! Source-shaped Crep memory-read helpers, parameterized by the word
+    operations for one particular word carrier. These make the case split in
+    HOL `panSem$mem_load_byte_def` and the alignment/domain/list computation in
+    `mem_load_32_def` explicit before adapting the `word32` result back to the
+    state's word type. The extra `PanMemoryModel` and `bytesInWord` parameters
+    stand for operations fixed by HOL's word type; until their generic
+    correspondence is established these helpers are Flapjack infrastructure
+    and carry no HOL tag. -/
+def crepHolEvalMemLoadByte
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) : Option α :=
+  let alignedAddress := model.byteAlign bytesInWord address
+  match state.memory alignedAddress with
+  | .word value =>
+      if state.memaddrs alignedAddress then
+        some (model.getByte bytesInWord address value state.bigEndian)
+      else none
+
+def crepHolEvalMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) : Option α :=
+  if model.aligned 4 address then
+    let alignedAddress := model.byteAlign bytesInWord address
+    match state.memory alignedAddress with
+    | .word value =>
+        if state.memaddrs alignedAddress then
+          some (model.wordOfBytes32 state.bigEndian
+            [model.getByte bytesInWord address value state.bigEndian,
+             model.getByte bytesInWord (address + 1) value state.bigEndian,
+             model.getByte bytesInWord (address + 2) value state.bigEndian,
+             model.getByte bytesInWord (address + 3) value state.bigEndian])
+        else none
+  else none
+
+theorem crepHolEvalMemLoadByte_eq_panModelReadByte [Add α] [OfNat α 1]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) :
+    crepHolEvalMemLoadByte model bytesInWord state address =
+      panModelReadByte model state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        bytesInWord address state.bigEndian := by
+  unfold crepHolEvalMemLoadByte panModelReadByte
+  cases hcell : state.memory (model.byteAlign bytesInWord address)
+  simp [hcell, panTheWord]
+
+theorem crepHolEvalMemLoad32_eq_panModelRead32 [Add α]
+    [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    (model : PanMemoryModel α) (bytesInWord : α)
+    (state : CrepHolState α σ) (address : α) :
+    crepHolEvalMemLoad32 model bytesInWord state address =
+      panModelRead32 model state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        bytesInWord address state.bigEndian := by
+  unfold crepHolEvalMemLoad32 panModelRead32
+  by_cases haligned : model.aligned 4 address
+  · simp only [haligned, ↓reduceIte]
+    cases hcell : state.memory (model.byteAlign bytesInWord address)
+    simp [hcell, panTheWord]
+  · simp [haligned]
+
+/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
+    over the 11-field `CrepHolState`:
+    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
+    Production `setCrepRuntimeGlobals` routes its globals update through this
+    definition while preserving its three extra configuration fields. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with globals := FUPDATE state.globals (key, value) }
+
+/-- HOL `crepSem$dec_clock_def` on the 11-field Crep state. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Exact HOL-shaped port of `crepSem$set_var_def` (crepSemScript.sml:55-57)
+    over the 11-field `CrepHolState`:
+    `set_var v w s = s with locals := s.locals |+ (v,w)`.
+    This is the local-binding step used by the `Assign` and `Primitive`
+    clauses of `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+def setCrepHolVar (name : Nat) (value : PanWordLab α)
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FUPDATE state.locals (name, value) }
+
+/-- Exact HOL-shaped port of `crepSem$upd_locals_def` (crepSemScript.sml:66-68)
+    over the 11-field `CrepHolState`, following HOL's `|++` (foldl `|+`) order:
+    `upd_locals varargs s = s with locals := FEMPTY |++ varargs`.
+    This is the callee-parameter step used by the `Call` clause of
+    `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FUPDATE_LIST FEMPTY varargs }
+
+/-- Exact HOL-shaped port of `crepSem$empty_locals_def` (crepSemScript.sml:71)
+    over the 11-field `CrepHolState`:
+    `empty_locals s = s with locals := FEMPTY`.
+    This is the state-clearing step at the terminal `While` timeout, `Raise`
+    and `Return` boundaries of `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FEMPTY }
+
+/-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
+    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`
+    rendered as `FDOMSUB` and `|+` as `FUPDATE`.  Lives in the crepSem counterpart module
+    because it is the HOL `crepSem` `res_var` used by the `Dec` restore; the generic
+    `FDOMSUB` stays in `Flapjack.FiniteMap.Basic`.  `[LawfulBEq α]` ties the Boolean key
+    equality used by the representation (`key == k`) to HOL's propositional equality. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
+def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB f entry.1
+  | some v => FUPDATE f (entry.1, v)
+
+/-- Exact HOL-shaped port of `crepSem$crep_op_def` (crepSemScript.sml:85-88):
+    `crep_op crepLang$Mul [w1;w2] = SOME (w1 * w2)` and `crep_op _ _ = NONE`.
+    HOL's carrier is `'a word`, so the tagged port is width-polymorphic over
+    `BitVec width` with the positive-width side condition `[NeZero width]`
+    (HOL's `:'a word` requires a nonempty index type) rather than an arbitrary
+    `[Mul α]`. The wildcard clause
+    covers `.mul` at every other arity, matching HOL's total-over-malformed-
+    operand-lists `crep_op _ _ = NONE`. The generic production evaluator still
+    multiplies directly in its `.crepOp` clause; the RV64 executed-path
+    instantiation is tested, but routing execution through this tagged
+    definition remains open (bead flapjack-pxn.18.4.3.48.1.20). -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
+def crepOpCrep (width : Nat) [NeZero width] : CrepOp → List (BitVec width) → Option (BitVec width)
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
+/-- Generic untagged helper: the same multiplication dispatch over an arbitrary
+    `[Mul α]`, used as the value-level bridge for the target-extended evaluator.
+    It is not a HOL port because HOL's operands are words. -/
+def crepOpValue [Mul α] : CrepOp → List α → Option α
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
+/-- The width-polymorphic tagged port is the generic helper at `BitVec width`. -/
+theorem crepOpCrep_eq_crepOpValue (width : Nat) [NeZero width] (operator : CrepOp)
+    (arguments : List (BitVec width)) :
+    crepOpCrep width operator arguments = crepOpValue operator arguments := by
+  cases operator
+  cases arguments with
+  | nil => rfl
+  | cons left rest =>
+      cases rest with
+      | nil => rfl
+      | cons right rest =>
+          cases rest with
+          | nil => rfl
+          | cons extra tail => rfl
+
+/-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
+    over the 11-field `CrepHolState`:
+    `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.
+    This is the word load used by the `Load` clause of `evaluate`; the result is
+    the total `word_lab` cell, exactly as in HOL. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+def memLoadCrepHol (address : α) (state : CrepHolState α σ) : Option (PanWordLab α) :=
+  if state.memaddrs address then some (state.memory address) else none
+
+/-- Forget the three target-configuration fields of the executable runtime
+    state, obtaining the 11-field HOL-shaped state. -/
+def CrepRuntimeState.toHolState (state : CrepRuntimeState α σ) :
+    CrepHolState α σ :=
+  { locals := state.locals
+    globals := state.globals
+    code := state.code
+    memory := state.memory
+    memaddrs := state.memaddrs
+    shMemaddrs := state.shMemaddrs
+    clock := state.clock
+    bigEndian := state.bigEndian
+    ffi := state.ffi
+    baseAddress := state.baseAddress
+    topAddress := state.topAddress }
+
 /- Flapjack clock update. Its field operation follows CakeML Pancake's
    `dec_clock_def`, but this runtime state still carries extra memory-model
    and FFI-context fields, so this is not tagged as an exact HOL definition. -/
@@ -103,17 +301,17 @@ def updateCrepRuntimeGlobal (globals : BitVec 5 → Option (PanWordLab α))
     (key : BitVec 5) (value : PanWordLab α) : BitVec 5 → Option (PanWordLab α) :=
   fun candidate => if key == candidate then some value else globals candidate
 
-/-- Production global update on the 14-field `CrepRuntimeState`. Its field
-    operation follows HOL `crepSem$set_globals` (crepSemScript.sml:61), but the
-    runtime state carries three target-configuration fields
-    (`memoryModel`, `bytesInWord`, `ffiContext`) absent from HOL's 11-field
-    state, so this is NOT tagged as the exact HOL definition. The exact
-    HOL-shaped port lives in `Flapjack/Pancake/Semantics/CrepSem/Eval.lean` as
-    `setCrepHolGlobals`; `setCrepRuntimeGlobals_eq_FUPDATE` records that the
-    update is HOL's finite-map `|+`/`FUPDATE` on the globals component. -/
+/-- Production global update on the 14-field `CrepRuntimeState`. It derives its
+    globals update by applying the tagged HOL `setCrepHolGlobals` to the
+    11-field projection `CrepRuntimeState.toHolState` and writing the resulting
+    globals back, so the three runtime configuration fields are preserved
+    exactly as the record update leaves them. It is NOT itself tagged (HOL's
+    state has 11 fields); `setCrepRuntimeGlobals_eq_FUPDATE` and
+    `setCrepRuntimeGlobals_toHolState` are the kernel-checked adapters. -/
 def setCrepRuntimeGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
-  { state with globals := updateCrepRuntimeGlobal state.globals key value }
+  { state with
+    globals := (setCrepHolGlobals key value state.toHolState).globals }
 
 /-- The global-cell update is HOL's finite-map `|+`/`FUPDATE` on the
     function-represented globals map. -/
@@ -129,9 +327,53 @@ theorem setCrepRuntimeGlobals_eq_FUPDATE
     setCrepRuntimeGlobals key value state =
       { state with globals := FUPDATE state.globals (key, value) } := rfl
 
+/-- Kernel-checked adapter: routing production StoreGlob through the tagged HOL
+    definition only changes the globals component, leaving the 11 encoded
+    fields equal to the HOL-shaped update. -/
+theorem setCrepRuntimeGlobals_toHolState
+    (key : BitVec 5) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    (setCrepRuntimeGlobals key value state).toHolState =
+      setCrepHolGlobals key value state.toHolState := rfl
+
+/-- Kernel-checked adapter: `toHolState` forgets exactly the three
+    configuration fields, so it commutes with the production update. -/
+theorem CrepRuntimeState.toHolState_globals (state : CrepRuntimeState α σ) :
+    state.toHolState.globals = state.globals := rfl
+
 def updateCrepRuntimeLocal (locals : Nat → Option (PanWordLab α))
     (name : Nat) (value : PanWordLab α) : Nat → Option (PanWordLab α) :=
   fun candidate => if name == candidate then some value else locals candidate
+
+/-- The runtime local-cell update is HOL's finite-map `|+`/`FUPDATE` on the
+    function-represented locals map, i.e. exactly the body of
+    `crepSem$set_var_def` before the enclosing record write. -/
+theorem updateCrepRuntimeLocal_eq_FUPDATE
+    (locals : Nat → Option (PanWordLab α)) (name : Nat) (value : PanWordLab α) :
+    updateCrepRuntimeLocal locals name value = FUPDATE locals (name, value) := rfl
+
+/-- Production local-binding on the 14-field `CrepRuntimeState`, routed through
+    the tagged HOL `setCrepHolVar` applied to the 11-field projection, so the
+    three runtime configuration fields are preserved exactly as a record
+    update leaves them. It is NOT itself tagged (HOL's state has 11 fields);
+    `setCrepRuntimeLocal_eq_update` and `setCrepRuntimeLocal_toHolState` are
+    the kernel-checked adapters. -/
+def setCrepRuntimeLocal (name : Nat) (value : PanWordLab α)
+    (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
+  { state with locals := (setCrepHolVar name value state.toHolState).locals }
+
+/-- `setCrepRuntimeLocal` has HOL's `set_var` locals component. -/
+@[simp] theorem setCrepRuntimeLocal_eq_update
+    (name : Nat) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    setCrepRuntimeLocal name value state =
+      { state with locals := updateCrepRuntimeLocal state.locals name value } := rfl
+
+/-- Kernel-checked adapter: routing production locals through the tagged HOL
+    `setCrepHolVar` leaves the 11 encoded fields equal to the HOL-shaped
+    update. -/
+theorem setCrepRuntimeLocal_toHolState
+    (name : Nat) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
+    (setCrepRuntimeLocal name value state).toHolState =
+      setCrepHolVar name value state.toHolState := rfl
 
 /-- Flapjack update of the total HOL-shaped memory function. -/
 def updateCrepRuntimeMemory [BEq α] (memory : α → PanWordLab α)
@@ -144,6 +386,11 @@ def updateCrepRuntimeMemory [BEq α] (memory : α → PanWordLab α)
    the caller's transient locals. -/
 def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with locals := fun _ => none }
+
+/-- Kernel-checked adapter: the production local-clear agrees with the tagged
+    HOL `emptyCrepHolLocals` under the 11-field projection. -/
+theorem clearCrepRuntimeLocals_toHolState (state : CrepRuntimeState α σ) :
+    (clearCrepRuntimeLocals state).toHolState = emptyCrepHolLocals state.toHolState := rfl
 
 /-- Flapjack-only projection lemma for the local-clear operation. -/
 @[simp] theorem clearCrepRuntimeLocals_code (state : CrepRuntimeState α σ) :
@@ -160,6 +407,60 @@ def assignCrepRuntimeLocals (locals : Nat → Option (PanWordLab α))
       (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
       locals)
 
+/-- Folding the runtime local-cell update over a list of `(name, value)` pairs
+    is the HOL finite-map `|++`/`FUPDATE_LIST` over the same pairs with the raw
+    values wrapped as `word_lab` cells. -/
+theorem foldl_updateCrepRuntimeLocal_eq
+    (entries : List (Nat × α)) (locals : Nat → Option (PanWordLab α)) :
+    entries.foldl
+        (fun acc entry => updateCrepRuntimeLocal acc entry.1 (.word entry.2))
+        locals =
+      (entries.map (fun entry => (entry.1, PanWordLab.word entry.2))).foldl
+        FUPDATE locals := by
+  induction entries generalizing locals with
+  | nil => rfl
+  | cons entry rest ih =>
+      simp only [List.foldl_cons, List.map_cons]
+      rw [updateCrepRuntimeLocal_eq_FUPDATE, ih]
+
+/-- Production `assignCrepRuntimeLocals` is exactly HOL's `|++` (`FUPDATE_LIST`)
+    over the zipped `(name, word value)` bindings, with the same length guard. -/
+theorem assignCrepRuntimeLocals_eq_FUPDATE_LIST
+    (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
+    assignCrepRuntimeLocals locals names values =
+      (if names.length != values.length then none
+       else some (FUPDATE_LIST locals
+         ((names.zip values).map (fun entry => (entry.1, PanWordLab.word entry.2))))) := by
+  unfold assignCrepRuntimeLocals
+  cases hb : names.length != values.length with
+  | true => rfl
+  | false =>
+      rw [foldl_updateCrepRuntimeLocal_eq]
+      rfl
+
+/-- Production callee-local setup starts from the empty map (the `Call` clause),
+    so it is HOL's `upd_locals` body `FEMPTY |++ varargs`. -/
+theorem assignCrepRuntimeLocals_empty_eq
+    (names : List Nat) (values : List α) (h : names.length = values.length) :
+    assignCrepRuntimeLocals (fun _ => none) names values =
+      some (FUPDATE_LIST FEMPTY
+        ((names.zip values).map (fun entry => (entry.1, PanWordLab.word entry.2)))) := by
+  rw [assignCrepRuntimeLocals_eq_FUPDATE_LIST]
+  have hfalse : (names.length != values.length) = false := by
+    cases hb : names.length != values.length with
+    | false => rfl
+    | true => exact (bne_iff_ne.mp hb h).elim
+  rw [hfalse]
+  rfl
+
+/-- Kernel-checked adapter: writing the callee-locals map produced from the
+    empty map into a runtime state projects to the tagged HOL `updCrepHolLocals`
+    on the 11-field state. -/
+theorem setCrepRuntimeLocalsFEMPTY_toHolState
+    (varargs : List (Nat × PanWordLab α)) (state : CrepRuntimeState α σ) :
+    ({ state with locals := FUPDATE_LIST FEMPTY varargs }).toHolState =
+      updCrepHolLocals varargs state.toHolState := rfl
+
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
     Option (CrepProg α × (Nat → Option (PanWordLab α))) :=
@@ -171,6 +472,28 @@ def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
         match assignCrepRuntimeLocals (fun _ => none) parameters values with
         | some locals => some (body, locals)
         | none => none
+      else none
+
+/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
+    over the finite map: look the function up, require the declared parameter
+    list to have the argument count and be duplicate-free, and return the body
+    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+
+    The HOL source quantifies `args : 'a word_lab list`; the executable
+    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
+    with `PanWordLab.word`, and checks distinctness with
+    `eraseDups.length = length` rather than `ALL_DISTINCT`.  This declaration
+    is the exact HOL-shaped operation; routing the executed path through it is
+    tracked separately (the two distinctness checks agree under `LawfulBEq`). -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) :
+    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
+  match FLOOKUP code fname with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length = args.length ∧ parameters.Nodup
+      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
       else none
 
 inductive CrepRuntimeRequest (α : Type u) where
@@ -201,6 +524,44 @@ inductive CrepRuntimeResult (α ε : Type u) where
 abbrev CrepRuntimeStep (α σ ε : Type u) :=
   CrepRuntimeResult α ε × CrepRuntimeState α σ
 
+/-- HOL `crepSem$fix_clock_def` (crepSemScript.sml:150-152) on the 11-field
+    Crep state: keep the result and clamp the returned clock to the smaller of
+    the old and new clocks.  This is the clock-clamping component used by the
+    faithful `Seq`/`While`/`Call` clauses of `evaluate_def`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+def fixCrepHolClock (oldState : CrepHolState α σ)
+    (step : CrepRuntimeResult α ε × CrepHolState α σ) :
+    CrepRuntimeResult α ε × CrepHolState α σ :=
+  (step.1,
+    { step.2 with
+      clock :=
+        if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- The clock bound `fix_clock_IMP_LESS_EQ` (crepSemScript.sml:155-157): the
+    clamped clock never exceeds the old state's clock.  Untagged here because
+    the Lean statement takes the argument pair apart with explicit `result` /
+    `newState` binders, whereas HOL destructures the pair in the hypothesis. -/
+theorem fixCrepHolClock_clock_le (oldState : CrepHolState α σ)
+    (result : CrepRuntimeResult α ε) (newState : CrepHolState α σ) :
+    (fixCrepHolClock oldState (result, newState)).2.clock ≤ oldState.clock := by
+  by_cases hlt : oldState.clock < newState.clock
+  · simp [fixCrepHolClock, hlt]
+  · simp only [fixCrepHolClock, hlt, if_false]
+    exact Nat.le_of_not_lt hlt
+
+/-- HOL `fix_clock_IMP_LESS_EQ`: if `fix_clock` returns a result and state,
+    the returned clock does not exceed the original state's clock. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+theorem fixCrepHolClock_IMP_LESS_EQ (oldState : CrepHolState α σ)
+    (step : CrepRuntimeResult α ε × CrepHolState α σ)
+    (result : CrepRuntimeResult α ε) (newState : CrepHolState α σ)
+    (hfixed : fixCrepHolClock oldState step = (result, newState)) :
+    newState.clock ≤ oldState.clock := by
+  obtain ⟨stepResult, stepState⟩ := step
+  have hbound := fixCrepHolClock_clock_le oldState stepResult stepState
+  rw [hfixed] at hbound
+  exact hbound
+
 def crepRuntimeMemWidth : CrepMemOp → Nat
   | .load | .store => 0
   | .load8 | .store8 => 1
@@ -219,6 +580,14 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memaddrs address then some (panTheWord (state.memory address)) else none
 
+/-- The executed runtime word load is the tagged HOL `mem_load` on the
+    `toHolState` view, with the `word_lab` cell projected by `panTheWord`. -/
+theorem crepRuntimeLoad_eq_memLoadCrepHol (state : CrepRuntimeState α σ) (address : α) :
+    crepRuntimeLoad state address =
+      (memLoadCrepHol address state.toHolState).map panTheWord := by
+  by_cases h : state.memaddrs address <;>
+    simp [crepRuntimeLoad, memLoadCrepHol, CrepRuntimeState.toHolState, h]
+
 def crepRuntimeLoadByte [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=
   let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
@@ -233,7 +602,7 @@ def crepRuntimeLoad32 [Add α] [OfNat α 1]
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
     if state.memaddrs alignedAddress then
       let value := panTheWord (state.memory alignedAddress)
-      pure (state.memoryModel.wordOfBytes state.bigEndian
+      pure (state.memoryModel.wordOfBytes32 state.bigEndian
         [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1 + 1) value state.bigEndian,
@@ -397,6 +766,10 @@ theorem crepRuntimeMemoryOfView_updateMemory_word [BEq α]
   · simp [crepRuntimeMemoryOfView, updateMemory, updateCrepRuntimeMemory,
       crepRuntimeMemoryView, hsame, panWordLab_word_panTheWord]
 
+/-- Locals-level reference fold for assigning call return values onto existing
+    word variables (HOL `upd_locals`/`FUPDATE_LIST` over existing names). Kept
+    as the proof-side counterpart of `setCrepRuntimeLocalsExisting`, which is
+    what the executed `crepRuntimeCall` paths use. -/
 def crepRuntimeAssignExisting
     (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
     Option (Nat → Option (PanWordLab α)) :=
@@ -407,6 +780,51 @@ def crepRuntimeAssignExisting
     some ((names.zip values).foldl
       (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
       locals)
+
+/-- State-level `crepRuntimeAssignExisting` whose fold routes through the tagged
+    HOL `set_var` definition via `setCrepRuntimeLocal`. This is the helper used
+    by the executed `crepRuntimeCall` returned-with-destinations path. -/
+def setCrepRuntimeLocalsExisting (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) : Option (CrepRuntimeState α σ) :=
+  if names.length != values.length then none
+  else if !names.all (fun name => (state.locals name).isSome) then none
+  else if names.eraseDups.length != names.length then none
+  else
+    some ((names.zip values).foldl
+      (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state) state)
+
+theorem foldl_setCrepRuntimeLocal_eq (entries : List (Nat × α))
+    (state : CrepRuntimeState α σ) :
+    entries.foldl (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state)
+        state =
+      { state with
+        locals :=
+          entries.foldl
+            (fun locals pair => updateCrepRuntimeLocal locals pair.1 (.word pair.2))
+            state.locals } := by
+  induction entries generalizing state with
+  | nil => rfl
+  | cons pair rest ih =>
+      simp only [List.foldl_cons]
+      rw [setCrepRuntimeLocal_eq_update, ih]
+
+@[simp] theorem setCrepRuntimeLocalsExisting_eq (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) :
+    setCrepRuntimeLocalsExisting names values state =
+      (crepRuntimeAssignExisting state.locals names values).map
+        (fun locals => { state with locals := locals }) := by
+  unfold setCrepRuntimeLocalsExisting crepRuntimeAssignExisting
+  cases hlen : names.length != values.length with
+  | true => rfl
+  | false =>
+      cases hall : !names.all (fun name => (state.locals name).isSome) with
+      | true => rfl
+      | false =>
+          cases hdup : names.eraseDups.length != names.length with
+          | true => rfl
+          | false =>
+              rw [foldl_setCrepRuntimeLocal_eq]
+              rfl
 
 def crepRuntimeReadBytes [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Nat → Option (List UInt8)
@@ -473,7 +891,7 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
             let state := { state with ffi := ffi }
-            (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+            (.normal, setCrepRuntimeLocal name (.word value) state)
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
         match (state.locals name).map panTheWord with
@@ -696,6 +1114,40 @@ theorem evalCrepRuntimeExp_crepOp_mul_wordLab
         | nil => simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
         | cons extra tail => simp [evalCrepRuntimeExp]
 
+/-- Production bridge for `crep_op_def`: the executed `.crepOp .mul` clause is
+    `case OPT_MMAP (eval s) args of SOME args' => crep_op op args' | _ => NONE`
+    at the only CrepOp constructor `.mul`, i.e. evaluate the two operands and
+    apply the tagged `crepOpCrep` (via the generic value helper `crepOpValue`).
+    Malformed arities return `none` on both sides.
+    Flapjack-only because the evaluator's state is target-extended. -/
+theorem evalCrepRuntimeExp_crepOp_eq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : CrepOp)
+    (arguments : List (CrepExp α)) :
+    evalCrepRuntimeExp state (.crepOp operator arguments) =
+      (match arguments with
+       | [left, right] =>
+           (match evalCrepRuntimeExp state left, evalCrepRuntimeExp state right with
+            | some leftValue, some rightValue => crepOpValue operator [leftValue, rightValue]
+            | _, _ => none)
+       | _ => none) := by
+  cases operator
+  cases arguments with
+  | nil => simp [evalCrepRuntimeExp]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp]
+      | cons right rest =>
+          cases rest with
+          | nil =>
+              cases h1 : evalCrepRuntimeExp state left <;>
+                cases h2 : evalCrepRuntimeExp state right <;>
+                  simp [evalCrepRuntimeExp, crepOpValue, h1, h2]
+          | cons extra tail => simp [evalCrepRuntimeExp]
+
 /-- Projection equation for `BaseAddr`; Flapjack-only because its state is
 target-extended. -/
 theorem evalCrepRuntimeExp_baseAddr_wordLab
@@ -763,10 +1215,164 @@ def evalCrepRuntimeExps
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
+/-- HOL-shaped Crep expression evaluator.  HOL's `crepSem$eval` returns a
+`word_lab` cell, so this core returns `PanWordLab` results directly instead of
+the unwrapped word carrier.  The production unwrapped evaluator
+`evalCrepRuntimeExp` has the shape of the `panTheWord` projection of this core;
+the formal projection bridge is tracked in bead flapjack-pxn.18.4.3.48.1. -/
+def evalCrepRuntimeExpWordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) : CrepExp α → Option (PanWordLab α)
+  | .const value => some (.word value)
+  | .var name => state.locals name
+  | .load address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoad state address).map PanWordLab.word
+  | .load32 address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoad32 state address).map PanWordLab.word
+  | .loadByte address => do
+      let address ← evalCrepRuntimeExp state address
+      (crepRuntimeLoadByte state address).map PanWordLab.word
+  | .loadGlob address => state.globals address
+  | .op operator expressions => do
+      let values ← expressions.mapM (evalCrepRuntimeExp state)
+      (state.memoryModel.wordOp operator values).map PanWordLab.word
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      pure (.word (left * right))
+  | .cmp operator left right => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      pure (.word (state.memoryModel.compare operator left right))
+  | .shift operator left right => do
+      let left ← evalCrepRuntimeExp state left
+      let right ← evalCrepRuntimeExp state right
+      (state.memoryModel.shift operator left right).map PanWordLab.word
+  | .baseAddr => some (.word state.baseAddress)
+  | .topAddr => some (.word state.topAddress)
+  | _ => none
+
+/-- List-argument HOL-shaped evaluator: the `word_lab` analogue of
+`OPT_MMAP (eval s)` over a list of Crep expressions. -/
+def evalCrepRuntimeExpsWordLab
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) : List (CrepExp α) → Option (List (PanWordLab α))
+  | [] => some []
+  | expression :: expressions => do
+      let value ← evalCrepRuntimeExpWordLab state expression
+      let values ← evalCrepRuntimeExpsWordLab state expressions
+      pure (value :: values)
+termination_by expressions => sizeOf expressions
+
+/-- Reading the production wrapped cell back through `PanWordLab.word` recovers
+it, since `PanWordLab` has the single `word` constructor.  Flapjack-only adapter
+infrastructure. -/
+theorem optionMapWordPanTheWord (cell : Option (PanWordLab α)) :
+    Option.map (fun value => PanWordLab.word (panTheWord value)) cell = cell := by
+  cases cell with
+  | none => rfl
+  | some value => simp [panWordLab_word_panTheWord]
+
+/-- Flapjack-only projection: the production wrapped evaluator's result, read
+back through `PanWordLab.word`, is exactly the HOL-shaped `word_lab` core for
+every expression constructor.  This is adapter infrastructure, not a HOL port:
+the `Op`, `Cmp`, `Shift`, and byte-load cases still delegate to the arbitrary
+`CrepRuntimeState` runtime hooks (`memoryModel`) rather than HOL's fixed
+`crepSem$eval` word/byte primitives, so no `@[hol]` tag is attached (tracked by
+bead flapjack-pxn.18.4.3.48.1). -/
+theorem evalCrepRuntimeExp_wordLab_projection
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expression : CrepExp α) :
+    (evalCrepRuntimeExp state expression).map PanWordLab.word =
+      evalCrepRuntimeExpWordLab state expression := by
+  cases expression <;>
+    simp [evalCrepRuntimeExp, evalCrepRuntimeExpWordLab, Function.comp_def,
+      Option.map_bind, optionMapWordPanTheWord]
+  case crepOp operator args =>
+    cases operator
+    cases args with
+    | nil => simp [evalCrepRuntimeExp]
+    | cons left rest =>
+        cases rest with
+        | nil => simp [evalCrepRuntimeExp]
+        | cons right tail =>
+            cases tail with
+            | nil =>
+                simp [evalCrepRuntimeExp, Function.comp_def, Option.map_bind,
+                  Option.map_some]
+            | cons extra more =>
+                simp [evalCrepRuntimeExp]
+
+theorem optionBindMapListMapWord (values : Option (List α)) (value : α) :
+    values.bind (Option.map (List.map PanWordLab.word) ∘ fun rest => some (value :: rest)) =
+      (Option.map (List.map PanWordLab.word) values).bind
+        (fun rest => some (PanWordLab.word value :: rest)) := by
+  cases values <;> simp [Function.comp_def, Option.bind_some]
+
+/-- The production list evaluator read back through `PanWordLab.word` equals the
+HOL-shaped list core, for every expression list.  Flapjack-only projection. -/
+theorem evalCrepRuntimeExps_wordLab_projection
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expressions : List (CrepExp α)) :
+    (evalCrepRuntimeExps state expressions).map (List.map PanWordLab.word) =
+      evalCrepRuntimeExpsWordLab state expressions := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps, evalCrepRuntimeExpsWordLab]
+  | cons expression expressions ih =>
+      simp only [evalCrepRuntimeExps, evalCrepRuntimeExpsWordLab]
+      have h := evalCrepRuntimeExp_wordLab_projection state expression
+      cases hw : evalCrepRuntimeExp state expression with
+      | none =>
+          have hl : evalCrepRuntimeExpWordLab state expression = none := by
+            rw [← h, hw]; rfl
+          rw [hl]
+          rfl
+      | some value =>
+          have hl : evalCrepRuntimeExpWordLab state expression = some (PanWordLab.word value) := by
+            rw [← h, hw]; rfl
+          rw [hl]
+          simp [Option.bind_some]
+          rw [optionBindMapListMapWord]
+          rw [ih]
+
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>
-      (result, { state with locals := fun candidate => if name == candidate then oldValue else state.locals candidate })
+      (result, { state with locals := resVar state.locals (name, oldValue) })
+
+/-- Pointwise form of the tagged HOL `res_var` update used by the production
+    `restoreCrepRuntimeStep`: restoring a variable is an `|+`/`\\` update. -/
+@[simp] theorem resVar_locals_apply [BEq α] [LawfulBEq α] (name : Nat)
+    (oldValue : Option (PanWordLab α)) (locals : Nat → Option (PanWordLab α)) :
+    resVar locals (name, oldValue) =
+      fun candidate => if name == candidate then oldValue else locals candidate := by
+  cases oldValue with
+  | none =>
+      funext candidate
+      simp only [resVar, FDOMSUB]
+  | some v =>
+      funext candidate
+      simp only [resVar, FUPDATE]
+
+/-- The production Dec restore is the tagged HOL `res_var` update. -/
+theorem restoreCrepRuntimeStep_eq_resVar (name : Nat) (oldValue : Option (PanWordLab α))
+    (result : CrepRuntimeResult α ε) (state : CrepRuntimeState α σ) :
+    restoreCrepRuntimeStep name oldValue (result, state) =
+      (result, { state with locals := resVar state.locals (name, oldValue) }) := rfl
 
 def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=
@@ -835,10 +1441,10 @@ mutual
                           | none =>
                               some (.returned values, clearCrepRuntimeLocals callerState)
                           | some (destinations, _) =>
-                              match crepRuntimeAssignExisting
-                                  caller.locals destinations values with
-                              | some locals =>
-                                  some (.normal, { callerState with locals := locals })
+                              match setCrepRuntimeLocalsExisting
+                                  destinations values callerState with
+                              | some state' =>
+                                  some (.normal, state')
                               | none => some (.error, callee)
                       | .raised exception =>
                           match info with
@@ -872,8 +1478,7 @@ mutual
         match evalCrepRuntimeExp state value with
         | none => some (.error, state)
         | some value =>
-            let nextState :=
-              { state with locals := updateCrepRuntimeLocal state.locals name (.word value) }
+            let nextState := setCrepRuntimeLocal name (.word value) state
             match evalCrepRuntimeProg handler primitive fuel nextState body with
             | none => none
             | some result => some (restoreCrepRuntimeStep name (state.locals name) result)
@@ -883,7 +1488,7 @@ mutual
         | some value =>
             match state.locals name with
             | some _ =>
-                some (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+                some (.normal, setCrepRuntimeLocal name (.word value) state)
             | none => some (.error, state)
     | _fuel + 1, state, .primitive names operator arguments =>
         match arguments.mapM (fun name => (state.locals name).map panTheWord) with
@@ -892,8 +1497,8 @@ mutual
             match primitive operator arguments with
             | none => some (.error, state)
             | some values =>
-                match crepRuntimeAssignExisting state.locals names values with
-                | some locals => some (.normal, { state with locals := locals })
+                match setCrepRuntimeLocalsExisting names values state with
+                | some state' => some (.normal, state')
                 | none => some (.error, state)
     | _fuel + 1, state, .store address value =>
         match evalCrepRuntimeExp state address, evalCrepRuntimeExp state value with
@@ -1075,5 +1680,169 @@ theorem evalCrepRuntimeResult_skip
     evalCrepRuntimeResult handler primitive (fuel + 1) state .skip =
       some (.normal, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
+
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_thm`
+(crepPropsScript.sml:257), not an exact HOL port: it is stated with the Boolean
+equality that `resVar` is implemented with. -/
+theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : Option β) :
+    FLOOKUP (resVar f (m, v)) n = if n == m then v else FLOOKUP f n := by
+  cases v with
+  | none =>
+    simp only [resVar, FDOMSUB, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+  | some w =>
+    simp only [resVar, FUPDATE, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_diff_eq`
+(crepPropsScript.sml:249); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : β) (h : n ≠ m) : FLOOKUP (resVar f (m, some v)) n = FLOOKUP f n := by
+  rw [FLOOKUP_resVar]
+  have hb : (n == m) = false := by
+    rw [beq_eq_false_iff_ne]
+    exact h
+  simp only [hb, Bool.false_eq_true, if_false]
+
+/-- Flapjack-specific analogue of Cake's `res_var_commutes`
+(crepPropsScript.sml:234); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h : α)
+    (hne : n ≠ h) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  cases hh : FLOOKUP lc' h with
+  | none =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_commutes lc n h hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc h n vn hne.symm]
+  | some vh =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc n h vh hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FUPDATE_comm lc h vh n vn hne.symm]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_eq`
+(crepPropsScript.sml:763); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over a list whose keys do not contain `x`
+leaves `x` untouched. -/
+theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
+    (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ xs.map Prod.fst) :
+    FLOOKUP (xs.foldl resVar f) x = FLOOKUP f x := by
+  induction xs generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVar f entry) hrest, FLOOKUP_resVar]
+    have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
+    simp [hfalse]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_zip_eq`
+(crepPropsScript.sml:777); not an exact HOL port: the zipped form of
+`FLOOKUP_foldl_resVar_not_mem`. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVar_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct`
+(crepPropsScript.sml:796); not an exact HOL port: looking up a key list disjoint
+from the updated key list is unaffected by the fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip zs).foldl resVar f) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_foldl_resVar_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (as : List β) (cs : List (Option β))
+    (fm : FiniteMap α β) (hdisj : ListDisjoint xs ys)
+    (hlenAs : xs.length = as.length) (hlenCs : xs.length = cs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip cs).foldl resVar (FUPDATE_LIST fm (xs.zip as))) y) =
+      ys.map (fun y => FLOOKUP fm y) := by
+  rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
+  exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
+
+/-- Flapjack-specific analogue of Cake `res_var_lookup_original_eq`
+(crepPropsScript.sml:612); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over the `ZIP` of a distinct key list with its
+values, restoring each key's original binding, reproduces the original map. -/
+theorem foldl_resVar_zip_lookup_original [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (lc : FiniteMap α β)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    ((xs.zip (xs.map (FLOOKUP lc))).foldl resVar
+        (FUPDATE_LIST lc (xs.zip ys))) = lc := by
+  induction xs generalizing ys lc with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      have hnotmem : a ∉ (xs.zip ys).map Prod.fst := by
+        rw [List.map_fst_zip (by omega)]
+        exact ha
+      simp only [List.map_cons, List.zip_cons_cons, FUPDATE_LIST_cons, List.foldl_cons]
+      rw [← FUPDATE_FUPDATE_LIST_commutes lc a y (xs.zip ys) hnotmem]
+      cases hlookup : FLOOKUP lc a with
+      | none =>
+        simp only [resVar, FDOMSUB_FUPDATE_same]
+        rw [FDOMSUB_FUPDATE_LIST_commutes xs ys lc a ha hlenTail,
+            FDOMSUB_eq_self_of_lookup_none lc a hlookup]
+        exact ih ys lc hdistinctTail hlenTail
+      | some v =>
+        simp only [resVar]
+        rw [FUPDATE_FUPDATE_same]
+        rw [FUPDATE_eq_self_of_lookup_some (FUPDATE_LIST lc (xs.zip ys)) a v
+          (by rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys lc a hlenTail ha]; exact hlookup)]
+        exact ih ys lc hdistinctTail hlenTail
 
 end Flapjack

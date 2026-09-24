@@ -67,6 +67,25 @@ def finiteMapLookupOK : Bool :=
   | ([.var 5], .one) => true
   | _ => false
 
+/-! This mirrors the direct HOL `finite_map_load32_local` observation and
+    checks the one-word Local Load32 compilation shape used by Call arguments. -/
+def finiteMapLoad32LocalOK : Bool :=
+  match compileExpHOL finiteMapContext (.load32 (.var .local "p")) with
+  | ([.load32 (.var 5)], .one) => true
+  | _ => false
+
+def finiteMapLoadByteLocalOK : Bool :=
+  match compileExpHOL finiteMapContext (.loadByte (.var .local "p")) with
+  | ([.loadByte (.var 5)], .one) => true
+  | _ => false
+
+/-! This matches the direct HOL `loadbyte_recursive_address` row. It checks
+    that LoadByte preserves the recursively compiled address expression. -/
+def loadByteRecursiveAddressOK : Bool :=
+  oneResultOK [.loadByte (.op .add [.const 1, .const 2])]
+    (compileExpHOL finiteMapContext
+      (.loadByte (.op .add [.const 1, .const 2])))
+
 /-! The remaining probe rows are reproduced through the tagged finite-map
     `compileExpHOL`. These mirror the `compileExp` rows above but exercise the
     HOL-shaped path used by `compileProgHOL`/`compileProgRiscV`. -/
@@ -100,7 +119,22 @@ def holCmpShiftOK : Bool :=
 
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
+  finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
   holLeavesOK && holStructFieldOK && holLoadsOpsOK && holCmpShiftOK
+
+example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =
+    ([.load32 (.var 5)], .one) := by
+  simp [compileExpHOL, finiteMapContext, FLOOKUP, FUPDATE]
+
+example : compileExpHOL finiteMapContext (.loadByte (.var .local "p")) =
+    ([.loadByte (.var 5)], .one) := by
+  simp [compileExpHOL, finiteMapContext, FLOOKUP, FUPDATE]
+
+example : compileExpHOL finiteMapContext
+    (.loadByte (.op .add [.const 1, .const 2])) =
+      ([.loadByte (.op .add [.const 1, .const 2])], .one) := by
+  simp [compileExpHOL, compileExpHOL.compileExpListHOL, cexpHeads,
+    finiteMapContext]
 
 example : compileExpHOL finiteMapContext (.var .local "p") = ([.var 5], .one) := by
   simp [compileExpHOL, finiteMapContext, FLOOKUP, FUPDATE]

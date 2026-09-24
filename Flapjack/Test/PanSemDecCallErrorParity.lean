@@ -11,15 +11,16 @@ generated from `panSemScript.sml` (`DecCall`, lines 694-713). It pins:
   continuation and restores the declared local;
 * a `DecCall` whose callee returns a value of the wrong shape is rejected
   (`SOME Error`);
-* a `DecCall` whose callee body itself fails is rejected (`SOME Error`);
-* a `DecCall` naming an unknown function is rejected (`SOME Error`); this
-  remains a tracked gap in the shared call-lookup path and is recorded by the
-  oracle but not asserted here.
+* a `DecCall` whose callee body is `Skip`, `Break`, or `Continue` is rejected
+  with `SOME Error`, matching the call path that treats the callee's `NONE`,
+  `Break`, and `Continue` results as errors;
+* a `DecCall` naming an unknown function is rejected (`SOME Error`).
 
 The clocked production entry point `panSemEvaluateCodeStateWithPostState` is
 exercised for the successful and rejected cases, and the non-clocked
 `evalPanValueFfiProgramSteps` step evaluator is exercised directly for the
-shape-mismatch and callee-Error propagation.
+shape-mismatch, callee-Error, callee-`Skip`/`Break`/`Continue`, and
+missing-function cases.
 -/
 
 namespace Flapjack.Test.PanSemDecCallErrorParity
@@ -118,11 +119,86 @@ def deccallCalleeErrorGuard : Bool := isErrorResult (decCallEvaluate 5 calleeErr
 def deccallNonClockedShapeGuard : Bool := nonClockedIsError calleeBody deccallShapeProgram
 def deccallNonClockedErrorGuard : Bool := nonClockedIsError calleeErrorBody deccallOkProgram
 
+def calleeSkipCode : PanSemCodeMap Word64 := [("s", ([], .skip, Shape.one))]
+def calleeBreakCode : PanSemCodeMap Word64 := [("b", ([], .break, Shape.one))]
+def calleeContinueCode : PanSemCodeMap Word64 := [("c", ([], .continue, Shape.one))]
+
+def deccallNamedProgram (name : FunName) : Prog Word64 :=
+  .decCall "r" Shape.one name [] .skip
+
+/-- The Call/DecCall path rejects a successful callee (HOL `NONE`), a `Break`
+    or `Continue` callee, and a missing function lookup, each as `SOME Error`. -/
+def deccallMissingGuard : Bool := isErrorResult (decCallEvaluate 5 calleeCode (deccallNamedProgram "missing"))
+def deccallSkipGuard : Bool := isErrorResult (decCallEvaluate 5 calleeSkipCode (deccallNamedProgram "s"))
+def deccallBreakGuard : Bool := isErrorResult (decCallEvaluate 5 calleeBreakCode (deccallNamedProgram "b"))
+def deccallContinueGuard : Bool := isErrorResult (decCallEvaluate 5 calleeContinueCode (deccallNamedProgram "c"))
+
+def nonClockedFunctionsNamed (name : FunName) (code : Prog Word64) :
+    List (FunName × List VarName × Prog Word64) :=
+  [(name, [], code)]
+
+def nonClockedEvaluateNamed (name : FunName) (code : Prog Word64) (program : Prog Word64) :
+    Option (PanValueFfiSteppedResult Word64 Unit) :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive statefulTestHandler
+    [] (nonClockedFunctionsNamed name code) (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 3 (fun _ => none) (fun _ => none) (fun _ => none)
+    statefulTestFfiState program
+
+def nonClockedIsErrorNamed (name : FunName) (code : Prog Word64)
+    (program : Prog Word64) : Bool :=
+  match nonClockedEvaluateNamed name code program with
+  | some (.error _ _ _ _, _) => true
+  | _ => false
+
+def deccallNcMissingGuard : Bool :=
+  nonClockedIsErrorNamed "missing" .skip (deccallNamedProgram "missing")
+def deccallNcSkipGuard : Bool :=
+  nonClockedIsErrorNamed "s" .skip (deccallNamedProgram "s")
+def deccallNcBreakGuard : Bool :=
+  nonClockedIsErrorNamed "b" .break (deccallNamedProgram "b")
+def deccallNcContinueGuard : Bool :=
+  nonClockedIsErrorNamed "c" .continue (deccallNamedProgram "c")
+
+/-- A `DecCall` whose argument list fails to evaluate (an unbound local),
+    which HOL rejects before callee lookup. -/
+def deccallArgFailProgram (name : FunName) : Prog Word64 :=
+  .decCall "r" Shape.one name [.var .local "z"] .skip
+
+/-- True when evaluation yields an explicit `Error` at the given clock with the
+    pre-existing local `x` still bound to `3`. -/
+def isErrorAt (clock : Nat)
+    (result : Option
+      (PanValueFfiClockResult Word64 Unit × PanSemState Word64 (FfiState Unit))) : Bool :=
+  match result with
+  | some ((.control (.error locals _ _ _), n), _) => n == clock && isWord 3 (locals "x")
+  | _ => false
+
+def deccallArgFailGuard : Bool :=
+  isErrorAt 5 (decCallEvaluate 5 calleeCode (deccallArgFailProgram "f"))
+def deccallArgFailMissingGuard : Bool :=
+  isErrorAt 5 (decCallEvaluate 5 calleeCode (deccallArgFailProgram "missing"))
+def deccallNcArgFailGuard : Bool :=
+  nonClockedIsErrorNamed "f" calleeBody (deccallArgFailProgram "f")
+def deccallNcArgFailMissingGuard : Bool :=
+  nonClockedIsErrorNamed "missing" .skip (deccallArgFailProgram "missing")
+
 #guard deccallOkGuard
 #guard deccallShapeGuard
 #guard deccallCalleeErrorGuard
 #guard deccallNonClockedShapeGuard
 #guard deccallNonClockedErrorGuard
+#guard deccallMissingGuard
+#guard deccallSkipGuard
+#guard deccallBreakGuard
+#guard deccallContinueGuard
+#guard deccallNcMissingGuard
+#guard deccallNcSkipGuard
+#guard deccallNcBreakGuard
+#guard deccallNcContinueGuard
+#guard deccallArgFailGuard
+#guard deccallArgFailMissingGuard
+#guard deccallNcArgFailGuard
+#guard deccallNcArgFailMissingGuard
 
 def runChecks : IO Bool := do
   let ok := deccallOkGuard
@@ -140,6 +216,22 @@ def runChecks : IO Bool := do
   let ncErr := deccallNonClockedErrorGuard
   IO.println (if ncErr then "PASS non-clocked DecCall callee Error propagated"
     else "FAIL non-clocked DecCall callee Error propagated")
-  pure (ok && shape && callee && ncShape && ncErr)
+  let missing := deccallMissingGuard && deccallNcMissingGuard
+  IO.println (if missing then "PASS panSem Call missing function rejected with Error"
+    else "FAIL panSem Call missing function rejected with Error")
+  let skip := deccallSkipGuard && deccallNcSkipGuard
+  IO.println (if skip then "PASS panSem Call falling-through callee rejected with Error"
+    else "FAIL panSem Call falling-through callee rejected with Error")
+  let brk := deccallBreakGuard && deccallNcBreakGuard
+  IO.println (if brk then "PASS panSem Call Break callee rejected with Error"
+    else "FAIL panSem Call Break callee rejected with Error")
+  let cont := deccallContinueGuard && deccallNcContinueGuard
+  IO.println (if cont then "PASS panSem Call Continue callee rejected with Error"
+    else "FAIL panSem Call Continue callee rejected with Error")
+  let argFail := deccallArgFailGuard && deccallArgFailMissingGuard &&
+    deccallNcArgFailGuard && deccallNcArgFailMissingGuard
+  IO.println (if argFail then "PASS panSem Call failing argument rejected with Error before lookup"
+    else "FAIL panSem Call failing argument rejected with Error before lookup")
+  pure (ok && shape && callee && ncShape && ncErr && missing && skip && brk && cont && argFail)
 
 end Flapjack.Test.PanSemDecCallErrorParity

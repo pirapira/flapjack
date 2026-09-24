@@ -132,6 +132,14 @@ val _ = print_eval "deccall_code_map_7"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))``
 
+val _ = print_eval "nested_call_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «f» [],
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([], panLang$Call NONE «g» [], panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
 val _ = print_eval "call_struct_argument_7_8"
   ``FST (panSem$evaluate
       (panLang$Call NONE «pair»
@@ -153,7 +161,67 @@ val _ = print_eval "call_record_first_field_7"
          code := FEMPTY |+
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+             clock := 10 |>)))``
+
+val _ = print_eval "call_record_middle_pair_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RField 1 (panLang$Var panLang$Local «record»)],
+       ((ARB:((8),unit) panSem$state) with
+        <| locals := FEMPTY |+ («record», RStruct [ValWord (3w:8 word);
+               RStruct [ValWord (7w:8 word); ValWord (8w:8 word)];
+               ValWord (10w:8 word)]);
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One]));
          clock := 10 |>)))``
+
+val _ = print_eval "call_constructed_record_middle_pair_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RField 1
+          (panLang$RStruct [panLang$Const (3w:8 word);
+            panLang$RStruct [panLang$Const (7w:8 word);
+              panLang$Const (8w:8 word)];
+            panLang$Const (10w:8 word)])],
+       ((ARB:((8),unit) panSem$state) with <|
+         code := FEMPTY |+
+           («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+             panLang$Return (panLang$Var panLang$Local «p»),
+             panLang$Comb [panLang$One; panLang$One]));
+         clock := 10 |>)))``
+
+val _ = print_eval "call_struct_field_rfield_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «pair»
+        [panLang$RStruct
+          [panLang$RField 0
+            (panLang$RStruct [panLang$Const (7w:8 word);
+              panLang$Const (9w:8 word)]);
+           panLang$Const (8w:8 word)]],
+       (((ARB:((8),unit) panSem$state) with
+          code := FEMPTY |+
+            («pair», ([(«p», panLang$Comb [panLang$One; panLang$One])],
+              panLang$Return (panLang$Var panLang$Local «p»),
+              panLang$Comb [panLang$One; panLang$One]))) with clock := 10)))``
+
+val _ = print_eval "call_nested_struct_field_rfield_7_8"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE «nestedPair»
+        [panLang$RStruct
+          [panLang$RStruct
+            [panLang$RField 0
+              (panLang$RStruct [panLang$Const (7w:8 word);
+                panLang$Const (9w:8 word)])];
+           panLang$Const (8w:8 word)]],
+       (((ARB:((8),unit) panSem$state) with
+          code := FEMPTY |+
+            («nestedPair», ([(«p», panLang$Comb
+              [panLang$Comb [panLang$One]; panLang$One])],
+              panLang$Return (panLang$Var panLang$Local «p»),
+              panLang$Comb [panLang$Comb [panLang$One]; panLang$One])))
+          with clock := 10)))``
 
 val _ = print_eval "call_zero_clock_timeout"
   ``FST (panSem$evaluate

@@ -43,6 +43,14 @@ all-width equation to the production RISC-V target is in
 boundary and its matching cases live in
 `Flapjack.Pancake.Semantics.PanSemStateEval` and
 `Flapjack.Test.PanSemStateEvalParity`.
+`pan_sem_e2e_probe.out` records direct HOL evaluation cases for nonempty
+state-owned code maps, including recursive Call, DecCall, nested Call/DecCall,
+and clock timeout. `pan_sem_call_return_shape_probe.out` adds Call and DecCall
+cases where the callee's actual returned value disagrees with the return shape
+stored in the code map; HOL returns `SOME Error`, preserves the decremented
+clock, and exposes the callee post-state. Their Lean checks live in
+`Flapjack.Test.PanEvaluateParity` and exercise the recursive
+`PanSemState.code` evaluator.
 `compile_def_probe.out` also records direct HOL evaluations of assigned Global
 call destinations through `pan_to_crep$compile`: absent lookups, the
 `One`/empty-list fallback, and inconsistent shape/name-list lengths. The
@@ -78,6 +86,100 @@ and multiplication expression. Its Lean constructor checks live in
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean
 destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
+`hol_fcp_index_n2w_probe.out` records direct HOL EVAL of `n2w` plus concrete
+instances of `word_index_n2w` and the underlying `BIT` values for zero, one,
+and the highest bit of an 8-bit word; it also records `dimindex (:8) = 8` to
+show the sampled indices are valid. The original definition is HOL4
+`wordsTheory.n2w_def` (`$HOL/src/n-bit/wordsScript.sml:54-56`);
+`word_index_n2w` at lines 1765-1774 states the general numeric-index equation.
+The kernel-checked canonical `Fin width`/BitVec equation
+`holWordBitsToBitVec_n2w` is in `Flapjack.Pancake.Semantics.CrepSem.Eval`; its
+zero/one/high-bit examples are in `Flapjack.Test.CrepeSimpExpParity`.
+For any explicit `HolFiniteDimension`, `holFiniteWordN2W_at_index` proves that
+the arbitrary-index adapter returns `Nat.testBit value (encode index)`, which
+is the pointwise FCP `BIT` equation under the chosen finite-index encoding;
+the Bool carrier test exercises this at multiple indices.
+`hol_word_arithmetic_probe.out` records the direct HOL4 definitions
+`word_add_def`, `word_mul_def`, and `word_sub_def` from the same external
+`wordsScript.sml`, along with the general `word_add_n2w` and `word_mul_n2w`
+theorems and 8-bit simplification examples. Lean's
+`holFiniteWordSourceAdd`/`holFiniteWordSourceMul` encode the source `n2w` of
+natural arithmetic on `w2n` values, with generic Fin-index transport theorems
+and focused 4-bit checks in `CrepeSimpExpParity`. The pointwise `n2w`/`BIT`
+equation is proved for explicit finite dimensions. The recursive
+`finWordSBitSum` follows the numeric `Fin` indices and proves the `w2n`
+weighted `SBIT` sum equals BitVec `toNat`; the operation adapters are also
+rewritten to expose their `n2w`-of-SBitSum source shape. `holFiniteWordSourceSub`
+uses the corresponding two's-complement natural formula and its transport
+theorem; the test checks wraparound subtraction. The remaining representation
+gap is identifying a Lean `HolFiniteDimension` witness with HOL's implicit
+`finite_index` choice; the full Crep evaluator correspondence is still open.
+`word_op_finite_probe.out` records the original CakeML
+`wordLangTheory.word_op_def` list folds (And/Add/Or/Xor/Sub), including empty
+fold values and malformed subtraction arities. This worktree's CakeML submodule
+has no compiled `wordLangTheory.ui`, so regenerate this probe against a
+read-only CakeML checkout with matching source and built theories by setting
+`CAKEML` (the checked output was generated from matching CakeML source commit
+`857f0d98da8f8a3580f3442338e697809308ede`).
+`holFiniteWord_wordOp_toBitVec` proves that the explicit finite-dimension
+wordOp list behavior maps through the Fin-index/BitVec conversion for every
+operator and argument list; Bool-index checks are in
+`Flapjack.Test.CrepeSimpExpParity`. This remains untagged because the theorem
+uses explicit dimension data.
+`word_sh_finite_probe.out` records the original `wordLang$word_sh_def`, its
+`dimindex` guard, and zero, valid, width, and above-width examples. Its source
+is `cakeml/compiler/backend/wordLangScript.sml`; the direct Lean transport
+`holFiniteWord_evalPanShift_toBitVec` covers all four shift operators for every
+explicit finite dimension. A Bool-index instance is checked in
+`Flapjack.Test.CrepeSimpExpParity`. This is evaluator infrastructure and does
+not by itself establish the unrestricted HOL-polymorphic
+`simp_exp_correct1` statement. Regenerate against a read-only CakeML checkout
+with matching built theories by setting `CAKEML`; the checked output was
+generated from source commit `857f0d98da8f8a3580f3442338e697809308ede`.
+`pan_fixed_load_probe.out` prints HOL `mem_load_byte_def` and
+`mem_load_32_def` directly, together with the imported `byte_align_def`,
+`aligned_def`, `align_def`, `get_byte_def`, `byte_index_def`, and
+`word_of_bytes_def`. It evaluates domain misses, alignment failure, both
+endiannesses, 8-bit/64-bit word instances, and the 24-bit cases
+`byte_align 5w = 4w`, little-endian `mem_load_byte ... {4w} F 5w = SOME 51w`,
+and big-endian `mem_load_byte ... {4w} T 5w = SOME 17w`. Those rows
+also include the width-24 32-bit load at address 4, whose `word32` result is
+`0x22113322`. They differ from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
+which misses the domain containing only address 4. RISC-V rounds by a multiple
+of three while the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The
+`holByteAlignedRiscVMemoryModel` overlay uses the source alignment formula and
+returns the probed byte while leaving the other RISC-V model operations
+explicit. Focused checks for the source overlay and production mismatch are in
+`Flapjack.Test.PanFixedLoadParity`. The generic finite-word
+`holFiniteWordSourceMemoryModel` adapter uses the same alignment formula and
+direct HOL `get_byte` index arithmetic; tests cover both endiannesses at width
+24, plus a 24-bit 32-bit-load fixture. Its `aligned` operation is now expressed
+as divisibility by the requested byte alignment. The `setByte` operation
+implements the pointwise bit-slice cases from HOL `set_byte_def`, and
+`wordOfBytes` follows the recursive shape from HOL `word_of_bytes_def`.
+`word_byte_memory_probe.out` records those source definitions, the width-17
+four-write expansion, and direct HOL EVAL for little- and big-endian width-17
+fixtures. A generic theorem relating the explicit dimension enumeration to
+HOL's native finite-index word operations remains open. The generic
+Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
+their equations to `panModelReadByte`/`panModelRead32`, are in
+`Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit
+and remain untagged until its operations are related to HOL's word-derived
+`byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
+dimensions.
+`word_byte_memory_probeScript.sml` is run from HOL4's built
+`src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
+depend on built CakeML Pancake theories. Refresh it with
+`HOL_PROBE_ONLY=word_byte_memory_probeScript.sml scripts/hol-probes/regenerate.sh`.
+The width-17 word fixtures use four distinct bytes, `0x11`, `0x22`, `0x33`,
+and `0x44`, so the HOL recursive overwrite order is visible: little-endian
+reduces to `0x2211w` and big-endian to `0x1122w`. The nonzero-initial-value
+`set_byte` rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
+by evaluation, preserving the other bits while reducing to concrete words.
+For initial value `0x1abcdw`, byte `0xa5w` at address `1w` reduces to
+`0x1a5cdw` little-endian and `0x1aba5w` big-endian.
+The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
+`byte_index` branches, which the Lean source adapter handles explicitly.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime
@@ -124,26 +226,52 @@ and zero-clock timeout / positive-clock decrement `Tick` evaluator equations,
 plus HOL simplifier reduction of `convert_s_def` over nonempty local, global,
 exception-shape, and function-code finite maps using the finite-map lookup
 rules. These are used in `compile_correct` at
-`cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows cover
-evaluator support only; the full theorem's finite-map premises and invariant,
-shape-map, and result-value postconditions remain open in
-`flapjack-pxn.18.5.3.29` and `.30`. Lean regressions live in
+`cakeml/pancake/proofs/pan_structsProofScript.sml:1034`. These rows only check
+the listed evaluator and conversion equations; they do not prove the full
+theorem. The finite-map state interface and actual `compile_correct` Skip,
+Tick, Break, and Continue case specializations are tracked separately. The
+parent theorem remains open while other statement cases and the complete
+induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
-`pan_structs_compile_exp_correct_probe.out` records HOL simplifier evaluations
-of Local and Global variable-constructor instances, and Const-, RStruct-, and
-NStruct-constructor instances of `compile_exp_correct`; each tuple contains
-old shape, semantic value shape, field validity, source evaluation, and
-converted target evaluation. The production `structCompileExp`/`evalPanValueExp` cases are
-proved in `panStructCompileExpCorrectVarCase` and
-`panStructCompileExpCorrectConstCase` and
-`panStructCompileExpCorrectRStructCase` and exercised by finite-map regressions
-in `Flapjack.Test.PanStructsCompileCorrect`. The RStruct row uses two constants
-and validates all three constructor conclusions. Its nonempty-list row separately
-checks source `OPT_MMAP` success, pointwise compiled-expression correctness,
-and the converted `compile_exps` result for the local HOL helper
+`pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
+and Global variable-constructor instances and Const-, RStruct-, NStruct-,
+NField-, RField-, Op-, Load-, and faithful Load32-constructor instances of
+`compile_exp_correct`; each
+five-element tuple contains old shape, semantic value shape, field validity,
+source evaluation, and converted target evaluation. The Var, Const, Shift, and
+faithful Load32 cases use `evalPanValueExpFull`; Load32 supplies an explicit
+model-backed `read32` access. RStruct, NStruct, NField, RField, Op, Load, and
+LoadByte retain their existing evaluator interfaces. These constructor cases
+are exercised by finite-map regressions in
+`Flapjack.Test.PanStructsCompileCorrect`. They are constructor specializations
+of the universal HOL theorem, not a complete induction port, and remain
+untagged where the Lean state/evaluator interfaces differ. The RStruct and Op
+rows use nonempty expressions: the former checks aggregate construction, while
+the latter checks that a binary Op retains exactly its two word operands after
+value conversion. Both validate all three constructor conclusions. The
+nonempty-list
+row separately checks source `OPT_MMAP` success, pointwise compiled-expression
+correctness, and the converted `compile_exps` result for the local HOL helper
 `compile_exp_correct_mmap_helper`; Lean proves the corresponding production
 list-evaluation prerequisite in `panStructCompileExpsEvalOfPointwiseCorrect`.
-The other expression constructors remain open.
+The Load row directly exercises an explicit two-word memory read and is paired
+with a Lean source/converted evaluation fixture. The nested named-load row
+checks a multiword `Pair` containing a named `Inner`, including source and
+compiled shapes, field validity, and both evaluator results. Its general
+constructor case and the required memory-conversion induction remain open. The
+`size_of_compile_shape_comb` row separately directly evaluates the HOL
+`size_of_compile_shape` prerequisite at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem
+and concrete fixture live in `Flapjack.Test.PanStructsCompileShapeParity`.
+`pan_structs_mem_load_conversion_probe.out` directly evaluates the HOL One
+branch, a nested three-word Comb branch, and a nested named `Pair`/`Inner`
+branch of `mem_load_conversion` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:609`. The named row prints
+the concrete `struct_infos_ok` result separately as `T` (proved from HOL's
+`struct_infos_ok_cons`) and prints both the source `NStruct` load and converted
+target `RStruct` load values, followed by their expected-value checks. The
+corresponding production fuel-loader conversion theorem is kept untagged and
+paired with a Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

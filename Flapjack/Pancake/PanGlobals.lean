@@ -284,6 +284,14 @@ decreasing_by
   rw [hone]
   omega
 
+/-- Internal freshness support for `globalNewMainName`; the proof-script
+    theorem `fresh_name_correct` is tracked separately from this helper. -/
+theorem freshNameHOL_not_mem (name : String) (names : List String) :
+    freshNameHOL name names ∉ names := by
+  fun_induction freshNameHOL name names with
+  | case1 name names ih => exact ih
+  | case2 name names => assumption
+
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
   | .named _ => .const (context.fromNat 0)
@@ -344,12 +352,12 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
             match lookupInfo name context.globals with
             | some (shape, address) =>
                 let compiledHandlerProgram := globalCompileProg context handler
-                let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
-                  compiledArguments.flatMap globalExpVars
-                let resultName := globalFreshName "" names
+                let names := handlerVar :: freeVarIds compiledHandlerProgram ++
+                  compiledArguments.flatMap expLocalVars
+                let resultName := freshNameHOL "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/
-                let flagName := globalFreshName "vn'" (resultName :: names)
+                let flagName := freshNameHOL "vn'" (resultName :: names)
                 let handlerBody :=
                   .seq compiledHandlerProgram
                     (.assign .local flagName (.const (context.fromNat 1)))
@@ -791,16 +799,16 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
     the synthesized entry-point name is `fresh_name "main"` over the current
     function names (`globalFunctionNames` is `MAP FST` of the function table). -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"]
-def globalNewMainName [LawfulBEq String] (declarations : List (Decl α)) : FunName :=
-  globalFreshName "main" (globalFunctionNames declarations)
+def globalNewMainName (declarations : List (Decl α)) : FunName :=
+  freshNameHOL "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `new_main_name_correct`
     (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
     is never one of the program's existing function names. -/
-theorem globalNewMainName_not_mem [LawfulBEq String]
+theorem globalNewMainName_not_mem
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
-  globalFreshName_not_mem "main" (globalFunctionNames declarations)
+  freshNameHOL_not_mem "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
@@ -1339,17 +1347,6 @@ structure GlobalCompileDecsResult (α : Type u) where
   exceptions : List (Decl α)
   context : GlobalPassContext α
 
-def globalCompileDecs [BEq String] [Add α] [Mul α]
-    (context : GlobalPassContext α) (declarations : List (Decl α)) :
-    GlobalCompileDecsResult α :=
-  let collected := globalCollect context declarations
-  { initializers := globalCompileInitializers context declarations
-    functions := globalDeclsFilter globalDeclIsFunction
-      (globalCompileDecls collected declarations)
-    exceptions := globalDeclsFilter globalDeclIsException
-      (globalCompileDecls collected declarations)
-    context := collected }
-
 /-! Flapjack-specific context-threading counterpart of HOL
     `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): each
     function body is compiled using the context at its position in the list.
@@ -1357,7 +1354,7 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
     operations, it accepts arbitrary `bytesInWord`/`fromNat` context fields,
     `[Add α]`/`[Mul α]`, and potentially non-lawful `[BEq String]`.
     Bead `flapjack-pxn.18.5.2.20.1.1` tracks the canonical-word-context port;
-    production `globalCompileDecs` above remains separate until `.20.2`. -/
+    production `globalCompileDecs` now calls this threaded implementation. -/
 def globalCompileDecsThreaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → GlobalCompileDecsResult α
   | [] => { initializers := [], functions := [], exceptions := [], context := context }
@@ -1460,6 +1457,206 @@ theorem globalCompileDecsThreaded_append [BEq String] [Add α] [Mul α]
           simp only [List.cons_append, globalCompileDecsThreaded]
           rw [ih context]
 
+def globalCompileDecs [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    GlobalCompileDecsResult α :=
+  let collected := globalCollect context declarations
+  { initializers := globalCompileInitializers context declarations
+    functions := (globalCompileDecsThreaded context declarations).functions
+    exceptions := globalDeclsFilter globalDeclIsException
+      (globalCompileDecls collected declarations)
+    context := collected }
+
+theorem globalCompileDecsThreaded_initializers [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (globalCompileDecsThreaded context declarations).initializers =
+      globalCompileInitializers context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileDecsThreaded, globalCompileInitializers]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecsThreaded, globalCompileInitializers]
+          exact ih context
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded, globalCompileInitializers]
+          congr 1
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded, globalCompileInitializers]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded, globalCompileInitializers]
+          exact ih context
+
+theorem globalCompileDecsThreaded_context [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (globalCompileDecsThreaded context declarations).context =
+      globalCollect context declarations := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileDecsThreaded, globalCollect]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [globalCompileDecsThreaded, globalCollect]
+          exact ih context
+      | decl shape name value =>
+          simpa only [globalCompileDecsThreaded, globalCollect] using ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded, globalCollect]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded, globalCollect]
+          exact ih context
+
+theorem globalCompileDecsThreaded_functions_names [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    (functions (globalCompileDecsThreaded context declarations).functions).map
+        (fun entry => entry.1) =
+      (functions declarations).map (fun entry => entry.1) := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileDecsThreaded, functions, functionEntries]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecsThreaded, functions, functionEntries, ih]
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+
+theorem globalCompileDecsThreaded_functions_of_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    (globalCompileDecsThreaded context declarations).functions =
+      declarations.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with
+              body := globalCompileProg context function.body }
+        | _ => declaration) := by
+  induction declarations generalizing context with
+  | nil => simp [globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, htail⟩ := hall
+      have hfunction : globalDeclIsFunction declaration = true := hhead
+      cases declaration with
+      | function function => simp [globalCompileDecsThreaded, ih context htail]
+      | decl shape name value => simp [globalDeclIsFunction] at hfunction
+      | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
+      | name struct fields => simp [globalDeclIsFunction] at hfunction
+
+theorem globalCompileDecsThreaded_functions_all_of_predicate [BEq String] [Add α] [Mul α]
+    (declarations : List (Decl α)) (predicate : Decl α → Bool) :
+    (∀ context, declarations.all
+      (fun declaration => match declaration with
+        | .function function =>
+            predicate (.function { function with
+              body := globalCompileProg context function.body })
+        | _ => true) = true) →
+    ∀ context, (globalCompileDecsThreaded context declarations).functions.all
+      predicate = true := by
+  induction declarations with
+  | nil => intro _ context; simp [globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      intro hsource context
+      cases declaration with
+      | function function =>
+          have h := hsource context
+          simp only [List.all_cons, Bool.and_eq_true] at h
+          simp only [globalCompileDecsThreaded, List.all_cons, Bool.and_eq_true]
+          exact ⟨h.1, ih (fun ctx => (by
+            have h := hsource ctx
+            simp only [List.all_cons, Bool.and_eq_true] at h
+            exact h.2)) context⟩
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded]
+          exact ih (fun ctx => (by
+            have h := hsource ctx
+            simp only [List.all_cons, Bool.and_eq_true] at h
+            exact h.2)) _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded]
+          exact ih (fun ctx => (by
+            have h := hsource ctx
+            simp only [List.all_cons, Bool.and_eq_true] at h
+            exact h.2)) context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded]
+          exact ih (fun ctx => (by
+            have h := hsource ctx
+            simp only [List.all_cons, Bool.and_eq_true] at h
+            exact h.2)) context
+
+theorem globalCompileDecsThreaded_exceptions_eq_filter [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (globalCompileDecsThreaded context code).exceptions =
+      globalDeclsFilter globalDeclIsException code := by
+  induction code generalizing context with
+  | nil => simp [globalCompileDecsThreaded, globalDeclsFilter]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecsThreaded, globalDeclsFilter, globalDeclIsException, ih]
+
+theorem exceptionEntries_globalCompileDecsThreaded_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    exceptionEntries (globalCompileDecsThreaded context code).functions = [] := by
+  induction code generalizing context with
+  | nil => simp [globalCompileDecsThreaded, exceptionEntries]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecsThreaded, exceptionEntries_cons, ih]
+
+theorem globalDeclsFilter_isDecl_all_not_function [BEq String] [Add α] [Mul α]
+    (code : List (Decl α)) :
+    (globalDeclsFilter isDecl code).all
+      (fun declaration => !globalDeclIsFunction declaration) = true := by
+  induction code with
+  | nil => simp [globalDeclsFilter]
+  | cons declaration declarations ih =>
+      simp only [globalDeclsFilter]
+      by_cases hpred : isDecl declaration = true
+      · rw [if_pos hpred]
+        cases declaration <;> simp_all [isDecl, globalDeclIsFunction]
+      · rw [if_neg hpred]
+        exact ih
+
+theorem globalCompileDecsThreaded_functions_expIds [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    (functions (globalCompileDecsThreaded context code).functions).map
+        (fun entry => expIds entry.2.2.1) =
+      (functions code).map (fun entry => expIds entry.2.2.1) := by
+  induction code generalizing context with
+  | nil => simp [globalCompileDecsThreaded, functions, functionEntries]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp [globalCompileDecsThreaded, functions, functionEntries,
+            globalCompileProg_expIds, ih]
+      | decl shape name value =>
+          simp only [globalCompileDecsThreaded]
+          exact ih _
+      | exnDecl exception shape =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+      | name struct fields =>
+          simp only [globalCompileDecsThreaded]
+          exact ih context
+
+theorem sizeOfEids_globalCompileDecsThreaded_functions [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (code : List (Decl α)) :
+    sizeOfEids (globalCompileDecsThreaded context code).functions = 0 := by
+  induction code generalizing context with
+  | nil => simp [globalCompileDecsThreaded, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [globalCompileDecsThreaded, sizeOfEids_cons, isExnDecl, ih]
+
 /-- HOL-shaped context for `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:8-14`): the three HOL fields
     `globals`/`globals_size`/`max_globals_size` over a `width`-bit word.
@@ -1499,6 +1696,79 @@ def cakeShapeVal {width : Nat} (context : CakeContext width) : Shape → Exp (Bi
   | .named _ => .const (BitVec.ofNat width 0)
   | .comb shapes => .rStruct (shapes.map (cakeShapeVal context))
 termination_by shape => sizeOf shape
+
+/-- Interpret a production `GlobalPassContext` over `BitVec width` as a
+    canonical HOL-shaped `CakeContext`: the association-list `globals` become a
+finite-map lookup through `lookupInfo`, keeping the size fields.  This is
+    the production-to-canonical direction of the adapter required by
+    `flapjack-pxn.18.5.2.20.2`. The fixed-width executed path calls tagged
+    `compileDecsCake`; equality of the context field's data representation
+    remains to be proved. -/
+def cakeContextOfPass [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) : CakeContext width :=
+  { globals := fun key => lookupInfo key context.globals
+    globalsSize := context.globalsSize
+    maxGlobalsSize := context.maxGlobalsSize }
+
+/-- Canonical-word hypothesis for the adapter: the production context uses
+    HOL's fixed `bytes_in_word = n2w (dimindex DIV 8)` and `n2w`. -/
+def GlobalPassContext.IsCakeCanonical {width : Nat}
+    (context : GlobalPassContext (BitVec width)) : Prop :=
+  context.bytesInWord = cakeBytesInWord width ∧
+    ∀ value : Nat, context.fromNat value = BitVec.ofNat width value
+
+/-- Under the canonical-word hypothesis the production global address
+    (`GlobalPassContext`-based) agrees with the canonical HOL address. -/
+theorem cakeAddress_ofPass [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width))
+    (hcanonical : context.IsCakeCanonical) (shape : Shape) :
+    cakeAddress (cakeContextOfPass context) shape = globalAddress context shape := by
+  rcases hcanonical with ⟨hbytes, hfrom⟩
+  simp [cakeAddress, cakeContextOfPass, globalAddress, hbytes, hfrom]
+
+/-- `cakeContextOfPass` commutes with the `Decl` context update: prepending a
+    global to the production association list is exactly `FUPDATE` on the
+    extracted finite map. -/
+theorem cakeContextOfPass_update [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (name : String)
+    (shape : Shape) (address : BitVec width) :
+    cakeContextOfPass { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      = { cakeContextOfPass context with
+          globals := FUPDATE (cakeContextOfPass context).globals
+            (name, (shape, address))
+          globalsSize := address } := by
+  simp only [cakeContextOfPass]
+  rfl
+
+/-- Explicit-field form of `cakeContextOfPass_update`, convenient for rewriting
+    `rw [← ...]` in the full-record adapter. -/
+theorem cakeContextOfPass_update_fields [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (name : String)
+    (shape : Shape) (address : BitVec width) :
+    cakeContextOfPass { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address }
+      = { globals := FUPDATE (cakeContextOfPass context).globals (name, (shape, address))
+          globalsSize := address
+          maxGlobalsSize := (cakeContextOfPass context).maxGlobalsSize } := by
+  simp only [cakeContextOfPass]
+  rfl
+
+/-- Adapter: production `shape_val` agrees with the canonical `cakeShapeVal`
+    through `cakeContextOfPass`, under the canonical-word hypothesis. -/
+theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (shape : Shape) :
+    globalShapeVal context shape = cakeShapeVal (cakeContextOfPass context) shape := by
+  induction shape using cakeShapeVal.induct with
+  | case1 => simp only [globalShapeVal, cakeShapeVal, hcanonical.2 0]
+  | case2 name => simp only [globalShapeVal, cakeShapeVal, hcanonical.2 0]
+  | case3 shapes ih =>
+      simp only [globalShapeVal, cakeShapeVal]
+      congr 1
+      exact List.map_congr_left ih
 
 /-- Exact clause-structured port of HOL `pan_globals$compile_exp_def`
     (`pan_globalsScript.sml:18-46`) over the canonical word context
@@ -1550,14 +1820,97 @@ def compileExpCakeArgs {width : Nat} [NeZero width] (context : CakeContext width
 termination_by expressions => sizeOf expressions
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port).  Clause-structured `compile`
-    over `CakeContext`, mirroring HOL `pan_globals$compile_def`
-    (`pan_globalsScript.sml:69-149`).  The global-return-handler case now calls
-    the exact `freshNameHOL` port of HOL `fresh_name` (`pan_globalsScript.sml:55`).
-    The `@[hol]` tag is still withheld pending full clause/side-condition review
-    of the program compiler and the finite-map representation note.  See beads
-    `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
-def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+/- Adapter for the expression compiler: on the `cakeContextOfPass` view of a
+    canonical production context, the tagged canonical `compileExpCake` agrees
+    with the production `globalCompileExp`.  Only the two fallback spots
+    (`fromNat 0` vs `n2w 0`) need the canonical-word hypothesis; the global
+    lookup is `lookupInfo` on both sides. -/
+mutual
+  theorem compileExpCake_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+      (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+      (expression : Exp (BitVec width)) →
+        compileExpCake (cakeContextOfPass context) expression = globalCompileExp context expression
+    | .var .local _ => by simp only [compileExpCake, globalCompileExp]
+    | .var .global name => by
+        simp only [compileExpCake, globalCompileExp, cakeContextOfPass, FLOOKUP,
+          hcanonical.2 0]
+        cases lookupInfo name context.globals <;> rfl
+    | .rStruct expressions => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCakeList_cakeContextOfPass context hcanonical expressions]
+    | .rField _ expression => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical expression]
+    | .nStruct _ _ => by
+        simp only [compileExpCake, globalCompileExp, hcanonical.2 0]
+    | .nField _ _ => by
+        simp only [compileExpCake, globalCompileExp, hcanonical.2 0]
+    | .load _ address => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical address]
+    | .load32 address => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical address]
+    | .loadByte address => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical address]
+    | .op _ expressions => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCakeList_cakeContextOfPass context hcanonical expressions]
+    | .panOp _ expressions => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCakeList_cakeContextOfPass context hcanonical expressions]
+    | .cmp _ left right => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical left,
+          compileExpCake_cakeContextOfPass context hcanonical right]
+    | .shift _ left right => by
+        simp only [compileExpCake, globalCompileExp,
+          compileExpCake_cakeContextOfPass context hcanonical left,
+          compileExpCake_cakeContextOfPass context hcanonical right]
+    | .const _ => by simp only [compileExpCake, globalCompileExp]
+    | .baseAddr => by simp only [compileExpCake, globalCompileExp]
+    | .topAddr => by simp only [compileExpCake, globalCompileExp, cakeContextOfPass]
+    | .bytesInWord => by simp only [compileExpCake, globalCompileExp]
+  theorem compileExpCakeList_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+      (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+      (expressions : List (Exp (BitVec width))) →
+        compileExpCake.compileExpCakeList (cakeContextOfPass context) expressions =
+          globalCompileExp.globalCompileExps context expressions
+    | [] => by
+        simp only [compileExpCake.compileExpCakeList, globalCompileExp.globalCompileExps]
+    | expression :: expressions => by
+        simp only [compileExpCake.compileExpCakeList, globalCompileExp.globalCompileExps,
+          compileExpCake_cakeContextOfPass context hcanonical expression,
+          compileExpCakeList_cakeContextOfPass context hcanonical expressions]
+end
+
+/-- Adapter for the argument-list compiler used by `compileProgCake`: on the
+    `cakeContextOfPass` view of a canonical production context, the canonical
+    `compileExpCakeArgs` agrees with the production `globalCompileExpList`. -/
+theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (expressions : List (Exp (BitVec width))) →
+      compileExpCakeArgs (cakeContextOfPass context) expressions =
+        globalCompileExpList context expressions
+  | [] => by
+      simp only [compileExpCakeArgs, globalCompileExpList]
+  | expression :: expressions => by
+      simp only [compileExpCakeArgs, globalCompileExpList,
+        compileExpCake_cakeContextOfPass context hcanonical expression,
+        compileExpCakeArgs_cakeContextOfPass context hcanonical expressions]
+
+/-- Exact clause-structured port of HOL `pan_globals$compile_def`
+    (`pan_globalsScript.sml:69-149`) over the canonical word context
+    `CakeContext`.  Each clause matches HOL directly; the global-return-handler
+    case uses the exact `freshNameHOL` port of HOL `fresh_name`
+    (`pan_globalsScript.sml:55`) and the exact `freeVarIds`/`expLocalVars`
+    ports of HOL `free_var_ids`/`var_exp` (`panLangScript.sml:347`/`:253`).
+    String equality is lawful, so the `==`/`!=` comparisons implement HOL `=`.
+    The finite-map `globals` is consulted only through `FLOOKUP`, as in HOL.
+    See beads `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_def"]
+def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>
       .dec name shape (compileExpCake context value) (compileProgCake context body)
@@ -1608,8 +1961,8 @@ def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
             match FLOOKUP context.globals name with
             | some (shape, address) =>
                 let compiledHandlerProgram := compileProgCake context handler
-                let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
-                  compiledArguments.flatMap globalExpVars
+                let names := handlerVar :: freeVarIds compiledHandlerProgram ++
+                  compiledArguments.flatMap expLocalVars
                 let resultName := freshNameHOL "" names
                 /- Cake's `compile_def` uses the fixed seed `"vn'"` for its
                    handler flag, independently of the fresh result name. -/
@@ -1659,6 +2012,46 @@ def compileProgCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
   | program => program
 termination_by program => sizeOf program
 
+@[simp] theorem FLOOKUP_cakeContextOfPass_globals [BEq String] {width : Nat}
+    (context : GlobalPassContext (BitVec width)) (key : String) :
+    (cakeContextOfPass context).globals key = lookupInfo key context.globals := rfl
+
+/-- The `shMemLoad` clause of the production/canonical agreement, isolated so
+    the `FLOOKUP`/match on the global table reduces on both sides. -/
+theorem compileProgCake_shMemLoad_eq [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (size : OpSize) (kind : VarKind) (name : VarName) (address : Exp (BitVec width)) :
+    compileProgCake (cakeContextOfPass context) (.shMemLoad size kind name address)
+      = globalCompileProg context (.shMemLoad size kind name address) := by
+  unfold compileProgCake globalCompileProg
+  simp only [FLOOKUP, FLOOKUP_cakeContextOfPass_globals]
+  cases h : lookupInfo name context.globals with
+  | none => cases kind <;> simp_all [compileExpCake_cakeContextOfPass context hcanonical]
+  | some pair =>
+      obtain ⟨shape, globalAddress⟩ := pair
+      cases shape <;> cases kind <;>
+        simp_all [compileExpCake_cakeContextOfPass context hcanonical, hcanonical.2]
+
+/-- Production `globalCompileProg` agrees with the tagged canonical
+    `compileProgCake` under the canonical word-context view. This is the
+    program half of the executed-path adapter for
+    `flapjack-pxn.18.5.2.20.2`. -/
+theorem globalCompileProg_cakeContextOfPass [BEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical) :
+    (program : Prog (BitVec width)) →
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program := by
+  apply globalCompileProg.induct context
+    (motive := fun program =>
+      compileProgCake (cakeContextOfPass context) program = globalCompileProg context program)
+  all_goals
+    intros
+    simp_all [compileProgCake, globalCompileProg, FLOOKUP,
+      FLOOKUP_cakeContextOfPass_globals,
+      compileProgCake_shMemLoad_eq context hcanonical,
+      compileExpCake_cakeContextOfPass context hcanonical,
+      compileExpCakeArgs_cakeContextOfPass context hcanonical,
+      globalShapeVal_cakeShapeVal context hcanonical, hcanonical.2]
+
 /-- HOL-shaped output of `compile_decs`. -/
 structure CakeCompileDecsResult (width : Nat) where
   initializers : List (Prog (BitVec width))
@@ -1666,18 +2059,28 @@ structure CakeCompileDecsResult (width : Nat) where
   exceptions : List (Decl (BitVec width))
   context : CakeContext width
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port).  Structural context-threading
-    `compile_decs` over `CakeContext`, with the clause shapes of HOL
-    `pan_globals$compile_decs_def` (`pan_globalsScript.sml:160-176`): a function
-    body is compiled under the context as of its own position, and a `Decl`
-    extends the context for the declarations that follow.  The `@[hol]` tag is
-    withheld because the program compiler used here (`compileProgCake`) still
-    calls the untagged `globalFreshName` in its handler case (exact HOL
-    `fresh_name` port tracked by bead `flapjack-pxn.18.5.2.20.1.1.1.1`), and
-    because `CakeContext.globals` is a `FiniteMap` lookup function without a
-    finite-support invariant.  `width` is restricted by `[NeZero width]`, as
-    HOL `dimindex` is positive.  See bead `flapjack-pxn.18.5.2.20.1.1`. -/
-def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
+/-- Exact clause-structured port of HOL `pan_globals$compile_decs_def`
+    (`pan_globalsScript.sml:160-176`) over the canonical word context
+    `CakeContext`: a function body is compiled (`compileProgCake`) under the
+    context as of its own position, and a `Decl` computes
+    `globals_size + bytes_in_word * n2w (size_of_shape sh)`, extends `globals`
+    by `FUPDATE` and updates `globals_size` for the declarations that follow.
+    Every clause matches HOL directly; `ExnDecl` conses the exception, `Name`
+    is skipped, and the empty list returns the context unchanged.
+
+    `CakeContext.globals` renders HOL's extensional finite map by the
+    repository's `FiniteMap` (`α → Option β`), which also admits lookups with
+    infinite support.  As recorded for `compileExpCake`, the HOL `compile_decs`
+    clauses consult `globals` only through `FLOOKUP`/`FUPDATE`, and every HOL
+    finite map embeds as one such lookup function, so on HOL-representable
+    contexts the Lean clauses agree clause-for-clause; the extra
+    infinite-support lookups do not alter the port.  No cross-system finite-map
+    equivalence is claimed beyond that local use.  `width` is restricted by
+    `[NeZero width]`, as HOL `dimindex` is positive, and the name equality is
+    `[LawfulBEq String]` so the `==` used by `FUPDATE`/`FLOOKUP` reflects HOL's
+    `=`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_decs_def"]
+def compileDecsCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }
   | .function declaration :: declarations =>
@@ -1704,7 +2107,44 @@ def compileDecsCake [BEq String] {width : Nat} [NeZero width] (context : CakeCon
         exceptions := rest.exceptions
         context := rest.context }
 
-theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZero width]
+/-- Full-record adapter: the canonical `compileDecsCake` over the extracted
+    `CakeContext` agrees, field by field, with the production
+    `globalCompileDecsThreaded` whenever the production context is
+    canonical-word (`IsCakeCanonical`).  All four fields (initializers,
+    functions, exceptions, context) are covered; the `context` field is stated
+    through `cakeContextOfPass` because the finite-map representation cannot be
+    turned back into a lossless association list. -/
+theorem compileDecsCake_cakeContextOfPass [LawfulBEq String] {width : Nat} [NeZero width]
+    (context : GlobalPassContext (BitVec width)) (hcanonical : context.IsCakeCanonical)
+    (declarations : List (Decl (BitVec width))) :
+    compileDecsCake (cakeContextOfPass context) declarations =
+      { initializers := (globalCompileDecsThreaded context declarations).initializers
+        functions := (globalCompileDecsThreaded context declarations).functions
+        exceptions := (globalCompileDecsThreaded context declarations).exceptions
+        context :=
+          cakeContextOfPass (globalCompileDecsThreaded context declarations).context } := by
+  induction declarations generalizing context with
+  | nil => simp only [compileDecsCake, globalCompileDecsThreaded]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function function =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          rw [ih context hcanonical]
+          simp only [globalCompileProg_cakeContextOfPass context hcanonical]
+      | exnDecl exception shape =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          rw [ih context hcanonical]
+      | name struct fields => exact ih context hcanonical
+      | decl shape name value =>
+          simp only [compileDecsCake, globalCompileDecsThreaded]
+          simp only [cakeAddress_ofPass context hcanonical shape]
+          erw [← cakeContextOfPass_update_fields context name shape (globalAddress context shape)]
+          rw [ih { context with
+              globals := (name, (shape, globalAddress context shape)) :: context.globals
+              globalsSize := globalAddress context shape } hcanonical]
+          simp only [compileExpCake_cakeContextOfPass context hcanonical value]
+
+theorem compileDecsCake_functions_all_isFunction [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (declarations : List (Decl (BitVec width))) :
     (compileDecsCake context declarations).functions.all globalDeclIsFunction = true := by
   induction declarations generalizing context with
@@ -1724,7 +2164,7 @@ theorem compileDecsCake_functions_all_isFunction [BEq String] {width : Nat} [NeZ
           simp only [compileDecsCake]
           exact ih context
 
-theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : Nat} [NeZero width]
+theorem compileDecsCake_functions_eq_nil_of_no_functions [LawfulBEq String] {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) :
     ∀ context, declarations.all (fun declaration => !globalDeclIsFunction declaration) = true →
       (compileDecsCake context declarations).functions = [] := by
@@ -1748,7 +2188,7 @@ theorem compileDecsCake_functions_eq_nil_of_no_functions [BEq String] {width : N
           simp only [compileDecsCake]
           exact ih _ hnone.2
 
-theorem compileDecsCake_append [BEq String] {width : Nat} [NeZero width] (context : CakeContext width)
+theorem compileDecsCake_append [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width)
     (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =
       let first := compileDecsCake context decs
@@ -1807,7 +2247,7 @@ theorem globalCompileDecs_preserve_functions [BEq String] [Add α] [Mul α]
         (fun entry => entry.1) =
       (functions code).map (fun entry => entry.1) := by
   simp only [globalCompileDecs]
-  rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+  exact globalCompileDecsThreaded_functions_names context code
 
 /-! Counterpart of Cake's `compile_decs_EVERY_is_function`
     (`pan_globalsProofScript.sml:1977`): every declaration the compilation
@@ -1816,7 +2256,7 @@ theorem globalCompileDecs_functions_all_isFunction [BEq String] [Add α] [Mul α
     (context : GlobalPassContext α) (code : List (Decl α)) :
     (globalCompileDecs context code).functions.all globalDeclIsFunction = true := by
   simp only [globalCompileDecs]
-  exact globalDeclsFilter_all globalDeclIsFunction _
+  exact globalCompileDecsThreaded_functions_all_isFunction context code
 
 /-! Counterpart of Cake's `compile_decs_decls_thm`
     (`pan_globalsProofScript.sml:1967`): a program whose declarations contain
@@ -1826,8 +2266,7 @@ theorem globalCompileDecs_functions_eq_nil_of_no_functions [BEq String] [Add α]
     (hnone : code.all (fun declaration => !globalDeclIsFunction declaration) = true) :
     (globalCompileDecs context code).functions = [] := by
   simp only [globalCompileDecs]
-  exact globalDeclsFilter_eq_nil_of_all_not globalDeclIsFunction _
-    (globalCompileDecls_all_not_function (globalCollect context code) code hnone)
+  exact globalCompileDecsThreaded_functions_eq_nil_of_no_functions code context hnone
 
 /-! Counterpart of Cake's `compile_decs_EVERY`
     (`pan_globalsProofScript.sml:1986`): every function of the compiled table
@@ -1864,17 +2303,16 @@ theorem globalDeclsFilter_globalCompileDecls_all_of_predicate [BEq String]
 theorem globalCompileDecs_functions_all_of_predicate [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (code : List (Decl α))
     (predicate : Decl α → Bool)
-    (hsource : code.all
+    (hsource : ∀ context, code.all
       (fun declaration => match declaration with
         | .function function =>
             predicate (.function { function with
-              body := globalCompileProg (globalCollect context code)
-                function.body })
+              body := globalCompileProg context function.body })
         | _ => true) = true) :
     (globalCompileDecs context code).functions.all predicate = true := by
   simp only [globalCompileDecs]
-  exact globalDeclsFilter_globalCompileDecls_all_of_predicate
-    (globalCollect context code) code predicate hsource
+  exact globalCompileDecsThreaded_functions_all_of_predicate code predicate
+    hsource context
 
 /-! Counterpart of Cake's `compile_decs_exns_are_exns`
     (`pan_globalsProofScript.sml:2448`): the exception table is exactly the
@@ -1897,6 +2335,34 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
   simp only [globalCompileDecs]
   exact globalDeclsFilter_isException_globalCompileDecls
     (globalCollect context code) code
+
+/-! Fieldwise link between the executed polymorphic `globalCompileDecs` and the
+    tagged canonical `compileDecsCake`. The three declaration-list fields agree
+    under the canonical context view; the contexts themselves are deliberately
+    not compared as data because `CakeContext.globals` is a finite map while the
+    production context keeps an association list. -/
+theorem globalCompileDecs_fields_cakeContextOfPass [LawfulBEq String] {width : Nat}
+    [NeZero width] (context : GlobalPassContext (BitVec width))
+    (hcanonical : context.IsCakeCanonical)
+    (declarations : List (Decl (BitVec width))) :
+    (compileDecsCake (cakeContextOfPass context) declarations).initializers =
+        (globalCompileDecs context declarations).initializers ∧
+      (compileDecsCake (cakeContextOfPass context) declarations).functions =
+        (globalCompileDecs context declarations).functions ∧
+      (compileDecsCake (cakeContextOfPass context) declarations).exceptions =
+        (globalCompileDecs context declarations).exceptions := by
+  rw [compileDecsCake_cakeContextOfPass context hcanonical declarations]
+  refine ⟨?_, ?_, ?_⟩
+  · show (globalCompileDecsThreaded context declarations).initializers =
+      (globalCompileDecs context declarations).initializers
+    exact globalCompileDecsThreaded_initializers context declarations
+  · show (globalCompileDecsThreaded context declarations).functions =
+      (globalCompileDecs context declarations).functions
+    rfl
+  · show (globalCompileDecsThreaded context declarations).exceptions =
+      (globalCompileDecs context declarations).exceptions
+    exact (globalCompileDecsThreaded_exceptions_eq_filter context declarations).trans
+      (globalCompileDecs_exceptions_eq_filter context declarations).symm
 
 theorem functions_globalDeclsFilter_isException (declarations : List (Decl α)) :
     functions (globalDeclsFilter globalDeclIsException declarations) = [] :=
@@ -2017,18 +2483,7 @@ theorem globalCompileDecs_functions_thm [BEq String] [Add α] [Mul α]
   · simp only [globalCompileDecs]
     exact globalCompileInitializers_of_functions context declarations hall
   · simp only [globalCompileDecs]
-    rw [globalCollect_of_functions context declarations hall]
-    rw [globalCompileDecls_of_functions context declarations hall]
-    refine globalDeclsFilter_eq_self_of_all globalDeclIsFunction _ ?_
-    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
-    obtain ⟨source, hsource, rfl⟩ := List.mem_map.mp hmem
-    have hfunction : globalDeclIsFunction source = true :=
-      List.all_eq_true.mp hall source hsource
-    cases source with
-    | function function => simp [globalDeclIsFunction]
-    | decl shape name value => simp [globalDeclIsFunction] at hfunction
-    | exnDecl exception shape => simp [globalDeclIsFunction] at hfunction
-    | name struct fields => simp [globalDeclIsFunction] at hfunction
+    exact globalCompileDecsThreaded_functions_of_functions context declarations hall
   · simp only [globalCompileDecs]
     rw [globalDeclsFilter_isException_globalCompileDecls]
     refine globalDeclsFilter_eq_nil_of_all_not globalDeclIsException declarations ?_
@@ -2125,9 +2580,14 @@ theorem globalCompileDecs_filter_isDecl [BEq String] [Add α] [Mul α]
       (globalCompileDecs context (globalDeclsFilter isDecl code)).context =
         (globalCompileDecs context code).context := by
   simp only [globalCompileDecs]
-  rw [globalCompileDecls_filter_isDecl, globalCollect_filter_isDecl,
-    globalCompileInitializers_filter_isDecl]
-  refine ⟨rfl, ?_, ?_, rfl⟩ <;> simp [globalDeclsFilter]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact globalCompileInitializers_filter_isDecl context code
+  · exact globalCompileDecsThreaded_functions_eq_nil_of_no_functions
+      (globalDeclsFilter isDecl code) context
+      (globalDeclsFilter_isDecl_all_not_function code)
+  · rw [globalCollect_filter_isDecl, globalCompileDecls_filter_isDecl]
+    simp [globalDeclsFilter]
+  · exact globalCollect_filter_isDecl context code
 
 /-! Successful-start helper for Flapjack's top-level global compiler. This
     Option-valued helper is used by invariants that require a named start
@@ -2174,17 +2634,84 @@ def globalCompileTopForStart [BEq String] [Add α] [Mul α]
     (start : FunName) : List (Decl α) :=
   (globalCompileTopForStartSome bytesInWord fromNat declarations start).getD []
 
+/-! Canonical fixed-word top-level compiler. Its global pass runs through the
+    tagged `compileDecsCake` over a `CakeContext`; the polymorphic
+    `globalCompileTopForStartSome` above remains available for arbitrary word
+    types. `globalCompileTopForStartSomeCake_eq` proves the two compute the same
+    output list, so the executed fixed-word path below can use the canonical
+    definition without changing observable behavior. -/
+def globalCompileTopForStartSomeCake [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    Option (List (Decl (BitVec width))) :=
+  match globalFindFunction start declarations with
+  | none => none
+  | some entry =>
+      let resorted := globalResortDecls declarations
+      let renamedStart := globalNewMainName declarations
+      let renamed := globalRenameDecls start renamedStart resorted
+      let maxGlobalsSize :=
+        cakeBytesInWord width * BitVec.ofNat width
+          ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+      let initial : GlobalPassContext (BitVec width) :=
+        { globals := []
+          globalsSize := BitVec.ofNat width 0
+          maxGlobalsSize := maxGlobalsSize
+          bytesInWord := cakeBytesInWord width
+          fromNat := BitVec.ofNat width }
+      let compiled := compileDecsCake (cakeContextOfPass initial) renamed
+      let parameters := entry.params.map (fun (name, _) => Exp.var .local name)
+      let newMain : Decl (BitVec width) :=
+        .function
+          { name := start
+            inline := false
+            exported := false
+            params := entry.params
+            body := .seq (nestedSeq compiled.initializers)
+              (.call none renamedStart parameters)
+            returnShape := entry.returnShape }
+      some (compiled.exceptions ++ [newMain] ++ compiled.functions)
+
+theorem globalCompileTopForStartSomeCake_eq [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    globalCompileTopForStartSomeCake declarations start =
+      globalCompileTopForStartSome (cakeBytesInWord width) (BitVec.ofNat width)
+        declarations start := by
+  unfold globalCompileTopForStartSomeCake globalCompileTopForStartSome
+  cases globalFindFunction start declarations with
+  | none => rfl
+  | some entry =>
+      simp only
+      congr 1
+      generalize hrenamed : globalRenameDecls start (globalNewMainName declarations)
+        (globalResortDecls declarations) = renamed
+      have hfields := globalCompileDecs_fields_cakeContextOfPass
+        (context := { globals := []
+                      globalsSize := BitVec.ofNat width 0
+                      maxGlobalsSize := cakeBytesInWord width * BitVec.ofNat width
+                        ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+                      bytesInWord := cakeBytesInWord width
+                      fromNat := BitVec.ofNat width })
+        (by refine ⟨rfl, fun value => rfl⟩) renamed
+      simp only [hfields.1, hfields.2.1, hfields.2.2]
+
 /-! HOL's `compile_top` fixes its compiler context to
     `bytes_in_word` and `n2w`. For a word of `width` bits, those are represented
     by `width / 8` and `BitVec.ofNat width` respectively. This wrapper keeps
     those choices out of the caller interface while remaining polymorphic in
     the HOL word width. -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]
-def globalCompileTopCake [BEq String] [Add (BitVec width)] [Mul (BitVec width)]
+def globalCompileTopCake [LawfulBEq String] {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) (start : FunName) :
     List (Decl (BitVec width)) :=
-  globalCompileTopForStart (BitVec.ofNat width (width / 8))
-    (BitVec.ofNat width) declarations start
+  (globalCompileTopForStartSomeCake declarations start).getD []
+
+theorem globalCompileTopCake_eq [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName) :
+    globalCompileTopCake declarations start =
+      globalCompileTopForStart (cakeBytesInWord width) (BitVec.ofNat width)
+        declarations start := by
+  simp only [globalCompileTopCake, globalCompileTopForStart,
+    globalCompileTopForStartSomeCake_eq declarations start]
 
 theorem globalDecls_all_or_of_all_left (predicate other : Decl α → Bool)
     (declarations : List (Decl α))
@@ -2228,7 +2755,8 @@ theorem globalCompileDecs_result_all_function_or_exception [BEq String] [Add α]
       globalDeclIsException _ (globalDeclsFilter_all globalDeclIsException _)
   · simp [hextra]
   · exact globalDecls_all_or_of_all_right globalDeclIsFunction
-      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsFunction _)
+      globalDeclIsException _
+      (globalCompileDecsThreaded_functions_all_isFunction context declarations)
 
 /-! Flapjack stage invariant: compiling declarations preserves their exception
     projection. This supports top-level exception reasoning but is not itself
@@ -2279,9 +2807,10 @@ theorem globalCompileTopForStart_exceptionEntries [BEq String] [Add α] [Mul α]
       subst hcompile
       simp only [globalCompileDecs]
       rw [exceptionEntries_append, exceptionEntries_append,
-        exceptionEntries_filter_exception, exceptionEntries_filter_function,
-        exceptionEntries_globalCompileDecls, exceptionEntries_globalRenameDecls,
-        exceptionEntries_globalResortDecls]
+        exceptionEntries_filter_exception,
+        exceptionEntries_globalCompileDecls,
+        exceptionEntries_globalCompileDecsThreaded_functions,
+        exceptionEntries_globalRenameDecls, exceptionEntries_globalResortDecls]
       simp [exceptionEntries]
 
 theorem globalFunctionNames_eq_functions_map (declarations : List (Decl α)) :
@@ -2376,7 +2905,7 @@ theorem globalCompileDecs_functions_names [BEq String] [Add α] [Mul α]
         (fun entry => entry.1)) =
       (functions declarations).map (fun entry => entry.1) := by
   simp only [globalCompileDecs]
-  rw [functions_globalDeclsFilter_isFunction, functions_names_globalCompileDecls]
+  exact globalCompileDecsThreaded_functions_names context declarations
 
 theorem functions_globalCompileDecls [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (declarations : List (Decl α)) :
@@ -2398,11 +2927,7 @@ theorem globalCompileDecs_functions_expIds [BEq String] [Add α] [Mul α]
         (fun entry => expIds entry.2.2.1) =
       (functions code).map (fun entry => expIds entry.2.2.1) := by
   simp only [globalCompileDecs]
-  rw [functions_globalDeclsFilter_isFunction, functions_globalCompileDecls]
-  rw [List.map_map]
-  apply List.map_congr_left
-  intro entry hentry
-  simp [globalCompileProg_expIds]
+  exact globalCompileDecsThreaded_functions_expIds context code
 
 theorem functions_globalRenameDecls_map_fst [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :
@@ -2568,7 +3093,7 @@ theorem sizeOfEids_globalCompileDecs_functions [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (code : List (Decl α)) :
     sizeOfEids (globalCompileDecs context code).functions = 0 := by
   simp only [globalCompileDecs]
-  exact sizeOfEids_globalDeclsFilter_isFunction _
+  exact sizeOfEids_globalCompileDecsThreaded_functions context code
 
 /-! Successful-start helper lemma for exception-identifier counts. The
     successful-start condition is explicit because the total HOL `compile_top`
@@ -2639,5 +3164,47 @@ theorem globalCollect_decl [Add α] [Mul α]
     (globalCollect context [.decl shape name value]).globalsSize =
       globalAddress context shape := by
   simp [globalCollect]
+
+theorem globalCompileDecsThreaded_functions_thm [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α))
+    (hall : declarations.all globalDeclIsFunction = true) :
+    (globalCompileDecsThreaded context declarations).initializers = [] ∧
+    (globalCompileDecsThreaded context declarations).functions =
+      declarations.map (fun declaration => match declaration with
+        | .function function =>
+            .function { function with
+              body := globalCompileProg context function.body }
+        | _ => declaration) ∧
+    (globalCompileDecsThreaded context declarations).exceptions = [] ∧
+    (globalCompileDecsThreaded context declarations).context = context := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [globalCompileDecsThreaded_initializers]
+    exact globalCompileInitializers_of_functions context declarations hall
+  · exact globalCompileDecsThreaded_functions_of_functions context declarations hall
+  · rw [globalCompileDecsThreaded_exceptions_eq_filter]
+    refine globalDeclsFilter_eq_nil_of_all_not globalDeclIsException declarations ?_
+    refine List.all_eq_true.mpr (fun declaration hmem => ?_)
+    have hfunction : globalDeclIsFunction declaration = true :=
+      List.all_eq_true.mp hall declaration hmem
+    cases declaration <;> simp_all [globalDeclIsFunction, globalDeclIsException]
+  · rw [globalCompileDecsThreaded_context]
+    exact globalCollect_of_functions context declarations hall
+
+theorem globalCompileDecsThreaded_result_all_function_or_exception [BEq String]
+    [Add α] [Mul α] (context : GlobalPassContext α) (declarations : List (Decl α))
+    (extra : Decl α) (hextra : globalDeclIsFunction extra = true) :
+    ((globalCompileDecsThreaded context declarations).exceptions ++ [extra] ++
+        (globalCompileDecsThreaded context declarations).functions).all
+      (fun declaration => globalDeclIsFunction declaration ||
+        globalDeclIsException declaration) = true := by
+  rw [List.all_append, List.all_append, Bool.and_eq_true, Bool.and_eq_true]
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · rw [globalCompileDecsThreaded_exceptions_eq_filter]
+    exact globalDecls_all_or_of_all_left globalDeclIsFunction
+      globalDeclIsException _ (globalDeclsFilter_all globalDeclIsException _)
+  · simp [hextra]
+  · exact globalDecls_all_or_of_all_right globalDeclIsFunction
+      globalDeclIsException _
+      (globalCompileDecsThreaded_functions_all_isFunction context declarations)
 
 end Flapjack

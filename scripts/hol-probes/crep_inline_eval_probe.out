@@ -1,0 +1,13 @@
+src_main_is_call=T
+tgt_main_is_tail=T
+code_keys_nonempty=T
+src_var=T
+tgt_var=T
+src_var_eq_tgt_var=T
+src_mmap=SOME [Word 5w; Word 7w]
+tgt_mmap=SOME [Word 5w; Word 7w]
+mmap_hetero=T
+mmap_eq=T
+skip_eval=T
+break_eval=T
+continue_eval=T

@@ -1,0 +1,6 @@
+set_var_hit=T
+set_var_keeps_other=T
+upd_locals_replace=T
+empty_locals_none=T
+set_var_fields_preserved=T
+empty_locals_fields_preserved=T

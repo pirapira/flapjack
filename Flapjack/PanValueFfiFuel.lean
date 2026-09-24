@@ -111,70 +111,65 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
   have hfk : fuel ≤ k := by omega
   rw [evalPanValueFfiCallSteps] at h
   rw [evalPanValueFfiCallSteps]
-  cases hargs : evalPanValueExpsCounted structs locals globals memory baseAddress
-      topAddress bytesInWord arguments ma with
-  | none => rw [hargs] at h; simp at h
+  cases hargs : panValueCallArguments structs baseAddress topAddress bytesInWord
+      locals globals memory arguments ma with
+  | none => rw [hargs] at h; exact h
   | some ap =>
     obtain ⟨values, argumentSteps⟩ := ap
     rw [hargs] at h
-    simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
-    cases hlk : lookupPanFunction function functions with
-    | none => rw [hlk] at h; simp at h
-    | some pb =>
-      obtain ⟨parameters, body⟩ := pb
-      rw [hlk] at h
-      simp only [Option.bind_some] at h ⊢
-      cases hbind : bindPanValueParameters parameters values with
-      | none => rw [hbind] at h; simp at h
-      | some calleeLocals =>
-        rw [hbind] at h
-        simp only [Option.bind_some] at h ⊢
-        cases hbody : evalPanValueFfiProgSteps context primitive handler structs functions
-            baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
-            (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
-        | none => rw [hbody] at h; simp at h
-        | some rp =>
-          obtain ⟨res, steps⟩ := rp
-          rw [hbody] at h
-          rw [ihBody body calleeLocals _ _ hfk hbody]
-          simp only [Option.bind_some] at h ⊢
-          cases res with
-          | normal l cg cm cf => exact h
-          | returned l cg cm cf vs => exact h
-          | broke l cg cm cf => exact h
-          | continued l cg cm cf => exact h
-          | finalFfi l cg cm cf ev => exact h
-          | error l cg cm cf => exact h
-          | raised l cg cm cf e v =>
-            dsimp only at h ⊢
-            by_cases hvalid :
-                (panValueExceptionValid structs c e v && panValuePayloadWithinLimit structs v) = true
-            · rw [if_pos hvalid] at h ⊢
-              cases info with
+    simp only [Option.elim_some] at h ⊢
+    cases htarget : panValueCallTarget structs c function functions values with
+    | none => rw [htarget] at h; simp only [Option.elim_none] at h ⊢; exact h
+    | some target =>
+      obtain ⟨body, calleeLocals⟩ := target
+      rw [htarget] at h
+      simp only [Option.elim_some] at h ⊢
+      cases hbody : evalPanValueFfiProgSteps context primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
+          (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+      | none => rw [hbody] at h; simp at h
+      | some rp =>
+        obtain ⟨res, steps⟩ := rp
+        rw [hbody] at h
+        rw [ihBody body calleeLocals _ _ hfk hbody]
+        simp only [Option.bind_eq_bind, Option.bind_some] at h ⊢
+        cases res with
+        | normal l cg cm cf => exact h
+        | returned l cg cm cf vs => exact h
+        | broke l cg cm cf => exact h
+        | continued l cg cm cf => exact h
+        | finalFfi l cg cm cf ev => exact h
+        | error l cg cm cf => exact h
+        | raised l cg cm cf e v =>
+          dsimp only at h ⊢
+          by_cases hvalid :
+              (panValueExceptionValid structs c e v && panValuePayloadWithinLimit structs v) = true
+          · rw [if_pos hvalid] at h ⊢
+            cases info with
+            | none => exact h
+            | some pr =>
+              obtain ⟨destination, handlerInfo⟩ := pr
+              cases handlerInfo with
               | none => exact h
-              | some pr =>
-                obtain ⟨destination, handlerInfo⟩ := pr
-                cases handlerInfo with
-                | none => exact h
-                | some triple =>
-                  obtain ⟨caught, handlerVariable, handlerProgram⟩ := triple
-                  dsimp only at h ⊢
-                  by_cases hcaught : (caught == e) = true
-                  · rw [if_pos hcaught] at h ⊢
-                    by_cases hhv : panValueHandlerValid structs c locals handlerVariable v
-                    · rw [if_pos hhv] at h ⊢
-                      cases hh : evalPanValueFfiProgSteps context primitive handler structs functions
-                          baseAddress topAddress bytesInWord fuel (updatePanValueMap locals handlerVariable v)
-                          cg cm cf handlerProgram (memoryAccess := ma) (contracts := c)
-                          (memoryHandler := mh) with
-                      | none => rw [hh] at h; simp at h
-                      | some q =>
-                        rw [hh] at h
-                        rw [ihHandler _ _ _ _ _ _ _ _ hfk hh]
-                        exact h
-                    · rw [if_neg hhv] at h; simp at h
-                  · rw [if_neg hcaught] at h ⊢; exact h
-            · rw [if_neg hvalid] at h; simp at h
+              | some triple =>
+                obtain ⟨caught, handlerVariable, handlerProgram⟩ := triple
+                dsimp only at h ⊢
+                by_cases hcaught : (caught == e) = true
+                · rw [if_pos hcaught] at h ⊢
+                  by_cases hhv : panValueHandlerValid structs c locals handlerVariable v
+                  · rw [if_pos hhv] at h ⊢
+                    cases hh : evalPanValueFfiProgSteps context primitive handler structs functions
+                        baseAddress topAddress bytesInWord fuel (updatePanValueMap locals handlerVariable v)
+                        cg cm cf handlerProgram (memoryAccess := ma) (contracts := c)
+                        (memoryHandler := mh) with
+                    | none => rw [hh] at h; simp at h
+                    | some q =>
+                      rw [hh] at h
+                      rw [ihHandler _ _ _ _ _ _ _ _ hfk hh]
+                      exact h
+                  · rw [if_neg hhv] at h; simp at h
+                · rw [if_neg hcaught] at h ⊢; exact h
+          · rw [if_neg hvalid] at h; simp at h
 
 theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ) (structs : StructContext)

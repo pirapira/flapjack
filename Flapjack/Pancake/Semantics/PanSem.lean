@@ -585,6 +585,123 @@ theorem panSemEvaluateCodeStateWithFuel_primitive
               · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
                   evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
                   evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
+/-- Production source-state `Seq` equation. The first command is evaluated and
+    its clock clamped to the entry clock (`fix_clock`); a normal (`NONE`)
+    outcome continues with the second command in the resulting state, while any
+    other outcome (including an explicit `Error`) is returned unchanged. This is
+    an untagged boundary equation because the structured result is reduced
+    rather than HOL's `(prog_result, state)` pair. Reference:
+    cakeml/pancake/semantics/panSemScript.sml:615-618 (`Seq`). -/
+theorem panSemEvaluateCodeStateWithFuel_seq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (first second : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.seq first second : Prog α) =
+      match panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+          state first with
+      | some firstStep =>
+          let fixedStep := fixPanClock state.clock firstStep
+          match fixedStep.1 with
+          | .control (.normal nextLocals nextGlobals nextMemory nextFfi) =>
+              panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+                { state with
+                  locals := nextLocals
+                  globals := nextGlobals
+                  memory := nextMemory
+                  ffi := nextFfi
+                  clock := fixedStep.2 } second
+          | _ => some fixedStep
+      | none => none := by
+  simp only [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg, fixPanClock]
+  cases h : evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+      state.exceptionShapes state.baseAddress state.topAddress bytesInWord fuel state.locals
+      state.globals state.memory state.ffi state.clock first with
+  | none => simp
+  | some firstStep => rfl
+
+/-- The production source evaluator exposes the `panSem` `If` equation: a
+    non-word (or missing) condition yields the explicit `Error` result with the
+    unchanged source state, while a word condition evaluates the selected
+    branch at the unchanged clock.  The result is the reduced structured pair,
+    not HOL's `(prog_result, state)`, so this stays an untagged boundary
+    equation.  The condition is evaluated with the caller's `memoryAccess`
+    (which the state-owned entry derives from `state.memaddrs`, `state.be`, and
+    the word model), so memory-reading conditions do not fall back to the
+    legacy whole-cell path.  Reference:
+    `cakeml/pancake/semantics/panSemScript.sml:617-620`. -/
+theorem panSemEvaluateCodeStateWithFuel_ite
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.ite condition thenBranch elseBranch : Prog α)
+        (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) =
+      match panValueIteConditionValue state.structs state.baseAddress state.topAddress
+          bytesInWord state.locals state.globals state.memory condition memoryAccess with
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock))
+      | some conditionValue =>
+          panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel state
+            (if conditionValue != 0 then thenBranch else elseBranch)
+            (memoryAccess := memoryAccess) (contracts := contracts)
+            (memoryHandler := memoryHandler) := by
+  simp only [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg]
+  cases h : panValueIteConditionValue state.structs state.baseAddress state.topAddress
+      bytesInWord state.locals state.globals state.memory condition memoryAccess with
+  | none => rfl
+  | some conditionValue => rfl
+
+/-- The `If` equation instantiated with the
+    state-derived memory access: the condition reads memory through
+    `state.memaddrs`, `state.sharedMemaddrs`, and `state.be` (via the word
+    model), matching the state-owned `panSemEvaluateCodeStateWithMemoryModel`
+    entry point.  Untagged boundary equation for the same reason as
+    `panSemEvaluateCodeStateWithFuel_ite`. -/
+theorem panSemEvaluateCodeStateWithFuel_ite_state_memory
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (model : PanMemoryModel α) (bytesInWord : α) (fuel : Nat)
+    (state : PanSemState α (FfiState σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.ite condition thenBranch elseBranch : Prog α)
+        (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+          state.sharedMemaddrs state.be)) =
+      match panValueIteConditionValue state.structs state.baseAddress state.topAddress
+          bytesInWord state.locals state.globals state.memory condition
+          (some (panValueMemoryAccessOfModel model state.memaddrs
+            state.sharedMemaddrs state.be)) with
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock))
+      | some conditionValue =>
+          panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel state
+            (if conditionValue != 0 then thenBranch else elseBranch)
+            (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+              state.sharedMemaddrs state.be)) :=
+  panSemEvaluateCodeStateWithFuel_ite context primitive handler bytesInWord fuel state
+    condition thenBranch elseBranch (some (panValueMemoryAccessOfModel model state.memaddrs
+      state.sharedMemaddrs state.be))
 
 /-!
   Exact source-memory entry point.
@@ -674,7 +791,7 @@ theorem panSemEvaluateExactState_raise_of_eval
         state.legacy.memory state.legacy.ffi exception value), state.legacy.clock) := by
   simp [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
     panSemEvaluateFuel, evalPanValueFfiClockLeaf, evalPanValueFfiClockProg,
-    evalPanValueFfiProgSteps, evalPanValueExpCounted,
+    evalPanValueFfiProgSteps, panValueRaiseResult, evalPanValueExpCounted,
     PanSemExactState.toEvaluateState, heval, hvalid, hlimit]
 
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an

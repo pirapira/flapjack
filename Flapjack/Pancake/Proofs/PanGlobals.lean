@@ -25,14 +25,15 @@ theorem globalCompileTopForStart_all_function_or_exception [BEq String]
         (by simp [globalDeclIsFunction])
 
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_only_functions_or_exns"]
-theorem globalCompileTopCake_all_function_or_exception {width : Nat}
+theorem globalCompileTopCake_all_function_or_exception {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width))) (start : FunName) :
     (globalCompileTopCake declarations start).all
       (fun declaration => globalDeclIsFunction declaration ||
         globalDeclIsException declaration) = true := by
-  simpa [globalCompileTopCake] using
-    (globalCompileTopForStart_all_function_or_exception
-      (BitVec.ofNat width (width / 8)) (BitVec.ofNat width) declarations start)
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
+  exact globalCompileTopForStart_all_function_or_exception
+    (BitVec.ofNat width (width / 8)) (BitVec.ofNat width) declarations start
 
 /-! Generalized proof behind the exact fixed-word theorem below. -/
 theorem globalCompileTopForStart_shapes_wf
@@ -116,22 +117,23 @@ theorem globalCompileTopForStart_shapes_wf
           (panDeclShapesWellFormed state.runtime.structs) = true := by
         change renamed.all (panDeclShapesWellFormed state.runtime.structs) = true
         exact hrenamedShapes
-      have hcompiledBodies : renamed.all (fun declaration =>
+      have hcompiledBodies : ∀ context, renamed.all (fun declaration =>
           match declaration with
           | .function function =>
               panDeclShapesWellFormed state.runtime.structs
                 (.function { function with
-                  body := globalCompileProg (globalCollect initial renamed) function.body })
+                  body := globalCompileProg context function.body })
           | _ => true) = true := by
+        intro context
         change (globalRenameDecls start newName sorted).all (fun declaration =>
           match declaration with
           | .function function =>
               panDeclShapesWellFormed state.runtime.structs
                 (.function { function with
-                  body := globalCompileProg (globalCollect initial renamed) function.body })
+                  body := globalCompileProg context function.body })
           | _ => true) = true
         exact globalRenameDecls_all_of_body_compiled state.runtime.structs
-          (globalCollect initial renamed) start newName sorted hrenamedShapes'
+          context start newName sorted hrenamedShapes'
       have hcompiledShapes := globalCompileDecs_result_shapes_wf
         state.runtime.structs initial renamed mainDeclaration hmainShapes hcompiledBodies
       have hresult : (globalCompileTopForStart bytesInWord fromNat declarations start).all
@@ -160,7 +162,7 @@ theorem globalCompileTopForStart_shapes_wf
     `bytes_in_word` and `n2w` choices instead of exposing caller-controlled
     compiler configuration. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf"]
-theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
+theorem globalCompileTopCake_shapes_wf {width : Nat} [NeZero width] [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) σ)
     (declarations : List (Decl (BitVec width))) (start : FunName)
@@ -172,10 +174,11 @@ theorem globalCompileTopCake_shapes_wf {width : Nat} [LawfulBEq String]
         function.params.all (fun parameter =>
           isWfShape state.runtime.structs parameter.2) = true ∧
           isWfShape state.runtime.structs function.returnShape = true := by
-  simpa [globalCompileTopCake] using
-    (globalCompileTopForStart_shapes_wf
+  rw [globalCompileTopCake_eq]
+  simp only [cakeBytesInWord]
+  exact globalCompileTopForStart_shapes_wf
       (BitVec.ofNat width (width / 8)) (BitVec.ofNat width)
-      state declarations start state' heval hadmissible)
+      state declarations start state' heval hadmissible
 
 /-! Cake's `is_wf_shape_nil` predicate is the well-formedness test with no
     declared structures. This local spelling keeps the corollary's conclusion
@@ -186,7 +189,7 @@ def isWfShapeNil : Shape → Bool := isWfShape []
     admissible declarations give well-formed output shapes under `isWfShapeNil`.
     The empty-structure premise is explicit, as in the HOL statement. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_top_shape_wf_nil"]
-theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [LawfulBEq String]
+theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) σ)
     (declarations : List (Decl (BitVec width))) (start : FunName)
@@ -288,6 +291,22 @@ theorem functions_FILTER_exn_decl (declarations : List (Decl α)) :
 theorem functions_FILTER_is_name (declarations : List (Decl α)) :
     functions (globalDeclsFilter isName declarations) = [] :=
   functions_globalDeclsFilter_isName declarations
+
+/-! Exact-shaped port of Cake's `MEM_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380`): every entry of
+    `functions` comes from a `.function` declaration of the source list, with
+    the entry being that declaration's name, parameters, body, and return
+    shape. Wraps the reviewed production lemma `mem_functions`
+    (`Flapjack/Pancake/PanSimp.lean`). -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "MEM_functions"]
+theorem MEM_functions {declarations : List (Decl α)}
+    {entry : FunName × List (VarName × Shape) × Prog α × Shape}
+    (hmem : entry ∈ functions declarations) :
+    ∃ declaration : FunDecl α,
+      (.function declaration : Decl α) ∈ declarations ∧
+        entry = (declaration.name, declaration.params, declaration.body,
+          declaration.returnShape) :=
+  mem_functions hmem
 
 /-! Exact-shaped port of Cake's `fperm_name_cancel`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`). `fperm_name`
@@ -715,21 +734,18 @@ theorem compile_decls_append_threaded [BEq String] [Add α] [Mul α]
         context := second.context } :=
   globalCompileDecsThreaded_append context decs rest
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `funs = []` result for
-    `compileDecsCake`, with the shape of Cake's `compile_decs_decls_thm`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`).  The `@[hol]` tag
-    is withheld pending an exactness review of the underlying representation:
-    `compileDecsCake` also composes `compileProgCake`, which is not yet proved
-    to implement every HOL `pan_globals$compile` clause (its global-handler
-    case now uses the exact tagged `freshNameHOL`, but the program compiler
-    still awaits clause/side-condition review; tracked by bead
-    `flapjack-pxn.18.5.2.20.1.1.1`), and
-    `CakeContext.globals` renders HOL's extensional finite map by a
-    `FiniteMap` lookup function that need not have finite support.  `width` is
-    restricted by `[NeZero width]` as HOL `dimindex` is positive.  The
-    `compile_exp` half is now an exact tagged port
-    (`compileExpCake`, `reviewed_exact`).  Tracked by bead
-    `flapjack-pxn.18.5.2.20.1.1`. -/
+/-- Exact port of Cake's `compile_decs_decls_thm`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1967`) for the canonical
+    word context: if every declaration is not a function, `compile_decs` returns
+    no compiled functions.  `compileDecsCake` is the exact tagged
+    `compile_decs_def` port and `compileProgCake`/`compileExpCake`/`freshNameHOL`
+    are the exact tagged `compile_def`/`compile_exp_def`/`fresh_name_def` ports.
+    `CakeContext.globals` renders HOL's extensional finite map by a `FiniteMap`
+    lookup function; the HOL clauses consult it only through `FLOOKUP`/`FUPDATE`,
+    so the extra infinite-support lookups do not alter the port (same local
+    argument as `compileExpCake`).  `width` is positive via `[NeZero width]`, as
+    HOL `dimindex` is. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_decls_thm"]
 theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -744,12 +760,12 @@ theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero wid
   rw [hfuns]
   exact compileDecsCake_functions_eq_nil_of_no_functions code context hnone
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port). The `EVERY is_function` result
-    for `compileDecsCake`, with the shape of Cake's
-    `compile_decs_EVERY_is_function`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`).  Untagged for the
-    same representation/definition reasons as `compile_decs_decls_thm_cake`; see
-    bead `flapjack-pxn.18.5.2.20.1.1`. -/
+/-- Exact port of Cake's `compile_decs_EVERY_is_function`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) for the canonical
+    word context: every returned declaration is a function.  Exactness follows
+    from the tagged `compileDecsCake`; the finite-map representation caveat and
+    `[NeZero width]` are as in `compile_decs_decls_thm_cake`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decs_EVERY_is_function"]
 theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (code : List (Decl (BitVec width)))
     (decls : List (Prog (BitVec width))) (funs exns : List (Decl (BitVec width)))
@@ -763,13 +779,13 @@ theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [Ne
   rw [hfuns]
   exact compileDecsCake_functions_all_isFunction context code
 
-/-- FLAPJACK-SPECIFIC (not an exact HOL port). The append/context-threading law
-    for `compileDecsCake`, with the shape of Cake's `compile_decls_append`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`): the second list
-    runs under the context reached by the first and the output lists append.
-    Untagged for the same representation/definition reasons as
-    `compile_decs_decls_thm_cake` (untagged `compileProgCake`/`fresh_name`);
-    see bead `flapjack-pxn.18.5.2.20.1.1`. -/
+/-- Exact port of Cake's `compile_decls_append`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) for the canonical
+    word context: the second declaration list runs under the context reached by
+    the first, and the output lists/context append.  Exactness follows from the
+    tagged `compileDecsCake`; the finite-map representation caveat and
+    `[NeZero width]` are as in `compile_decs_decls_thm_cake`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_decls_append"]
 theorem compile_decls_append_cake [LawfulBEq String] {width : Nat} [NeZero width]
     (context : CakeContext width) (decs rest : List (Decl (BitVec width))) :
     compileDecsCake context (decs ++ rest) =

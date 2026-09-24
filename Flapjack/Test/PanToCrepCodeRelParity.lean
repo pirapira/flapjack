@@ -188,13 +188,38 @@ example : List.lookup "f" (compileToCrepHOL alookupDecls) =
 
 #guard alookupGuard
 
+/-- Exact provenance guard for HOL `el_compile_prog_el_prog_eq`: the compiled
+    entry at index 0 is sourced from the `f` declaration (empty params, body
+    Skip, shape One), matching the HOL probe rows `source_el_f` and
+    `compiled_el_f`. -/
+example : (functionEntries alookupDecls)[0]? =
+    some ("f", [], Prog.skip, Shape.one) := by
+  apply elCompileToCrepElProgEq alookupDecls 0 "f"
+    (panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL alookupDecls) 0
+        (panToCrepGetEidsFromDeclsHOL alookupDecls)) [] Prog.skip)
+    Prog.skip Shape.one
+  · simp [compileToCrepHOL, alookupDecls, functionEntries, panToCrepVars,
+      Shape.shapeSize]
+  · decide
+  · decide
+  · simp [alookupDecls, functionEntries, lookupFunctionEntry]
+
+def elCompileGuard : Bool :=
+  match (functionEntries alookupDecls)[0]? with
+  | some ("f", [], Prog.skip, Shape.one) => true
+  | _ => false
+
+#guard elCompileGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
     ("HOL code_rel wrong-body target fixture", wrongBodyTargetGuard),
     ("HOL code_rel compiled parameter return", compiledReturnGuard),
     ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle),
-    ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard)]
+    ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard),
+    ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

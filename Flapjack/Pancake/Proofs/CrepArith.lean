@@ -2066,7 +2066,7 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEval {ι : Type} {σ : Type}
     proved identical to HOL `crepSem$eval` for its implicit finite-index
     instance. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceFull {ι : Type} {σ : Type}
-    (dimension : HolFiniteDimension ι)
+    [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) →
       (List Nat × CrepProg (ι → Bool)))
     (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))

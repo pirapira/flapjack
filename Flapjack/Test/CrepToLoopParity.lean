@@ -571,6 +571,25 @@ example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true �
       some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
   ⟨5, rfl, by decide, by simp [wlabWloc]⟩
 
+/-! `find_var`/`find_lab` over the finite-map context carrier, mirroring
+    `scripts/hol-probes/crep_to_loop_context_defs_probe.out`. -/
+def contextDefsContext : CrepToLoopFiniteMapContext :=
+  { vars := FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7),
+    funcs := FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2)),
+    vmax := 9, target := .rv64i }
+
+example : findVarHOL contextDefsContext 1 = 7 := by
+  simp [findVarHOL, contextDefsContext, FLOOKUP_update]
+
+example : findVarHOL contextDefsContext 2 = 0 := by
+  simp [findVarHOL, contextDefsContext, FLOOKUP_update]
+
+example : findLabHOL contextDefsContext "f" = 3 := by
+  simp [findLabHOL, contextDefsContext, FLOOKUP_update]
+
+example : findLabHOL contextDefsContext "g" = 0 := by
+  simp [findLabHOL, contextDefsContext, FLOOKUP_update]
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

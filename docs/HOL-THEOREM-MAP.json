@@ -8398,5 +8398,21 @@
     "lean_name": "crepToLoopLocalsRelHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against locals_rel_def at crep_to_loopProofScript.sml:101-111; ctxt.vars is the HOL finite map num |-> num, rendered over CrepToLoopFiniteMapContext; HOL's sptree$num_set is rendered as a Boolean membership map and sptree$num_map as its extensional Option-valued lookup, the same accepted renderings used by the tagged crepToLoopStateRel/crepToLoopMemRel/crepToLoopGlobalsRel; the distinct_vars/ctxt_max conjuncts reuse the tagged crepToLoopDistinctVars/crepToLoopCtxtMax; direct HOL-EVAL rows ctxt_vars_lookup/distinct_component/ctxt_max_component/set_domain_mem/map_lookup/subset_domain_component=T in scripts/hol-probes/crep_to_loop_locals_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "find_var_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "findVarHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "find_lab_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "findLabHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
   }
 ]

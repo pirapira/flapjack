@@ -2407,13 +2407,17 @@ end
 
 /-! ## Unconditional executed-path capstone (`flapjack-pxn.18.3.6.9.2.18.1`)
 
-The HOL-shaped source state derived from an executed `PanSemState`: the
-`structs`/`memory`/`memaddrs` projections are the ones the executed path reads,
-`locals`/`globals` are the `PanValue.toHolValue` images, and the base/top/bytes
-projections are the executed ones.  Because the executed RV64 compare/shift
-codec equalities and the byte/word load bridges are now proved, this state
-satisfies `PanValueEvalRel` unconditionally, so `evalPanValueExp` agrees with
-`evalHOL` on the executed path.  Untagged production-side adapter. -/
+An **observational projection** of an executed `PanSemState` into the
+`PanSemHolState` shape that `evalHOL` reads.  It is not an exact whole-state
+port: `code`/`eshapes`/`shMemaddrs` are set to defaults (they do not affect
+`evalHOL` expression evaluation) and `memaddrs` is narrowed to the
+word-defined cells `panValueFlatMachineDomain execState memory`.  The
+`memory`/`structs`/`locals`/`globals`/base/top arguments are supplied
+independently; the wrapper `evalPanValueExp_eq_evalHOL_state` instantiates them
+from `execState`.  Because the executed RV64 compare/shift codec equalities and
+the byte/word load bridges are now proved, this projected state satisfies
+`PanValueEvalRel` unconditionally, so `evalPanValueExp` agrees with `evalHOL` on
+the executed path.  Untagged production-side adapter. -/
 abbrev machineHolState (execState : PanSemState (RiscV.Word 64) ffi)
     (holFfi : FfiState ffi)
     (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
@@ -2445,7 +2449,7 @@ instance machineHolStateDecidablePred (execState : PanSemState (RiscV.Word 64) f
   fun a => inferInstanceAs
     (Decidable (execState.memaddrs a && panValueWordDefined memory a = true))
 
-/-- The state derived above satisfies the bundled relation, unconditionally. -/
+/-- The projected state above satisfies the bundled relation, unconditionally. -/
 theorem panValueEvalRel_machineHolState
     (execState : PanSemState (RiscV.Word 64) ffi)
     (holFfi : FfiState ffi)
@@ -2485,9 +2489,11 @@ theorem panValueEvalRel_machineHolState
     rw [h, Option.map_map]
     rfl
 
-/-- Unconditional executed-path capstone: on the state derived from the
-executed `PanSemState`, `evalPanValueExp` agrees with the exact tagged
-`evalHOL`.  Untagged. -/
+/-- Unconditional executed-path capstone: on the projected state built from the
+executed `PanSemState`, `evalPanValueExp` agrees with the exact tagged `evalHOL`.
+The `memory`/`structs`/`locals`/`globals`/base/top arguments may be supplied
+independently; `evalPanValueExp_eq_evalHOL_state` instantiates them from
+`execState`.  Untagged. -/
 theorem evalPanValueExp_eq_evalHOL_executed {ffi : Type} [LawfulBEq String]
     (execState : PanSemState (RiscV.Word 64) ffi)
     (holFfi : FfiState ffi)
@@ -2506,5 +2512,23 @@ theorem evalPanValueExp_eq_evalHOL_executed {ffi : Type} [LawfulBEq String]
     (panValueEvalRel_machineHolState execState holFfi memory structs locals globals baseAddress
       topAddress)
     expression
+
+/-- Actual-state corollary: `evalPanValueExp` run over the executed
+`PanSemState`'s own `structs`/`locals`/`globals`/`memory`/base/top agrees with
+the tagged `evalHOL` over the observational projection `machineHolState`.
+Untagged. -/
+theorem evalPanValueExp_eq_evalHOL_state {ffi : Type} [LawfulBEq String]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (expression : Exp (RiscV.Word 64)) :
+    evalPanValueExp execState.structs execState.locals execState.globals execState.memory
+        execState.baseAddress execState.topAddress panSemBitVec64BytesInWord expression
+        (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL
+            (machineHolState execState holFfi execState.memory execState.structs
+              execState.locals execState.globals execState.baseAddress execState.topAddress)
+            expression).map HolValue.toPanValue :=
+  evalPanValueExp_eq_evalHOL_executed execState holFfi execState.memory execState.structs
+    execState.locals execState.globals execState.baseAddress execState.topAddress expression
 
 end Flapjack

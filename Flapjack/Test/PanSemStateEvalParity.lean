@@ -1074,7 +1074,7 @@ example
     (fun _ => none) (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord rel
     (.load Shape.one (.const 0))
 
-/-- The unconditional executed-path capstone: the state derived from the
+/-- The unconditional executed-path capstone: the projected state built from the
     executed `PanSemState` satisfies the relation with no codec hypotheses. -/
 example :
     evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
@@ -1087,5 +1087,19 @@ example :
   evalPanValueExp_eq_evalHOL_executed littleEndianState sourceFfiState
     littleEndianState.memory ([] : StructContext) (fun _ => none) (fun _ => none) 0 0
     (.load Shape.one (.const 0))
+
+/-- Actual-state corollary: the executed `PanSemState`'s own fields feed the
+    observational projection with no extra arguments. -/
+example :
+    evalPanValueExp littleEndianState.structs littleEndianState.locals littleEndianState.globals
+        littleEndianState.memory littleEndianState.baseAddress littleEndianState.topAddress
+        panSemBitVec64BytesInWord (.const 0)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL
+            (machineHolState littleEndianState sourceFfiState littleEndianState.memory
+              littleEndianState.structs littleEndianState.locals littleEndianState.globals
+              littleEndianState.baseAddress littleEndianState.topAddress)
+            (.const 0)).map HolValue.toPanValue :=
+  evalPanValueExp_eq_evalHOL_state littleEndianState sourceFfiState (.const 0)
 
 end Flapjack.Test.PanSemStateEvalParity

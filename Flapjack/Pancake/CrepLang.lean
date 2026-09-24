@@ -381,12 +381,15 @@ def stores [BEq α] [OfNat α 0] [Add α]
       .store destination value :: stores address values (offset + stride) stride
 
 /-- Exact width-indexed port of HOL `crepLang$stores_def`
-    (`cakeml/pancake/crepLangScript.sml:95-100`): HOL's address/offset are
+     (`cakeml/pancake/crepLangScript.sml:95-100`): HOL's address/offset are
     `'a word` and the stride is the fixed `byte$bytes_in_word`
     (`BitVec.ofNat width (width / 8)`).  Clause-for-clause identical to the
-    generic `stores` once the stride is fixed. -/
+    generic `stores` once the stride is fixed.  The carrier is
+    `BitVec width` with `[NeZero width]` because every HOL word type has
+    positive `dimindex` (`BitVec 0` has no HOL counterpart), even though the
+    body never inspects word bits. -/
 @[hol "cakeml/pancake/crepLangScript.sml" "stores_def"]
-def storesW {width : Nat} (address : CrepExp (BitVec width))
+def storesW {width : Nat} [NeZero width] (address : CrepExp (BitVec width))
     (values : List (CrepExp (BitVec width))) (offset : BitVec width) :
     List (CrepProg (BitVec width)) :=
   match values with
@@ -399,7 +402,7 @@ def storesW {width : Nat} (address : CrepExp (BitVec width))
 /-- Untagged bridge showing the generic stride-parametric `stores` (the
     executed helper; production passes `CrepBytesInWord.bytesInWord`) is the
     exact width-indexed `storesW` when the stride is the machine byte width. -/
-theorem storesW_eq_stores {width : Nat} (address : CrepExp (BitVec width))
+theorem storesW_eq_stores {width : Nat} [NeZero width] (address : CrepExp (BitVec width))
     (values : List (CrepExp (BitVec width))) (offset : BitVec width) :
     storesW address values offset =
       stores address values offset (BitVec.ofNat width (width / 8)) := by

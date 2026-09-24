@@ -23,3 +23,6 @@ val _ = print_eval "slots_disjoint"
   ``~(MEM (1:num) [3;4]) /\ ~(MEM (2:num) [3;4])``;
 val _ = print_eval "distinct_lists_self"
   ``pan_common$distinct_lists [1;2] [3;4] = pan_common$distinct_lists [1;2] [3;4]``;
+
+val _ = print_eval "nested_zip_lookup"
+  (``FLOOKUP ((FEMPTY |++ ZIP([1;2;3], ZIP([10;20;30],[100;200;300]))) : (num, num # num) fmap) 2 = SOME (20,200)``);

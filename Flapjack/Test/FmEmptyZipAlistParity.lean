@@ -93,6 +93,15 @@ def slotsDisjointGuard : Bool :=
 
 #guard slotsDisjointGuard
 
+/-- HOL `fm_empty_zip_flookup_el` oracle row `nested_zip_lookup=T`. -/
+theorem nestedZipLookupEl :
+    FLOOKUP (FUPDATE_LIST FEMPTY ([1, 2, 3].zip ([10, 20, 30].zip [100, 200, 300]))) 2 =
+      some (20, 200) := by
+  rw [fmEmptyZipFlookupEl [1, 2, 3] [10, 20, 30] [100, 200, 300] 1 2
+    (by decide) (by decide) (by decide) (by decide) (by decide)]
+  decide
+
+
 /-- Exact HOL `MAX_LIST_add_not_mem` port: `maxList xs + 1` is never in `xs`. -/
 theorem maxListAddNotMem : maxList xs + 1 ∉ xs :=
   MAX_LIST_add_not_mem xs

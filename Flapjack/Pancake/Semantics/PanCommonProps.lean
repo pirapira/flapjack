@@ -241,4 +241,22 @@ theorem distinct_lists_simp_cons {α : Type} (xs : List α) (y : α) (ys : List 
     (h : ListDisjoint xs (y :: ys)) : ListDisjoint xs ys :=
   listDisjoint_of_cons_right xs y ys h
 
+
+/-- Exact port of HOL `fm_empty_zip_flookup_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:479`): looking up the
+    `n`-th distinct key of a doubly zipped finite map returns the `n`-th pair
+    of the value lists. HOL `EL` is rendered as a bounded `getElem`, matching
+    `fmEmptyZipFlookup`/`elLoadGlobals`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_empty_zip_flookup_el"]
+theorem fmEmptyZipFlookupEl [BEq α] [LawfulBEq α] (xs : List α) (ys zs : List β)
+    (n : Nat) (x : α) (hdistinct : xs.Nodup)
+    (hlen1 : xs.length = ys.length) (hlen2 : ys.length = zs.length)
+    (hn : n < xs.length) (hget : xs[n]'hn = x) :
+    FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip (ys.zip zs))) x =
+      some (ys[n]'(by omega), zs[n]'(by omega)) := by
+  subst hget
+  rw [FLOOKUP_FUPDATE_LIST_zip_getElem xs (ys.zip zs) FEMPTY n hdistinct
+    (by rw [List.length_zip]; omega) hn]
+  simp only [List.getElem_zip]
+
 end Flapjack

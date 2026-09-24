@@ -7606,5 +7606,13 @@
     "lean_name": "noOverlapFlookupDistinct",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519; HOL distinct_lists xs ys rendered as Lean distinctLists xs ys; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_empty_zip_flookup_el",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fmEmptyZipFlookupEl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against fm_empty_zip_flookup_el at pan_commonPropsScript.sml:479; HOL EL n rendered as bounded getElem as in elLoadGlobals, nested ZIP as (ys.zip zs); direct HOL-EVAL row nested_zip_lookup=T reproduced by Lean guard nestedZipLookupEl in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

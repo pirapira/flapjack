@@ -1,0 +1,6 @@
+src_main_is_call=T
+tgt_main_is_tail=T
+code_keys_nonempty=T
+src_var=T
+tgt_var=T
+src_var_eq_tgt_var=T

@@ -121,6 +121,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "ExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype exp = Const ('a word) | Var varkind varname | RStruct (exp list) | RField index exp | NStruct stcname ((fldname # exp) list) | NField fldname exp | Load shape exp | Load32 exp | LoadByte exp | Op binop (exp list) | Panop panop (exp list) | Cmp cmp exp exp | Shift shift exp exp | BaseAddr | TopAddr | BytesInWord (panLangScript.sml:53-69) vs ExpHOL {width} [NeZero width] with 16 constructors in the same order: const(BitVec width), var(VarKind)(MlS), rstruct(List ExpHOL), rfield(Nat)(ExpHOL), nstruct(MlS)(List (MlS x ExpHOL)), nfield(MlS)(ExpHOL), load(ShapeHOL)(ExpHOL), load32/loadByte(ExpHOL), op/panop(BinOp/PanOp)(List ExpHOL), cmp/shift(Cmp/Shift)(ExpHOL x ExpHOL), baseAddr/topAddr/bytesInWord; arities and field types match with varname/stcname/fldname = MlS (exact mlstring carrier) and Const over BitVec width. Production Flapjack.Exp is generic and untagged; kernel codec expToHOL/expOfHOL with total expToHOL_expOfHOL and byte-ranged ExpByteRanged side condition for expOfHOL_expToHOL; direct HOL oracle scripts/hol-probes/pan_lang_exp_probe.out reproduced by Flapjack/Test/PanLangExpHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",
@@ -4422,6 +4430,14 @@
     "lean_name": "panSemShapeOf",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "nb_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "nbOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -9068,15 +9084,31 @@
     "hol_name": "exp",
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "HolLoopExp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean source comparison: 8 exp ctors Const/Var/Lookup/Load/Op/Shift/BaseAddr/TopAddr at fixed BitVec width; HOL binop Add/Sub/And/Or/Xor and Shift Lsl/Lsr/Asr/Ror)"
   },
   {
     "hol_path": "cakeml/pancake/loopLangScript.sml",
     "hol_name": "loop_arith",
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "LoopArith",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean source comparison: 3 arith ctors and field shapes match LLongMul/LLongDiv/LDiv)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/TotalEvaluateCases.lean",
+    "lean_name": "panToCrepTotalSkipStateCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only total Skip induction-case support: uses the total measured PanSem Skip clause and total Crep HOL-state Skip clause, then carries state_rel, state-owned code_rel, excp_rel, and locals_rel to the unchanged runtime post-state. This is not a standalone HOL declaration or the full pc_compile_correct theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "all_distinct_ctxt_lookup_all_distinct",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "allDistinctCtxtLookupAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against all_distinct_ctxt_lookup_all_distinct at crep_to_loopProofScript.sml:3345; HOL ALL_DISTINCT rendered as List.Nodup, distinct_vars as crepToLoopDistinctVars (distinct_vars_def) and rt_vars as rtVars (rt_vars_def) over the finite-map context carrier CrepToLoopFiniteMapContext.vars; direct HOL-EVAL rows acd_distinct/acd_single/acd_missing=T in scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

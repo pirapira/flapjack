@@ -1309,6 +1309,111 @@ def holFiniteWordSetByteBitVec (width offset : Nat)
       ((BitVec.setWidth width (BitVec.extractLsb' 0 8 byte)) <<< offset)) |||
     BitVec.setWidth width (BitVec.extractLsb' 0 offset value)
 
+/-- Flapjack BitVec encoding lemma, with no separate HOL declaration: it gives
+    the Nat value of a zero-based low slice after widening it back to the
+    carrier width. Keeping this normalization separate makes the later
+    four-byte `word_of_bytes` proof reason about bounded Nat lanes. -/
+private theorem setWidth_extractLsb_zero_toNat (width length : Nat)
+    (value : BitVec width) (hlen : length ≤ width) :
+    (BitVec.setWidth width (BitVec.extractLsb' 0 length value)).toNat =
+      value.toNat % 2 ^ length := by
+  simp only [BitVec.toNat_setWidth, BitVec.extractLsb'_toNat,
+    Nat.shiftRight_eq_div_pow, Nat.pow_zero, Nat.div_one]
+  have hsmall : value.toNat % 2 ^ length < 2 ^ length :=
+    Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hpow : 2 ^ length ≤ 2 ^ width :=
+    Nat.pow_le_pow_right (by omega) hlen
+  rw [Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le hsmall hpow)]
+
+/-- Flapjack proof infrastructure for the BitVec encoding of HOL `set_byte`;
+    HOL has no separate Nat equation for this helper. The lower slice, inserted
+    byte, and preserved upper slice occupy disjoint bit ranges. -/
+private theorem holFiniteWordSetByteBitVec_toNat (width offset : Nat)
+    (byte value : BitVec width) (hoffset : offset + 8 ≤ width) :
+    (holFiniteWordSetByteBitVec width offset byte value).toNat =
+      (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +
+        (byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset := by
+  have hlow : value.toNat % 2 ^ offset < 2 ^ offset :=
+    Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hbyte : byte.toNat % 2 ^ 8 < 2 ^ 8 :=
+    Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hmid : (byte.toNat % 2 ^ 8) * 2 ^ offset +
+      value.toNat % 2 ^ offset < 2 ^ (offset + 8) := by
+    have hpow : 2 ^ (offset + 8) = 256 * 2 ^ offset := by
+      rw [Nat.pow_add, show (2 : Nat) ^ 8 = 256 by decide, Nat.mul_comm]
+    have hbyteLe : byte.toNat % 2 ^ 8 ≤ 255 := by omega
+    have hscaled := Nat.mul_le_mul_right (2 ^ offset) hbyteLe
+    rw [hpow]
+    omega
+  have hhigh : (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) <
+      2 ^ width := by
+    have hdiv := Nat.div_mul_le_self value.toNat (2 ^ (offset + 8))
+    have hpow : 2 ^ (offset + 8) ≤ 2 ^ width :=
+      Nat.pow_le_pow_right (by omega) hoffset
+    omega
+  have hlane : (byte.toNat % 2 ^ 8) * 2 ^ offset < 2 ^ width := by
+    have hbyteTimes : (byte.toNat % 2 ^ 8) * 2 ^ offset <
+        2 ^ (offset + 8) := by
+      have hscaled := Nat.mul_lt_mul_of_pos_right hbyte (Nat.two_pow_pos offset)
+      have hpow : 2 ^ (offset + 8) = 256 * 2 ^ offset := by
+        rw [Nat.pow_add, show (2 : Nat) ^ 8 = 256 by decide, Nat.mul_comm]
+      rw [hpow]
+      rw [show (2 : Nat) ^ 8 = 256 by decide] at hscaled
+      omega
+    exact Nat.lt_of_lt_of_le hbyteTimes
+      (Nat.pow_le_pow_right (by omega) hoffset)
+  have hLowNat :
+      (BitVec.setWidth width (BitVec.extractLsb' 0 offset value)).toNat =
+        value.toNat % 2 ^ offset :=
+    setWidth_extractLsb_zero_toNat width offset value (by omega)
+  have hByteNat :
+      (BitVec.setWidth width (BitVec.extractLsb' 0 8 byte)).toNat =
+        byte.toNat % 2 ^ 8 :=
+    setWidth_extractLsb_zero_toNat width 8 byte (by omega)
+  have hHighNat :
+      ((value >>> (offset + 8)) <<< (offset + 8)).toNat =
+        (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) := by
+    simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
+      Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow]
+    rw [Nat.mod_eq_of_lt hhigh]
+  have hLaneNat :
+      ((BitVec.setWidth width (BitVec.extractLsb' 0 8 byte)) <<< offset).toNat =
+        (byte.toNat % 2 ^ 8) * 2 ^ offset := by
+    simp only [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
+    rw [hByteNat, Nat.mod_eq_of_lt hlane]
+  have hOrLow :
+      (byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset =
+        ((byte.toNat % 2 ^ 8) * 2 ^ offset) ||| (value.toNat % 2 ^ offset) := by
+    calc
+      _ = 2 ^ offset * (byte.toNat % 2 ^ 8) + value.toNat % 2 ^ offset := by
+        rw [Nat.mul_comm]
+      _ = (2 ^ offset * (byte.toNat % 2 ^ 8)) ||| (value.toNat % 2 ^ offset) :=
+        Nat.two_pow_add_eq_or_of_lt hlow _
+      _ = _ := by rw [Nat.mul_comm]
+  have hOrAll :
+      (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +
+        ((byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset) =
+      ((value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8)) |||
+        (((byte.toNat % 2 ^ 8) * 2 ^ offset) ||| (value.toNat % 2 ^ offset)) := by
+    calc
+      _ = 2 ^ (offset + 8) * (value.toNat / 2 ^ (offset + 8)) +
+          ((byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset) := by
+        rw [Nat.mul_comm]
+      _ = (2 ^ (offset + 8) * (value.toNat / 2 ^ (offset + 8))) |||
+          ((byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset) :=
+        Nat.two_pow_add_eq_or_of_lt hmid _
+      _ = _ := by rw [Nat.mul_comm, hOrLow]
+  unfold holFiniteWordSetByteBitVec
+  rw [BitVec.toNat_or, BitVec.toNat_or, hHighNat, hLaneNat, hLowNat]
+  calc
+    _ = ((value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8)) |||
+        (((byte.toNat % 2 ^ 8) * 2 ^ offset) ||| (value.toNat % 2 ^ offset)) := by
+          rw [Nat.or_assoc]
+    _ = (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +
+        ((byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset) := hOrAll.symm
+    _ = (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +
+        (byte.toNat % 2 ^ 8) * 2 ^ offset + value.toNat % 2 ^ offset := by omega
+
 /-- The generic source `set_byte` model agrees with its BitVec slice form for
     every finite dimension, byte address, and endian mode. -/
 theorem holFiniteWordSourceSetByte_toBitVec {ι : Type u}

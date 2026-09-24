@@ -116,6 +116,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
   compile_exp_correct_load_nested_named \
   compile_exp_correct_load32_le_success \
+  compile_exp_correct_load_byte_out_of_domain \
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"

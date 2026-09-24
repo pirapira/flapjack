@@ -185,6 +185,142 @@ def codeInlGuard : Bool :=
   (codeInlSource.code "f").isSome && (codeInlTarget.code "f").isSome &&
     (codeInlEmptyTarget.code "f").isNone
 
+/-! ## Expression-evaluation invariance (`eval_code_inl`) over the canonical word -/
+
+/-- A concrete 11-field state over `RiscV.Word 64` with locals `0 := 7`. -/
+def evalBase : CrepHolState (RiscV.Word 64) Unit :=
+  { locals := fun n => if n == 0 then some (.word 7) else none
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun _ => .word 0
+    memaddrs := fun _ => true
+    shMemaddrs := fun _ => false
+    clock := 5
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 100 }
+
+/-- The empty inline finite map. -/
+def evalInlineFmap : CrepInlineFmap (RiscV.Word 64) := CrepInlineFmap.empty
+
+theorem evalCodeInl_hcode :
+    crepInlineCodeInlRel evalInlineFmap evalBase evalBase := by
+  apply crepInlineCodeInlRel_of_code
+  intro fname args prog hcode
+  simp [evalBase] at hcode
+
+example : crepHolFdom evalBase.code = crepHolFdom evalBase.code := rfl
+
+example (n : FunName) (hn : crepHolFdom evalBase.code n = true) :
+    crepHolFdom evalBase.code n = true :=
+  crepInlineCodeInlRel_fdom_subset evalInlineFmap evalBase evalBase
+    evalCodeInl_hcode n hn
+
+example :
+    (∀ n, crepHolFdom (fun _ : Nat => (none : Option Nat)) n = true →
+      crepHolFdom (fun _ : Nat => (none : Option Nat)) n = true) ↔
+    (∀ n p, (fun _ : Nat => (none : Option Nat)) n = some p →
+      ∃ q, (fun _ : Nat => (none : Option Nat)) n = some q) :=
+  crepHolFdom_subset_flookup _ _
+
+/-- `eval_code_inl`: a constant evaluates identically in the inlined code. -/
+example : evalCrepHolExp evalBase (.const (7 : RiscV.Word 64)) =
+    some (7 : RiscV.Word 64) :=
+  crepInlineEvalCodeInl evalBase evalBase (.const (7 : RiscV.Word 64))
+    (7 : RiscV.Word 64) evalInlineFmap (by simp only [evalCrepHolExp])
+    ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ rfl evalCodeInl_hcode
+
+/-- `eval_code_inl` transfers a variable lookup through equal locals. -/
+example : evalCrepHolExp evalBase (.var 0) = some (7 : RiscV.Word 64) := by
+  simp only [evalCrepHolExp, evalBase]
+  decide
+
+def evalInvarianceGuard : Bool :=
+  (evalCrepHolExp evalBase (.const (7 : RiscV.Word 64))).isSome &&
+    (evalCrepHolExp evalBase (.var 0)).isSome
+
+#guard evalInvarianceGuard
+
+/-! ## Nontrivial distinct code maps related by `inline_prog` -/
+
+/-- The inlineable callee `inc` with body `Skip`. -/
+def inlineCalleeFmap : CrepInlineFmap (RiscV.Word 64) :=
+  CrepInlineFmap.insert "inc" ([8], CrepProg.skip) CrepInlineFmap.empty
+
+/-- Source `main` body: a call to the inlineable `inc`. -/
+def inlineSrcMainBody : CrepProg (RiscV.Word 64) := .call none "inc" []
+
+/-- Source code with two nonempty entries. -/
+def inlineSrcCode : FunName → Option (List Nat × CrepProg (RiscV.Word 64)) :=
+  fun n =>
+    if n == "main" then some ([7], inlineSrcMainBody)
+    else if n == "inc" then some ([8], CrepProg.skip)
+    else none
+
+/-- Target code: each source body replaced by its `inline_prog` image. -/
+def inlineTgtCode : FunName → Option (List Nat × CrepProg (RiscV.Word 64)) :=
+  fun n =>
+    if n == "main" then
+      some ([7], crepInlineProgFmap inlineCalleeFmap inlineSrcMainBody)
+    else if n == "inc" then
+      some ([8], crepInlineProgFmap inlineCalleeFmap CrepProg.skip)
+    else none
+
+/-- Source state: locals `0 := 7`, nonempty source code. -/
+def inlineSrcState : CrepHolState (RiscV.Word 64) Unit :=
+  { evalBase with code := inlineSrcCode }
+
+/-- Target state: same locals and `state_rel_code` fields, different code. -/
+def inlineTgtState : CrepHolState (RiscV.Word 64) Unit :=
+  { evalBase with code := inlineTgtCode }
+
+theorem inlineStates_state_rel_code :
+    crepInlineStateRelCode inlineSrcState inlineTgtState :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+theorem inlineStates_locals_strong :
+    crepInlineLocalsStrongRel inlineSrcState inlineTgtState := rfl
+
+theorem inlineCodeInlRel :
+    crepInlineCodeInlRel inlineCalleeFmap inlineSrcState inlineTgtState := by
+  apply crepInlineCodeInlRel_of_code
+  intro fname args prog hcode
+  cases hmain : fname == "main" with
+  | true =>
+      simp [beq_iff_eq] at hmain
+      subst hmain
+      simp [inlineSrcState, inlineSrcCode] at hcode
+      obtain ⟨rfl, rfl⟩ := hcode
+      simp [inlineTgtState, inlineTgtCode]
+  | false =>
+      cases hinc : fname == "inc" with
+      | true =>
+          simp [beq_iff_eq] at hinc
+          subst hinc
+          simp [inlineSrcState, inlineSrcCode, hmain] at hcode
+          obtain ⟨rfl, rfl⟩ := hcode
+          simp [inlineTgtState, inlineTgtCode, hmain]
+      | false =>
+          simp [inlineSrcState, inlineSrcCode, hmain, hinc] at hcode
+
+theorem inlineSrcVarEval :
+    evalCrepHolExp inlineSrcState (.var 0) = some (7 : RiscV.Word 64) := by
+  simp only [evalCrepHolExp, inlineSrcState, evalBase]
+  decide
+
+/-- `eval_code_inl` on a distinct nonempty code pair: the target still returns 7. -/
+example : evalCrepHolExp inlineTgtState (.var 0) = some (7 : RiscV.Word 64) :=
+  crepInlineEvalCodeInl inlineSrcState inlineTgtState (.var 0)
+    (7 : RiscV.Word 64) inlineCalleeFmap inlineSrcVarEval
+    inlineStates_state_rel_code inlineStates_locals_strong inlineCodeInlRel
+
+def inlineEvalTransferGuard : Bool :=
+  (inlineSrcState.code "main").isSome && (inlineTgtState.code "main").isSome &&
+    (evalCrepHolExp inlineTgtState (.var 0) == some (7 : RiscV.Word 64))
+
+#guard inlineEvalTransferGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -202,6 +338,20 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline finite-map code_inl_rel relation"
       pure false
-  pure (relOk && codeInlOk)
+  let evalOk ←
+    if evalInvarianceGuard then
+      IO.println "PASS crep_inline eval_code_inl expression invariance"
+      pure true
+    else
+      IO.println "FAIL crep_inline eval_code_inl expression invariance"
+      pure false
+  let inlineEvalOk ←
+    if inlineEvalTransferGuard then
+      IO.println "PASS crep_inline eval_code_inl nontrivial distinct-code transfer"
+      pure true
+    else
+      IO.println "FAIL crep_inline eval_code_inl nontrivial distinct-code transfer"
+      pure false
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk)
 
 end Flapjack.Test.CrepInlineRelParity

@@ -132,6 +132,10 @@ def sourceCallMiddlePairCode : PanSemCodeMap Word64 :=
   [("pair", ([ ("p", .comb [.one, .one]) ], .return (.var .local "p"),
     .comb [.one, .one]))]
 
+def sourceNestedPairCode : PanSemCodeMap Word64 :=
+  [("nestedPair", ([ ("p", .comb [.comb [.one], .one]) ],
+    .return (.var .local "p"), .comb [.comb [.one], .one]))]
+
 def sourceRecursiveCode : PanSemCodeMap Word64 :=
   [("f", ([], .decCall "nested" .one "g" []
       (.return (.var .local "nested")), .one)),
@@ -206,6 +210,22 @@ def evaluateSourceCallConstructedMiddlePairField :=
       [.rField 1 (.rStruct [.const (BitVec.ofNat 64 3),
         .rStruct [.const (BitVec.ofNat 64 7), .const (BitVec.ofNat 64 8)],
         .const (BitVec.ofNat 64 10)])] : Prog Word64)
+
+def evaluateSourceCallStructFieldRField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceCallMiddlePairCode)
+    (.call none "pair"
+      [.rStruct [.rField 0 (.rStruct [.const (BitVec.ofNat 64 7),
+        .const (BitVec.ofNat 64 9)]), .const (BitVec.ofNat 64 8)]] : Prog Word64)
+
+def evaluateSourceCallNestedStructFieldRField :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceNestedPairCode)
+    (.call none "nestedPair"
+      [.rStruct [.rStruct [.rField 0 (.rStruct [.const (BitVec.ofNat 64 7),
+        .const (BitVec.ofNat 64 9)])], .const (BitVec.ofNat 64 8)]] : Prog Word64)
 
 def evaluateSourceCallAssigned :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -352,6 +372,19 @@ def observeSourceCallConstructedMiddlePairField : Bool :=
       first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
   | _ => false
 
+def observeSourceCallStructFieldRField : Bool :=
+  match evaluateSourceCallStructFieldRField with
+  | some (.control (.returned _ _ _ _ [.rStruct [.word first, .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
+def observeSourceCallNestedStructFieldRField : Bool :=
+  match evaluateSourceCallNestedStructFieldRField with
+  | some (.control (.returned _ _ _ _
+      [.rStruct [.rStruct [.word first], .word second]]), 9) =>
+      first == BitVec.ofNat 64 7 && second == BitVec.ofNat 64 8
+  | _ => false
+
 def observeSourceCallAssigned : Bool :=
   match evaluateSourceCallAssigned with
   | some (.control (.normal locals _globals _memory _ffi), 9) =>
@@ -436,6 +469,8 @@ def observeSourceDecCallBadReturnShape : Bool :=
 #guard observeSourceCallRaisesException
 #guard observeSourceCallHandlesException
 #guard observeSourceCallHandlesPairException
+#guard observeSourceCallStructFieldRField
+#guard observeSourceCallNestedStructFieldRField
 #guard observeSourceCodeDecCall
 #guard observeSourceNestedCodeCall
 #guard observeSourceNestedOrdinaryCall
@@ -777,6 +812,12 @@ def runChecks : IO Bool := do
   if observeSourceCallConstructedMiddlePairField then
     IO.println "PASS state-owned Call selects a nested pair from a constructed RStruct like original HOL"
   else IO.println "FAIL state-owned Call selects a nested pair from a constructed RStruct like original HOL"
+  if observeSourceCallStructFieldRField then
+    IO.println "PASS state-owned Call constructs a record with an RField field like original HOL"
+  else IO.println "FAIL state-owned Call constructs a record with an RField field like original HOL"
+  if observeSourceCallNestedStructFieldRField then
+    IO.println "PASS state-owned Call recursively compiles nested records with an RField field like original HOL"
+  else IO.println "FAIL state-owned Call recursively compiles nested records with an RField field like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else

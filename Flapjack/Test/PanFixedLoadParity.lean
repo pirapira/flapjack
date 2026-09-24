@@ -127,6 +127,32 @@ def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
     finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
 
+/-! A 17-bit source word has two full byte slots. HOL `word_of_bytes` applies
+    four recursive `set_byte` calls, so later byte addresses wrap onto slots
+    0 and 1 and the outer first two bytes take precedence. -/
+@[instance_reducible] def dimension17 : HolFiniteDimension (Fin 17) := inferInstance
+def finiteWord17 (value : Nat) : Fin 17 → Bool :=
+  bitVecToHolWord dimension17 (BitVec.ofNat 17 value)
+def finiteWord17WordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 false).wordOfBytes false
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
+def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 true).wordOfBytes true
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
+def finiteWord17SetByteLittle : Fin 17 → Bool :=
+  holFiniteWordSourceSetByte dimension17 (finiteWord17 1) (finiteWord17 0xA5)
+    (finiteWord17 0x1ABCD) false
+
+/-! HOL natural MOD has x MOD 0 = x. A width-5 word has no full byte slots,
+    so this checks the imported byte_index zero-divisor branch directly. -/
+@[instance_reducible] def dimension5 : HolFiniteDimension (Fin 5) := inferInstance
+def finiteWord5 (value : Nat) : Fin 5 → Bool :=
+  bitVecToHolWord dimension5 (BitVec.ofNat 5 value)
+def finiteWord5LittleGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) false
+def finiteWord5BigGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) true
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
@@ -150,5 +176,13 @@ def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   some (BitVec.ofNat 24 0x11)
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
+#guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
+  BitVec.ofNat 17 0x2211
+#guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==
+  BitVec.ofNat 17 0x1122
+#guard holWordToBitVec dimension17 finiteWord17SetByteLittle ==
+  BitVec.ofNat 17 0x1A5CD
+#guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
+#guard holWordToBitVec dimension5 finiteWord5BigGetByte == BitVec.ofNat 5 31
 
 end Flapjack.Test.PanFixedLoadParity

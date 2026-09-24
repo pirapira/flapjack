@@ -217,6 +217,11 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   flookup_f inline_arg_call "$cake_dir/pancake/crep_inlineScript.sml" \
   "$cake_dir/pancake"
+run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
+  eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
+run_probe crep_inline_eval_probeScript.sml crep_inline_eval_probe.out \
+  src_main_is_call src_var_eq_tgt_var "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
@@ -836,3 +841,6 @@ run_probe pan_itree_h_prog_call_probeScript.sml \
   pan_itree_h_prog_call_probe.out \
   argument_failure lookup_failure \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe word_byte_memory_probeScript.sml word_byte_memory_probe.out \
+  byte_index_definition set_byte_width17_big_nonzero_numeric \
+  "$hol_dir/src/n-bit/byteScript.sml" "$hol_dir/src/n-bit"

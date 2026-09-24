@@ -1,0 +1,8 @@
+distinct_true=¬(1 = 3 ∨ 1 = 4) ∧ ¬(2 = 3 ∨ 2 = 4)
+distinct_false_right_hit=F
+distinct_false_middle_hit=F
+distinct_empty_left=T
+distinct_empty_right=T
+distinct_eq_every_mem=T
+distinct_eq_disjoint=¬(1 = 4 ∨ 1 = 5) ∧ ¬(2 = 4 ∨ 2 = 5) ∧ ¬(3 = 4 ∨ 3 = 5) ⇔
+DISJOINT (set [1; 2; 3]) (set [4; 5])

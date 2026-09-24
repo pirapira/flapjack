@@ -4377,14 +4377,6 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "code_rel_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "codeRel",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "codeRelImp",

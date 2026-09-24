@@ -1983,16 +1983,19 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       vmax := context.vmax }
     program
 
-/-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
-    It quantifies over every source code entry, requires localisation and the
-    exact parameter/return-shape lookup in `ctxt.funcs`, derives parameter
-    slots from `GENLIST I (size_of_shape (Comb shs))`, constructs the target
-    context with `ctxt_fc`, and relates that entry to its compiled body.
+/-! Flapjack's code relation, shaped after HOL `code_rel_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`). It quantifies over
+    every source code entry, requires localisation and the exact
+    parameter/return-shape lookup in `ctxt.funcs`, derives parameter slots
+    from `GENLIST I (size_of_shape (Comb shs))`, and constructs the target
+    context with `ctxt_fc`.
 
-    Its compiler conclusion routes to `compileProgHOL`, whose context is the
-    original finite-map record. The `compile_def` tag is on the production
-    wrapper `compileProgRiscV`, not on this helper. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+    This declaration is intentionally untagged: its compiler conclusion uses
+    `compileCodeRelProg`/`compileProgHOL`, while the tagged `compile_def` port
+    is the RISC-V specialization `compileProgRiscV`. The existing production
+    bridge proves equality only for declaration-derived contexts, not for
+    every context quantified here. The general HOL compiler equality remains
+    open, so this relation is not claimed as an exact HOL port. -/
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)

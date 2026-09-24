@@ -385,6 +385,144 @@ theorem flattenApp_skip (tail : Bool) (sectionId next : Nat) (conts breaks : Lis
         sectionId next conts breaks := by
   simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
 
+theorem flattenApp_seq (tail : Bool) (first second : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (ihFirst : ∀ n, appListFlatten (flattenApp ops zero false first sectionId n conts breaks)
+      = flatten ops zero false first sectionId n conts breaks)
+    (ihSecond : ∀ n, appListFlatten (flattenApp ops zero false second sectionId n conts breaks)
+      = flatten ops zero false second sectionId n conts breaks) :
+    appListFlatten (flattenApp ops zero tail (.seq first second) sectionId next conts breaks)
+      = flatten ops zero tail (.seq first second) sectionId next conts breaks := by
+  simp only [flattenApp, flatten]
+  cases hA : flattenApp ops zero false first sectionId next conts breaks with
+  | mk xs rA =>
+    cases rA with
+    | mk nr1 nx =>
+      cases hB : flattenApp ops zero false second sectionId nx conts breaks with
+      | mk ys rB =>
+        cases rB with
+        | mk nr2 ny =>
+          cases hF : flatten ops zero false first sectionId next conts breaks with
+          | mk xsf rF =>
+            cases rF with
+            | mk nrf nxf =>
+              cases hG : flatten ops zero false second sectionId nxf conts breaks with
+              | mk ysf rG =>
+                cases rG with
+                | mk nrg nyf =>
+                  have h1 := ihFirst next
+                  rw [hA, hF] at h1
+                  simp only [appListFlatten] at h1
+                  have hxs : appListAppend xs = xsf := congrArg Prod.fst h1
+                  have hnr1 : nr1 = nrf := congrArg (fun p => p.2.1) h1
+                  have hnx : nx = nxf := congrArg (fun p => p.2.2) h1
+                  have h2 := ihSecond nx
+                  rw [← hnx] at hG
+                  rw [hB, hG] at h2
+                  simp only [appListFlatten] at h2
+                  have hys : appListAppend ys = ysf := congrArg Prod.fst h2
+                  have hnr2 : nr2 = nrg := congrArg (fun p => p.2.1) h2
+                  have hny : ny = nyf := congrArg (fun p => p.2.2) h2
+                  rw [hnr1, hnr2, hny]
+                  by_cases ht : tail = true
+                  · simp only [if_pos ht, appListFlatten, appListAppend, appendAux]
+                    congr 1
+                    rw [appendAux_thm]
+                    simp only [appListAppend] at hxs hys ⊢
+                    rw [hxs, hys, List.append_assoc]
+                  · simp only [if_neg ht, appListFlatten, appListAppend, appendAux]
+                    congr 1
+                    rw [appendAux_thm]
+                    simp only [appListAppend] at hxs hys ⊢
+                    rw [hxs, hys]
+
+theorem flattenApp_loop (tail : Bool) (body : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (ihBody : ∀ (n : Nat) (c b : List Nat),
+      appListFlatten (flattenApp ops zero false body sectionId n c b)
+        = flatten ops zero false body sectionId n c b) :
+    appListFlatten (flattenApp ops zero tail (.loop body) sectionId next conts breaks)
+      = flatten ops zero tail (.loop body) sectionId next conts breaks := by
+  simp only [flattenApp, flatten]
+  cases hA : flattenApp ops zero false body sectionId (next + 2) (next :: conts) ((next + 1) :: breaks) with
+  | mk xs rA =>
+    cases rA with
+    | mk nr1 nx =>
+      cases hF : flatten ops zero false body sectionId (next + 2) (next :: conts) ((next + 1) :: breaks) with
+      | mk xsf rF =>
+        cases rF with
+        | mk nrf nxf =>
+          have h1 := ihBody (next + 2) (next :: conts) ((next + 1) :: breaks)
+          rw [hA, hF] at h1
+          simp only [appListFlatten] at h1
+          injection h1 with hxs hrest
+          injection hrest with _hnr hnx
+          simp only [appListFlatten, appListAppend, appendAux]
+          rw [appendAux_thm]
+          simp only [appListAppend] at hxs
+          rw [hxs, hnx, List.append_nil, List.append_assoc]
+
+theorem flattenApp_call_some (tail : Bool)
+    (returnProgram : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (linkRegister returnSection returnLabel : Nat) (target : Sum Nat Nat)
+    (handler : Option (Prog Inst Cmp RegImm Binop Memop Addr MlString × Nat × Nat))
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (ihReturn : ∀ (n : Nat),
+      appListFlatten (flattenApp ops zero false returnProgram sectionId n conts breaks)
+        = flatten ops zero false returnProgram sectionId n conts breaks)
+    (ihHandler : ∀ (hp : Prog Inst Cmp RegImm Binop Memop Addr MlString) (_hs _hl n : Nat),
+      appListFlatten (flattenApp ops zero false hp sectionId n conts breaks)
+        = flatten ops zero false hp sectionId n conts breaks) :
+    appListFlatten (flattenApp ops zero tail
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target handler)
+        sectionId next conts breaks)
+      = flatten ops zero tail
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target handler)
+        sectionId next conts breaks := by
+  simp only [flattenApp, flatten]
+  cases hA : flattenApp ops zero false returnProgram sectionId next conts breaks with
+  | mk xs rA =>
+    cases rA with
+    | mk nr1 nx =>
+      cases hF : flatten ops zero false returnProgram sectionId next conts breaks with
+      | mk xsf rF =>
+        cases rF with
+        | mk nrf nxf =>
+          have h1 := ihReturn next
+          rw [hA, hF] at h1
+          simp only [appListFlatten] at h1
+          injection h1 with hxs hrest
+          injection hrest with hnr1 hnx
+          rw [hnx]
+          cases handler with
+          | none =>
+            simp only [appListFlatten, appListAppend, appendAux]
+            simp only [appListAppend] at hxs
+            rw [hxs, hnr1]
+          | some triple =>
+            obtain ⟨handlerProgram, handlerSection, handlerLabel⟩ := triple
+            simp only []
+            cases hB : flattenApp ops zero false handlerProgram sectionId nxf conts breaks with
+            | mk ys rB =>
+              cases rB with
+              | mk nr2 ny =>
+                cases hG : flatten ops zero false handlerProgram sectionId nxf conts breaks with
+                | mk ysf rG =>
+                  cases rG with
+                  | mk nrg nyf =>
+                    have h2 := ihHandler handlerProgram handlerSection handlerLabel nxf
+                    rw [hB, hG] at h2
+                    simp only [appListFlatten] at h2
+                    injection h2 with hys hrest2
+                    injection hrest2 with hnr2 hny
+                    simp only []
+                    simp only [appListFlatten, appListAppend, appendAux]
+                    rw [appendAux_thm]
+                    simp only [appListAppend] at hxs hys
+                    rw [hxs]
+                    rw [appendAux_thm]
+                    rw [hys, hnr1, hnr2, hny]
+                    simp only [List.append_nil, List.append_assoc]
 end FlattenAppBridge
 
 

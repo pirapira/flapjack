@@ -2071,25 +2071,19 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceFull {ι : Type} {σ : Type}
       (List Nat × CrepProg (ι → Bool)))
     (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
     (h : evalCrepHolFiniteWordSourceExp dimension state expression ≠ none) :
-    evalCrepHolFiniteWordSourceExp dimension
+    (evalCrepHolFiniteWordSourceExp dimension
       (crepArithHolFiniteDimensionMapCode f state)
       (crepSimpExp
         (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        expression) =
-    evalCrepHolFiniteWordSourceExp dimension state expression := by
+        expression)).map PanWordLab.word =
+    (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word := by
   have hmap : (evalCrepHolFiniteWordSourceExp dimension state expression).map
       PanWordLab.word ≠ none := by
     cases heval : evalCrepHolFiniteWordSourceExp dimension state expression <;>
       simp_all
-  have hprojected := crepSimpExpCorrect1HolFiniteWordSourceEval
+  exact crepSimpExpCorrect1HolFiniteWordSourceEval
     dimension f state expression hmap
-  cases hleft : evalCrepHolFiniteWordSourceExp dimension
-      (crepArithHolFiniteDimensionMapCode f state)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        expression) <;>
-    cases hright : evalCrepHolFiniteWordSourceExp dimension state expression <;>
-    simp_all
 
 /-! Canonical `Fin width` all-width instance of the source-runtime result.
     Unlike the arbitrary `HolFiniteDimension` theorem above, this fixes the

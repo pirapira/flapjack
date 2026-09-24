@@ -6494,5 +6494,45 @@
     "lean_name": "compileExpHOL_const_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rStruct_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RStruct constructor case supporting the HOL-shaped compile_exp_val_rel induction. It derives target evaluation, shape-size equality, source shape, and well-formedness from per-field induction hypotheses; it is not a standalone HOL declaration or complete expression theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_map_snd_eq_map_compileExp_shape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only list-shape projection helper for compileExpHOL results; it introduces no HOL theorem correspondence."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileField_shape_eq_panValueField",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only helper showing compileField preserves the selected PanValue field shape under an in-range index; no separate HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rField_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full four-conclusion RField constructor step for the HOL-shaped expression induction. It derives target evaluation, shape-size equality, source shape, and well-formedness from the inner full IH and source field evaluation; it is not tagged as a standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_load32_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full four-conclusion Load32 constructor step for localized Call arguments. It consumes the full address IH and RISC-V state relation to prove target evaluation, shape-size, source shape, and well-formedness; it is not tagged as a standalone HOL theorem."
   }
 ]

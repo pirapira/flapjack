@@ -343,4 +343,42 @@ example :
           some (PanWordLab.word (7 : Nat)) &&
         (FLOOKUP (clearCrepRuntimeLocals directUpdateState).toHolState.locals 3).isNone
 
+/-! ## Call-path destination update
+
+The executable `crepRuntimeCall` returned-with-destinations branch now runs the
+local assignment through `setCrepRuntimeLocalsExisting`, whose fold routes the
+tagged HOL `set_var` (`setCrepRuntimeLocal`) and whose failure checks are
+unchanged. HOL `crepSem$upd_locals` (`|++`, `FUPDATE_LIST`) is pinned by
+`crep_local_updates_probe.out` (`upd_locals_replace=T`) and
+`crep_locals_wordlab_probe.out` (`locals_upd_locals_cells`). -/
+
+/-- State with destination locals 1 and 2 already present, as the Call path
+    requires (HOL assigns onto existing word variables). -/
+def callDestState : CrepRuntimeState Nat Unit :=
+  { directUpdateState with
+    locals := fun name =>
+      if name == 1 then some (.word 0) else if name == 2 then some (.word 0)
+      else directUpdateState.locals name }
+
+/-- The production Call-destination helper updates the listed locals and keeps
+    the others, exactly like HOL `upd_locals`/`FUPDATE_LIST`. -/
+example :
+    (setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat), 6] callDestState).map
+        (fun state => (FLOOKUP state.locals 1, FLOOKUP state.locals 2, FLOOKUP state.locals 3, FLOOKUP state.locals 9)) =
+      some (some (.word 5), some (.word 6), some (.word 7), none) := by
+  rfl
+
+/-- The Call-destination helper keeps HOL's failure behavior: a length mismatch
+    and a missing destination local both return `none`. -/
+example :
+    setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat)] callDestState = none ∧
+      setCrepRuntimeLocalsExisting [9] [(5 : Nat)] callDestState = none := by
+  constructor <;> rfl
+
+#guard (setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat), 6] callDestState).map
+          (fun state => (FLOOKUP state.locals 1, FLOOKUP state.locals 2, FLOOKUP state.locals 3)) ==
+        some (some (.word 5), some (.word 6), some (.word 7)) &&
+      (setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat)] callDestState).isNone &&
+      (setCrepRuntimeLocalsExisting [9] [(5 : Nat)] callDestState).isNone
+
 end Flapjack.Test.CrepGlobalShapeParity

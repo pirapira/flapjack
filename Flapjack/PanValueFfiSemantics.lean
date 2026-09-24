@@ -795,8 +795,9 @@ mutual
                     some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                       argumentSteps + steps)
                 | .returned retLocals calleeGlobals calleeMemory calleeFfi values =>
-                    if panValueReturnValid structs contracts function values &&
-                        panValueValuesWithinLimit structs values then
+                    -- HOL's Call checks only `shape_of retv <> return_sh`; the
+                    -- payload-size limit is enforced by the callee `Return`.
+                    if panValueReturnValid structs contracts function values then
                       match info with
                       | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory calleeFfi values,
                           argumentSteps + steps)

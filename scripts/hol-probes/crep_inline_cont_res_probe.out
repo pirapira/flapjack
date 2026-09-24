@@ -1,0 +1,7 @@
+cont_res_none=T
+cont_res_break=T
+cont_res_continue=T
+cont_res_error=T
+cont_res_normal=T
+cont_res_timeout=T
+cont_res_done=0

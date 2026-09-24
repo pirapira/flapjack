@@ -312,13 +312,13 @@ theorem evalPanValueFfiClockCall_returned_no_destination
       baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
       body (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi values), finalClock))
-    (hwithin : panValueValuesWithinLimit structs values = true) :
+    (_hwithin : panValueValuesWithinLimit structs values = true) :
     evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
       none function arguments (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
         finalClock) := by
-  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody, hwithin]
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody]
 
 /-! An uncaught exception from a successful nonzero-clock call preserves the
 callee's state and clock while clearing the callee locals at the caller
@@ -903,7 +903,7 @@ theorem evalPanValueFfiClockCall_returned_destination
       baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
       body (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi values), finalClock))
-    (hwithin : panValueValuesWithinLimit structs values = true)
+    (_hwithin : panValueValuesWithinLimit structs values = true)
     (hassign : assignPanValueCallResult locals finalGlobals destination values
       (structs := structs) = some (assignedLocals, assignedGlobals)) :
     evalPanValueFfiClockCall context primitive handler structs functions
@@ -911,7 +911,7 @@ theorem evalPanValueFfiClockCall_returned_destination
       (some (destination, none)) function arguments
       (memoryAccess := memoryAccess) (contracts := none) =
       some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi), finalClock) := by
-  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody, hwithin,
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hclock, hbody,
     hassign]
 
 /-! One true loop iteration consumes one clock unit before evaluating the body
@@ -1338,7 +1338,7 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                     simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                     obtain ⟨_, hc⟩ := hrun; omega
                   | returned l g m f vs =>
-                    by_cases hret : (panValueReturnValid structs contracts function vs && panValueValuesWithinLimit structs vs) = true
+                    by_cases hret : panValueReturnValid structs contracts function vs = true
                     · simp only [hret, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
                       cases info with
                       | none =>
@@ -1353,7 +1353,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                           simp only [hassign, Option.bind_eq_bind, Option.bind_some] at hrun
                           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                           obtain ⟨_, hc⟩ := hrun; omega
-                    · simp only [hret, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                    · simp only [hret, if_false, Option.pure_def, Option.some.injEq,
+                        Prod.mk.injEq] at hrun
+                      obtain ⟨_, hc⟩ := hrun; omega
                   | raised l g m f ex v =>
                     by_cases hexc : (panValueExceptionValid structs contracts ex v && panValuePayloadWithinLimit structs v) = true
                     · simp only [hexc, if_true, Option.bind_eq_bind, Option.bind_some] at hrun

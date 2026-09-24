@@ -2306,7 +2306,7 @@ theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_code_imp_code_rel"]
 theorem mkCtxtCodeImpCodeRel
     (declarations : List (Decl (BitVec width)))
-    (hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
     (hlocalised : ∀ entry ∈ functionEntries declarations,
       localisedProg entry.2.2.1) :
     codeRel
@@ -2332,7 +2332,7 @@ theorem mkCtxtCodeImpCodeRel
   · simp only []
     rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup]
     rw [alookupCompileToCrepCodeGeneral declarations function vshs prog rshape
-      hdistinct hsource]
+      hsource]
     rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
     rfl
 

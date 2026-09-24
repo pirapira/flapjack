@@ -6989,7 +6989,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "fixCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width: keep the result and clamp the returned clock to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation; kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width; the result component is RESULT-POLYMORPHIC in beta exactly as HOL leaves `res` unconstrained, and the returned clock is clamped to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation (result fixed to CrepRuntimeResult); kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock at beta := CrepRuntimeResult; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -8174,5 +8174,29 @@
     "lean_name": "lookupCrepHolCodeW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "distinct_funcs_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopDistinctFuncs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact statement comparison with distinct_funcs_def crep_to_loopProofScript.sml:60-65 over FiniteMap FunName (Nat x Nat); no word-typed field, so width-independent; direct HOL-EVAL body rows distinct_funcs_sep=T, distinct_funcs_collision=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean; untagged crepToLoopDistinctFuncs_iff keeps the iff form)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "distinct_vars_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopDistinctVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against distinct_vars_def at crep_to_loopProofScript.sml:95-99: num |-> num finite map, two entries with equal slots must share the key; rendered as FiniteMap Nat Nat with no word-typed field, so word-length independent and no width-indexing needed; untagged crepToLoopDistinctVars_iff keeps the iff form; direct HOL oracle rows distinct_vars_sep=T/distinct_vars_collision=F/distinct_vars_absent=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "ctxt_max_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopCtxtMax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact port of crep_to_loop ctxt_max_def crep_to_loopProofScript.sml:90-93: ctxt_max (n:num) fm <=> (!v m. FLOOKUP fm v = SOME m ==> m <= n) over the num |-> num finite map; no word-typed field, so word-length independent (no width-indexing needed); direct HOL oracle crep_to_loop_ctxt_max_probe.out rows ctxt_max_within=T/ctxt_max_absent=T/ctxt_max_exceeds=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

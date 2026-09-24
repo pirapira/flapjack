@@ -412,6 +412,83 @@ def memRelGuard : Bool :=
 
 #guard memRelGuard
 
+/-- Concrete function table used to reproduce the `distinct_funcs_*` oracle
+    rows: `«a» ↦ (1,10)`, `«b» ↦ (2,20)`, `«c» ↦ (1,30)`. -/
+def distinctFuncsFm : FiniteMap String (Nat × Nat) :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap String (Nat × Nat)) ("a", (1, 10)))
+      ("b", (2, 20)))
+    ("c", (1, 30))
+
+/-- `distinct_funcs_sep=T`: two entries with different labels satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctFuncs distinctFuncsFm) :
+    (1 : Nat) = 2 → (("a" : String) = "b") :=
+  h "a" "b" 1 2 10 20
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+
+/-- `distinct_funcs_collision=F`: two distinct keys with the same label violate
+    the relation, so it does not hold for a colliding table. -/
+example : ¬ crepToLoopDistinctFuncs distinctFuncsFm := by
+  intro h
+  have hkey : ("a" : String) = "c" :=
+    h "a" "c" 1 1 10 30
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
+/-- Concrete variable map used to reproduce the `distinct_vars_*` oracle rows:
+    `1 ↦ 10`, `2 ↦ 20`, `3 ↦ 10`. -/
+def distinctVarsFm : FiniteMap Nat Nat :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10))
+      (2, 20))
+    (3, 10)
+
+/-- `distinct_vars_sep=T`: two entries with different slots satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctVars distinctVarsFm) :
+    (10 : Nat) = 20 → ((1 : Nat) = 2) :=
+  h 1 2 10 20
+    (by simp [distinctVarsFm, FLOOKUP_update])
+    (by simp [distinctVarsFm, FLOOKUP_update])
+
+/-- `distinct_vars_collision=F`: two distinct keys sharing a slot violate the
+    relation. -/
+example : ¬ crepToLoopDistinctVars distinctVarsFm := by
+  intro h
+  have hkey : (1 : Nat) = 3 :=
+    h 1 3 10 10
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
+/-- HOL `ctxt_max_def` (`crep_to_loopProofScript.sml:90-93`) on the concrete
+    table `1 ↦ 10`, matching oracle rows `ctxt_max_within=T` and
+    `ctxt_max_absent=T` (absent keys are vacuous). -/
+def ctxtMaxFm : FiniteMap Nat Nat :=
+  FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)
+
+example : crepToLoopCtxtMax 20 ctxtMaxFm := by
+  intro v m h
+  rw [ctxtMaxFm, FLOOKUP_update] at h
+  split at h
+  · simp_all
+    omega
+  · simp at h
+
+/-- Oracle row `ctxt_max_exceeds=F`: the bound `5` does not admit the stored
+    value `10`. -/
+example : ¬ crepToLoopCtxtMax 5 ctxtMaxFm := by
+  intro h
+  have hle := h 1 10 (by simp [ctxtMaxFm, FLOOKUP_update])
+  omega
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

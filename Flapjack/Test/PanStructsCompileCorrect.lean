@@ -100,13 +100,29 @@ example :
     structCompileExp, structCompileShape, structCompileShapeWF,
     structCompileShapeWF.structCompileShapesWF]
 
-/-! Paired LoadByte constructor regression for the direct HOL-EVAL row
-`compile_exp_correct_load_byte`. It calls the actual correctness case. -/
+/-! Paired LoadByte constructor regressions for the direct HOL-EVAL success
+row `compile_exp_correct_load_byte` and the out-of-domain failure row in
+`pan_structs_compile_exp_correct_probe.out`. -/
 def loadByteCompileCaseRuntime : PanSemState Word64 (FfiState Unit) :=
   { finiteMapRuntime with
     memory := fun address =>
       if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 19))
-      else none }
+      else none
+    memaddrs := fun address => address == BitVec.ofNat 64 0 }
+
+def loadByteCompileCaseMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    loadByteCompileCaseRuntime.memaddrs
+    loadByteCompileCaseRuntime.sharedMemaddrs loadByteCompileCaseRuntime.be
+
+def loadByteCompileCaseOutOfDomainRuntime : PanSemState Word64 (FfiState Unit) :=
+  { loadByteCompileCaseRuntime with memaddrs := fun _ => false }
+
+def loadByteCompileCaseOutOfDomainMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    loadByteCompileCaseOutOfDomainRuntime.memaddrs
+    loadByteCompileCaseOutOfDomainRuntime.sharedMemaddrs
+    loadByteCompileCaseOutOfDomainRuntime.be
 
 def loadByteCompileCaseExpression : Exp Word64 :=
   .loadByte (.const (BitVec.ofNat 64 0))
@@ -119,12 +135,14 @@ example :
       loadByteCompileCaseExpression = panSemShapeOf loadByteCompileCaseValue ∧
     panStructValueFieldsOkBool loadByteCompileCaseRuntime.structs
       loadByteCompileCaseValue = true ∧
-    evalPanValueExp loadByteCompileCaseRuntime.structs
+    evalPanValueExpFull loadByteCompileCaseRuntime.structs
       loadByteCompileCaseRuntime.locals loadByteCompileCaseRuntime.globals
       loadByteCompileCaseRuntime.memory loadByteCompileCaseRuntime.baseAddress
       loadByteCompileCaseRuntime.topAddress (BitVec.ofNat 64 1)
-      loadByteCompileCaseExpression = some loadByteCompileCaseValue ∧
-    evalPanValueExp
+      loadByteCompileCaseExpression
+      (memoryAccess := some loadByteCompileCaseMemoryAccess) =
+        some loadByteCompileCaseValue ∧
+    evalPanValueExpFull
       (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).structs
       (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).locals
       (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).globals
@@ -132,15 +150,22 @@ example :
       (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).baseAddress
       (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).topAddress
       (BitVec.ofNat 64 1)
-      (structCompileExp emptyStructCompileContext loadByteCompileCaseExpression) =
+      (structCompileExp emptyStructCompileContext loadByteCompileCaseExpression)
+      (memoryAccess := some loadByteCompileCaseMemoryAccess) =
         some (panStructConvertValue loadByteCompileCaseValue) := by
-  have hload : evalPanValueExp loadByteCompileCaseRuntime.structs
+  have hload : evalPanValueExpFull loadByteCompileCaseRuntime.structs
       loadByteCompileCaseRuntime.locals loadByteCompileCaseRuntime.globals
       loadByteCompileCaseRuntime.memory loadByteCompileCaseRuntime.baseAddress
       loadByteCompileCaseRuntime.topAddress (BitVec.ofNat 64 1)
-      loadByteCompileCaseExpression = some loadByteCompileCaseValue := by
+      loadByteCompileCaseExpression
+      (memoryAccess := some loadByteCompileCaseMemoryAccess) =
+        some loadByteCompileCaseValue := by
     simp [loadByteCompileCaseRuntime, loadByteCompileCaseExpression,
-      loadByteCompileCaseValue, finiteMapRuntime, evalPanValueExp]
+      loadByteCompileCaseMemoryAccess, loadByteCompileCaseValue,
+      finiteMapRuntime, evalPanValueExpFull, panValueMemoryAccessOfModel,
+      panValueWordMemory, panModelReadByte, RiscV.panRiscVMemoryModel,
+      RiscV.panRiscVByteAlign, RiscV.panRiscVByteIndex,
+      RiscV.panRiscVGetByte]
   have hlocalsFields : panStructEveryValueFieldsOkBool
       loadByteCompileCaseRuntime.structs loadByteCompileCaseRuntime.locals := by
     intro name value hvalue
@@ -162,15 +187,16 @@ example :
     simp [emptyStructCompileContext, loadByteCompileCaseRuntime,
       finiteMapRuntime, lookupInfo]
   have haddressIH : ∀ addressValue,
-      evalPanValueExp loadByteCompileCaseRuntime.structs
+      evalPanValueExpFull loadByteCompileCaseRuntime.structs
         loadByteCompileCaseRuntime.locals loadByteCompileCaseRuntime.globals
         loadByteCompileCaseRuntime.memory loadByteCompileCaseRuntime.baseAddress
         loadByteCompileCaseRuntime.topAddress (BitVec.ofNat 64 1)
-        (.const (BitVec.ofNat 64 0)) = some addressValue →
+        (.const (BitVec.ofNat 64 0))
+        (memoryAccess := some loadByteCompileCaseMemoryAccess) = some addressValue →
       structOldExpShape emptyStructCompileContext (.const (BitVec.ofNat 64 0)) =
           panSemShapeOf addressValue ∧
       panStructValueFieldsOkBool loadByteCompileCaseRuntime.structs addressValue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).structs
         (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).locals
         (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).globals
@@ -178,20 +204,60 @@ example :
         (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).topAddress
         (BitVec.ofNat 64 1)
-        (structCompileExp emptyStructCompileContext (.const (BitVec.ofNat 64 0))) =
+        (structCompileExp emptyStructCompileContext (.const (BitVec.ofNat 64 0)))
+        (memoryAccess := some loadByteCompileCaseMemoryAccess) =
           some (panStructConvertValue addressValue) := by
     intro addressValue haddress
     have hword : addressValue = .word (BitVec.ofNat 64 0) := by
-      simpa [evalPanValueExp] using haddress.symm
+      simpa [evalPanValueExpFull] using haddress.symm
     subst addressValue
     refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
     · simp [panStructValueFieldsOkBool]
-    · simp [evalPanValueExp, panStructConvertState, panStructConvertValue]
+    · simp [evalPanValueExpFull, panStructConvertState, panStructConvertValue]
   have hcase := panStructCompileExpCorrectLoadByteCase
     emptyStructCompileContext loadByteCompileCaseRuntime (BitVec.ofNat 64 1)
-    (.const (BitVec.ofNat 64 0)) loadByteCompileCaseValue hload rfl
+    loadByteCompileCaseMemoryAccess (.const (BitVec.ofNat 64 0))
+    loadByteCompileCaseValue hload rfl
     hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap haddressIH
   exact ⟨hcase.1, hcase.2.1, hload, hcase.2.2⟩
+
+#guard
+  let source := evalPanValueExpFull
+    loadByteCompileCaseRuntime.structs loadByteCompileCaseRuntime.locals
+    loadByteCompileCaseRuntime.globals loadByteCompileCaseRuntime.memory
+    loadByteCompileCaseRuntime.baseAddress loadByteCompileCaseRuntime.topAddress
+    (BitVec.ofNat 64 1) loadByteCompileCaseExpression
+    (memoryAccess := some loadByteCompileCaseMemoryAccess)
+  let target := evalPanValueExpFull
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).structs
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).locals
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).globals
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).memory
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).baseAddress
+    (panStructConvertState emptyStructCompileContext loadByteCompileCaseRuntime).topAddress
+    (BitVec.ofNat 64 1)
+    (structCompileExp emptyStructCompileContext loadByteCompileCaseExpression)
+    (memoryAccess := some loadByteCompileCaseMemoryAccess)
+  panStructShapeEqBool
+    (structOldExpShape emptyStructCompileContext loadByteCompileCaseExpression) .one &&
+  panStructValueFieldsOkBool loadByteCompileCaseRuntime.structs
+    loadByteCompileCaseValue &&
+  (match source with
+   | some (.word result) => result == BitVec.ofNat 64 19
+   | _ => false) &&
+  (match target with
+   | some (.word result) => result == BitVec.ofNat 64 19
+   | _ => false)
+
+#guard
+  (evalPanValueExpFull loadByteCompileCaseOutOfDomainRuntime.structs
+    loadByteCompileCaseOutOfDomainRuntime.locals
+    loadByteCompileCaseOutOfDomainRuntime.globals
+    loadByteCompileCaseOutOfDomainRuntime.memory
+    loadByteCompileCaseOutOfDomainRuntime.baseAddress
+    loadByteCompileCaseOutOfDomainRuntime.topAddress
+    (BitVec.ofNat 64 1) loadByteCompileCaseExpression
+    (memoryAccess := some loadByteCompileCaseOutOfDomainMemoryAccess)).isNone
 
 /-! The direct HOL oracle row `compile_exp_correct_load32_le_success` uses an
 aligned 64-bit word cell and checks that `Load32` extracts the low four bytes.

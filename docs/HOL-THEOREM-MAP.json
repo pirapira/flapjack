@@ -5221,7 +5221,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectLoadByteCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked LoadByte-constructor specialization with successful evaluation, a recursive address IH, and all three parent conclusion roles. Intentionally untagged: HOL has only universal compile_exp_correct and its LoadByte evaluator calls mem_load_byte with finite memory-domain and endian state; the Lean production evaluator with default memoryAccess reads a total PanValue lookup and carries explicit bytesInWord. Lean's context/FEVERY/FMAP_MAP2 premises use projected views and pointwise adapters; local/global validity, maps, and structInfosOk are retained but unused in this constructor. Paired direct HOL/Lean oracle row uses a one-byte 8-bit memory cell."
+    "reviewer": "Kernel-checked LoadByte-constructor specialization over evalPanValueExpFull for source, address IH, and converted execution, passing the same PanValueMemoryAccess through each so the adapter's successful/failed read policy is preserved. To match HOL mem_load_byte exactly, callers must build the adapter from the state's memory-domain and endian fields; the theorem itself exposes that adapter and bytesInWord rather than constraining its readByte implementation. Intentionally untagged: HOL has only universal compile_exp_correct, while Lean translates context/FEVERY/FMAP_MAP2 through projected views and pointwise adapters; full-evaluator shift dictionaries are runtime parameters. Local/global validity, maps, and structInfosOk are retained but unused in this constructor. Paired direct HOL/Lean guards cover successful one-byte reading and out-of-domain NONE."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -6566,5 +6566,13 @@
     "lean_name": "compileExpHOL_op2_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only two-argument Op constructor case for localized Call arguments. It consumes full operand IHs, derives singleton compiled operands, and proves production Crep word_op evaluation plus the four compile_exp_val_rel conclusions; general arity remains open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "crepOpCrep",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause port of crepSem$crep_op_def (crep_op Mul [w1;w2]=SOME(w1*w2), otherwise NONE) over the HOL word carrier: width-polymorphic BitVec width with [NeZero width]; direct HOL-EVAL rows mirrored by Lean guards incl. an RV64 runtime instantiation."
   }
 ]

@@ -6446,5 +6446,13 @@
     "lean_name": "resVar",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (clause-for-clause port of crepSem$res_var_def: res_var lc (n,NONE)=lc\\\\n becomes FDOMSUB, res_var lc (n,SOME v)=lc|+(n,v) becomes FUPDATE; [LawfulBEq] ties Boolean equality to HOL propositional equality; oracle rows crep_res_var_probe.out res_var_delete_hit=NONE and res_var_update_hit=SOME (Word 7w) reproduced by Lean guards in Flapjack/Test/FiniteMapParity.lean; production restoreCrepRuntimeStep now routes through resVar via resVar_locals_apply)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "lookup_code_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "lookupCrepHolCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause against lookup_code_def: FLOOKUP code fname, LENGTH ns = LENGTH args, ALL_DISTINCT ns -> Nodup, result FEMPTY |++ ZIP(ns,args) -> FUPDATE_LIST FEMPTY (ns.zip args); direct HOL oracle scripts/hol-probes/crep_lookup_code_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

@@ -415,6 +415,28 @@ def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
         | none => none
       else none
 
+/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
+    over the finite map: look the function up, require the declared parameter
+    list to have the argument count and be duplicate-free, and return the body
+    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+
+    The HOL source quantifies `args : 'a word_lab list`; the executable
+    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
+    with `PanWordLab.word`, and checks distinctness with
+    `eraseDups.length = length` rather than `ALL_DISTINCT`.  This declaration
+    is the exact HOL-shaped operation; routing the executed path through it is
+    tracked separately (the two distinctness checks agree under `LawfulBEq`). -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) :
+    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
+  match FLOOKUP code fname with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length = args.length ∧ parameters.Nodup
+      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
+      else none
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration array : List UInt8)

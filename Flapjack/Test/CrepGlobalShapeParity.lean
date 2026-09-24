@@ -381,4 +381,23 @@ example :
       (setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat)] callDestState).isNone &&
       (setCrepRuntimeLocalsExisting [9] [(5 : Nat)] callDestState).isNone
 
+/-- Exact HOL `lookup_code_def` over the finite map. Mirrors the direct HOL
+    oracle `scripts/hol-probes/crep_lookup_code_probe.out`
+    (`lookup_code_valid=SOME (Word 7w)`, `lookup_code_missing=NONE`). -/
+def lookupCodeMap : FunName → Option (List Nat × CrepProg Nat) :=
+  fun name => if name == "id" then some ([1], CrepProg.skip) else none
+
+example :
+    (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+        (fun pair => FLOOKUP pair.2 1) = some (some (PanWordLab.word 7)) := by
+  rfl
+
+example : lookupCrepHolCode lookupCodeMap "missing" [] = none := by
+  rfl
+
+#guard (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+          (fun pair => FLOOKUP pair.2 1) == some (some (PanWordLab.word 7)) &&
+        (lookupCrepHolCode lookupCodeMap "missing" []).isNone &&
+        (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8]).isNone
+
 end Flapjack.Test.CrepGlobalShapeParity

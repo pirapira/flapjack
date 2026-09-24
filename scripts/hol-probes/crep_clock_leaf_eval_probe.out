@@ -16,3 +16,6 @@ return_word_eval=T
 return_empty_eval=T
 return_missing_eval=T
 raise_eval=T
+dec_shadow_eval=T
+dec_new_local_eval=T
+dec_error_eval=T

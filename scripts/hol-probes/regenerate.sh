@@ -244,6 +244,15 @@ run_probe crep_to_loop_globals_rel_probeScript.sml crep_to_loop_globals_rel_prob
 run_probe crep_to_loop_mem_rel_probeScript.sml crep_to_loop_mem_rel_probe.out \
   mem_rel_match mem_rel_dom_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_distinct_funcs_probeScript.sml crep_to_loop_distinct_funcs_probe.out \
+  distinct_funcs_sep distinct_funcs_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_distinct_vars_probeScript.sml crep_to_loop_distinct_vars_probe.out \
+  distinct_vars_sep distinct_vars_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_ctxt_max_probeScript.sml crep_to_loop_ctxt_max_probe.out \
+  ctxt_max_within ctxt_max_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq zip_lookup_witness "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -566,6 +575,7 @@ run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
+  if_true_eval if_false_eval if_error_eval if_nested_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \

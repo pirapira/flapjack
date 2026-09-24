@@ -161,6 +161,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_wf_shape_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "isWfShapeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL is_wf_shape One/Comb/Named clauses match, ALOOKUP rendered as first-match lookupInfo at the concrete String BEq instance (String is the key type, so no extra LawfulBEq parameter is quantified) and isSome as <> NONE; context is HOL-shaped StructContextHOL over struct_info fields/size; production isWfShape related by isWfShapeHOL_toHOL; direct HOL rows in scripts/hol-probes/pan_lang_wf_shape_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "functions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "functionEntries",
@@ -7814,6 +7822,22 @@
     "lean_name": "compileCodeRelProg_eq_compileProgRiscV",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the tagged compile_def compiler (compileProgRiscV) on the bridged context for every proof context; makes the code_rel_def tag truthful for arbitrary ctxt_fc contexts."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (width-indexed exact proof boundary for HOL code_rel_def; compiler expression is the tagged compileProgRiscV at BitVec width via nextContext.toHOLContext, and codeRelW width = codeRel at BitVec width by Iff.rfl; codeRel itself stays untagged because it is generic in alpha)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelW_iff_codeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only bridge: the width-indexed codeRelW is definitionally the generic codeRel at BitVec width)"
   }
 ,
   {

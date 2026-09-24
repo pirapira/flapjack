@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.PanToCrepMaxList
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.CrepInline.Pass
 
 /-! Exact theorem counterpart for CakeML's `crep_inlineProofScript.sml`.
@@ -117,10 +118,12 @@ theorem crepInlineLocalsRel_decClock (s t : CrepHolState α σ)
 
 /-- Finite-map `FDOM` for Lean's extensional lookup-function representation:
     the predicate holding exactly at the bound keys.  HOL's `FDOM` is a
-    `num_set`; membership `n ∈ FDOM f` is `FLOOKUP f n ≠ NONE`, which is this
-    Boolean test.  Untagged infrastructure: HOL's `FDOM` is a finite-map
-    operation, not a declaration of `crep_inlineProofScript.sml`. -/
-def crepHolFdom (f : Nat → Option β) : Nat → Bool :=
+    finite set; membership `n ∈ FDOM f` is `FLOOKUP f n ≠ NONE`, which is this
+    Boolean test.  The key type is arbitrary so the same definition covers both
+    `locals` (`Nat` keys) and `code` (`mlstring` keys).  Untagged
+    infrastructure: HOL's `FDOM` is a finite-map operation, not a declaration of
+    `crep_inlineProofScript.sml`. -/
+def crepHolFdom {κ : Type} (f : κ → Option β) : κ → Bool :=
   fun n => (f n).isSome
 
 /-- Finite-map `FDIFF` for Lean's extensional lookup-function representation:
@@ -210,5 +213,108 @@ theorem not_crepInlineCodeInlRel_of_target_none
   obtain ⟨_bag, _hsub, htarget⟩ := h fname args prog hcode
   rw [hnone] at htarget
   simp at htarget
+
+/-! ## Expression-evaluation invariance under the inline state relations
+
+    These are the Lean counterparts of Cake's
+    `fdom_subset_flookup_thm` (`crep_inlineProofScript.sml:1456`),
+    `eval_state_locals_same_code_fdom_same` (:1467) and `eval_code_inl` (:1513).
+
+    Exactness caveat: the source evaluator `crepSem$eval` is polymorphic in the
+    word type, while the Lean evaluator `evalCrepHolExp`
+    (`Flapjack/Pancake/Semantics/CrepSem/Eval.lean`) is only defined for the
+    concrete `RiscV.Word width` carrier (`[NeZero width]`) and is itself
+    untagged; `crepHolFdom` renders `FDOM` as an extensional Boolean predicate
+    rather than a HOL finite set; and `crepInlineCodeInlRel`'s bearer is the
+    unique-key entry-list finite map.  So no `@[hol]` tag is attached even
+    though the statements otherwise follow the source clause for clause. -/
+
+/-- CakeML's `fdom_subset_flookup_thm` (`crep_inlineProofScript.sml:1456`):
+    `FDOM f ⊆ FDOM g` is exactly "every binding of `f` has a binding of `g` at
+    the same key".  Stated for an arbitrary key type since both `locals` and
+    `code` are finite maps. -/
+theorem crepHolFdom_subset_flookup {κ : Type} (f g : κ → Option β) :
+    (∀ n, crepHolFdom f n = true → crepHolFdom g n = true) ↔
+      (∀ n p, f n = some p → ∃ q, g n = some q) := by
+  constructor
+  · intro h n p hp
+    exact Option.isSome_iff_exists.mp (h n (by simp [crepHolFdom, hp]))
+  · intro h n hn
+    obtain ⟨p, hp⟩ := Option.isSome_iff_exists.mp hn
+    obtain ⟨q, hq⟩ := h n p hp
+    simp [crepHolFdom, hq]
+
+/-- CakeML's `eval_code_inl` FDOM extraction: `code_inl_rel inl_fs s t` puts
+    every key bound in `s.code` into `t.code`, so `FDOM s.code ⊆ FDOM t.code`.
+    This is the hypothesis consumed by the expression-evaluation invariance
+    below. -/
+theorem crepInlineCodeInlRel_fdom_subset
+    [BEq FunName] [LawfulBEq FunName]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    (inlFs : CrepInlineFmap (RiscV.Word width))
+    (s t : CrepHolState (RiscV.Word width) σ)
+    (hcode : crepInlineCodeInlRel inlFs s t) :
+    ∀ n, crepHolFdom s.code n = true → crepHolFdom t.code n = true := by
+  intro n hn
+  obtain ⟨⟨args, prog⟩, hlookup⟩ := Option.isSome_iff_exists.mp hn
+  obtain ⟨_inlBag, _hsub, htcode⟩ := hcode n args prog hlookup
+  simp [crepHolFdom, htcode]
+
+/-- CakeML's `eval_state_locals_same_code_fdom_same`
+    (`crep_inlineProofScript.sml:1467`): expression evaluation depends only on
+    the locals and the `state_rel_code` fields, never on `code`, so any two
+    states related by `state_rel_code` with equal locals evaluate every
+    expression identically.  The `FDOM` subset hypothesis is carried to match
+    the HOL statement but is not needed, since `eval` never reads `code`. -/
+theorem evalCrepHolExp_state_rel_code [NeZero width]
+    (s t : CrepHolState (RiscV.Word width) σ) (e : CrepExp (RiscV.Word width))
+    (hstate : crepInlineStateRelCode s t)
+    (hlocals : crepInlineLocalsStrongRel s t)
+    (_hcode : ∀ n, crepHolFdom s.code n = true → crepHolFdom t.code n = true) :
+    evalCrepHolExp s e = evalCrepHolExp t e := by
+  obtain ⟨hg, hm, hma, _hsm, _hcl, hbe, _hf, hba, hta⟩ := hstate
+  have hloc : s.locals = t.locals := hlocals
+  induction e using evalCrepHolExp.induct with
+  | case1 value => simp only [evalCrepHolExp]
+  | case2 name => simp only [evalCrepHolExp, hloc]
+  | case3 address ih => simp only [evalCrepHolExp, ih, hm, hma]
+  | case4 address ih => simp only [evalCrepHolExp, ih, hm, hma, hbe, crepHolEvalMemLoad32]
+  | case5 address ih => simp only [evalCrepHolExp, ih, hm, hma, hbe, crepHolEvalMemLoadByte]
+  | case6 address => simp only [evalCrepHolExp, hg]
+  | case7 operator expressions ih =>
+      simp only [evalCrepHolExp]
+      have hmap : List.mapM (evalCrepHolExp s) expressions
+          = List.mapM (evalCrepHolExp t) expressions := by
+        induction expressions with
+        | nil => simp
+        | cons x xs ihxs =>
+            have htail : List.mapM (evalCrepHolExp s) xs
+                = List.mapM (evalCrepHolExp t) xs :=
+              ihxs (fun y hy => ih y (by simp [hy]))
+            simp only [List.mapM_cons, ih x (by simp), htail]
+      rw [hmap]
+  | case8 left right ihl ihr => simp only [evalCrepHolExp, ihl, ihr]
+  | case9 operator args h => simp only [evalCrepHolExp]
+  | case10 operator left right ihl ihr => simp only [evalCrepHolExp, ihl, ihr]
+  | case11 operator left right ihl ihr => simp only [evalCrepHolExp, ihl, ihr]
+  | case12 => simp only [evalCrepHolExp, hba]
+  | case13 => simp only [evalCrepHolExp, hta]
+
+/-- CakeML's `eval_code_inl` (`crep_inlineProofScript.sml:1513`): if `s` and `t`
+    are related by `state_rel_code` with equal locals and `t`'s code inlines
+    `s`'s code along `inl_fs`, then every expression `s` evaluates to, `t`
+    evaluates to as well. -/
+theorem crepInlineEvalCodeInl [NeZero width] [BEq FunName] [LawfulBEq FunName]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    (s t : CrepHolState (RiscV.Word width) σ) (e : CrepExp (RiscV.Word width))
+    (value : RiscV.Word width) (inlFs : CrepInlineFmap (RiscV.Word width))
+    (heval : evalCrepHolExp s e = some value)
+    (hstate : crepInlineStateRelCode s t)
+    (hlocals : crepInlineLocalsStrongRel s t)
+    (hcode : crepInlineCodeInlRel inlFs s t) :
+    evalCrepHolExp t e = some value := by
+  have hsubset := crepInlineCodeInlRel_fdom_subset inlFs s t hcode
+  rw [← heval]
+  exact (evalCrepHolExp_state_rel_code s t e hstate hlocals hsubset).symm
 
 end Flapjack

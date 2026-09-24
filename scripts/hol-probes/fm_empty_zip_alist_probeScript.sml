@@ -40,3 +40,8 @@ val _ = print_eval "flookup_first"
 
 val _ = print_eval "flookup_absent"
   (``FLOOKUP ((FEMPTY |++ ZIP(^xs, ^ys)) : (num, num) fmap) 9``);
+
+val _ = print_eval "zip_lookup_witness"
+  (``case FLOOKUP ((FEMPTY |++ ZIP(^xs, ^ys)) : (num, num) fmap) 3 of
+      SOME y => (EL 2 (ZIP(^xs,^ys)) = (3,y))
+    | NONE => F``);

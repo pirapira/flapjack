@@ -8085,7 +8085,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "decCrepHolClock_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; 10-conjunct projection equality over the 11-field CrepHolState via tagged decCrepHolClock; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the clock decrement is the tagged width-indexed decCrepHolClockW (dec_clock_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out (all T) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8093,7 +8093,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "emptyCrepHolLocals_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; 10-conjunct projection equality over the 11-field CrepHolState via tagged emptyCrepHolLocals; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the locals clear is the tagged width-indexed emptyCrepHolLocalsW (empty_locals_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8181,7 +8181,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopDistinctFuncs",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact statement comparison with distinct_funcs_def crep_to_loopProofScript.sml:60-65 over FiniteMap FunName (Nat x Nat); no word-typed field, so width-independent; direct HOL-EVAL body rows distinct_funcs_sep=T, distinct_funcs_collision=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean; untagged crepToLoopDistinctFuncs_iff keeps the iff form)"
+    "reviewer": "Codex (statement compared against distinct_funcs_def at crep_to_loopProofScript.sml:60; HOL's un-annotated Definition infers 'a |-> ('b # 'c), so the port is polymorphic in the key and both tuple components; direct HOL-EVAL rows distinct_funcs_sep/collision/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8189,7 +8189,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopDistinctVars",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against distinct_vars_def at crep_to_loopProofScript.sml:95-99: num |-> num finite map, two entries with equal slots must share the key; rendered as FiniteMap Nat Nat with no word-typed field, so word-length independent and no width-indexing needed; untagged crepToLoopDistinctVars_iff keeps the iff form; direct HOL oracle rows distinct_vars_sep=T/distinct_vars_collision=F/distinct_vars_absent=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against distinct_vars_def at crep_to_loopProofScript.sml:95; HOL's un-annotated Definition infers 'a |-> 'b, so the port is polymorphic in the key and value; direct HOL-EVAL rows distinct_vars_sep/collision/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8197,6 +8197,6 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopCtxtMax",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact port of crep_to_loop ctxt_max_def crep_to_loopProofScript.sml:90-93: ctxt_max (n:num) fm <=> (!v m. FLOOKUP fm v = SOME m ==> m <= n) over the num |-> num finite map; no word-typed field, so word-length independent (no width-indexing needed); direct HOL oracle crep_to_loop_ctxt_max_probe.out rows ctxt_max_within=T/ctxt_max_absent=T/ctxt_max_exceeds=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against ctxt_max_def at crep_to_loopProofScript.sml:90; HOL's un-annotated Definition infers 'a |-> num because m <= n, so the port is polymorphic in the key and fixed at Nat for values; direct HOL-EVAL rows ctxt_max_within/exceeds/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

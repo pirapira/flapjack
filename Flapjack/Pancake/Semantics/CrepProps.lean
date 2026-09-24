@@ -361,37 +361,37 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
 /-- Exact HOL-shaped port of Cake `crepProps$dec_clock_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:267`): decrementing the clock
     leaves every other field of the 11-field state unchanged. The clock
-    decrement is the tagged `decCrepHolClock` (`dec_clock_def`). -/
+    decrement is the tagged width-indexed `decCrepHolClockW` (`dec_clock_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
 theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
-    (decCrepHolClock s).locals = s.locals ∧
-      (decCrepHolClock s).globals = s.globals ∧
-      (decCrepHolClock s).code = s.code ∧
-      (decCrepHolClock s).memory = s.memory ∧
-      (decCrepHolClock s).memaddrs = s.memaddrs ∧
-      (decCrepHolClock s).shMemaddrs = s.shMemaddrs ∧
-      (decCrepHolClock s).bigEndian = s.bigEndian ∧
-      (decCrepHolClock s).ffi = s.ffi ∧
-      (decCrepHolClock s).baseAddress = s.baseAddress ∧
-      (decCrepHolClock s).topAddress = s.topAddress := by
-  simp [decCrepHolClock]
+    (decCrepHolClockW s).locals = s.locals ∧
+      (decCrepHolClockW s).globals = s.globals ∧
+      (decCrepHolClockW s).code = s.code ∧
+      (decCrepHolClockW s).memory = s.memory ∧
+      (decCrepHolClockW s).memaddrs = s.memaddrs ∧
+      (decCrepHolClockW s).shMemaddrs = s.shMemaddrs ∧
+      (decCrepHolClockW s).bigEndian = s.bigEndian ∧
+      (decCrepHolClockW s).ffi = s.ffi ∧
+      (decCrepHolClockW s).baseAddress = s.baseAddress ∧
+      (decCrepHolClockW s).topAddress = s.topAddress := by
+  simp [decCrepHolClockW]
 
 /-- Exact HOL-shaped port of Cake `crepProps$empty_locals_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:282`): clearing the locals
     leaves every other field of the 11-field state unchanged. The locals clear
-    is the tagged `emptyCrepHolLocals` (`empty_locals_def`). -/
+    is the tagged width-indexed `emptyCrepHolLocalsW` (`empty_locals_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
 theorem emptyCrepHolLocals_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
-    (emptyCrepHolLocals s).globals = s.globals ∧
-      (emptyCrepHolLocals s).code = s.code ∧
-      (emptyCrepHolLocals s).memory = s.memory ∧
-      (emptyCrepHolLocals s).memaddrs = s.memaddrs ∧
-      (emptyCrepHolLocals s).shMemaddrs = s.shMemaddrs ∧
-      (emptyCrepHolLocals s).clock = s.clock ∧
-      (emptyCrepHolLocals s).bigEndian = s.bigEndian ∧
-      (emptyCrepHolLocals s).ffi = s.ffi ∧
-      (emptyCrepHolLocals s).baseAddress = s.baseAddress ∧
-      (emptyCrepHolLocals s).topAddress = s.topAddress := by
-  simp [emptyCrepHolLocals]
+    (emptyCrepHolLocalsW s).globals = s.globals ∧
+      (emptyCrepHolLocalsW s).code = s.code ∧
+      (emptyCrepHolLocalsW s).memory = s.memory ∧
+      (emptyCrepHolLocalsW s).memaddrs = s.memaddrs ∧
+      (emptyCrepHolLocalsW s).shMemaddrs = s.shMemaddrs ∧
+      (emptyCrepHolLocalsW s).clock = s.clock ∧
+      (emptyCrepHolLocalsW s).bigEndian = s.bigEndian ∧
+      (emptyCrepHolLocalsW s).ffi = s.ffi ∧
+      (emptyCrepHolLocalsW s).baseAddress = s.baseAddress ∧
+      (emptyCrepHolLocalsW s).topAddress = s.topAddress := by
+  simp [emptyCrepHolLocalsW]
 
 end Flapjack

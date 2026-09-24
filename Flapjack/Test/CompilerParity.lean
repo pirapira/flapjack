@@ -194,6 +194,7 @@ import Flapjack.Test.PanShMemLoadParity
 import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
+import Flapjack.Test.PanSemLookupCodeParity
 import Flapjack.Test.PanSemTickParity
 import Flapjack.Test.PanSemSkipParity
 import Flapjack.Test.PanSemAssignParity
@@ -234,6 +235,7 @@ import Flapjack.Test.WordLangAllocConventionsParity
 import Flapjack.Test.LabPropsLineOkPreParity
 import Flapjack.Test.LabPropsSecEndsLabelParity
 import Flapjack.Test.CakeAllocatorBitsBridgeParity
+import Flapjack.Test.StackNamesParity
 import Flapjack.Test.RiscvConfigParity
 import Flapjack.Test.MiscAppListParity
 import Flapjack.Test.StackToLabFlattenOpsParity
@@ -813,6 +815,7 @@ def main : IO Unit := do
     Flapjack.Test.PanShMemStoreParity.runChecks,
     Flapjack.Test.PanEvalParity.runChecks,
     Flapjack.Test.PanEvaluateParity.runChecks,
+    Flapjack.Test.PanSemLookupCodeParity.runChecks,
     Flapjack.Test.PanSemTickParity.runChecks,
     Flapjack.Test.PanSemSkipParity.runChecks,
     Flapjack.Test.PanSemAssignParity.runChecks,
@@ -853,6 +856,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.LabPropsLineOkPreParity.runChecks,
     Flapjack.Test.LabPropsSecEndsLabelParity.runChecks,
     Flapjack.Test.CakeAllocatorBitsBridgeParity.runChecks,
+    Flapjack.Test.StackNamesParity.runChecks,
     Flapjack.Test.RiscvConfigParity.runChecks,
     Flapjack.Test.MiscAppListParity.runChecks,
     Flapjack.Test.StackToLabFlattenOpsParity.runChecks,

@@ -1,0 +1,15 @@
+ri_reg=Reg 7
+ri_imm=Imm 0w
+inst_const=Const 7 0w
+inst_div=Arith (Div 7 4 5)
+inst_fma=FP (FPFma 1 2 3)
+inst_mem=Mem Load 7 (Addr 7 8w)
+dest_inr=INR 7
+dest_inl=INL 2
+comp_seq=Seq (const_inst 7 0w) (Halt 7)
+comp_call=Call (SOME (Raise 7,4,5,6)) (INR 7) (SOME (Halt 4,8,9))
+prog_comp_row=(1,Halt 7)
+compile_row=[(1,Halt 7); (2,Raise 4)]
+names_ok_bad=F
+names_ok_ok=T
+names_ok_dup=F

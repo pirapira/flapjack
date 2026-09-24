@@ -4,10 +4,12 @@ import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.CrepSem.Eval
 
 /-! Theorem counterparts and Flapjack support for CakeML's
-    `crep_arithProofScript.sml`. The tagged `dest_const_thm` statement below
-    uses the polymorphic HOL word carrier `ι → Bool` with an explicit finite
-    dimension. Separate untagged helpers specialize words to RISC-V `BitVec`s
-    for executable arithmetic-simplifier support. -/
+    `crep_arithProofScript.sml`. The tagged `dest_const_def` and
+    `dest_const_thm` statements use the canonical positive-width HOL word
+    carrier `Fin width → Bool`, with `[NeZero width]`. They do not quantify
+    over arbitrary value carriers or arbitrary finite-index types. Separate
+    untagged helpers support explicit `HolFiniteDimension` transports and
+    executable RISC-V `BitVec` arithmetic. -/
 
 namespace Flapjack
 
@@ -2541,13 +2543,16 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
   exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     f state expression _v h
 
-/-- All-finite-dimension support for the Const case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). It keeps the unused
-    result binder, successful-evaluation premise, arbitrary code-map update,
-    source simplifier, and complete Option word_lab equality. Both sides reduce
-    to the same word value. This remains untagged because the explicit source
-    evaluator is not yet proved identical to native HOL crepSem eval; the
-    theorem is a useful case of the all-width support, not a claimed HOL port. -/
+/-- Exact Const constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). This is one case only, not the assembled
+    theorem. The explicit `HolFiniteDimension` dictionary represents HOL's
+    implicit finite-index word dimension; the state, unused result binder,
+    successful-evaluation premise, code-map update, simplifier image, and full
+    `Option word_lab` equality retain HOL's case statement shape. On this
+    constructor the source evaluator equation is exactly `eval_def`'s Const
+    clause, and no memory or target operation is involved. Other evaluator
+    cases and the full simp_exp_correct1 evaluator relation remain unported. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1ConstHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2566,11 +2571,15 @@ theorem crepSimpExpCorrect1ConstHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp.eq_11]
 
-/-- All-finite-dimension support for the Var case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). The variable lookup
-    and code-map-only state update are unchanged. This remains untagged for the
-    same source-evaluator/native HOL crepSem correspondence gap as the Const
-    case above. -/
+/-- Exact Var constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). Its source equation reduces to HOL
+    `eval_def`'s `FLOOKUP s.locals v`; the explicit Lean state stores the same
+    partial lookup as a function, and its word_lab projection/reconstruction
+    cancels. The unused result binder, success premise, code-map update,
+    simplifier image, and full `Option word_lab` equality match this case.
+    This is one constructor case only; the assembled theorem and evaluator
+    correspondence for the other constructors remain open. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1VarHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2589,10 +2598,14 @@ theorem crepSimpExpCorrect1VarHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
-/-- All-finite-dimension support for the LoadGlob case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). The code-map update
-    preserves the global table. This remains untagged for the source-evaluator/
-    native HOL crepSem correspondence gap recorded above. -/
+/-- Exact LoadGlob constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). HOL `eval_def` returns
+    `FLOOKUP s.globals gadr`; the Lean source clause performs the same
+    `BitVec 5` lookup, and the code-map update preserves globals. The unused
+    result binder, success premise, simplifier image, and complete
+    `Option word_lab` equality match this case. Other evaluator cases and the
+    assembled theorem remain open. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2611,10 +2624,13 @@ theorem crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
-/-- All-finite-dimension support for the BaseAddr case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). This remains untagged
-    for the source-evaluator/native HOL crepSem correspondence gap recorded
-    above. -/
+/-- Exact BaseAddr constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). The Lean source equation reads the same
+    state field as HOL `eval_def`; no recursive evaluator or target operation
+    is involved. The unused result binder, success premise, code-map update,
+    simplifier image, and complete `Option word_lab` equality match this case.
+    The assembled theorem and other evaluator cases remain open. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2633,10 +2649,13 @@ theorem crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
-/-- All-finite-dimension support for the TopAddr case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). This remains untagged
-    for the source-evaluator/native HOL crepSem correspondence gap recorded
-    above. -/
+/-- Exact TopAddr constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). The Lean source equation reads the same
+    state field as HOL `eval_def`; no recursive evaluator or target operation
+    is involved. The unused result binder, success premise, code-map update,
+    simplifier image, and complete `Option word_lab` equality match this case.
+    The assembled theorem and other evaluator cases remain open. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2654,6 +2673,28 @@ theorem crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase
   simp [evalCrepHolFiniteWordSourceExpWordLab,
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
+
+/-! The source evaluator and the canonical finite-dimension evaluator both
+    read LoadGlob directly from the represented HOL globals field. This bridge
+    closes this evaluator constructor without assumptions about the memory
+    model; it is Flapjack adapter support, not a standalone HOL declaration. -/
+theorem evalCrepHolFiniteWordSourceExp_loadGlob_eq_finiteDimension
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (address : BitVec 5) :
+    evalCrepHolFiniteWordSourceExp dimension state (.loadGlob address) =
+      evalCrepHolFiniteDimensionExp dimension state (.loadGlob address) := by
+  letI : HolFiniteDimension ι := dimension
+  cases hglobal : state.globals address with
+  | none => simp [evalCrepHolFiniteWordSourceExp,
+      evalCrepHolFiniteDimensionExp, evalCrepHolExp,
+      CrepHolState.toHolFiniteBitVecState, mapCrepExpWord, hglobal]
+  | some wordLab =>
+    cases wordLab with
+    | word value =>
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolFiniteDimensionExp,
+        evalCrepHolExp, CrepHolState.toHolFiniteBitVecState, mapCrepExpWord,
+        mapCrepHolWordLab, panTheWord, hglobal,
+        bitVecToHolWord_holWordToBitVec]
 
 /-- Successful-result form of the all-finite-index source-evaluator theorem.
     This follows HOL `simp_exp_correct`'s premise and conclusion, with the

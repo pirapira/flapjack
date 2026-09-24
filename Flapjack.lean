@@ -44,6 +44,7 @@ import Flapjack.PanShMemLoad
 import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
@@ -193,6 +194,7 @@ import Flapjack.Misc.AppList
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps
+import Flapjack.Compiler.Backend.StackNames
 import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.RiscV.CakeAllocatorBitsBridge

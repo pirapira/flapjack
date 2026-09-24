@@ -489,6 +489,17 @@ def holWordBitsGlobalState4 (value : Fin 4 → Bool) :
     CrepHolState (Fin 4 → Bool) Unit :=
   { holWordBitsState4 with globals := fun _ => some (.word value) }
 
+example (address : BitVec 5) (value : Fin 4 → Bool) :
+    evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 4))
+      (holWordBitsGlobalState4 value) (.loadGlob address) =
+    evalCrepHolFiniteDimensionExp
+      (instFinHolFiniteDimension (width := 4))
+      (holWordBitsGlobalState4 value) (.loadGlob address) := by
+  exact evalCrepHolFiniteWordSourceExp_loadGlob_eq_finiteDimension
+    (instFinHolFiniteDimension (width := 4))
+    (holWordBitsGlobalState4 value) address
+
 example (value : Fin 4 → Bool) :
     evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := 4))

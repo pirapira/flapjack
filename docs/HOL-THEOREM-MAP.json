@@ -5341,7 +5341,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectPanOpCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Intentionally untagged because HOL has only universal compile_exp_correct, and production Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord, and the evalPanOp interface."
+    "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Source, every recursive argument IH, and converted execution use evalPanValueExpFull with one shared explicit PanValueMemoryAccess parameter. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Paired direct HOL EVAL and Lean exact-intermediate fixtures cover nonempty Mul arguments. Intentionally untagged because HOL has only universal compile_exp_correct, while Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord/memory access, and full-evaluator operation dictionaries."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -6694,6 +6694,14 @@
     "lean_name": "compileExpHOL_bytesInWord_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only full localized-expression IH constructor case for RV64 BytesInWord. It proves target evaluation, compiled length/shape agreement, source shape, and shape well-formedness over the fixed 64-bit word size; not a standalone HOL theorem statement."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "el_compile_prog_el_prog_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "elCompileToCrepElProgEq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

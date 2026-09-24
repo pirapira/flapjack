@@ -4309,18 +4309,24 @@ theorem panStructCompileExpCorrectOpCase
     HOL has only the universally quantified theorem. This untagged case keeps
     its translated context, FEVERY, FMAP_MAP2 and `struct_infos_ok` premise
     roles, with recursive argument induction hypotheses. Lean uses the
-    total-function lookup/Bool adapters, explicit `bytesInWord`, and the
-    production `evalPanOp` operation interface. -/
+    full evaluator for source arguments, recursive IHs, and converted
+    execution, sharing one explicit memory adapter. The theorem remains
+    untagged because Lean uses total-function lookup/Bool adapters, explicit
+    `bytesInWord` and memory access, while HOL uses finite maps and its
+    fixed-width evaluator. -/
 theorem panStructCompileExpCorrectPanOpCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext) (state : PanSemState α ffi)
-    (bytesInWord : α) (operator : PanOp) (arguments : List (Exp α))
+    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
+    (operator : PanOp) (arguments : List (Exp α))
     (value : PanValue α)
-    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord (.panOp operator arguments) = some value)
+    (heval : evalPanValueExpFull state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.panOp operator arguments)
+      (memoryAccess := some memoryAccess) = some value)
     (hstructs : panStructContextShapeView context.structs =
       panStructContextShapeView state.structs)
     (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
@@ -4329,8 +4335,9 @@ theorem panStructCompileExpCorrectPanOpCase
     (hlocalsMap : panStructShapeMapEq context.locals state.locals)
     (hglobalsMap : panStructShapeMapEq context.globals state.globals)
     (hinduction : ∀ argument, argument ∈ arguments → ∀ subvalue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
-        state.baseAddress state.topAddress bytesInWord argument = some subvalue →
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord argument
+        (memoryAccess := some memoryAccess) = some subvalue →
       panStructContextShapeView context.structs = panStructContextShapeView state.structs →
       panStructEveryValueFieldsOkBool state.structs state.locals →
       panStructEveryValueFieldsOkBool state.structs state.globals →
@@ -4339,96 +4346,96 @@ theorem panStructCompileExpCorrectPanOpCase
       panStructShapeMapEq context.globals state.globals →
       structOldExpShape context argument = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool state.structs subvalue = true ∧
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
         (panStructConvertState context state).baseAddress
         (panStructConvertState context state).topAddress bytesInWord
-        (structCompileExp context argument) = some (panStructConvertValue subvalue)) :
+        (structCompileExp context argument) (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue subvalue)) :
     structOldExpShape context (.panOp operator arguments) = panSemShapeOf value ∧
     panStructValueFieldsOkBool state.structs value = true ∧
-    evalPanValueExp (panStructConvertState context state).structs
+    evalPanValueExpFull (panStructConvertState context state).structs
       (panStructConvertState context state).locals
       (panStructConvertState context state).globals
       (panStructConvertState context state).memory
       (panStructConvertState context state).baseAddress
       (panStructConvertState context state).topAddress bytesInWord
-      (structCompileExp context (.panOp operator arguments)) =
+      (structCompileExp context (.panOp operator arguments))
+      (memoryAccess := some memoryAccess) =
         some (panStructConvertValue value) := by
   have hpointwise : ∀ expression, expression ∈ arguments → ∀ subvalue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
-        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression
+        (memoryAccess := some memoryAccess) = some subvalue →
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
         (panStructConvertState context state).baseAddress
         (panStructConvertState context state).topAddress bytesInWord
-        (structCompileExp context expression) = some (panStructConvertValue subvalue) := by
+        (structCompileExp context expression) (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue subvalue) := by
     intro expression hmem subvalue heval
     exact (hinduction expression hmem subvalue heval hstructs hlocalsFields
       hglobalsFields hstructInfos hlocalsMap hglobalsMap).2.2
-  cases harguments : evalPanValueExps state.structs state.locals state.globals
-      state.memory state.baseAddress state.topAddress bytesInWord arguments with
+  cases harguments : evalPanValueExpsFull state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord arguments
+      (memoryAccess := some memoryAccess) with
   | none =>
-      have harguments' : evalPanValueExp.evalPanValueExps state.structs
-          state.locals state.globals state.memory state.baseAddress state.topAddress
-          bytesInWord arguments = none := by
-        simpa [evalPanValueExps] using harguments
-      simp [evalPanValueExp, harguments'] at heval
+      simp [evalPanValueExpFull, harguments] at heval
   | some operands =>
-      have harguments' : evalPanValueExp.evalPanValueExps state.structs
-          state.locals state.globals state.memory state.baseAddress state.topAddress
-          bytesInWord arguments = some operands := by
-        simpa [evalPanValueExps] using harguments
       cases operands with
-      | nil => simp [evalPanValueExp, harguments'] at heval
+      | nil => simp [evalPanValueExpFull, harguments] at heval
       | cons first rest =>
           cases rest with
-          | nil => simp [evalPanValueExp, harguments'] at heval
+          | nil => simp [evalPanValueExpFull, harguments] at heval
           | cons second rest =>
               cases rest with
-              | cons third rest => simp [evalPanValueExp, harguments'] at heval
+              | cons third rest => simp [evalPanValueExpFull, harguments] at heval
               | nil =>
-                  cases first with
-                  | rStruct fields => simp [evalPanValueExp, harguments'] at heval
-                  | nStruct name fields => simp [evalPanValueExp, harguments'] at heval
+                cases first with
+                  | rStruct fields => simp [evalPanValueExpFull, harguments] at heval
+                  | nStruct name fields => simp [evalPanValueExpFull, harguments] at heval
                   | word left =>
-                      cases second with
-                      | rStruct fields => simp [evalPanValueExp, harguments'] at heval
-                      | nStruct name fields => simp [evalPanValueExp, harguments'] at heval
+                    cases second with
+                      | rStruct fields => simp [evalPanValueExpFull, harguments] at heval
+                      | nStruct name fields => simp [evalPanValueExpFull, harguments] at heval
                       | word right =>
-                          cases hoperation : evalPanOp operator [left, right] with
-                          | none => simp [evalPanValueExp, harguments', hoperation] at heval
-                          | some result =>
-                              have hvalue : value = .word result := by
-                                simpa [evalPanValueExp, harguments', hoperation] using heval.symm
-                              have hcompiledArgs := panStructCompileExpsEvalOfPointwiseCorrect
-                                context state bytesInWord arguments (.word left :: .word right :: [])
-                                (by simp [evalPanValueExps, harguments']) hpointwise
-                              have hcompiledArgs' :
-                                  evalPanValueExp.evalPanValueExps
-                                    (panStructConvertState context state).structs
+                        cases hoperation : evalPanOp operator [left, right] with
+                        | none => simp [evalPanValueExpFull, harguments, hoperation] at heval
+                        | some result =>
+                            have hvalue : value = .word result := by
+                              simpa [evalPanValueExpFull, harguments, hoperation] using heval.symm
+                            have hcompiledArgs := panStructCompileExpsFullEvalOfPointwiseCorrect
+                              context state bytesInWord
+                              memoryAccess arguments
+                              (.word left :: .word right :: [])
+                              (by simpa using harguments) hpointwise
+                            have hcompiledArgs' :
+                                evalPanValueExpsFull
+                                  (panStructConvertState context state).structs
                                     (panStructConvertState context state).locals
                                     (panStructConvertState context state).globals
                                     (panStructConvertState context state).memory
                                     (panStructConvertState context state).baseAddress
-                                    (panStructConvertState context state).topAddress
+                                  (panStructConvertState context state).topAddress
                                     bytesInWord
-                                    (structCompileExp.structCompileExps context arguments) =
-                                      some [.word left, .word right] := by
-                                simpa [evalPanValueExps, panStructConvertValue] using hcompiledArgs
-                              refine ⟨?_, ?_, ?_⟩
-                              · simp [structOldExpShape, panSemShapeOf, hvalue]
-                              · simp [panStructValueFieldsOkBool, hvalue]
-                              · have hcompiledPanOp :
-                                    structCompileExp context (.panOp operator arguments) =
-                                      .panOp operator
-                                        (structCompileExp.structCompileExps context arguments) := by
-                                  simp [structCompileExp]
-                                rw [hcompiledPanOp, hvalue]
-                                simp [evalPanValueExp, hcompiledArgs', hoperation,
+                                  (structCompileExp.structCompileExps context arguments)
+                                  (memoryAccess := some memoryAccess) =
+                                    some [.word left, .word right] := by
+                              simpa [panStructConvertValue] using hcompiledArgs
+                            refine ⟨?_, ?_, ?_⟩
+                            · simp [structOldExpShape, panSemShapeOf, hvalue]
+                            · simp [panStructValueFieldsOkBool, hvalue]
+                            · have hcompiledPanOp :
+                                  structCompileExp context (.panOp operator arguments) =
+                                    .panOp operator
+                                      (structCompileExp.structCompileExps context arguments) := by
+                                simp [structCompileExp]
+                              rw [hcompiledPanOp, hvalue]
+                              simp [evalPanValueExpFull, hcompiledArgs', hoperation,
                                 panStructConvertValue]
 
 /-- Derived binary Cmp-constructor specialization of HOL

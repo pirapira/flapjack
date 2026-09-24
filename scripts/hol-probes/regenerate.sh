@@ -119,6 +119,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_load_nested_named \
   compile_exp_correct_load32_le_success \
   compile_exp_correct_load_byte_out_of_domain \
+  compile_exp_correct_panop_mul \
   compile_exp_correct_cmp_equal \
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
@@ -394,6 +395,12 @@ run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
 run_probe pan_sem_ite_memory_probeScript.sml pan_sem_ite_memory_probe.out \
   if_mem_nonzero_result if_mem_byte_be_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Assign memory probe observes a memory-reading source: a present word cell
+# written to the destination local, an address outside `memaddrs` rejected with
+# Error and the locals/clock unchanged, and `be` driving the byte read.
+run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out \
+  assign_mem_load_result assign_mem_byte_be_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
@@ -606,6 +613,8 @@ run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_alookup_compile_probeScript.sml crep_alookup_compile_probe.out \
   source_names_distinct alookup_param_entry "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_el_compile_probeScript.sml crep_el_compile_probe.out \
+  source_el_f compiled_el_f "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

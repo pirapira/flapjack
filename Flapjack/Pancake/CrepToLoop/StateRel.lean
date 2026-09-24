@@ -445,6 +445,46 @@ def mkCtxtHOL (target : Compiler.Encoders.Asm.AsmArchitecture) (vmap : FiniteMap
 def makeVmapHOL (params : List Nat) : FiniteMap Nat Nat :=
   FUPDATE_LIST FEMPTY (params.zip (List.range params.length))
 
+/-! ## Executable `crepMakeVmap` vs the tagged HOL `make_vmap_def` -/
+
+/-- Adapter from the executable list-backed lookup map to the finite map built
+    by replaying the association list in reverse (Cake's `FEMPTY |++ ...`). -/
+def natInfoMapToFiniteMap [BEq Nat] (entries : NatInfoMap β) : FiniteMap Nat β :=
+  FUPDATE_LIST FEMPTY entries.reverse
+
+theorem FUPDATE_LIST_append_repr [BEq Nat] (fm : FiniteMap Nat β)
+    (entries rest : List (Nat × β)) :
+    FUPDATE_LIST fm (entries ++ rest) = FUPDATE_LIST (FUPDATE_LIST fm entries) rest := by
+  simp [FUPDATE_LIST, List.foldl_append]
+
+/-- Kernel-checked representation theorem: the list-backed first-match
+    `lookupNatInfo` and `FLOOKUP` of the reversed replay agree at every key,
+    including duplicate names. -/
+theorem lookupNatInfo_eq_flookup_natInfoMapToFiniteMap [BEq Nat] [LawfulBEq Nat]
+    (name : Nat) (entries : NatInfoMap β) :
+    lookupNatInfo name entries = FLOOKUP (natInfoMapToFiniteMap entries) name := by
+  induction entries with
+  | nil => rfl
+  | cons entry rest ih =>
+      rw [natInfoMapToFiniteMap, List.reverse_cons, FUPDATE_LIST_append_repr,
+        FUPDATE_LIST_cons, FUPDATE_LIST_nil, FLOOKUP_update]
+      rw [lookupNatInfo]
+      by_cases h : entry.1 = name
+      · simp [h]
+      · simp [h]
+        simpa [natInfoMapToFiniteMap] using ih
+
+/-- Faithful production semantics for HOL `make_vmap_def`: the executed
+    `crepMakeVmap` replays the positional pairs most-recent-first, so its
+    first-match lookup reproduces HOL's last-binding-wins behaviour for a
+    duplicate parameter name.  This is the general correspondence with the
+    tagged `makeVmapHOL`, valid for every parameter list. -/
+theorem lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL (params : List Nat) (name : Nat) :
+    lookupNatInfo name (crepMakeVmap params) = FLOOKUP (makeVmapHOL params) name := by
+  simp only [crepMakeVmap, makeVmapHOL,
+    lookupNatInfo_eq_flookup_natInfoMapToFiniteMap, natInfoMapToFiniteMap,
+    List.reverse_reverse]
+
 /-- Exact port of HOL `make_funcs` (`cakeml/pancake/crep_to_loopScript.sml:247`).
     HOL derives, for each program entry `(name, params, body)`,
     `(name, (num, LENGTH params))` where `num = index + first_name`; the result

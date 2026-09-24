@@ -280,6 +280,9 @@ run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_pr
 run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
   mk_ctxt_vars make_vmap_empty_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_make_vmap_dup_probeScript.sml crep_to_loop_make_vmap_dup_probe.out \
+  mvd_single_hit mvd_dup_last_wins "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
   mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -637,6 +640,10 @@ run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
 run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_lookup_code_probeScript.sml pan_sem_lookup_code_probe.out \
+  lookup_code_nonempty_success lookup_code_missing_function \
+  lookup_code_wrong_arity lookup_code_wrong_shape lookup_code_duplicate_formals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
   recursive_call_timeout recursive_deccall_timeout \
@@ -647,6 +654,8 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
   seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
+  while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
+  while_break_zero_eval while_break_label_eval while_continue_label_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \

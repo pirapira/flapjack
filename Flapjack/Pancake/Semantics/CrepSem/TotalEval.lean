@@ -4,7 +4,7 @@ import Flapjack.Pancake.Semantics.CrepSem.Eval
 # Total HOL-shaped Crep control subset
 
 This module ports the leaf clauses `Skip`, `Break`, `Continue`, and `Tick`,
-plus the `Assign`, `If`, `Seq`, `Return`, `Raise`, and `Dec` clauses over its
+plus the `Assign`, `If`, `Seq`, `While`, `Return`, `Raise`, and `Dec` clauses over its
 restricted recursive syntax, from `crepSem$evaluate_def` to the 11-field
 `CrepHolState`. The
 restricted syntax makes the implemented domain explicit: this is not a
@@ -35,8 +35,9 @@ def CrepClockLeaf.toCrepProg {width : Nat} :
 /-- Recursive program fragment for the total clock/control evaluator. Its
     `Assign` and `If` nodes evaluate source `CrepExp` terms in the current HOL
     state, and its `Seq` nodes use the HOL `fix_clock` boundary between
-    recursively evaluated programs. Return nodes evaluate their expression
-    list in the current HOL state. -/
+    recursively evaluated programs. `While` uses clock decrease and the same
+    `fix_clock` boundary between iterations. Return nodes evaluate their
+    expression list in the current HOL state. -/
 inductive CrepClockProg (width : Nat) where
   | leaf (value : CrepClockLeaf)
   | raiseException (value : BitVec width)
@@ -47,6 +48,8 @@ inductive CrepClockProg (width : Nat) where
   | returnValues (values : List (CrepExp (BitVec width)))
   | ite (condition : CrepExp (BitVec width))
       (thenBranch elseBranch : CrepClockProg width)
+  | whileLoop (condition : CrepExp (BitVec width))
+      (body : CrepClockProg width)
 
 /-- Embed the restricted recursive syntax into production Crep syntax. -/
 def CrepClockProg.toCrepProg {width : Nat} :
@@ -59,9 +62,19 @@ def CrepClockProg.toCrepProg {width : Nat} :
   | .returnValues values => .return values
   | .ite condition thenBranch elseBranch =>
       .ite condition thenBranch.toCrepProg elseBranch.toCrepProg
+  | .whileLoop condition body => .while condition body.toCrepProg
+
+/-- HOL `exit_loop` on an optional control result: propagate other outcomes,
+    while decrementing the nesting label of Break and Continue. -/
+def exitCrepClockLoopResult {width : Nat} :
+    Option (CrepResultHOL (BitVec width) FfiFinalEvent) →
+      Option (CrepResultHOL (BitVec width) FfiFinalEvent)
+  | some (.break label) => some (.break (label - 1))
+  | some (.continue label) => some (.continue (label - 1))
+  | result => result
 
 /-- Total result/state equations for the matching HOL `evaluate_def` leaves,
-    `Assign`, `If`, `Seq`, `Return`, `Raise`, and `Dec`. This restricted
+    `Assign`, `If`, `Seq`, `While`, `Return`, `Raise`, and `Dec`. This restricted
     function deliberately has no `Option` fuel wrapper and does not depend on
     `evalCrepRuntimeResult`. -/
 def evalCrepClockLeaf {width : Nat} {σ : Type _}
@@ -82,7 +95,9 @@ def evalCrepClockLeaf {width : Nat} {σ : Type _}
     `Assign` requires an existing destination and uses HOL `set_var` on success;
     expression and destination errors preserve the input state. `If` selects
     the then branch for nonzero words and the else branch for zero. `Seq`
-    applies HOL `fix_clock` between recursively evaluated programs. No fuel,
+    applies HOL `fix_clock` between recursively evaluated programs. `While`
+    recurs only after the HOL clock decrease and handles loop-control labels.
+    No fuel,
     partial result, or branch-run assumption is exposed. Remaining constructors
     are not assigned behavior by this restricted evaluator. -/
 def evalCrepClockProg [NeZero width] {σ : Type _}
@@ -127,8 +142,49 @@ def evalCrepClockProg [NeZero width] {σ : Type _}
           if value = 0 then evalCrepClockProg elseBranch state
           else evalCrepClockProg thenBranch state
       | none => (some .error, state)
-termination_by program _state => sizeOf program
-decreasing_by all_goals decreasing_trivial
+  | .whileLoop condition body, state =>
+      match evalCrepHolExp state condition with
+      | none => (some .error, state)
+      | some value =>
+          if value = 0 then (none, state)
+          else if hclock : state.clock = 0 then
+            (some .timeOut, emptyCrepHolLocals state)
+          else
+            let decState := decCrepHolClockW state
+            let step := evalCrepClockProg body decState
+            let fixed := fixCrepHolClockW decState step
+            match hfixed : fixed with
+            | (none, loopState) =>
+                have hbound : loopState.clock ≤ decState.clock := by
+                  have h := fixCrepHolClock_IMP_LESS_EQW decState step none loopState
+                  exact h (by simpa [fixed] using hfixed)
+                have hlt : loopState.clock < state.clock := by
+                  simp [decState, decCrepHolClockW] at hbound
+                  have hsub : state.clock - 1 < state.clock :=
+                    Nat.sub_lt (Nat.pos_of_ne_zero hclock) (by omega)
+                  exact Nat.lt_of_le_of_lt hbound hsub
+                evalCrepClockProg (.whileLoop condition body) loopState
+            | (some (.continue 0), loopState) =>
+                have hbound : loopState.clock ≤ decState.clock := by
+                  have h := fixCrepHolClock_IMP_LESS_EQW decState step
+                    (some (.continue 0)) loopState
+                  exact h (by simpa [fixed] using hfixed)
+                have hlt : loopState.clock < state.clock := by
+                  simp [decState, decCrepHolClockW] at hbound
+                  have hsub : state.clock - 1 < state.clock :=
+                    Nat.sub_lt (Nat.pos_of_ne_zero hclock) (by omega)
+                  exact Nat.lt_of_le_of_lt hbound hsub
+                evalCrepClockProg (.whileLoop condition body) loopState
+            | (some (.break 0), loopState) => (none, loopState)
+            | (result, loopState) => (exitCrepClockLoopResult result, loopState)
+termination_by program state => (sizeOf program, state.clock)
+decreasing_by
+  all_goals
+    simp_wf
+    first | decreasing_trivial | omega
+  all_goals
+    simp_wf
+    omega
 
 theorem evalCrepClockProg_return_success [NeZero width] {σ : Type _}
     (values : List (CrepExp (BitVec width)))

@@ -257,6 +257,9 @@ run_probe crep_to_loop_locals_rel_probeScript.sml crep_to_loop_locals_rel_probe.
   ctxt_vars_lookup subset_domain_component \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
+  find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
   gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake"
@@ -1261,6 +1264,6 @@ run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
 # The flatten app_list probe observes `misc$append` flattening the HOL
 # `stack_to_lab$flatten` app_list output to the production flat list.
 run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app_list_probe.out \
-  flatten_app_tick flatten_app_raise \
+  flatten_app_tick flatten_app_ite_tick \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"

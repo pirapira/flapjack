@@ -770,6 +770,13 @@ example :
   crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches holStoreByteBaseState
     holStoreByteBaseState_matches rfl rfl 8 0x77
 
+example :
+    crepRuntimeStoreByte holStoreByteBaseState (9 : RiscV.Word 64) 0xAA =
+      (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 9
+        0xAA).map (fun memory => { holStoreByteBaseState with memory := memory }) :=
+  crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches holStoreByteBaseState
+    holStoreByteBaseState_matches rfl rfl 9 0xAA
+
 /-- The production word/byte stores over an arbitrary matching model agree with
     HOL `mem_store`/`mem_store_byte`: guarded insertion, byte replacement in the
     aligned cell, and domain failure. -/
@@ -780,10 +787,20 @@ def storeByteMatchesGuard : Bool :=
         (fun state => state.memory 8) == some (.word (0x1122334455667777 : RiscV.Word 64))) &&
     (crepRuntimeStore holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
     (crepRuntimeStoreByte holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
-    ((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
+((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
         0x77).map (fun memory => memory 8) ==
       some (.word (0x1122334455667777 : RiscV.Word 64))) &&
-((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
+    ((crepRuntimeStoreByte holStoreByteBaseState (9 : RiscV.Word 64) 0xAA).map
+        (fun state => state.memory 8) ==
+      some (.word (0x112233445566AA88 : RiscV.Word 64))) &&
+    ((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 9
+        0xAA).map (fun memory => memory 8) ==
+      some (.word (0x112233445566AA88 : RiscV.Word 64))) &&
+    ((crepRuntimeStoreByte holStoreByteBaseState (9 : RiscV.Word 64) 0xAA).map
+        (fun state => state.memory 8) ==
+      (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 9
+        0xAA).map (fun memory => memory 8)) &&
+ ((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
         (fun state => state.memory 8) ==
       (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
         0x77).map (fun memory => memory 8))

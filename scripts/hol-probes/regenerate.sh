@@ -732,6 +732,13 @@ run_probe crep_eval_load_rv64_probeScript.sml crep_eval_load_rv64_probe.out \
   mem_load_valid eval_load_outside_domain \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval StoreByte probe observes HOL set_byte at a nonzero byte offset: the
+# cell updated at address 8 and at address 9, plus the memaddrs domain failure.
+run_probe crep_eval_store_byte_offset_probeScript.sml \
+  crep_eval_store_byte_offset_probe.out \
+  storebyte_offset9_result storebyte_outside_domain_mem8 \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 # The eval Op probe observes HOL word_op folding over constant operands for the
 # RV64 target (Add/Sub/And, plus the empty-Add neutral and the Sub arity failure).
 run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \

@@ -271,6 +271,31 @@ val _ = print_eval "compile_exp_correct_load_nested_named"
        (pan_structs$compile_exp ^nested_load_ctxt ^nested_load_expression) =
        SOME (pan_structsProof$convert_v ^nested_load_value))``;
 
+val _ = print_eval "compile_exp_correct_base_addr"
+  ``(pan_structs$old_exp_shape ^ctxt panLang$BaseAddr,
+     panSem$shape_of (ValWord (^state).base_addr),
+     pan_structsProof$v_flds_ok (^state).structs (ValWord (^state).base_addr),
+     panSem$eval ^state panLang$BaseAddr = SOME (ValWord (^state).base_addr),
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^state)
+       (pan_structs$compile_exp ^ctxt panLang$BaseAddr) =
+       SOME (pan_structsProof$convert_v (ValWord (^state).base_addr)))``;
+val _ = print_eval "compile_exp_correct_top_addr"
+  ``(pan_structs$old_exp_shape ^ctxt panLang$TopAddr,
+     panSem$shape_of (ValWord (^state).top_addr),
+     pan_structsProof$v_flds_ok (^state).structs (ValWord (^state).top_addr),
+     panSem$eval ^state panLang$TopAddr = SOME (ValWord (^state).top_addr),
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^state)
+       (pan_structs$compile_exp ^ctxt panLang$TopAddr) =
+       SOME (pan_structsProof$convert_v (ValWord (^state).top_addr)))``;
+val _ = print_eval "compile_exp_correct_bytes_in_word"
+  ``(pan_structs$old_exp_shape ^ctxt panLang$BytesInWord,
+     panSem$shape_of (ValWord byte$bytes_in_word),
+     pan_structsProof$v_flds_ok (^state).structs (ValWord byte$bytes_in_word),
+     panSem$eval ^state panLang$BytesInWord = SOME (ValWord byte$bytes_in_word),
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^state)
+       (pan_structs$compile_exp ^ctxt panLang$BytesInWord) =
+       SOME (pan_structsProof$convert_v (ValWord byte$bytes_in_word)))``;
+
 val _ = print_eval "size_of_compile_shape_comb"
   ``(is_wf_shape [] (Comb [One; One]),
      struct_infos_ok [],

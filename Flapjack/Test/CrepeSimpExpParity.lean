@@ -287,7 +287,7 @@ example :
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)
         (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord]) := by
   exact crepSimpExpEvalPreservesHolFiniteDimension boolWordDimension
-    boolDimensionHolState _ (by simp [evalCrepRuntimeExp])
+    boolDimensionHolState _ (by simp [evalCrepRuntimeExp, crepOpCrep])
 
 example :
     (evalCrepRuntimeExp
@@ -303,7 +303,7 @@ example :
         PanWordLab.word := by
   exact crepSimpExpCorrect1HolFiniteDimension (fun (_, entry) => entry)
     boolDimensionHolState _
-    (by simp [evalCrepRuntimeExp])
+    (by simp [evalCrepRuntimeExp, crepOpCrep])
 
 example :
     evalCrepHolFiniteDimensionExpWordLab boolWordDimension
@@ -323,7 +323,7 @@ example :
     (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
       PanWordLab.word ≠ none
   rw [← hEval]
-  simp [evalCrepRuntimeExp]
+  simp [evalCrepRuntimeExp, crepOpCrep]
 
 example :
     (evalCrepRuntimeExp
@@ -340,7 +340,7 @@ example :
         PanWordLab.word := by
   apply crepSimpExpCorrect1HolFiniteWordSource (fun (_, entry) => entry)
     boolDimensionHolState _
-  simp [evalCrepRuntimeExp]
+  simp [evalCrepRuntimeExp, crepOpCrep]
 
 /-! Instantiate the complete successful-result theorem at the non-`Fin`
     Bool index carrier. The premise remains universally supplied, matching
@@ -380,7 +380,7 @@ example : True := by
       (.crepOp .mul [.const boolDimensionWord, .const boolDimensionWord])).map
         PanWordLab.word ≠ none
     rw [← hEval]
-    simp [evalCrepRuntimeExp]
+    simp [evalCrepRuntimeExp, crepOpCrep]
   exact True.intro
 
 #guard crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 4 value))
@@ -482,7 +482,7 @@ example : (evalCrepRuntimeExp
       (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
         (instFinHolFiniteDimension (width := 64)))
       holWordBitsMulEight).map PanWordLab.word ≠ none := by
-    simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
+    simp [evalCrepRuntimeExp, crepOpCrep, CrepHolState.toHolFiniteWordSourceRuntime,
       CrepHolState.toHolFiniteWordRuntime, holWordBitsMulEight,
       holWordBitsState64WithLocal,
       holWordBitsState64, holWordBits64]
@@ -506,7 +506,7 @@ example :
   have hRuntime : evalCrepRuntimeExp
       (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
         (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight ≠ none := by
-    simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
+    simp [evalCrepRuntimeExp, crepOpCrep, CrepHolState.toHolFiniteWordSourceRuntime,
       CrepHolState.toHolFiniteWordRuntime, holWordBitsMulEight,
       holWordBitsState64WithLocal, holWordBitsState64, holWordBits64]
   have hRuntimeWordLab : (evalCrepRuntimeExp

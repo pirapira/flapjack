@@ -5943,7 +5943,7 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
                                           hleftSingleton, hrightSingleton,
                                           cexpHeads, compilePanOp]
                                       simp [compilerContext, hcompiled, evalCrepRuntimeExps,
-                                        evalCrepRuntimeExp, hleftExpressionRun,
+                                        evalCrepRuntimeExp, crepOpCrep, hleftExpressionRun,
                                         hrightExpressionRun, panValueFlatten]
                                   | cons _ _ => simp [hrightCompiled] at hrightLength
                           | cons _ _ => simp [hleftCompiled] at hleftLength
@@ -7739,7 +7739,7 @@ theorem compileExpHOL_panOpMul_ofHOLIH
                       some [leftWord * rightWord] := by
                     rw [hcompiled]
                     simp [evalCrepRuntimeExps, evalCrepRuntimeExp,
-                      hleftExpressionRun, hrightExpressionRun]
+                      crepOpCrep, hleftExpressionRun, hrightExpressionRun]
                   refine ⟨?_, ?_, ?_, ?_⟩
                   · simpa [compilerContext, hresult, panValueFlatten] using htargetMul
                   · simp [compilerContext, hcompiled]

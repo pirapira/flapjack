@@ -820,7 +820,7 @@ theorem crepEvalMulConstForModel {n : Nat} [NeZero n] {σ : Type}
             unfold crepMulConst
             simp only [if_neg hzeroCond, if_neg honeCond, hdest]
           rw [hmul]
-          simp [evalCrepRuntimeExp, h]
+          simp [evalCrepRuntimeExp, crepOpCrep, h]
       | some exponent =>
           have hbound : exponent < n :=
             crepDest2Exp_lt_width constant exponent hdest
@@ -934,7 +934,7 @@ theorem crepEvalMulConstFiniteWordForModel {ι : Type}
     · simp only [if_neg hzero, if_neg hone]
       cases hdest : crepDest2Exp 0 constant with
       | none =>
-          simp [evalCrepRuntimeExp, h]
+          simp [evalCrepRuntimeExp, crepOpCrep, h]
       | some exponent =>
           have hbound := crepDest2ExpHolFiniteDimension_lt_width
             dimension constant exponent hdest
@@ -1355,7 +1355,7 @@ private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
           have hmulShape := crepSimpExp.eq_8 fromNat [left, right]
             CrepOp.mul hnotConstConst hnotLeftConst hnotRightConst
           rw [hmulShape]
-          simp [evalCrepRuntimeExp, simpExp, hleft, hright]
+          simp [evalCrepRuntimeExp, crepOpCrep, simpExp, hleft, hright]
 
 /-! All-width preservation for the production evaluator on an explicitly
     enumerated Boolean-index word. The statement mirrors HOL's successful-
@@ -1504,7 +1504,7 @@ private theorem crepSimpExpEvalPreservesHolFiniteDimensionWithRuntime {ι : Type
                 some (leftValue * rightValue) := hmul
             _ = evalCrepRuntimeExp (toRuntime state)
                   (.crepOp .mul [left, right]) := by
-                simp [evalCrepRuntimeExp, ← ih.1 left (by simp) state
+                simp [evalCrepRuntimeExp, crepOpCrep, ← ih.1 left (by simp) state
                   (by intro hn; simp [evalCrepRuntimeExp, hn] at h),
                   ← ih.1 right (by simp) state
                     (by intro hn; simp [evalCrepRuntimeExp, hn] at h),
@@ -1675,7 +1675,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
           have hmulShape := crepSimpExp.eq_8 (BitVec.ofNat n) [left, right]
             CrepOp.mul hnotConstConst hnotLeftConst hnotRightConst
           rw [hmulShape]
-          simp [evalCrepRuntimeExp, hleft, hright]
+          simp [evalCrepRuntimeExp, crepOpCrep, hleft, hright]
 
 /-! This width-generic preservation lemma follows the successful-evaluation
     induction for HOL simp_exp_correct1, but its evaluator remains the
@@ -1781,7 +1781,8 @@ theorem crepSimpExpEvalPreserves {n : Nat} [NeZero n] {σ : Type}
                 (crepSimpExp (BitVec.ofNat n) (.crepOp .mul [left, right])) =
                 some (leftValue * rightValue) := hmul
             _ = evalCrepRuntimeExp (riscvCrepWordTarget state) (.crepOp .mul [left, right]) := by
-              simp [evalCrepRuntimeExp, ← hleftSimp, ← hrightSimp, hleftValue, hrightValue]
+              simp [evalCrepRuntimeExp, crepOpCrep, ← hleftSimp, ← hrightSimp,
+                hleftValue, hrightValue]
   case cmp operator left right ihl ihr =>
     rw [crepSimpExp.eq_9]
     simp only [evalCrepRuntimeExp] at h ⊢

@@ -41,6 +41,15 @@ theorem bitVecToHolWordBits_holWordBitsToBitVec {width : Nat}
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD]
 
+theorem holWordBitsToBitVec_injective {width : Nat} :
+    Function.Injective (@holWordBitsToBitVec width) := by
+  intro left right h
+  calc
+    left = bitVecToHolWordBits (holWordBitsToBitVec left) :=
+      (bitVecToHolWordBits_holWordBitsToBitVec left).symm
+    _ = bitVecToHolWordBits (holWordBitsToBitVec right) := congrArg bitVecToHolWordBits h
+    _ = right := bitVecToHolWordBits_holWordBitsToBitVec right
+
 theorem bitVecToHolWordBits_ofNat {width : Nat} (value : Nat) :
     bitVecToHolWordBits (BitVec.ofNat width value) =
       fun index => Nat.testBit value index.val := by
@@ -133,6 +142,17 @@ theorem bitVecToHolWord_holWordToBitVec {ι : Type u}
       (bitVecToHolWordBits (holWordBitsToBitVec (holWordToFinBits dimension word))) = word
   rw [bitVecToHolWordBits_holWordBitsToBitVec]
   exact finBitsToHolWord_holWordToFinBits dimension word
+
+theorem holWordToBitVec_injective {ι : Type u}
+    (dimension : HolFiniteDimension ι) :
+    Function.Injective (holWordToBitVec dimension) := by
+  intro left right h
+  calc
+    left = bitVecToHolWord dimension (holWordToBitVec dimension left) :=
+      (bitVecToHolWord_holWordToBitVec dimension left).symm
+    _ = bitVecToHolWord dimension (holWordToBitVec dimension right) :=
+      congrArg (bitVecToHolWord dimension) h
+    _ = right := bitVecToHolWord_holWordToBitVec dimension right
 
 theorem holWordToBitVec_bitVecToHolWord {ι : Type u}
     (dimension : HolFiniteDimension ι) (word : BitVec dimension.width) :
@@ -2540,9 +2560,10 @@ theorem evalCrepRuntimeExp_finiteDimension_crepOpMul {ι : Type}
                 some (bitVecToHolWord dimension rightValue) := by
             simpa [hRight] using ihRight
           rw [hLeftSource, hRightSource]
-          simp [evalCrepHolExp, hLeft, hRight]
-          apply congrArg (bitVecToHolWord dimension)
-          simp [holWordToBitVec_bitVecToHolWord dimension]
+          simp [evalCrepHolExp, hLeft, hRight, crepOpCrep]
+          apply holWordToBitVec_injective dimension
+          rw [holFiniteWordToBitVec_mul]
+          simp [holWordToBitVec_bitVecToHolWord]
 
 private theorem evalCrepRuntimeExps_toMapM_wordBits [NeZero width]
     (state : CrepRuntimeState (Fin width → Bool) σ)
@@ -2737,11 +2758,9 @@ theorem evalCrepRuntimeExp_crepOpMul_toHolWordBits [NeZero width]
               some (bitVecToHolWordBits rightValue) := by
             simpa [hRight] using ihRight
           rw [hLeftFin, hRightFin]
-          simp [evalCrepHolExp, hLeft, hRight]
-          change bitVecToHolWordBits
-              (holWordBitsToBitVec (bitVecToHolWordBits leftValue) *
-                holWordBitsToBitVec (bitVecToHolWordBits rightValue)) =
-            bitVecToHolWordBits (leftValue * rightValue)
+          simp [evalCrepHolExp, hLeft, hRight, crepOpCrep]
+          apply holWordBitsToBitVec_injective
+          rw [holWordBitsToBitVec_mul]
           simp [holWordBitsToBitVec_bitVecToHolWordBits]
 
 /-! Target helpers for the production evaluator relation, retaining the
@@ -2987,7 +3006,7 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
         | nil =>
           simp only [evalCrepRuntimeExp, evalCrepHolExp]
           rw [ih.1 head (by simp) state, ih.1 second (by simp) state]
-          simp
+          simp [crepOpCrep]
         | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolExp]
   case cmp operator left right ihl ihr =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]
@@ -3171,31 +3190,5 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
       · exact ihTail.1 e he state
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
-
-/-! ## BitVec 64 `crepOp` branch computes the tagged definition
-
-The executed Crep expression evaluator `evalCrepRuntimeExp` is carrier-generic:
-its `.crepOp` clause routes through the generic helper `crepOpValue`, because a
-generic `α` cannot syntactically call the width-polymorphic tagged `crepOpCrep`.
-On the canonical RISC-V 64 target the two agree; the theorem below records that
-the executed branch at `BitVec 64` computes exactly the reviewed tagged
-definition. This keeps the compiler/semantics distinction explicit: the tagged
-`crepOpCrep` is the HOL semantics of `crep_op`, the generic `crepOpValue` is what
-the Lean evaluator executes, and this theorem is the bridge between them (it does
-not introduce a second evaluator). -/
-
-/-- On the `BitVec 64` carrier the executed `.crepOp .mul [left, right]` branch
-    of `evalCrepRuntimeExp` computes the reviewed tagged `crepOpCrep 64`. -/
-theorem evalCrepRuntimeExp_crepOp_bitVec64 (state : CrepRuntimeState (BitVec 64) σ)
-    (left right : CrepExp (BitVec 64)) :
-    evalCrepRuntimeExp state (.crepOp CrepOp.mul [left, right]) =
-      (do
-        let leftValue ← evalCrepRuntimeExp state left
-        let rightValue ← evalCrepRuntimeExp state right
-        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) := by
-  rw [evalCrepRuntimeExp_crepOp_eq]
-  cases hleft : evalCrepRuntimeExp state left <;>
-    cases hright : evalCrepRuntimeExp state right <;>
-      simp [hleft, hright, crepOpCrep]
 
 end Flapjack

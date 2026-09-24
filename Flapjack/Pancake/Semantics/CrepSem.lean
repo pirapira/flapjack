@@ -228,47 +228,31 @@ def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option �
   | none => FDOMSUB f entry.1
   | some v => FUPDATE f (entry.1, v)
 
-/-- Exact HOL-shaped port of `crepSem$crep_op_def` (crepSemScript.sml:85-88):
-    `crep_op crepLang$Mul [w1;w2] = SOME (w1 * w2)` and `crep_op _ _ = NONE`.
-    HOL's carrier is `'a word`, so the tagged port is width-polymorphic over
-    `BitVec width` with the positive-width side condition `[NeZero width]`
-    (HOL's `:'a word` requires a nonempty index type) rather than an arbitrary
-    `[Mul α]`. The wildcard clause
-    covers `.mul` at every other arity, matching HOL's total-over-malformed-
-    operand-lists `crep_op _ _ = NONE`. The generic production evaluator still
-    multiplies directly in its `.crepOp` clause; the RV64 executed-path
-    instantiation is tested, but routing execution through this tagged
-    definition remains open (bead flapjack-pxn.18.4.3.48.1.20). -/
+/-! HOL crep_op has exactly one operator constructor, Mul. Lean's Mul α
+is the carrier operation corresponding to HOL word multiplication. -/
+/-- Exact generic counterpart of CakeML's `crepSem$crep_op_def`
+    (`crepSemScript.sml:85-88`): Mul on exactly two words succeeds with their
+    product; every operator/arity combination not covered by HOL returns none.
+    The arbitrary α is the word-value carrier and `[Mul α]` supplies its HOL
+    multiplication operation. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
-def crepOpCrep (width : Nat) [NeZero width] : CrepOp → List (BitVec width) → Option (BitVec width)
+def crepOpCrep [Mul α] : CrepOp → List α → Option α
   | .mul, [left, right] => some (left * right)
   | _, _ => none
 
-/-- Generic untagged helper: the same multiplication dispatch over an arbitrary
-    `[Mul α]`, used as the value-level bridge for the target-extended evaluator.
-    It is not a HOL port because HOL's operands are words. -/
-def crepOpValue [Mul α] : CrepOp → List α → Option α
-  | .mul, [left, right] => some (left * right)
-  | _, _ => none
+/-- Compatibility name retained for existing target-adapter clients; the body
+is the reviewed generic HOL definition above. Production evaluation calls
+`crepOpCrep` directly. -/
+def crepOpValue [Mul α] : CrepOp → List α → Option α := crepOpCrep
 
-/-- The width-polymorphic tagged port is the generic helper at `BitVec width`. -/
+/-- Compatibility equation for target-adapter clients of the generic operator. -/
 @[simp] theorem crepOpValue_mul [Mul α] (left right : α) :
     crepOpValue .mul [left, right] = some (left * right) := by
-  simp [crepOpValue]
+  rfl
 
-theorem crepOpCrep_eq_crepOpValue (width : Nat) [NeZero width] (operator : CrepOp)
-    (arguments : List (BitVec width)) :
-    crepOpCrep width operator arguments = crepOpValue operator arguments := by
-  cases operator
-  cases arguments with
-  | nil => rfl
-  | cons left rest =>
-      cases rest with
-      | nil => rfl
-      | cons right rest =>
-          cases rest with
-          | nil => rfl
-          | cons extra tail => rfl
+theorem crepOpCrep_eq_crepOpValue [Mul α] (operator : CrepOp)
+    (arguments : List α) :
+    crepOpCrep operator arguments = crepOpValue operator arguments := rfl
 
 /-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
     over the 11-field `CrepHolState`:
@@ -1076,7 +1060,7 @@ def evalCrepRuntimeExp
   | .crepOp .mul [left, right] => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
-      crepOpValue .mul [left, right]
+      crepOpCrep .mul [left, right]
   | .cmp operator left right => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
@@ -1254,13 +1238,13 @@ theorem evalCrepRuntimeExp_crepOp_mul_wordLab
       | nil => simp [evalCrepRuntimeExp]
       | cons right rest =>
         cases rest with
-        | nil => simp [evalCrepRuntimeExp, crepOpValue, Option.map_bind, Option.map_some, Function.comp_def]
+        | nil => simp [evalCrepRuntimeExp, crepOpCrep, Option.map_bind, Function.comp_def]
         | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Production bridge for `crep_op_def`: the executed `.crepOp .mul` clause is
     `case OPT_MMAP (eval s) args of SOME args' => crep_op op args' | _ => NONE`
     at the only CrepOp constructor `.mul`, i.e. evaluate the two operands and
-    apply the tagged `crepOpCrep` (via the generic value helper `crepOpValue`).
+    apply the tagged `crepOpCrep` directly.
     Malformed arities return `none` on both sides.
     Flapjack-only because the evaluator's state is target-extended. -/
 theorem evalCrepRuntimeExp_crepOp_eq
@@ -1274,7 +1258,7 @@ theorem evalCrepRuntimeExp_crepOp_eq
       (match arguments with
        | [left, right] =>
            (match evalCrepRuntimeExp state left, evalCrepRuntimeExp state right with
-            | some leftValue, some rightValue => crepOpValue operator [leftValue, rightValue]
+            | some leftValue, some rightValue => crepOpCrep operator [leftValue, rightValue]
             | _, _ => none)
        | _ => none) := by
   cases operator
@@ -1288,7 +1272,7 @@ theorem evalCrepRuntimeExp_crepOp_eq
           | nil =>
               cases h1 : evalCrepRuntimeExp state left <;>
                 cases h2 : evalCrepRuntimeExp state right <;>
-                  simp [evalCrepRuntimeExp, crepOpValue, h1, h2]
+                  simp [evalCrepRuntimeExp, crepOpCrep, h1, h2]
           | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Projection equation for `BaseAddr`; Flapjack-only because its state is
@@ -1452,8 +1436,7 @@ theorem evalCrepRuntimeExp_wordLab_projection
         | cons right tail =>
             cases tail with
             | nil =>
-                simp [evalCrepRuntimeExp, crepOpValue, Function.comp_def, Option.map_bind,
-                  Option.map_some]
+                simp [evalCrepRuntimeExp, crepOpCrep, Function.comp_def, Option.map_bind]
             | cons extra more =>
                 simp [evalCrepRuntimeExp]
 

@@ -34,6 +34,14 @@ val _ = print_eval "apply_colour_alias_assign"
   ``apply_colour ^alias_colour
       (wordLang$Assign 2 (wordLang$Var 1 : 64 word wordLang$exp))``;
 
+val binary_alias_colour =
+  ``\n:num. if n = 2 then 1 else if n = 3 then 2 else n``;
+val _ = print_eval "apply_colour_alias_add"
+  ``apply_colour ^binary_alias_colour
+      (wordLang$Assign 2
+        (wordLang$Op Add
+          [wordLang$Var 1; wordLang$Var 3] : 64 word wordLang$exp))``;
+
 val _ = print_eval "apply_colour_return_raise"
   ``apply_colour (total_colour ^colour)
       (wordLang$Seq

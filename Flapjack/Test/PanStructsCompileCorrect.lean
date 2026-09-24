@@ -1022,14 +1022,15 @@ example :
         panSemShapeOf (.word (BitVec.ofNat 64 1)) ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs
         (.word (BitVec.ofNat 64 1)) = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
-        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .bytesInWord) =
+        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .bytesInWord)
+        (memoryAccess := none) =
           some (panStructConvertValue (.word (BitVec.ofNat 64 1)))) := by
   have hlocalsFields : panStructEveryValueFieldsOkBool
       finiteMapRuntime.structs finiteMapRuntime.locals := by
@@ -1058,8 +1059,8 @@ example :
     (by simp [evalPanValueExpFull]) rfl hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap
   have hbytes := panStructCompileExpCorrectBytesInWordCase emptyStructCompileContext
-    finiteMapRuntime (BitVec.ofNat 64 1) (.word (BitVec.ofNat 64 1))
-    (by simp [evalPanValueExp]) rfl hlocalsFields hglobalsFields
+    finiteMapRuntime (BitVec.ofNat 64 1) none (.word (BitVec.ofNat 64 1))
+    (by simp [evalPanValueExpFull]) rfl hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap
   exact ⟨hbase, htop, hbytes⟩
 

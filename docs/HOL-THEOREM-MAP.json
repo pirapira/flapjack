@@ -5245,7 +5245,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectBytesInWordCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked BytesInWord-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. HOL uses its fixed bytes_in_word value, while production Lean exposes the value through the explicit bytesInWord evaluator parameter."
+    "reviewer": "Kernel-checked BytesInWord-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters, stated over evalPanValueExpFull and PanSemState. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. HOL uses its fixed byte$bytes_in_word value, while production Lean exposes the value through the explicit bytesInWord evaluator parameter. PanShiftWidth, ArithmeticShiftRight, and RotateRightOp are evaluator runtime dictionaries not inspected by this literal, not additional logical HOL side conditions; Lean also exposes optional PanValueMemoryAccess."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

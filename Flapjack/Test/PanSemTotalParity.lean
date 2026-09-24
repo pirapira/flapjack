@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem.Total
+import Flapjack.Pancake.Semantics.PanSem.TotalMeasure
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
@@ -566,5 +567,59 @@ def runChecks : IO Bool := do
     IO.println "PASS panSem total Assign missing source rejected with Error and unchanged state"
   else IO.println "FAIL panSem total Assign missing source rejected with Error and unchanged state"
   pure totalGuard
+
+example :
+    panSemEvalMeasureRel (totalState 5, Prog.skip)
+      (totalState 5, Prog.ite (.const (BitVec.ofNat 64 1)) .skip .tick) :=
+  panSemEvalMeasureRel_ite_branch (totalState 5)
+    (.const (BitVec.ofNat 64 1)) .skip .tick .skip (Or.inl rfl)
+
+example :
+    panSemEvalMeasureRel (totalState 5, Prog.skip)
+      (totalState 5,
+        Prog.dec "x" .one (.const (BitVec.ofNat 64 9)) .skip) :=
+  panSemEvalMeasureRel_decBody (totalState 5) "x" .one
+    (.const (BitVec.ofNat 64 9)) .skip
+
+example :
+    panSemEvalMeasureRel
+      (totalState 4, Prog.while (.const (BitVec.ofNat 64 1)) (.skip : Prog Word64))
+      (totalState 5, Prog.skip) :=
+  panSemEvalMeasureRel_of_clock_lt (by decide)
+
+example :
+    panSemEvalMeasureRel
+      ({totalState 5 with clock := decPanClock 5},
+        (Prog.seq .skip (.while (.const (BitVec.ofNat 64 1)) .tick) : Prog Word64))
+      (totalState 5, Prog.call none "callee" []) := by
+  apply panSemEvalMeasureRel_of_clock_le_decPanClock (currentState := totalState 5)
+    (nextProgram := Prog.seq .skip (.while (.const (BitVec.ofNat 64 1)) .tick))
+    (currentProgram := Prog.call none "callee" [])
+  · decide
+  · decide
+
+example :
+    panSemEvalMeasureRel
+      ({totalState 5 with clock := decPanClock 5}, Prog.seq .skip .tick)
+      (totalState 5,
+        Prog.decCall "x" .one "callee" [] (Prog.seq .skip .tick)) := by
+  apply panSemEvalMeasureRel_decCallBody ({totalState 5 with clock := decPanClock 5})
+    (totalState 5) "x" .one "callee" [] (Prog.seq .skip .tick)
+  decide
+
+example :
+    panSemEvalMeasureRel (totalState 4, Prog.tick)
+      (totalState 5, Prog.seq .skip .tick) :=
+  panSemEvalMeasureRel_seq_branch (totalState 4) (totalState 5)
+    .skip .tick .tick (by decide) (Or.inr rfl)
+
+example :
+    panSemEvalMeasureRel
+      (panSemFixClock 5 (totalState 7), Prog.tick)
+      (totalState 5, Prog.seq .skip .tick) := by
+  apply panSemEvalMeasureRel_seq_branch (panSemFixClock 5 (totalState 7))
+    (totalState 5) .skip .tick .tick
+  · exact panSemFixClock_clock_le 5 (totalState 7)
+  · exact Or.inr rfl
 
 end Flapjack.Test.PanSemTotalParity

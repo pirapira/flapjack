@@ -523,6 +523,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1OpHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged support for the Op case shape, with IHs over the argument list and full Option word_lab result. It uses evalCrepHolFiniteWordSourceExpWordLab over an explicit HolFiniteDimension and CrepHolState. The word_op operation bridge is reviewed, but no proof identifies this evaluator/state encoding with native HOL crepSem eval_def for arbitrary dimensions and states; therefore it is not tagged as a HOL case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged TopAddr support case over the unverified source-model evaluator; exact HOL evaluator/state correspondence remains open."
@@ -8688,6 +8696,30 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `handler_slots_def` at word_to_stackScript.sml:346-348 - handler_slots perf = if perf then 5n else 3n - pure bool/num sizing of exception-handler stack slots used by raise_stub/PushHandler/StackHandlerArgs/copy_ret, with no word operation or dimindex, so the monomorphic Lean port is exact; direct HOL-EVAL rows ps_handler_slots_true=5/ps_handler_slots_false=3 in scripts/hol-probes/word_to_stack_perf_slots_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wReg1_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wReg1",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wReg1_def` at word_to_stackScript.sml:28-31 - wReg1 r (k,f,f') = let r = r DIV 2 in if r < k then ([],r) else ([(k,f-1-(r-k))],k) - touches only num/bool/list with no word operation or dimindex, so the word-independent Lean port is exact with no width index; direct HOL-EVAL rows rf_reg1_high=([(3,8)],3)/rf_reg1_low=([],1) in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wReg2_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wReg2",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wReg2_def` at word_to_stackScript.sml:34-37 - wReg2 r (k,f,f') = let r = r DIV 2 in if r < k then ([],r) else ([(k+1,f-1-(r-k))],k+1) - pure num/bool/list, no word operation or dimindex, exact with no width index; HOL-EVAL rows rf_reg2_high=([(4,8)],4)/rf_reg2_low=([],2) in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "format_var_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "formatVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `format_var_def` at word_to_stackScript.sml:78-80 - format_var k NONE = INL (k+1) /\\ format_var k (SOME x) = if x < k then INL x else INR x - pure num/option/sum, no word operation or dimindex, exact with no width index; HOL-EVAL rows rf_format_var_none=INL 6/rf_format_var_some_reg=INL 2/rf_format_var_some_frame=INR 7 in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",
@@ -8720,52 +8752,52 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `inst` at asmScript.sml:130-136 - Skip | Const reg ('a word) | Arith ('a arith) | Mem memop reg ('a addr) | FP fp. The width-indexed Lean HolInst width matches constructor-for-constructor: Skip; Const Nat (BitVec width); Arith (HolArith width) where HolArith width = WordLangArith (BitVec width) is the exact word-indexed arith mirror; Mem (HolMemop) Nat (HolAddr width) with the exact memop/addr mirrors; FP (HolFp) with the exact fp mirror. It is the payload of stackLang prog's Inst. Kernel isomorphisms HolInst.toWordLangInst/ofWordLangInst with roundtrip lemmas connect it to the production generic WordLangInst. Direct HOL-EVAL rows ai_skip=1/ai_const_reg=2/ai_const_val=7/ai_mem_reg=2/ai_mem_base=3 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "binop",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolBinop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `binop` at asmScript.sml:78-80 - Add | Sub | And | Or | Xor. Monomorphic and width-independent; HolBinop is the alias of the faithful Flapjack.BinOp inductive with the same five nullary constructors. Direct HOL-EVAL row ab_add=1 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by binopTag in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "binop",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolBinop",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `binop` at asmScript.sml:78-80 - Add | Sub | And | Or | Xor. Monomorphic and width-independent; HolBinop is the alias of the faithful Flapjack.BinOp inductive with the same five nullary constructors. Direct HOL-EVAL row ab_add=1 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by binopTag in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "cmp",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolCmp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `cmp` at asmScript.sml:82-84 - Equal | Lower | Less | Test | NotEqual | NotLower | NotLess | NotTest. Monomorphic and width-independent; HolCmp is the alias of the faithful Flapjack.Cmp inductive with the same eight nullary constructors. Direct HOL-EVAL row ac_notTest=7 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by cmpTag in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "cmp",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolCmp",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `cmp` at asmScript.sml:82-84 - Equal | Lower | Less | Test | NotEqual | NotLower | NotLess | NotTest. Monomorphic and width-independent; HolCmp is the alias of the faithful Flapjack.Cmp inductive with the same eight nullary constructors. Direct HOL-EVAL row ac_notTest=7 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by cmpTag in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "memop",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolMemop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `memop` at asmScript.sml:125-128 - Load | Load8 | Load16 | Load32 | Store | Store8 | Store16 | Store32. Monomorphic and width-independent; HolMemop is the alias of the faithful Flapjack.WordMemOp inductive with the same eight nullary constructors. Direct HOL-EVAL row am_store32=7 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by memopTag in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "memop",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolMemop",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `memop` at asmScript.sml:125-128 - Load | Load8 | Load16 | Load32 | Store | Store8 | Store16 | Store32. Monomorphic and width-independent; HolMemop is the alias of the faithful Flapjack.WordMemOp inductive with the same eight nullary constructors. Direct HOL-EVAL row am_store32=7 in scripts/hol-probes/asm_inst_fragment_probe.out is reproduced by memopTag in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "arith",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolArith",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact word-indexed rendering of HOL `arith` at asmScript.sml:86-95 - Binop binop reg reg ('a reg_imm) | Shift shift reg reg ('a reg_imm) | Div reg reg reg | LongMul reg reg reg reg | LongDiv reg reg reg reg reg | AddCarry reg reg reg reg | AddOverflow reg reg reg reg | SubOverflow reg reg reg reg, with shift = ast$shift (cakeml/semantics/astScript.sml:21). HolArith width is definitionally WordLangArith (BitVec width), the already-faithful generic mirror at the width word; constructor arity and field types match the HOL datatype exactly (Binop/Shift keep the 4-field form with right : reg_imm). Direct HOL-EVAL rows aa_div_arity=6/aa_longDiv_arity=15 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by arithDivSum/arithLongDivSum in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "arith",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolArith",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact word-indexed rendering of HOL `arith` at asmScript.sml:86-95 - Binop binop reg reg ('a reg_imm) | Shift shift reg reg ('a reg_imm) | Div reg reg reg | LongMul reg reg reg reg | LongDiv reg reg reg reg reg | AddCarry reg reg reg reg | AddOverflow reg reg reg reg | SubOverflow reg reg reg reg, with shift = ast$shift (cakeml/semantics/astScript.sml:21). HolArith width is definitionally WordLangArith (BitVec width), the already-faithful generic mirror at the width word; constructor arity and field types match the HOL datatype exactly (Binop/Shift keep the 4-field form with right : reg_imm). Direct HOL-EVAL rows aa_div_arity=6/aa_longDiv_arity=15 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by arithDivSum/arithLongDivSum in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "fp",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolFp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `fp` at asmScript.sml:97-119, 16 constructors over reg/fp_reg (num): FPLess/FPLessEqual/FPEqual (3 regs), FPAbs/FPNeg/FPSqrt (2), FPAdd/FPSub/FPMul/FPDiv (3), FPFma (3), FPMov (2), FPMovToReg (reg reg fp_reg), FPMovFromReg (fp_reg reg reg), FPToInt (2), FPFromInt (2). Monomorphic and width-independent; HolFp is the alias of the faithful Flapjack.WordLangFp inductive with the same 16 constructors and arities. Direct HOL-EVAL rows af_fpMovToReg=6/af_fpFromInt=9 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by fpMovToRegSum/fpFromIntSum in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "fp",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolFp",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact port of HOL `fp` at asmScript.sml:97-119, 16 constructors over reg/fp_reg (num): FPLess/FPLessEqual/FPEqual (3 regs), FPAbs/FPNeg/FPSqrt (2), FPAdd/FPSub/FPMul/FPDiv (3), FPFma (3), FPMov (2), FPMovToReg (reg reg fp_reg), FPMovFromReg (fp_reg reg reg), FPToInt (2), FPFromInt (2). Monomorphic and width-independent; HolFp is the alias of the faithful Flapjack.WordLangFp inductive with the same 16 constructors and arities. Direct HOL-EVAL rows af_fpMovToReg=6/af_fpFromInt=9 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by fpMovToRegSum/fpFromIntSum in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
-    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-    "hol_name": "asm",
-    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-    "lean_name": "HolAsm",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `asm` at asmScript.sml:138-145 - Inst ('a inst) | Jump ('a word) | JumpCmp cmp reg ('a reg_imm) ('a word) | Call ('a word) | JumpReg reg | Loc reg ('a word). The width-indexed Lean HolAsm width matches constructor-for-constructor: inst (HolInst width); jump/call/loc over BitVec width; jumpCmp HolCmp Nat (HolRegImm width) (BitVec width); jumpReg Nat. The production generic-field rendering AsmData width is kept untagged (same arity, fields at the generic WordLangInst/WordRegImm/Cmp carriers). Direct HOL-EVAL rows as_jump=9/as_jumpCmp=1/as_jumpReg=7/as_loc=14 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by asmJumpTarget/asmJumpCmpReg/asmJumpRegTarget/asmLocSum in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+   "hol_name": "asm",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolAsm",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `asm` at asmScript.sml:138-145 - Inst ('a inst) | Jump ('a word) | JumpCmp cmp reg ('a reg_imm) ('a word) | Call ('a word) | JumpReg reg | Loc reg ('a word). The width-indexed Lean HolAsm width matches constructor-for-constructor: inst (HolInst width); jump/call/loc over BitVec width; jumpCmp HolCmp Nat (HolRegImm width) (BitVec width); jumpReg Nat. The production generic-field rendering AsmData width is kept untagged (same arity, fields at the generic WordLangInst/WordRegImm/Cmp carriers). Direct HOL-EVAL rows as_jump=9/as_jumpCmp=1/as_jumpReg=7/as_loc=14 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by asmJumpTarget/asmJumpCmpReg/asmJumpRegTarget/asmLocSum in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
@@ -8903,68 +8935,108 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against alookup_el_pair_eq_el at crep_to_loopProofScript.sml:3921; HOL EL n prog = (start,[],SND(SND(EL n prog))) rendered literally as prog[n]'hn = (start,[],(prog[n]'hn).2.2) over the right-associated triple, ALOOKUP as List.lookup, ALL_DISTINCT (MAP FST prog) as (prog.map Prod.fst).Nodup; the proof delegates to the untagged PanLang counterpart getElem_eq_of_lookup_eq; direct HOL-EVAL rows ael_shape_0/ael_shape_1/ael_distinct/ael_lookup/ael_result=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
   },
-  {
-    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-    "hol_name": "ri_find_name_def",
-    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-    "lean_name": "riFindName",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_namesScript.sml:16-19 ri_find_name renames only the register payload (Reg r -> Reg (find_name f r)); Imm unchanged. HOL payload is an actual 'a word; Lean width-indexed at BitVec width with [NeZero width].)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-    "hol_name": "inst_find_name_def",
-    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-    "lean_name": "instFindName",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_namesScript.sml:21-49 one clause per asm inst constructor with catch-all; only register fields renamed via find_name. Width-indexed at BitVec width.)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-    "hol_name": "is_SOME_Word_def",
-    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-    "lean_name": "isSomeWord",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:144-147 exhaustive two clauses (is_SOME_Word (SOME (Word w)) = T; is_SOME_Word _ = F); Lean width-indexed Option (WordLoc (BitVec width)) -> Bool matches. Generic WordLoc payload deliberately untagged (dependency bead tracks exact tagged word_loc datatype).)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-    "hol_name": "read_mem_def",
-    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-    "lean_name": "readMem",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2739-2743 read_mem two clauses using bytes_in_word; Lean BitVec width address, memory BitVec width -> WordLoc (BitVec width), same stride.)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-    "hol_name": "addresses_def",
-    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-    "lean_name": "addresses",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2745-2748 addresses two clauses; HOL sets modelled in Lean as predicates ({} and INSERT a).)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-    "hol_name": "LENGTH_read_mem",
-    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-    "lean_name": "length_readMem",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2754-2756 LENGTH (read_mem a m n) = n.)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-    "hol_name": "IN_addresses",
-    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-    "lean_name": "mem_addresses",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2757-2761 IN_addresses x IN addresses a n <=> ?i. i<n /\\ x = a + n2w i * bytes_in_word; Lean uses BitVec.ofNat width i * bytesInWord width.)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
-    "hol_name": "word_loc",
-    "lean_path": "Flapjack/Pancake/WordLang.lean",
-    "lean_name": "WordLocW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek (exact HOL wordLangScript.sml:331-333 word_loc = Word ('a word) | Loc num num; Lean width-indexed WordLocW (width) [NeZero width] | word (value : BitVec width) | loc (block offset : Nat): same constructor arity/field types, payload fixed-width BitVec width, and the instance binder enforces HOL's nonzero dimindex(:'a) so width=0 is not admitted. Untagged wordLocWToGeneric/wordLocWOfGeneric plus round-trip theorems bridge the generic WordLoc (BitVec width).)"
-  }
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "ri_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "riFindName",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:16-19 ri_find_name renames only the register payload (Reg r -> Reg (find_name f r)); Imm unchanged. HOL payload is an actual 'a word; Lean width-indexed at BitVec width with [NeZero width].)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "inst_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "instFindName",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:21-49 one clause per asm inst constructor with catch-all; only register fields renamed via find_name. Width-indexed at BitVec width.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "is_SOME_Word_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "isSomeWord",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:144-147 exhaustive two clauses (is_SOME_Word (SOME (Word w)) = T; is_SOME_Word _ = F); Lean width-indexed Option (WordLoc (BitVec width)) -> Bool matches. Generic WordLoc payload deliberately untagged (dependency bead tracks exact tagged word_loc datatype).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "read_mem_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2739-2743 read_mem two clauses using bytes_in_word; Lean BitVec width address, memory BitVec width -> WordLoc (BitVec width), same stride.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "addresses_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2745-2748 addresses two clauses; HOL sets modelled in Lean as predicates ({} and INSERT a).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "LENGTH_read_mem",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "length_readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2754-2756 LENGTH (read_mem a m n) = n.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "IN_addresses",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "mem_addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2757-2761 IN_addresses x IN addresses a n <=> ?i. i<n /\\ x = a + n2w i * bytes_in_word; Lean uses BitVec.ofNat width i * bytesInWord width.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "word_loc",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "WordLocW",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (exact HOL wordLangScript.sml:331-333 word_loc = Word ('a word) | Loc num num; Lean width-indexed WordLocW (width) [NeZero width] | word (value : BitVec width) | loc (block offset : Nat): same constructor arity/field types, payload fixed-width BitVec width, and the instance binder enforces HOL's nonzero dimindex(:'a) so width=0 is not admitted. Untagged wordLocWToGeneric/wordLocWOfGeneric plus round-trip theorems bridge the generic WordLoc (BitVec width).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "max_stack_alloc_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "maxStackAlloc",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: both are the constant 255)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "word_offset_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "wordOffset",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: n2w (dimindex(:'a) DIV 8 * n); Lean width-indexed BitVec.ofNat width (width/8 * n) with [NeZero width] matching HOL's nonzero dimension)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "store_list_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "storeList",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: same 16 base store names followed by Temp 00w..Temp 31w, 48 entries)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "store_length_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "storeLength",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: EVEN-rounded LENGTH store_list, even so equals 48)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "stack_err_lab_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "stackErrLab",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: both are the constant 2)"
+}
 ]

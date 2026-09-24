@@ -1,6 +1,7 @@
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.WordToStack
+import Flapjack.Compiler.Backend.WordToStackRegFormat
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps
 import Flapjack.Compiler.Backend.StackNames

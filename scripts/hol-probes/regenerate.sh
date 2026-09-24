@@ -329,6 +329,9 @@ run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_pr
 run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_probe.out \
   ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_reg_format_probeScript.sml word_to_stack_reg_format_probe.out \
+  rf_reg1_high wma_two "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinators_probe.out \
   lc_empty wss_two "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
@@ -1374,4 +1377,20 @@ run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
 run_probe word_lang_word_loc_probeScript.sml word_lang_word_loc_probe.out \
   wl_word wl_match \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The stack_remove value-helper probe pins max_stack_alloc, word_offset (8/64),
+# store_list (length/head/last), store_length and stack_err_lab from the
+# stack_remove compiler script.
+run_probe stack_remove_helpers_probeScript.sml stack_remove_helpers_probe.out \
+  max_stack_alloc stack_err_lab \
+  "$cake_dir/compiler/backend/stack_removeScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The stackLang instruction-overload probe pins left_shift_inst,
+# right_shift_inst, const_inst, load_inst, store_inst (stackLangScript.sml:80-84)
+# and halt_inst (stack_removeScript.sml:58) against explicit constructor terms.
+run_probe stack_lang_inst_overloads_probeScript.sml stack_lang_inst_overloads_probe.out \
+  left_shift_inst_2_3 halt_inst_0 \
+  "$cake_dir/compiler/backend/stack_removeScript.sml" \
   "$cake_dir/compiler/backend"

@@ -6550,5 +6550,21 @@
     "lean_name": "compileExpHOL_panOpMul_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only binary PanOp Mul constructor case for localized Call arguments. It consumes full operand IHs and source evaluation, proves production Crep operation evaluation, shape-size, source shape, and well-formedness; it is not tagged as a standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_op2_inv",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only inversion helper for the two-argument source Op evaluator: successful evaluation forces word operands and yields the HOL word_op result."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_op2_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only two-argument Op constructor case for localized Call arguments. It consumes full operand IHs, derives singleton compiled operands, and proves production Crep word_op evaluation plus the four compile_exp_val_rel conclusions; general arity remains open."
   }
 ]

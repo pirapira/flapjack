@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.WordLang
 
 /-! The expected values are recorded by direct HOL EVAL of the source
@@ -1027,5 +1028,13 @@ example :
         0 0 panSemBitVec64BytesInWord (.load (.named "Nope") (.const 0))
         (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState)))
   == none
+
+/-- The source and target `byte_align` renderings agree (`byte$byte_align_def`):
+    this is the alignment half of the source/target byte-store correspondence. -/
+example : riscvByteAlignHOL (9 : RiscV.Word 64) = panByteAlignHOL (9 : RiscV.Word 64) :=
+  riscvByteAlignHOL_eq_panByteAlignHOL 9
+
+example : riscvByteAlignHOL (17 : RiscV.Word 64) = panByteAlignHOL (17 : RiscV.Word 64) :=
+  riscvByteAlignHOL_eq_panByteAlignHOL 17
 
 end Flapjack.Test.PanSemStateEvalParity

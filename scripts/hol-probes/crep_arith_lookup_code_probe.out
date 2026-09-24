@@ -1,0 +1,1 @@
+simp_prog_after_lookup=SOME (Assign 2 (Const 8w),FEMPTY⟨1 ↦ Word 9w⟩)

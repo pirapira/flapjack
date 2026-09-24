@@ -429,4 +429,24 @@ example :
       (some (panSemBitVec64MemoryAccess littleEndianState)) 0 ==
     some sourceMemoryWord)
 
+/-! Structured `.load` Comb/Named induction prerequisites (flapjack-pxn.18.3.6.9.2.2.1). -/
+
+example : 1 ≤ panValueFlatShapeFuel Shape.one := panValueFlatShapeFuel_pos Shape.one
+
+example : 1 ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.one] :=
+  panValueFlatShapeListFuel_pos Shape.one []
+
+example : 1 ≤ panValueFlatFieldsFuel [("f", Shape.one)] :=
+  panValueFlatFieldsFuel_pos ("f", Shape.one) []
+
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext)) = none :=
+  panMemLoadHOL_named_none "S" ([] : StructContext) 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory) (by simp [lookupInfoWithRest])
+
 end Flapjack.Test.PanSemStateEvalParity

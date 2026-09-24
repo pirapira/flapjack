@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Encoding
+import Flapjack.Test.RiscVColourLivenessParity
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer

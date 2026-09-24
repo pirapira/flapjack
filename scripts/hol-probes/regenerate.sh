@@ -293,7 +293,7 @@ run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
-  total_colour_alloc apply_colour_loop_live \
+  total_colour_alloc apply_colour_alias_assign apply_colour_loop_live \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 # The legacy allocator-map probe checks the existing WordBijection path too.

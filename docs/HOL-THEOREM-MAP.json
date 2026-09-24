@@ -808,6 +808,14 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "OPT_MMAP_MEM_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "OPT_MMAP_MEM_IMP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; pure option/list lemma over List.mapM as the OPT_MMAP carrier, no key-equality side condition)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "fdoms_eq_opt_mmap_flookup_some",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",

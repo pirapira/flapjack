@@ -551,6 +551,20 @@ def listRelFlattenFlookupGuard : Bool :=
 
 #guard listRelFlattenFlookupGuard
 
+/-- Direct parity for HOL `OPT_MMAP_MEM_IMP` (`panPropsScript.sml:115`). -/
+theorem optMmapMemImpFixture :
+    ∃ x, x ∈ ([1, 2, 3] : List Nat) ∧
+      (fun n : Nat => some (n * 10)) x = some 20 :=
+  OPT_MMAP_MEM_IMP (fun n : Nat => some (n * 10)) [1, 2, 3]
+    [10, 20, 30] 20 (by decide) (by decide)
+
+def optMmapMemImpGuard : Bool :=
+  match ([1, 2, 3] : List Nat).mapM (fun n => some (n * 10)) with
+  | some ys => ys == [10, 20, 30]
+  | none => false
+
+#guard optMmapMemImpGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -597,10 +611,12 @@ def runChecks : IO Bool := do
     checkDisjoint "pan list_rel_flatten_with_shape_length" listRelFlattenGuard
   let listRelFlattenFlookupOk ←
     checkDisjoint "pan list_rel_flatten_with_shape_flookup" listRelFlattenFlookupGuard
+  let optMmapMemImpOk ←
+    checkDisjoint "pan OPT_MMAP_MEM_IMP" optMmapMemImpGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
-    listRelFlattenOk && listRelFlattenFlookupOk)
+    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk)
 
 end Flapjack.Test.PanWithShapeParity

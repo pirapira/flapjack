@@ -156,13 +156,92 @@ theorem bridgeCongrShadow :
   crepInlineProgFmap_congr (fs := fmapReinsert) (gs := fmapEntries)
     fmapReinsertViewEq CrepProg.skip
 
+/-- Lean `.call none` defining equation of `crepInlineProgFmap`, in the shape
+    of HOL `inline_prog_def`'s `Call` clause (ctyp `NONE`).  This is an unfold
+    of the Lean definition, not a cross-system equality with HOL. -/
+theorem clauseCallNone :
+    crepInlineProgFmap fmapEntries (.call none "f" [.const 5]) =
+      (match fmapEntries.lookup "f" with
+       | none => .call none "f" [.const 5]
+       | some (argsVname, body) =>
+           let inlined :=
+             (crepUnreachElim (crepInlineProgFmap (fmapEntries.remove "f") body)).1
+           let tmp := crepInlineTmpNames ([.const 5].flatMap crepExpVars) argsVname
+           crepInlineTail (crepArgLoad tmp [.const 5] argsVname inlined)) :=
+  crepInlineProgFmap_call_hol fmapEntries "f" [.const 5]
+
+/-- Lean `.call (some (rts, some _))` defining equation (the
+    `SOME(rts, SOME _)` branch of HOL `inline_prog_def`'s `Call` clause): only
+    the ctyp is updated and the handler recursively inlined.  Lean unfold, not
+    a cross-system equality. -/
+theorem clauseCallHandler :
+    crepInlineProgFmap fmapEntries (.call (some ([1], some (0, .skip))) "f" []) =
+      .call (some ([1], some (0, crepInlineProgFmap fmapEntries .skip))) "f" [] :=
+  crepInlineProgFmap_call_some_handler_hol fmapEntries [1] 0 .skip "f" []
+
+/-- Lean `.dec v e p` defining equation (structural recursion, matching HOL
+    `inline_prog_def`'s `Dec` clause).  Lean unfold, not a cross-system
+    equality. -/
+theorem clauseDec :
+    crepInlineProgFmap fmapEntries (.dec 1 (.const 1) .skip) =
+      .dec 1 (.const 1) (crepInlineProgFmap fmapEntries .skip) :=
+  crepInlineProgFmap_dec_hol fmapEntries 1 (.const 1) .skip
+
+def clauseGuard : Bool :=
+  match crepInlineProgFmap fmapEntries (.call (some ([1], some (0, .skip))) "f" []) with
+  | .call (some ([1], some (_, _))) "f" [] => true
+  | _ => false
+
+/-- Cross-system helper observations against
+    `scripts/hol-probes/crep_inline_helper_probe.out` (rows `eoc_p`,
+    `branch_p`, `tail_p`, `argload_p`, `nontail_p`, `unreach_p`), evaluated on
+    the same inputs by the original HOL definitions in
+    `cakeml/pancake/crep_inlineScript.sml`. -/
+def helperBody : CrepProg Nat := .dec 1 (.const 1) .skip
+
+def helperP : CrepProg Nat :=
+  .seq (.dec 1 (.const 1) (.return [.var 2])) .skip
+
+theorem helperEocP :
+    crepTransformEoc [10] helperP =
+      .seq (.dec 1 (.const 1) (.seq (.assign 10 (.var 2)) .skip)) .skip := by
+  simp [helperP, crepTransformEoc, crepNestedSeq]
+
+theorem helperBranchP :
+    crepTransformBranch 0 [10] helperP =
+      .seq (.dec 1 (.const 1)
+        (.seq (.seq (.assign 10 (.var 2)) .skip) (.break 0))) .skip := by
+  simp [helperP, crepTransformBranch, crepNestedSeq]
+
+theorem helperTailP :
+    crepInlineTail helperP =
+      .seq .tick (.seq (.dec 1 (.const 1) (.return [.var 2])) .skip) := by
+  simp [helperP, crepInlineTail]
+
+theorem helperArgLoadP :
+    crepArgLoad [20] [.const 5] [7] helperBody =
+      .dec 20 (.const 5) (.dec 7 (.var 20) (.dec 1 (.const 1) .skip)) := by
+  simp [helperBody, crepArgLoad, nestedDecs]
+
+theorem helperNontailP :
+    crepInlineNontail helperBody [10] [11] [20] [.const 5] [7] =
+      .dec 11 (.const 0)
+        (.seq (.dec 20 (.const 5) (.dec 7 (.var 20) (.dec 1 (.const 1) .skip)))
+          (.seq (.assign 10 (.var 11)) .skip)) := by
+  simp [helperBody, crepInlineNontail, crepArgLoad, nestedDecs, crepNestedSeq]
+
+theorem helperUnreachP :
+    (crepUnreachElim helperP).1 = .dec 1 (.const 1) (.return [.var 2]) := by
+  simp [helperP, crepUnreachElim]
+
 /-- Matching HOL `FLOOKUP` on the finite map. -/
 def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&
     ((fmapEntries.remove "f").lookup "f").isNone
 
 def parityGuard : Bool :=
-  inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape
+  inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape &&
+    clauseGuard
 
 #guard parityGuard
 #eval parityGuard

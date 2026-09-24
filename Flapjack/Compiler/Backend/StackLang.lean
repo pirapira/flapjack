@@ -14,7 +14,21 @@ The word-independent program combinator `list_Seq` is ported over this carrier.
 
 namespace Flapjack.Compiler.Backend.StackLang
 
-/-- HOL `stackLang$store_name`; `Temp` carries exactly a 5-bit word. -/
+/-- Exact port of HOL `stackLang$store_name`
+    (`cakeml/compiler/backend/stackLangScript.sml:18-25`):
+
+```
+store_name =
+  NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase |
+  CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart |
+  CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd |
+  Temp (5 word)
+```
+
+    `store_name` is monomorphic in HOL (no type parameter) and uses one fixed
+    5-bit `Temp` field, so the Lean `BitVec 5` field is the exact width-indexed
+    counterpart with no further side condition. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_name"]
 inductive StoreName where
   | nextFree
   | endOfHeap
@@ -37,6 +51,16 @@ inductive StoreName where
   deriving Repr
 
 /-- HOL `stackLang$prog`, with its imported HOL carrier types explicit.
+
+NOT TAGGED (exact HOL `stackLang$prog` differs in carrier arity): HOL
+`stackLangScript.sml:27-66` parameterises `prog` by a SINGLE shared word type
+`'a`, with the fields typed by `asm$inst`, `asm$reg_imm`, `asm$addr`, and the
+monomorphic `asm$binop`/`asm$cmp`/`asm$memop`/`mlstring`; the Lean carrier has
+SEVEN independent type parameters, so it is a strict generalisation rather than
+the HOL datatype. An exact width-indexed tag needs the asm syntax carriers
+(`reg_imm`, `addr`, `inst`, `arith`, `fp`) ported first, tracked by
+`flapjack-pxn.18.5.15.3.11`. The `StoreName` carrier above and the word-
+independent combinators over this generic `Prog` are unaffected.
 
 The target of `Call` is `num + num`, represented by `Sum Nat Nat`; the two
 optional continuations retain their distinct tuple arities. -/

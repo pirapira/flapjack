@@ -8653,7 +8653,15 @@
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",
     "lean_name": "listSeq",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `list_Seq_def` at stackLangScript.sml:86-90 - list_Seq [] = Skip; list_Seq [x] = x; list_Seq (x::y::xs) = Seq x (list_Seq (y::xs)) - over the exact generic HOL `prog` carrier Flapjack.Compiler.Backend.StackLang.Prog. The Lean datatype is uniformly polymorphic in its seven constructor parameter families (StoreName already pins the BitVec 5 temp register), matching HOL's single-'a polymorphism, and list_Seq touches only Skip/Seq so no word operation or dimindex is involved - the generic port is therefore exact with no width indexing. Direct HOL-EVAL rows lc_empty/lc_one/lc_two/lc_three in scripts/hol-probes/stack_lang_prog_combinators_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `list_Seq_def` at stackLangScript.sml:86-90 - list_Seq [] = Skip; list_Seq [x] = x; list_Seq (x::y::xs) = Seq x (list_Seq (y::xs)) - over the exact generic HOL `prog` carrier Flapjack.Compiler.Backend.StackLang.Prog. The Lean datatype is uniformly polymorphic in its seven constructor parameter families (StoreName already pins the BitVec 5 temp register), matching HOL's single-'a polymorphism, and list_Seq touches only Skip/Seq so no word operation or dimindex is involved - the generic port is therefore exact with no width indexing. Direct HOL-EVAL rows lc_empty/lc_one/lc_two/lc_three in scripts/hol-probes/stack_lang_prog_combinators_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean. The equation shape is exact regardless of the carrier's parameter arity; the underlying `Prog` datatype is itself a seven-parameter generalisation rather than the exact HOL `prog` and stays untagged, tracked by flapjack-pxn.18.5.15.3.11)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "store_name",
+    "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",
+    "lean_name": "StoreName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `store_name` at stackLangScript.sml:18-25 - NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase | CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart | CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd | Temp (5 word). store_name is monomorphic in HOL and its only payload is the fixed 5-bit Temp field, so the Lean inductive with the same 17 nullary constructors plus Temp (BitVec 5) is shape-exact with no side condition. Direct HOL-EVAL rows sn_count=18 (every constructor name), sn_temp_w2n=3, sn_temp_word_bits=31 in scripts/hol-probes/stack_lang_store_name_probe.out are reproduced by Lean constructor checks in Flapjack/Test/WordToStackBitsParity.lean. NOTE: the separate HOL `prog` datatype is NOT yet exact in Lean - it is parameterised by a single shared 'a whereas the Lean Prog carrier has seven independent type parameters - so Prog stays untagged; see flapjack-pxn.18.5.15.3.11)"
   },
   {
     "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",

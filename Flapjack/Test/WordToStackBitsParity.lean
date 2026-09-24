@@ -370,11 +370,75 @@ example : (Flapjack.RiscV.CakeAlloc.frameBitmapWords 3 [true, false, true]).map
     wordListW (width := 64) [true, false, true] 3 :=
   Flapjack.RiscV.CakeAlloc.frameBitmapWords_map 3 _
 
+/-! ## stackLang `store_name` datatype oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/stack_lang_store_name_probe.out` (bead
+`flapjack-pxn.18.5.15.3.10`), for the exact monomorphic HOL `store_name`
+datatype (`stackLangScript.sml:18-25`):
+
+```
+sn_count=18  sn_temp_eq=T  sn_temp_ne=F  sn_find=T  sn_absent=F
+sn_temp_w2n=3  sn_temp_word_bits=31
+```
+
+`StoreName` has no derived `BEq`/`DecidableEq`, so the checks use structural
+pattern matching. -/
+
+open Flapjack.Compiler.Backend.StackLang (StoreName)
+
+/-- Tag every `StoreName` constructor, exercising constructor existence/arity
+and the fixed 5-bit `Temp` payload exactly as the HOL datatype declares it. -/
+def storeNameTag : StoreName → Nat
+  | .nextFree => 0
+  | .endOfHeap => 1
+  | .triggerGC => 2
+  | .heapLength => 3
+  | .progStart => 4
+  | .bitmapBase => 5
+  | .currHeap => 6
+  | .otherHeap => 7
+  | .allocSize => 8
+  | .globals => 9
+  | .globReal => 10
+  | .handler => 11
+  | .genStart => 12
+  | .codeBuffer => 13
+  | .codeBufferEnd => 14
+  | .bitmapBuffer => 15
+  | .bitmapBufferEnd => 16
+  | .temp value => 17 + value.toNat
+
+def allStoreNames : List StoreName :=
+  [.nextFree, .endOfHeap, .triggerGC, .heapLength, .progStart, .bitmapBase,
+   .currHeap, .otherHeap, .allocSize, .globals, .globReal, .handler, .genStart,
+   .codeBuffer, .codeBufferEnd, .bitmapBuffer, .bitmapBufferEnd,
+   .temp (3 : BitVec 5)]
+
+def storeNameParityGuard : Bool :=
+  (allStoreNames.length == 18) &&
+  (storeNameTag (.temp (3 : BitVec 5)) == 20) &&
+  (storeNameTag (.temp (31 : BitVec 5)) == 48) &&
+  (storeNameTag .nextFree == 0) &&
+  (storeNameTag .bitmapBufferEnd == 16) &&
+  (match (StoreName.temp (3 : BitVec 5)) with
+   | .temp value => value == 3
+   | _ => false)
+
+#eval storeNameParityGuard
+#guard storeNameParityGuard
+
+example : storeNameTag (StoreName.temp (3 : BitVec 5)) = 20 := rfl
+example : storeNameTag StoreName.allocSize = 8 := rfl
+example : storeNameTag (StoreName.temp (31 : BitVec 5)) = 48 := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap and stack-slot oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
+  IO.println "PASS stackLang store_name datatype oracle rows"
   pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
-    stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard)
+    stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
+    storeNameParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

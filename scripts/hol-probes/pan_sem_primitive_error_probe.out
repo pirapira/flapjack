@@ -1,0 +1,6 @@
+prim_wrong_arity_result=SOME Error
+prim_wrong_arity_locals=SOME (RStruct [ValWord 0w; ValWord 0w])
+prim_wrong_arity_clock=5
+prim_shape_mismatch_result=SOME Error
+prim_shape_mismatch_locals=SOME (ValWord 1w)
+prim_shape_mismatch_clock=5

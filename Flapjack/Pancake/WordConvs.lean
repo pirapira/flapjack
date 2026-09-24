@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.WordLang
+import Flapjack.Compiler.Encoders.Asm
 
 /-!
 # CakeML backend `wordConvs` syntactic conventions
@@ -18,6 +19,8 @@ The `num_set` cut-set carriers of `WordLangProg` are modelled by
 -/
 
 namespace Flapjack
+
+open Flapjack.Compiler.Encoders.Asm
 
 /-- Exact source counterpart of CakeML `wordConvs$labels_rel_def`
 (`cakeml/compiler/backend/semantics/wordConvsScript.sml:139-143`): labels may be
@@ -180,6 +183,159 @@ def flatExpConventions {width : Nat} : WordLangProg (BitVec width) → Bool
         (match handler with
           | none => true
           | some (_, handlerProg, _, _) => flatExpConventions handlerProg)
+  | _ => true
+
+/-- Exact source counterpart of CakeML `wordConvs$inst_ok_less_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:208-249`).  This is the
+weaker per-instruction well-formedness predicate used by
+`compile_to_word_conventions2`: unlike `asm$inst_ok` it omits the operand
+register checks and only constrains the configuration-dependent immediate and
+offset conditions.  The `Mem` branch lists `Load`/`Store`/`Load16`/`Store16`/
+`Load32`/`Store32` in its first case, so the `hw_offset_ok` case is only
+reachable for the remaining memops in the HOL definition. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_ok_less_def"]
+def instOkLess {width : Nat} (config : AsmConfig width) :
+    WordLangInst (BitVec width) → Bool
+  | .arith (.binop operator _ _ (.imm value)) => config.validImm (.inl operator) value
+  | .arith (.shift operator _ _ (.imm value)) =>
+      (!(value == 0) || operator == .lsl) && value.toNat < width
+  | .arith (.div ..) =>
+      config.isa == .armv8 || config.isa == .mips || config.isa == .riscv
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      (!(config.isa == .armv7) || !(destinationLeft == destinationRight)) &&
+        (!(config.isa == .armv8 || config.isa == .riscv || config.isa == .ag32) ||
+          (!(destinationLeft == sourceLeft) && !(destinationLeft == sourceRight)))
+  | .arith (.longDiv ..) => config.isa == .x86_64
+  | .arith (.addCarry destination _ sourceLeft sourceRight) =>
+      (!(config.isa == .mips || config.isa == .riscv) ||
+        (!(destination == sourceLeft) && !(destination == sourceRight)))
+  | .arith (.addOverflow destination _ sourceLeft _) =>
+      (!(config.isa == .mips || config.isa == .riscv) || !(destination == sourceLeft))
+  | .arith (.subOverflow destination _ sourceLeft _) =>
+      (!(config.isa == .mips || config.isa == .riscv) || !(destination == sourceLeft))
+  | .mem operator _ (.addr _ offset) =>
+      (if operator == .load || operator == .store || operator == .load16 ||
+          operator == .store16 || operator == .load32 || operator == .store32 then
+        asmAddrOffsetOk config offset
+       else if operator == .load16 || operator == .store16 then
+        asmHwOffsetOk config offset
+       else
+        asmByteOffsetOk config offset)
+  | .fp (.fpLess _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpLessEqual _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpEqual _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpAbs destination source) =>
+      (!config.twoRegArith || !(destination == source)) &&
+        asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpNeg destination source) =>
+      (!config.twoRegArith || !(destination == source)) &&
+        asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpSqrt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpAdd destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpSub destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpMul destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpDiv destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpFma destination left right) =>
+      (config.isa == .armv7) && 2 < config.fpRegCount && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpMov destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpMovToReg destinationInteger second _) =>
+      (!(width == 32) || !(destinationInteger == second))
+  | .fp (.fpMovFromReg _ destinationInteger second) =>
+      (!(width == 32) || !(destinationInteger == second))
+  | .fp (.fpToInt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpFromInt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | _ => true
+
+/-- HOL `wordConvs$full_inst_ok_less_def` (`wordConvsScript.sml:318-345`): the
+weaker per-instruction validity predicate lifted over the program, with the
+`ShareInst` address-expression restriction via `expToAddr`. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "full_inst_ok_less_def"]
+def fullInstOkLess {width : Nat} (config : AsmConfig width) :
+    WordLangProg (BitVec width) -> Bool
+  | .inst value => instOkLess config value
+  | .seq first second =>
+      fullInstOkLess config first && fullInstOkLess config second
+  | .loop _ body _ => fullInstOkLess config body
+  | .ite _ _ _ thenBranch elseBranch =>
+      fullInstOkLess config thenBranch && fullInstOkLess config elseBranch
+  | .mustTerminate body => fullInstOkLess config body
+  | .call returns _ _ handler =>
+      match returns with
+      | none => true
+      | some (_, _, returnHandler, _, _) =>
+          fullInstOkLess config returnHandler &&
+            match handler with
+            | none => true
+            | some (_, handlerProg, _, _) => fullInstOkLess config handlerProg
+  | .shareInst operator _ address =>
+      match expToAddr address with
+      | some (.addr _ offset) =>
+          if operator == .load || operator == .store ||
+              operator == .load32 || operator == .store32 then
+            asmAddrOffsetOk config offset
+          else if operator == .load16 || operator == .store16 then
+            asmHwOffsetOk config offset
+          else asmByteOffsetOk config offset
+      | none => false
+  | _ => true
+
+/-- HOL `wordConvs$inst_arg_convention` (`wordConvsScript.sml:378-386`):
+per-instruction calling-convention argument placement. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_arg_convention_def"]
+def instArgConvention {width : Nat} : WordLangInst (BitVec width) -> Bool
+  | .arith (.addCarry _ _ _ r4) => r4 == 0
+  | .arith (.shift _ _ _ (.reg r)) => r == 8
+  | .arith (.addOverflow _ _ _ r4) => r4 == 0
+  | .arith (.subOverflow _ _ _ r4) => r4 == 0
+  | .arith (.longMul r1 r2 r3 r4) =>
+      r1 == 6 && r2 == 0 && r3 == 0 && r4 == 4
+  | .arith (.longDiv r1 r2 r3 r4 _) =>
+      r1 == 0 && r2 == 6 && r3 == 6 && r4 == 0
+  | _ => true
+
+/-- HOL `wordConvs$call_arg_convention` (`wordConvsScript.sml:391-423`):
+the generated Calling-Convention placement of arguments in registers.
+`GENLIST f n` is represented by `(List.range n).map f`. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "call_arg_convention_def"]
+def callArgConvention {width : Nat} : WordLangProg (BitVec width) -> Bool
+  | .inst value => instArgConvention value
+  | .return _ values => values == (List.range values.length).map (fun x => 2 * (x + 1))
+  | .raise exception => exception == 2
+  | .install ptr len _ _ _ => ptr == 2 && len == 4
+  | .ffi _ configuration configurationLength array arrayLength _ =>
+      configuration == 2 && configurationLength == 4 &&
+        array == 6 && arrayLength == 8
+  | .alloc destination _ => destination == 2
+  | .storeConsts a b c d _ => a == 0 && b == 2 && c == 4 && d == 6
+  | .call returns _ arguments handler =>
+      (match returns with
+        | none => arguments == (List.range arguments.length).map (fun x => 2 * x)
+        | some (returns, _, returnHandler, _, _) =>
+            arguments == (List.range arguments.length).map (fun x => 2 * (x + 1)) &&
+            returns == (List.range returns.length).map (fun x => 2 * (x + 1)) &&
+            callArgConvention returnHandler &&
+            (match handler with
+              | none => true
+              | some (value, handlerProg, _, _) =>
+                  value == 2 && callArgConvention handlerProg))
+  | .mustTerminate body => callArgConvention body
+  | .seq first second => callArgConvention first && callArgConvention second
+  | .loop _ body _ => callArgConvention body
+  | .ite _ _ _ thenBranch elseBranch =>
+      callArgConvention thenBranch && callArgConvention elseBranch
   | _ => true
 
 end Flapjack

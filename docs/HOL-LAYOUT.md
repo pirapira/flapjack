@@ -74,3 +74,4 @@ has been established. For declaration-level provenance, use
 `scripts/next-hol-port.py`. Track individual gaps and progress in
 [GitHub issues](https://github.com/pirapira/flapjack/issues), not in this
 layout guide.
+| compiler/backend/reg_alloc/reg_allocScript.sml | Flapjack/Compiler/Backend/RegAlloc.lean |

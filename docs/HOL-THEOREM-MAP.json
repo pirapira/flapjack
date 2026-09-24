@@ -7920,6 +7920,46 @@
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "inst_ok_less_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "instOkLess",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "exp_to_addr_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "expToAddr",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "full_inst_ok_less_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "fullInstOkLess",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison; Call NONE handler case oracle added after review)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "inst_arg_convention_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "instArgConvention",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "call_arg_convention_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "callArgConvention",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -7936,20 +7976,36 @@
     "reviewer": "Codex (Flapjack bridge lemma for the width-indexed codeRelW exact HOL code_rel_def boundary; no standalone HOL original)"
   },
   {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "dec_clock_simp",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "decCrepHolClock_simp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the 10-conjunct projection equality over the 11-field CrepHolState uses the tagged decCrepHolClock (dec_clock_def); direct HOL-EVAL rows dec_clock_clock/dec_clock_globals/dec_clock_be/dec_clock_top in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+    "hol_name": "is_stack_var_def",
+    "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+    "lean_name": "isStackVar",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "empty_locals_simp",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "emptyCrepHolLocals_simp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the 10-conjunct projection equality over the 11-field CrepHolState uses the tagged emptyCrepHolLocals (empty_locals_def); direct HOL-EVAL rows empty_locals_locals/empty_locals_clock/empty_locals_memory in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+    "hol_name": "is_phy_var_def",
+    "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+    "lean_name": "isPhyVar",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+    "hol_name": "is_alloc_var_def",
+    "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+    "lean_name": "isAllocVar",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+    "hol_name": "convention_partitions",
+    "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+    "lean_name": "conventionPartitions",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -7957,7 +8013,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; the seven compared fields memaddrs/mdomain, sh_memaddrs/sh_mdomain, clock, be, ffi, base_addr, top_addr are compared over the whole 11-field CrepHolState and LoopMachineState; HOL sets memaddrs/sh_memaddrs correspond to the Boolean membership maps mdomain/shMdomain, the same set-as-function rendering used by the tagged PanToCrep stateRel; direct HOL-EVAL rows memaddrs_mdomain_mem/sh_memaddrs_sh_mdomain_mem/clock_eq/be_eq/base_eq/top_eq/clock_mismatch in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -7965,6 +8021,22 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; it is the unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl as in the HOL proof `rw [state_rel_def]`; Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "dec_clock_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "decCrepHolClock_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; 10-conjunct projection equality over the 11-field CrepHolState via tagged decCrepHolClock; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "empty_locals_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "emptyCrepHolLocals_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; 10-conjunct projection equality over the 11-field CrepHolState via tagged emptyCrepHolLocals; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

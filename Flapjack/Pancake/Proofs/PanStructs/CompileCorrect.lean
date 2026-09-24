@@ -3283,8 +3283,9 @@ theorem panStructCompileExpCorrectConstCase
     and retains all three HOL conclusion roles plus the recursive address IH.
     The local/global `FEVERY` and `FMAP_MAP2` premises are retained but unused
     by this constructor. Source, address IH, and converted evaluation share an
-    explicit state-derived `PanValueMemoryAccess`, preserving its domain and
-    endian behavior for the load. Lean still exposes `bytesInWord`, the memory
+    explicit caller-supplied `PanValueMemoryAccess`, preserving its domain and
+    endian behavior for the load; the paired RV64 test derives it from the
+    source state. Lean still exposes `bytesInWord`, the memory
     adapter, and a pointwise Bool validity predicate instead of HOL's fixed
     word stride, finite-map memory, and `v_flds_ok`. -/
 theorem panStructCompileExpCorrectLoadCase

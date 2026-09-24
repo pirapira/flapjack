@@ -475,4 +475,17 @@ example :
 #guard evalCrepRuntimeExp bv64State
     (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
 
+/-- The executed generic `.crepOp` branch at `BitVec 64` computes the reviewed
+    tagged `crepOpCrep 64`: a bridge between the executed semantics and the HOL
+    definition, not a second evaluator. -/
+example :
+    evalCrepRuntimeExp bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      (do
+        let leftValue ← evalCrepRuntimeExp bv64State (.const (7 : RiscV.Word 64))
+        let rightValue ← evalCrepRuntimeExp bv64State (.const (3 : RiscV.Word 64))
+        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) :=
+  evalCrepRuntimeExp_crepOp_bitVec64 bv64State
+    (.const (7 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))
+
 end Flapjack.Test.CrepGlobalShapeParity

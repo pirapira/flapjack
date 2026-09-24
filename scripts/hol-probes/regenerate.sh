@@ -691,7 +691,7 @@ run_probe word_sh_finite_probeScript.sml word_sh_finite_probe.out \
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
-  const_mul fallback_var "$cake_dir/pancake/crep_arithScript.sml"
+  const_mul eval_simp_after "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
   assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
 run_probe afindi_probeScript.sml afindi_probe.out \

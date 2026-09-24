@@ -2976,6 +2976,7 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
         | nil =>
           simp only [evalCrepRuntimeExp, evalCrepHolExp]
           rw [ih.1 head (by simp) state, ih.1 second (by simp) state]
+          simp
         | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolExp]
   case cmp operator left right ihl ihr =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]
@@ -3159,5 +3160,31 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
       · exact ihTail.1 e he state
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
+
+/-! ## BitVec 64 `crepOp` branch computes the tagged definition
+
+The executed Crep expression evaluator `evalCrepRuntimeExp` is carrier-generic:
+its `.crepOp` clause routes through the generic helper `crepOpValue`, because a
+generic `α` cannot syntactically call the width-polymorphic tagged `crepOpCrep`.
+On the canonical RISC-V 64 target the two agree; the theorem below records that
+the executed branch at `BitVec 64` computes exactly the reviewed tagged
+definition. This keeps the compiler/semantics distinction explicit: the tagged
+`crepOpCrep` is the HOL semantics of `crep_op`, the generic `crepOpValue` is what
+the Lean evaluator executes, and this theorem is the bridge between them (it does
+not introduce a second evaluator). -/
+
+/-- On the `BitVec 64` carrier the executed `.crepOp .mul [left, right]` branch
+    of `evalCrepRuntimeExp` computes the reviewed tagged `crepOpCrep 64`. -/
+theorem evalCrepRuntimeExp_crepOp_bitVec64 (state : CrepRuntimeState (BitVec 64) σ)
+    (left right : CrepExp (BitVec 64)) :
+    evalCrepRuntimeExp state (.crepOp CrepOp.mul [left, right]) =
+      (do
+        let leftValue ← evalCrepRuntimeExp state left
+        let rightValue ← evalCrepRuntimeExp state right
+        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) := by
+  rw [evalCrepRuntimeExp_crepOp_eq]
+  cases hleft : evalCrepRuntimeExp state left <;>
+    cases hright : evalCrepRuntimeExp state right <;>
+      simp [hleft, hright, crepOpCrep]
 
 end Flapjack

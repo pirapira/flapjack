@@ -6,7 +6,7 @@ open Flapjack.Compiler.Backend.LabLang
 
 abbrev ProbeAsmWithLab := AsmWithLab Nat Nat String
 abbrev ProbeAsmOrCbw := AsmOrCbw Nat Nat Nat
-abbrev ProbeLine := Line ProbeAsmOrCbw ProbeAsmWithLab Nat Nat
+abbrev ProbeLine := Line ProbeAsmOrCbw ProbeAsmWithLab Nat
 
 def asmWithLabIndex : ProbeAsmWithLab → Nat
   | .jump _ => 0
@@ -39,8 +39,8 @@ def lineIndex : ProbeLine → Nat
   | .labAsm _ _ _ _ => 2
 
 def lineFixtures : List ProbeLine :=
-  [ .label 1 2 3, .asm (.asmi 0) [1, 2] 3
-  , .labAsm (.call (.lab 4 5)) 6 [7, 8] 9 ]
+  [ .label 1 2 3, .asm (.asmi 0) [BitVec.ofNat 8 1, BitVec.ofNat 8 2] 3
+  , .labAsm (.call (.lab 4 5)) 6 [BitVec.ofNat 8 7, BitVec.ofNat 8 8] 9 ]
 
 #guard (lineFixtures.map lineIndex) == List.range 3
 

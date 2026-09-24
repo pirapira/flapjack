@@ -33,12 +33,13 @@ inductive AsmOrCbw (Inst Memop Addr : Type) where
   | shareMem (operator : Memop) (register : Nat) (address : Addr)
   deriving Repr
 
-/-- HOL `labLang$line`; encoded bytes and word position remain typed carriers. -/
-inductive Line (AsmOrCbw AsmWithLab Word Byte : Type) where
+/-- HOL `labLang$line`; bytes are fixed `word8` values and positions retain
+the width-polymorphic HOL word carrier. -/
+inductive Line (AsmOrCbw AsmWithLab Word : Type) where
   | label (sectionId label length : Nat)
-  | asm (instruction : AsmOrCbw) (encoded : List Byte) (length : Nat)
+  | asm (instruction : AsmOrCbw) (encoded : List (BitVec 8)) (length : Nat)
   | labAsm (instruction : AsmWithLab) (position : Word)
-      (encoded : List Byte) (length : Nat)
+      (encoded : List (BitVec 8)) (length : Nat)
   deriving Repr
 
 /-- HOL `labLang$sec`. -/

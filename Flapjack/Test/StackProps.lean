@@ -5,7 +5,7 @@ namespace Flapjack.Test.StackProps
 open Flapjack.Compiler.Backend.StackLang
 open Flapjack.Compiler.Backend.StackProps
 
-abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat Nat String
+abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat String
 
 def checks : AsmChecks Nat Nat Nat :=
   { regCount := 8

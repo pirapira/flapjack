@@ -30,7 +30,7 @@ structure AsmChecks (Inst Memop Addr : Type) where
 registers checked against `reg_count` and `avoid_regs`. A handler without a
 return continuation is ignored, matching the source clause. -/
 def stackAsmOk (checks : AsmChecks Inst Memop Addr) :
-    Prog Word Inst Cmp RegImm Binop Memop Addr MlString → Bool
+    Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
   | .inst instruction => checks.instOk instruction
   | .shMemOp operator register address =>
       checks.regOk register && checks.addrOk operator address

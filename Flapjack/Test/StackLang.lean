@@ -4,7 +4,7 @@ namespace Flapjack.Test.StackLang
 
 open Flapjack.Compiler.Backend.StackLang
 
-abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat Nat String
+abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat String
 
 def progConstructorIndex : ProbeProg → Nat
   | .skip => 0
@@ -45,7 +45,7 @@ def progConstructorIndex : ProbeProg → Nat
 def progConstructorFixtures : List ProbeProg :=
   [ .skip
   , .inst 0
-  , .get 1 (.temp 2)
+  , .get 1 (.temp (BitVec.ofNat 5 2))
   , .set .globals 1
   , .opCurrHeap 0 1 2
   , .call (some (.skip, 1, 2, 3)) (.inl 4) (some (.tick, 5, 6))
@@ -80,7 +80,7 @@ def progConstructorFixtures : List ProbeProg :=
 
 #guard (progConstructorFixtures.map progConstructorIndex) == List.range 34
 
-def storeNameConstructorIndex : StoreName Nat → Nat
+def storeNameConstructorIndex : StoreName → Nat
   | .nextFree => 0
   | .endOfHeap => 1
   | .triggerGC => 2
@@ -100,11 +100,11 @@ def storeNameConstructorIndex : StoreName Nat → Nat
   | .bitmapBufferEnd => 16
   | .temp _ => 17
 
-def storeNameConstructorFixtures : List (StoreName Nat) :=
+def storeNameConstructorFixtures : List StoreName :=
   [ .nextFree, .endOfHeap, .triggerGC, .heapLength, .progStart, .bitmapBase
   , .currHeap, .otherHeap, .allocSize, .globals, .globReal, .handler
   , .genStart, .codeBuffer, .codeBufferEnd, .bitmapBuffer, .bitmapBufferEnd
-  , .temp 0 ]
+  , .temp (BitVec.ofNat 5 0) ]
 
 #guard (storeNameConstructorFixtures.map storeNameConstructorIndex) == List.range 18
 

@@ -14,8 +14,8 @@ namespace Flapjack.Compiler.Backend.StackAlloc
 open StackLang
 
 /-- HOL `stack_alloc$next_lab`, including its traversal order and label seed. -/
-def nextLab {Word Inst Cmp RegImm Binop Memop Addr MlString : Type} :
-    Prog Word Inst Cmp RegImm Binop Memop Addr MlString → Nat → Nat
+def nextLab {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+    Prog Inst Cmp RegImm Binop Memop Addr MlString → Nat → Nat
   | .seq first second, next => nextLab first (nextLab second next)
   | .ite _ _ _ thenBranch elseBranch, next =>
       nextLab thenBranch (nextLab elseBranch next)

@@ -5,7 +5,7 @@ namespace Flapjack.Test.StackAlloc
 open Flapjack.Compiler.Backend.StackLang
 open Flapjack.Compiler.Backend.StackAlloc
 
-abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat Nat String
+abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat String
 
 def handlerOnly (label : Nat) : ProbeProg :=
   .call none (.inl 0) (some (.skip, 0, label))

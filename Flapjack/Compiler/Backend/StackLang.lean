@@ -11,8 +11,8 @@ without claiming that the existing executable AST is already related to it.
 
 namespace Flapjack.Compiler.Backend.StackLang
 
-/-- HOL `stackLang$store_name`; `Temp` retains the HOL word payload type. -/
-inductive StoreName (Word : Type) where
+/-- HOL `stackLang$store_name`; `Temp` carries exactly a 5-bit word. -/
+inductive StoreName where
   | nextFree
   | endOfHeap
   | triggerGC
@@ -30,28 +30,28 @@ inductive StoreName (Word : Type) where
   | codeBufferEnd
   | bitmapBuffer
   | bitmapBufferEnd
-  | temp (value : Word)
+  | temp (value : BitVec 5)
   deriving Repr
 
 /-- HOL `stackLang$prog`, with its imported HOL carrier types explicit.
 
 The target of `Call` is `num + num`, represented by `Sum Nat Nat`; the two
 optional continuations retain their distinct tuple arities. -/
-inductive Prog (Word Inst Cmp RegImm Binop Memop Addr MlString : Type) where
+inductive Prog (Inst Cmp RegImm Binop Memop Addr MlString : Type) where
   | skip
   | inst (instruction : Inst)
-  | get (destination : Nat) (store : StoreName Word)
-  | set (store : StoreName Word) (source : Nat)
+  | get (destination : Nat) (store : StoreName)
+  | set (store : StoreName) (source : Nat)
   | opCurrHeap (operator : Binop) (destination source : Nat)
-  | call (returnHandler : Option (Prog Word Inst Cmp RegImm Binop Memop Addr MlString ×
+  | call (returnHandler : Option (Prog Inst Cmp RegImm Binop Memop Addr MlString ×
         Nat × Nat × Nat))
       (target : Sum Nat Nat)
-      (handler : Option (Prog Word Inst Cmp RegImm Binop Memop Addr MlString ×
+      (handler : Option (Prog Inst Cmp RegImm Binop Memop Addr MlString ×
         Nat × Nat))
-  | seq (first second : Prog Word Inst Cmp RegImm Binop Memop Addr MlString)
+  | seq (first second : Prog Inst Cmp RegImm Binop Memop Addr MlString)
   | ite (operator : Cmp) (condition : Nat) (right : RegImm)
-      (thenBranch elseBranch : Prog Word Inst Cmp RegImm Binop Memop Addr MlString)
-  | loop (body : Prog Word Inst Cmp RegImm Binop Memop Addr MlString)
+      (thenBranch elseBranch : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+  | loop (body : Prog Inst Cmp RegImm Binop Memop Addr MlString)
   | jumpLower (left right target : Nat)
   | alloc (words : Nat)
   | storeConsts (source bitmap : Nat) (stub : Option Nat)

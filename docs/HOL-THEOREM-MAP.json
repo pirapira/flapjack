@@ -6262,5 +6262,29 @@
     "lean_name": "panValueFlatLoadFuel_shape_fields",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked production prerequisite: successful panValueFlatLoadFuel yields the requested panSemShapeOf and production panStructValueFieldsOkBool predicates for well-formed shapes in structInfosOk contexts. It is intentionally untagged: this is support for HOL mem_load_conversion, not its complete converted-memory theorem; Lean uses explicit fuel and an arbitrary readWord callback, while HOL mem_load uses a finite-address-domain word-memory relation and the HOL v_flds_ok predicate. The nested named-load regression exercises this theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_eval_flatten_of_compileExpRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args bridge that projects target evaluation from the full per-expression compile_exp_val_rel-shaped IH; the argument list result is derived without a separate target-evaluation premise. It does not prove the expression IH or the complete Call theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_localCases_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args result for lists of Local expressions, using the HOL-shaped Local expression case and locals_rel; no general mixed-constructor expression induction is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual source/target Call code-lookup bridge: derives target compile_args evaluation from a full expression IH, then uses code_rel for production Crep lookup. It retains the flattened parameter-length premise and does not prove body/handler IHs or full pc_compile_correct."
   }
 ]

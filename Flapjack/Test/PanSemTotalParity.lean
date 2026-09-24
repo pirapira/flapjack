@@ -67,7 +67,54 @@ def tickZeroGuard : Bool :=
   | some (.timeout, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
-def totalGuard : Bool := skipGuard && tickSuccGuard && tickZeroGuard
+/-- The compositional HOL `Seq` step applied to base-case first-command results
+    (this is not a whole-program evaluator): compile `Skip ; Skip` by pairing the
+    `Skip` base case with a `Skip` continuation. -/
+def seqStepSkipSkip : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  let first := panSemEvaluateSkip (totalState 5)
+  panSemTotalSeqStep 5 first.1 first.2 panSemEvaluateSkip
+
+def seqNormalGuard : Bool :=
+  match seqStepSkipSkip with
+  | (.normal, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+/-- `Tick ; Skip`: the first base case decrements the clock to 4, and the `Seq`
+    step clamps the entry clock to it before running the continuation. -/
+def seqStepTickSkip : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  let first := panSemEvaluateTick (totalState 5)
+  panSemTotalSeqStep 5 first.1 first.2 panSemEvaluateSkip
+
+def seqTickGuard : Bool :=
+  match seqStepTickSkip with
+  | (.normal, state) => state.clock == 4 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+/-- A continuation that would be observable if it were (wrongly) run. -/
+def seqObservableContinuation
+    (_ : PanSemState Word64 (FfiState Unit)) :
+    PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  (.error, totalState 5)
+
+def seqStepBreak : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  panSemTotalSeqStep 5 .broke (totalState 5) seqObservableContinuation
+
+def seqBreakGuard : Bool :=
+  match seqStepBreak with
+  | (.broke, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def seqStepContinue : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  panSemTotalSeqStep 5 .continued (totalState 5) seqObservableContinuation
+
+def seqContinueGuard : Bool :=
+  match seqStepContinue with
+  | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalGuard : Bool :=
+  skipGuard && tickSuccGuard && tickZeroGuard && seqNormalGuard && seqBreakGuard &&
+    seqContinueGuard && seqTickGuard
 
 #guard totalGuard
 
@@ -77,6 +124,19 @@ example :
         panSemTotalOfExecuted = some (panSemEvaluateSkip (totalState 5)) :=
   panSemEvaluateCodeStateWithPostState_skip_total statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
+
+example :
+    panSemTotalSeqStep 5 (.normal : PanSemProgResult Word64 Unit) (totalState 5)
+        panSemEvaluateSkip =
+      panSemEvaluateSkip (panSemFixClock 5 (totalState 5)) :=
+  panSemTotalSeqStep_normal 5 (totalState 5) panSemEvaluateSkip
+
+example :
+    panSemTotalSeqStep 5 (.broke : PanSemProgResult Word64 Unit) (totalState 5)
+        seqObservableContinuation =
+      (.broke, panSemFixClock 5 (totalState 5)) :=
+  panSemTotalSeqStep_of_ne_normal 5 .broke (totalState 5) seqObservableContinuation
+    (by intro h; cases h)
 
 example :
     (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
@@ -95,6 +155,18 @@ def runChecks : IO Bool := do
   if tickZeroGuard then
     IO.println "PASS panSem total Tick timeout clears locals at clock zero"
   else IO.println "FAIL panSem total Tick timeout clears locals at clock zero"
+  if seqNormalGuard then
+    IO.println "PASS panSem total Seq Skip/Skip completes normally"
+  else IO.println "FAIL panSem total Seq Skip/Skip completes normally"
+  if seqBreakGuard then
+    IO.println "PASS panSem total Seq Break short-circuits and skips the second command"
+  else IO.println "FAIL panSem total Seq Break short-circuits and skips the second command"
+  if seqContinueGuard then
+    IO.println "PASS panSem total Seq Continue short-circuits and skips the second command"
+  else IO.println "FAIL panSem total Seq Continue short-circuits and skips the second command"
+  if seqTickGuard then
+    IO.println "PASS panSem total Seq Tick clamps the clock before the second command"
+  else IO.println "FAIL panSem total Seq Tick clamps the clock before the second command"
   pure totalGuard
 
 end Flapjack.Test.PanSemTotalParity

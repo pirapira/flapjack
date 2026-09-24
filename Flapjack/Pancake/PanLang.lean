@@ -182,6 +182,11 @@ instance natPanShiftWidth : PanShiftWidth Nat where
   width := 64
   amount := id
 
+/-- HOL `panLang$prog` (`cakeml/pancake/panLangScript.sml:82-100`). The
+constructors, recursive program positions, payload order, and nested `Call`
+return/exception metadata match the source datatype. Pancake identifier and
+annotation carriers are the existing `String` aliases for HOL `mlstring`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "prog"]
 inductive Prog (α : Type u) where
   | skip
   | dec (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)

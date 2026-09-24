@@ -128,6 +128,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Prog",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor, field-order, recursive-position, and nested Call metadata comparison against panLangScript.sml:82-100)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
     "hol_name": "loop_primop_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

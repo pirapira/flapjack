@@ -1,6 +1,7 @@
 """Regression tests for HOL theorem-map coverage and metadata validation."""
 
 import runpy
+import json
 import unittest
 from pathlib import Path
 
@@ -69,16 +70,40 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
-        key = (
+        generic_key = (
+            "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+            "genlistVmaxDistinctListsCompiledExps",
+        )
+        generic = inventory[generic_key]
+        self.assertIsNone(generic["hol_name"])
+        self.assertEqual(
+            generic["statement_status"],
+            "no_hol_reference_pending_classification",
+        )
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        generic_record = manifest_by_key[generic_key]
+        self.assertEqual(
+            generic_record["hol_name"],
+            "genlist_vmax_distinct_lists_compiled_exps",
+        )
+        self.assertEqual(generic_record["statement_status"], "documented_mismatch")
+
+        exact_key = (
             "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
             "genlistVmaxDistinctListsCompiledExpsW",
         )
+        exact = inventory[exact_key]
         self.assertEqual(
-            inventory[key]["hol_name"],
+            exact["hol_name"],
             "genlist_vmax_distinct_lists_compiled_exps",
         )
-        self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
-        self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+        self.assertEqual(exact["statement_status"], "reviewed_exact")
+        self.assertTrue(exact["reviewer"])
 
     def test_exact_pan_to_crep_utility_ports_are_in_review_inventory(self):
         inventory = {

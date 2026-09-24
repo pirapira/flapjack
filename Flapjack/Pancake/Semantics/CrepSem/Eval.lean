@@ -1078,6 +1078,22 @@ def holFiniteWordSourceGetByte {ι : Type u}
     let bit := (dimension.encode index).val
     decide (bit < 8) && valueBits.getLsbD (bit + bitOffset)
 
+/-- HOL `get_byte_def` is `w2w (w ⋙ byte_index)`. Pointwise, its
+    source-shaped finite-word implementation is the low eight bits of a
+    logical BitVec shift, for every explicit dimension and byte order. This
+    equation is the operation bridge consumed by generic byte-load proofs. -/
+theorem holFiniteWordSourceGetByte_atIndex {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address value : ι → Bool)
+    (bigEndian : Bool) (index : Fin dimension.width) :
+    holFiniteWordSourceGetByte dimension address value bigEndian
+        (dimension.decode index) =
+      (decide (index.val < 8) &&
+        BitVec.getLsbD (holWordToBitVec dimension value >>>
+          (8 * holFiniteWordSourceByteIndex dimension address bigEndian))
+          index.val) := by
+  simp [holFiniteWordSourceGetByte, holFiniteWordSourceByteIndex,
+    dimension.encode_decode, Nat.add_comm]
+
 /-- Pointwise `word_slice_alt`/shift/or expansion of HOL `set_byte_def`. -/
 def holFiniteWordSourceSetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address byte value : ι → Bool)

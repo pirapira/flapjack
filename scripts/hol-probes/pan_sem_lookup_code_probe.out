@@ -1,0 +1,5 @@
+lookup_code_nonempty_success=T
+lookup_code_missing_function=T
+lookup_code_wrong_arity=T
+lookup_code_wrong_shape=T
+lookup_code_duplicate_formals=T

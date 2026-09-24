@@ -627,6 +627,10 @@ run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
 run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_lookup_code_probeScript.sml pan_sem_lookup_code_probe.out \
+  lookup_code_nonempty_success lookup_code_missing_function \
+  lookup_code_wrong_arity lookup_code_wrong_shape lookup_code_duplicate_formals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
   recursive_call_timeout recursive_deccall_timeout \

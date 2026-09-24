@@ -140,6 +140,16 @@ def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
   (holFiniteWordSourceMemoryModel dimension17 true).wordOfBytes true
     [finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11]
 
+/-! HOL natural MOD has x MOD 0 = x. A width-5 word has no full byte slots,
+    so this checks the imported byte_index zero-divisor branch directly. -/
+@[instance_reducible] def dimension5 : HolFiniteDimension (Fin 5) := inferInstance
+def finiteWord5 (value : Nat) : Fin 5 → Bool :=
+  bitVecToHolWord dimension5 (BitVec.ofNat 5 value)
+def finiteWord5LittleGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) false
+def finiteWord5BigGetByte : Fin 5 → Bool :=
+  holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) true
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit
@@ -167,5 +177,7 @@ def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
   BitVec.ofNat 17 0x3211
 #guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==
   BitVec.ofNat 17 0x3211
+#guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
+#guard holWordToBitVec dimension5 finiteWord5BigGetByte == BitVec.ofNat 5 31
 
 end Flapjack.Test.PanFixedLoadParity

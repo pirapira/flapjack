@@ -940,7 +940,11 @@ def holFiniteWordSourceByteIndex {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool)
     (bigEndian : Bool) : Nat :=
   let bytesPerWord := dimension.width / 8
-  let byteIndex := (holWordToBitVec dimension address).toNat % bytesPerWord
+  let addressIndex := (holWordToBitVec dimension address).toNat
+  -- HOL natural MOD uses x MOD 0 = x. This matters for word dimensions below
+  -- eight bits, where dimindex DIV 8 is zero.
+  let byteIndex := if bytesPerWord = 0 then addressIndex
+    else addressIndex % bytesPerWord
   if bigEndian then bytesPerWord - 1 - byteIndex else byteIndex
 
 def holFiniteWordSourceGetByte {ι : Type u}

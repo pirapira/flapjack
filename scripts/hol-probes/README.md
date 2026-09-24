@@ -174,6 +174,8 @@ depend on built CakeML Pancake theories. Refresh it with
 The width-17 rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
 by HOL evaluation; the little- and big-endian fixtures both reduce to `12817w`
 (`0x3211w`) for the corresponding byte orders.
+The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
+`byte_index` branches, which the Lean source adapter handles explicitly.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

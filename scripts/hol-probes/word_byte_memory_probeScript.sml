@@ -2,6 +2,7 @@
 load "bossLib";
 load "byteTheory";
 load "wordsLib";
+load "arithmeticTheory";
 open bossLib;
 open HolKernel Parse;
 
@@ -27,6 +28,15 @@ val _ = print_thm "byte_index_definition" byteTheory.byte_index_def;
 val _ = print_thm "get_byte_definition" byteTheory.get_byte_def;
 val _ = print_thm "set_byte_definition" byteTheory.set_byte_def;
 val _ = print_thm "word_of_bytes_definition" byteTheory.word_of_bytes_def;
+val _ = print_thm "natural_mod_zero_theorem" arithmeticTheory.MOD_0;
+val _ = print_eval "byte_index_width5_little"
+  ``byte_index (1w:5 word) F``;
+val _ = print_eval "byte_index_width5_big"
+  ``byte_index (1w:5 word) T``;
+val _ = print_eval "get_byte_width5_little"
+  ``get_byte (1w:5 word) (31w:5 word) F``;
+val _ = print_eval "get_byte_width5_big"
+  ``get_byte (1w:5 word) (31w:5 word) T``;
 
 val _ = print_eval "word_of_bytes_width17_little"
   ``word_of_bytes F (0w:17 word)

@@ -46,6 +46,23 @@ theorem alwaysOpNested :
     crepEveryExp (fun _ => true) (.op .add [.load constant, constantTwo]) = true :=
   rfl
 
+/-- Holds only of constant expressions, at `BitVec 64`. -/
+def isConst64 : CrepExp (BitVec 64) → Bool
+  | .const _ => true
+  | _ => false
+
+/-- Width-indexed `crepEveryExpW` over `CrepExp (BitVec 64)` (oracle row
+    `const_hit=T`, plus the always-true traversal). -/
+example : crepEveryExpW (width := 64) isConst64 (.const (5 : BitVec 64)) = true := rfl
+
+example : crepEveryExpW (width := 64) (fun _ => true)
+    (.op .add [.load (.const (5 : BitVec 64)), .const 6]) = true := rfl
+
+/-- Width-indexed `cexpHeadsSimpW` over `CrepExp (BitVec 64)`: a non-empty
+    singleton yields the mapped head. -/
+example : cexpHeadsSimpW (width := 64) [[.const (1 : BitVec 64)]] =
+    some [.const (1 : BitVec 64)] := rfl
+
 def parityGuard : Bool :=
   crepEveryExp isConst constant &&
   !crepEveryExp isConst (.op .add [constant, constantTwo]) &&

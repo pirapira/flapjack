@@ -1011,17 +1011,17 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "assignRet",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "assignRetW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assign_ret_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "loadGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against load_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
@@ -1035,9 +1035,9 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "storeGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "storeGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against store_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -1211,9 +1211,9 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "cexp_heads_simp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "cexpHeadsSimp",
+    "lean_name": "cexpHeadsSimpW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "Codex (statement compared against cexp_heads_simp_def at crepPropsScript.sml:11; exact width-indexed wrapper over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic cexpHeadsSimp stays untagged with a FLAPJACK-SPECIFIC note; parity covered by CrepeSimpHeadsParity / HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -6267,9 +6267,9 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepEveryExp",
+    "lean_name": "crepEveryExpW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
+    "reviewer": "Codex (statement compared against every_exp_def at crepPropsScript.sml:1300; exact width-indexed wrapper over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic crepEveryExp stays untagged with a FLAPJACK-SPECIFIC note; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
   },
   {
     "hol_path": null,

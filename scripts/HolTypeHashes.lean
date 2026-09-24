@@ -10,6 +10,7 @@ import Flapjack.Compiler.Backend.StackNames
 import Flapjack.Compiler.Backend.StackRemove
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.AppList
+import Flapjack.Misc.Sptree
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepToLoop
@@ -19,6 +20,7 @@ import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
+import Flapjack.Pancake.PanLang.Prog
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg

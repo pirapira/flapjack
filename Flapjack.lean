@@ -3,6 +3,7 @@ import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
+import Flapjack.Pancake.PanLang.Prog
 import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi
@@ -202,6 +203,7 @@ import Flapjack.Compiler.Backend.MlStringBridge
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList
+import Flapjack.Misc.Sptree
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps

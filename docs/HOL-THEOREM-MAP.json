@@ -808,6 +808,14 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "OPT_MMAP_MEM_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "OPT_MMAP_MEM_IMP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; pure option/list lemma over List.mapM as the OPT_MMAP carrier, no key-equality side condition)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "fdoms_eq_opt_mmap_flookup_some",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
@@ -6195,6 +6203,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized Call-argument IH for Const, Local, baseAddr, topAddr, and bytesInWord. It derives production target argument evaluation plus expression length, shape, and well-formedness; other constructors and the complete HOL expression theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
@@ -6254,6 +6270,38 @@
     "lean_name": "fmEmptyZipAlist",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against fm_empty_zip_alist at pan_commonPropsScript.sml:426; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "MAX_LIST_add_not_mem",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "MAX_LIST_add_not_mem",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact statement, maxList is the faithful rich_list$MAX_LIST port, List.range n is GENLIST I n)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "MAX_LIST_i_genlist",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "MAX_LIST_i_genlist",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact statement, maxList is the faithful rich_list$MAX_LIST port, List.range n is GENLIST I n)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "max_foldr_lt",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "max_foldr_lt",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause with matching hypotheses/order; direct Lean counterpart wrappers mem_lt_foldr_max_add/panMap3_eq_map2_zip)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "MAP3_MAP2",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "MAP3_MAP2",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-for-clause with matching hypotheses/order; direct Lean counterpart wrappers mem_lt_foldr_max_add/panMap3_eq_map2_zip)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -6798,6 +6846,22 @@
     "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual Call-entry locals_rel composition for arbitrary full expression IHs: uses source lookup/bindPanValueParameters, production target code lookup, and code_rel to derive callee locals_rel. It derives the flattened argument-length equality internally from the successful source parameter match and source-value well-formedness; the expression induction and recursive body/handler Call_Ret_Exception composition remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constOrLocalOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local argument lists. It derives the full per-expression IH from the dedicated four-conclusion argument-list proof, then uses production source/target code maps to derive target lookup and callee locals_rel. Other expression constructors and recursive body/handler Call composition remain open; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local and the three fixed RISC-V address leaves. It derives the expression IHs from state_rel and proves production target code lookup plus callee locals_rel; other argument constructors and recursive Call body/handler composition remain open."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -7444,6 +7508,38 @@
     "hol_name": "extract_labels_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "extractLabels",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "distinct_tar_reg_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "distinctTarReg",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "two_reg_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "twoRegInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "every_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "everyInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "flat_exp_conventions_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "flatExpConventions",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   }

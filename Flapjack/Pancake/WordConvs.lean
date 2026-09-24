@@ -97,4 +97,89 @@ def extractLabels {width : Nat} : WordLangProg (BitVec width) → List (Nat × N
       extractLabels thenBranch ++ extractLabels elseBranch
   | _ => []
 
+/-- Exact source counterpart of CakeML `wordConvs$distinct_tar_reg_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:267-279`): whether an
+instruction's destination differs from the registers it reads.  Every other
+instruction is accepted. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "distinct_tar_reg_def"]
+def distinctTarReg {width : Nat} : WordLangInst (BitVec width) → Bool
+  | .arith (.binop _ r1 _ ri) => match ri with
+      | .reg r => decide (r ≠ r1)
+      | .imm _ => true
+  | .arith (.shift _ r1 _ ri) => match ri with
+      | .reg r => decide (r ≠ r1)
+      | .imm _ => true
+  | .arith (.addCarry r1 _ r3 r4) => decide (r1 ≠ r3 ∧ r1 ≠ r4)
+  | .arith (.addOverflow r1 _ r3 _) => decide (r1 ≠ r3)
+  | .arith (.subOverflow r1 _ r3 _) => decide (r1 ≠ r3)
+  | _ => true
+
+/-- Exact source counterpart of CakeML `wordConvs$two_reg_inst_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:284-296`): whether an
+instruction is two-register (the destination equals the first source) for the
+arithmetic forms that require it.  Every other instruction is accepted. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "two_reg_inst_def"]
+def twoRegInst {width : Nat} : WordLangInst (BitVec width) → Bool
+  | .arith (.binop _ r1 r2 _) => r1 == r2
+  | .arith (.shift _ r1 r2 _) => r1 == r2
+  | .arith (.addCarry r1 r2 _ _) => r1 == r2
+  | .arith (.addOverflow r1 r2 _ _) => r1 == r2
+  | .arith (.subOverflow r1 r2 _ _) => r1 == r2
+  | _ => true
+
+/-- Exact source counterpart of CakeML `wordConvs$every_inst_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:299-315`): whether a
+predicate holds on every `Inst` reachable through the program's structural
+positions (`Seq`, `Loop`, `If`, `MustTerminate`, `Call` bodies, and the
+synthetic instruction of `OpCurrHeap`).  Note HOL's `Call` nesting: when the
+return metadata is `NONE` the result is `T` regardless of the handler. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "every_inst_def"]
+def everyInst {width : Nat} (P : WordLangInst (BitVec width) → Bool) :
+    WordLangProg (BitVec width) → Bool
+  | .inst instruction => P instruction
+  | .seq first second => everyInst P first && everyInst P second
+  | .loop _ body _ => everyInst P body
+  | .ite _ _ _ thenBranch elseBranch => everyInst P thenBranch && everyInst P elseBranch
+  | .opCurrHeap bop r1 r2 => P (.arith (.binop bop r1 r2 (.reg r2)))
+  | .mustTerminate body => everyInst P body
+  | .call returns _ _ handler =>
+      match returns with
+      | none => true
+      | some (_, _, returnHandler, _, _) =>
+          everyInst P returnHandler &&
+            match handler with
+            | none => true
+            | some (_, handlerProg, _, _) => everyInst P handlerProg
+  | _ => true
+
+/-- HOL `wordConvs$flat_exp_conventions` (`wordConvsScript.sml:179-205`):
+whether a program keeps all expressions flat.  Top-level expressions are
+forbidden in `Assign` and `Store`, allowed only as `Var` in `Set`, and in
+`ShareInst` allowed only as `Var` or `Op Add [Var r; Const c]`.  Descends
+through `Seq`, `Loop`, `If`, `MustTerminate` and both `Call` bodies (the
+return and handler cases are both required, so a `Call` with no return
+metadata but a non-flat handler is rejected). -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "flat_exp_conventions_def"]
+def flatExpConventions {width : Nat} : WordLangProg (BitVec width) → Bool
+  | .assign _ _ => false
+  | .store _ _ => false
+  | .set _ (.var _) => true
+  | .set _ _ => false
+  | .shareInst _ _ (.var _) => true
+  | .shareInst _ _ (.op .add [.var _, .const _]) => true
+  | .shareInst _ _ _ => false
+  | .seq first second => flatExpConventions first && flatExpConventions second
+  | .loop _ body _ => flatExpConventions body
+  | .ite _ _ _ thenBranch elseBranch =>
+      flatExpConventions thenBranch && flatExpConventions elseBranch
+  | .mustTerminate body => flatExpConventions body
+  | .call returns _ _ handler =>
+      (match returns with
+        | none => true
+        | some (_, _, returnHandler, _, _) => flatExpConventions returnHandler) &&
+        (match handler with
+          | none => true
+          | some (_, handlerProg, _, _) => flatExpConventions handlerProg)
+  | _ => true
+
 end Flapjack

@@ -1,6 +1,7 @@
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.Pancake.Proofs.PanGlobals
+import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
 
 /-!
@@ -434,6 +435,18 @@ def map3Guard : Bool :=
 #eval map3Guard
 #guard map3Guard
 
+/-! Exact tagged ports of `max_foldr_lt` and `MAP3_MAP2`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:768/827`). -/
+
+theorem maxFoldrLt_tagged_fixture : 3 < ([1, 3].foldr max 2) + 1 :=
+  max_foldr_lt [1, 3] 3 2 1 (by decide) (by decide) (by decide)
+
+theorem MAP3_MAP2_tagged_fixture :
+    panMap3 (fun (a b c : Nat) => a + b * c) [1, 2] [3, 4] [5, 6] =
+      panMap2 (fun (pair : Nat × Nat) (z : Nat) => pair.1 + pair.2 * z)
+        ([1, 2].zip [3, 4]) [5, 6] :=
+  MAP3_MAP2 _ [1, 2] [3, 4] [5, 6] (by decide) (by decide)
+
 /-! Cake's `map_map2_fst`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`). -/
 
@@ -551,6 +564,20 @@ def listRelFlattenFlookupGuard : Bool :=
 
 #guard listRelFlattenFlookupGuard
 
+/-- Direct parity for HOL `OPT_MMAP_MEM_IMP` (`panPropsScript.sml:115`). -/
+theorem optMmapMemImpFixture :
+    ∃ x, x ∈ ([1, 2, 3] : List Nat) ∧
+      (fun n : Nat => some (n * 10)) x = some 20 :=
+  OPT_MMAP_MEM_IMP (fun n : Nat => some (n * 10)) [1, 2, 3]
+    [10, 20, 30] 20 (by decide) (by decide)
+
+def optMmapMemImpGuard : Bool :=
+  match ([1, 2, 3] : List Nat).mapM (fun n => some (n * 10)) with
+  | some ys => ys == [10, 20, 30]
+  | none => false
+
+#guard optMmapMemImpGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -597,10 +624,12 @@ def runChecks : IO Bool := do
     checkDisjoint "pan list_rel_flatten_with_shape_length" listRelFlattenGuard
   let listRelFlattenFlookupOk ←
     checkDisjoint "pan list_rel_flatten_with_shape_flookup" listRelFlattenFlookupGuard
+  let optMmapMemImpOk ←
+    checkDisjoint "pan OPT_MMAP_MEM_IMP" optMmapMemImpGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
-    listRelFlattenOk && listRelFlattenFlookupOk)
+    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk)
 
 end Flapjack.Test.PanWithShapeParity

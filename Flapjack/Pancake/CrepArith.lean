@@ -12,6 +12,11 @@ that inspect intermediate artifacts.
 
 namespace Flapjack
 
+/-- Generic Flapjack helper for extracting a value from a Const node.
+    This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
+    stores an `'a word`, while this helper accepts arbitrary `α`. A
+    width-indexed word-shaped port and its connection to this production
+    helper remain open. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
@@ -61,11 +66,19 @@ def crepSimpExp [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
   | .crepOp operator expressions =>
       let expressions := expressions.map (crepSimpExp fromNat)
       match operator, expressions with
-      | .mul, [.const left, .const right] => .const (left * right)
+      | .mul, [.const left, .const right] =>
+          match crepDestConst (.const left), crepDestConst (.const right) with
+          | some leftConstant, some rightConstant =>
+              .const (leftConstant * rightConstant)
+          | _, _ => .crepOp operator expressions
       | .mul, [.const constant, expression] =>
-          crepMulConst fromNat expression constant
+          match crepDestConst (.const constant) with
+          | some value => crepMulConst fromNat expression value
+          | none => .crepOp operator expressions
       | .mul, [expression, .const constant] =>
-          crepMulConst fromNat expression constant
+          match crepDestConst (.const constant) with
+          | some value => crepMulConst fromNat expression value
+          | none => .crepOp operator expressions
       | _, _ => .crepOp operator expressions
   | .cmp operator left right =>
       .cmp operator (crepSimpExp fromNat left) (crepSimpExp fromNat right)

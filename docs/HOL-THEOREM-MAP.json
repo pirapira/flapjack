@@ -7452,7 +7452,7 @@
     "hol_name": "extract_labels_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "extractLabels",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
   }
 ]

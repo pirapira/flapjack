@@ -1649,16 +1649,16 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The one-word target execution is established by
-`EvaluateCases.crepRuntimeExpHdlOneWord`, and
-`crepRuntimeExpHdlOneWord_localsRel` proves its post-state `locals_rel`
-condition. The corresponding `crepRuntimeExpHdlTwoWords` and
-`crepRuntimeExpHdlTwoWords_localsRel` lemmas establish the same boundary for
-two-word payloads. This lemma supplies the source-to-target map-update
-relation used by those proofs. The full HOL
-`pc_compile_correct[Call_Ret_Exception]` simulation remains open: the general
-Call state transition and arbitrary payload-shape cases are not yet
-established. -/
+For the stated one-word premises, `EvaluateCases.crepRuntimeExpHdlOneWord`
+proves target runtime `exp_hdl` execution and
+`crepRuntimeExpHdlOneWord_localsRel` proves the resulting post-state
+`locals_rel`. `crepRuntimeExpHdlTwoWords` and
+`crepRuntimeExpHdlTwoWords_localsRel` prove the corresponding execution and
+post-state relation for two-word payloads. This lemma supplies the
+source-to-target map-update relation used by those results. These bounded
+runtime cases do not yet prove actual-state `Call_Ret_Exception` branch
+matching/composition or arbitrary payload arities; the full HOL
+`pc_compile_correct[Call_Ret_Exception]` simulation remains open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

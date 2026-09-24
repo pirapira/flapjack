@@ -106,16 +106,51 @@ def exprStepSomeGuard : Bool :=
   isReturnedWord 5 (panSemTotalExprStep stepsState (.const (BitVec.ofNat 64 5))
     (fun value => (some (.returned value), stepsState))).1
 
+/-- A `Primitive` handler producing a valid word binding succeeds. -/
+def primitiveOkGuard : Bool :=
+  let result := panSemTotalPrimitiveClause stepsState "x" .addCarry
+    [.const (BitVec.ofNat 64 1)] (fun _ _ => some (.word (BitVec.ofNat 64 9)))
+  isNoneResult result.1 && wordAt result.2.locals "x" 9
+
+/-- A `Primitive` handler producing a shape-incompatible value is `SOME Error`. -/
+def primitiveShapeMismatchGuard : Bool :=
+  let result := panSemTotalPrimitiveClause stepsState "x" .addCarry
+    [.const (BitVec.ofNat 64 1)] (fun _ _ => some (.rStruct []))
+  isErrorResult result.1 && wordAt result.2.locals "x" 7
+
+/-- A `Primitive` handler returning `none` is `SOME Error`. -/
+def primitivePrimNoneGuard : Bool :=
+  isErrorResult (panSemTotalPrimitiveClause stepsState "x" .addCarry
+    [.const (BitVec.ofNat 64 1)] (fun _ _ => none)).1
+
+/-- A `Primitive` whose argument expression fails is `SOME Error`. -/
+def primitiveArgErrorGuard : Bool :=
+  isErrorResult (panSemTotalPrimitiveClause stepsState "x" .addCarry
+    [.var .local "missing"] (fun _ _ => some (.word (BitVec.ofNat 64 9)))).1
+
+/-- The list-expression glue leaves a failed argument list as `SOME Error`. -/
+def exprListStepGuard : Bool :=
+  isErrorResult (panSemTotalExprListStep stepsState
+    [.const (BitVec.ofNat 64 1), .var .local "missing"]
+    (fun _ => (none, stepsState))).1
+
+/-- HOL `Annot` is erased: normal completion, state verbatim. -/
+def annotGuard : Bool :=
+  let result := panSemTotalAnnotClause stepsState "tag" "body"
+  isNoneResult result.1 && wordAt result.2.locals "x" 7
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
-    raiseGuard && exprStepErrorGuard && exprStepSomeGuard
+    raiseGuard && exprStepErrorGuard && exprStepSomeGuard &&
+    primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
+    primitiveArgErrorGuard && exprListStepGuard && annotGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

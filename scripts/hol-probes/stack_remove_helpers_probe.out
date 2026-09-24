@@ -1,0 +1,8 @@
+max_stack_alloc=255
+word_offset_3_8=3w
+word_offset_3_64=24w
+store_list_len=48
+store_list_head=NextFree
+store_list_last=Temp 31w
+store_length=48
+stack_err_lab=2

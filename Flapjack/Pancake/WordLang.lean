@@ -255,4 +255,84 @@ def everyVarInst {width : Nat} (P : Nat -> Bool) :
   | .fp (.fpMovFromReg _ r1 r2) => if width = 64 then P r1 else (P r1 && P r2)
   | _ => true
 
+/-- HOL `wordLang$every_name` (`wordLangScript.sml:127-131`). HOL enumerates
+`toAList`; the `WordLangNumSet` function carrier has no key enumeration, so this
+uses the order-insensitive, duplicate-free domain form `everyNumSetKey`, which
+the direct HOL oracle `num_set_audit_probe` shows is equivalent for these uses.
+Not `@[hol]`-tagged: the carrier is a documented model
+(`docs/NUM-SET-AUDIT.md`). -/
+def everyName (P : Nat -> Bool) (t : WordLangCutsets) : Prop :=
+  everyNumSetKey P t.1 /\ everyNumSetKey P t.2
+
+/-- HOL `wordLang$every_var` (`wordLangScript.sml:133-176`) over the faithful
+backend `prog`. Prop-valued because `everyName` is; the `num_set` sub-terms use
+the documented `everyNumSetKey` model. Not `@[hol]`-tagged for that reason. -/
+def everyVar {width : Nat} (P : Nat -> Bool) :
+    WordLangProg (BitVec width) -> Prop
+  | .skip => True
+  | .move _ moves =>
+      moves.all (fun pair => P pair.1) = true /\
+        moves.all (fun pair => P pair.2) = true
+  | .inst instruction => everyVarInst P instruction = true
+  | .assign name value => P name = true /\ everyVarExp P value = true
+  | .get destination _ => P destination = true
+  | .set _ value => everyVarExp P value = true
+  | .store value num => P num = true /\ everyVarExp P value = true
+  | .locValue r _ => P r = true
+  | .install r1 r2 r3 r4 names =>
+      P r1 = true /\ P r2 = true /\ P r3 = true /\ P r4 = true /\
+        everyName P names
+  | .codeBufferWrite r1 r2 => P r1 = true /\ P r2 = true
+  | .dataBufferWrite r1 r2 => P r1 = true /\ P r2 = true
+  | .ffi _ cptr clen ptr len names =>
+      P cptr = true /\ P clen = true /\ P ptr = true /\ P len = true /\
+        everyName P names
+  | .mustTerminate body => everyVar P body
+  | .call returns _ arguments handler =>
+      arguments.all P = true /\
+        (match returns with
+         | none => True
+         | some (values, cutset, returnHandler, _, _) =>
+             values.all P = true /\ everyName P cutset /\
+               everyVar P returnHandler /\
+               (match handler with
+                | none => True
+                | some (v, prog, _, _) => P v = true /\ everyVar P prog))
+  | .seq s1 s2 => everyVar P s1 /\ everyVar P s2
+  | .ite _ r1 right e2 e3 =>
+      P r1 = true /\ everyVarImm P right = true /\ everyVar P e2 /\
+        everyVar P e3
+  | .alloc num numset => P num = true /\ everyName P numset
+  | .storeConsts a b c d _ =>
+      P a = true /\ P b = true /\ P c = true /\ P d = true
+  | .raise num => P num = true
+  | .return num1 names => P num1 = true /\ names.all P = true
+  | .opCurrHeap _ num1 num2 => P num1 = true /\ P num2 = true
+  | .tick => True
+  | .shareInst _ num value => P num = true /\ everyVarExp P value = true
+  | .loop names body exitNames =>
+      everyNumSetKey P names /\ everyVar P body /\ everyNumSetKey P exitNames
+  | _ => True
+
+/-- HOL `wordLang$every_stack_var` (`wordLangScript.sml:179-205`). Prop-valued
+and `everyNumSetKey`-modelled like `everyVar`; not `@[hol]`-tagged. -/
+def everyStackVar {width : Nat} (P : Nat -> Bool) :
+    WordLangProg (BitVec width) -> Prop
+  | .ffi _ _ _ _ _ names => everyName P names
+  | .install _ _ _ _ names => everyName P names
+  | .call returns _ _ handler =>
+      (match returns with
+       | none => True
+       | some (_, cutset, returnHandler, _, _) =>
+           everyName P cutset /\ everyStackVar P returnHandler /\
+             (match handler with
+              | none => True
+              | some (_, prog, _, _) => everyStackVar P prog))
+  | .alloc _ numset => everyName P numset
+  | .mustTerminate body => everyStackVar P body
+  | .seq s1 s2 => everyStackVar P s1 /\ everyStackVar P s2
+  | .ite _ _ _ e2 e3 => everyStackVar P e2 /\ everyStackVar P e3
+  | .loop _ body _ => everyStackVar P body
+  | _ => True
+
 end Flapjack

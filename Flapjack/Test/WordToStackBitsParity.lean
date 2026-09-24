@@ -69,4 +69,31 @@ def wordListParityGuard : Bool :=
 example : wordListW (width := 64) [true, false, true, true] 2 =
     ([5, 3] : List (BitVec 64)) := by native_decide
 
+/-! ## `chunk_to_bits` parity
+
+Rows for the width-indexed `chunkToBitsW`, tagged against HOL
+`chunk_to_bits_def` (`cakeml/compiler/backend/word_to_stackScript.sml:386`;
+bead `flapjack-pxn.18.5.15.3.3`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bits_probe.out`:
+
+```
+cb_empty=1w  cb_single_true=3w  cb_single_false=2w
+cb_true_false=5w  cb_false_true=6w  cb_three=11w  cb_ignores_word=T
+```
+-/
+
+def chunkToBitsParityGuard : Bool :=
+  (chunkToBitsW (width := 64) ([] : List (Bool × BitVec 64)) == 1) &&
+  (chunkToBitsW (width := 64) [(true, 0)] == 3) &&
+  (chunkToBitsW (width := 64) [(false, 0)] == 2) &&
+  (chunkToBitsW (width := 64) [(true, 0), (false, 0)] == 5) &&
+  (chunkToBitsW (width := 64) [(false, 0), (true, 0)] == 6) &&
+  (chunkToBitsW (width := 64) [(true, 0), (true, 0), (false, 0)] == 11)
+
+#eval chunkToBitsParityGuard
+#guard chunkToBitsParityGuard
+
+example : chunkToBitsW (width := 64) [(true, (0 : BitVec 64)), (false, 9)] =
+    chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by native_decide
+
 end Flapjack.Test.WordToStackBitsParity

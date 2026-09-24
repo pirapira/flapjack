@@ -1,0 +1,7 @@
+cb_empty=1w
+cb_single_true=3w
+cb_single_false=2w
+cb_true_false=5w
+cb_false_true=6w
+cb_three=11w
+cb_ignores_word=T

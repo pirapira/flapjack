@@ -63,4 +63,24 @@ decreasing_by
   simp only [List.length_drop]
   omega
 
+/-- Exact port of HOL `chunk_to_bits_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:386`):
+
+```
+chunk_to_bits ([]:(bool # 'a word) list) = 1w
+chunk_to_bits ((b,w)::ws) =
+  let res = (chunk_to_bits ws) << 1 in
+    if b then res + 1w else res
+```
+
+HOL is polymorphic over the word carrier and ignores the word payload `w`;
+only the boolean tag contributes.  The faithful carrier is `BitVec width` with
+`[NeZero width]` (HOL's `'a word`). -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "chunk_to_bits_def"]
+def chunkToBitsW {width : Nat} [NeZero width] : List (Bool × BitVec width) → BitVec width
+  | [] => 1
+  | (b, _) :: ws =>
+    let res := (chunkToBitsW ws) <<< 1
+    if b then res + 1 else res
+
 end Flapjack.Compiler.Backend.WordToStack

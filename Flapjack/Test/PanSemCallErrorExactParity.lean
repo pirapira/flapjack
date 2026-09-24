@@ -175,6 +175,29 @@ private def callBreakGuard : Bool :=
 private def callContinueGuard : Bool :=
   isTerminalError 4 1 (evaluate continueState (.call none "f" [.const 1]))
 
+/-- Result matcher for a callee that finishes with `Error`: the call propagates
+    `SOME Error` through the catch-all `empty_locals st`, so the caller-visible
+    locals are cleared at the decremented callee clock. -/
+private def isPropagatedError (clock : Nat)
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control control, n) =>
+      match control with
+      | .error locals _ _ _ =>
+          n == clock && (locals "p").isNone && (locals "x").isNone
+      | _ => false
+  | _ => false
+
+/-- State whose callee `f` errors while evaluating its body: it reads address
+    `11` outside the domain, so the callee finishes with `Error`. -/
+private def calleeErrorState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none)
+      parameterContracts) with
+    functions := [("f", ["p"], .assign .local "p" (.load Shape.one (.const 11)))] }
+
+private def callCalleeErrorGuard : Bool :=
+  isPropagatedError 4 (evaluate calleeErrorState (.call none "f" [.const 1]))
+
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
 
@@ -193,7 +216,7 @@ private def callDomainGuard : Bool :=
 private def callGuard : Bool :=
   callLoadMissGuard && callMissingGuard && callDomainGuard &&
     callParamArityGuard && callParamShapeGuard && callFallThroughGuard &&
-    callBreakGuard && callContinueGuard
+    callBreakGuard && callContinueGuard && callCalleeErrorGuard
 
 #guard callGuard
 
@@ -261,6 +284,9 @@ def runChecks : IO Bool := do
   if callContinueGuard then
     IO.println "PASS exact-state Call callee continue rejects with Error and callee locals"
   else IO.println "FAIL exact-state Call callee continue rejects with Error and callee locals"
+  if callCalleeErrorGuard then
+    IO.println "PASS exact-state Call callee error propagates cleared locals"
+  else IO.println "FAIL exact-state Call callee error propagates cleared locals"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

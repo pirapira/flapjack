@@ -806,4 +806,52 @@ theorem evalPanValueFfiClockCall_callee_continued_error
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
     Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
 
+/-- Flapjack's clocked Call equation for a callee Error: the catch-all Call
+    branch preserves the callee's final nonlocal state and clears its locals.
+    Untagged because this evaluator uses a structured control result rather
+    than HOL's `result option × state` pair. -/
+theorem evalPanValueFfiClockCall_callee_error_error
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock : Nat)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (finalClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.error bodyLocals finalGlobals finalMemory finalFfi), finalClock)) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      info function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.error (fun _ => none) finalGlobals finalMemory finalFfi), finalClock) := by
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
+    Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
+
 end Flapjack

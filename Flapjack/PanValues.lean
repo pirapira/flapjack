@@ -599,7 +599,7 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [panValueIsWf, Bool.and_eq_true] at h
       obtain ⟨hname, _⟩ := h
       simp only [panValueShape, isWfShape]
-      exact hname
+      simpa only [isWfShapeHOL_named, lookupInfo_toHOL_isSome] using hname
   | case4 => simp
   | case5 fst value fields ihValue ihFields =>
       rename_i h

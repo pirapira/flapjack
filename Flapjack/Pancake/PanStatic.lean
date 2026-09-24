@@ -64,7 +64,7 @@ theorem lookupInfo_toHOL [BEq String] (name : String) (context : StructContext) 
 
 /-- The `isSome` corollary of `lookupInfo_toHOL`: the HOL `ALOOKUP sctxt nm <>
     NONE` condition is projection-invariant. -/
-theorem lookupInfo_toHOL_isSome [BEq String] (name : String) (context : StructContext) :
+@[simp] theorem lookupInfo_toHOL_isSome [BEq String] (name : String) (context : StructContext) :
     (lookupInfo name context.toHOL).isSome = (lookupInfo name context).isSome := by
   rw [lookupInfo_toHOL]
   cases lookupInfo name context <;> rfl
@@ -115,20 +115,30 @@ def lookupInfoWithRest [BEq String] (name : String) : StructContext →
       if candidate == name then some (info, context)
       else lookupInfoWithRest name context
 
-/-- Production shape well-formedness: `Named nm` succeeds iff `nm` occurs in the
-    context. This is the executable counterpart of HOL `is_wf_shape`
-    (`cakeml/pancake/panLangScript.sml:139`), but it is **not statement-exact**:
-    `StructInfo` carries an extra `shapedFields` field absent from HOL
-    `struct_info`, and `Named` consults `lookupInfo` (canonical String `==`)
-    rather than HOL `ALOOKUP` with `=`. The exact HOL-shaped port is
-    `isWfShapeHOL` over `StructContextHOL` (in `PanLang.lean`), and
-    `isWfShapeHOL_toHOL` below proves the two agree through
-    `StructContext.toHOL`. Direct HOL oracle rows are in
+/-- Production shape well-formedness. This is the executable counterpart of HOL
+    `is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The two leaf clauses
+    are delegated to the exact HOL-shaped, `@[hol panLangScript.sml
+    is_wf_shape_def]`-tagged `isWfShapeHOL` over `StructContextHOL` (in
+    `PanLang.lean`), projecting the production `StructContext` through
+    `StructContext.toHOL`; the `Comb` clause is the HOL `EVERY is_wf_shape`
+    recursion, kept as the executable `isWfShapeList` fold so the function
+    retains its well-founded induction principle. `isWfShapeHOL_toHOL` below
+    records the clause-by-clause agreement. Direct HOL oracle rows are in
     `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+@[simp] theorem isWfShapeHOL_one (context : StructContextHOL) :
+    isWfShapeHOL context .one = true := by
+  rw [isWfShapeHOL.eq_def]
+
+/-- The `Named` clause of the exact port, exposed as a `simp` bridge so the
+    production delegation reduces to the production `lookupInfo` result. -/
+@[simp] theorem isWfShapeHOL_named (context : StructContextHOL) (name : StructName) :
+    isWfShapeHOL context (.named name) = (lookupInfo name context).isSome := by
+  rw [isWfShapeHOL.eq_def]
+
 def isWfShape (context : StructContext) : Shape → Bool
-  | .one => true
+  | .one => isWfShapeHOL context.toHOL .one
   | .comb shapes => isWfShapeList context shapes
-  | .named name => (lookupInfo name context).isSome
+  | .named name => isWfShapeHOL context.toHOL (.named name)
 
 termination_by shape => sizeOf shape
 decreasing_by
@@ -155,7 +165,6 @@ mutual
         exact isWfShapeListHOL_toHOL context shapes
     | .named name => by
         simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
-        exact lookupInfo_toHOL_isSome name context
 
   theorem isWfShapeListHOL_toHOL (context : StructContext) :
       ∀ (shapes : List Shape),
@@ -202,7 +211,9 @@ theorem shapeSizeWithContext_eq_shapeSize_of_isWfShape :
         (fun shape hmem h => ih shape hmem h context) hwf 0
   | case3 name =>
       intro hwf context
-      simp [isWfShape, lookupInfo] at hwf
+      simp only [isWfShape.eq_def, isWfShapeHOL_named, StructContext.toHOL,
+        List.map_nil, lookupInfo, Option.isSome_none] at hwf
+      exact (Bool.false_ne_true hwf).elim
 where
   /-- Fold form of `shapeSizeWithContext_eq_shapeSize_of_isWfShape`, needed for
       the `comb` case. -/

@@ -572,7 +572,7 @@ theorem panValueFlatLoad_one_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
         (fun a => state.memaddrs a && panValueWordDefined memory a = true)
         (panValueWordHOL memory) structs.toHOL).map HolValue.toPanValue := by
   unfold panValueFlatLoad panMemLoadHOL
-  simp only [isWfShape.eq_def, if_true]
+  simp only [isWfShape.eq_def, isWfShapeHOL_one, if_true]
   unfold panValueFlatLoadFuel panValueFlatReadWord
   unfold panSemBitVec64MemoryAccess panValueMemoryAccessOfModel
   simp only []

@@ -137,4 +137,65 @@ def targetLoadsPairPayload : Bool :=
 
 #guard targetLoadsPairPayload
 
+/-! Arbitrary-list target `exp_hdl` support, exercised on a three-word payload.
+The proof uses state-owned return-global cells and writes into preexisting
+handler locals in order. The source HOL `exp_hdl` oracle pins the generated
+load/store sequence; this fixture validates the generalized runtime theorem. -/
+private def tripleHandlerVariables : FiniteMap String (Shape × List Nat) :=
+  FUPDATE FEMPTY ("caught", (.comb [.one, .one, .one], [1, 2, 3]))
+
+private def tripleHandlerState : CrepRuntimeState Word64 Unit :=
+  { handlerTargetState with
+    locals := fun slot =>
+      if slot == 1 || slot == 2 || slot == 3 then some (.word 0) else none
+    globals := fun address =>
+      if address == 0 then some (.word payload)
+      else if address == 1 then some (.word (BitVec.ofNat 64 8))
+      else if address == 2 then some (.word (BitVec.ofNat 64 9))
+      else none }
+
+private def tripleValues : List Word64 := [payload, BitVec.ofNat 64 8, BitVec.ofNat 64 9]
+
+private def tripleExpHdlResult :=
+  evalCrepRuntimeProg handlerTargetFfi handlerTargetPrimitive 5 tripleHandlerState
+    (expHdlFiniteMap tripleHandlerVariables "caught")
+
+example : tripleExpHdlResult = some (.normal,
+    { tripleHandlerState with locals :=
+      (updateCrepRuntimeLocal
+        (updateCrepRuntimeLocal
+          (updateCrepRuntimeLocal tripleHandlerState.locals 1 (.word payload))
+          2 (.word (BitVec.ofNat 64 8)))
+        3 (.word (BitVec.ofNat 64 9))) }) := by
+  have hvar : FLOOKUP tripleHandlerVariables "caught" =
+      some (.comb [.one, .one, .one], [1, 2, 3]) := by
+    simp [tripleHandlerVariables, FUPDATE, FLOOKUP]
+  have hslots : ∀ slot, slot ∈ [1, 2, 3] →
+      ∃ old, tripleHandlerState.locals slot = some old := by
+    intro slot hslot
+    have hslot' : slot = 1 ∨ slot = 2 ∨ slot = 3 := by simpa using hslot
+    rcases hslot' with hslot | hslot | hslot <;> subst slot <;>
+      exact ⟨.word 0, by simp [tripleHandlerState]⟩
+  have hglobals : crepRuntimeGlobalWordsRel tripleHandlerState 0
+      [1, 2, 3] tripleValues := by
+    change evalCrepRuntimeExp tripleHandlerState (.loadGlob 0) = some payload ∧
+      (evalCrepRuntimeExp tripleHandlerState (.loadGlob 1) = some (BitVec.ofNat 64 8) ∧
+        (evalCrepRuntimeExp tripleHandlerState (.loadGlob 2) = some (BitVec.ofNat 64 9) ∧ True))
+    simp [evalCrepRuntimeExp, panTheWord, tripleHandlerState, payload]
+  simpa [tripleExpHdlResult, tripleValues, List.zip_cons_cons,
+    List.foldl_cons] using
+    crepRuntimeExpHdlFiniteMapWords handlerTargetFfi handlerTargetPrimitive
+      tripleHandlerState tripleHandlerVariables "caught"
+      (.comb [.one, .one, .one]) [1, 2, 3] tripleValues hvar hslots hglobals
+
+def targetLoadsTriplePayload : Bool :=
+  match tripleExpHdlResult with
+  | some (.normal, post) =>
+      post.locals 1 == some (.word payload) &&
+      post.locals 2 == some (.word (BitVec.ofNat 64 8)) &&
+      post.locals 3 == some (.word (BitVec.ofNat 64 9))
+  | _ => false
+
+#guard targetLoadsTriplePayload
+
 end Flapjack.Test.PanToCrepCallExceptionHandlerParity

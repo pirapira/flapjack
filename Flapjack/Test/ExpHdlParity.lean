@@ -30,6 +30,16 @@ def knownOK : Bool :=
       (.seq (.assign 4 (.loadGlob 1)) .skip) => true
   | _ => false
 
+def threeWordVars : FiniteMap VarName (Shape × List Nat) :=
+  FUPDATE FEMPTY ("x", (.one, [3, 4, 5]))
+
+def threeWordOK : Bool :=
+  match expHdlFiniteMap (α := Nat) threeWordVars "x" with
+  | .seq (.assign 3 (.loadGlob 0))
+      (.seq (.assign 4 (.loadGlob 1))
+        (.seq (.assign 5 (.loadGlob 2)) .skip)) => true
+  | _ => false
+
 def fmVars : FiniteMap VarName (Shape × List Nat) :=
   FUPDATE FEMPTY ("x", (.one, [3, 4]))
 
@@ -77,7 +87,7 @@ example : expHdl (α := Nat) execDupVars "x" =
     expHdlFiniteMap (α := Nat) dupListVars "x" := rfl
 
 def parityGuard : Bool :=
-  missingOK && knownOK && fmMissingOK && fmKnownOK && dupUpdateOK && dupListOK
+  missingOK && knownOK && threeWordOK && fmMissingOK && fmKnownOK && dupUpdateOK && dupListOK
     && execDupOK
 
 #eval parityGuard
@@ -86,7 +96,7 @@ def parityGuard : Bool :=
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println
-      "PASS exp_hdl missing/known global-load assignments; duplicate finite-map updates keep the last binding on the executed path"
+      "PASS exp_hdl missing, two-word, three-word, and duplicate-update global-load assignments"
   else
     IO.println "FAIL exp_hdl parity"
   pure parityGuard

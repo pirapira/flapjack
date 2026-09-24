@@ -42,32 +42,35 @@ termination_by value => sizeOf value
 
 /-- Statement-exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`,
     `word_lab = Word ('a word) End`): a single `word` constructor carrying the
-    word payload.  This is declared here, in the `panSemScript.sml` counterpart
-    file, so the Datatype tag is a source-shaped port; the executable code uses
-    the definitionally identical `PanWordLab` (`Flapjack/PanValues.lean`), and
-    the two are related by the checked isomorphism below. -/
+    word payload.  HOL's `'a word` is width-indexed, so the port is indexed by
+    `width` with a `BitVec width` payload.  This is declared here, in the
+    `panSemScript.sml` counterpart file, so the Datatype tag is a source-shaped
+    port; the executable code uses the generic `PanWordLab`
+    (`Flapjack/PanValues.lean`), and the two are related by the checked
+    isomorphism below at each width. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
-inductive HolWordLab (α : Type u) where
-  | word (value : α)
+inductive HolWordLab (width : Nat) where
+  | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr
 
 /-- The isomorphism from the exact port to production `PanWordLab`. -/
-def HolWordLab.toPanWordLab : HolWordLab α → PanWordLab α
+def HolWordLab.toPanWordLab {width : Nat} : HolWordLab width → PanWordLab (BitVec width)
   | .word value => .word value
 
 /-- The isomorphism from production `PanWordLab` to the exact port. -/
-def PanWordLab.toHolWordLab : PanWordLab α → HolWordLab α
+def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWordLab width
   | .word value => .word value
 
-@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab (value : HolWordLab α) :
+@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab {width : Nat} (value : HolWordLab width) :
     value.toPanWordLab.toHolWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab (value : PanWordLab α) :
+@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab {width : Nat}
+    (value : PanWordLab (BitVec width)) :
     value.toHolWordLab.toPanWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem HolWordLab.toPanWordLab_word (value : α) :
+@[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
 structure PanSemEvaluateState (α : Type u) (σ : Type v) where

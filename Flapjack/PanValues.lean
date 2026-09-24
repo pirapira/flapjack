@@ -1071,6 +1071,38 @@ where
     decreasing_by
       all_goals first | decreasing_trivial
 
+mutual
+  theorem panShapeMatches_comm : (left right : Shape) →
+      panShapeMatches left right = panShapeMatches right left
+    | .one, .one => by simp only [panShapeMatches]
+    | .named left, .named right => by
+        simp only [panShapeMatches]
+        by_cases h : left = right
+        · rw [beq_iff_eq.mpr h, beq_iff_eq.mpr h.symm]
+        · rw [beq_eq_false_iff_ne.mpr h,
+              beq_eq_false_iff_ne.mpr (fun hh => h hh.symm)]
+    | .comb left, .comb right => by
+        simp only [panShapeMatches]
+        exact panShapeListMatches_comm left right
+    | .one, .named _ => by simp only [panShapeMatches]
+    | .one, .comb _ => by simp only [panShapeMatches]
+    | .named _, .one => by simp only [panShapeMatches]
+    | .named _, .comb _ => by simp only [panShapeMatches]
+    | .comb _, .one => by simp only [panShapeMatches]
+    | .comb _, .named _ => by simp only [panShapeMatches]
+
+  theorem panShapeListMatches_comm : (left right : List Shape) →
+      panShapeMatches.panShapeListMatches left right =
+        panShapeMatches.panShapeListMatches right left
+    | [], [] => by simp only [panShapeMatches.panShapeListMatches]
+    | left :: leftRest, right :: rightRest => by
+        simp only [panShapeMatches.panShapeListMatches]
+        rw [panShapeMatches_comm left right,
+          panShapeListMatches_comm leftRest rightRest]
+    | [], _ :: _ => by simp only [panShapeMatches.panShapeListMatches]
+    | _ :: _, [] => by simp only [panShapeMatches.panShapeListMatches]
+end
+
 /-! Declaration-level contracts used by the call-aware evaluators.  The
     optional wrapper keeps the original hand-built evaluator API useful for
     small compatibility fixtures while allowing declaration-driven execution
@@ -1249,15 +1281,15 @@ def panValueFieldsHaveShapes (context : StructContext) :
     `panValueShape` is the context-free twin of HOL `shape_of`
     (`Flapjack.Pancake.Semantics.panSemShapeOf`, the tagged exact port) and
     `panShapeMatches` is the Bool rendering of structural `=` on `Shape`; the
-    comparison is written with the value shape on the left, which is equivalent
-    because `=` on `Shape` is symmetric. -/
+    comparison keeps the context shape on the left, as HOL's `λs v. s = shape_of v`
+    does. -/
 def panValueFieldsExactHOL (context : StructContext)
     (expected : List (FieldName × Shape))
     (actual : List (FieldName × PanValue α)) : Bool :=
   (expected.map Prod.fst == actual.map Prod.fst) &&
     List.all
       ((expected.map Prod.snd).zip (actual.map Prod.snd))
-      (fun pair => panShapeMatches (panValueShape context pair.2) pair.1)
+      (fun pair => panShapeMatches pair.1 (panValueShape context pair.2))
 
 /-- The literal HOL-shaped `NStruct` field check agrees with the production
     helper on every input (`Bool.and` is commutative and associative). -/
@@ -1279,10 +1311,11 @@ theorem panValueFieldsExactHOL_eq_haveShapes (context : StructContext)
           obtain ⟨actualName, actualValue⟩ := actualHead
           simp only [panValueFieldsHaveShapes, panValueFieldsExactHOL, List.map_cons,
             List.zip_cons_cons, List.all_cons, List.cons_beq_cons]
+          rw [panShapeMatches_comm expectedShape (panValueShape context actualValue)]
           have htail :
               (List.map Prod.fst tail == List.map Prod.fst actualTail &&
                   ((List.map Prod.snd tail).zip (List.map Prod.snd actualTail)).all
-                    fun pair => panShapeMatches (panValueShape context pair.snd) pair.fst) =
+                    fun pair => panShapeMatches pair.fst (panValueShape context pair.snd)) =
                 panValueFieldsHaveShapes context tail actualTail := ih actualTail
           rw [← htail]
           simp only [Bool.and_assoc, Bool.and_left_comm]

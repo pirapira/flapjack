@@ -65,12 +65,12 @@ def observeMissingStruct : Bool :=
   (panEval context (.nStruct "Pair" [])).isNone
 
 /-- The exact `word_lab` port and production `PanWordLab` are isomorphic. -/
-theorem wordLabBridge (value : Nat) :
+theorem wordLabBridge (value : BitVec 64) :
     (HolWordLab.word value).toPanWordLab.toHolWordLab = HolWordLab.word value :=
   HolWordLab.toPanWordLab_toHolWordLab _
 
 def observeWordLabBridge : Bool :=
-  (HolWordLab.word (3 : Nat)).toPanWordLab == PanWordLab.word 3
+  (HolWordLab.word (3 : BitVec 64)).toPanWordLab == PanWordLab.word 3
 
 #guard observeConst
 #guard observeLocal

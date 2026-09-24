@@ -691,6 +691,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField and recursively nested RStruct cases, but is not the full HOL compile_exp_val_rel relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_constOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only per-expression helper for Const/Local or arbitrary-inner RField fields in a constructed RStruct argument; this remains a constructor subset of HOL compile_exp_val_rel."

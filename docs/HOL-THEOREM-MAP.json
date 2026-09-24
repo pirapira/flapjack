@@ -693,7 +693,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField and recursively nested RStruct cases, but is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, and PanOp.mul over supported operands. It is not the full HOL compile_exp_val_rel relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_length_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production Crep list-evaluator fact: successful evaluation preserves list length; used to show a scalar compiled PanOp operand has exactly one target expression."
   },
   {
     "hol_path": null,
@@ -5565,7 +5573,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only mixed Call argument list theorem combining Const/Local/RStruct/address cases and arbitrary-inner RField cases with an explicit compile_exp_val_rel-shaped IH; other constructors and the full expression induction remain open."
+    "reviewer": "Flapjack-only mixed Call argument list theorem over the restricted evaluator evidence, including Const/Local/RStruct/address/RField and PanOp.mul over supported operands; it is not the full compile_exp_val_rel list theorem and other constructors remain open."
   },
   {
     "hol_path": null,

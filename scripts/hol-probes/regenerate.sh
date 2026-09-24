@@ -580,6 +580,8 @@ run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
   if_true_eval if_false_eval if_error_eval if_nested_eval \
+  seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
+  seq_fix_clock_upper_clamp_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \

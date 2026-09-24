@@ -54,3 +54,6 @@ val _ = print_eval "finite_map_load32_local"
 val _ = print_eval "finite_map_load_byte_local"
   ``pan_to_crep$compile_exp ^finite_map_shadow_ctxt
       (LoadByte (Var Local «p»))``;
+val _ = print_eval "loadbyte_recursive_address"
+  ``pan_to_crep$compile_exp ^ctxt
+      (LoadByte (Op Add [Const (1w : 8 word); Const 2w]))``;

@@ -293,7 +293,7 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
   genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
   "$cake_dir/pancake"
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
-  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  bits_empty wordlist_chunk "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
   wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \

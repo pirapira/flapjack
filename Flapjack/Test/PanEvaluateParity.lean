@@ -11,6 +11,9 @@ from `panSemScript.sml:556-736`.  Its `return_41`, `return_mul_42`, and
 `FST (panSem$evaluate ...)`; the call, memory, and FFI fixtures use the same
 source boundary. State-owned Call and DecCall fixtures exercise nonempty code
 maps, nested calls, recursive calls, return shapes, and source-clock timeout.
+The direct HOL probe also records `(result, final clock)` for a simple Call,
+a recursive Call that invokes DecCall, and a DecCall; the guards below check
+the corresponding clocks in the state-owned evaluator.
 
 The fixed-width memory oracle is `scripts/hol-probes/
 pan_sem_evaluate_fixed_load_probe.out`, generated from

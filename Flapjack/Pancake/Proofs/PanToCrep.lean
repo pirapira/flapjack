@@ -1829,17 +1829,16 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The target runtime `exp_hdl` execution and its `locals_rel` postcondition are
-already proved for arbitrary flattened payload widths by
+For a one-word exception payload, the target runtime `exp_hdl` execution is
+proved by `EvaluateCases.crepRuntimeExpHdlOneWord`, and
+`crepRuntimeExpHdlOneWord_localsRel` proves its `locals_rel` postcondition.
+The corresponding arbitrary-width flattened execution and local relation are
 `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
-`crepRuntimeExpHdlFiniteMapWords_localsRel`; the one-word execution is also
-available as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
-`crepRuntimeExpHdlOneWord_localsRel` proving its local-map result. The actual
-state and relation setup for a matching handler is available as untagged
-induction support in
+`crepRuntimeExpHdlFiniteMapWords_localsRel`. The actual state and relation
+setup for a matching handler is available as untagged induction support in
 `crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations`. This lemma supplies
-the source-to-target map-update relation used by those proofs. What remains
-open is composing the recursive callee and handler induction hypotheses into
+the source-to-target map-update relation used by those proofs. The remaining
+gap is composing the recursive callee and handler induction hypotheses into
 the full source/target HOL `Call_Ret_Exception` case. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)

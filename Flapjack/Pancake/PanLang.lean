@@ -217,6 +217,27 @@ inductive Exp (α : Type u) where
   | bytesInWord
   deriving Repr
 
+/-! ## Width-indexed `Exp` constructor correspondence (option A)
+
+HOL `panLangScript.sml` `exp` is indexed by the word length with
+`Const ('a word)`. The production datatype `Exp (alpha : Type u)` is used by the
+executed compiler front at `alpha := BitVec width` (Pipeline.lean,
+Pancake/PanToCrep/Compile.lean, ...). This records the width-specialized
+`Const` constructor correspondence WITHOUT a second datatype. Untagged: the
+datatype parameter is still a `Type`; the exact HOL `exp` tag awaits the reviewed
+representation refinement (bead flapjack-pxn.18.3.5.3.1). -/
+
+/-- The production `.const` constructor at `BitVec width` is the HOL
+    `Const ('a word)` clause. -/
+theorem exp_const_width_correspondence {width : Nat} (value : BitVec width) :
+    (Exp.const value : Exp (BitVec width)) = .const value := rfl
+
+/-- The width-specialized `.const` constructor is injective, matching HOL
+    constructor freeness for `Const`. -/
+theorem exp_const_width_injective {width : Nat} {left right : BitVec width}
+    (h : (Exp.const left : Exp (BitVec width)) = .const right) : left = right := by
+  injection h with hval
+
 /-- Exact port of Cake's `opsize` datatype (`cakeml/pancake/panLangScript.sml:49`):
 the four nullary constructors `Op8`/`OpW`/`Op32`/`Op16` match in order. -/
 @[hol "cakeml/pancake/panLangScript.sml" "opsize"]

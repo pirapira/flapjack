@@ -1408,9 +1408,38 @@ private theorem crepSimpExpEvalPreservesHolFiniteDimensionWithRuntime {ι : Type
         (toRuntime state) expressions with
     | none => simp [hx] at h
     | some values =>
-        have hi := ih.2 state (by simp [hx])
-        rw [← evalExpsMapM state (expressions.map (crepSimpExp fromNat)),
-          ← evalExpsMapM state expressions, hi]
+        have hOriginal : expressions.mapM
+            (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [← evalExpsMapM state expressions]
+          exact hx
+        have hSimplified : expressions.mapM
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) = some values := by
+          apply optMmapEqSomeMono
+            (evalCrepRuntimeExp (toRuntime state))
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) expressions values hOriginal
+          intro expression value hmem heval
+          have hSuccessful :
+              evalCrepRuntimeExp (toRuntime state) expression ≠ none := by
+            rw [heval]
+            simp
+          have hPreserved := ih.1 expression hmem state hSuccessful
+          rw [hPreserved, heval]
+        have hMapMapM (xs : List (CrepExp (ι → Bool))) :
+            (xs.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) =
+              xs.mapM (fun expression => evalCrepRuntimeExp (toRuntime state)
+                (crepSimpExp fromNat expression)) := by
+          induction xs with
+          | nil => rfl
+          | cons head tail ihTail => simp [List.mapM_cons, ihTail]
+        have hSimplifiedMapped :
+            (expressions.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [hMapMapM]
+          exact hSimplified
+        rw [hSimplifiedMapped, hOriginal]
   case crepOp operator expressions ih =>
     cases operator
     cases expressions with

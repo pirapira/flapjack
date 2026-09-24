@@ -4210,6 +4210,29 @@ private theorem evalPanSemStateExp_loadOne_const_stateRel
     panValueMemoryAccessOfModel, evalCrepRuntimeExp, crepRuntimeLoad,
     isWfShape, hmemory, hdomain]
 
+private theorem evalPanSemStateExp_loadTwo_const_stateRel
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64)
+    (hstate : stateRel source target) :
+    evalPanSemStateExp source
+        (.load (.comb [.one, .one]) (.const address)) =
+      ((evalCrepRuntimeExp target (.load (.const address))).bind fun first =>
+        (evalCrepRuntimeExp target (.load (.const (address + 8)))).map fun second =>
+          .rStruct [.word first, .word second]) := by
+  rcases hstate with ⟨hmemory, hdomain, _, hstructs, _, _, _, _, _, _⟩
+  simp [evalPanSemStateExp, evalPanValueExp, panValueFlatLoad,
+    panValueFlatLoadFuel, panValueFlatLoadListFuel, panValueFlatReadWord,
+    panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+    panValueFlatContextFuel, panValueFlatShapeFuel,
+    panValueFlatShapeFuel.panValueFlatShapeListFuel,
+    evalCrepRuntimeExp, crepRuntimeLoad, panValueFlatOffset,
+    shapeSizeWithContext, panSemBitVec64BytesInWord,
+    isWfShape, isWfShape.isWfShapeList, hmemory, hdomain, hstructs]
+  cases target.memaddrs address <;>
+    cases target.memaddrs (address + 8) <;>
+    simp
+
 inductive compileArgConstLocalStructAddressOrRFieldInnerIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -5475,6 +5498,245 @@ theorem compileExpHOL_loadOne_ofHOLIH
           · simp [compilerContext, hcompiledLoad]
           · simp [compilerContext, hcompiledLoad, panValueShape]
           · simp [compilerContext, hcompiledLoad, isWfShape]
+      | cons _ _ => simp [hcompiledAddress] at haddressLength
+
+
+/-! Full localized-expression IH case for a two-word flat Load. The proof
+keeps the source flat-load stride and target compile_exp load_shape stride
+aligned at the fixed RV64 width. Arbitrary shape lists remain open. -/
+theorem compileExpHOL_loadTwo_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : Exp (RiscV.Word 64)) (addressWord loaded0 loaded1 : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcanonical : target = riscvCrepWordTarget target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (haddressLocalized : expGlobalVars address = [])
+    (haddress : evalPanSemStateExp source address = some (.word addressWord))
+    (haddressIH : ∀ addressValue,
+      evalPanSemStateExp source address = some addressValue →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars address = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            address).1 = some (panValueFlatten addressValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          address).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              address).2 ∧
+        panValueShape [] addressValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          address).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          address).2 = true)
+    (hsourceLoad : evalPanSemStateExp source
+      (.load (.comb [.one, .one]) address) =
+        some (.rStruct [.word loaded0, .word loaded1])) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.load (.comb [.one, .one]) address)).1 = some [loaded0, loaded1] ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load (.comb [.one, .one]) address)).1.length =
+          Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.load (.comb [.one, .one]) address)).2 ∧
+      panValueShape [] (.rStruct [.word loaded0, .word loaded1]) =
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.load (.comb [.one, .one]) address)).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load (.comb [.one, .one]) address)).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have haddressRel := haddressIH (.word addressWord) haddress
+    hstate hcode hlocals haddressLocalized
+  have haddressShape : (compileExpHOL compilerContext address).2 = .one := by
+    have h := haddressRel.2.2.1
+    simpa [compilerContext, panValueShape] using h.symm
+  have haddressLength : (compileExpHOL compilerContext address).1.length = 1 := by
+    have h := haddressRel.2.1
+    rw [haddressShape] at h
+    simpa using h
+  have hcompiledAddressRun :
+      evalCrepRuntimeExps target (compileExpHOL compilerContext address).1 =
+        some [addressWord] := by
+    simpa [compilerContext, panValueFlatten] using haddressRel.1
+  cases hcompiledAddress : (compileExpHOL compilerContext address).1 with
+  | nil => simp [hcompiledAddress] at haddressLength
+  | cons targetAddress targetAddressTail =>
+      cases targetAddressTail with
+      | nil =>
+          have hcompiledAddressSingleton :
+              (compileExpHOL compilerContext address).1 = [targetAddress] := by
+            simp [hcompiledAddress]
+          have hcompiledAddressPair :
+              compileExpHOL compilerContext address = ([targetAddress], .one) := by
+            apply Prod.ext
+            · exact hcompiledAddressSingleton
+            · exact haddressShape
+          have htargetAddress : evalCrepRuntimeExp target targetAddress =
+              some addressWord := by
+            rw [hcompiledAddressSingleton] at hcompiledAddressRun
+            cases hvalue : evalCrepRuntimeExp target targetAddress with
+            | none => simp [evalCrepRuntimeExps, hvalue] at hcompiledAddressRun
+            | some word =>
+                have hword : word = addressWord := by
+                  simpa [evalCrepRuntimeExps, hvalue] using hcompiledAddressRun
+                simp [hword]
+          have hcompiledLoad :
+              compileExpHOL compilerContext (.load (.comb [.one, .one]) address) =
+                ([.load targetAddress,
+                  .load (.op .add [targetAddress, .const 8])], .comb [.one, .one]) := by
+            simp only [compileExpHOL, compilerContext, hcompiledAddressPair,
+              CrepBytesInWord.bytesInWord]
+            apply Prod.ext
+            · have hcount : Shape.shapeSize (.comb [.one, .one]) = 2 := by
+                simp [Shape.shapeSize]
+              rw [hcount]
+              change loadShape (0 : RiscV.Word 64)
+                (BitVec.ofNat 64 (64 / 8)) 2 targetAddress =
+                [.load targetAddress,
+                  .load (.op .add [targetAddress, .const 8])]
+              rw [loadShape]
+              rw [loadShape]
+              rfl
+            · rfl
+          have htargetAddressNext :
+              evalCrepRuntimeExp target (.op .add [targetAddress, .const 8]) =
+                some (addressWord + 8) := by
+            have htargetAddressCanonical :
+                evalCrepRuntimeExp (riscvCrepWordTarget target) targetAddress =
+                  some addressWord := by
+              rw [hcanonical] at htargetAddress
+              exact htargetAddress
+            have hwordArgs :
+                [targetAddress, .const 8].mapM
+                    (evalCrepRuntimeExp (riscvCrepWordTarget target)) =
+                  some [addressWord, 8] := by
+              simp only [List.mapM_cons, List.mapM_nil,
+                evalCrepRuntimeExp, htargetAddressCanonical]
+              rfl
+            have hwordResult :
+                ([targetAddress, .const 8].mapM
+                    (evalCrepRuntimeExp (riscvCrepWordTarget target))).bind
+                    (wordOpHOL .add) = some (addressWord + 8) := by
+              rw [hwordArgs]
+              simp [wordOpHOL, wordOp]
+            rw [hcanonical]
+            rw [evalCrepRuntimeExp_op_riscvWordTarget_wordOpHOL]
+            exact hwordResult
+          have hsourceAddressEval :
+              evalPanValueExp source.structs source.locals source.globals
+                source.memory source.baseAddress source.topAddress
+                panSemBitVec64BytesInWord address
+                (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                  some (.word addressWord) := by
+            simpa [evalPanSemStateExp] using haddress
+          have hsourceLoadConst :
+              evalPanSemStateExp source (.load (.comb [.one, .one]) address) =
+                evalPanSemStateExp source
+                  (.load (.comb [.one, .one]) (.const addressWord)) := by
+            simp [evalPanSemStateExp, evalPanValueExp, hsourceAddressEval]
+          have hsourceTarget := evalPanSemStateExp_loadTwo_const_stateRel
+            source target addressWord hstate
+          rw [hsourceLoadConst, hsourceTarget] at hsourceLoad
+          cases hfirst : evalCrepRuntimeExp target (.load (.const addressWord)) with
+          | none => simp [hfirst] at hsourceLoad
+          | some first =>
+              simp only [hfirst, Option.bind_some] at hsourceLoad
+              cases hsecond : evalCrepRuntimeExp target
+                  (.load (.const (addressWord + 8))) with
+              | none =>
+                  simp only [hsecond, Option.map_none] at hsourceLoad
+                  cases hsourceLoad
+              | some second =>
+                  simp only [hsecond, Option.map_some] at hsourceLoad
+                  have hstruct := Option.some.inj hsourceLoad
+                  have hvalues := PanValue.rStruct.inj hstruct
+                  have hfirstValue : first = loaded0 := by
+                    injection hvalues with hhead htail
+                    exact PanValue.word.inj hhead
+                  have hsecondValue : second = loaded1 := by
+                    injection hvalues with hhead htail
+                    injection htail with hheadSecond hnil
+                    exact PanValue.word.inj hheadSecond
+                  have hcompiledFirstLoad :
+                      evalCrepRuntimeExp target (.load targetAddress) =
+                        some loaded0 := by
+                    have hfirstLoad := hfirst
+                    calc
+                      evalCrepRuntimeExp target (.load targetAddress) =
+                          crepRuntimeLoad target addressWord := by
+                        simp [evalCrepRuntimeExp, htargetAddress]
+                      _ = evalCrepRuntimeExp target (.load (.const addressWord)) := by
+                        simp [evalCrepRuntimeExp]
+                      _ = some first := hfirst
+                      _ = some loaded0 := by rw [hfirstValue]
+                  have hcompiledSecondLoad :
+                      evalCrepRuntimeExp target
+                        (.load (.op .add [targetAddress, .const 8])) =
+                        some loaded1 := by
+                    have hloadBind (expression : CrepExp (RiscV.Word 64)) :
+                        evalCrepRuntimeExp target (.load expression) =
+                          (evalCrepRuntimeExp target expression).bind
+                            (crepRuntimeLoad target) := by
+                      simp only [evalCrepRuntimeExp]
+                      rfl
+                    rw [hloadBind, htargetAddressNext]
+                    have hsecondLoad : crepRuntimeLoad target
+                        (addressWord + 8) = some second := by
+                      simpa [evalCrepRuntimeExp] using hsecond
+                    exact hsecondLoad.trans (congrArg some hsecondValue)
+                  refine ⟨?_, ?_, ?_, ?_⟩
+                  · have htargetRun : evalCrepRuntimeExps target
+                        ([.load targetAddress,
+                          .load (.op .add [targetAddress, .const 8])] :
+                            List (CrepExp (RiscV.Word 64))) =
+                          some [loaded0, loaded1] := by
+                      change evalCrepRuntimeExps target
+                        ([.load targetAddress] ++
+                          [.load (.op .add [targetAddress, .const 8])]) =
+                        some ([loaded0] ++ [loaded1])
+                      have hfirstList : evalCrepRuntimeExps target
+                          [.load targetAddress] = some [loaded0] := by
+                        simp [evalCrepRuntimeExps, hcompiledFirstLoad]
+                      have hsecondList : evalCrepRuntimeExps target
+                          [.load (.op .add [targetAddress, .const 8])] =
+                            some [loaded1] := by
+                        simp only [evalCrepRuntimeExps, hcompiledSecondLoad]
+                        simp
+                      exact evalCrepRuntimeExps_append target
+                        [.load targetAddress]
+                        [.load (.op .add [targetAddress, .const 8])]
+                        [loaded0] [loaded1]
+                        hfirstList hsecondList
+                    simpa [compilerContext, hcompiledLoad] using htargetRun
+                  · simp [compilerContext, hcompiledLoad, Shape.shapeSize]
+                  · simp [compilerContext, hcompiledLoad, panValueShape]
+                  · simp [compilerContext, hcompiledLoad, isWfShape,
+                      isWfShape.isWfShapeList]
       | cons _ _ => simp [hcompiledAddress] at haddressLength
 
 

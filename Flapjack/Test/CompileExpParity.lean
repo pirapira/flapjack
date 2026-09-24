@@ -100,6 +100,16 @@ def holLeavesOK : Bool :=
   oneResultOK [.const CrepBytesInWord.bytesInWord]
     (compileExpHOL finiteMapContext .bytesInWord)
 
+/-! These fallback outputs match direct HOL `nstruct` and `nfield` rows.
+    Source stateRel simultaneously rules out a successful source evaluation
+    with the empty PanSem struct table, so the full-IH proof cases are
+    discharged from source semantics rather than treating the fallback as a
+    successful translation. -/
+def holNamedFallbackOK : Bool :=
+  oneResultOK [.const 0] (compileExpHOL finiteMapContext (.nStruct "S" [])) &&
+  oneResultOK [.const 0]
+    (compileExpHOL finiteMapContext (.nField "x" (.const 1)))
+
 def holStructFieldOK : Bool :=
   combTwoResultOK [.const 1, .const 2]
       (compileExpHOL finiteMapContext (.rStruct [.const 1, .const 2])) &&
@@ -131,7 +141,8 @@ def holCmpShiftOK : Bool :=
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
   finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
-  holLeavesOK && holStructFieldOK && holLoadsOpsOK && holNaryOpOK && holCmpShiftOK
+  holLeavesOK && holNamedFallbackOK && holStructFieldOK && holLoadsOpsOK &&
+  holNaryOpOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =
     ([.load32 (.var 5)], .one) := by

@@ -1,0 +1,11 @@
+ret_mem_fail_result=SOME Error
+ret_mem_fail_locals=SOME (ValWord 3w)
+ret_mem_fail_clock=5
+ret_mem_ok_result=SOME (Return (ValWord 119w))
+ret_mem_ok_locals=NONE
+raise_mem_fail_result=SOME Error
+raise_mem_fail_locals=SOME (ValWord 3w)
+raise_mem_badshape_result=SOME Error
+raise_mem_badshape_locals=SOME (ValWord 3w)
+raise_mem_ok_result=SOME (Exception «E» (ValWord 119w))
+raise_mem_ok_locals=NONE

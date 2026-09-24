@@ -1927,7 +1927,8 @@ theorem compileToCrepHOL_eq_map
               (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
                 (panToCrepGetEidsFromDeclsHOL declarations))
               entry.2.1 entry.2.2.1))) := by
-  simp only [compileToCrepHOL]
+  simp [compileToCrepHOL, functionInfosHOL_eq_makeFuncsHOL,
+    panToCrepCompFuncRiscV_eq_compFuncHOL, panToCrepMkCtxtHOL]
 
 /-- Exact port of HOL `alookup_compile_prog_code`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575`): a source

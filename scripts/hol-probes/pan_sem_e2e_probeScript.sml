@@ -426,4 +426,48 @@ val _ = print_eval "lookup_kvar_missing"
   ``lookup_kvar Local (strlit "z")
       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)``
 
+val returning_ffi =
+  ``<| oracle := (λname st conf bytes. ffi$Oracle_return st (MAP (λb. (0x42w:word8)) bytes));
+      ffi_state := (); io_events := [] |>``;
+
+val _ = print_eval "shmemload_returned"
+  ``case panSem$evaluate
+      (panLang$ShMemLoad OpW Local «v» (panLang$Const (8w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («v», ValWord (0w:8 word));
+          sh_memaddrs := {8w}; ffi := ^returning_ffi |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «v»)``
+
+val _ = print_eval "shmemload_missing_local"
+  ``case panSem$evaluate
+      (panLang$ShMemLoad OpW Local «v» (panLang$Const (8w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY;
+          sh_memaddrs := {8w}; ffi := ^returning_ffi |>)) of
+      (res,s') => res``
+
+val _ = print_eval "shmemload_out_of_domain"
+  ``case panSem$evaluate
+      (panLang$ShMemLoad OpW Local «v» (panLang$Const (8w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («v», ValWord (0w:8 word));
+          sh_memaddrs := EMPTY; ffi := ^returning_ffi |>)) of
+      (res,s') => res``
+
+val _ = print_eval "shmemstore_returned"
+  ``case panSem$evaluate
+      (panLang$ShMemStore OpW (panLang$Const (8w:8 word))
+         (panLang$Const (0xABw:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          sh_memaddrs := {8w}; ffi := ^returning_ffi |>)) of
+      (res,s') => res``
+
+val _ = print_eval "shmemstore_out_of_domain"
+  ``case panSem$evaluate
+      (panLang$ShMemStore OpW (panLang$Const (8w:8 word))
+         (panLang$Const (0xABw:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          sh_memaddrs := EMPTY; ffi := ^returning_ffi |>)) of
+      (res,s') => res``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

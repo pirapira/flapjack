@@ -6672,6 +6672,30 @@
     "reviewer": "Flapjack-only arbitrary-arity Op induction case for compile_exp_val_rel. It consumes full operand IHs and state-owned source evaluation to prove target RISC-V Op evaluation and shape conclusions; the assumptions and conclusion are not the standalone HOL theorem statement."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_baseAddr_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH constructor case for BaseAddr at fixed RV64 width. It uses stateRel for source/target address equality and proves target evaluation, compiled length/shape agreement, source shape, and shape well-formedness; not a standalone HOL theorem statement."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_topAddr_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH constructor case for TopAddr at fixed RV64 width. It uses stateRel for source/target address equality and proves target evaluation, compiled length/shape agreement, source shape, and shape well-formedness; not a standalone HOL theorem statement."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_bytesInWord_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH constructor case for RV64 BytesInWord. It proves target evaluation, compiled length/shape agreement, source shape, and shape well-formedness over the fixed 64-bit word size; not a standalone HOL theorem statement."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "alookup_compile_prog_code",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

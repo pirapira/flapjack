@@ -221,7 +221,11 @@ def has_list_array_witness(lines: list[str], field: str) -> bool:
 
     The witness convention is `holListArrayWitness_<field>` and its theorem
     type must mention both `RepresentsHOLNodeList` and the qualified state field.
-    Lake checks the theorem when it builds the tagged module.
+    The relation must occur in the result type, exactly once, and not in any
+    premise: a theorem assuming the relation it claims to establish is not a
+    representation witness. Lake checks the witness proof when it builds the
+    tagged module; this syntactic gate does not itself prove semantic
+    correspondence.
     """
     source = strip_lean_comments("\n".join(lines))
     pattern = re.compile(
@@ -232,8 +236,22 @@ def has_list_array_witness(lines: list[str], field: str) -> bool:
     )
     for match in pattern.finditer(source):
         statement = match.group("type")
-        if "RepresentsHOLNodeList" in statement and re.search(
-            rf"\.\s*{re.escape(field)}\b", statement
+        depth = 0
+        result_start: int | None = None
+        for index, char in enumerate(statement):
+            if char in "([{":
+                depth += 1
+            elif char in ")]}":
+                depth -= 1
+            elif char == ":" and depth == 0:
+                result_start = index + 1
+        if result_start is None:
+            continue
+        premises, result_type = statement[:result_start], statement[result_start:]
+        if (
+            "RepresentsHOLNodeList" not in premises
+            and result_type.count("RepresentsHOLNodeList") == 1
+            and re.search(rf"\.\s*{re.escape(field)}\b", result_type)
         ):
             return True
     return False

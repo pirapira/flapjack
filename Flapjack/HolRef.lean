@@ -46,7 +46,9 @@ structure HolRef where
       lemma before the tag may be applied. Each named field must be declared in
       a same-module structure and have a checked theorem named
       `holListArrayWitness_<field>` whose conclusion relates that field to a HOL
-      list through `RepresentsHOLNodeList`. -/
+      list through `RepresentsHOLNodeList`, without assuming that relation in
+      the witness premises. The reference checker validates this shape; it does
+      not independently prove source-to-Lean semantic correspondence. -/
   listAsArray : Array String := #[]
   deriving Inhabited, Repr, BEq
 

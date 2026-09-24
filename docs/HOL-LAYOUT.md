@@ -16,7 +16,9 @@ the mismatch must be explained beside the Lean declaration. The inventory
 uses `reviewed_list_as_array` when the HOL list fields are represented by Lean
 arrays. For each qualified field, the reference checker requires a same-module
 structure field and a `holListArrayWitness_<field>` theorem relating that field
-to its HOL list with `RepresentsHOLNodeList`. Ordinary exact tags retain
+to its HOL list with `RepresentsHOLNodeList`, without assuming that relation in
+the witness premises. This checks witness shape and Lean kernel acceptance; it
+does not establish cross-language equivalence by itself. Ordinary exact tags retain
 `reviewed_exact`. The inventory
 recognizes `theorem` and `lemma` declarations only; `#check` commands and
 comments do not count as theorem entries or tests. Correctness claims are described in

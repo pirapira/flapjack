@@ -1067,8 +1067,14 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
 The original runs these transitions in a state monad over growable
 arrays; this port threads `CakeRaState` functionally. -/
 
-/-- `dec_deg` (`reg_allocScript.sml:256-272`): decrement one adjacent
-    node's degree. -/
+/-- Lean's `dec_deg`-shaped transition (`reg_allocScript.sml:252-257`), kept
+    untagged because its boundary behavior differs from HOL. HOL
+    `degrees_sub_eqn` and `update_degrees_eqn` (`reg_allocProofScript.sml:160-168,
+    229-237`) return `M_failure Subscript` when `v` is outside the `degrees`
+    array. This implementation reads with `getD 0` and `CakeNodeMap.set` stores
+    out-of-range keys in `outside`, so it succeeds and changes state instead.
+    It is not eligible for a `list_as_array` HOL tag until those behaviors
+    match. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
   let d := (state.degrees.get v).getD 0
   { state with degrees := state.degrees.set v (d - 1) }

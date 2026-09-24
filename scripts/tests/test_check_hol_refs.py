@@ -62,10 +62,11 @@ class HolAttributeSitesTest(unittest.TestCase):
         lines = [
             "structure State where",
             "  degrees : CakeNodeMap Nat",
-            "",
             "theorem holListArrayWitness_degrees (state : State) (xs : List Nat)",
-            "    (h : RepresentsHOLNodeList state.degrees xs) :",
-            "    RepresentsHOLNodeList state.degrees xs := h",
+            "    (h : state.degrees = CakeNodeMap.ofList xs) :",
+            "    RepresentsHOLNodeList state.degrees xs := by",
+            "  rw [h]",
+            "  exact CakeNodeMap.ofList_representsHOLNodeList xs",
         ]
         self.assertIn("degrees", CHECKER["structure_fields"](lines))
         self.assertTrue(CHECKER["has_list_array_witness"](lines, "degrees"))
@@ -79,6 +80,18 @@ class HolAttributeSitesTest(unittest.TestCase):
         )
         self.assertTrue(any("not a field" in error for error in errors))
         self.assertTrue(any("no same-module checked witness" in error for error in errors))
+
+    def test_circular_representation_assumption_is_not_a_witness(self):
+        lines = [
+            "structure State where",
+            "  degrees : CakeNodeMap Nat",
+            "theorem holListArrayWitness_degrees (state : State) (xs : List Nat)",
+            "    (h : RepresentsHOLNodeList state.degrees xs) :",
+            "    RepresentsHOLNodeList state.degrees xs := h",
+        ]
+        self.assertFalse(
+            CHECKER["has_list_array_witness"](lines, "degrees")
+        )
 
     def test_comments_cannot_supply_qualified_field_or_witness(self):
         lines = [

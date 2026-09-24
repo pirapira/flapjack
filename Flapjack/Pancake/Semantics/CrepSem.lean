@@ -548,10 +548,11 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
 
     The HOL source quantifies `args : 'a word_lab list`; the executable
     `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
-    with `PanWordLab.word`. -/
+    with `PanWordLab.word`. Its `len` argument is retained from the HOL
+    `lookup_code` signature, where the definition does not inspect it. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
 def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
-    (fname : FunName) (args : List (PanWordLab α)) :
+    (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
     Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
   match FLOOKUP code fname with
   | none => none
@@ -593,10 +594,10 @@ theorem zip_word_eq {α : Type} (names : List Nat) (values : List α) :
     HOL-shaped `lookupCrepHolCode` on the wrapped arguments, under
     `[LawfulBEq String]`. -/
 theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq String]
-    (name : FunName) (values : List α)
+    (name : FunName) (values : List α) (len : Nat)
     (code : FunName → Option (List Nat × CrepProg α)) :
     lookupCrepRuntimeCode name values code =
-      lookupCrepHolCode code name (values.map PanWordLab.word) := by
+      lookupCrepHolCode code name (values.map PanWordLab.word) len := by
   unfold lookupCrepRuntimeCode lookupCrepHolCode
   cases hcode : FLOOKUP code name with
   | none => rfl

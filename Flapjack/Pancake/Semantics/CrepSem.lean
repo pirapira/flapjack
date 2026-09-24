@@ -943,6 +943,83 @@ def evalCrepRuntimeExpsWordLab
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
+/-- Reading the production wrapped cell back through `PanWordLab.word` recovers
+it, since `PanWordLab` has the single `word` constructor.  Flapjack-only adapter
+infrastructure. -/
+theorem optionMapWordPanTheWord (cell : Option (PanWordLab α)) :
+    Option.map (fun value => PanWordLab.word (panTheWord value)) cell = cell := by
+  cases cell with
+  | none => rfl
+  | some value => simp [panWordLab_word_panTheWord]
+
+/-- Flapjack-only projection: the production wrapped evaluator's result, read
+back through `PanWordLab.word`, is exactly the HOL-shaped `word_lab` core for
+every expression constructor.  This is adapter infrastructure, not a HOL port:
+the `Op`, `Cmp`, `Shift`, and byte-load cases still delegate to the arbitrary
+`CrepRuntimeState` runtime hooks (`memoryModel`) rather than HOL's fixed
+`crepSem$eval` word/byte primitives, so no `@[hol]` tag is attached (tracked by
+bead flapjack-pxn.18.4.3.48.1). -/
+theorem evalCrepRuntimeExp_wordLab_projection
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expression : CrepExp α) :
+    (evalCrepRuntimeExp state expression).map PanWordLab.word =
+      evalCrepRuntimeExpWordLab state expression := by
+  cases expression <;>
+    simp [evalCrepRuntimeExp, evalCrepRuntimeExpWordLab, Function.comp_def,
+      Option.map_bind, optionMapWordPanTheWord]
+  case crepOp operator args =>
+    cases operator
+    cases args with
+    | nil => simp [evalCrepRuntimeExp]
+    | cons left rest =>
+        cases rest with
+        | nil => simp [evalCrepRuntimeExp]
+        | cons right tail =>
+            cases tail with
+            | nil =>
+                simp [evalCrepRuntimeExp, Function.comp_def, Option.map_bind,
+                  Option.map_some]
+            | cons extra more =>
+                simp [evalCrepRuntimeExp]
+
+theorem optionBindMapListMapWord (values : Option (List α)) (value : α) :
+    values.bind (Option.map (List.map PanWordLab.word) ∘ fun rest => some (value :: rest)) =
+      (Option.map (List.map PanWordLab.word) values).bind
+        (fun rest => some (PanWordLab.word value :: rest)) := by
+  cases values <;> simp [Function.comp_def, Option.bind_some]
+
+/-- The production list evaluator read back through `PanWordLab.word` equals the
+HOL-shaped list core, for every expression list.  Flapjack-only projection. -/
+theorem evalCrepRuntimeExps_wordLab_projection
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expressions : List (CrepExp α)) :
+    (evalCrepRuntimeExps state expressions).map (List.map PanWordLab.word) =
+      evalCrepRuntimeExpsWordLab state expressions := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps, evalCrepRuntimeExpsWordLab]
+  | cons expression expressions ih =>
+      simp only [evalCrepRuntimeExps, evalCrepRuntimeExpsWordLab]
+      have h := evalCrepRuntimeExp_wordLab_projection state expression
+      cases hw : evalCrepRuntimeExp state expression with
+      | none =>
+          have hl : evalCrepRuntimeExpWordLab state expression = none := by
+            rw [← h, hw]; rfl
+          rw [hl]
+          rfl
+      | some value =>
+          have hl : evalCrepRuntimeExpWordLab state expression = some (PanWordLab.word value) := by
+            rw [← h, hw]; rfl
+          rw [hl]
+          simp [Option.bind_some]
+          rw [optionBindMapListMapWord]
+          rw [ih]
+
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>

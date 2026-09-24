@@ -11,7 +11,9 @@ CakeML's `mem_load_byte_def` and `mem_load_32_def` in
 
 The probe uses a little-endian 64-bit word cell at byte address 8. Pancake
 rejects the unaligned 32-bit load at address 9 and reads the four bytes at
-address 8 as `0x04030201`.
+address 8 as `0x04030201`. At width 24 the original `mem_load_32` returns the
+full 32-bit `0x22113322`; the Crep source-word adapter then truncates this to
+`0x113322`.
 -/
 
 namespace Flapjack.Test.PanFixedLoadParity
@@ -130,6 +132,9 @@ def finiteWord24Load32 : Option (Fin 24 → Bool) :=
     `crepSem.eval` widens or truncates that result into the source word width. -/
 def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=
   [finiteWord24 0x22, finiteWord24 0x33, finiteWord24 0x11, finiteWord24 0x22]
+def originalLoad32Width24 : BitVec 32 := BitVec.ofNat 32 0x22113322
+def finiteWord24HolLoad32Width24 : BitVec 32 :=
+  holFiniteWordSourceWordOfBytes32BitVec dimension24 false finiteWord24Fixed32Bytes
 def finiteWord24Fixed32Load : Fin 24 → Bool :=
   holFiniteWordSourceWordOfBytes32 dimension24 false finiteWord24Fixed32Bytes
 
@@ -195,6 +200,8 @@ example :
   some (BitVec.ofNat 24 0x11)
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
+#guard finiteWord24HolLoad32Width24 == originalLoad32Width24
+#guard BitVec.ofNat 24 originalLoad32Width24.toNat == BitVec.ofNat 24 0x113322
 #guard holWordToBitVec dimension24 finiteWord24Fixed32Load ==
   BitVec.ofNat 24 0x113322
 #guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==

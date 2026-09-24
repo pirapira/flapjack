@@ -1,0 +1,7 @@
+call_error_load_result=SOME Error
+call_error_load_clock=5
+call_error_load_locals=SOME (ValWord 3w)
+call_error_domain_result=SOME Error
+call_error_domain_locals=SOME (ValWord 3w)
+call_error_missing_result=SOME Error
+call_error_missing_clock=5

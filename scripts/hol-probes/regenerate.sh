@@ -415,6 +415,13 @@ run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out 
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
   call_arg_fail_result call_arg_fail_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call error-state probe observes that a memory-reading argument is gated by
+# the source `memaddrs` (an address outside the domain rejects the call even
+# when the raw memory function holds a cell), and that an unknown callee is
+# rejected, both with `SOME Error` and the unchanged state.
+run_probe pan_sem_call_error_state_probeScript.sml pan_sem_call_error_state_probe.out \
+  call_error_load_result call_error_missing_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.

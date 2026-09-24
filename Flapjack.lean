@@ -4,6 +4,7 @@ import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi

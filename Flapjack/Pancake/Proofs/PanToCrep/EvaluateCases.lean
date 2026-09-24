@@ -9843,6 +9843,34 @@ private theorem list_mapM_some_lookup_of_mem {α β : Type _}
                 exact ⟨value, hlookup⟩
               · exact ih htail candidate htailMem
 
+/-! Result correspondence carried by the recursive handler IH. This records
+the result component of HOL `pc_compile_correct` independently from the
+post-state relations: normal/error/timeout/control/return/final-FFI results map
+constructor-by-constructor, while raised results use the context's exception
+code and the actual target state's `globalsLookup` cells. This is Flapjack-only
+induction support and is not tagged as the enclosing HOL theorem. -/
+def panToCrepClockResultRel {α σ : Type}
+    (context : PanToCrepProofContext α)
+    (sourceResult : PanValueFfiClockResult α σ)
+    (targetResult : CrepRuntimeStep α σ FfiFinalEvent) : Prop :=
+  match sourceResult.1, targetResult.1 with
+  | .timeout .., .timeout => True
+  | .control (.normal ..), .normal => True
+  | .control (.error ..), .error => True
+  | .control (.broke ..), .broke 0 => True
+  | .control (.continued ..), .continued 0 => True
+  | .control (.returned _ _ _ _ values), .returned words =>
+      words = values.flatMap panValueFlatten
+  | .control (.raised _ _ _ _ exception value), .raised code =>
+      FLOOKUP context.eids exception = some code ∧
+        (1 ≤ Shape.shapeSize (panSemShapeOf value) →
+          globalsLookup targetResult.2 value =
+            some ((panValueFlatten value).map PanWordLab.word) ∧
+          Shape.shapeSize (panSemShapeOf value) ≤ 32)
+  | .control (.finalFfi _ _ _ _ event), .finalFfi targetEvent =>
+      targetEvent = event
+  | _, _ => False
+
 /-! Compose a production source Call with its recursive callee and handler
     simulation hypotheses for a matching raised payload of any supported shape.
     Both recursive source evaluations use the parent Call's canonical budget
@@ -10038,7 +10066,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       excpRel context.eids
         (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
       localsRel context (panSemCodeStateAfter source sourceResult).locals
-        handlerResult.2.locals) :
+        handlerResult.2.locals ∧
+      panToCrepClockResultRel context sourceResult handlerResult) :
     panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
       source
       (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
@@ -10058,7 +10087,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     excpRel context.eids
       (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
     localsRel context (panSemCodeStateAfter source sourceResult).locals
-      handlerResult.2.locals := by
+      handlerResult.2.locals ∧
+    panToCrepClockResultRel context sourceResult handlerResult := by
   subst sourceAfterCallee
   let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
@@ -10174,7 +10204,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       sourceAfterCallee source.locals caller calleeState handlerVariable shape slots
       old payload values hcalleeStateRel hcalleeCodeRel hcalleeExcpRel hlocals
       hsourceHandlerLocal hshape hvariable hpayloadShape hflatten hslots hcalleeGlobals
-  obtain ⟨hhandlerRun, hpostState, hpostCode, hpostExcp, hpostLocals⟩ :=
+  obtain ⟨hhandlerRun, hpostState, hpostCode, hpostExcp, hpostLocals,
+      hpostResult⟩ :=
     hhandlerIH targetPost hsourceHandlerBody hpayloadState hpayloadCode hpayloadExcp
       hpayloadLocals
   have htarget := evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
@@ -10188,7 +10219,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (fun targetPost' _hrun hstate' hcode' hexcp' hlocals' =>
       (hhandlerIH targetPost' hsourceHandlerBody hstate' hcode' hexcp' hlocals').1)
   exact ⟨hsourceCallRun, by simpa [hcompiledHandlerBody] using htarget,
-    hpostState, hpostCode, hpostExcp, hpostLocals⟩
+    hpostState, hpostCode, hpostExcp, hpostLocals, hpostResult⟩
 
 /-! Preserve the handler-body post-state IH through the production target Call
 dispatcher. `sourcePost` is the source state supplied by that IH (in a full

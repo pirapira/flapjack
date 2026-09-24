@@ -145,6 +145,17 @@ private def pairHandlerState : CrepRuntimeState Word64 Unit :=
       else if address == 1 then some (.word (BitVec.ofNat 64 8))
       else none }
 
+private def raisedSourceResult : PanValueFfiClockResult Word64 Unit :=
+  (.control (.raised (fun _ => none) (fun _ => none)
+      (fun _ => some (.word (BitVec.ofNat 64 0))) statefulTestFfiState
+      "E" (.word payload)), 4)
+
+example : panToCrepClockResultRel handlerContext raisedSourceResult
+    (.raised exceptionCode, pairHandlerState) := by
+  simp [panToCrepClockResultRel, raisedSourceResult, handlerContext,
+    exceptionCode, pairHandlerState, payload, globalsLookup, panSemShapeOf,
+    panValueFlatten, FUPDATE, FLOOKUP]
+
 private def pairExpHdlResult :=
   evalCrepRuntimeProg handlerTargetFfi handlerTargetPrimitive 4 pairHandlerState
     (expHdlFiniteMap pairHandlerVariables "caught")

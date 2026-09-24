@@ -11,9 +11,11 @@ RV64 source state:
 * `Assign` to a bound local succeeds (HOL's normal completion, i.e. `NONE`) and
   updates the binding; `Assign` to an absent local is `SOME Error` with the state
   unchanged;
-* `Return` of an evaluable expression is `SOME (Return v)` with the state
-  unchanged; a failed expression is `SOME Error`;
-* `Raise` mirrors `Return` with `SOME (Exception eid v)`.
+* `Return` of a value of at most 32 words is `SOME (Return v)` with locals
+  cleared; an oversized or failed expression is `SOME Error` with state
+  unchanged;
+* `Raise` additionally requires a declared matching exception shape, then
+  returns `SOME (Exception eid v)` with locals cleared.
 
 These are untagged interface checks for the future exact `evaluate_def` port,
 not a port of `evaluate` itself. The expression oracle is
@@ -33,7 +35,7 @@ def stepsState : PanSemState Word64 (FfiState Unit) :=
     globals := fun _ => none
     structs := []
     code := []
-    exceptionShapes := fun _ => none
+    exceptionShapes := fun name => if name == "E" then some .one else none
     memory := fun _ => none
     memaddrs := fun _ => false
     sharedMemaddrs := fun _ => false
@@ -83,18 +85,33 @@ def assignMissingGuard : Bool :=
   let result := panSemTotalAssignClause stepsState .local "y" (.const (BitVec.ofNat 64 9))
   isErrorResult result.1 && wordAt result.2.locals "x" 7 && !(wordAt result.2.locals "y" 9)
 
-/-- A `Return` of an evaluable expression returns the value, state unchanged. -/
+/-- A bounded `Return` returns its value and clears only locals. -/
 def returnGuard : Bool :=
   let result := panSemTotalReturnClause stepsState (.const (BitVec.ofNat 64 3))
-  isReturnedWord 3 result.1 && wordAt result.2.locals "x" 7
+  isReturnedWord 3 result.1 && result.2.clock == stepsState.clock &&
+    (result.2.locals "x").isNone
 
 /-- A `Return` whose expression fails is `SOME Error`. -/
 def returnErrorGuard : Bool :=
   isErrorResult (panSemTotalReturnClause stepsState (.var .local "missing")).1
 
-/-- A `Raise` of an evaluable expression returns `SOME (Exception eid v)`. -/
+/-- A shape-correct `Raise` returns its exception and clears locals. -/
 def raiseGuard : Bool :=
-  isExceptionOf "E" 4 (panSemTotalRaiseClause stepsState "E" (.const (BitVec.ofNat 64 4))).1
+  let result := panSemTotalRaiseClause stepsState "E" (.const (BitVec.ofNat 64 4))
+  isExceptionOf "E" 4 result.1 && result.2.clock == stepsState.clock &&
+    (result.2.locals "x").isNone
+
+def raiseShapeMismatchGuard : Bool :=
+  let result := panSemTotalRaiseClause stepsState "E" (.rStruct [])
+  isErrorResult result.1 && wordAt result.2.locals "x" 7
+
+def raiseMissingShapeGuard : Bool :=
+  let result := panSemTotalRaiseClause stepsState "Missing" (.const (BitVec.ofNat 64 4))
+  isErrorResult result.1 && wordAt result.2.locals "x" 7
+
+def raiseMissingValueGuard : Bool :=
+  let result := panSemTotalRaiseClause stepsState "E" (.var .local "missing")
+  isErrorResult result.1 && wordAt result.2.locals "x" 7
 
 /-- The shared glue leaves a failed expression as `SOME Error`. -/
 def exprStepErrorGuard : Bool :=
@@ -195,7 +212,8 @@ def storeByteErrorGuard : Bool :=
 
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
-    raiseGuard && exprStepErrorGuard && exprStepSomeGuard &&
+    raiseGuard && raiseShapeMismatchGuard && raiseMissingShapeGuard &&
+    raiseMissingValueGuard && exprStepErrorGuard && exprStepSomeGuard &&
     primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
     primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
     storeGuard && storeNonWordGuard && storeErrorGuard &&

@@ -1402,3 +1402,10 @@ run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
   ml_strlen ml_concat_len \
   "$cake_dir/basis/pure/mlstringScript.sml" \
   "$cake_dir/basis/pure"
+
+# The loopSem state-carrier probe pins the exact field shapes of a concrete
+# (8,'ffi) loopSem$state: num_map locals/code, total memory, set domain, clock, be.
+run_probe loop_sem_state_carrier_probeScript.sml loop_sem_state_carrier_probe.out \
+  locals_0 base_self \
+  "$cake_dir/pancake/semantics/loopSemScript.sml" \
+  "$cake_dir/pancake/semantics"

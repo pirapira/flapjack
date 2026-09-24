@@ -597,6 +597,11 @@ theorem cakeSpillCostMap_outside_lookup
     hlt]
 
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
+inductive CakeRaFailure where
+  | subscript
+  | missingDegreeSlot
+  deriving Repr, DecidableEq
+
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)
   /- Present for production states built by `cakeInitRaStateFromBij`; hand-
@@ -613,6 +618,7 @@ structure CakeRaState where
   availMovesWl : List (Nat × (Nat × Nat))
   unavailMovesWl : List (Nat × (Nat × Nat))
   stack : List Nat
+  failure : Option CakeRaFailure := none
   deriving Repr
 
 /-- The empty allocator state for `n` nodes. -/
@@ -1067,17 +1073,75 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
 The original runs these transitions in a state monad over growable
 arrays; this port threads `CakeRaState` functionally. -/
 
-/-- Lean's `dec_deg`-shaped transition (`reg_allocScript.sml:252-257`), kept
-    untagged because its boundary behavior differs from HOL. HOL
-    `degrees_sub_eqn` and `update_degrees_eqn` (`reg_allocProofScript.sml:160-168,
-    229-237`) return `M_failure Subscript` when `v` is outside the `degrees`
-    array. This implementation reads with `getD 0` and `CakeNodeMap.set` stores
-    out-of-range keys in `outside`, so it succeeds and changes state instead.
-    It is not eligible for a `list_as_array` HOL tag until those behaviors
-    match. -/
+/-! `dec_deg` (`reg_allocScript.sml:252-257`) first reads `degrees[v]`, then
+    writes `degrees[v] - 1`. Both `degrees_sub_eqn` and `update_degrees_eqn`
+    return `M_failure Subscript` for an index outside the HOL list
+    (`reg_allocProofScript.sml:160-168, 229-237`). `cakeDecDegStep` carries that
+    failure explicitly, checks the dense array bound before using `set!`, and
+    treats an in-range missing option slot as an invalid array representation
+    rather than silently inventing degree zero. -/
+def cakeDecDegStep (v : Nat) (state : CakeRaState) : Except CakeRaFailure CakeRaState :=
+  if v < state.degrees.slots.size then
+    match state.degrees.slots[v]? with
+    | some (some degree) =>
+        .ok { state with degrees := state.degrees.set v (degree - 1) }
+    | _ => .error .missingDegreeSlot
+  else
+    .error .subscript
+
+/-! The allocator pipeline is pure, so it latches a failed monadic degree
+    update in the state and rejects the overall colouring result. Subsequent
+    degree updates preserve the first failure. On valid dense states this path
+    reduces to the same single `Array.set!` update as `CakeNodeMap.set`. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
-  let d := (state.degrees.get v).getD 0
-  { state with degrees := state.degrees.set v (d - 1) }
+  match state.failure with
+  | some _ => state
+  | none =>
+      match cakeDecDegStep v state with
+      | .ok updated => updated
+      | .error error => { state with failure := some error }
+
+private theorem cakeDecDegStep_stack_of_ok (v : Nat) (state updated : CakeRaState)
+    (h : cakeDecDegStep v state = .ok updated) : updated.stack = state.stack := by
+  unfold cakeDecDegStep at h
+  split at h
+  · split at h
+    · cases h
+      rfl
+    · cases h
+  · cases h
+
+private theorem cakeDecDegStep_simpWl_of_ok (v : Nat) (state updated : CakeRaState)
+    (h : cakeDecDegStep v state = .ok updated) : updated.simpWl = state.simpWl := by
+  unfold cakeDecDegStep at h
+  split at h
+  · split at h
+    · cases h
+      rfl
+    · cases h
+  · cases h
+
+@[simp] theorem cakeDecDeg_stack (v : Nat) (state : CakeRaState) :
+    (cakeDecDeg v state).stack = state.stack := by
+  cases hfailure : state.failure with
+  | some error => simp [cakeDecDeg, hfailure]
+  | none =>
+      cases hstep : cakeDecDegStep v state with
+      | error error => simp [cakeDecDeg, hfailure, hstep]
+      | ok updated =>
+          simp only [cakeDecDeg, hfailure, hstep]
+          exact cakeDecDegStep_stack_of_ok v state updated hstep
+
+@[simp] theorem cakeDecDeg_simpWl (v : Nat) (state : CakeRaState) :
+    (cakeDecDeg v state).simpWl = state.simpWl := by
+  cases hfailure : state.failure with
+  | some error => simp [cakeDecDeg, hfailure]
+  | none =>
+      cases hstep : cakeDecDegStep v state with
+      | error error => simp [cakeDecDeg, hfailure, hstep]
+      | ok updated =>
+          simp only [cakeDecDeg, hfailure, hstep]
+          exact cakeDecDegStep_simpWl_of_ok v state updated hstep
 
 /-- `dec_degree`: decrement the degrees of all nodes adjacent to `x`. -/
 def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
@@ -1168,7 +1232,7 @@ theorem cakeDoSimplify_stack_eq
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack x s
   have hdecDegSimp : ∀ (s : CakeRaState) (xs : List Nat),
       (xs.foldl (fun s x => cakeDecDeg x s) s).simpWl = s.simpWl := by
     intro s xs
@@ -1177,7 +1241,7 @@ theorem cakeDoSimplify_stack_eq
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_simpWl x s
   have hdec : ∀ (s : CakeRaState) (xs : List Nat),
       (xs.foldl (fun s x => cakeDecDegree x s) s).stack = s.stack := by
     intro s xs
@@ -1274,7 +1338,7 @@ theorem cakeDoCoalesceReal_selected_stack_lt_dim
     | cons v xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack v s
   refine ⟨y, hy, ?_⟩
   let coalescedState := { state with coalesced := state.coalesced.set y x }
   by_cases hfixed : !cakeIsFixed coalescedState x
@@ -1404,7 +1468,7 @@ theorem cakeDoFreeze_selected_stack_lt_dim
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack x s
   refine ⟨item, hitem, ?_⟩
   simp [cakeDoFreeze, hfreeze, cakePushStack, cakeDecDegree, hitem,
     hdecDeg, cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
@@ -1559,7 +1623,7 @@ theorem cakeDoSpill_selected_stack_lt_dim
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        rfl
+        exact cakeDecDeg_stack x s
   cases hcost : scost with
   | none =>
       have hbounds := cakeStExListMaxDeg_bounds state.degrees rest
@@ -1875,7 +1939,7 @@ def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap N
   let mvs := cakeResortMovesSp (cakeMovesToSp moves0 (CakeNodeMap.ofSize bij.nextNode))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
-  some (cakeExtractColor state bij.toAllocator)
+  if state.failure.isSome then none else some (cakeExtractColor state bij.toAllocator)
 
 def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)

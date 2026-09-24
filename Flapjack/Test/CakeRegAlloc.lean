@@ -577,6 +577,88 @@ def decDegreeNeighboursGuard : Bool :=
 
 #guard decDegreeNeighboursGuard
 
+/-! The paired direct HOL `dec_deg` observations are in
+    `scripts/hol-probes/reg_alloc_dec_deg_probe.out`: an in-range degree
+    succeeds with `LUPDATE`, while an index at the list length returns
+    `M_failure Subscript`. A missing option inside the dense array is a Lean
+    representation hole, distinct from the HOL list-boundary case. -/
+def decDegBoundaryGuard : Bool :=
+  let represented : CakeRaState :=
+    { CakeRaState.empty 1 with degrees := CakeNodeMap.ofList [3] }
+  let decremented := cakeDecDegStep 0 represented
+  let outside := cakeDecDegStep 1 represented
+  let sparse : CakeRaState :=
+    { represented with degrees := { slots := #[none], outside := [] } }
+  let hole := cakeDecDegStep 0 sparse
+  let latched := cakeDecDeg 1 represented
+  (match decremented with
+    | .ok state => state.degrees.get 0 == some 2 && state.failure.isNone
+    | .error _ => false) &&
+  (match outside with
+    | .error .subscript => true
+    | _ => false) &&
+  (match hole with
+    | .error .missingDegreeSlot => true
+    | _ => false) &&
+  (latched.failure == some .subscript) &&
+  (latched.degrees.slots.size == represented.degrees.slots.size) &&
+  (latched.degrees.outside == [])
+
+#guard decDegBoundaryGuard
+
+/-- Under the actual dense-array/list relation, the successful production step
+    is HOL's in-range `LUPDATE` decrement. This keeps the paired oracle fixture
+    from treating a caller-supplied representation assertion as evidence by
+    itself: `hrep` is constructed with `ofList_representsHOLNodeList`, and the
+    update relation is proved by `set_representsHOLNodeList`. -/
+theorem cakeDecDegStep_matchesHolLupdate (state : CakeRaState)
+    (m : CakeNodeMap Nat) (values : List Nat) (i : Nat)
+    (hstate : state.degrees = m)
+    (hrep : CakeNodeMap.RepresentsHOLNodeList m values)
+    (hi : i < values.length) :
+    cakeDecDegStep i state =
+        .ok { state with degrees := CakeNodeMap.set m i (values[i] - 1) } ∧
+      CakeNodeMap.RepresentsHOLNodeList
+        (CakeNodeMap.set m i (values[i] - 1))
+        (values.set i (values[i] - 1)) := by
+  rcases hrep with ⟨houtside, hsize, hget⟩
+  have hi' : i < m.slots.size := by simpa [hsize] using hi
+  have hlookup : m.get i = some values[i] := by
+    simpa using hget i hi
+  have hslot : m.slots[i]? = some (some values[i]) := by
+    simpa [CakeNodeMap.get, hi', houtside] using hlookup
+  constructor
+  · unfold cakeDecDegStep
+    rw [hstate]
+    simp only [if_pos hi']
+    rw [hslot]
+  · exact CakeNodeMap.set_representsHOLNodeList m values
+      ⟨houtside, hsize, hget⟩ i (values[i] - 1) hi
+
+example :
+    CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.ofList [3]) [3] := by
+  exact CakeNodeMap.ofList_representsHOLNodeList [3]
+
+example :
+    cakeDecDegStep 0 { CakeRaState.empty 1 with
+        degrees := CakeNodeMap.ofList [3] } =
+      .ok { CakeRaState.empty 1 with
+        degrees := CakeNodeMap.set (CakeNodeMap.ofList [3]) 0 2 } := by
+  have h := cakeDecDegStep_matchesHolLupdate
+    (state := { CakeRaState.empty 1 with degrees := CakeNodeMap.ofList [3] })
+    (m := CakeNodeMap.ofList [3]) (values := [3]) (i := 0) rfl
+    (CakeNodeMap.ofList_representsHOLNodeList [3]) (by decide)
+  simpa using h.1
+
+def decDegFailureReachesAllocatorGuard : Bool :=
+  let bijection : CakeNodeBijection :=
+    { toAllocator := [], fromAllocator := [], nextNode := 0 }
+  let invalid := cakeDecDeg 0 (CakeRaState.empty 0)
+  cakeDoRegAllocFromState .simple none 1 [] bijection invalid == none
+
+#guard decDegFailureReachesAllocatorGuard
+
 /- Cake's `push_stack` zeroes the pushed node degree, clears its move-related
    flag, and prepends it to the stack while preserving unrelated state. -/
 def pushStackGuard : Bool :=

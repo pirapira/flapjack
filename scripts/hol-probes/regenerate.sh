@@ -739,6 +739,13 @@ run_probe crep_eval_store_byte_offset_probeScript.sml \
   storebyte_offset9_result storebyte_outside_domain_mem8 \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval Store32 high-bits probe observes HOL `mem_store_32`'s up-front `w2w`
+# truncation: storing 0xDEADBEEF11223344 and 0x11223344 leave the same cell.
+run_probe crep_eval_store_32_highbits_probeScript.sml \
+  crep_eval_store_32_highbits_probe.out \
+  w2w_highbits store32_unaligned_result \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 # The eval Op probe observes HOL word_op folding over constant operands for the
 # RV64 target (Add/Sub/And, plus the empty-Add neutral and the Sub arity failure).
 run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \

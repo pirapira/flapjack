@@ -1719,6 +1719,44 @@ theorem panRiscVGetByte_eight_eq_holGetByte64 (address value : RiscV.Word 64) :
     rw [show (256 : Nat) = 2 ^ 8 by decide, Nat.pow_mul]
   rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, hpow, Nat.shiftRight_eq_div_pow]
 
+/-- Arithmetic core of the HOL `w2w` truncation relation: extracting a byte at
+byte offset `k ≤ 24` does not see the high 32 bits. -/
+theorem nat_shiftRight_mod_low32 (x k : Nat) (hk : k ≤ 24) :
+    (x >>> k) % 256 = ((x % 2^32) >>> k) % 256 := by
+  rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow]
+  rw [← Nat.mod_mul_right_div_self x (2^k) 256,
+      ← Nat.mod_mul_right_div_self (x % 2^32) (2^k) 256]
+  have hdvd : 2^k * 256 ∣ 2^32 := by
+    have h : 2^k * 256 = 2^(k+8) := by rw [show (256 : Nat) = 2^8 by decide, ← Nat.pow_add]
+    rw [h]
+    exact ⟨2^(32-(k+8)), by rw [← Nat.pow_add]; congr 1; omega⟩
+  rw [Nat.mod_mod_of_dvd x hdvd]
+
+/-- HOL `w2w` truncation of a `Word 64` to a `Word 32`: only the low 32 bits are
+kept, matching the `hw : word32` argument of HOL `panSemScript.sml`
+`mem_store_32_def`. -/
+def holW2w32_64 (value : RiscV.Word 64) : BitVec 32 :=
+  BitVec.ofNat 32 (value.toNat % 2^32)
+
+/-- HOL `w2w` commutation: at a byte offset within the low half (indices 0..3),
+HOL `get_byte` does not distinguish a `Word 64` from its `w2w` truncation to
+`Word 32`. -/
+theorem holGetByte64_low32_eq (value index : RiscV.Word 64)
+    (hindex : index.toNat % 8 < 4) :
+    holGetByte64 index value false =
+      holGetByte64 index (BitVec.ofNat 64 (value.toNat % 2^32)) false := by
+  have hbyte : (value.toNat >>> holByteIndex64 index false) % 256 =
+      ((BitVec.ofNat 64 (value.toNat % 2^32)).toNat >>>
+        holByteIndex64 index false) % 256 := by
+    simp only [holByteIndex64, Bool.false_eq_true, ↓reduceIte]
+    have hk : 8 * (index.toNat % 8) ≤ 24 := by omega
+    have hval : (BitVec.ofNat 64 (value.toNat % 2^32)).toNat = value.toNat % 2^32 := by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    rw [hval]
+    exact nat_shiftRight_mod_low32 value.toNat (8 * (index.toNat % 8)) hk
+  simp only [holGetByte64]
+  rw [hbyte]
+
 theorem panRiscVReadByte_eight_eq_holMemLoadByte64
     (domain : PanMemoryDomain (RiscV.Word 64))
     (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
@@ -2691,6 +2729,37 @@ theorem crepRuntimeStore32_eq_holMemStore32_64_of_matches
       simp only [Option.pure_def, Option.map_some]
     · simp [hd]
   · simp [ha]
+
+/-- HOL `mem_store_32_def` takes `hw : word32` and stores only the low 32 bits of
+the RV64 value (via `w2w`).  In little-endian mode the stored bytes come from
+byte offsets 0..3, so the 64-bit reconstruction used by production is unchanged
+when the high 32 bits are altered. -/
+theorem holMemStore32_64_high_bits_ignored
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    holMemStore32_64 domain memory false address value =
+      holMemStore32_64 domain memory false address
+        (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  unfold holMemStore32_64
+  rw [holGetByte64_low32_eq value 0 (by decide),
+      holGetByte64_low32_eq value 1 (by decide),
+      holGetByte64_low32_eq value (1 + 1) (by decide),
+      holGetByte64_low32_eq value (1 + 1 + 1) (by decide)]
+
+/-- The production RV64 `Store32` at the target depends only on the low 32 bits
+of the stored value, matching HOL `mem_store_32`'s up-front `w2w` truncation. -/
+theorem crepRuntimeStore32_low32_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      crepRuntimeStore32 base address (BitVec.ofNat 64 (value.toNat % 2^32)) := by
+  rw [crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address value,
+      crepRuntimeStore32_eq_holMemStore32_64_of_matches base hmodel hbytes hbig address
+        (BitVec.ofNat 64 (value.toNat % 2^32)),
+      holMemStore32_64_high_bits_ignored base.memaddrs base.memory address value]
 
 /-- The production word store is HOL `mem_store` for any model: no memory-model
 hook is involved. -/

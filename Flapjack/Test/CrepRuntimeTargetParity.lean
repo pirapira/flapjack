@@ -834,6 +834,25 @@ example :
   crepRuntimeStore32_eq_holMemStore32_64_of_matches holStore32BaseState
     holStore32BaseState_matches rfl rfl 8 0x11223344
 
+example (value : RiscV.Word 64) :
+    holGetByte64 0 value false =
+      holGetByte64 0 (BitVec.ofNat 64 (value.toNat % 2^32)) false :=
+  holGetByte64_low32_eq value 0 (by decide)
+
+example :
+    holMemStore32_64 holStore32BaseState.memaddrs holStore32BaseState.memory false 8
+        0xDEADBEEF11223344 =
+      holMemStore32_64 holStore32BaseState.memaddrs holStore32BaseState.memory false 8
+        0x11223344 :=
+  holMemStore32_64_high_bits_ignored holStore32BaseState.memaddrs holStore32BaseState.memory
+    8 0xDEADBEEF11223344
+
+example :
+    crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0xDEADBEEF11223344 =
+      crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0x11223344 :=
+  crepRuntimeStore32_low32_of_matches holStore32BaseState holStore32BaseState_matches
+    rfl rfl 8 0xDEADBEEF11223344
+
 /-- The production 32-bit store over an arbitrary matching model agrees with HOL
     `mem_store_32`: four-byte replacement in the aligned cell, alignment and
     domain failure. -/
@@ -849,7 +868,15 @@ def store32MatchesGuard : Bool :=
     ((crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0x11223344).map
         (fun state => state.memory 8) ==
       (holMemStore32_64 holStore32BaseState.memaddrs holStore32BaseState.memory false 8
-        0x11223344).map (fun memory => memory 8))
+        0x11223344).map (fun memory => memory 8)) &&
+    ((crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0xDEADBEEF11223344).map
+        (fun state => state.memory 8) ==
+      some (.word (0x1122334411223344 : RiscV.Word 64))) &&
+    ((crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0xDEADBEEF11223344).map
+        (fun state => state.memory 8) ==
+      (crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0x11223344).map
+        (fun state => state.memory 8)) &&
+    (holW2w32_64 (0xDEADBEEF11223344 : RiscV.Word 64) == (0x11223344 : BitVec 32))
 
 #guard store32MatchesGuard
 #eval store32MatchesGuard

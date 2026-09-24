@@ -5357,7 +5357,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectCmpCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Cmp constructor specialization with distinct recursive left/right induction hypotheses, successful-evaluation premises, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three conclusions of HOL compile_exp_correct. Successful source evaluation forces two word operands; conversion preserves each word so both evaluators compute the same evalPanCmp result. Intentionally untagged because HOL has only the universal theorem and Lean uses projected context views, total lookup/Bool adapters, and explicit bytesInWord."
+    "reviewer": "Kernel-checked Cmp constructor specialization with distinct recursive left/right induction hypotheses, successful-evaluation premises, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three conclusions of HOL compile_exp_correct. Source, both operand IHs, and converted evaluation share one explicit optional PanValueMemoryAccess through evalPanValueExpFull; successful evaluation forces word operands and conversion preserves them. The direct HOL EVAL and Lean exact-intermediate fixtures cover equal nonempty operands. It remains untagged because HOL has only the universal theorem, while Lean uses projected context views, total lookup/Bool adapters, explicit bytesInWord/memory access, and full-evaluator operation dictionaries."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -4340,16 +4340,16 @@
     "hol_name": "ctxt_max_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "ctxtMax",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek (source comparison against pan_commonPropsScript.sml:11 ctxt_max_def; HOL fm is polymorphic in key and value, value is (a, xs) with a arbitrary, so Lean is generic in alpha and beta over FiniteMap alpha (beta x List Nat) with FLOOKUP as the extensional finite-map model; 0 <= n and MEM x xs ==> x <= n rendered literally)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "no_overlap_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "noOverlap",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek (source comparison against pan_commonPropsScript.sml:18 no_overlap_def; generic in alpha and beta over FiniteMap alpha (beta x List Nat); ALL_DISTINCT xs rendered as xs.Nodup; ~DISJOINT (set xs) (set ys) rendered as exists z, z in xs and z in ys)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",

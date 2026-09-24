@@ -2324,10 +2324,86 @@ def panSemDeclUpdateInfo [BEq String] (entries : InfoMap β)
     (name : String) (value : β) : InfoMap β :=
   (name, value) :: entries.filter (fun entry => !(entry.1 == name))
 
+/-- Production declaration-globals update: `evaluate_decls` writes a `Decl`
+    binding with HOL `s.globals |+ (v,res)`. This is the executable
+    `FUPDATE` (`finite_mapTheory.FUPDATE_DEF`) on the finite-map view
+    `VarName → Option (PanValue α)`; `panSemDeclUpdateGlobal_eq_FUPDATE` proves
+    it is exactly the repo `FUPDATE` under lawful String equality. It is not
+    `@[hol]`-tagged because the HOL source (`finite_mapTheory`) is HOL stdlib,
+    outside the CakeML submodule, and the repo `FUPDATE` itself quantifies
+    `[BEq α]` (the exact `=`-primitive gap is tracked by bead
+    `flapjack-pxn.18.5.5.19`). -/
 def panSemDeclUpdateGlobal [BEq String]
     (globals : VarName → Option (PanValue α)) (name : VarName)
     (value : PanValue α) : VarName → Option (PanValue α) :=
   fun candidate => if candidate == name then some value else globals candidate
+
+/-- `panSemDeclUpdateGlobal` is exactly the repo `FUPDATE` on the finite-map
+    view of `globals`, i.e. HOL `s.globals |+ (name,value)`, under lawful
+    String equality. -/
+theorem panSemDeclUpdateGlobal_eq_FUPDATE [BEq String] [LawfulBEq String]
+    (globals : VarName → Option (PanValue α)) (name : VarName) (value : PanValue α) :
+    panSemDeclUpdateGlobal globals name value = FUPDATE globals (name, value) := by
+  funext candidate
+  by_cases h : candidate = name
+  · subst h
+    simp [panSemDeclUpdateGlobal, FUPDATE]
+  · have h₁ : (candidate == name) = false := beq_eq_false_iff_ne.mpr h
+    have h₂ : (name == candidate) = false :=
+      beq_eq_false_iff_ne.mpr (fun hh => h hh.symm)
+    simp [panSemDeclUpdateGlobal, FUPDATE, h₁, h₂]
+
+/-- Filtering the binding being updated does not change lookups at any other
+    key. -/
+theorem lookupInfo_filter_not_eq [BEq String] [LawfulBEq String]
+    (entries : InfoMap β) (name key : String) (hne : key ≠ name) :
+    lookupInfo key (entries.filter (fun entry => !(entry.1 == name))) =
+      lookupInfo key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨candidate, val⟩ := entry
+      by_cases hc : candidate = name
+      · have hb : (candidate == name) = true := beq_iff_eq.mpr hc
+        have hck : (candidate == key) = false :=
+          beq_eq_false_iff_ne.mpr (fun h => hne (by rw [← h, hc]))
+        rw [show List.filter (fun entry => !(entry.1 == name)) ((candidate, val) :: entries)
+              = List.filter (fun entry => !(entry.1 == name)) entries from by
+            simp [hb, Bool.not_true]]
+        rw [ih]
+        simp only [lookupInfo, hck, Bool.false_eq_true, if_false]
+      · have hb : (candidate == name) = false := beq_eq_false_iff_ne.mpr hc
+        rw [show List.filter (fun entry => !(entry.1 == name)) ((candidate, val) :: entries)
+              = (candidate, val) :: List.filter (fun entry => !(entry.1 == name)) entries from by
+            simp [hb, Bool.not_false]]
+        by_cases hk : candidate = key
+        · have hkb : (candidate == key) = true := beq_iff_eq.mpr hk
+          simp only [lookupInfo, hkb, if_true]
+        · have hkb : (candidate == key) = false := beq_eq_false_iff_ne.mpr hk
+          simp only [lookupInfo, hkb, Bool.false_eq_true, if_false]
+          exact ih
+
+/-- `panSemDeclUpdateInfo` is exactly HOL `code |+ (name,value)` /
+    `eshapes |+ (name,value)` on the finite-map *view* of the association-list
+    representation: looking up any key after the update agrees with `FUPDATE`
+    of `fun k => lookupInfo k entries`. The assoc-list representation (with
+    duplicate removal) is thus related to HOL's `num_map`/finite-map update by
+    this bridge; it is untagged for the same stdlib/`[BEq String]` reasons as
+    `panSemDeclUpdateGlobal`. -/
+theorem lookupInfo_panSemDeclUpdateInfo [BEq String] [LawfulBEq String]
+    (entries : InfoMap β) (name : String) (value : β) (key : String) :
+    lookupInfo key (panSemDeclUpdateInfo entries name value) =
+      FLOOKUP (FUPDATE (fun k => lookupInfo k entries) (name, value)) key := by
+  rw [FLOOKUP_update]
+  simp only [panSemDeclUpdateInfo, lookupInfo]
+  by_cases h : name = key
+  · have hb : (name == key) = true := beq_iff_eq.mpr h
+    rw [hb]
+    simp
+  · have hb : (name == key) = false := beq_eq_false_iff_ne.mpr h
+    rw [hb]
+    simp only [Bool.false_eq_true, if_false]
+    exact lookupInfo_filter_not_eq entries name key (fun hh => h hh.symm)
 
 /-! Constructor form of the admissible-declaration premise used by Cake's
     `compile_top_shape_wf`: functions, value declarations, and exceptions are

@@ -134,10 +134,25 @@ def compile {α MlString : Type} (names : FiniteMap Nat Nat)
     List (Nat × StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString) :=
   program.map (progCompEntry names)
 
-/-- HOL `names_ok_def` (`stack_namesScript.sml:111-116`). -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "names_ok_def"]
+/-- Executable Boolean counterpart of HOL `names_ok`; the tagged predicate
+below retains HOL's proposition-valued result. -/
 def namesOk (names : FiniteMap Nat Nat) (regCount : Nat) (avoidRegs : List Nat) : Bool :=
   let xs := (List.range (regCount - avoidRegs.length)).map (findName names)
   decide xs.Nodup && xs.all (fun x => x < regCount && !(avoidRegs.contains x))
+
+/-- Exact proposition-shaped port of HOL `names_ok_def`
+(`stack_namesScript.sml:111-116`): generated names are distinct, below the
+register bound, and disjoint from the avoided registers. -/
+@[hol "cakeml/compiler/backend/stack_namesScript.sml" "names_ok_def"]
+def namesOkHOL (names : FiniteMap Nat Nat) (regCount : Nat)
+    (avoidRegs : List Nat) : Prop :=
+  let xs := (List.range (regCount - avoidRegs.length)).map (findName names)
+  xs.Nodup ∧ xs.all (fun x => x < regCount && !(avoidRegs.contains x)) = true
+
+/-- The executable Boolean check implements the HOL-shaped predicate. -/
+theorem namesOkHOL_iff_bool (names : FiniteMap Nat Nat) (regCount : Nat)
+    (avoidRegs : List Nat) :
+    namesOkHOL names regCount avoidRegs ↔ namesOk names regCount avoidRegs = true := by
+  simp [namesOkHOL, namesOk, Bool.and_eq_true]
 
 end Flapjack.Compiler.Backend.StackNames

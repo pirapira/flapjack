@@ -89,6 +89,13 @@ example : compile names [(1, pHalt 3), (2, pRaise 4)] =
 example : namesOk names 4 [0, 1] = false := rfl
 example : namesOk emptyNames 8 [] = true := rfl
 example : namesOk dupNames 4 [] = false := rfl
+example : namesOkHOL emptyNames 8 [] :=
+  (namesOkHOL_iff_bool _ _ _).2 (by rfl)
+example : ¬namesOkHOL names 4 [0, 1] := by
+  intro h
+  have hb := (namesOkHOL_iff_bool _ _ _).1 h
+  have hfalse : namesOk names 4 [0, 1] = false := by rfl
+  simp [hfalse] at hb
 
 private def parityGuard : Bool :=
   isReg7 && isConst7 &&

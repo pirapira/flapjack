@@ -630,7 +630,11 @@ theorem panSemEvaluateCodeStateWithFuel_seq
     unchanged source state, while a word condition evaluates the selected
     branch at the unchanged clock.  The result is the reduced structured pair,
     not HOL's `(prog_result, state)`, so this stays an untagged boundary
-    equation.  Reference: `cakeml/pancake/semantics/panSemScript.sml:617-620`. -/
+    equation.  The condition is evaluated with the caller's `memoryAccess`
+    (which the state-owned entry derives from `state.memaddrs`, `state.be`, and
+    the word model), so memory-reading conditions do not fall back to the
+    legacy whole-cell path.  Reference:
+    `cakeml/pancake/semantics/panSemScript.sml:617-620`. -/
 theorem panSemEvaluateCodeStateWithFuel_ite
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -639,22 +643,65 @@ theorem panSemEvaluateCodeStateWithFuel_ite
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
     (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
-    (condition : Exp α) (thenBranch elseBranch : Prog α) :
+    (condition : Exp α) (thenBranch elseBranch : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) :
     panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
-        state (.ite condition thenBranch elseBranch : Prog α) =
+        state (.ite condition thenBranch elseBranch : Prog α)
+        (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) =
       match panValueIteConditionValue state.structs state.baseAddress state.topAddress
-          bytesInWord state.locals state.globals state.memory condition none with
+          bytesInWord state.locals state.globals state.memory condition memoryAccess with
       | none =>
           some ((.control (.error state.locals state.globals state.memory state.ffi),
             state.clock))
       | some conditionValue =>
           panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel state
-            (if conditionValue != 0 then thenBranch else elseBranch) := by
+            (if conditionValue != 0 then thenBranch else elseBranch)
+            (memoryAccess := memoryAccess) (contracts := contracts)
+            (memoryHandler := memoryHandler) := by
   simp only [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg]
   cases h : panValueIteConditionValue state.structs state.baseAddress state.topAddress
-      bytesInWord state.locals state.globals state.memory condition none with
+      bytesInWord state.locals state.globals state.memory condition memoryAccess with
   | none => rfl
   | some conditionValue => rfl
+
+/-- The `If` equation over the same `If` equation instantiated with the
+    state-derived memory access: the condition reads memory through
+    `state.memaddrs`, `state.sharedMemaddrs`, and `state.be` (via the word
+    model), matching the state-owned `panSemEvaluateCodeStateWithMemoryModel`
+    entry point.  Untagged boundary equation for the same reason as
+    `panSemEvaluateCodeStateWithFuel_ite`. -/
+theorem panSemEvaluateCodeStateWithFuel_ite_state_memory
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (model : PanMemoryModel α) (bytesInWord : α) (fuel : Nat)
+    (state : PanSemState α (FfiState σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.ite condition thenBranch elseBranch : Prog α)
+        (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+          state.sharedMemaddrs state.be)) =
+      match panValueIteConditionValue state.structs state.baseAddress state.topAddress
+          bytesInWord state.locals state.globals state.memory condition
+          (some (panValueMemoryAccessOfModel model state.memaddrs
+            state.sharedMemaddrs state.be)) with
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock))
+      | some conditionValue =>
+          panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel state
+            (if conditionValue != 0 then thenBranch else elseBranch)
+            (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+              state.sharedMemaddrs state.be)) :=
+  panSemEvaluateCodeStateWithFuel_ite context primitive handler bytesInWord fuel state
+    condition thenBranch elseBranch (some (panValueMemoryAccessOfModel model state.memaddrs
+      state.sharedMemaddrs state.be))
 
 /-!
   Exact source-memory entry point.

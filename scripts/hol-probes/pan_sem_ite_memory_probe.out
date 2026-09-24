@@ -1,0 +1,8 @@
+if_mem_nonzero_result=NONE
+if_mem_nonzero_locals=SOME (ValWord 9w)
+if_mem_zero_result=NONE
+if_mem_zero_locals=SOME (ValWord 0w)
+if_mem_domain_fail_result=SOME Error
+if_mem_domain_fail_locals=SOME (ValWord 3w)
+if_mem_byte_le_locals=SOME (ValWord 0w)
+if_mem_byte_be_locals=SOME (ValWord 9w)

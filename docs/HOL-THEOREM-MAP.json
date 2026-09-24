@@ -5050,6 +5050,14 @@
   {
     "hol_path": null,
     "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedTwoWords_postRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of an actual state-owned source Call run and two-word production target Call dispatch. Full expression IHs derive target arguments and callee locals; a recursive target callee IH supplies the raised run and related post-state/global cells, then a handler IH supplies the result relations. Both recursive simulations remain premises; this is not the full pc_compile_correct Call_Ret_Exception theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "crepRuntimeExtCall_stateRel_dispatch_returned",
     "statement_status": "no_hol_reference_pending_classification",

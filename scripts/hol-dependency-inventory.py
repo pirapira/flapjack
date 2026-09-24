@@ -22,8 +22,10 @@ Method (first slice; deliberately coarse, see limitations below):
    declaration NAMES, not of declaration identities; the per-kind, per-area
    and per-theory breakdowns attribute each cited name to one representative
    declaration (the first with that name in index order).
-4. Lean coverage: which cited declarations already carry a ``@[hol ...]``
-   tag (matched by ``(theory, name)`` and by name alone).
+4. Lean coverage heuristic: textual ``@[hol ...]`` patterns under ``Flapjack/``
+   matched by ``(theory, name)`` and by name alone. This is not a parsed count
+   of attached attributes; the HOL reference checker is authoritative for
+   validated tags.
 
 Limitations (explicit, do not overclaim):
 
@@ -406,17 +408,17 @@ def main() -> int:
     lines.append("")
     lines.append("## Lean coverage of the lexically cited set")
     lines.append("")
-    lines.append(f"- `@[hol]` tags found under `Flapjack/`: `{len(tags)}`")
+    lines.append(f"- Distinct textual `@[hol]` `(theory, name)` matches under `Flapjack/`: `{len(tags)}` (not the validated tag count)")
     lines.append(
-        f"- Lexically cited declarations tagged by `(theory, name)`: "
+        f"- Lexically cited names with a textual `(theory, name)` match: "
         f"`{len(tagged_here)}`"
     )
     lines.append(
-        f"- Lexically cited declarations with no matching `(theory, name)` tag: "
+        f"- Lexically cited names with no textual `(theory, name)` match: "
         f"`{len(untagged_here)}`"
     )
     lines.append(
-        f"- ... of which also have no same-name tag anywhere: "
+        f"- ... of which also have no same-name textual match anywhere: "
         f"`{len(untagged_anywhere)}` (name heuristic: neither an over- nor an "
         "under-approximation of genuinely missing ports)"
     )
@@ -481,7 +483,9 @@ def main() -> int:
         "names with no tag is NOT a lower bound on genuinely missing ports."
     )
     lines.append(
-        "- Definitions and datatypes are included, and an untagged declaration "
+        "- Lean matches are found textually and may include comments; use "
+        "check-hol-refs.py for the validated attribute count. Definitions and "
+        "datatypes are included, and an untagged declaration "
         "may still have a correct untagged Lean analogue."
     )
     lines.append(

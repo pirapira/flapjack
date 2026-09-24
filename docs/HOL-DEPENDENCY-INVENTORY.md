@@ -28,10 +28,10 @@ All count invariants hold:
 
 ## Lean coverage of the lexically cited set
 
-- `@[hol]` tags found under `Flapjack/`: `249`
-- Lexically cited declarations tagged by `(theory, name)`: `127`
-- Lexically cited declarations with no matching `(theory, name)` tag: `6467`
-- ... of which also have no same-name tag anywhere: `6440` (name heuristic: neither an over- nor an under-approximation of genuinely missing ports)
+- Distinct textual `@[hol]` `(theory, name)` matches under `Flapjack/`: `246` (not the validated tag count)
+- Lexically cited names with a textual `(theory, name)` match: `127`
+- Lexically cited names with no textual `(theory, name)` match: `6467`
+- ... of which also have no same-name textual match anywhere: `6439` (name heuristic: neither an over- nor an under-approximation of genuinely missing ports)
 
 ## Direct citations of the root theorem
 
@@ -439,7 +439,7 @@ python3 scripts/hol-dependency-inventory.py --list   # full cited list
 - Citation is lexical over identifier tokens in declaration spans, not semantic; theory qualifiers are dropped, so same-named declarations collapse into one node.
 - Tactic scripts, simplifier sets, and rewrite rules use lemmas without naming them in the declaration span, so the lexical set is NOT an upper bound on actual HOL dependencies.
 - Comment and shadowed-identifier mentions are false positives, and name collisions across theories are collapsed, so the count of cited names with no tag is NOT a lower bound on genuinely missing ports.
-- Definitions and datatypes are included, and an untagged declaration may still have a correct untagged Lean analogue.
+- Lean matches are found textually and may include comments; use check-hol-refs.py for the validated attribute count. Definitions and datatypes are included, and an untagged declaration may still have a correct untagged Lean analogue.
 - This first slice does not yet resolve `Theory$name` / `nameTheory.name` qualified citations, nor distinguish HOL helper lemmas that Lean proof restructuring makes unnecessary.
 - `.hol-index/` is generated and git-ignored; numbers move with the CakeML revision.
 - Theory ancestors are restricted to identifier tokens in the `Ancestors` header (trailing `[attributes]` stripped, section keywords terminate the list); a malformed `theory-deps.txt` is rejected rather than silently folded into the closure.

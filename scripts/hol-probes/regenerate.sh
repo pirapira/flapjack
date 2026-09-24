@@ -335,6 +335,9 @@ run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinator
 run_probe stack_lang_store_name_probeScript.sml stack_lang_store_name_probe.out \
   sn_count sn_temp_word_bits "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe asm_inst_fragment_probeScript.sml asm_inst_fragment_probe.out \
+  ar_reg as_loc "$cake_dir/compiler/encoders/asm/asmScript.sml" \
+  "$cake_dir/compiler/encoders/asm"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -1360,3 +1363,10 @@ run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
   is_word_some in_addr_out \
   "$cake_dir/compiler/backend/proofs/stack_removeProofScript.sml" \
   "$cake_dir/compiler/backend/proofs"
+
+# The word_loc probe pins the exact width-indexed HOL stackLang word_loc
+# datatype (Word ('a word) | Loc num num) used by StackRemove.
+run_probe word_lang_word_loc_probeScript.sml word_lang_word_loc_probe.out \
+  wl_word wl_match \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"

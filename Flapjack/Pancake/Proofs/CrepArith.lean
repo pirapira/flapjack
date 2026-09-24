@@ -2115,8 +2115,8 @@ theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
     (fromNat : Nat → α)
     (code : FunName → Option (List Nat × CrepProg α))
     (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
-    lookupCrepHolCode (crepArithSimpCodeMap fromNat code) fname args =
-      (lookupCrepHolCode code fname args).map
+    lookupCrepHolCode (crepArithSimpCodeMap fromNat code) fname args _len =
+      (lookupCrepHolCode code fname args _len).map
         (fun (body, locals) => (crepSimpProg fromNat body, locals)) := by
   unfold lookupCrepHolCode crepArithSimpCodeMap FLOOKUP
   cases hlookup : code fname with

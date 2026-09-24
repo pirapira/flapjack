@@ -1510,9 +1510,27 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
       holFiniteWordSourceWordOfBytes dimension be bytes
     wordOfBytes32 := fun be bytes =>
       holFiniteWordSourceWordOfBytes32 dimension be bytes
-    wordOp := wordOp
+    /- Route the finite-word source evaluator through the reviewed HOL
+       `word_op_def` port. `holFiniteWord_wordOp_toBitVec` proves this is the
+       same operation as the generic carrier helper under the dimension
+       representation. -/
+    wordOp := fun operator values =>
+      (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension)
     compare := evalPanCmp
     shift := evalPanShiftFull }
+
+/-- The source model routes list-valued word operations through the tagged
+    HOL `word_op_def` port. This transport equation proves that changing the
+    route preserves the arbitrary finite-word helper result. -/
+theorem holFiniteWordSourceMemoryModel_wordOp_eq_wordOp {ι : Type u}
+    [dimension : HolFiniteDimension ι] (bigEndian : Bool)
+    (operator : BinOp) (values : List (ι → Bool)) :
+    (holFiniteWordSourceMemoryModel dimension bigEndian).wordOp operator values =
+      wordOp operator values := by
+  change (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+      (bitVecToHolWord dimension) = wordOp operator values
+  exact (holFiniteWord_wordOp_toBitVec dimension operator values).symm
 
 /-- BitVec-carrier view of the HOL source memory model. Every field is
     transported from the arbitrary finite-word source operations; this does

@@ -109,7 +109,7 @@
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "freeVarIds",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $\u2260; direct #guard parity in PanLangFreeVarIdsParity)."
+    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $≠; direct #guard parity in PanLangFreeVarIdsParity)."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -742,6 +742,86 @@
     "lean_name": "max_list_genlist_add_suc_val",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "cont_res_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "contResHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; all five HOL equations; carrier is the exact 7-constructor CrepResultHOL encoding of crepSem$result with Return carrying List (PanWordLab alpha) and Exception carrying alpha, matching 'a word_lab list and 'a word; no Flapjack-only normal constructor; direct HOL EVAL rows in crep_inline_cont_res_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "MEM_MAP2_IMP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "panMap2_mem",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; MEM x (MAP2 f l1 l2) => exists y1 y2, x = f y1 y2 /\\ MEM y1 l1 /\\ MEM y2 l2; panMap2 is the exact MAP2 port; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "not_some_is_none",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "not_some_is_none",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; forall a. (forall v. a <> SOME v) <=> a = NONE, exact statement over Option alpha; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdom_eq_flookup_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdom_eq_flookup_thm",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; FDOM equality iff pointwise FLOOKUP support conditions; FDOM is the repo finite-map domain predicate, statement has no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdom_subset_flookup_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdom_subset_flookup_thm",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL FDOM f SUBSET FDOM g is rendered as the pointwise implication on the repo FDOM predicate, and the FLOOKUP support condition matches HOL exactly; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL SUBMAP is rendered by the repo crepHolSubmap lookup-function predicate, |+ is FUPDATE; both sides updated at the same key; [LawfulBEq κ] ties the Boolean key equality to HOL =; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; crepHolSubmap for SUBMAP, FDOMSUB for HOL \\; same key removed from both sides; [LawfulBEq κ]; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; f \\ x SUBMAP g |+ (x,y); crepHolSubmap/FDOMSUB/FUPDATE; [LawfulBEq κ]; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "res_var_commutes_strong",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "res_var_commutes_strong",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact statement over the reviewed resVar (res_var_def) with no n <> h side condition; Boolean key equality reflects HOL = under LawfulBEq alpha)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "res_var_foldl_commutes_strong",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "res_var_foldl_commutes_strong",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL ZIP (vs, MAP f vs) is Lean vs.zip (vs.map f), FOLDL is List.foldl; no extra hypotheses)"
   },
   {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
@@ -3411,7 +3491,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_decls_thm",
     "lean_name": "compile_decs_decls_thm_threaded"
   },
@@ -3419,7 +3499,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decs_EVERY_is_function",
     "lean_name": "compile_decs_EVERY_is_function_threaded"
   },
@@ -3427,7 +3507,7 @@
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add \u03b1]/[Mul \u03b1] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
+    "reviewer": "Untagged: context-threading globalCompileDecsThreaded over arbitrary GlobalPassContext bytesInWord/fromNat and arbitrary [Add α]/[Mul α] with non-lawful [BEq String]; exact canonical-word-context port tracked by a dependency bead.",
     "hol_name": "compile_decls_append",
     "lean_name": "compile_decls_append_threaded"
   },
@@ -3485,7 +3565,7 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "freshNameHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/\u2208 of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=\u00abx\u00bb, fresh_name_missing_empty=\u00ab\u00bb, fresh_name_hit=\u00ab'''\u00bb, fresh_name_seed=\u00abvn''\u00bb match the Lean parity checks)."
+    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/∈ of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=«x», fresh_name_missing_empty=«», fresh_name_hit=«'''», fresh_name_seed=«vn''» match the Lean parity checks)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3749,7 +3829,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "ctxtFcNoOverlapOfDistinctSlots",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem\u2019s exact withShape partition; not tagged as a separate HOL theorem."
+    "reviewer": "Flapjack proof support for HOL no_overlap on ctxtFc: relies on distinct flat slots and the source theorem’s exact withShape partition; not tagged as a separate HOL theorem."
   },
   {
     "hol_path": null,
@@ -3773,7 +3853,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlcWordLabWithShapeGetElemMapOfPanSem",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument\u2019s flattened word_lab values; no HOL theorem tag."
+    "reviewer": "Flapjack source-facing projection showing ctxtFc withShape slots map through the actual word_lab tlc target map to a single argument’s flattened word_lab values; no HOL theorem tag."
   },
   {
     "hol_path": null,
@@ -4995,6 +5075,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlTwoWords_handlerPrestateRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of two-word exp_hdl with state_rel, code_rel, excp_rel, and locals_rel at the matching handler-body entry; the callee post-state relations and two payload globals remain premises, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
@@ -5067,6 +5155,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only target Call_Ret_Exception dispatcher for a two-word payload using a full expression IH to derive compiled arguments and the state-owned callee lookup, then composing two-word exp_hdl state_rel/code_rel/excp_rel/locals_rel with the handler-body IH. The callee and handler simulations remain premises; this is not the full pc_compile_correct case."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-fuel target Call composition carrying a related handler-body post-state through production dispatch; its source post-state is supplied by the caller and is not itself connected to source evaluation, so this is not pc_compile_correct[Call_Ret_Exception]"
@@ -5078,6 +5174,14 @@
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The premise hcalleeTargetBodyIH assumes the target callee-body evaluator run plus callee state_rel/code_rel/excp_rel and the word payload in target global cell zero needed by exp_hdl; this helper consumes that target-body induction premise and does not prove the callee simulation. The handler relation IH also remains a premise. This is not the full compiled-program Call_Ret_Exception case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedTwoWords_postRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of an actual state-owned source Call run and two-word production target Call dispatch. Full expression IHs derive target arguments and callee locals; a recursive target callee IH supplies the raised run and related post-state/global cells, then a handler IH supplies the result relations. Both recursive simulations remain premises; this is not the full pc_compile_correct Call_Ret_Exception theorem."
   },
   {
     "hol_path": null,

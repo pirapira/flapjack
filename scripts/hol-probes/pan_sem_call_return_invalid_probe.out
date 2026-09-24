@@ -1,0 +1,4 @@
+call_retinvalid_result=SOME Error
+call_retinvalid_param_locals=NONE
+call_retinvalid_caller_locals=NONE
+call_retinvalid_clock=4

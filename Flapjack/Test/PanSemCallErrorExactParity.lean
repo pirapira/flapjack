@@ -198,6 +198,31 @@ private def calleeErrorState : PanSemExactState Word64 Unit :=
 private def callCalleeErrorGuard : Bool :=
   isPropagatedError 4 (evaluate calleeErrorState (.call none "f" [.const 1]))
 
+/-- Contracts declaring that callee `f` must return a `Named "Other"` shape. -/
+private def returnInvalidContracts : Option PanValueCallContracts :=
+  some { returnShapes := [("f", Shape.named "Other")], exceptionShapes := [], parameterShapes := [("f", [("p", Shape.one)])] }
+
+/-- State whose callee `f` returns a word while the contract demands a named
+    shape, so the call is rejected with `Error`. -/
+private def returnInvalidState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none) returnInvalidContracts) with functions := [("f", ["p"], .return (.const 0))] }
+
+/-- Result matcher for a callee whose returned shape does not match the
+    declared return shape: `SOME Error` at the decremented clock with the
+    callee-cleared locals. -/
+private def isReturnInvalidError (clock : Nat)
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control control, n) =>
+      match control with
+      | .error locals _ _ _ =>
+          n == clock && (locals "p").isNone && (locals "x").isNone
+      | _ => false
+  | _ => false
+
+private def callReturnInvalidGuard : Bool :=
+  isReturnInvalidError 4 (evaluate returnInvalidState (.call none "f" [.const 1]))
+
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
 
@@ -216,7 +241,7 @@ private def callDomainGuard : Bool :=
 private def callGuard : Bool :=
   callLoadMissGuard && callMissingGuard && callDomainGuard &&
     callParamArityGuard && callParamShapeGuard && callFallThroughGuard &&
-    callBreakGuard && callContinueGuard && callCalleeErrorGuard
+    callBreakGuard && callContinueGuard && callCalleeErrorGuard && callReturnInvalidGuard
 
 #guard callGuard
 
@@ -287,6 +312,9 @@ def runChecks : IO Bool := do
   if callCalleeErrorGuard then
     IO.println "PASS exact-state Call callee error propagates cleared locals"
   else IO.println "FAIL exact-state Call callee error propagates cleared locals"
+  if callReturnInvalidGuard then
+    IO.println "PASS exact-state Call invalid return shape rejects with Error"
+  else IO.println "FAIL exact-state Call invalid return shape rejects with Error"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

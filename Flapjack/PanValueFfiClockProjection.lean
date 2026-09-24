@@ -232,7 +232,7 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
         argumentSteps + bodySteps) := by
   constructor
   · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
-      hwithin, hclockBody]
+      hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hstepBody]
 
@@ -419,7 +419,7 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
         argumentSteps + bodySteps) := by
   constructor
   · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
-      hwithin, hassign, hclockBody]
+      hassign, hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hassign, hstepBody]
 

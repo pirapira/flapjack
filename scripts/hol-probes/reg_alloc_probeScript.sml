@@ -77,3 +77,15 @@ val _ = print_eval "ra_spill_cost"
   ``reg_alloc$reg_alloc reg_alloc$IRC
       (SOME (fromAList [(1,1);(5,100);(9,1)]) : num sptree$num_map option) 1 []
       (reg_alloc$Delta [1;5;9] []) [] LN``;
+
+(* The proof-side node-field accessor is EL under an explicit list bound. *)
+val _ = print_eval "node_list_empty_length"
+  ``LENGTH ([] : num list) = 0``;
+val _ = print_eval "node_list_first"
+  ``EL 0 ([7; 11; 13] : num list)``;
+val _ = print_eval "node_list_last"
+  ``EL 2 ([7; 11; 13] : num list)``;
+val _ = print_eval "node_list_last_in_range"
+  ``2 < LENGTH ([7; 11; 13] : num list)``;
+val _ = print_eval "node_list_out_of_range"
+  ``3 < LENGTH ([7; 11; 13] : num list)``;

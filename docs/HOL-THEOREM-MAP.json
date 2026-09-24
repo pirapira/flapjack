@@ -5229,7 +5229,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectBaseAddrCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked BaseAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case."
+    "reviewer": "Kernel-checked BaseAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters, stated over evalPanValueExpFull and PanSemState. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case. PanShiftWidth, ArithmeticShiftRight, and RotateRightOp are the Lean evaluator's runtime dictionary parameters and are not inspected by BaseAddr; they are not additional logical side conditions from HOL. Lean also exposes bytesInWord and optional PanValueMemoryAccess parameters, neither of which affects BaseAddr."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

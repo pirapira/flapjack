@@ -1244,7 +1244,8 @@ def panValueFieldsHaveShapes (context : StructContext) :
     (`MAP FST info.fields = MAP FST fields`) and every context field shape must
     match the shape of the corresponding value
     (`EVERY (λ(s,v). s = shape_of v)
-       (ZIP (MAP SND info.fields, MAP shape_of values))`).
+       (ZIP (MAP SND info.fields, field_vals))`, computing the value shape
+    inside the predicate as HOL's `λ` does).
     `panValueShape` is the context-free twin of HOL `shape_of`
     (`Flapjack.Pancake.Semantics.panSemShapeOf`, the tagged exact port) and
     `panShapeMatches` is the Bool rendering of structural `=` on `Shape`; the
@@ -1255,8 +1256,8 @@ def panValueFieldsExactHOL (context : StructContext)
     (actual : List (FieldName × PanValue α)) : Bool :=
   (expected.map Prod.fst == actual.map Prod.fst) &&
     List.all
-      ((expected.map Prod.snd).zip (actual.map (fun pair => panValueShape context pair.2)))
-      (fun pair => panShapeMatches pair.2 pair.1)
+      ((expected.map Prod.snd).zip (actual.map Prod.snd))
+      (fun pair => panShapeMatches (panValueShape context pair.2) pair.1)
 
 /-- The literal HOL-shaped `NStruct` field check agrees with the production
     helper on every input (`Bool.and` is commutative and associative). -/
@@ -1280,9 +1281,8 @@ theorem panValueFieldsExactHOL_eq_haveShapes (context : StructContext)
             List.zip_cons_cons, List.all_cons, List.cons_beq_cons]
           have htail :
               (List.map Prod.fst tail == List.map Prod.fst actualTail &&
-                  ((List.map Prod.snd tail).zip
-                    (List.map (fun pair => panValueShape context pair.snd) actualTail)).all
-                    fun pair => panShapeMatches pair.snd pair.fst) =
+                  ((List.map Prod.snd tail).zip (List.map Prod.snd actualTail)).all
+                    fun pair => panShapeMatches (panValueShape context pair.snd) pair.fst) =
                 panValueFieldsHaveShapes context tail actualTail := ih actualTail
           rw [← htail]
           simp only [Bool.and_assoc, Bool.and_left_comm]
@@ -1321,7 +1321,8 @@ NOT a statement-exact port of HOL `panSemScript.sml:209 eval_def`
 * `NStruct` / `NField` use the production `lookupInfo` first-match.  The
   `NStruct` field check is the literal HOL form (`panValueFieldsExactHOL`:
   `MAP FST info.fields = MAP FST fields` and `EVERY (λ(s,v). s = shape_of v)
-  (ZIP (MAP SND info.fields, MAP shape_of values))`), proved equal to the
+  (ZIP (MAP SND info.fields, values))`, with the value shape computed inside the
+  predicate as in HOL), proved equal to the
   legacy pairwise helper `panValueFieldsHaveShapes`; HOL's `ALOOKUP` with HOL
   `=` is still rendered by `lookupInfo` at the concrete `String` instance.
 * `Load` / `Load32` / `LoadByte` / `Op` do not read memory through the HOL

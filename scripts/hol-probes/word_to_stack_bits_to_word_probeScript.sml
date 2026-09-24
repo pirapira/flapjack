@@ -39,3 +39,9 @@ val _ = print_eval "bits_all_true_3" ``(word_to_stack$bits_to_word [T;T;T]) : wo
 val _ = print_eval "bits_pattern" ``(word_to_stack$bits_to_word [F;T;F;F;T]) : word64``;
 val _ = print_eval "bits_equation"
   ``word_to_stack$bits_to_word [T;F] = (word_to_stack$bits_to_word [F] << 1 || 1w)``;
+val _ = print_eval "bits_overflow_65"
+  ``(word_to_stack$bits_to_word (GENLIST (K T) 65)) : word64``;
+val _ = print_eval "wordlist_short"
+  ``(word_to_stack$word_list [T;F] 4) : word64 list``;
+val _ = print_eval "wordlist_chunk"
+  ``(word_to_stack$word_list [T;T;T;T;T] 2) : word64 list``;

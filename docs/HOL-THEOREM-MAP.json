@@ -7510,5 +7510,37 @@
     "lean_name": "extractLabels",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "distinct_tar_reg_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "distinctTarReg",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "two_reg_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "twoRegInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "every_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "everyInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "flat_exp_conventions_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "flatExpConventions",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

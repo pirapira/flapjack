@@ -9919,7 +9919,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (caller : CrepRuntimeState (RiscV.Word 64) σ)
     (slots : List Nat) (destinations : List Nat)
     (caught exceptionCode : RiscV.Word 64)
-    (handlerBody : CrepProg (RiscV.Word 64))
     (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
     (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
     (hsourceCalleeBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
@@ -9953,7 +9952,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
       some shape)
     (hcontextException : FLOOKUP context.eids sourceException = some exceptionCode)
-    (hcompiledHandlerBody : compileCodeRelProg context handlerProgram = handlerBody)
     (hinitialState : stateRel source caller)
     (hcallCode : codeRelW 64 context (panSemCodeAsLookup source.code) caller.code)
     (hexcp : excpRel context.eids source.exceptionShapes)
@@ -9995,7 +9993,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           expression).2 = true)
     (hinfoValid : crepRuntimeCallInfoValid
       (some (destinations, some (caught,
-        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
+        .seq (expHdlFiniteMap context.vars handlerVariable)
+          (compileCodeRelProg context handlerProgram)))) = true)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
     (hcalleeTargetIH :
@@ -10072,7 +10071,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       evalCrepRuntimeProg handler primitive (slots.length + 2)
         (fixCrepRuntimeClock (ε := FfiFinalEvent)
           (crepRuntimeCallerState caller calleeState) (.normal, targetPost)).2
-        handlerBody = some handlerResult ∧
+        (compileCodeRelProg context handlerProgram) = some handlerResult ∧
       stateRel (panSemCodeStateAfter source sourceResult) handlerResult.2 ∧
       codeRelW 64 context
         (panSemCodeAsLookup (panSemCodeStateAfter source sourceResult).code)
@@ -10214,14 +10213,15 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
   have htarget := evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
     context handler primitive source sourceAfterCallee caller function handlerVariable
     shape slots old payload destinations caught exceptionCode
-    parameters sourceBody returnShape expressions arguments values handlerBody
+    parameters sourceBody returnShape expressions arguments values
+    (compileCodeRelProg context handlerProgram)
     calleeState handlerResult hinitialState hcallCode hcalleeStateRel hcalleeCodeRel
     hcalleeExcpRel hlocals hsourceHandlerLocal hshape hvariable hpayloadShape hflatten
     hslots hcalleeGlobals hlocalized hsourceArgs hentry
     hargumentLength heach hinfoValid hclock hmatch hcalleeIH
     (fun targetPost' _hrun hstate' hcode' hexcp' hlocals' =>
       (hhandlerIH targetPost' hsourceHandlerBody hstate' hcode' hexcp' hlocals').1)
-  exact ⟨hsourceCallRun, by simpa [hcompiledHandlerBody] using htarget,
+  exact ⟨hsourceCallRun, htarget,
     hpostState, hpostCode, hpostExcp, hpostLocals, hpostResult⟩
 
 /-! Preserve the handler-body post-state IH through the production target Call

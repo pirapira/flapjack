@@ -6182,5 +6182,77 @@
     "lean_name": "crepInlineRuntimeSkip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Runtime Skip constructor case toward HOL inline_prog_correct (crep_inlineProofScript.sml:2301): from a source evalCrepRuntimeResult Skip run and the runtime relations, derives an existential target run on crepInlineProgFmap and preserves the postrelations. Untagged: Lean uses the fuel-bounded evalCrepRuntimeResult, not HOL's clock-based evaluate."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeMatches_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private reflexivity support for production panShapeMatches; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeListMatches_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private reflexivity support for the production shape-list matcher; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_context_irrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private context-independence lemma for field shape comparisons; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_append_eq_of_some_context",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private lookup support showing a successful suffix lookup is preserved when a disjoint structure-context prefix is added; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueFieldsOkBool_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private production field-validity context-extension lemma under distinct structure names; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoWithRest_lookupInfo_for_load",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private adapter from production lookupInfoWithRest success to lookupInfo success, used by named Load; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_of_maps",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private implication from exact field-name and panSemShapeOf list equalities to production panValueFieldsHaveShapes; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFieldValuesFieldsOkBool_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private field-list validity context-extension lemma under distinct structure names; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadFuel_shape_fields",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked production prerequisite: successful panValueFlatLoadFuel yields the requested panSemShapeOf and production panStructValueFieldsOkBool predicates for well-formed shapes in structInfosOk contexts. It is intentionally untagged: this is support for HOL mem_load_conversion, not its complete converted-memory theorem; Lean uses explicit fuel and an arbitrary readWord callback, while HOL mem_load uses a finite-address-domain word-memory relation and the HOL v_flds_ok predicate. The nested named-load regression exercises this theorem."
   }
 ]

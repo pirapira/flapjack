@@ -252,6 +252,10 @@ def crepOpValue [Mul α] : CrepOp → List α → Option α
   | _, _ => none
 
 /-- The width-polymorphic tagged port is the generic helper at `BitVec width`. -/
+@[simp] theorem crepOpValue_mul [Mul α] (left right : α) :
+    crepOpValue .mul [left, right] = some (left * right) := by
+  simp [crepOpValue]
+
 theorem crepOpCrep_eq_crepOpValue (width : Nat) [NeZero width] (operator : CrepOp)
     (arguments : List (BitVec width)) :
     crepOpCrep width operator arguments = crepOpValue operator arguments := by
@@ -933,7 +937,7 @@ def evalCrepRuntimeExp
   | .crepOp .mul [left, right] => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
-      pure (left * right)
+      crepOpValue .mul [left, right]
   | .cmp operator left right => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
@@ -1111,7 +1115,7 @@ theorem evalCrepRuntimeExp_crepOp_mul_wordLab
       | nil => simp [evalCrepRuntimeExp]
       | cons right rest =>
         cases rest with
-        | nil => simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+        | nil => simp [evalCrepRuntimeExp, crepOpValue, Option.map_bind, Option.map_some, Function.comp_def]
         | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Production bridge for `crep_op_def`: the executed `.crepOp .mul` clause is
@@ -1309,7 +1313,7 @@ theorem evalCrepRuntimeExp_wordLab_projection
         | cons right tail =>
             cases tail with
             | nil =>
-                simp [evalCrepRuntimeExp, Function.comp_def, Option.map_bind,
+                simp [evalCrepRuntimeExp, crepOpValue, Function.comp_def, Option.map_bind,
                   Option.map_some]
             | cons extra more =>
                 simp [evalCrepRuntimeExp]

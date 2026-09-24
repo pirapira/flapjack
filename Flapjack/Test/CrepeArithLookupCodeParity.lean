@@ -38,6 +38,14 @@ example :
         (fun (body, locals) => (crepSimpProg (BitVec.ofNat 8) body, locals)) :=
   crepArithLookupCodeSimpProgW code "f" arguments 1
 
+/-- The production runtime lookup equals the positive-width tagged HOL
+    definition, including its complete body/locals result shape. -/
+example :
+    lookupCrepRuntimeCode "f" [BitVec.ofNat 8 9] simpCode =
+      lookupCrepHolCodeW simpCode "f" [.word (BitVec.ofNat 8 9)] 1 :=
+  lookupCrepRuntimeCode_eq_lookupCrepHolCodeW
+    "f" [BitVec.ofNat 8 9] 1 simpCode
+
 /-- The HOL definition accepts `len` but does not inspect it. The exact lemma
     retains that quantified input, including values different from the
     parameter count. -/

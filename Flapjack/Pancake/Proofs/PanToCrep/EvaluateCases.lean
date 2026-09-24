@@ -9868,8 +9868,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
         sourceException payload), calleeClock))
     (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
-    (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
-      (fun _ => none) .local handlerVariable payload = true)
     (hsourceHandlerBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord
@@ -10053,6 +10051,15 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       (panValueShape source.structs payload) shape = true := by
     rw [hsourceStructs, hpayloadShape]
     exact panShapeMatches_self_forSourceCall shape
+  have hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
+      (fun _ => none) .local handlerVariable payload = true := by
+    have hsourceHandlerLookup : source.locals handlerVariable = some old := by
+      simpa [FLOOKUP] using hsourceHandlerLocal
+    unfold panValueAssignmentValid
+    rw [hsourceStructs, hsourceHandlerLookup]
+    change panShapeMatches (panValueShape [] payload) (panValueShape [] old) = true
+    rw [← hshape]
+    exact panShapeMatches_self_forSourceCall (panValueShape [] old)
   have hsourceClock : source.clock ≠ 0 := by
     rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
     intro hzero

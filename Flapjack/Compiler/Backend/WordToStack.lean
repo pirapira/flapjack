@@ -11,8 +11,10 @@ the pure bitmap prerequisites `bits_to_word`, `word_list`, `chunk_to_bits`,
 uses to build the
 GC/liveness bitmaps consumed by `compile_word_to_stack`, together with the pure
 stack-slot arithmetic helpers `num_stack_ret`, `skip_free`, `stack_arg_count`
-and `stack_free` used by the return/argument path of `comp`; eventually these
-feed the Word-to-Stack `compile_semantics` theorem
+and `stack_free` used by the return/argument path of `comp`, plus the
+perf/handler-slot constants `perf_rsp`, `perf_rbp` and `handler_slots` used by
+the exception-handler sizing path (`raise_stub`/`PushHandler`/`copy_ret`);
+eventually these feed the Word-to-Stack `compile_semantics` theorem
 (`word_to_stackProofScript.sml:10709`).
 
 HOL's `bits_to_word` is polymorphic over the word carrier (`'a word`) and has
@@ -267,5 +269,41 @@ stack_free dest arg_count (k,f,f') = f - stack_arg_count dest arg_count k
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_free_def"]
 def stackFree {α β : Type} (dest : Sum α β) (arg_count k f _f' : Nat) : Nat :=
   f - stackArgCount dest arg_count k
+
+/-- Exact port of HOL `perf_rsp_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:310`):
+
+```
+perf_rsp = 14n
+```
+
+    The x64 `RSP` register number used by the unverified perf-mode
+    instrumentation; a pure `num`, no `dimindex`, so the port is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_rsp_def"]
+def perfRsp : Nat := 14
+
+/-- Exact port of HOL `perf_rbp_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:315`):
+
+```
+perf_rbp = 15n
+```
+
+    The x64 `RBP` register number used by the unverified perf-mode
+    instrumentation; a pure `num`, no `dimindex`, so the port is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_rbp_def"]
+def perfRbp : Nat := 15
+
+/-- Exact port of HOL `handler_slots_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:346`):
+
+```
+handler_slots perf = if perf then 5n else 3n
+```
+
+    Pure `bool`/`num`; sizes the exception-handler stack slots used by
+    `raise_stub`/`PushHandler`/`StackHandlerArgs`/`copy_ret`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "handler_slots_def"]
+def handlerSlots (perf : Bool) : Nat := if perf then 5 else 3
 
 end Flapjack.Compiler.Backend.WordToStack

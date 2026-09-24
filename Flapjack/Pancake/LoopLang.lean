@@ -1,4 +1,6 @@
 import Flapjack.Pancake.CrepLang
+import Flapjack.Basis.Pure.MlString
+import Flapjack.FiniteMap.Basic
 
 /-!
 The Loop intermediate language used after Crepe lowering. The constructors
@@ -64,6 +66,51 @@ inductive LoopArith where
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | div (destination dividend divisor : Nat)
   deriving Repr, DecidableEq
+
+/-- **Untagged approximation** of Cake `loopLang$prog` over a fixed word width.
+Not claimed as an exact HOL port: the `num_set` fields use `FiniteMap Nat Unit`,
+whereas HOL `num_set` is `unit spt` (`miscScript.sml:787`); a finite map is an
+unrestricted function and loses the `sptree` well-formedness/structure, so only
+order-insensitive domain predicates bridge across (`docs/NUM-SET-AUDIT.md`), and
+a datatype tag would over-claim. The exact `spt`-backed carrier is tracked by
+bead `flapjack-pxn.18.5.17.1.1.1`. The other carriers here are faithful: word
+width is fixed at `BitVec width`, `shMem` uses `CrepMemOp`, whose eight
+constructors (`load/load8/load16/load32/store/store8/store16/store32`) match
+`asm$memop` (`asmScript.sml:125-128`) name for name, and the FFI name is the
+exact `MlString` carrier rather than the executable `FunName = String`. The
+executable `LoopProg` is itself a one-parameter superset (`LoopExp` adds
+`crepOp`/`cmp`; FFI names are `String`), so the executable/faithful bridge is
+also tracked by bead `flapjack-pxn.18.5.17.1.1`. -/
+inductive HolLoopProg (width : Nat) [NeZero width] where
+  | skip
+  | assign (name : Nat) (value : HolLoopExp width)
+  | primitive (destinations : List Nat) (operator : PrimOp) (arguments : List Nat)
+  | arith (operation : LoopArith)
+  | store (address : HolLoopExp width) (value : Nat)
+  | setGlobal (address : BitVec 5) (value : HolLoopExp width)
+  | load32 (address destination : Nat)
+  | loadByte (address destination : Nat)
+  | store32 (address value : Nat)
+  | storeByte (address value : Nat)
+  | seq (first second : HolLoopProg width)
+  | ite (operator : Cmp) (condition : Nat) (right : RegImm (BitVec width))
+      (thenBranch elseBranch : HolLoopProg width) (live : FiniteMap Nat Unit)
+  | loop (liveIn : FiniteMap Nat Unit) (body : HolLoopProg width) (liveOut : FiniteMap Nat Unit)
+  | break (label : Nat)
+  | continue (label : Nat)
+  | raise (exception : Nat)
+  | return (values : List Nat)
+  | shMem (operator : CrepMemOp) (name : Nat) (address : HolLoopExp width)
+  | tick
+  | mark (body : HolLoopProg width)
+  | fail
+  | locValue (destination source : Nat)
+  | call (returns : Option (List Nat × FiniteMap Nat Unit)) (target : Option Nat)
+      (arguments : List Nat)
+      (handler : Option (Nat × HolLoopProg width × HolLoopProg width × FiniteMap Nat Unit))
+  | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
+      (configuration configurationLength array arrayLength : Nat)
+      (live : FiniteMap Nat Unit)
 
 inductive LoopProg (α : Type u) where
   | skip

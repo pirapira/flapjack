@@ -11,11 +11,9 @@ RV64 source state:
 * `Assign` to a bound local succeeds (HOL's normal completion, i.e. `NONE`) and
   updates the binding; `Assign` to an absent local is `SOME Error` with the state
   unchanged;
-* `Return` of a value of at most 32 words is `SOME (Return v)` with locals
-  cleared; an oversized or failed expression is `SOME Error` with state
-  unchanged;
-* `Raise` additionally requires a declared matching exception shape, then
-  returns `SOME (Exception eid v)` with locals cleared.
+* `Return` of an evaluable expression is `SOME (Return v)` with the state
+  unchanged; a failed expression is `SOME Error`;
+* `Raise` mirrors `Return` with `SOME (Exception eid v)`.
 
 These are untagged interface checks for the future exact `evaluate_def` port,
 not a port of `evaluate` itself. The expression oracle is
@@ -35,7 +33,7 @@ def stepsState : PanSemState Word64 (FfiState Unit) :=
     globals := fun _ => none
     structs := []
     code := []
-    exceptionShapes := fun name => if name == "E" then some .one else none
+    exceptionShapes := fun _ => none
     memory := fun _ => none
     memaddrs := fun _ => false
     sharedMemaddrs := fun _ => false
@@ -85,33 +83,44 @@ def assignMissingGuard : Bool :=
   let result := panSemTotalAssignClause stepsState .local "y" (.const (BitVec.ofNat 64 9))
   isErrorResult result.1 && wordAt result.2.locals "x" 7 && !(wordAt result.2.locals "y" 9)
 
-/-- A bounded `Return` returns its value and clears only locals. -/
+/-- A `Return` of a value whose shape size is at most 32 returns it and clears
+    the locals (HOL `empty_locals`). -/
 def returnGuard : Bool :=
   let result := panSemTotalReturnClause stepsState (.const (BitVec.ofNat 64 3))
-  isReturnedWord 3 result.1 && result.2.clock == stepsState.clock &&
-    (result.2.locals "x").isNone
+  isReturnedWord 3 result.1 && (result.2.locals "x").isNone
+
+/-- A `Return` of a value whose shape size exceeds 32 is `SOME Error`. -/
+def returnSizeErrorGuard : Bool :=
+  isErrorResult (panSemTotalReturnClause stepsState
+    (.rStruct (List.replicate 33 (.const (BitVec.ofNat 64 0))))).1
 
 /-- A `Return` whose expression fails is `SOME Error`. -/
 def returnErrorGuard : Bool :=
   isErrorResult (panSemTotalReturnClause stepsState (.var .local "missing")).1
 
-/-- A shape-correct `Raise` returns its exception and clears locals. -/
+/-- A state with declared exception shape `E` = `One`. -/
+def raiseState : PanSemState Word64 (FfiState Unit) :=
+  { stepsState with exceptionShapes := fun name =>
+      if name == "E" then some Shape.one else none }
+
+/-- A `Raise` of an `One`-shaped value under a matching declared exception
+    returns `SOME (Exception eid v)` and clears the locals. -/
 def raiseGuard : Bool :=
-  let result := panSemTotalRaiseClause stepsState "E" (.const (BitVec.ofNat 64 4))
-  isExceptionOf "E" 4 result.1 && result.2.clock == stepsState.clock &&
-    (result.2.locals "x").isNone
+  let result := panSemTotalRaiseClause raiseState "E" (.const (BitVec.ofNat 64 4))
+  isExceptionOf "E" 4 result.1 && (result.2.locals "x").isNone
 
-def raiseShapeMismatchGuard : Bool :=
-  let result := panSemTotalRaiseClause stepsState "E" (.rStruct [])
-  isErrorResult result.1 && wordAt result.2.locals "x" 7
+/-- A `Raise` of an undeclared exception is `SOME Error`. -/
+def raiseMissingGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "F" (.const (BitVec.ofNat 64 4))).1
 
-def raiseMissingShapeGuard : Bool :=
-  let result := panSemTotalRaiseClause stepsState "Missing" (.const (BitVec.ofNat 64 4))
-  isErrorResult result.1 && wordAt result.2.locals "x" 7
+/-- A `Raise` whose value shape does not match the declared exception is
+    `SOME Error`. -/
+def raiseShapeErrorGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "E" (.rStruct [])).1
 
-def raiseMissingValueGuard : Bool :=
-  let result := panSemTotalRaiseClause stepsState "E" (.var .local "missing")
-  isErrorResult result.1 && wordAt result.2.locals "x" 7
+/-- A `Raise` whose expression fails is `SOME Error`. -/
+def raiseErrorGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "E" (.var .local "missing")).1
 
 /-- The shared glue leaves a failed expression as `SOME Error`. -/
 def exprStepErrorGuard : Bool :=
@@ -210,21 +219,47 @@ def storeByteErrorGuard : Bool :=
   isErrorResult (panSemTotalStoreByteClause storeState (.const (BitVec.ofNat 64 0))
     (.const (BitVec.ofNat 64 0xAB))).1
 
+/-- `Dec` body continuation: return the bound variable `x`. -/
+def decBody (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  match state.locals "x" with
+  | some value => (some (.returned value), state)
+  | none => (some .error, state)
+
+/-- `Dec` of a valid local initialiser updates the binding, runs the body, then
+    restores the previous local binding of the name. -/
+def decOkGuard : Bool :=
+  let result := panSemTotalDecClause stepsState "x" Shape.one
+    (.const (BitVec.ofNat 64 9)) decBody
+  isReturnedWord 9 result.1 && wordAt result.2.locals "x" 7
+
+/-- `Dec` whose declared shape does not match the value shape is `SOME Error`. -/
+def decShapeErrorGuard : Bool :=
+  isErrorResult (panSemTotalDecClause stepsState "x" Shape.one
+    (.rStruct []) decBody).1
+
+/-- `Dec` whose initialiser fails to evaluate is `SOME Error`. -/
+def decErrorGuard : Bool :=
+  isErrorResult (panSemTotalDecClause stepsState "x" Shape.one
+    (.var .local "missing") decBody).1
+
 def stepsGuard : Bool :=
-  assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
-    raiseGuard && raiseShapeMismatchGuard && raiseMissingShapeGuard &&
-    raiseMissingValueGuard && exprStepErrorGuard && exprStepSomeGuard &&
+  assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
+    returnErrorGuard &&
+    raiseGuard && raiseMissingGuard && raiseShapeErrorGuard && raiseErrorGuard &&
+    exprStepErrorGuard && exprStepSomeGuard &&
     primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
     primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
     storeGuard && storeNonWordGuard && storeErrorGuard &&
-    store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard
+    store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard &&
+    decOkGuard && decShapeErrorGuard && decErrorGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

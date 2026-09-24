@@ -22,7 +22,7 @@ the word type and uses Lean `String` identifiers, so it is not the exact HOL
 datatype and stays untagged.
 
 `ExpHOL width` below is the exact counterpart: `const : BitVec width`, the
-`mlstring`-named identifier fields, and `load : ShapeHOL width` (the exact shape
+`mlstring`-named identifier fields, and `load : ShapeHOL` (the exact shape
 carrier of `Flapjack/Pancake/PanLang/Shape.lean`).
 
 `expToHOL`/`expOfHOL` are the kernel-checked codec to production

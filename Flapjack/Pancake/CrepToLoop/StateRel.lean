@@ -561,4 +561,101 @@ theorem alookupElPairEqEl {α β : Type} [BEq α] [LawfulBEq α]
   have hhead : (prog[n]'hn).1 = start := congrArg Prod.fst hshape
   exact getElem_eq_of_lookup_eq hdistinct hn hhead hlookup
 
+/-! ## Distinctness of `rt_vars` over a distinct map
+
+`crep_to_loopProofScript.sml`'s `all_distinct_ctxt_lookup_all_distinct`
+(`:3345`): for a distinct list of return variables and a `distinct_vars`
+context, `rt_vars` (the `OPT_MMAP` of `ctxt.vars` over those variables, or
+`[n+1]` on failure) is itself `ALL_DISTINCT`. The Lean counterpart uses the
+exact carriers `crepToLoopDistinctVars` (`distinct_vars_def`) and `rtVars`
+(`rt_vars_def`); `ALL_DISTINCT` is rendered as `List.Nodup`. -/
+
+private theorem forall_some_of_mapM_some {ι : Type} {vars : FiniteMap ι Nat}
+    (rts : List ι) (m : List Nat)
+    (hm : rts.mapM (fun v => FLOOKUP vars v) = some m) :
+    ∀ v ∈ rts, ∃ k, FLOOKUP vars v = some k := by
+  induction rts generalizing m with
+  | nil => intro v hv; simp at hv
+  | cons a l ih =>
+      rw [List.mapM_cons] at hm
+      cases hfa : FLOOKUP vars a with
+      | none => simp [hfa] at hm
+      | some k =>
+          cases hml : l.mapM (fun v => FLOOKUP vars v) with
+          | none => simp [hfa, hml] at hm
+          | some m' =>
+              intro v hv
+              rw [List.mem_cons] at hv
+              rcases hv with rfl | hv
+              · exact ⟨k, hfa⟩
+              · exact ih m' hml v hv
+
+private theorem mem_of_mem_mapM {ι α : Type} {f : ι → Option α}
+    (l : List ι) (m : List α) (hm : l.mapM f = some m) :
+    ∀ x ∈ m, ∃ b ∈ l, f b = some x := by
+  induction l generalizing m with
+  | nil => intro x hx; simp at hm; subst hm; simp at hx
+  | cons a l ih =>
+      intro x hx
+      rw [List.mapM_cons] at hm
+      cases hfa : f a with
+      | none => simp [hfa] at hm
+      | some y =>
+          cases hml : l.mapM f with
+          | none => simp [hfa, hml] at hm
+          | some m' =>
+              simp [hfa, hml] at hm
+              subst hm
+              rw [List.mem_cons] at hx
+              rcases hx with rfl | hx
+              · exact ⟨a, List.mem_cons_self, hfa⟩
+              · obtain ⟨b, hb, hfb⟩ := ih m' hml x hx
+                exact ⟨b, List.mem_cons_of_mem a hb, hfb⟩
+
+private theorem nodup_of_mapM_of_inj {ι α : Type} (f : ι → Option α)
+    (l : List ι) (m : List α) (hm : l.mapM f = some m) (hl : l.Nodup)
+    (hinj : ∀ a ∈ l, ∀ b ∈ l, f a = f b → a = b) : m.Nodup := by
+  induction l generalizing m with
+  | nil => simp at hm; subst hm; exact List.nodup_nil
+  | cons a l ih =>
+      rw [List.mapM_cons] at hm
+      cases hfa : f a with
+      | none => simp [hfa] at hm
+      | some x =>
+          cases hml : l.mapM f with
+          | none => simp [hfa, hml] at hm
+          | some m' =>
+              simp [hfa, hml] at hm
+              subst hm
+              rw [List.nodup_cons] at hl
+              obtain ⟨hanot, hl'⟩ := hl
+              refine List.nodup_cons.mpr
+                ⟨?_, ih m' hml hl' (fun c hc d hd hcd =>
+                  hinj c (List.mem_cons_of_mem a hc) d (List.mem_cons_of_mem a hd) hcd)⟩
+              intro hxmem
+              obtain ⟨b, hb, hfb⟩ := mem_of_mem_mapM l m' hml x hxmem
+              have hab : a = b :=
+                hinj a (List.mem_cons_self) b (List.mem_cons_of_mem a hb) (hfa.trans hfb.symm)
+              exact hanot (hab ▸ hb)
+
+/-- Exact port of HOL `all_distinct_ctxt_lookup_all_distinct`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3345`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "all_distinct_ctxt_lookup_all_distinct"]
+theorem allDistinctCtxtLookupAllDistinct (ctxt : CrepToLoopFiniteMapContext)
+    (rts : List Nat) (n : Nat)
+    (hrts : rts.Nodup) (hinj : crepToLoopDistinctVars ctxt.vars) :
+    (rtVars ctxt.vars rts n).Nodup := by
+  unfold rtVars
+  cases hmap : rts.mapM (fun v => FLOOKUP ctxt.vars v) with
+  | none => simp
+  | some m =>
+      simp only
+      refine nodup_of_mapM_of_inj _ rts m hmap hrts (fun a ha b hb hfab => ?_)
+      obtain ⟨ka, hka⟩ := forall_some_of_mapM_some rts m hmap a ha
+      obtain ⟨kb, hkb⟩ := forall_some_of_mapM_some rts m hmap b hb
+      have hk : ka = kb := by
+        rw [hka, hkb] at hfab
+        exact Option.some.inj hfab
+      exact hinj a b ka kb hka hkb hk
+
 end Flapjack

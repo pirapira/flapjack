@@ -539,9 +539,16 @@ theorem mapAppendEqDrop_tagged_fixture :
       [30] :=
   map_append_eq_drop [1, 2, 3] [10, 20] [30] (fun n => n * 10) (by decide)
 
-theorem setEqMembership_tagged_fixture :
+/-- The list client keeps using the untagged list reading. -/
+theorem setEqMembershipList_fixture :
     (3 : Nat) ∈ ([1, 2, 3] : List Nat) :=
-  set_eq_membership (a := [1, 2, 3]) (b := [1, 2, 3]) (x := 3) ⟨rfl, by decide⟩
+  memTransportsOfEq (a := [1, 2, 3]) (b := [1, 2, 3]) (x := 3) ⟨rfl, by decide⟩
+
+/-- The exact tagged HOL set statement. -/
+theorem setEqMembership_tagged_fixture :
+    (fun n : Nat => n = 3) 3 :=
+  set_eq_membership (a := fun n : Nat => n = 3) (b := fun n : Nat => n = 3)
+    (x := 3) ⟨rfl, rfl⟩
 
 theorem elReducTl_tagged_fixture :
     ([1, 2, 3] : List Nat)[2]'(by decide) =

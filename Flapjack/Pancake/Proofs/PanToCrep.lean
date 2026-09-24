@@ -1829,18 +1829,18 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The target runtime `exp_hdl` writes and their `locals_rel` updates are proved
-for arbitrary flattened payload widths by
+The target runtime `exp_hdl` execution and its `locals_rel` postcondition are
+already proved for arbitrary flattened payload widths by
 `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
-`crepRuntimeExpHdlFiniteMapWords_localsRel`. The one-word execution is also
-stated directly as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
-`crepRuntimeExpHdlOneWord_localsRel` giving its local-map result. The
-corresponding actual-state matching-handler prestate composition is available in
-`crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations` as untagged
-induction support. This lemma supplies the source-to-target map-update
-relation used by those proofs. The general HOL `Call_Ret_Exception`
-simulation remains open because the recursive callee and handler induction
-hypotheses have not yet been composed into the source/target Call case. -/
+`crepRuntimeExpHdlFiniteMapWords_localsRel`; the one-word execution is also
+available as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
+`crepRuntimeExpHdlOneWord_localsRel` proving its local-map result. The actual
+state and relation setup for a matching handler is available as untagged
+induction support in
+`crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations`. This lemma supplies
+the source-to-target map-update relation used by those proofs. What remains
+open is composing the recursive callee and handler induction hypotheses into
+the full source/target HOL `Call_Ret_Exception` case. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

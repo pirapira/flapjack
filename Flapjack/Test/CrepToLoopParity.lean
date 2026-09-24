@@ -366,4 +366,74 @@ example (s : CrepHolState (BitVec 64) Unit) (t : LoopMachineState (BitVec 64) Un
     ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
   crepToLoopStateRel_clock_add_zero s t h
 
+/-- HOL `mem_rel_intro` (`crep_to_loopProofScript.sml:203-209`) is an
+    implication: from the total-memory relation, conclude the pointwise
+    equation. -/
+example (smem : BitVec 64 → PanWordLab (BitVec 64))
+    (tmem : BitVec 64 → LoopValue (BitVec 64)) (dom : BitVec 64 → Bool)
+    (h : crepToLoopMemRel smem tmem dom) :
+    ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  crepToLoopMemRel_intro smem tmem dom h
+
+/-- Untagged iff form of `crepToLoopMemRel`. -/
+example (smem : BitVec 64 → PanWordLab (BitVec 64))
+    (tmem : BitVec 64 → LoopValue (BitVec 64)) (dom : BitVec 64 → Bool) :
+    crepToLoopMemRel smem tmem dom ↔
+      ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  crepToLoopMemRel_iff smem tmem dom
+
+/-- Total-view bridge: the total HOL memory agrees with the Option-valued
+    `LoopMachineState.memory` at a defined address. -/
+example (default : LoopValue (BitVec 64)) (t : LoopMachineState (BitVec 64) Unit)
+    (ad : BitVec 64) (v : LoopValue (BitVec 64)) (h : t.memory ad = some v) :
+    loopMemoryTotal default t ad = v :=
+  loopMemoryTotal_eq_some default t ad v h
+
+/-- Concrete total loop memory used to reproduce the `mem_rel_match`/
+    `mem_rel_wrong` oracle rows: `4 ↦ .word 7`, other addresses defaulting. -/
+def memRelFixture : LoopMachineState (BitVec 64) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun ad => if ad == (4 : BitVec 64) then some (.word (7 : BitVec 64)) else none
+    mdomain := fun _ => false
+    shMdomain := fun _ => false
+    clock := 0
+    code := []
+    be := false
+    ffi := trivialFfiState Unit ()
+    baseAddr := 0
+    topAddr := 0 }
+
+/-- Reproduces the `mem_rel_match=T` / `mem_rel_wrong=F` oracle rows via the
+    total view of the Option-valued loop memory. -/
+def memRelGuard : Bool :=
+  let t := loopMemoryTotal (LoopValue.word (0 : BitVec 64)) memRelFixture
+  (t 4 == LoopValue.word (7 : BitVec 64)) && (t 9 == LoopValue.word (0 : BitVec 64))
+
+#guard memRelGuard
+
+/-! The following proofs exercise the *relation itself* on the same 8-bit
+    cases as the checked-in HOL oracle, rather than only its total-memory view. -/
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 7)
+    (fun ad => ad == 4) := by
+  intro ad _
+  rfl
+
+example : ¬ crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun ad => ad == 4) := by
+  intro h
+  have h4 := h 4 (by decide)
+  simp [wlabWloc] at h4
+
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun _ => false) := by
+  intro _ h
+  cases h
+
 end Flapjack.Test.CrepToLoopParity

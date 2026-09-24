@@ -266,9 +266,11 @@ the `FFI` field matches HOL's opaque `mlstring = implode string`
 (`cakeml/basis/pure/mlstringScript.sml:19-21`).  All 34 constructor arities and
 field types match `stackLangScript.sml:27-66`; the only `@[hol]`-tagged
 program-level declaration is this instantiation.  The production
-`StackCarrier.ProgW` (`String` FFI) and this exact carrier are related by the
-kernel-checked `String`<->`MlString` bridge recorded on
-`flapjack-pxn.18.5.15.3.11.2.3`. -/
+`StackCarrier.ProgW` (`String` FFI) is a separate untagged carrier; no
+kernel-checked `String`<->`MlString` bridge between the two exists yet.  A
+bridge is PENDING and tracked by `flapjack-pxn.18.5.15.3.11.2.3`; until it
+lands, `StackCarrier.ProgW` must not be described as the image of this exact
+carrier. -/
 @[hol "cakeml/compiler/backend/stackLangScript.sml" "prog"]
 abbrev HolProg (width : Nat) [NeZero width] :=
   Flapjack.Compiler.Backend.StackLang.Prog (HolInst width) HolCmp (HolRegImm width)

@@ -832,6 +832,22 @@
     "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "OPT_MMAP_SOME_ALL",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "OPT_MMAP_SOME_ALL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; List.mapM is the repo's OPT_MMAP carrier, cf. tagged optMmapEqSome; exists/exists-forall clauses over membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "OPT_MMAP_ALL_EQ",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "OPT_MMAP_ALL_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; List.mapM carrier; pointwise function agreement on members implies mapM equality)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
@@ -7278,5 +7294,21 @@
     "lean_name": "notMemContextAssignedMemGt",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact HOL-shaped port over PanToCrepHOLContext + compileProgHOL: ctxt_max hypothesis kept (intentionally unused; the freshness hypothesis is stronger), FLOOKUP freshness hypothesis, x <= vmax bound, conclusion x not in crepAssignedFreeVars (compileProgHOL context program). HOL statement pan_to_crepProofScript.sml:1252."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "rewritten_context_unassigned",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "rewrittenContextUnassigned",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause: nctxt/ctxt record update, FLOOKUP ctxt.vars v, no_overlap/ctxt_max for both contexts, distinct_lists nvars ns ==> distinct_lists ns (assigned_free_vars (compile nctxt p)). Uses the landed not_mem_context_assigned_mem_gt port; Lean test/guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "distinctLists_eq_true_iff",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack helper: characterises distinctLists as set-disjointness (no HOL declaration)."
   }
 ]

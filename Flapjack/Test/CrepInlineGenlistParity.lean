@@ -160,6 +160,18 @@ theorem crepInlineFlookupResVarIsMemZipValue :
         resVar crepInlineResVarLc1) 2 = some 20 :=
   crepInlineFlookupResVarIsMemZip
 
+theorem crepInlineOptMmapSomeAll :
+    (∃ x : List Nat,
+        ([1, 2, 3] : List Nat).mapM (fun n => if n = 2 then none else some n) = some x) ↔
+      (∀ e, e ∈ ([1, 2, 3] : List Nat) →
+        ∃ y, (fun n => if n = 2 then none else some n) e = some y) :=
+  OPT_MMAP_SOME_ALL (fun n => if n = 2 then none else some n) [1, 2, 3]
+
+theorem crepInlineOptMmapAllEq :
+    ([1, 2, 3] : List Nat).mapM (fun n => some (n + 0)) =
+      ([1, 2, 3] : List Nat).mapM (fun n => some (n + 0)) :=
+  OPT_MMAP_ALL_EQ _ _ _ (fun _ _ => rfl)
+
 theorem crepInlineSubmapFupdate
     (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
     crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) :=
@@ -252,6 +264,17 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline flookup_res_var_is_mem_zip_eq"
       pure false
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk && submapOk && flookupOk)
+  let optMmapOk ←
+    if (match ([1, 2, 3] : List Nat).mapM (fun n => if n = 2 then none else some n) with
+        | some _ => false
+        | none => true) &&
+        (([1, 2, 3] : List Nat).mapM (fun n => some n) ==
+          ([1, 2, 3] : List Nat).mapM (fun n => some n)) then
+      IO.println "PASS crep_inline OPT_MMAP_SOME_ALL and OPT_MMAP_ALL_EQ"
+      pure true
+    else
+      IO.println "FAIL crep_inline OPT_MMAP_SOME_ALL and OPT_MMAP_ALL_EQ"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk && submapOk && flookupOk && optMmapOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

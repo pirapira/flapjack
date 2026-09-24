@@ -592,6 +592,9 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
+  assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -966,17 +966,18 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
     (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
     expression constant value rfl hShift h
 
-/-- Flapjack support lemma for HOL `eval_mul_const`, deliberately untagged.
-    It proves preservation for production `evalCrepRuntimeExp` only after
-    specializing values to `RiscV.Word n` and replacing the state's target
-    operations with `riscvCrepWordTarget`. The HOL theorem instead quantifies
-    over its polymorphic word type and arbitrary `crepSem` state; its evaluator
-    is defined through HOL `eval_def` and `crep_op_def`/`word_sh`. No theorem
-    currently relates those operations and every HOL state to this canonical
-    production target. Width generality alone therefore does not establish the
-    required evaluator correspondence or justify an `@[hol]` tag. This
-    specialization discharges its shift case through the model-parametric
-    helper above. -/
+/-- Flapjack support for HOL `eval_mul_const`, deliberately untagged. HOL's
+    statement is `crepSem$eval s exp = SOME (Word w) ->
+    crepSem$eval s (mul_const exp c) = SOME (Word (w * c))`, over its
+    polymorphic word carrier and arbitrary `crepSem` state. This Lean support
+    instead fixes values to `RiscV.Word n`, evaluates the state through
+    `riscvCrepWordTarget`, and projects the `Option` result through
+    `PanWordLab.word`. The helper proves the shift arithmetic for that target;
+    there is no theorem relating the resulting production evaluator to HOL's
+    `eval_def`/`crep_op_def`/`word_sh` for arbitrary HOL states and word types.
+    The prior `@[hol]` claim was removed and its theorem-map row is classified
+    `documented_mismatch`. Keep this support untagged until the exact evaluator
+    relation and HOL-shaped polymorphic statement are proved. -/
 theorem crepEvalMulConst {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (expression : CrepExp (RiscV.Word n)) (constant value : RiscV.Word n)

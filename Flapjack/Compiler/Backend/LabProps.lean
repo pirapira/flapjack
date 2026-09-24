@@ -382,6 +382,28 @@ theorem flatten_seq_lines_all {Asm Memop Addr Cmp RegImm MlString Word : Type}
             decide
           · simp only [ht, Bool.false_eq_true, if_false, List.all_append, ih1', ih2']
             decide
+
+theorem flatten_loop_lines_all {Asm Memop Addr Cmp RegImm MlString Word : Type}
+    (_checks : AsmChecks Asm Memop Addr Word) {Inst Binop AsmInst : Type}
+    (ops : StackToLab.FlattenOps Inst Cmp RegImm AsmInst) (zero : Word) (tail : Bool)
+    (body : Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (P : StackToLab.FlatLine Memop Addr Cmp RegImm MlString AsmInst Word -> Bool)
+    (ih : (StackToLab.flatten ops zero false body sectionId (next + 2) (next :: conts)
+        ((next + 1) :: breaks)).1.all P = true)
+    (hlabel : forall k, P (.label sectionId k 0) = true)
+    (hjump : forall k, P (.labAsm (.jump (.lab sectionId k)) zero [] 0) = true) :
+    (StackToLab.flatten ops zero tail (.loop body) sectionId next conts breaks).1.all P = true := by
+  simp only [StackToLab.flatten]
+  cases h : StackToLab.flatten ops zero false body sectionId (next + 2) (next :: conts)
+      ((next + 1) :: breaks) with
+  | mk xs r1 =>
+    cases r1 with
+    | mk r1x nxb =>
+      have ih' : xs.all P = true := by simpa [h] using ih
+      simp only [List.all_cons, List.all_nil, List.all_append, ih', hlabel, hjump]
+      decide
+
 end FlattenBaseLinesAll
 
 end Flapjack.Compiler.Backend.LabProps

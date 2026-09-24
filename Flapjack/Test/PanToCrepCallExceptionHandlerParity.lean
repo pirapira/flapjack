@@ -150,6 +150,15 @@ private def raisedSourceResult : PanValueFfiClockResult Word64 Unit :=
       (fun _ => some (.word (BitVec.ofNat 64 0))) statefulTestFfiState
       "E" (.word payload)), 4)
 
+private def returnedSourceResult : PanValueFfiClockResult Word64 Unit :=
+  (.control (.returned (fun _ => none) (fun _ => none)
+      (fun _ => some (.word (BitVec.ofNat 64 0))) statefulTestFfiState
+      [.word payload]), 4)
+
+example : panToCrepClockResultRel handlerContext returnedSourceResult
+    (.returned [payload], handlerTargetState) := by
+  simp [panToCrepClockResultRel, returnedSourceResult, payload, panValueFlatten]
+
 example : panToCrepClockResultRel handlerContext raisedSourceResult
     (.raised exceptionCode, pairHandlerState) := by
   simp [panToCrepClockResultRel, raisedSourceResult, handlerContext,

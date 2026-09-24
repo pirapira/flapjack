@@ -24,6 +24,7 @@ import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanLangShapeHOLParity
 import Flapjack.Test.PanLangExpHOLParity
 import Flapjack.Test.PanLangProgHOLParity
+import Flapjack.Test.PanLangDeclHOLParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity

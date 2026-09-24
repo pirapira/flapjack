@@ -137,6 +137,30 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "fun_decl",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "FunDeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (field-by-field source comparison; HOL Datatype fun_decl = <| name : mlstring; inline : bool; export : bool; params : (varname # shape) list; body : 'a prog; return : shape |> (panLangScript.sml:102-109) vs FunDeclHOL {width} [NeZero width] with name : MlS, inline : Bool, exported : Bool (HOL 'export'), params : List (MlS x ShapeHOL), body : ProgHOL width, returnShape : ShapeHOL (HOL 'return', retyped because Lean reserves return as a keyword). Field types and order match with varname = MlS (exact mlstring carrier) and the word-indexed body. Production Flapjack.FunDecl is generic over String names and is untagged; codec funDeclToHOL/funDeclOfHOL with total kernel roundtrip funDeclToHOL_funDeclOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "decl",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "DeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype decl = Function ('a fun_decl) | Decl shape mlstring ('a exp) | ExnDecl eid shape | Name stcname ((fldname # shape) list) (panLangScript.sml:111-116) vs DeclHOL {width} [NeZero width] with the same four constructors and field types: function(FunDeclHOL width); decl(ShapeHOL)(MlS)(ExpHOL width); exnDecl(MlS)(ShapeHOL); name(MlS)(List (MlS x ShapeHOL)). Names eid/stcname/fldname = MlS (exact mlstring carrier). Production Flapjack.Decl is generic over String names and is untagged; codec declToHOL/declOfHOL with total kernel roundtrip declToHOL_declOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "struct_info",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "StructInfoHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (field-by-field source comparison; HOL Datatype struct_info = <| fields : (fldname # shape) list; size : num |> (panLangScript.sml:118-122) vs StructInfoHOLExact with fields : List (MlS x ShapeHOL) and size : Nat. fldname = MlS (exact mlstring carrier). The production Flapjack.StructInfoHOL uses String names and monomorphic Shape and is untagged; codec structInfoToHOL/structInfoOfHOL with total kernel roundtrip structInfoToHOL_structInfoOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",

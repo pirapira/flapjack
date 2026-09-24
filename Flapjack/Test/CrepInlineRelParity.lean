@@ -321,6 +321,32 @@ def inlineEvalTransferGuard : Bool :=
 
 #guard inlineEvalTransferGuard
 
+/-- Nonempty heterogeneous expression list: a constant and a variable. -/
+def inlineHeteroExps : List (CrepExp (RiscV.Word 64)) :=
+  [.const (5 : RiscV.Word 64), .var 0]
+
+theorem inlineSrcMmapEval :
+    inlineHeteroExps.mapM (evalCrepHolExp inlineSrcState) =
+      some [(5 : RiscV.Word 64), 7] := by
+  simp only [inlineHeteroExps, List.mapM_cons, List.mapM_nil]
+  simp only [evalCrepHolExp, inlineSrcState, evalBase]
+  decide
+
+/-- `opt_mmap_eval_code_inl` transfers the whole heterogeneous list: the
+    distinct-code target evaluates it to the same values. -/
+example :
+    inlineHeteroExps.mapM (evalCrepHolExp inlineTgtState) =
+      some [(5 : RiscV.Word 64), 7] :=
+  crepInlineOptMmapEvalCodeInl inlineSrcState inlineTgtState inlineHeteroExps
+    [(5 : RiscV.Word 64), 7] inlineCalleeFmap inlineSrcMmapEval
+    inlineStates_state_rel_code inlineStates_locals_strong inlineCodeInlRel
+
+def inlineMmapTransferGuard : Bool :=
+  (inlineHeteroExps.mapM (evalCrepHolExp inlineTgtState) ==
+    some [(5 : RiscV.Word 64), 7])
+
+#guard inlineMmapTransferGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -352,6 +378,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline eval_code_inl nontrivial distinct-code transfer"
       pure false
-  pure (relOk && codeInlOk && evalOk && inlineEvalOk)
+  let inlineMmapOk ←
+    if inlineMmapTransferGuard then
+      IO.println "PASS crep_inline opt_mmap_eval_code_inl heterogeneous list transfer"
+      pure true
+    else
+      IO.println "FAIL crep_inline opt_mmap_eval_code_inl heterogeneous list transfer"
+      pure false
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk)
 
 end Flapjack.Test.CrepInlineRelParity

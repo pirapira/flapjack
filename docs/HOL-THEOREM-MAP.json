@@ -6046,5 +6046,37 @@
     "lean_name": "lookupInfo_append_eq_of_some",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only lookup preservation helper under nodup appended keys, used in the exact panValueFldsOk_append port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepHolFdom_subset_flookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex: untagged; extensional-FDOM form of HOL fdom_subset_flookup_thm (crep_inlineProofScript.sml:1456); FDOM is a Bool key predicate here, not a HOL finite set, so no @[hol] tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineCodeInlRel_fdom_subset",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex: untagged helper extracting the FDOM-subset hypothesis from the finite-map code_inl_rel carrier; used by crepInlineEvalCodeInl."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "evalCrepHolExp_state_rel_code",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex: untagged counterpart of eval_state_locals_same_code_fdom_same (crep_inlineProofScript.sml:1467); Lean evalCrepHolExp is fixed-width ([NeZero width]) and the FDOM hypothesis is extensional, so no @[hol] tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineEvalCodeInl",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex: untagged counterpart of eval_code_inl (crep_inlineProofScript.sml:1513); statement follows the family but the Lean evaluator and FDOM rendering are not definitionally HOL's, so no @[hol] tag."
   }
 ]

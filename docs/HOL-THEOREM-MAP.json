@@ -4556,8 +4556,16 @@
     "hol_name": "MEM_compile_exp_vmax",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "memCompileExpVmax",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.4): statement is generic in the element type a with [BEq a] [OfNat a 0] [Add a] [CrepBytesInWord a] and calls the generic-a compileExpHOL, whereas HOL MEM_compile_exp_vmax (pan_to_crepProofScript.sml:410) is over compile_exp/context indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions. Following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) the exact tag is carried by memCompileExpVmaxW; this generic form is Flapjack support. Faithful width-indexed port tracked by flapjack-pxn.18.4.3.78.4."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MEM_compile_exp_vmax",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "memCompileExpVmaxW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.4): width-indexed faithful port of HOL MEM_compile_exp_vmax (pan_to_crepProofScript.sml:410). HOL compile_exp/context are indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101); following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) the carrier is BitVec width with [NeZero width], the only side condition is ctxt_max ctxt.vmax ctxt.vars rendered as ctxtMax, and the conclusion n <= ctxt.vmax is unchanged. Proof delegates to the generic memCompileExpVmax."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

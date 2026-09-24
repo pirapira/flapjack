@@ -188,6 +188,7 @@ import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackCarrier
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList
@@ -195,6 +196,7 @@ import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps
 import Flapjack.Compiler.Backend.StackNames
+import Flapjack.Compiler.Backend.StackRemove
 import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.RiscV.CakeAllocatorBitsBridge

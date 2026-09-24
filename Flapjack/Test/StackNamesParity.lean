@@ -97,12 +97,19 @@ example : ¬namesOkHOL names 4 [0, 1] := by
   have hfalse : namesOk names 4 [0, 1] = false := by rfl
   simp [hfalse] at hb
 
+private def mapFstSample : List (Nat × PT) := [(1, pHalt 3), (2, pRaise 4)]
+
+-- `MAP_FST_compile`
+example : (compile names mapFstSample).map Prod.fst = mapFstSample.map Prod.fst :=
+  map_fst_compile names mapFstSample
+
 private def parityGuard : Bool :=
   isReg7 && isConst7 &&
   (match destFindName names (.inr 3 : Sum Nat Nat) with | .inr 7 => true | _ => false) &&
   (namesOk names 4 [0, 1] == false) &&
   (namesOk emptyNames 8 [] == true) &&
   (namesOk dupNames 4 [] == false) &&
+  ((compile names mapFstSample).map Prod.fst == mapFstSample.map Prod.fst) &&
   (match compile names [(1, pHalt 3)] with
    | [(1, p)] => isHalt7 p
    | _ => false)

@@ -248,6 +248,14 @@
     "reviewer": "Generic Option-list statement matches local HOL theorem; Lean List.mapM with Option is the OPT_MMAP encoding"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "lookup_code",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithLookupCodeSimpProg",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause with local lookup_code at line 162: FMAP_MAP2 maps each stored simp_prog body, and OPTION_MAP (simp_prog ## I) changes only the returned program; Lean fromNat exposes the word type's implicit n2w operation, len is retained as the unused HOL input, and lookup uses lookupCrepHolCode"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_2exp_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

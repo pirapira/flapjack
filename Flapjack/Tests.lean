@@ -78,6 +78,7 @@ import Flapjack.Test.PanValueMemoryFfi
 import Flapjack.Test.PanValueAcceleratorFfi
 import Flapjack.Test.PanValueFfiClockMemoryFfi
 import Flapjack.Test.CrepeArith
+import Flapjack.Test.CrepeArithLookupCodeParity
 import Flapjack.Test.CrepeExpressionStabilityParity
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite

@@ -2031,6 +2031,43 @@ def crepArithHolMapCode {n : Nat} {σ : Type}
     CrepHolState (RiscV.Word n) σ :=
   { state with code := fun name => (state.code name).map f }
 
+/-- Apply the Crep arithmetic simplifier to the body stored at every function
+    name, preserving the declaration's parameter list. This is the Lean
+    function-map form of the `FMAP_MAP2` code transformation used by the local
+    `lookup_code` lemma in `crep_arithProofScript.sml`. -/
+def crepArithSimpCodeMap {α : Type} [BEq α] [OfNat α 0] [OfNat α 1]
+    [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    FunName → Option (List Nat × CrepProg α) :=
+  fun name => (code name).map fun (parameters, body) =>
+    (parameters, crepSimpProg fromNat body)
+
+/-- CakeML's local `lookup_code` simplification lemma
+    (`crep_arithProofScript.sml:162`): mapping `simp_prog` over every code
+    body commutes with a successful code lookup, leaving its argument-local
+    map unchanged. The unused length parameter is retained because it is a
+    quantified input in the HOL declaration. This theorem uses the faithful
+    `lookupCrepHolCode` definition rather than the executable runtime lookup. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "lookup_code" 162]
+theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
+    lookupCrepHolCode (crepArithSimpCodeMap fromNat code) fname args =
+      (lookupCrepHolCode code fname args).map
+        (fun (body, locals) => (crepSimpProg fromNat body, locals)) := by
+  unfold lookupCrepHolCode crepArithSimpCodeMap FLOOKUP
+  cases hlookup : code fname with
+  | none => simp [hlookup]
+  | some entry =>
+      rcases entry with ⟨parameters, body⟩
+      by_cases hvalid : parameters.length = args.length ∧ parameters.Nodup
+      · simp [hlookup, hvalid]
+      · simp [hlookup, hvalid]
+
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
 theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →

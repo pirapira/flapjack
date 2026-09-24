@@ -384,6 +384,14 @@
     "reviewer": "This source-evaluator corollary has HOL's success premise, code-map update, simplifier, and complete Option word_lab result, with production evaluation proved equal to its recursive source equations. It is not tagged because its explicit HolFiniteDimension encoding and CrepHolState adapter are not yet identified with HOL's implicit finite_index word type and crepSem state."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceFull",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension source evaluator and CrepHolState adapter are not yet proved identical to HOL crepSem eval and its implicit finite_index operations."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -6454,5 +6462,37 @@
     "lean_name": "compileExpHOL_shift_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only RISC-V-specialized Shift constructor case for the full compile_exp_val_rel induction hypotheses. It consumes full left/right relation hypotheses and proves evaluation, length, shape, and well-formedness using the source and canonical-target RISC-V shift bridges, but it is not a standalone HOL declaration or complete expression induction; no @[hol] tag claimed. The matching direct compile_exp Shift output is covered by the cmp_shift row in scripts/hol-probes/compile_exp_probe.out and CompileExpParity.holCmpShiftOK."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "lookup_code_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "lookupCrepHolCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause against lookup_code_def: FLOOKUP code fname, LENGTH ns = LENGTH args, ALL_DISTINCT ns -> Nodup, result FEMPTY |++ ZIP(ns,args) -> FUPDATE_LIST FEMPTY (ns.zip args); direct HOL oracle scripts/hol-probes/crep_lookup_code_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "res_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "resVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause against res_var_def: res_var lc (n,NONE) = lc \\\\ n -> FDOMSUB, res_var lc (n,SOME v) = lc |+ (n,v) -> FUPDATE, with [BEq]/[LawfulBEq]; production Dec restore routed through resVar; oracle scripts/hol-probes/crep_res_var_probe.out reproduced by Lean guards in Flapjack/Test/FiniteMapParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "memLoadCrepHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause port of crepSem$mem_load_def over CrepHolState; if addr IN state.memaddrs then SOME (state.memory addr) else NONE; direct HOL oracle crep_mem_load_probe.out rows reproduced by Lean guards; bridge crepRuntimeLoad_eq_memLoadCrepHol to the executed load)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_const_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
   }
 ]

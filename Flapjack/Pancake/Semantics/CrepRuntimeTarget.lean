@@ -2375,7 +2375,7 @@ def CrepMemoryModelLoad32MatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) :
     (∀ (byteAddress : RiscV.Word 64),
       model.getByte (8 : RiscV.Word 64) byteAddress value false =
         holGetByte64 byteAddress value false) ∧
-    model.wordOfBytes false
+    model.wordOfBytes32 false
         [holGetByte64 address value false, holGetByte64 (address + 1) value false,
          holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false] =
       holWordOfBytes64 false
@@ -2408,7 +2408,7 @@ theorem crepMemoryModelLoad32_wordOfBytes_of_matches
     {model : PanMemoryModel (RiscV.Word 64)}
     (hmodel : CrepMemoryModelLoad32MatchesHOL64 model)
     (address value : RiscV.Word 64) :
-    model.wordOfBytes false
+    model.wordOfBytes32 false
         [holGetByte64 address value false, holGetByte64 (address + 1) value false,
          holGetByte64 (address + 2) value false, holGetByte64 (address + 3) value false] =
       holWordOfBytes64 false

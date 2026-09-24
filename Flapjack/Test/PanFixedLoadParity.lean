@@ -126,6 +126,12 @@ def finiteWord24BigEndianByteLoad : Option (Fin 24 → Bool) :=
 def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
     finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
+/-! HOL `mem_load_32` assembles the four extracted bytes at width 32, then
+    `crepSem.eval` widens or truncates that result into the source word width. -/
+def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=
+  [finiteWord24 0x22, finiteWord24 0x33, finiteWord24 0x11, finiteWord24 0x22]
+def finiteWord24Fixed32Load : Fin 24 → Bool :=
+  holFiniteWordSourceWordOfBytes32 dimension24 false finiteWord24Fixed32Bytes
 
 /-! A 17-bit source word has two full byte slots. HOL `word_of_bytes` applies
     four recursive `set_byte` calls, so later byte addresses wrap onto slots
@@ -176,6 +182,8 @@ def finiteWord5BigGetByte : Fin 5 → Bool :=
   some (BitVec.ofNat 24 0x11)
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
+#guard holWordToBitVec dimension24 finiteWord24Fixed32Load ==
+  BitVec.ofNat 24 0x113322
 #guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
   BitVec.ofNat 17 0x2211
 #guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==

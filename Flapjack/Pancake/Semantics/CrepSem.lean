@@ -138,7 +138,7 @@ def crepHolEvalMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
     match state.memory alignedAddress with
     | .word value =>
         if state.memaddrs alignedAddress then
-          some (model.wordOfBytes state.bigEndian
+          some (model.wordOfBytes32 state.bigEndian
             [model.getByte bytesInWord address value state.bigEndian,
              model.getByte bytesInWord (address + 1) value state.bigEndian,
              model.getByte bytesInWord (address + 2) value state.bigEndian,
@@ -215,6 +215,27 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
+
+/-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
+    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`
+    rendered as `FDOMSUB` and `|+` as `FUPDATE`.  Lives in the crepSem counterpart module
+    because it is the HOL `crepSem` `res_var` used by the `Dec` restore; the generic
+    `FDOMSUB` stays in `Flapjack.FiniteMap.Basic`.  `[LawfulBEq α]` ties the Boolean key
+    equality used by the representation (`key == k`) to HOL's propositional equality. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
+def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB f entry.1
+  | some v => FUPDATE f (entry.1, v)
+
+/-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
+    over the 11-field `CrepHolState`:
+    `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.
+    This is the word load used by the `Load` clause of `evaluate`; the result is
+    the total `word_lab` cell, exactly as in HOL. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+def memLoadCrepHol (address : α) (state : CrepHolState α σ) : Option (PanWordLab α) :=
+  if state.memaddrs address then some (state.memory address) else none
 
 /-- Forget the three target-configuration fields of the executable runtime
     state, obtaining the 11-field HOL-shaped state. -/
@@ -415,6 +436,28 @@ def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
         | none => none
       else none
 
+/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
+    over the finite map: look the function up, require the declared parameter
+    list to have the argument count and be duplicate-free, and return the body
+    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+
+    The HOL source quantifies `args : 'a word_lab list`; the executable
+    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
+    with `PanWordLab.word`, and checks distinctness with
+    `eraseDups.length = length` rather than `ALL_DISTINCT`.  This declaration
+    is the exact HOL-shaped operation; routing the executed path through it is
+    tracked separately (the two distinctness checks agree under `LawfulBEq`). -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) :
+    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
+  match FLOOKUP code fname with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length = args.length ∧ parameters.Nodup
+      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
+      else none
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration array : List UInt8)
@@ -499,6 +542,14 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memaddrs address then some (panTheWord (state.memory address)) else none
 
+/-- The executed runtime word load is the tagged HOL `mem_load` on the
+    `toHolState` view, with the `word_lab` cell projected by `panTheWord`. -/
+theorem crepRuntimeLoad_eq_memLoadCrepHol (state : CrepRuntimeState α σ) (address : α) :
+    crepRuntimeLoad state address =
+      (memLoadCrepHol address state.toHolState).map panTheWord := by
+  by_cases h : state.memaddrs address <;>
+    simp [crepRuntimeLoad, memLoadCrepHol, CrepRuntimeState.toHolState, h]
+
 def crepRuntimeLoadByte [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=
   let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
@@ -513,7 +564,7 @@ def crepRuntimeLoad32 [Add α] [OfNat α 1]
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
     if state.memaddrs alignedAddress then
       let value := panTheWord (state.memory alignedAddress)
-      pure (state.memoryModel.wordOfBytes state.bigEndian
+      pure (state.memoryModel.wordOfBytes32 state.bigEndian
         [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1 + 1) value state.bigEndian,
@@ -1229,7 +1280,27 @@ theorem evalCrepRuntimeExps_wordLab_projection
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>
-      (result, { state with locals := fun candidate => if name == candidate then oldValue else state.locals candidate })
+      (result, { state with locals := resVar state.locals (name, oldValue) })
+
+/-- Pointwise form of the tagged HOL `res_var` update used by the production
+    `restoreCrepRuntimeStep`: restoring a variable is an `|+`/`\\` update. -/
+@[simp] theorem resVar_locals_apply [BEq α] [LawfulBEq α] (name : Nat)
+    (oldValue : Option (PanWordLab α)) (locals : Nat → Option (PanWordLab α)) :
+    resVar locals (name, oldValue) =
+      fun candidate => if name == candidate then oldValue else locals candidate := by
+  cases oldValue with
+  | none =>
+      funext candidate
+      simp only [resVar, FDOMSUB]
+  | some v =>
+      funext candidate
+      simp only [resVar, FUPDATE]
+
+/-- The production Dec restore is the tagged HOL `res_var` update. -/
+theorem restoreCrepRuntimeStep_eq_resVar (name : Nat) (oldValue : Option (PanWordLab α))
+    (result : CrepRuntimeResult α ε) (state : CrepRuntimeState α σ) :
+    restoreCrepRuntimeStep name oldValue (result, state) =
+      (result, { state with locals := resVar state.locals (name, oldValue) }) := rfl
 
 def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=
@@ -1537,5 +1608,169 @@ theorem evalCrepRuntimeResult_skip
     evalCrepRuntimeResult handler primitive (fuel + 1) state .skip =
       some (.normal, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
+
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_thm`
+(crepPropsScript.sml:257), not an exact HOL port: it is stated with the Boolean
+equality that `resVar` is implemented with. -/
+theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : Option β) :
+    FLOOKUP (resVar f (m, v)) n = if n == m then v else FLOOKUP f n := by
+  cases v with
+  | none =>
+    simp only [resVar, FDOMSUB, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+  | some w =>
+    simp only [resVar, FUPDATE, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_diff_eq`
+(crepPropsScript.sml:249); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : β) (h : n ≠ m) : FLOOKUP (resVar f (m, some v)) n = FLOOKUP f n := by
+  rw [FLOOKUP_resVar]
+  have hb : (n == m) = false := by
+    rw [beq_eq_false_iff_ne]
+    exact h
+  simp only [hb, Bool.false_eq_true, if_false]
+
+/-- Flapjack-specific analogue of Cake's `res_var_commutes`
+(crepPropsScript.sml:234); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h : α)
+    (hne : n ≠ h) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  cases hh : FLOOKUP lc' h with
+  | none =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_commutes lc n h hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc h n vn hne.symm]
+  | some vh =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc n h vh hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FUPDATE_comm lc h vh n vn hne.symm]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_eq`
+(crepPropsScript.sml:763); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over a list whose keys do not contain `x`
+leaves `x` untouched. -/
+theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
+    (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ xs.map Prod.fst) :
+    FLOOKUP (xs.foldl resVar f) x = FLOOKUP f x := by
+  induction xs generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVar f entry) hrest, FLOOKUP_resVar]
+    have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
+    simp [hfalse]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_zip_eq`
+(crepPropsScript.sml:777); not an exact HOL port: the zipped form of
+`FLOOKUP_foldl_resVar_not_mem`. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVar_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct`
+(crepPropsScript.sml:796); not an exact HOL port: looking up a key list disjoint
+from the updated key list is unaffected by the fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip zs).foldl resVar f) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_foldl_resVar_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (as : List β) (cs : List (Option β))
+    (fm : FiniteMap α β) (hdisj : ListDisjoint xs ys)
+    (hlenAs : xs.length = as.length) (hlenCs : xs.length = cs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip cs).foldl resVar (FUPDATE_LIST fm (xs.zip as))) y) =
+      ys.map (fun y => FLOOKUP fm y) := by
+  rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
+  exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
+
+/-- Flapjack-specific analogue of Cake `res_var_lookup_original_eq`
+(crepPropsScript.sml:612); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over the `ZIP` of a distinct key list with its
+values, restoring each key's original binding, reproduces the original map. -/
+theorem foldl_resVar_zip_lookup_original [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (lc : FiniteMap α β)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    ((xs.zip (xs.map (FLOOKUP lc))).foldl resVar
+        (FUPDATE_LIST lc (xs.zip ys))) = lc := by
+  induction xs generalizing ys lc with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      have hnotmem : a ∉ (xs.zip ys).map Prod.fst := by
+        rw [List.map_fst_zip (by omega)]
+        exact ha
+      simp only [List.map_cons, List.zip_cons_cons, FUPDATE_LIST_cons, List.foldl_cons]
+      rw [← FUPDATE_FUPDATE_LIST_commutes lc a y (xs.zip ys) hnotmem]
+      cases hlookup : FLOOKUP lc a with
+      | none =>
+        simp only [resVar, FDOMSUB_FUPDATE_same]
+        rw [FDOMSUB_FUPDATE_LIST_commutes xs ys lc a ha hlenTail,
+            FDOMSUB_eq_self_of_lookup_none lc a hlookup]
+        exact ih ys lc hdistinctTail hlenTail
+      | some v =>
+        simp only [resVar]
+        rw [FUPDATE_FUPDATE_same]
+        rw [FUPDATE_eq_self_of_lookup_some (FUPDATE_LIST lc (xs.zip ys)) a v
+          (by rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys lc a hlenTail ha]; exact hlookup)]
+        exact ih ys lc hdistinctTail hlenTail
 
 end Flapjack

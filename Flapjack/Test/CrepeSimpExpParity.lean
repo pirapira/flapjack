@@ -69,10 +69,29 @@ example :
 local instance : HolFiniteDimension Bool := boolWordDimension
 
 /-! The arbitrary-index n2w adapter is pointwise `BIT` at the number assigned
-    by the dimension encoding, matching HOL's FCP `finite_index` convention. -/
+    by the dimension encoding, matching HOL's FCP `finite_index` convention.
+    The dimension decoder itself satisfies HOL's unique-in-range property. -/
 #guard holFiniteWordN2W boolWordDimension 1 false == true
 #guard holFiniteWordN2W boolWordDimension 1 true == false
 #guard holFiniteWordN2W boolWordDimension 2 true == true
+
+example (value : Bool) :
+    ∃ index, index < boolWordDimension.width ∧
+      holFiniteIndex boolWordDimension index = value ∧
+      ∀ other, other < boolWordDimension.width →
+        holFiniteIndex boolWordDimension other = value → other = index :=
+  holFiniteIndex_bijective boolWordDimension value
+
+example (value index : Nat) (hindex : index < boolWordDimension.width) :
+    holFiniteWordN2W boolWordDimension value
+        (holFiniteIndex boolWordDimension index) = Nat.testBit value index :=
+  holFiniteWordN2W_at_finiteIndex boolWordDimension value index hindex
+
+example (word : Bool → Bool) :
+    holFiniteWordW2N boolWordDimension word =
+      finWordSBitSum boolWordDimension.width
+        (fun index => word (holFiniteIndex boolWordDimension index.val)) :=
+  holFiniteWordW2N_eq_finiteIndexSBitSum boolWordDimension word
 
 @[instance_reducible] def boolWordDimensionSwapped : HolFiniteDimension Bool where
   width := 2
@@ -82,10 +101,22 @@ local instance : HolFiniteDimension Bool := boolWordDimension
   encode_decode := by decide
   decode_encode := by decide
 
-/-! This witness demonstrates why an arbitrary finite enumeration alone is
-    not a HOL word representation: `n2w 1` changes when the index order is
-    permuted. The generic preservation theorem holds under either selected
-    model, but an exact HOL port must identify HOL's canonical index order. -/
+example (value : Bool) :
+    ∃ index, index < boolWordDimensionSwapped.width ∧
+      holFiniteIndex boolWordDimensionSwapped index = value ∧
+      ∀ other, other < boolWordDimensionSwapped.width →
+        holFiniteIndex boolWordDimensionSwapped other = value → other = index :=
+  holFiniteIndex_bijective boolWordDimensionSwapped value
+
+example (value index : Nat) (hindex : index < boolWordDimensionSwapped.width) :
+    holFiniteWordN2W boolWordDimensionSwapped value
+        (holFiniteIndex boolWordDimensionSwapped index) = Nat.testBit value index :=
+  holFiniteWordN2W_at_finiteIndex boolWordDimensionSwapped value index hindex
+
+/-! Both witnesses satisfy HOL's finite_index bijection property, while they
+    encode different dictionaries: `n2w 1` changes when the index order is
+    permuted. The all-width proof works under either dictionary; the exact HOL
+    instance for a concrete index type still needs to be identified. -/
 example :
     bitVecToHolWord boolWordDimension (BitVec.ofNat 2 1) ≠
       bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1) := by
@@ -357,6 +388,44 @@ example (value : PanWordLab (Bool → Bool))
   exact @crepSimpExpCorrectHolFiniteWordSourceEvalClass Bool Unit
     boolWordDimension (fun (_, entry) => entry) boolDimensionHolState
     (.crepOp .mul [.var 0, .const boolDimensionWord]) value h
+
+/-! The all-width full-result theorem also proves a concrete simplification
+    over a different valid finite_index dictionary for Bool. This does not
+    claim that the swapped dictionary is HOL's ambient Bool instance. -/
+section SwappedFiniteIndex
+
+local instance : HolFiniteDimension Bool := boolWordDimensionSwapped
+
+example :
+    evalCrepHolFiniteWordSourceExpWordLab boolWordDimensionSwapped
+        (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+          boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 n))
+          (.crepOp .mul
+            [.const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1)),
+             .const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))])) =
+    evalCrepHolFiniteWordSourceExpWordLab boolWordDimensionSwapped
+      boolDimensionHolState
+      (.crepOp .mul
+        [.const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1)),
+         .const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))]) := by
+  have hsuccess :
+      evalCrepHolFiniteWordSourceExpWordLab boolWordDimensionSwapped
+        boolDimensionHolState
+        (.crepOp .mul
+          [.const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1)),
+           .const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))]) ≠ none := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMul]
+  exact @crepSimpExpCorrect1HolFiniteWordSourceWordLab Bool Unit
+    boolWordDimensionSwapped (fun (_, entry) => entry) boolDimensionHolState
+    (.crepOp .mul
+      [.const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1)),
+       .const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))])
+    (.word (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))) hsuccess
+
+end SwappedFiniteIndex
 
 example : True := by
   letI : HolFiniteDimension Bool := boolWordDimensionSwapped

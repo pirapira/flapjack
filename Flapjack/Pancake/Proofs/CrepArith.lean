@@ -2390,9 +2390,11 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
     `simp_exp_correct1`: the finite-index dictionary is implicit, the success
     premise is on the evaluator result, `f` updates only the code map, and the
     entire wrapped result is preserved. It stays untagged because the source
-    evaluator's operations and `HolFiniteDimension` dictionary have not yet
-    been formally identified with HOL's native `crepSem$eval` and
-    `finite_index` instances. -/
+    evaluator and its word-operation dictionary have not yet been identified
+    with the concrete HOL `crepSem$eval` equations and the selected HOL
+    `finite_index` instance. `holFiniteIndex_bijective` proves the defining
+    unique-in-range property for the Lean dimension dictionary, but does not
+    establish that instance identity. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

@@ -101,4 +101,53 @@ def evalPanSemStateExps [NeZero 64]
     state.baseAddress state.topAddress panSemBitVec64BytesInWord expressions
     (memoryAccess := some (panSemBitVec64MemoryAccess state))
 
+
+/-- The executed 64-bit source `.op` branch consults exactly the tagged
+`wordOpHOL` list fold. `panSemBitVec64MemoryAccess` is built from
+`RiscV.panRiscVMemoryModel`, whose `wordOp` is `panRiscVWordOp = wordOpHOL`;
+this is the arbitrary-operand-list delegation used by the exact-state path.
+The generic `memoryAccess := none` compatibility branch remains untagged and
+is tracked separately as a mismatch. -/
+theorem panSemBitVec64MemoryAccess_wordOp
+    (state : PanSemState (RiscV.Word 64) ffi) (operator : BinOp)
+    (values : List (RiscV.Word 64)) :
+    (panSemBitVec64MemoryAccess state).wordOp operator values =
+      wordOpHOL operator values := rfl
+
+/-- Unfolding of the executed source `.op` clause: for an arbitrary operand
+list it evaluates the arguments and then applies the tagged `wordOpHOL`
+fold. This pins the exact-state path to `wordOpHOL` without changing the
+generic compatibility branch. -/
+theorem evalPanSemStateExp_op
+    (state : PanSemState (RiscV.Word 64) ffi) (operator : BinOp)
+    (arguments : List (Exp (RiscV.Word 64))) :
+    evalPanSemStateExp state (.op operator arguments) =
+      (evalPanSemStateExps state arguments).bind (fun values =>
+        (values.mapM panValueWordProjection).bind (fun words =>
+          (wordOpHOL operator words).map PanValue.word)) := by
+  simp only [evalPanSemStateExp, evalPanSemStateExps, evalPanValueExp.eq_def,
+    panSemBitVec64MemoryAccess_wordOp]
+  rfl
+
+/-- Exact port of HOL `mem_load_byte_def` (`panSemScript.sml:86`) over the
+faithful source memory shape: `m` is a total `'a word → 'a word_lab` map
+(here `HolWordLab`), `dm` is a word set rendered as a `Prop` predicate, and
+the result is the exact `word8` option.  The executed
+`PanValueMemoryAccess.readByte` widens the decoded byte to the word carrier;
+that widening is the separate production adapter, tracked by
+flapjack-pxn.18.3.6.9.2. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_byte_def"]
+def panMemLoadByteHOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) : Option UInt8 :=
+  let aligned := RiscV.panRiscVByteAlign (BitVec.ofNat width (width / 8)) address
+  match memory aligned with
+  | .word value =>
+      if domain aligned then
+        some (UInt8.ofNat
+          (RiscV.panRiscVGetByteEndian (BitVec.ofNat width (width / 8)) address
+            value bigEndian).toNat)
+      else none
+
 end Flapjack

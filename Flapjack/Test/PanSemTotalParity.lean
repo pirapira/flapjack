@@ -67,7 +67,38 @@ def tickZeroGuard : Bool :=
   | some (.timeout, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
-def totalGuard : Bool := skipGuard && tickSuccGuard && tickZeroGuard
+/-- The genuine total recursive evaluator (not the executed-evaluator
+    projection): `Seq` support is exercised directly here. -/
+def totalSeqEvaluate (state : PanSemState Word64 (FfiState Unit)) (program : Prog Word64) :
+    PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
+    (BitVec.ofNat 64 8) state program
+
+def seqNormalGuard : Bool :=
+  match totalSeqEvaluate (totalState 5) (.seq .skip .skip) with
+  | (.normal, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def seqBreakGuard : Bool :=
+  match totalSeqEvaluate (totalState 5)
+      (.seq .break (.assign .local "x" (.const (BitVec.ofNat 64 9)))) with
+  | (.broke, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def seqContinueGuard : Bool :=
+  match totalSeqEvaluate (totalState 5)
+      (.seq .continue (.assign .local "x" (.const (BitVec.ofNat 64 9)))) with
+  | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def seqTickGuard : Bool :=
+  match totalSeqEvaluate (totalState 5) (.seq .tick .skip) with
+  | (.normal, state) => state.clock == 4
+  | _ => false
+
+def totalGuard : Bool :=
+  skipGuard && tickSuccGuard && tickZeroGuard && seqNormalGuard && seqBreakGuard &&
+    seqContinueGuard && seqTickGuard
 
 #guard totalGuard
 
@@ -77,6 +108,18 @@ example :
         panSemTotalOfExecuted = some (panSemEvaluateSkip (totalState 5)) :=
   panSemEvaluateCodeStateWithPostState_skip_total statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
+
+example :
+    panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
+        (BitVec.ofNat 64 8) (totalState 5) (.seq (.skip : Prog Word64) .skip) =
+      (match panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
+          (BitVec.ofNat 64 8) (totalState 5) (.skip : Prog Word64) with
+       | (.normal, firstState) =>
+           panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
+             (BitVec.ofNat 64 8) (panSemFixClock (totalState 5).clock firstState) .skip
+       | (other, firstState) => (other, panSemFixClock (totalState 5).clock firstState)) :=
+  panSemTotalEvaluate_seq statefulTestContext statefulTestPrimitive statefulTestHandler
+    (BitVec.ofNat 64 8) (totalState 5) .skip .skip
 
 example :
     (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
@@ -95,6 +138,18 @@ def runChecks : IO Bool := do
   if tickZeroGuard then
     IO.println "PASS panSem total Tick timeout clears locals at clock zero"
   else IO.println "FAIL panSem total Tick timeout clears locals at clock zero"
+  if seqNormalGuard then
+    IO.println "PASS panSem total Seq Skip/Skip completes normally"
+  else IO.println "FAIL panSem total Seq Skip/Skip completes normally"
+  if seqBreakGuard then
+    IO.println "PASS panSem total Seq Break short-circuits and skips the second command"
+  else IO.println "FAIL panSem total Seq Break short-circuits and skips the second command"
+  if seqContinueGuard then
+    IO.println "PASS panSem total Seq Continue short-circuits and skips the second command"
+  else IO.println "FAIL panSem total Seq Continue short-circuits and skips the second command"
+  if seqTickGuard then
+    IO.println "PASS panSem total Seq Tick clamps the clock before the second command"
+  else IO.println "FAIL panSem total Seq Tick clamps the clock before the second command"
   pure totalGuard
 
 end Flapjack.Test.PanSemTotalParity

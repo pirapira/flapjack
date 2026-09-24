@@ -188,4 +188,96 @@ theorem panSemEvaluateCodeStateWithPostState_tick_total
   by_cases hclock : state.clock = 0 <;>
     simp [panSemTotalOfExecuted, panSemEvaluateTick, panSemProgResultOfClockResult, hclock]
 
+/-- HOL `fix_clock` (`cakeml/pancake/semantics/panSemScript.sml:446-449`): clamp
+    a returned state's clock to the entry clock. -/
+def panSemFixClock (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
+    PanSemState α (FfiState σ) :=
+  { state with clock := min entryClock state.clock }
+
+/-! ## Genuine total recursive evaluator (staged)
+
+    `panSemTotalEvaluate` is a single total function returning the HOL
+    `(result option # state)` shape with no fuel.  It currently implements the
+    control-flow constructors `Skip`, `Tick`, `Seq`, `Break`, `Continue`, and
+    `Annot` exactly; every other constructor is a documented staging
+    placeholder returning `.error` with the state unchanged, NOT HOL semantics.
+    The recursive `Seq` equations are direct; the evaluator will move to the
+    HOL lexicographic measure `(state.clock, program size)` when the
+    clock-recursive `While`/`Call`/`DecCall` constructors are added. -/
+
+/-- Total source evaluator, staged over the `Prog` constructors. -/
+def panSemTotalEvaluate (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) (program : Prog α) :
+    PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  match program with
+  | .skip => panSemEvaluateSkip state
+  | .tick => panSemEvaluateTick state
+  | .seq first second =>
+      let firstStep := panSemTotalEvaluate context primitive handler bytesInWord state first
+      let secondState := panSemFixClock state.clock firstStep.2
+      match firstStep.1 with
+      | .normal => panSemTotalEvaluate context primitive handler bytesInWord secondState second
+      | other => (other, secondState)
+  | .break => (.broke, state)
+  | .continue => (.continued, state)
+  | .annot _ _ => (.normal, state)
+  | _ => (.error, state)
+
+@[simp] theorem panSemTotalEvaluate_skip
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.skip : Prog α) =
+      (.normal, state) := rfl
+
+@[simp] theorem panSemTotalEvaluate_tick
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.tick : Prog α) =
+      (if state.clock = 0 then
+        (.timeout, { state with locals := fun _ => none })
+       else
+        (.normal, { state with clock := state.clock - 1 })) := rfl
+
+@[simp] theorem panSemTotalEvaluate_break
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.break : Prog α) =
+      (.broke, state) := rfl
+
+@[simp] theorem panSemTotalEvaluate_continue
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.continue : Prog α) =
+      (.continued, state) := rfl
+
+@[simp] theorem panSemTotalEvaluate_annot
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) (tag text : String) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.annot tag text : Prog α) =
+      (.normal, state) := rfl
+
+/-- The `Seq` equation is the HOL one: evaluate the first command, clamp the
+    returned clock to the entry clock (`fix_clock`), continue with the second
+    command only on a normal completion, and otherwise return the first
+    outcome with the clamped state (`panSemScript.sml:615-618`). -/
+theorem panSemTotalEvaluate_seq
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ)) (first second : Prog α) :
+    panSemTotalEvaluate context primitive handler bytesInWord state (.seq first second) =
+      (match panSemTotalEvaluate context primitive handler bytesInWord state first with
+       | (.normal, firstState) =>
+           panSemTotalEvaluate context primitive handler bytesInWord
+             (panSemFixClock state.clock firstState) second
+       | (other, firstState) => (other, panSemFixClock state.clock firstState)) := by
+  simp only [panSemTotalEvaluate]
+  cases h : panSemTotalEvaluate context primitive handler bytesInWord state first with
+  | mk r s => cases r <;> rfl
+
 end Flapjack

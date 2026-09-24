@@ -491,6 +491,22 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1Load32HolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-model Load32 case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension wordOfBytes32/getByte evaluator has not yet been proved identical to native HOL mem_load_32 for implicit finite_index, so it is untagged support rather than a HOL case port."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadByteHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-model LoadByte case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension byteAlign/getByte evaluator has not yet been proved identical to native HOL mem_load_byte for implicit finite_index, so it is untagged support rather than a HOL case port."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact LoadGlob constructor case of local simp_exp_correct1. HOL eval_def uses FLOOKUP s.globals gadr; Lean uses the same BitVec 5-keyed lookup and the code-only update preserves globals. The unused result binder, success premise, and full Option word_lab equality match this constructor case. Other cases and the assembled theorem remain open."

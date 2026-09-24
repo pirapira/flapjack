@@ -225,6 +225,45 @@ theorem flookup_res_var_is_mem_zip_eq [BEq α] [LawfulBEq α]
         · rw [if_neg (by rw [beq_eq_false_iff_ne.mpr hxa]; simp)]
           exact ih hxas
 
+/-- CakeML's `OPT_MMAP_SOME_ALL` (`crep_inlineProofScript.sml:36`): the optional
+    map over a list succeeds for some result exactly when every element maps to
+    a `some`.  `List.mapM` is the repo's `OPT_MMAP` carrier (cf. the tagged
+    `optMmapEqSome`). -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "OPT_MMAP_SOME_ALL"]
+theorem OPT_MMAP_SOME_ALL {α : Type} {β : Type} (f : α → Option β) (l : List α) :
+    (∃ x, l.mapM f = some x) ↔ (∀ e, e ∈ l → ∃ y, f e = some y) := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+      constructor
+      · rintro ⟨x, hx⟩ e he
+        rcases List.mem_cons.mp he with hea | he
+        · rw [hea]
+          cases hfa : f a with
+          | none => rw [List.mapM_cons] at hx; simp [hfa] at hx
+          | some y => exact ⟨y, rfl⟩
+        · cases hfa : f a with
+          | none => rw [List.mapM_cons] at hx; simp [hfa] at hx
+          | some y =>
+              cases hta : as.mapM f with
+              | none => rw [List.mapM_cons] at hx; simp [hfa, hta] at hx
+              | some rest => exact ih.mp ⟨rest, hta⟩ e he
+      · intro h
+        obtain ⟨y, hy⟩ := h a List.mem_cons_self
+        obtain ⟨ys, hys⟩ := ih.mpr (fun e he => h e (List.mem_cons_of_mem a he))
+        exact ⟨y :: ys, by simp [List.mapM_cons, hy, hys]⟩
+
+/-- CakeML's `OPT_MMAP_ALL_EQ` (`crep_inlineProofScript.sml:47`): two optional
+    maps over a list agree when their functions agree on every element. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "OPT_MMAP_ALL_EQ"]
+theorem OPT_MMAP_ALL_EQ {α : Type} {β : Type} (f g : α → Option β) (l : List α)
+    (h : ∀ e, e ∈ l → f e = g e) : l.mapM f = l.mapM g := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+      simp only [List.mapM_cons, h a List.mem_cons_self,
+        ih (fun e he => h e (List.mem_cons_of_mem a he))]
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

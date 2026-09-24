@@ -115,16 +115,8 @@ def lookupInfoWithRest [BEq String] (name : String) : StructContext →
       if candidate == name then some (info, context)
       else lookupInfoWithRest name context
 
-/-- Production shape well-formedness. This is the executable counterpart of HOL
-    `is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The two leaf clauses
-    are delegated to the exact HOL-shaped, `@[hol panLangScript.sml
-    is_wf_shape_def]`-tagged `isWfShapeHOL` over `StructContextHOL` (in
-    `PanLang.lean`), projecting the production `StructContext` through
-    `StructContext.toHOL`; the `Comb` clause is the HOL `EVERY is_wf_shape`
-    recursion, kept as the executable `isWfShapeList` fold so the function
-    retains its well-founded induction principle. `isWfShapeHOL_toHOL` below
-    records the clause-by-clause agreement. Direct HOL oracle rows are in
-    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+/-- The `One` clause of the exact HOL-shaped port `isWfShapeHOL`, exposed as a
+    `simp` bridge so the production `isWfShape` leaf clause reduces. -/
 @[simp] theorem isWfShapeHOL_one (context : StructContextHOL) :
     isWfShapeHOL context .one = true := by
   rw [isWfShapeHOL.eq_def]
@@ -135,6 +127,16 @@ def lookupInfoWithRest [BEq String] (name : String) : StructContext →
     isWfShapeHOL context (.named name) = (lookupInfo name context).isSome := by
   rw [isWfShapeHOL.eq_def]
 
+/-- Production shape well-formedness. This is the executable counterpart of HOL
+    `is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The two leaf clauses
+    are delegated to the exact HOL-shaped, `@[hol panLangScript.sml
+    is_wf_shape_def]`-tagged `isWfShapeHOL` over `StructContextHOL` (in
+    `PanLang.lean`), projecting the production `StructContext` through
+    `StructContext.toHOL`; the `Comb` clause is the HOL `EVERY is_wf_shape`
+    recursion, kept as the executable `isWfShapeList` fold so the function
+    retains its well-founded induction principle. `isWfShapeHOL_toHOL` below
+    records the clause-by-clause agreement. Direct HOL oracle rows are in
+    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
 def isWfShape (context : StructContext) : Shape → Bool
   | .one => isWfShapeHOL context.toHOL .one
   | .comb shapes => isWfShapeList context shapes

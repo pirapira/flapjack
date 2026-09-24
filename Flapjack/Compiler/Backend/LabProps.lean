@@ -1011,6 +1011,48 @@ theorem flattenApp_line_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfi
   rw [hfst]
   exact hflat
 
+
+/-- HOL-exact `stack_to_labProofScript.sml` `compile_all_enc_ok_pre` over the
+`app_list` `prog_to_section`: every section produced by `progToSectionApp` for a
+list of `stack_asm_ok` programs satisfies `line_ok_pre`, via
+`progToSectionApp_lines` and the flat `compile_all_enc_ok_pre`. -/
+theorem compile_all_enc_ok_pre_app (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (programs : List (Nat × FlattenProg width))
+    (hbyte : Flapjack.Compiler.Encoders.Asm.asmByteOffsetOk config (0 : BitVec width) = true)
+    (hok : programs.all (fun entry =>
+      StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) entry.2) = true) :
+    (programs.map (fun entry => StackToLab.progToSectionApp (flattenOps (width := width))
+      (0 : BitVec width) entry.1 entry.2)).all (secOkPreConfig config) = true := by
+  induction programs with
+  | nil => rfl
+  | cons head tail ih =>
+    obtain ⟨sectionId, program⟩ := head
+    rw [List.all_cons, Bool.and_eq_true] at hok
+    obtain ⟨hokHead, hokTail⟩ := hok
+    rw [List.map_cons, List.all_cons]
+    have hsecEq : secOkPreConfig config
+        (StackToLab.progToSectionApp (flattenOps (width := width)) (0 : BitVec width)
+          sectionId program)
+        = secOkPreConfig config
+          (StackToLab.progToSection (flattenOps (width := width)) (0 : BitVec width)
+            sectionId program) := by
+      simp only [secOkPreConfig, secOkPre, StackToLab.progToSectionApp_lines]
+    have hsecFlat : secOkPreConfig config
+        (StackToLab.progToSection (flattenOps (width := width)) (0 : BitVec width)
+          sectionId program) = true := by
+      simp only [StackToLab.progToSection, secOkPreConfig, secOkPre, List.all_append,
+        List.all_cons, List.all_nil, Bool.and_eq_true]
+      constructor
+      · exact flatten_line_ok_pre config program true sectionId
+          (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] [] hbyte hokHead
+      · simp [lineOkPre]
+    have hsec : secOkPreConfig config
+        (StackToLab.progToSectionApp (flattenOps (width := width)) (0 : BitVec width)
+          sectionId program) = true := by
+      rw [hsecEq]; exact hsecFlat
+    rw [hsec, ih hokTail]
+    rfl
+
 end FlattenLineOkPre
 
 end Flapjack.Compiler.Backend.LabProps

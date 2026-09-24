@@ -759,4 +759,52 @@ def progToSection {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type
   { sectionId := sectionId
     lines := lines ++ [.label sectionId (if isSeq program then next else 1) 0] }
 
+
+/-- HOL `stack_to_labScript.sml` `prog_to_section_def` over the `app_list`
+representation: the section lines are `append (Append lines (List [Label ...]))`
+of the `flattenApp` output. -/
+def progToSectionApp {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (sectionId : Nat) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    Section (FlatLine Memop Addr Cmp RegImm MlString AsmInst Word) :=
+  let (lines, _, next) :=
+    flattenApp ops zero true program sectionId
+      (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] []
+  { sectionId := sectionId
+    lines := appListAppend (.append lines (.list [.label sectionId (if isSeq program then next else 1) 0])) }
+
+/-- The app-list `progToSectionApp` has the same flat lines as the production
+`progToSection`, via `flattenApp_appListFlatten_eq_flatten`. -/
+theorem progToSectionApp_lines {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (sectionId : Nat) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    (progToSectionApp ops zero sectionId program).lines
+      = (progToSection ops zero sectionId program).lines := by
+  simp only [progToSectionApp, progToSection]
+  cases hA : flattenApp ops zero true program sectionId
+      (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] [] with
+  | mk lines rA =>
+    cases rA with
+    | mk a nextA =>
+      cases hF : flatten ops zero true program sectionId
+          (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] [] with
+      | mk linesF rF =>
+        cases rF with
+        | mk aF nextF =>
+          have h1 := flattenApp_appListFlatten_eq_flatten ops zero true program sectionId
+            (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] []
+          rw [hA, hF] at h1
+          simp only [appListFlatten] at h1
+          have hlines : appListAppend lines = linesF := congrArg Prod.fst h1
+          have hnext : nextA = nextF := congrArg (fun p => p.2.2) h1
+          have hsplit :
+              appListAppend (AppList.append lines
+                  (.list [.label sectionId (if isSeq program then nextA else 1) 0]))
+                = linesF ++ [.label sectionId (if isSeq program then nextF else 1) 0] := by
+            have hthm := appListAppend_thm lines
+              (.list [.label sectionId (if isSeq program then nextA else 1) 0])
+              [.label sectionId (if isSeq program then nextA else 1) 0]
+            rw [hthm.1, hthm.2.1, hnext, hlines]
+          exact hsplit
+
 end Flapjack.Compiler.Backend.StackToLab

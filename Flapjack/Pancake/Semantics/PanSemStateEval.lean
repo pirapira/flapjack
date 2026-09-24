@@ -2120,6 +2120,52 @@ theorem evalPanValueExp_loadByte_eq_evalHOL {width : Nat} [NeZero width] [Lawful
       | rStruct f => simp
       | nStruct n f => simp
 
+/-! ## Production structured `.load` clause bridge (flapjack-pxn.18.3.6.9.2.13)
+
+Width-64 executed-path bridge: production `evalPanValueExp (.load shape address)`
+under `some (panSemBitVec64MemoryAccess execState)` agrees with tagged `evalHOL`
+once the exact source state's `structs`/`memory`/`memaddrs` are related to the
+production `StructContext`/memory/`panValueFlatMachineDomain` and the guard holds.
+Reuses the capstone `panValueFlatLoad_eq_panMemLoadHOL`.  Untagged production-side
+adapter. -/
+
+theorem evalPanValueExp_load_eq_evalHOL {σ ffi : Type} [LawfulBEq String]
+    (state : PanSemHolState 64 σ) [DecidablePred state.memaddrs]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress bytesInWord : RiscV.Word 64)
+    (shape : Shape) (address : Exp (RiscV.Word 64))
+    (haddress : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        address (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL state address).map HolValue.toPanValue)
+    (hstructs : state.structs = structs.toHOL)
+    (hmem : state.memory = panValueWordHOL memory)
+    (hdom : state.memaddrs = panValueFlatMachineDomain execState memory)
+    (hbytes : bytesInWord = panSemBitVec64BytesInWord)
+    (hwf : isWfShape structs shape = true) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.load shape address) (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL state (.load shape address)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [haddress, hstructs, isWfShapeHOL_toHOL structs shape, hwf]
+  cases ha : evalHOL state address with
+  | none => simp
+  | some hv =>
+      cases hv with
+      | val w =>
+          cases w with
+          | word bits =>
+              simp only [Option.map_some]
+              rw [HolValue.toPanValue_val bits]
+              simp only [hbytes]
+              simp
+              rw [panValueFlatLoad_eq_panMemLoadHOL execState memory structs shape bits hwf]
+              simp only [hmem, hdom]
+      | rStruct fs => simp only [Option.map_some]; rw [HolValue.toPanValue_rStruct]; simp
+      | nStruct nm fs => simp only [Option.map_some]; rw [HolValue.toPanValue_nStruct]; simp
+
 end
 
 end Flapjack

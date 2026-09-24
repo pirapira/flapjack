@@ -404,4 +404,26 @@ val _ = print_eval "dec_shape_mismatch"
          panLang$Skip,
        (ARB:((8),unit) panSem$state)))``
 
+val _ = print_eval "nb_op_op8" ``nb_op Op8``
+
+val _ = print_eval "nb_op_op16" ``nb_op Op16``
+
+val _ = print_eval "nb_op_opW" ``nb_op OpW``
+
+val _ = print_eval "nb_op_op32" ``nb_op Op32``
+
+val _ = print_eval "lookup_kvar_local"
+  ``lookup_kvar Local (strlit "x")
+      ((ARB:((8),unit) panSem$state) with
+         locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)))``
+
+val _ = print_eval "lookup_kvar_global"
+  ``lookup_kvar Global (strlit "y")
+      ((ARB:((8),unit) panSem$state) with
+         globals := FEMPTY |+ (strlit "y", ValWord (4w:8 word)))``
+
+val _ = print_eval "lookup_kvar_missing"
+  ``lookup_kvar Local (strlit "z")
+      ((ARB:((8),unit) panSem$state) with locals := FEMPTY)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

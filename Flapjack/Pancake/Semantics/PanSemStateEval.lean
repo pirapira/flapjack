@@ -2531,4 +2531,41 @@ theorem evalPanValueExp_eq_evalHOL_state {ffi : Type} [LawfulBEq String]
   evalPanValueExp_eq_evalHOL_executed execState holFfi execState.memory execState.structs
     execState.locals execState.globals execState.baseAddress execState.topAddress expression
 
+/-! ## Exact HOL `panSem` state-access helper definitions (flapjack-pxn.18.4.3.77.8)
+
+These are the small definitions in `cakeml/pancake/semantics/panSemScript.sml`
+that the total statement clauses (notably `ShMemLoad`/`ShMemStore` and
+`is_valid_value`) are phrased over. -/
+
+/-- Exact HOL `nb_op` (`panSemScript.sml:549`): the byte width sent as the
+shared-memory size byte for each `OpSize` (`OpW` is the full word, width 0). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "nb_op_def"]
+def nbOpHOL : OpSize → Nat
+  | .op8 => 1
+  | .op16 => 2
+  | .opW => 0
+  | .op32 => 4
+
+/-- Exact HOL `lookup_kvar` (`panSemScript.sml:415`): first-match lookup of the
+local or global finite map. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_kvar_def"]
+def lookupKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
+    (state : PanSemHolState width σ) : Option (HolValue width) :=
+  match kind with
+  | .local => state.locals name
+  | .global => state.globals name
+
+/-- Exact HOL `set_kvar` (`panSemScript.sml:403`): the HOL finite-map update
+`(name =+ value)` rendered as a function update by HOL equality. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_kvar_def"]
+def setKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
+    (value : HolValue width) (state : PanSemHolState width σ) : PanSemHolState width σ :=
+  match kind with
+  | .local =>
+      { state with
+        locals := fun current => if current = name then some value else state.locals current }
+  | .global =>
+      { state with
+        globals := fun current => if current = name then some value else state.globals current }
+
 end Flapjack

@@ -338,6 +338,19 @@ val _ = print_eval "compile_exp_correct_cmp_equal"
        (pan_structs$compile_exp ^ctxt ^cmp_expression) =
        SOME (pan_structsProof$convert_v ^cmp_value))``;
 
+val shift_value = ``ValWord (6w:8 word)``;
+val shift_expression =
+  ``(panLang$Shift Lsl (panLang$Const (3w:8 word))
+       (panLang$Const (1w:8 word)) : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_shift_lsl"
+  ``(pan_structs$old_exp_shape ^ctxt ^shift_expression,
+     panSem$shape_of ^shift_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^shift_value,
+     panSem$eval ^local_state ^shift_expression = SOME ^shift_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^shift_expression) =
+       SOME (pan_structsProof$convert_v ^shift_value))``;
+
 val _ = print_eval "size_of_compile_shape_comb"
   ``(is_wf_shape [] (Comb [One; One]),
      struct_infos_ok [],

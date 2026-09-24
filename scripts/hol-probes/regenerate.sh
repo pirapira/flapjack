@@ -643,6 +643,8 @@ run_probe crep_make_funcs_probeScript.sml crep_make_funcs_probe.out \
   make_funcs_empty_params make_funcs_duplicate_first_wins "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_get_eids_probeScript.sml crep_get_eids_probe.out \
   eids_present eids_codes_distinct "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_vmap_ctxtfc_probeScript.sml crep_vmap_ctxtfc_probe.out \
+  vmap_x vmap_eq_ctxt "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

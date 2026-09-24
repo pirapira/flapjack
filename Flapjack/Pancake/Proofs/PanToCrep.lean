@@ -628,6 +628,77 @@ def ctxtFc
     eids := exceptionCodes
     vmax := maxList names }
 
+/-- Flapjack-specific support for the HOL `MAX_LIST_i_genlist` step: dropping
+    the first `n` entries of `List.range m` is the same as mapping `n + ·` over
+    `List.range (m - n)` (used to line up `ctxt_fc`'s `with_shape` slices with
+    `compileParamVars`'s per-parameter slot ranges). -/
+theorem drop_range_map (m n : Nat) (h : n ≤ m) :
+    (List.range m).drop n = (List.range (m - n)).map (fun index => n + index) := by
+  rw [show m = n + (m - n) from (Nat.add_sub_cancel' h).symm]
+  rw [List.range_add, List.drop_append_of_le_length (by simp [List.length_range])]
+  simp
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map built by `compileParamVars` and the proof-side
+    `ctxt_fc` variable map agree after shifting the slot ranges by `offset`.
+    This is the correspondence the HOL proof discharges with
+    `gvs[ctxt_fc_def, make_vmap_def]`; HOL `make_vmap` is `panToCrepMakeVmapHOL`. -/
+theorem compileParamVars_range_withShape (params : List (VarName × Shape)) (offset : Nat) :
+    (compileParamVars params offset).1 =
+      (params.map Prod.fst).zip
+        ((params.map Prod.snd).zip
+          (withShape (params.map Prod.snd)
+            ((List.range (Shape.shapeSize (.comb (params.map Prod.snd)))).map
+              (fun index => offset + index)))) := by
+  induction params generalizing offset with
+  | nil => simp [compileParamVars, withShape]
+  | cons param params ih =>
+      obtain ⟨name, shape⟩ := param
+      simp only [compileParamVars, List.map_cons]
+      rw [shapeSize_comb_cons]
+      have htake :
+          List.take (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => offset + index)
+              (List.range (Shape.shapeSize shape)) := by
+        rw [← List.map_take, List.take_range]
+        simp
+      have hdrop :
+          List.drop (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => (offset + Shape.shapeSize shape) + index)
+              (List.range (Shape.shapeSize (.comb (params.map Prod.snd)))) := by
+        rw [← List.map_drop]
+        rw [drop_range_map
+          (Shape.shapeSize shape + Shape.shapeSize (.comb (params.map Prod.snd)))
+          (Shape.shapeSize shape) (Nat.le_add_right _ _)]
+        rw [Nat.add_sub_cancel_left]
+        rw [List.map_map]
+        congr 1
+        funext index
+        simp [Nat.add_assoc]
+      simp only [withShape]
+      rw [htake, hdrop, ih (offset + Shape.shapeSize shape)]
+      simp only [List.zip_cons_cons]
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map `panToCrepMakeVmapHOL` equals the `vars` field of
+    the proof-side `ctxt_fc` context at the standard slot window. -/
+theorem panToCrepMakeVmapHOL_eq_ctxtFcVars
+    (params : List (VarName × Shape))
+    (functions : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (exceptionCodes : FiniteMap ExceptionId α) :
+    panToCrepMakeVmapHOL params =
+      (ctxtFc functions exceptionCodes (params.map Prod.fst) (params.map Prod.snd)
+        (panToCrepVars params)).vars := by
+  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars]
+  rw [compileParamVars_range_withShape params 0]
+  simp
+
 /-! Indexed projection of the parameter variable map constructed by HOL
 `ctxtFc`. This support lemma exposes the corresponding `withShape` slot window
 without claiming the complete Call `locals_rel` theorem. -/

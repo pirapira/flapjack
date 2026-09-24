@@ -263,6 +263,24 @@ def getEidsGuard : Bool :=
 
 #guard getEidsGuard
 
+/-- Parameter list for the `make_vmap` / `ctxt_fc` bridge used by HOL
+    `mk_ctxt_code_imp_code_rel`'s context construction. -/
+def bridgeParams : List (VarName × Shape) := [("x", .one), ("y", .one)]
+
+example : panToCrepMakeVmapHOL bridgeParams =
+    (ctxtFc (FEMPTY : FiniteMap FunName (List (VarName × Shape) × Shape))
+      (FEMPTY : FiniteMap ExceptionId Nat) (bridgeParams.map Prod.fst)
+      (bridgeParams.map Prod.snd) (panToCrepVars bridgeParams)).vars :=
+  panToCrepMakeVmapHOL_eq_ctxtFcVars bridgeParams _ _
+
+def vmapCtxtFCGuard : Bool :=
+  match FLOOKUP (panToCrepMakeVmapHOL bridgeParams) "x",
+        FLOOKUP (panToCrepMakeVmapHOL bridgeParams) "y" with
+  | some (Shape.one, [0]), some (Shape.one, [1]) => true
+  | _, _ => false
+
+#eval vmapCtxtFCGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -272,7 +290,8 @@ def runChecks : IO Bool := do
     ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard),
     ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard),
     ("HOL make_funcs_def parameter table", makeFuncsGuard),
-    ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard)]
+    ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard),
+    ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

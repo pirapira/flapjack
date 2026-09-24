@@ -1,0 +1,7 @@
+vmap_x=T
+vmap_y=T
+vmap_absent=T
+ns_offsets=T
+ctxt_x=T
+ctxt_y=T
+vmap_eq_ctxt=T

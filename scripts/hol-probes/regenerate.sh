@@ -714,6 +714,13 @@ run_probe crep_eval_load_byte_probeScript.sml crep_eval_load_byte_probe.out \
   eval_loadbyte_addr8 mem_load_byte_addr9 \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval Load32 probe observes the fixed RV64 aligned four-byte read:
+# little-endian and big-endian byte order, alignment failure, and the memaddrs
+# domain failure over a total word -> word_lab memory.
+run_probe crep_eval_load_32_probeScript.sml crep_eval_load_32_probe.out \
+  eval_load32_le_addr8 eval_load32_be_addr8 \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

@@ -542,6 +542,35 @@ theorem evalCrepRuntimeExpWordLab_op_rv64_const
     riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp,
     wordOpHOL, Function.comp_def, hmapM]
 
+/-! ## The RV64 `Cmp` evaluator case
+
+HOL `crepSem$eval` evaluates `Cmp op e1 e2` by evaluating both operands and then
+applying `word_cmp` (`cakeml/pancake/semantics/crepSemScript.sml:90-137` and
+`cakeml/compiler/encoders/asm/asmScript.sml:83`).  For constant operands the
+production RV64 evaluator returns exactly the fixed target comparison
+`RiscV.panRiscVCmp`; the remaining link from that primitive to HOL `word_cmp` is
+the existing untagged `panRiscVCmp_eq_evalPanCmp` bridge, so no `@[hol]` tag is
+attached yet.  Direct oracle `scripts/hol-probes/crep_eval_cmp_rv64_probe.out`
+(`eval_cmp_equal_true=SOME (Word (v2w [T]))`, `eval_cmp_equal_false=SOME (Word (v2w [F]))`,
+`eval_cmp_lower_true=SOME (Word (v2w [T]))`, `eval_cmp_test_zero=SOME (Word (v2w [F]))`,
+`eval_cmp_test_disjoint=SOME (Word (v2w [T]))`). -/
+theorem evalCrepRuntimeExp_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (RiscV.panRiscVCmp operator left right) := by
+  simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
+theorem evalCrepRuntimeExpWordLab_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (.word (RiscV.panRiscVCmp operator left right)) := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
 /-! ## External-call byte-array reads
 
 HOL `crepSem$ExtCall` (and `panSem`) read the configuration and array arguments
@@ -1762,5 +1791,116 @@ theorem evalCrepRuntimeExpWordLab_load_rv64_const
         PanWordLab.word := by
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeLoad_rv64_eq_holMemLoad64]
+
+/-! ## The RV64 `Shift` evaluator case
+
+HOL `crepSem$eval` evaluates `Shift sh e1 e2` by evaluating both operands and
+then applying `word_sh sh w1 (w2n w2)` (`cakeml/pancake/semantics/crepSemScript.sml:131-133`).
+`word_sh` (`cakeml/compiler/backend/wordLangScript.sml:313-321`) rejects an
+amount that is nonzero and at least the word width, keeps amount zero, and
+selects `Lsl`/`Lsr`/`Asr`/`Ror`.  The constant-operand case below is exactly
+that primitive over the RV64 target.  Declaration notes: Flapjack-specific
+bridge, intentionally untagged while the arbitrary runtime `memoryModel` hook
+is only definitionally the fixed HOL primitive at this instantiation. -/
+
+/-- The RV64 instance of HOL `word_sh`: amount zero is valid, a nonzero amount
+at least the word width is invalid. -/
+def holWordShift64 (operator : Shift) (value : RiscV.Word 64) (amount : Nat) :
+    Option (RiscV.Word 64) :=
+  if amount ≠ 0 ∧ 64 ≤ amount then none
+  else
+    match operator with
+    | .lsl => some (value <<< amount)
+    | .lsr => some (value >>> amount)
+    | .asr => some (BitVec.sshiftRight value amount)
+    | .ror => some (BitVec.rotateRight value amount)
+
+theorem panRiscVShift_eight_eq_holWordShift64
+    (operator : Shift) (left right : RiscV.Word 64) :
+    RiscV.panRiscVShift operator left right =
+      holWordShift64 operator left right.toNat := by
+  unfold RiscV.panRiscVShift holWordShift64
+  by_cases h : right.toNat < 64
+  · have hnot : ¬ (right.toNat ≠ 0 ∧ 64 ≤ right.toNat) := by omega
+    simp only [h, if_true, hnot, if_false]
+    rfl
+  · have hge : 64 ≤ right.toNat := by omega
+    have hnz : right.toNat ≠ 0 := by omega
+    simp [h, hnz, hge]
+
+theorem crepRuntimeShift_rv64_eq_holWordShift64
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    (riscv64CrepRuntimeTarget base).memoryModel.shift operator left right =
+      holWordShift64 operator left right.toNat := by
+  change RiscV.panRiscVShift operator left right =
+    holWordShift64 operator left right.toNat
+  exact panRiscVShift_eight_eq_holWordShift64 operator left right
+
+/-- Evaluator case: the production `Shift` over two constant operands at the
+RV64 target is HOL `word_sh`. -/
+theorem evalCrepRuntimeExp_shift_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.shift operator (.const left) (.const right)) =
+      holWordShift64 operator left right.toNat := by
+  simp [evalCrepRuntimeExp, crepRuntimeShift_rv64_eq_holWordShift64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Shift` over two
+constant operands at the RV64 target is HOL `word_sh` wrapped in
+`PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_shift_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.shift operator (.const left) (.const right)) =
+      (holWordShift64 operator left right.toNat).map PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeShift_rv64_eq_holWordShift64]
+
+/-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
+two word operands yields their product, any other arity is a failure. -/
+def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
+  match values with
+  | [left, right] => some (left * right)
+  | _ => none
+
+/-- Evaluator case: the production `Crepop Mul` over constant operands at the
+RV64 target is HOL `crep_op`. -/
+theorem evalCrepRuntimeExp_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      holCrepOpMul64 args := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExp, holCrepOpMul64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Crepop Mul` over
+constant operands at the RV64 target is HOL `crep_op` wrapped in
+`PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      (holCrepOpMul64 args).map PanWordLab.word := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
 
 end Flapjack

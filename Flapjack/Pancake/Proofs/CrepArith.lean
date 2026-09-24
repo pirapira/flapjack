@@ -966,6 +966,38 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
     (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
     expression constant value rfl hShift h
 
+/-- Production-evaluator `eval_mul_const` support over every explicit
+    finite-index word carrier, stated with HOL's complete
+    `Option (word_lab word)` result shape. This uses the source-shaped runtime
+    adapter and the production `evalCrepRuntimeExp`; it remains untagged until
+    that adapter's word primitives are formally identified with HOL's
+    polymorphic `crepSem$eval` definitions. -/
+theorem crepEvalMulConstHolFiniteWordSourceRuntimeLab {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool)) (constant value : ι → Bool)
+    (h : (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression).map
+        PanWordLab.word = some (.word value)) :
+    (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension)
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression constant)).map
+        PanWordLab.word = some (.word (value * constant)) := by
+  have wordInjective : Function.Injective
+      (PanWordLab.word : (ι → Bool) → PanWordLab (ι → Bool)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hRaw : evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression = some value := by
+    apply Option.map_injective wordInjective
+    simpa using h
+  have hPreserved := crepEvalMulConstHolFiniteWordSource dimension state
+    expression constant value hRaw
+  exact congrArg (Option.map PanWordLab.word) hPreserved
+
 /-- Finite-dimension source-evaluator form of HOL `eval_mul_const`. It has
     the source evaluator's complete `Option (word_lab word)` premise and
     conclusion, and is proved by the production evaluator bridge above. It
@@ -989,23 +1021,28 @@ theorem crepEvalMulConstHolFiniteWordSourceEval {ι : Type} {σ : Type}
     intro left right hEq
     cases hEq
     rfl
-  have hRaw : evalCrepHolFiniteWordSourceExp dimension state expression =
-      some value := by
-    apply Option.map_injective wordInjective
-    simpa using h
-  have hRuntime : evalCrepRuntimeExp
-      (state.toHolFiniteWordSourceRuntime dimension) expression = some value := by
+  have hRuntimeWrapped : (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression).map
+        PanWordLab.word = some (.word value) := by
     rw [evalCrepRuntimeExp_sourceWord_eq dimension]
-    exact hRaw
-  have hResult := crepEvalMulConstHolFiniteWordSource dimension state
-    expression constant value hRuntime
+    exact h
+  have hResult := crepEvalMulConstHolFiniteWordSourceRuntimeLab
+    dimension state expression constant value hRuntimeWrapped
+  have hResultRaw : evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension)
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression constant) =
+      some (value * constant) := by
+    apply Option.map_injective wordInjective
+    simpa using hResult
   have hSourceResult : evalCrepHolFiniteWordSourceExp dimension state
       (crepMulConst
         (fun n => bitVecToHolWord dimension
           (BitVec.ofNat dimension.width n)) expression constant) =
       some (value * constant) := by
     rw [← evalCrepRuntimeExp_sourceWord_eq dimension state]
-    exact hResult
+    exact hResultRaw
   simpa using congrArg (Option.map PanWordLab.word) hSourceResult
 
 /-- Flapjack support for HOL `eval_mul_const`, deliberately untagged. HOL's
@@ -1912,6 +1949,14 @@ theorem crepArithHolFiniteDimensionSourceMapCode_runtime {ι : Type}
   cases state
   rfl
 
+/-- All-dimension production-evaluator support for HOL
+    `simp_exp_correct1`. The hypothesis states successful evaluation, `f`
+    updates only the source state's code map, and the conclusion preserves the
+    full optional `word_lab` result. `HolFiniteDimension` is explicit Lean
+    evidence for a finite index carrier, with `decode` serving as its
+    `finite_index` map. This remains untagged because no theorem yet identifies
+    that adapter and its operation instances with HOL's native implicit
+    `dimindex`/`finite_index` interpretation of `crepSem$eval`. -/
 theorem crepSimpExpCorrect1HolFiniteWordSource {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

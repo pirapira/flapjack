@@ -1,0 +1,6 @@
+eval_shift_lsl_const=SOME (Word 8w)
+eval_shift_lsr_const=SOME (Word 4w)
+eval_shift_asr_const=SOME (Word 0xF800000000000000w)
+eval_shift_ror_const=SOME (Word 0x8000000000000000w)
+eval_shift_amount_zero=SOME (Word 7w)
+eval_shift_amount_width=NONE

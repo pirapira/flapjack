@@ -395,6 +395,31 @@ theorem wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
     exact heq.symm
   simpa [hleft', hright'] using hneq.symm
 
+/-! Local checker bridge for one write's live-after conflict row. The generated
+    edge list directly connects the destination with each surviving live name,
+    so callers no longer provide a separate edge-coverage premise. This is an
+    executable list encoding of the relevant `colouring_ok` injectivity
+    obligation, not a port of HOL's recursive `colouring_ok` or
+    `evaluate_apply_colour`. -/
+def wordSingleWriteClashEdges (destination : Nat) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  liveAfter.map (fun current => (destination, current))
+
+theorem wordColouringRespectsClashes_singleWrite_map_noAlias
+    (destination : Nat) (liveAfter : List Nat) (colour : Nat → Nat)
+    (colouring : NatInfoMap Nat)
+    (hchecked : wordColouringRespectsClashes
+      (wordSingleWriteClashEdges destination liveAfter) colouring = true)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  apply wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    colouring destination liveAfter (wordSingleWriteClashEdges destination liveAfter)
+    colour hchecked (fun name hname _ => by
+      simp [wordSingleWriteClashEdges, hname]) hlookup current hcurrent hdifferent
+
 theorem evalWordProg_assignVar_applyColour_liveClashes
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (colourZero : colour 0 = 0)
@@ -474,6 +499,52 @@ theorem evalWordProg_assignConst_applyColour
     injective colourZero {source with pc := nextPc source}
     {target with pc := nextPc target} hnext name hname
     (readRegister source 0 + value) (readRegister target 0 + value) hvalue
+  exact ⟨_, _, hsourceEval, htargetEval, by
+    simpa [execute, colourZero] using hstate⟩
+
+/-! Live-scoped Const assignment support for the HOL colouring simulation.
+    It avoids global colour injectivity: only the destination versus names
+    remaining live after the write must not clash. The explicit equality of
+    source/target register zero is a Lean `State` invariant absent from the HOL
+    `word_state_eq_rel` statement as represented here; this remains untagged
+    support, not an exact `evaluate_apply_colour` port. -/
+theorem evalWordProg_assignConst_applyColour_live
+    [NeZero width]
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) (liveAfter : List Nat)
+    (hrelation : WordColourStateRelationOn colour liveAfter source target)
+    (hzero : readRegister source 0 = readRegister target 0)
+    (name : Nat) (value : Word width) (hname : name < 32)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ liveAfter → current ≠ name →
+      colour current ≠ colour name) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.const value)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.const value))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  have hnext := wordColourStateRelationOn_nextPc colour liveAfter source target hrelation
+  have hvalue :
+      readRegister source 0 + value = readRegister target 0 + value := by
+    rw [hzero]
+  have hsourceEval :
+      evalWordProg source (.assign name (.const value)) =
+        some (execute source (.addi ⟨name, hname⟩ 0 value)) := by
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hname, executeInstructions]
+  have htargetEval :
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.const value))) =
+          some (execute target (.addi ⟨colour name, valid name hname⟩ 0 value)) := by
+    simp [wordApplyColour, wordApplyColourExp, evalWordProg,
+      wordExpToInstructions, wordExpToInstruction, registerOfNat,
+      valid name hname, executeInstructions]
+  have hstate := wordColourStateRelationOn_writeRegister colour valid
+    colourZero {source with pc := nextPc source}
+    {target with pc := nextPc target} liveAfter hnext name hname
+    hcolourNonzero hnoAlias (readRegister source 0 + value)
+    (readRegister target 0 + value) hvalue
   exact ⟨_, _, hsourceEval, htargetEval, by
     simpa [execute, colourZero] using hstate⟩
 

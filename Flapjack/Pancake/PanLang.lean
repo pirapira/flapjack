@@ -1119,24 +1119,6 @@ theorem getElem_eq_of_lookup_eq [BEq α] [LawfulBEq α] {entries : List (α × �
   subst hnm
   exact hmval
 
-/-- Counterpart of Cake's `MEM_MAP2_IMP`
-    (`cakeml/pancake/proofs/crep_inlineProofScript.sml:2233`): every element of
-    a pointwise map comes from elements of both input lists. -/
-theorem panMap2_mem {α β γ : Type} {f : α → β → γ} {l1 : List α} {l2 : List β}
-    {x : γ} (hmem : x ∈ panMap2 f l1 l2) :
-    ∃ y1 y2, x = f y1 y2 ∧ y1 ∈ l1 ∧ y2 ∈ l2 := by
-  induction l1 generalizing l2 with
-  | nil => simp [panMap2] at hmem
-  | cons a as ih =>
-      cases l2 with
-      | nil => simp [panMap2] at hmem
-      | cons b bs =>
-          simp only [panMap2, List.mem_cons] at hmem
-          rcases hmem with heq | hmem
-          · exact ⟨a, b, heq, by simp, by simp⟩
-          · obtain ⟨y1, y2, heq, h1, h2⟩ := ih hmem
-            exact ⟨y1, y2, heq, by simp [h1], by simp [h2]⟩
-
 /-- Cake's `map_map2_fst_lemma`
     (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:118`): the first
     components of a pointwise pairing are the prefix of the first list cut at

@@ -794,7 +794,7 @@ mutual
                 | .normal calleeLocals calleeGlobals calleeMemory calleeFfi =>
                     some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
                       argumentSteps + steps)
-                | .returned _ calleeGlobals calleeMemory calleeFfi values =>
+                | .returned retLocals calleeGlobals calleeMemory calleeFfi values =>
                     if panValueReturnValid structs contracts function values &&
                         panValueValuesWithinLimit structs values then
                       match info with
@@ -806,7 +806,7 @@ mutual
                             (structs := structs)
                           pure (.normal locals globals calleeMemory calleeFfi,
                             argumentSteps + steps)
-                    else some (.error calleeLocals calleeGlobals calleeMemory calleeFfi,
+                    else some (.error retLocals calleeGlobals calleeMemory calleeFfi,
                       argumentSteps + steps)
                 | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
                     if panValueExceptionValid structs contracts exception value &&

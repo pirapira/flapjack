@@ -284,6 +284,14 @@ decreasing_by
   rw [hone]
   omega
 
+/-- Internal freshness support for `globalNewMainName`; the proof-script
+    theorem `fresh_name_correct` is tracked separately from this helper. -/
+theorem freshNameHOL_not_mem (name : String) (names : List String) :
+    freshNameHOL name names ∉ names := by
+  fun_induction freshNameHOL name names with
+  | case1 name names ih => exact ih
+  | case2 name names => assumption
+
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
   | .named _ => .const (context.fromNat 0)
@@ -791,16 +799,16 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
     the synthesized entry-point name is `fresh_name "main"` over the current
     function names (`globalFunctionNames` is `MAP FST` of the function table). -/
 @[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"]
-def globalNewMainName [LawfulBEq String] (declarations : List (Decl α)) : FunName :=
-  globalFreshName "main" (globalFunctionNames declarations)
+def globalNewMainName (declarations : List (Decl α)) : FunName :=
+  freshNameHOL "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `new_main_name_correct`
     (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
     is never one of the program's existing function names. -/
-theorem globalNewMainName_not_mem [LawfulBEq String]
+theorem globalNewMainName_not_mem
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
-  globalFreshName_not_mem "main" (globalFunctionNames declarations)
+  freshNameHOL_not_mem "main" (globalFunctionNames declarations)
 
 /-! Counterpart of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
@@ -1346,7 +1354,7 @@ structure GlobalCompileDecsResult (α : Type u) where
     operations, it accepts arbitrary `bytesInWord`/`fromNat` context fields,
     `[Add α]`/`[Mul α]`, and potentially non-lawful `[BEq String]`.
     Bead `flapjack-pxn.18.5.2.20.1.1` tracks the canonical-word-context port;
-    production `globalCompileDecs` above remains separate until `.20.2`. -/
+    production `globalCompileDecs` now calls this threaded implementation. -/
 def globalCompileDecsThreaded [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → GlobalCompileDecsResult α
   | [] => { initializers := [], functions := [], exceptions := [], context := context }
@@ -1693,8 +1701,9 @@ termination_by shape => sizeOf shape
     canonical HOL-shaped `CakeContext`: the association-list `globals` become a
 finite-map lookup through `lookupInfo`, keeping the size fields.  This is
     the production-to-canonical direction of the adapter required by
-    `flapjack-pxn.18.5.2.20.2`. The complete equivalence between the executed
-    RISC-V path and tagged `compileDecsCake` remains to be proved. -/
+    `flapjack-pxn.18.5.2.20.2`. The fixed-width executed path calls tagged
+    `compileDecsCake`; equality of the context field's data representation
+    remains to be proved. -/
 def cakeContextOfPass [BEq String] {width : Nat}
     (context : GlobalPassContext (BitVec width)) : CakeContext width :=
   { globals := fun key => lookupInfo key context.globals

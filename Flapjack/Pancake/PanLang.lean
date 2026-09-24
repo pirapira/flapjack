@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 
 /-!
 The core Flapjack syntax.
@@ -571,11 +572,6 @@ theorem mem_compField_imp_mem_of_any (index : Nat) (shapes : List Shape)
           simp only [compField, Nat.succ_ne_zero, if_false] at hmem
           exact List.mem_of_mem_drop
             (ih k (values.drop (Shape.shapeSize shape)) hmem)
-
-/-- Cake's `DISJOINT (set left) (set right)` predicate, stated directly on
-    lists because `List` membership already expresses the element relation. -/
-def ListDisjoint (left right : List α) : Prop :=
-  ∀ value, value ∈ left → value ∈ right → False
 
 /-! Counterpart of Cake's `all_distinct_take`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:384`). -/

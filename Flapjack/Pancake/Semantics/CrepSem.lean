@@ -138,7 +138,7 @@ def crepHolEvalMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
     match state.memory alignedAddress with
     | .word value =>
         if state.memaddrs alignedAddress then
-          some (model.wordOfBytes state.bigEndian
+          some (model.wordOfBytes32 state.bigEndian
             [model.getByte bytesInWord address value state.bigEndian,
              model.getByte bytesInWord (address + 1) value state.bigEndian,
              model.getByte bytesInWord (address + 2) value state.bigEndian,
@@ -215,6 +215,27 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
+
+/-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
+    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`
+    rendered as `FDOMSUB` and `|+` as `FUPDATE`.  Lives in the crepSem counterpart module
+    because it is the HOL `crepSem` `res_var` used by the `Dec` restore; the generic
+    `FDOMSUB` stays in `Flapjack.FiniteMap.Basic`.  `[LawfulBEq α]` ties the Boolean key
+    equality used by the representation (`key == k`) to HOL's propositional equality. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
+def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB f entry.1
+  | some v => FUPDATE f (entry.1, v)
+
+/-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
+    over the 11-field `CrepHolState`:
+    `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.
+    This is the word load used by the `Load` clause of `evaluate`; the result is
+    the total `word_lab` cell, exactly as in HOL. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+def memLoadCrepHol (address : α) (state : CrepHolState α σ) : Option (PanWordLab α) :=
+  if state.memaddrs address then some (state.memory address) else none
 
 /-- Forget the three target-configuration fields of the executable runtime
     state, obtaining the 11-field HOL-shaped state. -/
@@ -415,6 +436,28 @@ def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
         | none => none
       else none
 
+/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
+    over the finite map: look the function up, require the declared parameter
+    list to have the argument count and be duplicate-free, and return the body
+    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+
+    The HOL source quantifies `args : 'a word_lab list`; the executable
+    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
+    with `PanWordLab.word`, and checks distinctness with
+    `eraseDups.length = length` rather than `ALL_DISTINCT`.  This declaration
+    is the exact HOL-shaped operation; routing the executed path through it is
+    tracked separately (the two distinctness checks agree under `LawfulBEq`). -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) :
+    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
+  match FLOOKUP code fname with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length = args.length ∧ parameters.Nodup
+      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
+      else none
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration array : List UInt8)
@@ -499,6 +542,14 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memaddrs address then some (panTheWord (state.memory address)) else none
 
+/-- The executed runtime word load is the tagged HOL `mem_load` on the
+    `toHolState` view, with the `word_lab` cell projected by `panTheWord`. -/
+theorem crepRuntimeLoad_eq_memLoadCrepHol (state : CrepRuntimeState α σ) (address : α) :
+    crepRuntimeLoad state address =
+      (memLoadCrepHol address state.toHolState).map panTheWord := by
+  by_cases h : state.memaddrs address <;>
+    simp [crepRuntimeLoad, memLoadCrepHol, CrepRuntimeState.toHolState, h]
+
 def crepRuntimeLoadByte [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=
   let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
@@ -513,7 +564,7 @@ def crepRuntimeLoad32 [Add α] [OfNat α 1]
     let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
     if state.memaddrs alignedAddress then
       let value := panTheWord (state.memory alignedAddress)
-      pure (state.memoryModel.wordOfBytes state.bigEndian
+      pure (state.memoryModel.wordOfBytes32 state.bigEndian
         [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
          state.memoryModel.getByte state.bytesInWord (address + 1 + 1) value state.bigEndian,
@@ -1229,7 +1280,27 @@ theorem evalCrepRuntimeExps_wordLab_projection
 def restoreCrepRuntimeStep (name : Nat) (oldValue : Option (PanWordLab α)) :
     CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
   | (result, state) =>
-      (result, { state with locals := fun candidate => if name == candidate then oldValue else state.locals candidate })
+      (result, { state with locals := resVar state.locals (name, oldValue) })
+
+/-- Pointwise form of the tagged HOL `res_var` update used by the production
+    `restoreCrepRuntimeStep`: restoring a variable is an `|+`/`\\` update. -/
+@[simp] theorem resVar_locals_apply [BEq α] [LawfulBEq α] (name : Nat)
+    (oldValue : Option (PanWordLab α)) (locals : Nat → Option (PanWordLab α)) :
+    resVar locals (name, oldValue) =
+      fun candidate => if name == candidate then oldValue else locals candidate := by
+  cases oldValue with
+  | none =>
+      funext candidate
+      simp only [resVar, FDOMSUB]
+  | some v =>
+      funext candidate
+      simp only [resVar, FUPDATE]
+
+/-- The production Dec restore is the tagged HOL `res_var` update. -/
+theorem restoreCrepRuntimeStep_eq_resVar (name : Nat) (oldValue : Option (PanWordLab α))
+    (result : CrepRuntimeResult α ε) (state : CrepRuntimeState α σ) :
+    restoreCrepRuntimeStep name oldValue (result, state) =
+      (result, { state with locals := resVar state.locals (name, oldValue) }) := rfl
 
 def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     CrepRuntimeState α σ :=

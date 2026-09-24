@@ -152,6 +152,66 @@ inductive Exp (α : Type u) where
   | bytesInWord
   deriving Repr
 
+/-- Width-indexed production expression datatype: the faithful analogue of
+    HOL `panLangScript.sml` `exp` (indexed by the word length `'a`, with
+    `Const ('a word)`). It keeps the same 16 constructors and field types as
+    `Exp`; only `const` is fixed to `BitVec width`. This is the migration
+    target adopted incrementally by the executable compiler front (the
+    production `Exp (BitVec width)` instantiation is converted by `toExp`).
+    Not tagged: `@[hol ... "exp"]` is added only once the executed compiler
+    path uses this width-indexed datatype. -/
+inductive ExpW (width : Nat) where
+  | const (value : BitVec width)
+  | var (kind : VarKind) (name : VarName)
+  | rStruct (fields : List (ExpW width))
+  | rField (index : Nat) (value : ExpW width)
+  | nStruct (name : StructName) (fields : List (FieldName × ExpW width))
+  | nField (name : FieldName) (value : ExpW width)
+  | load (shape : Shape) (address : ExpW width)
+  | load32 (address : ExpW width)
+  | loadByte (address : ExpW width)
+  | op (operator : BinOp) (args : List (ExpW width))
+  | panOp (operator : PanOp) (args : List (ExpW width))
+  | cmp (operator : Cmp) (left right : ExpW width)
+  | shift (operator : Shift) (left right : ExpW width)
+  | baseAddr
+  | topAddr
+  | bytesInWord
+  deriving Repr
+
+namespace ExpW
+
+mutual
+  /-- Executable view of the width-indexed expression as the generic production
+      `Exp` at `BitVec width`. -/
+  def toExp : ExpW width → Exp (BitVec width)
+    | .const value => .const value
+    | .var kind name => .var kind name
+    | .rStruct fields => .rStruct (toExpList fields)
+    | .rField index value => .rField index (toExp value)
+    | .nStruct name fields => .nStruct name (toExpFields fields)
+    | .nField name value => .nField name (toExp value)
+    | .load shape address => .load shape (toExp address)
+    | .load32 address => .load32 (toExp address)
+    | .loadByte address => .loadByte (toExp address)
+    | .op operator args => .op operator (toExpList args)
+    | .panOp operator args => .panOp operator (toExpList args)
+    | .cmp operator left right => .cmp operator (toExp left) (toExp right)
+    | .shift operator left right => .shift operator (toExp left) (toExp right)
+    | .baseAddr => .baseAddr
+    | .topAddr => .topAddr
+    | .bytesInWord => .bytesInWord
+  def toExpList : List (ExpW width) → List (Exp (BitVec width))
+    | [] => []
+    | expression :: expressions => toExp expression :: toExpList expressions
+  def toExpFields :
+      List (FieldName × ExpW width) → List (FieldName × Exp (BitVec width))
+    | [] => []
+    | field :: fields => (field.1, toExp field.2) :: toExpFields fields
+end
+
+end ExpW
+
 inductive OpSize where
   | op8
   | opW

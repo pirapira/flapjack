@@ -530,6 +530,49 @@ def shiftMatchesGuard : Bool :=
 #guard shiftMatchesGuard
 #eval shiftMatchesGuard
 
+/-- A memory model whose `wordOp` hook is literally HOL `word_op` at 64 bits,
+    but which is otherwise not the RISC-V target model. -/
+def holOpModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with wordOp := fun operator values => wordOpHOL operator values }
+
+def holOpBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memoryModel := holOpModel }
+
+theorem holOpBaseState_matches :
+    CrepMemoryModelOpMatchesHOL64 holOpBaseState.memoryModel :=
+  fun _ _ => rfl
+
+example : CrepMemoryModelOpMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_op_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holOpBaseState
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) =
+      wordOpHOL .add [3, 4] :=
+  evalCrepRuntimeExp_op_const_of_matches holOpBaseState holOpBaseState_matches .add [3, 4]
+
+/-- The production evaluator over an arbitrary matching model agrees with HOL
+    `word_op` on valid operations and rejects an out-of-range arity. -/
+def opMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holOpBaseState
+      (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+    some (7 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holOpBaseState
+        (.op .and ([(0xF0 : RiscV.Word 64), 0x3C].map CrepExp.const)) ==
+      some (0x30 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holOpBaseState
+        (.op .sub ([(7 : RiscV.Word 64)].map CrepExp.const)) ==
+      none) &&
+    (evalCrepRuntimeExpWordLab holOpBaseState
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+      some (.word (7 : RiscV.Word 64))) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holOpBaseState)
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+      some (7 : RiscV.Word 64))
+
+#guard opMatchesGuard
+#eval opMatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -571,8 +614,12 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Shift hook matches HOL word_sh over arbitrary model"
   else
     IO.println "FAIL crep Shift hook matches HOL word_sh over arbitrary model"
+  if opMatchesGuard then
+    IO.println "PASS crep Op hook matches HOL word_op over arbitrary model"
+  else
+    IO.println "FAIL crep Op hook matches HOL word_op over arbitrary model"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
-    crepOpEvalGuard && corrGuard && shiftMatchesGuard)
+    crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

@@ -2018,6 +2018,63 @@ theorem evalCrepRuntimeExpWordLab_shift_const_of_matches
       (holWordShift64 operator left right.toNat).map PanWordLab.word := by
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, hmodel operator left right]
 
+/-- Exact condition under which the production `Op` hook coincides with HOL's
+fixed `word_op` at 64 bits.  `panRiscVWordOp_eq_wordOpHOL` is the
+`riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need not
+satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelOpMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : BinOp) (values : List (RiscV.Word 64)),
+    model.wordOp operator values = wordOpHOL operator values
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelOpMatchesHOL64` computes `Op` as HOL `word_op`. -/
+theorem crepMemoryModelOp_eq_wordOpHOL_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelOpMatchesHOL64 model)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    model.wordOp operator values = wordOpHOL operator values :=
+  hmodel operator values
+
+/-- The RV64 target's memory model satisfies the `Op`/HOL-`word_op` predicate. -/
+theorem riscv64CrepRuntimeTarget_op_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelOpMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator values => panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- Exact production/source relation for `Op` over constant operands: for
+*any* memory model matching HOL `word_op`, the production evaluator agrees with
+the HOL primitive, without assuming the model is the RISC-V one. -/
+theorem evalCrepRuntimeExp_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.op operator (values.map CrepExp.const)) =
+      wordOpHOL operator values := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  simp only [evalCrepRuntimeExp]
+  rw [hmapConst]
+  exact hmodel operator values
+
+/-- Word_lab version of `evalCrepRuntimeExp_op_const_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.op operator (values.map CrepExp.const)) =
+      (wordOpHOL operator values).map PanWordLab.word := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  simp only [evalCrepRuntimeExpWordLab]
+  rw [hmapConst]
+  exact congrArg (Option.map PanWordLab.word) (hmodel operator values)
+
 /-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
 two word operands yields their product, any other arity is a failure. -/
 def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=

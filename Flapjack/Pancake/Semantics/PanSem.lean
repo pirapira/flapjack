@@ -1303,6 +1303,10 @@ theorem panSemEvaluateExactState_call_error_of_callee_continued
     (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
     harguments hlookup hbind hparameters hclock hbody
 
+/-- Exact-state Flapjack Call equation for a callee Error: the final memory,
+    globals, FFI state, and clock survive while locals are cleared. Untagged
+    because Lean's structured result is not HOL's literal `result option ×
+    state` pair. -/
 theorem panSemEvaluateExactState_call_error_of_callee_error
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -1,0 +1,5 @@
+mem_rel_match=T
+mem_rel_wrong=F
+mem_rel_out_of_domain=T
+mem_rel_dom_present=T
+mem_rel_dom_absent=F

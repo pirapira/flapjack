@@ -8915,6 +8915,24 @@ recursive target callee IH supplies the related post-state and state-owned
 global words used by the actual finite-map `exp_hdl`. The handler IH supplies
 the final post-state relations; recursive simulations remain premises, so
 this is not the full HOL `pc_compile_correct[Call_Ret_Exception]` theorem. -/
+mutual
+private theorem panShapeMatches_self_forSourceCall :
+    ∀ shape, panShapeMatches shape shape = true
+  | .one => by simp [panShapeMatches]
+  | .named _ => by simp [panShapeMatches]
+  | .comb shapes => by
+      simp only [panShapeMatches]
+      exact panShapeListMatches_self_forSourceCall shapes
+
+private theorem panShapeListMatches_self_forSourceCall :
+    ∀ shapes, panShapeMatches.panShapeListMatches shapes shapes = true
+  | [] => by simp [panShapeMatches.panShapeListMatches]
+  | shape :: shapes => by
+      simp [panShapeMatches.panShapeListMatches,
+        panShapeMatches_self_forSourceCall shape,
+        panShapeListMatches_self_forSourceCall shapes]
+end
+
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
@@ -8957,8 +8975,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         function expressions) = fuel + 2)
     (hsourceExceptionValid : panValueExceptionValid source.structs none
       sourceException payload = true)
-    (hsourceExceptionShapeMatches : panShapeMatches
-      (panValueShape source.structs payload) shape = true)
     (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
     (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
       (fun _ => none) .local handlerVariable payload = true)
@@ -9112,6 +9128,11 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       with clock := min (decPanClock source.clock) calleeClock }
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
+  have hsourceStructs := stateRel_structs source caller hinitialState
+  have hsourceShapeMatch : panShapeMatches
+      (panValueShape source.structs payload) shape = true := by
+    rw [hsourceStructs, hpayloadShape]
+    exact panShapeMatches_self_forSourceCall shape
   have hsourceClock : source.clock ≠ 0 := by
     rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
     intro hzero
@@ -9122,7 +9143,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     handlerVariable expressions arguments returnShape sourceBody sourceCalleeLocals
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi payload calleeClock
     handlerProgram sourceResult hsourceFuel hsourceArgs hsourceCall hsourceClock
-    hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceExceptionShapeMatches⟩
+    hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceShapeMatch⟩
     hsourceExceptionValid hsourcePayloadWithinLimit hsourceHandlerAssignment
     hsourceHandlerContract hsourceHandlerBody
   have hsourceCallRun := hsourceRun.1

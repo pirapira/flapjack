@@ -82,7 +82,7 @@ inductive Prog (Inst Cmp RegImm Binop Memop Addr MlString : Type) where
   | halt (register : Nat)
   deriving Repr
 
-/-- Exact port of HOL `list_Seq_def`
+/-- Untagged structural analogue of HOL `list_Seq_def`
     (`cakeml/compiler/backend/stackLangScript.sml:86`):
 
 ```
@@ -97,9 +97,9 @@ inductive Prog (Inst Cmp RegImm Binop Memop Addr MlString : Type) where
     touches only the word-independent `Skip`/`Seq` constructors, whose fields are
     the program itself; the Lean definition is correspondingly polymorphic in the
     carrier's type parameters (`Inst`/`Cmp`/`RegImm`/`Binop`/`Memop`/`Addr`/
-    `MlString`) and uses none of them.  The word-indexed constructors
-    (`inst`/`ite`/`shMemOp`) are not involved. -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "list_Seq_def"]
+    `MlString`) and uses none of them. HOL's `prog` has one shared word type,
+    whereas this carrier admits seven independent types; the exact tagged
+    statement awaits the width-indexed `prog` carrier. -/
 def listSeq {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     List (Prog Inst Cmp RegImm Binop Memop Addr MlString) →
       Prog Inst Cmp RegImm Binop Memop Addr MlString

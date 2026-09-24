@@ -18,11 +18,17 @@ word_of_bytes_definition=(∀be a. word_of_bytes be a [] = 0w) ∧
   word_of_bytes be a (b::bs) = set_byte a b (word_of_bytes be (a + 1w) bs) be
 word_of_bytes_width17_little=word_of_bytes F 0w [17w; 50w; 17w; 50w] =
 set_byte 0w 17w
-  (set_byte (0w + 1w) 50w
-     (set_byte (0w + 1w + 1w) 17w (set_byte (0w + 1w + 1w + 1w) 50w 0w F) F)
-     F) F
+  (set_byte 1w 50w (set_byte 2w 17w (set_byte 3w 50w 0w F) F) F) F
 word_of_bytes_width17_big=word_of_bytes T 0w [50w; 17w; 50w; 17w] =
 set_byte 0w 50w
-  (set_byte (0w + 1w) 17w
-     (set_byte (0w + 1w + 1w) 50w (set_byte (0w + 1w + 1w + 1w) 17w 0w T) T)
-     T) T
+  (set_byte 1w 17w (set_byte 2w 50w (set_byte 3w 17w 0w T) T) T) T
+word_of_bytes_width17_little_numeric=bit_field_insert (byte_index 0w F + 7) (byte_index 0w F) 17w
+  (bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 50w
+     (bit_field_insert (byte_index 2w F + 7) (byte_index 2w F) 17w
+        (bit_field_insert (byte_index 3w F + 7) (byte_index 3w F) 50w 0w))) =
+12817w
+word_of_bytes_width17_big_numeric=bit_field_insert (byte_index 0w T + 7) (byte_index 0w T) 50w
+  (bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 17w
+     (bit_field_insert (byte_index 2w T + 7) (byte_index 2w T) 50w
+        (bit_field_insert (byte_index 3w T + 7) (byte_index 3w T) 17w 0w))) =
+12817w

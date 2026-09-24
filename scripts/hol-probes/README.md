@@ -172,6 +172,9 @@ dimensions.
 `src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
 depend on built CakeML Pancake theories. Refresh it with
 `HOL_PROBE_ONLY=word_byte_memory_probeScript.sml scripts/hol-probes/regenerate.sh`.
+The width-17 rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
+by HOL evaluation; the little- and big-endian fixtures both reduce to `12817w`
+(`0x3211w`) for the corresponding byte orders.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

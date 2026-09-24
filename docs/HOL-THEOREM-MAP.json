@@ -8494,5 +8494,13 @@
     "lean_name": "findLabHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
-  }
+  },
+{
+  "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+  "hol_name": "word_list_def",
+  "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+  "lean_name": "wordListW",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

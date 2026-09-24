@@ -40,4 +40,32 @@ def bitsToWordW {width : Nat} [NeZero width] : List Bool → BitVec width
   | true :: bits => (bitsToWordW bits) <<< 1 ||| 1
   | false :: bits => (bitsToWordW bits) <<< 1
 
+/-- Exact port of HOL `word_list_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:231`):
+
+```
+word_list (xs:bool list) d =
+  if LENGTH xs <= d \/ (d = 0) then
+    [bits_to_word xs]
+  else
+    bits_to_word (TAKE d xs ++ [T]) :: word_list (DROP d xs) d
+```
+
+Each emitted word packs up to `d` bits, with an explicit terminator `T`
+appended so the highest set bit inside a chunk marks the chunk boundary.
+The carrier and `[NeZero width]` follow the same convention as
+`bitsToWordW`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "word_list_def"]
+def wordListW {width : Nat} [NeZero width] (bits : List Bool) (chunkSize : Nat) :
+    List (BitVec width) :=
+  if bits.length ≤ chunkSize ∨ chunkSize = 0 then
+    [bitsToWordW (width := width) bits]
+  else
+    bitsToWordW (width := width) (bits.take chunkSize ++ [true]) ::
+      wordListW (bits.drop chunkSize) chunkSize
+  termination_by bits.length
+  decreasing_by
+    simp only [List.length_drop]
+    omega
+
 end Flapjack.Compiler.Backend.WordToStack

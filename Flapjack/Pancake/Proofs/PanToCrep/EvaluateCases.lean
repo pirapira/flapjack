@@ -4861,9 +4861,6 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
       some (parameters, sourceBody, returnShape))
     (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
       some (sourceBody, returnShape, sourceCalleeLocals))
-    (hargumentLength :
-      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
-        (arguments.flatMap panValueFlatten).length)
     (heach : ∀ expression, expression ∈ expressions → ∀ value,
       evalPanSemStateExp source expression = some value →
       stateRel source target →
@@ -4909,14 +4906,18 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
   obtain ⟨hnames, hbind⟩ := bindPanValueParameters_of_lookup_success
     source.structs source.code function parameters arguments sourceBody returnShape
     sourceCalleeLocals hentry hsourceCall
-  obtain ⟨targetCalleeLocals, _harguments, htargetLookup, htargetMap⟩ :=
-    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source target
-      function parameters sourceBody returnShape expressions arguments hstate hcode
-      hlocals hlocalized hsourceArgs hentry hargumentLength heach
-  have hstateForWf := hstate
+  have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
+    target.locals expressions arguments hsourceArgs hstate hlocals
+  have hstateForLookup := hstate
   obtain ⟨_, _, _, hstructs, _, _, _, _, _, _⟩ := hstate
   have hmatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
     simpa [hstructs] using hmatch
+  have hargumentLength := panSemCodeArgumentsMatch_flattenLength parameters arguments
+    hmatchEmpty hvaluesWf
+  obtain ⟨targetCalleeLocals, _harguments, htargetLookup, htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source target
+      function parameters sourceBody returnShape expressions arguments hstateForLookup hcode
+      hlocals hlocalized hsourceArgs hentry hargumentLength heach
   have hshapeMapRaw := panSemCodeArgumentsMatch_shapeMapEq [] parameters arguments
     hmatchEmpty
   have hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf := by
@@ -4926,8 +4927,6 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
         (panSemShapeOfMapPanValueShapeNil arguments).symm
   have hparameterLength := panSemCodeArgumentsMatch_length [] parameters arguments
     hmatchEmpty
-  have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
-    target.locals expressions arguments hsourceArgs hstateForWf hlocals
   have hwf : ∀ value, value ∈ arguments →
       isWfShape [] (panSemShapeOf value) = true := by
     intro value hmem
@@ -5402,6 +5401,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH
     (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
     (expressions : List (Exp (RiscV.Word 64)))
     (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
     (handlerBody : CrepProg (RiscV.Word 64))
     (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
     (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
@@ -5422,9 +5422,8 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
-    (hargumentLength :
-      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
-        (arguments.flatMap panValueFlatten).length)
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals))
     (hinfoValid : crepRuntimeCallInfoValid
       (some (destinations, some (caught,
         .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
@@ -5501,6 +5500,16 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH
       old value hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
   have hhandlerBody := hhandlerIH targetPost hpayload hpayloadState hpayloadCode
     hpayloadExcp hpayloadLocals
+  have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
+    source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  have hwfArguments := evalPanSemStateExpsWfShapeOfStateRel source caller context
+    caller.locals expressions arguments hsourceArgs hinitialState hlocals
+  have hstructs := stateRel_structs source caller hinitialState
+  have hsourceArgsMatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
+    simpa [hstructs] using hsourceArgsMatch
+  have hargumentLength := panSemCodeArgumentsMatch_flattenLength parameters arguments
+    hsourceArgsMatchEmpty hwfArguments
   obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
     lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source caller
       function parameters sourceBody returnShape expressions arguments hinitialState

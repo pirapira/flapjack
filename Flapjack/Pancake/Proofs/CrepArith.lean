@@ -179,6 +179,38 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+/-- Exact generic list-success monotonicity helper from HOL's local
+    `OPT_MMAP_EQ_SOME_MONO` (`crep_arithProofScript.sml:93`).  `List.mapM` with
+    the `Option` monad is the Lean encoding of HOL's `OPT_MMAP`; this lemma is
+    independent of the Crep evaluator and is used for pointwise successful
+    result preservation in the arithmetic simplifier proof. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "OPT_MMAP_EQ_SOME_MONO" 93]
+theorem optMmapEqSomeMono {α β : Type} (f g : α → Option β)
+    (xs : List α) (ys : List β)
+    (hf : xs.mapM f = some ys)
+    (hmono : ∀ x z, x ∈ xs → f x = some z → g x = some z) :
+    xs.mapM g = some ys := by
+  induction xs generalizing ys with
+  | nil =>
+      simp_all
+  | cons x xs ih =>
+      simp only [List.mapM_cons] at hf ⊢
+      cases hfx : f x with
+      | none => simp [hfx] at hf
+      | some z =>
+          cases htail : xs.mapM f with
+          | none => simp [hfx, htail] at hf
+          | some tail =>
+              have hys : z :: tail = ys := by
+                simpa [hfx, htail] using hf
+              have hgx : g x = some z :=
+                hmono x z (by simp) hfx
+              have hgtail : xs.mapM g = some tail :=
+                ih tail htail (by
+                  intro y value hy hvalue
+                  exact hmono y value (by simp [hy]) hvalue)
+              simp [hgx, hgtail, hys]
+
 private theorem crepDestConst_mapCrepExpWord {α β : Type}
     (convert : α → β) (expression : CrepExp α) :
     crepDestConst (mapCrepExpWord convert expression) =

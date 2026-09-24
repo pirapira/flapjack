@@ -240,6 +240,14 @@
     "reviewer": "Codex (fully polymorphic statement comparison with HOL dest_const_thm and direct HOL-EVAL constructor probe)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "OPT_MMAP_EQ_SOME_MONO",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "optMmapEqSomeMono",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Generic Option-list statement matches local HOL theorem; Lean List.mapM with Option is the OPT_MMAP encoding"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_2exp_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -757,7 +765,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, one-word Local LoadByte/Load32, and LoadByte/Load32 of recursively supported addresses with an explicit One compile shape, all under the canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, one-word Local LoadByte/Load32, LoadByte/Load32 of recursively supported addresses with an explicit One compile shape, and a two-word flat Load at a constant address, all under the canonical RISC-V target invariant where required. It is not the full HOL compile_exp_val_rel relation."
   },
   {
     "hol_path": null,
@@ -5373,7 +5381,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectShiftCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. The full evaluator uses evalPanShiftFull to implement LSL/LSR/ASR/ROR and HOL's nonzero amount < word-width cutoff; direct HOL and Lean fixtures cover LSL, ASR, ROR, and the cutoff. It remains untagged because the public Lean statement translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
+    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. One explicit PanValueMemoryAccess is shared by source, IHs, and converted execution; because this adapter supplies its own shift operation, the theorem also requires that operation to agree with evalPanShiftFull for the evaluated operands. Direct HOL and Lean fixtures cover LSL, ASR, ROR, and the width cutoff. It remains untagged because this adapter compatibility premise is Lean-specific, and the public statement also translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectFull",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked nested Exp.rec induction assembled from the constructor specializations, retaining successful evalPanValueExpFull, projected struct-context equality, pointwise Bool field-validity, structInfosOk, local/global shape-map premises, and all three compile_exp_correct conclusion roles. The nested recursion covers Expr, expression lists, named-field expression lists, and field pairs. It remains untagged: HOL provides one universal theorem but Lean's statement translates finite-map ctxt/FEVERY/FMAP_MAP2 conditions through projected views and total-function adapters, exposes bytesInWord and an explicit PanValueMemoryAccess, and needs a Lean-specific adapter.shift = evalPanShiftFull compatibility premise."
   },
   {
     "hol_path": null,
@@ -6710,6 +6726,14 @@
     "lean_name": "compileExpHOL_bytesInWord_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only full localized-expression IH constructor case for RV64 BytesInWord. It proves target evaluation, compiled length/shape agreement, source shape, and shape well-formedness over the fixed 64-bit word size; not a standalone HOL theorem statement."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_global_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression Global Var case. Under stateRel, the source globals map is empty, so successful source evaluation is impossible; the target compiler's Const 0 fallback is not treated as semantic translation. This is an induction case, not a standalone HOL theorem port."
   },
   {
     "hol_path": null,

@@ -808,6 +808,10 @@ theorem evalPanValueFfiClockCall_callee_continued_error
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
     Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
 
+/-- Flapjack's clocked Call equation for a callee Error: the catch-all Call
+    branch preserves the callee's final nonlocal state and clears its locals.
+    Untagged because this evaluator uses a structured control result rather
+    than HOL's `result option × state` pair. -/
 theorem evalPanValueFfiClockCall_callee_error_error
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

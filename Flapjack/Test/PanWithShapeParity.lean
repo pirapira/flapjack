@@ -756,14 +756,4 @@ def runChecks : IO Bool := do
     listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk && distinctListsTaggedOk &&
     optMmapTaggedOk && elIndexedTaggedOk)
 
-/-! Width-indexed `Exp.Const` correspondence (bead .18.3.5.3.1.2.1). Direct HOL
-observations of the `Const` constructor at the word instantiation are in
-`scripts/hol-probes/compile_exp_probe.out` (e.g. `Const 7w`). -/
-example : (Exp.const (7 : BitVec 64) : Exp (BitVec 64)) = .const 7 :=
-  exp_const_width_correspondence 7
-
-example {left right : BitVec 64}
-    (h : (Exp.const left : Exp (BitVec 64)) = .const right) : left = right :=
-  exp_const_width_injective h
-
 end Flapjack.Test.PanWithShapeParity

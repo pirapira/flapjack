@@ -217,26 +217,42 @@ inductive Exp (α : Type u) where
   | bytesInWord
   deriving Repr
 
-/-! ## Width-indexed `Exp` constructor correspondence (option A)
+/-! ## Width-indexed `Exp` / HOL `exp` constructor audit (option A)
 
-HOL `panLangScript.sml` `exp` is indexed by the word length with
-`Const ('a word)`. The production datatype `Exp (alpha : Type u)` is used by the
-executed compiler front at `alpha := BitVec width` (Pipeline.lean,
-Pancake/PanToCrep/Compile.lean, ...). This records the width-specialized
-`Const` constructor correspondence WITHOUT a second datatype. Untagged: the
-datatype parameter is still a `Type`; the exact HOL `exp` tag awaits the reviewed
-representation refinement (bead flapjack-pxn.18.3.5.3.1). -/
+Full constructor/field audit of HOL `panLangScript.sml` `exp` (lines 49-68)
+against the production `Exp (α : Type u)` at `α := BitVec width`:
 
-/-- The production `.const` constructor at `BitVec width` is the HOL
-    `Const ('a word)` clause. -/
-theorem exp_const_width_correspondence {width : Nat} (value : BitVec width) :
-    (Exp.const value : Exp (BitVec width)) = .const value := rfl
+| # | HOL `exp`                         | Lean `Exp (BitVec width)`                 |
+|---|-----------------------------------|-------------------------------------------|
+| 1 | `Const ('a word)`                 | `const (BitVec width)`                    |
+| 2 | `Var varkind varname`             | `var VarKind VarName`                     |
+| 3 | `RStruct (exp list)`              | `rStruct (List (Exp ·))`                  |
+| 4 | `RField index exp`                | `rField Nat (Exp ·)`                      |
+| 5 | `NStruct stcname ((fldname # exp) list)` | `nStruct StructName (List (FieldName × Exp ·))` |
+| 6 | `NField fldname exp`              | `nField FieldName (Exp ·)`                |
+| 7 | `Load shape exp`                  | `load Shape (Exp ·)`                      |
+| 8 | `Load32 exp`                      | `load32 (Exp ·)`                          |
+| 9 | `LoadByte exp`                    | `loadByte (Exp ·)`                        |
+|10 | `Op binop (exp list)`             | `op BinOp (List (Exp ·))`                 |
+|11 | `Panop panop (exp list)`          | `panOp PanOp (List (Exp ·))`              |
+|12 | `Cmp cmp exp exp`                 | `cmp Cmp (Exp ·) (Exp ·)`                 |
+|13 | `Shift shift exp exp`             | `shift Shift (Exp ·) (Exp ·)`             |
+|14 | `BaseAddr`                        | `baseAddr`                                |
+|15 | `TopAddr`                         | `topAddr`                                 |
+|16 | `BytesInWord`                     | `bytesInWord`                             |
 
-/-- The width-specialized `.const` constructor is injective, matching HOL
-    constructor freeness for `Const`. -/
-theorem exp_const_width_injective {width : Nat} {left right : BitVec width}
-    (h : (Exp.const left : Exp (BitVec width)) = .const right) : left = right := by
-  injection h with hval
+All 16 constructors match in name, arity, order and field types once the word
+length is fixed (`α := BitVec width` is exactly HOL `'a word` at `'a = width`);
+the executed compiler front already uses this instantiation.
+
+Consequence for option A (single production datatype): every "correspondence"
+statement is definitional reflexivity on the same Lean term, and constructor
+freeness/injectivity is generic `Exp` injection — i.e. tautological proof sites.
+This slice therefore records the audit as evidence and adds NO theorems and NO
+`@[hol]` tag. A substantive representation refinement requires distinct carriers
+(option B/C of bead flapjack-pxn.18.3.5.3.1.2), or an explicit reviewer decision
+that the audit itself establishes the width-specialized `Const` shape. -/
+
 
 /-- Exact port of Cake's `opsize` datatype (`cakeml/pancake/panLangScript.sml:49`):
 the four nullary constructors `Op8`/`OpW`/`Op32`/`Op16` match in order. -/

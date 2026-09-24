@@ -5277,7 +5277,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectNStructCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked NStruct constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp, proving all three case conclusions from per-field induction hypotheses that carry the translated premises and conclusions. It is intentionally untagged because HOL has one universally quantified theorem and no separately named NStruct declaration. Lean replaces direct ctxt.structs equality with projected shape-view equality, finite-map FEVERY validity with pointwise Bool predicates over total lookups, and FMAP_MAP2 equations with pointwise shape-map adapters. structInfosOk is retained and used for declared-field uniqueness. Lean uses PanSemState total lookups and explicit bytesInWord rather than HOL finite maps and fixed-width eval. Other expression constructors remain open."
+    "reviewer": "Kernel-checked NStruct constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExpFull, proving all three case conclusions from per-field induction hypotheses that carry the translated premises and conclusions. Source evaluation, each recursive field IH, and converted execution share one state-derived PanValueMemoryAccess. It is intentionally untagged because HOL has one universally quantified theorem and no separately named NStruct declaration. Lean replaces direct ctxt.structs equality with projected shape-view equality, finite-map FEVERY validity with pointwise Bool predicates over total lookups, and FMAP_MAP2 equations with pointwise shape-map adapters. structInfosOk is retained for declared-field uniqueness. Lean uses PanSemState total lookups, explicit bytesInWord/memory access, and full-evaluator operation dictionaries rather than HOL finite maps and fixed-width eval. The paired direct HOL EVAL and Lean regression cover a nonempty named struct. Other expression constructors remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_projection",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization of HOL compile_exp_correct. It projects successful full named-field evaluation to full evaluation of the field expressions with values in the same order, threading the shared memory adapter. Untagged because the Lean full evaluator and explicit state adapter differ from HOL finite-map evaluation."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_names",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

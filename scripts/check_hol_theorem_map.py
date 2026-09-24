@@ -230,7 +230,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "compileExpNotMemLoadGlob"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "memCompileExpVmax"),
-        ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExps"),
+        ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
     }
     for key in reviewed_exact:
         if key in inventory:

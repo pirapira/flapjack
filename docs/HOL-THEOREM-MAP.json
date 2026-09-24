@@ -7005,7 +7005,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "fixCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width: keep the result and clamp the returned clock to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation; kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width; the result component is RESULT-POLYMORPHIC in beta exactly as HOL leaves `res` unconstrained, and the returned clock is clamped to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation (result fixed to CrepRuntimeResult); kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock at beta := CrepRuntimeResult; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -7350,6 +7350,22 @@
     "lean_name": "compileExpHOL_loadTwo_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only full localized-expression IH case for a two-word flat Load at fixed RV64 width. It consumes the address full IH and stateRel to relate both source word-cell loads to production Crep Loads at offsets 0 and 8; arbitrary shape lists remain unproved. The matching compile_exp output is pinned by direct HOL-EVAL row load_two and CompileExpParity.holLoadTwoOK; this is induction support, not a standalone HOL theorem or a complete expression induction."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadOne_localAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only corollary composing the generic Load One full IH with a state-owned local variable address. It adds no standalone HOL theorem claim; the underlying Load One constructor mapping is tracked by compile_exp_val_rel and remains part of the open expression-induction proof."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadTwo_localAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only corollary composing the generic two-word Load full IH with a state-owned local variable address under the fixed RV64 target invariant. It adds no standalone HOL theorem claim; arbitrary flattened shapes and the full expression-induction proof remain open."
   },
   {
     "hol_path": null,
@@ -8101,7 +8117,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "decCrepHolClock_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; 10-conjunct projection equality over the 11-field CrepHolState via tagged decCrepHolClock; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the clock decrement is the tagged width-indexed decCrepHolClockW (dec_clock_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out (all T) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8109,7 +8125,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "emptyCrepHolLocals_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; 10-conjunct projection equality over the 11-field CrepHolState via tagged emptyCrepHolLocals; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the locals clear is the tagged width-indexed emptyCrepHolLocalsW (empty_locals_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8190,5 +8206,29 @@
     "lean_name": "lookupCrepHolCodeW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "distinct_funcs_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopDistinctFuncs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against distinct_funcs_def at crep_to_loopProofScript.sml:60; HOL's un-annotated Definition infers 'a |-> ('b # 'c), so the port is polymorphic in the key and both tuple components; direct HOL-EVAL rows distinct_funcs_sep/collision/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "distinct_vars_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopDistinctVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against distinct_vars_def at crep_to_loopProofScript.sml:95; HOL's un-annotated Definition infers 'a |-> 'b, so the port is polymorphic in the key and value; direct HOL-EVAL rows distinct_vars_sep/collision/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "ctxt_max_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopCtxtMax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against ctxt_max_def at crep_to_loopProofScript.sml:90; HOL's un-annotated Definition infers 'a |-> num because m <= n, so the port is polymorphic in the key and fixed at Nat for values; direct HOL-EVAL rows ctxt_max_within/exceeds/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

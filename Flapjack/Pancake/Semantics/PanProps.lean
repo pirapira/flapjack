@@ -437,4 +437,33 @@ theorem allDistinctAlistNoOverlap (sh : List Shape) (ns : List Nat) (vs : List S
       · simp at hbase'
     · simp at hbase
 
+
+/-- Exact port of HOL `all_distinct_alist_ctxt_max`
+    (`cakeml/pancake/semantics/panPropsScript.sml:517`): every slot recorded in
+    the compiled context is bounded by `MAX_LIST ns`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "all_distinct_alist_ctxt_max"]
+theorem allDistinctAlistCtxtMax (sh : List Shape) (ns : List Nat) (vs : List String)
+    (_hdistinct : ns.Nodup) (hlen1 : ns.length = Shape.shapeSize (.comb sh))
+    (hlen2 : vs.length = sh.length) :
+    ctxtMax (maxList ns) (FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns)))) := by
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro v a xs hlk x hx
+  rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap String (Shape × List Nat))
+      (vs.zip (sh.zip (withShape sh ns))) v (a, xs) hlk with ⟨e, hmem, hke, hve⟩ | hbase
+  · have he : e = (v, (a, xs)) := Prod.ext hke hve
+    subst he
+    obtain ⟨n, hn, _hj, _hfst, hsnd⟩ :=
+      mem_zip_getElem vs (sh.zip (withShape sh ns)) (v, (a, xs)) hmem
+    have hnsh : n < sh.length := by rw [← hlen2]; exact hn
+    have hz := hsnd
+    rw [List.getElem_zip] at hz
+    have hshapeget :
+        (withShape sh ns)[n]'(by rw [withShape_length]; exact hnsh) = xs :=
+      congrArg Prod.snd hz
+    have hxmem : x ∈ ns := by
+      rw [← hshapeget] at hx
+      exact mem_of_withShape_mem sh ns n x (by rw [withShape_length]; exact hnsh) hlen1 hx
+    exact maxList_ge_of_mem ns x hxmem
+  · simp at hbase
+
 end Flapjack

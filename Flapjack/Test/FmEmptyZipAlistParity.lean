@@ -125,6 +125,15 @@ theorem alistNoOverlapExample :
   allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "b"]
     (by decide) (by simp [Shape.shapeSize]) (by decide)
 
+/-- HOL `all_distinct_alist_ctxt_max` oracle rows (`ctxt_*` in
+    `scripts/hol-probes/pan_props_alist_ctxt_max_probe.out`). -/
+theorem alistCtxtMaxExample :
+    ctxtMax (maxList [0, 1]) (FUPDATE_LIST FEMPTY
+      (["a", "b"].zip ([Shape.one, Shape.one].zip
+        (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistCtxtMax [Shape.one, Shape.one] [0, 1] ["a", "b"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
 def runChecks : IO Bool := do
   let ok := parityGuard && zipFlookupGuard && maxListGuard
   IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL"

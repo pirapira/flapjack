@@ -101,6 +101,11 @@ run_probe riscv_word_extract_6_probeScript.sml riscv_word_extract_6_probe.out \
   word_extract_6_zero word_extract_6_63 word_extract_6_64_premise \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
+run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
+  riscv_encode_length_addi riscv_encode_length_add riscv_encode_length_branch \
+  riscv_encode_length_load \
+  "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
+  "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \

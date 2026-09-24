@@ -22,7 +22,18 @@ theorem wordExtract6OfLt64 (word : BitVec 64) (_hword : word.toNat < 64) :
     BitVec.toNat_setWidth]
 
 /-! Cake's `riscv_encoding` target contract: every encoded instruction is a
-    nonempty four-byte artifact. -/
+    nonempty four-byte artifact.
+
+    HOL's `riscv_encoder_correct` (`riscv_targetProofScript.sml:512`) is much
+    stronger: it proves `encoder_correct riscv_target`, whose premise is a HOL
+    `asm_step` related to a target machine state and whose conclusion gives a
+    target-state simulation under interference, byte-preservation, and code-PC
+    invariants (`asmPropsScript.sml:117-130`). The current Lean `Model.execute`
+    consumes an already-decoded `Instruction`; it has no encoded-byte fetch /
+    decode step or corresponding HOL `target_state_rel`. Thus the byte-length
+    lemmas below are untagged support, not ports of `riscv_encoder_correct`.
+    Add the tag only after the production encoded bytes are connected to a
+    faithful target-state step theorem. -/
 
 theorem encodeInstructionBytes_mod_four [NeZero width]
     (instruction : Instruction width) :

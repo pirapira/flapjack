@@ -560,7 +560,7 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves struct_field loads_ops cmp_shift finite_map_shadow \
+  leaves struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
   missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"

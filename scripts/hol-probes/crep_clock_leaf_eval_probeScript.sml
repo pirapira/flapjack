@@ -83,3 +83,6 @@ val _ = print_eval "return_empty_eval"
 val _ = print_eval "return_missing_eval"
   ``evaluate ((Return [Var 9]) : 64 crepLang$prog, ^s) =
       (SOME Error, ^s)``;
+val _ = print_eval "raise_eval"
+  ``evaluate ((Raise (9w:64 word)) : 64 crepLang$prog, ^s) =
+      (SOME (Exception (9w:64 word)), empty_locals ^s)``;

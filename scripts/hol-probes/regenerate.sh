@@ -266,6 +266,10 @@ run_probe crep_to_loop_locals_insert_probeScript.sml crep_to_loop_locals_insert_
   insert_same subset_preserved \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_locals_cutset_probeScript.sml crep_to_loop_locals_cutset_probe.out \
+  cutset_sub_0 cutset_domain_trans \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -289,7 +293,7 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
   genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
   "$cake_dir/pancake"
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
-  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  bits_empty wordlist_chunk "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
   wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
@@ -308,6 +312,9 @@ run_probe word_to_stack_insert_bitmap_probeScript.sml word_to_stack_insert_bitma
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_probe.out \
   ss_num_stack_ret_pair ss_stack_free_inl "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_probe.out \
+  ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \

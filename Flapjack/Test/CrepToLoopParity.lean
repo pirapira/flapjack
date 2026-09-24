@@ -535,7 +535,7 @@ example : crepToLoopLocalsRel localsRelContext (fun _ => false)
 def localsRelHOLContext : CrepToLoopFiniteMapContext :=
   { vars := (FEMPTY : FiniteMap Nat Nat),
     funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
-    vmax := 5, target := .rv64i }
+    vmax := 5, target := .riscv }
 
 /-- The tagged exact `locals_rel_def` port satisfies every clause vacuously for
     an empty context and empty source locals. -/
@@ -586,6 +586,43 @@ example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some 
       some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
   ⟨5, by simp [FLOOKUP, FUPDATE], by decide, by simp [wlabWloc]⟩
 
+/-- HOL `locals_rel_cutset_prop` oracle rows (`cutset_sub_0`, `cutset_sub_1`,
+    `cutset_sub_absent`, `cutset_lookup_preserved`, `cutset_lookup_other`,
+    `cutset_domain_trans` in
+    `scripts/hol-probes/crep_to_loop_locals_cutset_probe.out`): shrinking the
+    live set (`subspt cset cset'` rendered as `live n = true → live' n = true`)
+    preserves the tagged relation against the same target locals. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun _ => (none : Option (LoopValue (BitVec 64)))) :=
+  crepToLoopLocalsRelHOL_cutset_prop localsRelHOLContext
+    (fun _ => false) (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by intro n hn; exact absurd hn Bool.false_ne_true)
+
 /-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
     local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
     locals hold `wlab 9` at `5`. -/
@@ -601,7 +638,7 @@ example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true �
 def contextDefsContext : CrepToLoopFiniteMapContext :=
   { vars := FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7),
     funcs := FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2)),
-    vmax := 9, target := .rv64i }
+    vmax := 9, target := .riscv }
 
 example : findVarHOL contextDefsContext 1 = 7 := by
   simp [findVarHOL, contextDefsContext, FLOOKUP_update]
@@ -618,15 +655,18 @@ example : findLabHOL contextDefsContext "g" = 0 := by
 /-! `mk_ctxt`/`make_vmap` over the finite-map carrier, mirroring
     `scripts/hol-probes/crep_to_loop_mk_ctxt_probe.out`. -/
 example :
-    (mkCtxtHOL .rv64i (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
+    (mkCtxtHOL .riscv (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
       (FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2))) 9).vars =
       FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7) := rfl
 
-example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
       (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).vmax = 9 := rfl
 
-example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
-      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .rv64i := rfl
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .riscv := rfl
+
+example : (mkCtxtHOL .armv7 (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .armv7 := rfl
 
 example : FLOOKUP (makeVmapHOL [5]) 5 = some 0 := by
   simp [makeVmapHOL, FUPDATE_LIST, FUPDATE, FLOOKUP]

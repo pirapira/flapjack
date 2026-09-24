@@ -118,12 +118,29 @@ def load_index(path: Path) -> list[Declaration]:
 
 
 def load_theory_graph(path: Path) -> dict[str, set[str]]:
+    """Load the ``Theory -> Ancestor`` graph.
+
+    Tokens are re-validated against the identifier grammar so that a stale or
+    malformed ``theory-deps.txt`` cannot inject parser noise (``->``, ``:``,
+    ``;``, ``Datatype:``, ...) into the closure.
+    """
     graph: dict[str, set[str]] = defaultdict(set)
+    skipped: list[str] = []
     for line in path.read_text(encoding="utf-8").splitlines():
-        if not line or line.startswith("#") or "->" not in line:
+        if not line or line.startswith("#") or " -> " not in line:
             continue
-        theory, ancestor = line.split(" -> ", 1)
-        graph[theory.strip()].add(ancestor.strip())
+        theory, _, ancestor = line.partition(" -> ")
+        theory, ancestor = theory.strip(), ancestor.strip()
+        if not (IDENT.fullmatch(theory) and IDENT.fullmatch(ancestor)):
+            skipped.append(line)
+            continue
+        graph[theory].add(ancestor)
+    if skipped:
+        raise SystemExit(
+            "theory-deps.txt contains non-identifier nodes; "
+            f"regenerate it with `python3 scripts/index-hol.py` "
+            f"({len(skipped)} bad edge(s), first: {skipped[0]!r})"
+        )
     return graph
 
 
@@ -237,22 +254,30 @@ def main() -> int:
     pool_kinds: dict[str, int] = defaultdict(int)
     for d in in_closure:
         pool_kinds[d.kind] += 1
-    required_kinds: dict[str, int] = defaultdict(int)
-    required_by_theory: dict[str, int] = defaultdict(int)
-    name_theory: dict[str, str] = {}
-    for d in in_closure:
-        if d.name in required:
-            required_kinds[d.kind] += 1
-            required_by_theory[d.theory] += 1
-            name_theory.setdefault(d.name, d.theory)
-
     pool_areas: dict[str, int] = defaultdict(int)
     for d in in_closure:
         pool_areas[area_of_path(d.path)] += 1
-    required_areas: dict[str, int] = defaultdict(int)
+
+    # The required set is a set of NAMES.  Attribute each name to the first
+    # declaration with that name in index order so that the total agrees with
+    # the per-kind / per-area / per-theory sums.
+    representative: dict[str, Declaration] = {}
     for d in in_closure:
-        if d.name in required:
-            required_areas[area_of_path(d.path)] += 1
+        representative.setdefault(d.name, d)
+    required_decls = [
+        representative[name] for name in sorted(required) if name in representative
+    ]
+    resident_in_pool = {d.name for d in in_closure}
+
+    required_kinds: dict[str, int] = defaultdict(int)
+    required_by_theory: dict[str, int] = defaultdict(int)
+    required_areas: dict[str, int] = defaultdict(int)
+    name_theory: dict[str, str] = {}
+    for d in required_decls:
+        required_kinds[d.kind] += 1
+        required_by_theory[d.theory] += 1
+        required_areas[area_of_path(d.path)] += 1
+        name_theory.setdefault(d.name, d.theory)
 
     tags = load_lean_tags(ROOT / "Flapjack")
     tagged_names = {name for _theory, name in tags}
@@ -263,6 +288,32 @@ def main() -> int:
         name for name in required if (name_theory.get(name), name) not in tags
     )
     untagged_anywhere = [name for name in untagged_here if name not in tagged_names]
+
+    invariant_errors: list[str] = []
+    if len(required_decls) != len(required):
+        invariant_errors.append(
+            f"required names {len(required)} != attributed declarations "
+            f"{len(required_decls)}"
+        )
+    for label, counts in (
+        ("kind", required_kinds),
+        ("area", required_areas),
+        ("theory", required_by_theory),
+    ):
+        total = sum(counts.values())
+        if total != len(required):
+            invariant_errors.append(
+                f"required by {label} sums to {total}, expected {len(required)}"
+            )
+    if sum(pool_kinds.values()) != len(in_closure):
+        invariant_errors.append("source pool kind counts do not sum to the pool size")
+    if sum(pool_areas.values()) != len(in_closure):
+        invariant_errors.append("source pool area counts do not sum to the pool size")
+    non_pool = sorted(name for name in required if name not in resident_in_pool)
+    if non_pool:
+        invariant_errors.append(
+            f"{len(non_pool)} required names are absent from the theory closure pool"
+        )
 
     if root_decls:
         root_decl = root_decls[0]
@@ -306,6 +357,24 @@ def main() -> int:
     lines.append(
         f"  - by area: {format_counts(required_areas, AREA_ORDER)}"
     )
+    lines.append("")
+    lines.append("## Validation")
+    lines.append("")
+    if invariant_errors:
+        lines.append(
+            "**UNVALIDATED**: the following count invariants failed, so the "
+            "required-theorem estimate must not be trusted:"
+        )
+        for err in invariant_errors:
+            lines.append(f"- {err}")
+    else:
+        lines.append("All count invariants hold:")
+        lines.append(
+            f"- required total (`{len(required)}`) equals the per-kind, per-area "
+            "and per-theory sums"
+        )
+        lines.append("- source-pool totals equal the per-kind and per-area sums")
+        lines.append("- every required name is a declaration in the theory closure")
     lines.append("")
     lines.append("## Lean coverage of the required set")
     lines.append("")
@@ -386,6 +455,12 @@ def main() -> int:
         "restructuring makes unnecessary."
     )
     lines.append("- `.hol-index/` is generated and git-ignored; numbers move with the CakeML revision.")
+    lines.append(
+        "- Theory ancestors are restricted to identifier tokens in the "
+        "`Ancestors` header (trailing `[attributes]` stripped, section "
+        "keywords terminate the list); a malformed `theory-deps.txt` is "
+        "rejected rather than silently folded into the closure."
+    )
     lines.append("")
 
     report = "\n".join(lines)
@@ -399,11 +474,24 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        if "**UNVALIDATED**" in report:
+            print("committed report is unvalidated", file=sys.stderr)
+            return 1
         print(f"{args.out} is up to date")
         return 0
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(report, encoding="utf-8")
+
+    if invariant_errors:
+        for err in invariant_errors:
+            print(f"invariant failure: {err}", file=sys.stderr)
+        print(
+            "wrote the report, but it is marked UNVALIDATED; refusing to "
+            "present a required-theorem estimate",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.json is not None:
         payload = {

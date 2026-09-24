@@ -1288,3 +1288,11 @@ run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app
   flatten_app_tick flatten_app_ite_tick \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The labProps sec_ends_with_label probe observes the `is_Label` classifier and
+# the `¬NULL ls ∧ is_Label (LAST ls)` section test used by
+# `EVERY_sec_ends_with_label_MAP_prog_to_section`.
+run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_probe.out \
+  is_label_label sec_empty \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

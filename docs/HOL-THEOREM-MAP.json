@@ -259,6 +259,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "eval_mul_const",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolFiniteWordSourceRuntimeLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Production evaluator support with the complete Option word_lab result over an explicit HolFiniteDimension adapter. The HOL finite-index and CrepHolState evaluator correspondence remains open, so this is not tagged as the polymorphic HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConst",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (width-generic RISC-V target specialization; no proved correspondence from HOL eval_def/crep_op_def and arbitrary HOL state to riscvCrepWordTarget)"

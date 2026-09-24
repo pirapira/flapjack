@@ -118,6 +118,19 @@ def compileExpHOLW {width : Nat} [NeZero width]
     Exp (BitVec width) → List (CrepExp (BitVec width)) × Shape :=
   compileExpHOL context
 
+/-- Kernel-checked execution bridge for `flapjack-pxn.18.3.1.3.2`: at the
+    RISC-V word carrier, the generic expression compiler that the shipped
+    `compileProgRiscV`/`compileProgHOL` path executes is definitionally the
+    tagged width-indexed `compile_exp_def` port `compileExpHOLW`.  The executed
+    path therefore compiles expressions with the reviewed definition rather
+    than an unreviewed duplicate.  A textual width specialization of the
+    enclosing `compileProg` chain would duplicate the large `compileProgHOL`
+    equation/codeRel proof surface and is tracked by
+    `flapjack-pxn.18.3.5.3.1.2`. -/
+theorem compileExpHOLW_eq_compileExpHOL {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (expression : Exp (BitVec width)) :
+    compileExpHOLW context expression = compileExpHOL context expression := rfl
+
 def compileArgsHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
   match expressions with
@@ -303,7 +316,11 @@ def storeMemOpHOL : OpSize → CrepMemOp
 /-! Generic finite-map implementation used to share the compile equations
     with non-word fixtures. This helper takes the target word's byte stride as
     an instance parameter, so the HOL reference belongs to the RISC-V
-    specialization below rather than this generic adapter. -/
+    specialization below rather than this generic adapter.  Its expression
+    compilation runs the generic `compileExpHOL`, which at the RISC-V carrier is
+    the tagged width-indexed `compileExpHOLW` by
+    `compileExpHOLW_eq_compileExpHOL`, so the executed path uses the reviewed
+    `compile_exp_def` port. -/
 def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
     (program : Prog α) : CrepProg α :=

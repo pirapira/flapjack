@@ -1130,6 +1130,52 @@ theorem panShapeMatches_holShapeOf_toHolValue {width : Nat} [NeZero width] (cont
       panShapeMatches shape (panValueShape context value) := by
   rw [holShapeOf_toHolValue context value]
 
+/-- Bridge for the production-to-`evalHOL` `NStruct` adapter: the field-shape
+    predicate of `evalHOL` (over the `HolValue` image of the fields) agrees with
+    the predicate used by the production `panValueFieldsExactHOL`.  Untagged: a
+    Flapjack-specific adapter, not a HOL statement. -/
+theorem panValueFieldsShapeHOL_eq {width : Nat} [NeZero width] (structs : StructContext)
+    (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue (BitVec width))) :
+    List.all
+        ((expected.map Prod.snd).zip
+          ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))
+      = List.all
+        ((expected.map Prod.snd).zip (actual.map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (panValueShape structs pair.2)) := by
+  induction expected generalizing actual with
+  | nil => cases actual <;> rfl
+  | cons head tail ih =>
+      obtain ⟨expectedName, expectedShape⟩ := head
+      cases actual with
+      | nil => rfl
+      | cons actualHead actualTail =>
+          obtain ⟨actualName, actualValue⟩ := actualHead
+          simp only [List.map_cons, List.zip_cons_cons, List.all_cons]
+          rw [panShapeMatches_holShapeOf_toHolValue structs expectedShape actualValue,
+            ih actualTail]
+
+/-- Bridge for the production-to-`evalHOL` `NStruct` adapter: the whole
+    production `panValueFieldsExactHOL` field check on `PanValue` fields equals
+    the inline `evalHOL` predicate (propositional field-name equality decided to
+    a `Bool` and the `HolValue`-image shape check).  Untagged: a Flapjack-specific
+    adapter, not a HOL statement. -/
+theorem panValueFieldsExactHOL_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (structs : StructContext) (info : StructInfo)
+    (actual : List (FieldName × PanValue (BitVec width))) :
+    panValueFieldsExactHOL structs info.fields actual =
+      (decide (info.fields.map Prod.fst = actual.map Prod.fst) &&
+        List.all
+          ((info.fields.map Prod.snd).zip
+            ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+          (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))) := by
+  unfold panValueFieldsExactHOL
+  rw [← panValueFieldsShapeHOL_eq structs info.fields actual]
+  congr 1
+  rw [Bool.eq_iff_iff, decide_eq_true_eq]
+  exact beq_iff_eq
+
 /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL `theValWord`
     (`cakeml/pancake/semantics/panSemScript.sml:39`) is a *partial* function
     (`theValWord (ValWord w) = w`, undefined otherwise); this Lean helper is the

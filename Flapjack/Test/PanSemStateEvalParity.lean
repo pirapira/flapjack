@@ -620,4 +620,32 @@ example (shape : Shape) (value : PanValue (BitVec 64)) :
       panShapeMatches shape (panValueShape ([] : StructContext) value) :=
   panShapeMatches_holShapeOf_toHolValue ([] : StructContext) shape value
 
+/- Bridges: the production `NStruct` field check equals the inline `evalHOL`
+   predicate over the `HolValue` image (bead flapjack-pxn.18.3.6.9.5). -/
+example (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue (BitVec 64))) :
+    List.all
+        ((expected.map Prod.snd).zip
+          ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))
+      = List.all
+        ((expected.map Prod.snd).zip (actual.map Prod.snd))
+        (fun pair => panShapeMatches pair.1 (panValueShape ([] : StructContext) pair.2)) :=
+  panValueFieldsShapeHOL_eq ([] : StructContext) expected actual
+
+example (info : StructInfo) (actual : List (FieldName × PanValue (BitVec 64))) :
+    panValueFieldsExactHOL ([] : StructContext) info.fields actual =
+      (decide (info.fields.map Prod.fst = actual.map Prod.fst) &&
+        List.all
+          ((info.fields.map Prod.snd).zip
+            ((actual.map (fun pair => (pair.1, pair.2.toHolValue))).map Prod.snd))
+          (fun pair => panShapeMatches pair.1 (holShapeOf pair.2))) :=
+  panValueFieldsExactHOL_eq_evalHOL ([] : StructContext) info actual
+
+#guard panValueFieldsExactHOL ([] : StructContext) [("f", Shape.one)]
+    [("f", PanValue.word (7 : BitVec 64))] ==
+  (decide ((["f"] : List FieldName) = ["f"]) &&
+    List.all [(Shape.one, (PanValue.word (7 : BitVec 64)).toHolValue)]
+      (fun pair => panShapeMatches pair.1 (holShapeOf pair.2)))
+
 end Flapjack.Test.PanSemStateEvalParity

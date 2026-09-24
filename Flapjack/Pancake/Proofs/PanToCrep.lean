@@ -1829,11 +1829,11 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For a one-word exception payload, the target runtime `exp_hdl` execution is
-proved by `EvaluateCases.crepRuntimeExpHdlOneWord`, and
-`crepRuntimeExpHdlOneWord_localsRel` proves its `locals_rel` postcondition.
-The corresponding arbitrary-width flattened execution and local relation are
-`EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
+The target runtime `exp_hdl` evaluator is already proved for one-word payloads
+by `EvaluateCases.crepRuntimeExpHdlOneWord`; its
+`crepRuntimeExpHdlOneWord_localsRel` companion proves the `locals_rel`
+postcondition. The corresponding arbitrary-width flattened execution and
+local relation are `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
 `crepRuntimeExpHdlFiniteMapWords_localsRel`. The actual state and relation
 setup for a matching handler is available as untagged induction support in
 `crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations`. This lemma supplies

@@ -96,4 +96,44 @@ def chunkToBitsParityGuard : Bool :=
 example : chunkToBitsW (width := 64) [(true, (0 : BitVec 64)), (false, 9)] =
     chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by native_decide
 
+/-! ## `chunk_to_bitmap` / `const_words_to_bitmap` parity
+
+Rows for the width-indexed `chunkToBitmapW` and `constWordsToBitmapW`, tagged
+against HOL `chunk_to_bitmap_def` / `const_words_to_bitmap_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:393,397`; bead
+`flapjack-pxn.18.5.15.3.4`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bitmap_probe.out`:
+
+```
+cbm_empty=[1w]  cbm_two=[5w; 0w; 9w]  cbm_payload=[3w; 7w]
+cwb_empty=[1w]  cwb_short=[5w; 0w; 9w]
+cwb_boundary8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 1w]
+cwb_split8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 2w; 8w]
+```
+
+`cwb_boundary8` exercises `word8` (`dimindex (:'a) = 8`) with
+`ws_len = dimindex-1 = 7`: HOL's strict `<` still recurses, splitting off the
+first seven words and appending `chunk_to_bitmap [] = [1w]`.
+-/
+
+def chunkToBitmapParityGuard : Bool :=
+  (chunkToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) == [1]) &&
+  (chunkToBitmapW (width := 64) [(true, 0), (false, 9)] == [5, 0, 9]) &&
+  (chunkToBitmapW (width := 64) [(true, 7)] == [3, 7]) &&
+  (constWordsToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) 0 == [1]) &&
+  (constWordsToBitmapW (width := 64) [(true, 0), (false, 9)] 2 == [5, 0, 9]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7)] 7
+      == [213, 1, 2, 3, 4, 5, 6, 7, 1]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8
+      == [213, 1, 2, 3, 4, 5, 6, 7, 2, 8])
+
+#eval chunkToBitmapParityGuard
+#guard chunkToBitmapParityGuard
+
+example : constWordsToBitmapW (width := 8)
+    [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
+    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by native_decide
+
 end Flapjack.Test.WordToStackBitsParity

@@ -142,6 +142,21 @@ theorem crepInlineResVarFoldl (h : Nat) (vs : List Nat) (lc1 lc2 : FiniteMap Nat
       (vs.zip (vs.map (FLOOKUP lc2))).foldl resVar (resVar lc1 (h, FLOOKUP lc2 h)) :=
   res_var_foldl_commutes_strong h vs lc1 lc2
 
+theorem crepInlineSubmapFupdate
+    (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) :=
+  SUBMAP_IMP_FUPDATE_SUBMAP f g x y h
+
+theorem crepInlineSubmapDomsub
+    (f g : FiniteMap Nat Nat) (x : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FDOMSUB g x) :=
+  SUBMAP_IMP_DOMSUB_SUBMAP f g x h
+
+theorem crepInlineSubmapDomsubFupdate
+    (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FUPDATE g (x, y)) :=
+  SUBMAP_IMP_DOMSUB_FUPDATE f g x y h
+
 def crepInlineFdomGuard : Bool :=
   (match FLOOKUP crepInlineFdomMap 1 with
     | some v => v == 10
@@ -205,6 +220,9 @@ def runChecks : IO Bool := do
   let resVarOk ← do
     IO.println "PASS crep_inline res_var_commutes_strong and res_var_foldl_commutes_strong"
     pure true
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk)
+  let submapOk ← do
+    IO.println "PASS crep_inline SUBMAP_IMP_FUPDATE_SUBMAP/DOMSUB_SUBMAP/DOMSUB_FUPDATE"
+    pure true
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk && submapOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

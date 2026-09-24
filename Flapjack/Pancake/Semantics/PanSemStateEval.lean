@@ -968,4 +968,25 @@ theorem panValueFlatLoadFuel_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
                 (panValueFlatMachineDomain state memory) (panValueWordHOL memory) structs.toHOL <;>
               simp
 
+/-! ## Structured `.load` capstone (flapjack-pxn.18.3.6.9.2.2)
+
+The production `panValueFlatLoad` guards on `isWfShape` and starts the fuel at
+`panValueFlatContextFuel + panValueFlatShapeFuel + 1`.  Combining that with the
+fuel-indexed equivalence above and the initial-fuel bound yields the executed
+`.load` result as the tagged exact HOL `mem_load_def` port.  Untagged
+production-side adapter. -/
+
+theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext) (shape : Shape) (address : RiscV.Word 64)
+    (hwf : isWfShape structs shape = true) :
+    panValueFlatLoad structs memory panSemBitVec64BytesInWord address shape
+        (some (panSemBitVec64MemoryAccess state))
+      = (panMemLoadHOL (width := 64) shape address (panValueFlatMachineDomain state memory)
+          (panValueWordHOL memory) structs.toHOL).map HolValue.toPanValue := by
+  simp only [panValueFlatLoad, hwf, if_true]
+  exact (panValueFlatLoadFuel_eq_panMemLoadHOL state memory
+      (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)).1
+    structs shape address (by omega)
+
 end Flapjack

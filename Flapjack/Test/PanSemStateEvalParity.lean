@@ -498,4 +498,19 @@ example :
   (panValueFlatLoadFuel_eq_panMemLoadHOL littleEndianState littleEndianState.memory 3).1
     [] (.comb [Shape.one]) 0 (by decide)
 
+
+/-- Capstone: the guarded production `panValueFlatLoad` over the executed RV64
+memory-access state equals the tagged exact `panMemLoadHOL` mapped by
+`HolValue.toPanValue`. -/
+example (hwf : isWfShape ([] : StructContext) Shape.one = true) :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 Shape.one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) Shape.one 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_eq_panMemLoadHOL littleEndianState littleEndianState.memory
+    ([] : StructContext) Shape.one 0 hwf
+
 end Flapjack.Test.PanSemStateEvalParity

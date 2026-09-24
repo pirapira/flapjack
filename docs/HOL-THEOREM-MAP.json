@@ -8366,5 +8366,13 @@
     "lean_name": "crepInlineLocalsRel_decClock",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only generic-α helper (untagged): the exact width-indexed tag is on crepInlineLocalsRel_decClockW."
-  }
+  },
+{
+  "hol_path": "cakeml/pancake/pan_commonScript.sml",
+  "hol_name": "distinct_lists_def",
+  "lean_path": "Flapjack/Pancake/PanCommon.lean",
+  "lean_name": "distinctListsHol",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
+}
 ]

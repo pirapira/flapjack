@@ -45,7 +45,9 @@ import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSem.LookupCode
+import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.ByteAlignBridge
+import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
@@ -190,6 +192,7 @@ import Flapjack.Word
 import Flapjack.Stack
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.StackCarrier
+import Flapjack.Compiler.Backend.MlString
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList

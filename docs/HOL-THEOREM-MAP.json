@@ -8728,6 +8728,14 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `store_name` at stackLangScript.sml:18-25 - NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase | CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart | CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd | Temp (5 word). store_name is monomorphic in HOL and its only payload is the fixed 5-bit Temp field, so the Lean inductive with the same 17 nullary constructors plus Temp (BitVec 5) is shape-exact with no side condition. Direct HOL-EVAL rows sn_count=18 (every constructor name), sn_temp_w2n=3, sn_temp_word_bits=31 in scripts/hol-probes/stack_lang_store_name_probe.out are reproduced by Lean constructor checks in Flapjack/Test/WordToStackBitsParity.lean. NOTE: the separate HOL `prog` datatype is NOT yet exact in Lean - it is parameterised by a single shared 'a whereas the Lean Prog carrier has seven independent type parameters - so Prog stays untagged; see flapjack-pxn.18.5.15.3.11)"
   },
   {
+    "hol_path": "cakeml/basis/pure/mlstringScript.sml",
+    "hol_name": "mlstring",
+    "lean_path": "Flapjack/Compiler/Backend/MlString.lean",
+    "lean_name": "MlString",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `mlstring` at cakeml/basis/pure/mlstringScript.sml:19-21 - Datatype: mlstring = implode string, where HOL string = char list. HOL char is the canonical 256-element type (bijection CHR/ORD with num, HOL/src/string/stringScript.sml:29); Flapjack models it by HolChar = BitVec 8, the canonical 256-element carrier, exactly as HOL word types are modeled by BitVec width. The Lean inductive MlString = implode (List HolChar) is a single-constructor datatype with the same field, no width index and no typeclass side condition. Direct HOL-EVAL rows ml_strlen=3/ml_ord0=0/ml_ord255=255/ml_chr_ord=T/ml_explode_len=2/ml_implode_explode=T/ml_explode_implode=T/ml_concat_len=3 in scripts/hol-probes/mlstring_carrier_probe.out are reproduced by Lean guards in Flapjack/Test/MlStringParity.lean. This carrier is the prerequisite for the exact shared-word stackLang program theorems; see flapjack-pxn.18.5.15.3.11.2)"
+  },
+  {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "reg_imm",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",

@@ -113,3 +113,15 @@ val _ = print_eval "if_local_zero_tick_clock"
   ``(SND (panSem$evaluate
       (panLang$If (panLang$Var Local (strlit "x")) panLang$Tick panLang$Skip,
         ^baseStateZero))).clock``;
+val _ = print_eval "if_op_add_true_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If
+        (panLang$Op Add [panLang$Const (1w:8 word);
+                         panLang$Const (2w:8 word)])
+        panLang$Tick panLang$Skip, ^baseState))).clock``;
+val _ = print_eval "if_op_sub_zero_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If
+        (panLang$Op Sub [panLang$Const (3w:8 word);
+                         panLang$Const (3w:8 word)])
+        panLang$Tick panLang$Skip, ^baseState))).clock``;

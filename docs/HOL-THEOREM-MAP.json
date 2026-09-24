@@ -301,15 +301,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged Flapjack support over arbitrary alpha; HOL expression and value are both word-typed. The width-parametric RiscV.Word specialization is separately tagged as crepDestConstWord_eq_const."
+    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The faithful polymorphic word statement is separately tagged as crepDestConstHolWord_eq_const."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConstHolWord_eq_const",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Boolean-function word carrier ι → Bool with HolFiniteDimension, which encodes the finite, nonempty enumeration corresponding to HOL finite_index. Same polymorphic word-typed shape and no extra operation premises; successful dest_const premise and Const conclusion match source."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstWord_eq_const",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Width-parametric positive BitVec word instance of the HOL word-typed statement; no extra operation premises, successful dest_const premise and Const conclusion match source."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged BitVec-width support specialization used by RISC-V simp proofs. The HOL-polymorphic word-carrier theorem is crepDestConstHolWord_eq_const above."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

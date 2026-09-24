@@ -136,16 +136,29 @@ theorem evalPanSemStateExp_op
     alignment lives in the standard library, outside the CakeML submodule, so
     this helper is untagged. -/
 def panByteAlignHOL {width : Nat} (address : RiscV.Word width) : RiscV.Word width :=
-  let bits := Nat.log2 (width / 8)
-  (address >>> bits) <<< bits
+  let alignment := 2 ^ Nat.log2 (width / 8)
+  BitVec.ofNat width ((address.toNat / alignment) * alignment)
 
-/-- Exact port of HOL `mem_load_byte_def` (`panSemScript.sml:86`) over the
-faithful source memory shape: `m` is a total `'a word → 'a word_lab` map
-(here `HolWordLab`), `dm` is a word set rendered as a `Prop` predicate, and
-the result is the exact `word8` option.  The executed
-`PanValueMemoryAccess.readByte` widens the decoded byte to the word carrier;
-that widening is the separate production adapter, tracked by
-flapjack-pxn.18.3.6.9.2. -/
+/-- Flapjack-specific BitVec rendering of HOL4 standard-library
+`byte$get_byte_def` and `byte_index_def` from
+`HOL/src/n-bit/byteScript.sml:15-23`. This dependency is outside the CakeML
+repository, so this helper intentionally has no repository `@[hol]` tag. The
+formula preserves HOL natural `MOD 0` and subtraction behavior for sub-byte
+dimensions. -/
+def panGetByteHOL {width : Nat} (address value : RiscV.Word width)
+    (bigEndian : Bool) : UInt8 :=
+  let bytesPerWord := width / 8
+  let byteIndex := if bigEndian then
+      bytesPerWord - 1 - (address.toNat % bytesPerWord)
+    else address.toNat % bytesPerWord
+  UInt8.ofNat ((value.toNat / 256 ^ byteIndex) % 256)
+
+/-- HOL `byte$get_byte_def`/`byte_index_def` specialized to the source word
+    width. In particular, little endian `w2n address MOD 0` keeps the address
+    as the shift index below one byte. The RISC-V memory helper returns index
+    zero when `bytesInWord = 0`, which differs. The executed
+    `PanValueMemoryAccess.readByte` widening adapter remains tracked by
+    flapjack-pxn.18.3.6.9.2. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_byte_def"]
 def panMemLoadByteHOL {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)
@@ -155,9 +168,7 @@ def panMemLoadByteHOL {width : Nat} [NeZero width]
   match memory aligned with
   | .word value =>
       if domain aligned then
-        some (UInt8.ofNat
-          (RiscV.panRiscVGetByteEndian (BitVec.ofNat width (width / 8)) address
-            value bigEndian).toNat)
+        some (panGetByteHOL address value bigEndian)
       else none
 
 /-- Exact port of HOL `mem_load_32_def`
@@ -333,19 +344,7 @@ def panValueWordDefined
 theorem panSemBitVec64ByteAlign_eq_panByteAlignHOL (address : RiscV.Word 64) :
     panSemBitVec64WordModel.byteAlign (8 : RiscV.Word 64) address =
       panByteAlignHOL (width := 64) address := by
-  have h8 : BitVec.toNat (8 : RiscV.Word 64) = 8 := by decide
-  change RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address =
-    panByteAlignHOL (width := 64) address
-  simp only [RiscV.panRiscVByteAlign, panByteAlignHOL]
-  rw [show Nat.log2 8 = 3 from rfl]
-  apply BitVec.eq_of_toNat_eq
-  have hlt : BitVec.toNat address / 8 * 8 < 2 ^ 64 := by
-    have hle := Nat.div_mul_le_self (BitVec.toNat address) 8
-    have his := BitVec.isLt address
-    omega
-  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft,
-    Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, h8]
-  rw [if_neg (by decide : ¬ (8 = 0)), BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlt]
+  rfl
 
 /-- The model's `getByte` at width 64 equals the exact HOL `get_byte` codec
     `panRiscVGetByteEndian`, as a width-64 word. -/
@@ -403,8 +402,21 @@ theorem panSemBitVec64ReadByte_eq_panMemLoadByteHOL
             panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
           cases hb : state.memaddrs (panByteAlignHOL (width := 64) address)
           · simp
-          · simp only [(by decide : BitVec.ofNat 64 (64 / 8) = (8 : RiscV.Word 64))]
-            simp
+          · simp
+            have hbyte : panGetByteHOL address w state.be =
+                UInt8.ofNat
+                  (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                    address w state.be).toNat := by
+              unfold panGetByteHOL
+              apply congrArg UInt8.ofNat
+              simp [RiscV.panRiscVGetByteEndian, RiscV.panRiscVByteIndex]
+              have hsmall :
+                  (w.toNat / 256 ^
+                    (if state.be = true then 7 - address.toNat % 8
+                     else address.toNat % 8)) % 256 < 2 ^ 64 := by
+                exact Nat.lt_trans (Nat.mod_lt _ (by decide)) (by decide)
+              rw [Nat.mod_eq_of_lt hsmall]
+            rw [hbyte]
             change RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be =
               BitVec.ofNat 64 (BitVec.toNat
                 (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be) % 256)
@@ -776,5 +788,217 @@ theorem panMemLoadHOL_named_some (name : StructName) (structs : StructContext)
         rw [panMemLoadHOL.eq_def]
         simp only [hb, if_true]
         split <;> simp_all [Option.map]
+
+/-! The equation lemmas of the exact-HOL value isomorphism `HolValue.toPanValue`
+    (`cakeml/pancake/semantics/panSemScript.sml:22`), needed to push `Option.map
+    HolValue.toPanValue` through the structured `mem_load` cases of the executed
+    `.load` widening adapter (flapjack-pxn.18.3.6.9.2.2.1).  Untagged
+    production-side helpers. -/
+
+theorem HolValue.toPanValue_val {width : Nat} (bits : RiscV.Word width) :
+    HolValue.toPanValue (width := width) (HolValue.val (HolWordLab.word bits)) =
+      PanValue.word bits := by
+  rw [HolValue.toPanValue]
+
+theorem HolValue.toPanValue_rStruct {width : Nat} (fields : List (HolValue width)) :
+    HolValue.toPanValue (width := width) (HolValue.rStruct fields) =
+      PanValue.rStruct (fields.map HolValue.toPanValue) := by
+  rw [HolValue.toPanValue]
+
+theorem HolValue.toPanValue_nStruct {width : Nat} (name : StructName)
+    (fields : List (FieldName × HolValue width)) :
+    HolValue.toPanValue (width := width) (HolValue.nStruct name fields) =
+      PanValue.nStruct name (fields.map (fun p => (p.1, HolValue.toPanValue p.2))) := by
+  rw [HolValue.toPanValue]
+
+/-! ## Structured `.load` fuel-indexed equivalence (flapjack-pxn.18.3.6.9.2.2.1.1.2/.3)
+
+Kernel-checked equivalence between the production fuel-indexed flattening loader and
+the tagged exact HOL `mem_load_def` port for arbitrary Comb/List/Fields/Named shapes,
+under the executed RV64 memory-access state. Untagged production-side adapter. -/
+
+abbrev panValueFlatMachineReadWord (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) : RiscV.Word 64 → Option (RiscV.Word 64) :=
+  panValueFlatReadWord memory panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess state))
+
+abbrev panValueFlatMachineDomain (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) : RiscV.Word 64 → Prop :=
+  fun a => state.memaddrs a && panValueWordDefined memory a = true
+
+theorem panValueFlatLoadFuel_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) :
+    ∀ (fuel : Nat),
+      (∀ (structs : StructContext) (shape : Shape) (address : RiscV.Word 64),
+        panValueFlatContextFuel structs + panValueFlatShapeFuel shape ≤ fuel →
+        panValueFlatLoadFuel structs (panValueFlatMachineReadWord state memory) panSemBitVec64BytesInWord fuel shape address
+          = (panMemLoadHOL (width := 64) shape address (panValueFlatMachineDomain state memory)
+              (panValueWordHOL memory) structs.toHOL).map HolValue.toPanValue)
+      ∧ (∀ (structs : StructContext) (shapes : List Shape) (address : RiscV.Word 64),
+        panValueFlatContextFuel structs + panValueFlatShapeFuel.panValueFlatShapeListFuel shapes ≤ fuel →
+        panValueFlatLoadListFuel structs (panValueFlatMachineReadWord state memory) panSemBitVec64BytesInWord fuel shapes address
+          = (panMemLoadsHOL shapes address (panValueFlatMachineDomain state memory)
+              (panValueWordHOL memory) structs.toHOL).map (List.map HolValue.toPanValue))
+      ∧ (∀ (structs : StructContext) (fields : List (FieldName × Shape)) (address : RiscV.Word 64),
+        panValueFlatContextFuel structs + panValueFlatFieldsFuel fields ≤ fuel →
+        panValueFlatLoadFieldsFuel structs (panValueFlatMachineReadWord state memory) panSemBitVec64BytesInWord fuel fields address
+          = (panMemLoadFldsHOL fields address (panValueFlatMachineDomain state memory)
+              (panValueWordHOL memory) structs.toHOL).map
+              (List.map (fun p => (p.1, HolValue.toPanValue p.2)))) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      refine ⟨?_, ?_, ?_⟩
+      · intro structs shape address h
+        have := panValueFlatShapeFuel_pos shape
+        omega
+      · intro structs shapes address h
+        cases shapes with
+        | nil => simp [panValueFlatLoadListFuel, panMemLoadsHOL]
+        | cons shape shapes =>
+            simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel] at h
+            have := panValueFlatShapeFuel_pos shape
+            omega
+      · intro structs fields address h
+        cases fields with
+        | nil => simp [panValueFlatLoadFieldsFuel, panMemLoadFldsHOL]
+        | cons field fields =>
+            obtain ⟨_, shape⟩ := field
+            simp only [panValueFlatFieldsFuel] at h
+            have := panValueFlatShapeFuel_pos shape
+            omega
+  | succ fuel ih =>
+      refine ⟨?_, ?_, ?_⟩
+      · intro structs shape address h
+        cases shape with
+        | one =>
+            simp only [panValueFlatLoadFuel]
+            simp only [panValueFlatMachineReadWord]
+            rw [panMemLoadHOL.eq_def]
+            simp only []
+            rw [panValueFlatReadWord_eq_panValueWordHOL]
+            cases hmem : memory address with
+            | none => simp [panValueFlatMachineDomain, panValueWordDefined, hmem]
+            | some cell =>
+                cases cell with
+                | word w =>
+                    simp [panValueFlatMachineDomain, panValueWordDefined, hmem, panValueWordHOL,
+                      HolValue.toPanValue_val]
+                | rStruct fs => simp [panValueFlatMachineDomain, panValueWordDefined, hmem]
+                | nStruct nm fs => simp [panValueFlatMachineDomain, panValueWordDefined, hmem]
+        | comb shapes =>
+            simp only [panValueFlatLoadFuel]
+            rw [panMemLoadHOL.eq_def]
+            simp only []
+            have hb : panValueFlatContextFuel structs
+                + panValueFlatShapeFuel.panValueFlatShapeListFuel shapes ≤ fuel := by
+              simp only [panValueFlatShapeFuel] at h
+              omega
+            rw [ih.2.1 structs shapes address hb]
+            cases panMemLoadsHOL shapes address (panValueFlatMachineDomain state memory)
+                (panValueWordHOL memory) structs.toHOL <;>
+              simp [HolValue.toPanValue_rStruct]
+        | named name =>
+            simp only [panValueFlatLoadFuel]
+            cases hlook : lookupInfoWithRest name structs with
+            | none =>
+                rw [panMemLoadHOL_named_none name structs address (panValueFlatMachineDomain state memory)
+                  (panValueWordHOL memory) hlook]
+                simp
+            | some pair =>
+                obtain ⟨info, rest⟩ := pair
+                have hb : panValueFlatContextFuel rest + panValueFlatFieldsFuel info.fields ≤ fuel := by
+                  have hle := panValueFlatContextFuel_lookupInfoWithRest_le name structs info rest hlook
+                  simp only [panValueFlatShapeFuel] at h
+                  omega
+                rw [panMemLoadHOL_named_some name structs address (panValueFlatMachineDomain state memory)
+                  (panValueWordHOL memory) info rest hlook]
+                simp
+                rw [ih.2.2 rest info.fields address hb]
+                cases panMemLoadFldsHOL info.fields address (panValueFlatMachineDomain state memory)
+                    (panValueWordHOL memory) rest.toHOL <;>
+                  simp [HolValue.toPanValue_nStruct]
+      · intro structs shapes address h
+        cases shapes with
+        | nil => simp [panValueFlatLoadListFuel, panMemLoadsHOL]
+        | cons shape shapes =>
+            simp only [panValueFlatLoadListFuel]
+            rw [panMemLoadsHOL.eq_def]
+            simp only []
+            have hshape : panValueFlatContextFuel structs + panValueFlatShapeFuel shape ≤ fuel := by
+              simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel] at h
+              omega
+            have htail : panValueFlatContextFuel structs
+                + panValueFlatShapeFuel.panValueFlatShapeListFuel shapes ≤ fuel := by
+              simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel] at h
+              omega
+            have haddr : panValueFlatOffset panSemBitVec64BytesInWord address
+                    (shapeSizeWithContext structs shape)
+                = address + panBytesInWord 64
+                    * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape) := by
+              rw [show panSemBitVec64BytesInWord = (8 : RiscV.Word 64) from rfl,
+                panValueFlatOffset_eq_widen]
+              simp only [panValueFlatShapeSize_eq_sizeOfShWithCtxt, panBytesInWord]
+            rw [haddr]
+            rw [ih.1 structs shape address hshape]
+            rw [ih.2.1 structs shapes
+              (address + panBytesInWord 64 * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape)) htail]
+            cases panMemLoadHOL shape address (panValueFlatMachineDomain state memory)
+                (panValueWordHOL memory) structs.toHOL <;>
+              cases panMemLoadsHOL shapes
+                (address + panBytesInWord 64 * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape))
+                (panValueFlatMachineDomain state memory) (panValueWordHOL memory) structs.toHOL <;>
+              simp
+      · intro structs fields address h
+        cases fields with
+        | nil => simp [panValueFlatLoadFieldsFuel, panMemLoadFldsHOL]
+        | cons field fields =>
+            obtain ⟨fieldName, shape⟩ := field
+            simp only [panValueFlatLoadFieldsFuel]
+            rw [panMemLoadFldsHOL.eq_def]
+            simp only []
+            have hshape : panValueFlatContextFuel structs + panValueFlatShapeFuel shape ≤ fuel := by
+              simp only [panValueFlatFieldsFuel] at h
+              omega
+            have htail : panValueFlatContextFuel structs + panValueFlatFieldsFuel fields ≤ fuel := by
+              simp only [panValueFlatFieldsFuel] at h
+              omega
+            have haddr : panValueFlatOffset panSemBitVec64BytesInWord address
+                    (shapeSizeWithContext structs shape)
+                = address + panBytesInWord 64
+                    * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape) := by
+              rw [show panSemBitVec64BytesInWord = (8 : RiscV.Word 64) from rfl,
+                panValueFlatOffset_eq_widen]
+              simp only [panValueFlatShapeSize_eq_sizeOfShWithCtxt, panBytesInWord]
+            rw [haddr]
+            rw [ih.1 structs shape address hshape]
+            rw [ih.2.2 structs fields
+              (address + panBytesInWord 64 * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape)) htail]
+            cases panMemLoadHOL shape address (panValueFlatMachineDomain state memory)
+                (panValueWordHOL memory) structs.toHOL <;>
+              cases panMemLoadFldsHOL fields
+                (address + panBytesInWord 64 * BitVec.ofNat 64 (sizeOfShWithCtxt structs.toHOL shape))
+                (panValueFlatMachineDomain state memory) (panValueWordHOL memory) structs.toHOL <;>
+              simp
+
+/-! ## Structured `.load` capstone (flapjack-pxn.18.3.6.9.2.2)
+
+The production `panValueFlatLoad` guards on `isWfShape` and starts the fuel at
+`panValueFlatContextFuel + panValueFlatShapeFuel + 1`.  Combining that with the
+fuel-indexed equivalence above and the initial-fuel bound yields the executed
+`.load` result as the tagged exact HOL `mem_load_def` port.  Untagged
+production-side adapter. -/
+
+theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext) (shape : Shape) (address : RiscV.Word 64)
+    (hwf : isWfShape structs shape = true) :
+    panValueFlatLoad structs memory panSemBitVec64BytesInWord address shape
+        (some (panSemBitVec64MemoryAccess state))
+      = (panMemLoadHOL (width := 64) shape address (panValueFlatMachineDomain state memory)
+          (panValueWordHOL memory) structs.toHOL).map HolValue.toPanValue := by
+  simp only [panValueFlatLoad, hwf, if_true]
+  exact (panValueFlatLoadFuel_eq_panMemLoadHOL state memory
+      (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)).1
+    structs shape address (by omega)
 
 end Flapjack

@@ -308,6 +308,27 @@ private abbrev dom24 : RiscV.Word 24 → Prop := fun address => address = 4
 #guard panMemLoad32HOL (width := 24) mem24 dom24 false (BitVec.ofNat 24 4) =
   some (BitVec.ofNat 32 0x22331122)
 
+/-- Direct HOL width-4 parity with nonzero word 0xB: little endian uses
+    `address MOD 0`, while big endian's natural subtraction saturates to zero. -/
+private def mem4 : RiscV.Word 4 → HolWordLab 4 := fun _ => .word 1
+private abbrev dom4 : RiscV.Word 4 → Prop := fun address => address = 1
+
+#guard panMemLoadByteHOL (width := 4) mem4 dom4 false 1 == some (UInt8.ofNat 0)
+example : panMemLoadByteHOL (width := 4) mem4 dom4 false 1 =
+    some (UInt8.ofNat 0) := by decide
+
+private def mem4Nonzero : RiscV.Word 4 → HolWordLab 4 := fun _ => .word 11
+private abbrev dom4All : RiscV.Word 4 → Prop := fun _ => True
+
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All false 0 ==
+  some (UInt8.ofNat 11)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All false 1 ==
+  some (UInt8.ofNat 0)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All true 0 ==
+  some (UInt8.ofNat 11)
+#guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All true 1 ==
+  some (UInt8.ofNat 11)
+
 /-! ### Executed-path widening adapter (flapjack-pxn.18.3.6.9.2) -/
 
 /-- The executed `readByte` on the source state agrees with the tagged exact
@@ -466,5 +487,51 @@ example :
     (panValueWordHOL littleEndianState.memory)
     { fields := [("f", Shape.one)], size := 1 } []
     (by simp [lookupInfoWithRest])
+
+/-- Equation lemmas of the exact-HOL `HolValue.toPanValue` isomorphism. -/
+example :
+    HolValue.toPanValue (width := 64) (HolValue.val (HolWordLab.word (7 : RiscV.Word 64))) =
+      PanValue.word (7 : RiscV.Word 64) :=
+  HolValue.toPanValue_val (7 : RiscV.Word 64)
+
+example :
+    HolValue.toPanValue (width := 64) (HolValue.rStruct []) =
+      PanValue.rStruct ([] : List (PanValue (RiscV.Word 64))) :=
+  HolValue.toPanValue_rStruct ([] : List (HolValue 64))
+
+example :
+    HolValue.toPanValue (width := 64)
+        (HolValue.nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]) =
+      PanValue.nStruct "S" [("f", PanValue.word (7 : RiscV.Word 64))] :=
+  by
+    simpa [HolValue.toPanValue_val] using
+      HolValue.toPanValue_nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]
+
+/-- Fuel-indexed Comb/List/Fields/Named equivalence with the tagged exact `mem_load_def`
+port, extracted from the conjunction produced by the mutual fuel induction. -/
+example :
+    panValueFlatLoadFuel ([] : StructContext)
+        (panValueFlatMachineReadWord littleEndianState littleEndianState.memory)
+        panSemBitVec64BytesInWord 3 (.comb [Shape.one]) 0 =
+      (panMemLoadHOL (width := 64) (.comb [Shape.one]) 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory) (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  (panValueFlatLoadFuel_eq_panMemLoadHOL littleEndianState littleEndianState.memory 3).1
+    [] (.comb [Shape.one]) 0 (by decide)
+
+
+/-- Capstone: the guarded production `panValueFlatLoad` over the executed RV64
+memory-access state equals the tagged exact `panMemLoadHOL` mapped by
+`HolValue.toPanValue`. -/
+example (hwf : isWfShape ([] : StructContext) Shape.one = true) :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 Shape.one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) Shape.one 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_eq_panMemLoadHOL littleEndianState littleEndianState.memory
+    ([] : StructContext) Shape.one 0 hwf
 
 end Flapjack.Test.PanSemStateEvalParity

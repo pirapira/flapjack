@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.TotalMeasure
 import Flapjack.Pancake.Semantics.PanSemStateEval
 
 /-!
@@ -37,8 +38,9 @@ This module starts the genuinely HOL-shaped total interface:
 
 The state half is the production `PanSemState`, so the eventual total
 `panSemEvaluate` returns a `PanSemProgResult α σ × PanSemState α (FfiState σ)`
-pair with no `Option`/fuel wrapper, recursing on the HOL termination measure
-`(state.clock, program size)`.  `panSemTotalOfExecuted` is only a proved
+pair with no `Option`/fuel wrapper, using the source recursion measure
+`panSemEvalMeasure`, whose coordinates are `(state.clock, panSemProgFuel
+program)`.  `panSemTotalOfExecuted` is only a proved
 relation between the executed evaluator and this interface; it never defines
 total evaluation.  Everything here is untagged until that total evaluator and
 its exact HOL statement are established.
@@ -451,6 +453,11 @@ theorem panSemEvaluateCodeStateWithPostState_continue_total
 def panSemFixClock (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
     PanSemState α (FfiState σ) :=
   { state with clock := min entryClock state.clock }
+
+@[simp] theorem panSemFixClock_clock_le
+    (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
+    (panSemFixClock entryClock state).clock ≤ entryClock := by
+  exact Nat.min_le_left _ _
 
 /-! A small source-program fragment gives the clock leaves, `Seq`, and `If`
     with `Const` or `Var Local` conditions a real recursive evaluator over the

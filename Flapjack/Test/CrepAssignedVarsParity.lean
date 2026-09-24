@@ -69,6 +69,47 @@ example : crepAssignedFreeVars parityNested = [1, 2] :=
   crepAssignedFreeVars_nestedSeq_assign_zipWith [1, 2]
     [CrepExp.const (1 : Nat), CrepExp.const 2] (by decide)
 
+/-- Width-indexed `W`-wrapper spot checks (beads `.18.4.3.85`): each HOL
+    crepProps theorem restated over `CrepProg (BitVec 64)`/`CrepExp (BitVec 64)`. -/
+example : ((List.range 3).map (CrepExp.var (α := BitVec 64))).flatMap crepExpVarsW =
+    List.range 3 :=
+  map_var_crepExpVars_eqW (width := 64) (List.range 3)
+
+example : (loadGlobalsW (width := 64) (0 : BitVec 5) 2).length = 2 :=
+  loadGlobals_lengthW (width := 64) 0 2
+
+example : (loadGlobalsW (width := 64) (0 : BitVec 5) 2).flatMap crepExpVarsW = [] :=
+  loadGlobals_crepExpVars_emptyW (width := 64) 0 2
+
+example : crepAssignedFreeVarsW
+    (crepNestedSeqW (storeGlobalsW (0 : BitVec 5) [.const (7 : BitVec 64)])) = [] :=
+  crepAssignedFreeVars_nestedSeq_storeGlobalsW (width := 64) 0 [.const 7]
+
+example : crepAssignedVarsW
+    (crepNestedSeqW (storeGlobalsW (0 : BitVec 5) [.const (7 : BitVec 64)])) = [] :=
+  crepAssignedVars_nestedSeq_storeGlobalsW (width := 64) 0 [.const 7]
+
+example : crepAssignedVarsW
+    (crepNestedSeqW (([1, 2].zipWith
+      (fun name value => CrepProg.assign name value)
+      [.const (3 : BitVec 64), .const (4 : BitVec 64)]))) = [1, 2] :=
+  crepAssignedVars_nestedSeq_assign_zipWithW (width := 64) [1, 2]
+    [.const (3 : BitVec 64), .const (4 : BitVec 64)]
+    (by decide)
+
+example : crepAssignedFreeVarsW
+    (crepNestedSeqW (([1, 2].zipWith
+      (fun name value => CrepProg.assign name value)
+      [.const (3 : BitVec 64), .const 4]))) = [1, 2] :=
+  crepAssignedFreeVars_nestedSeq_assign_zipWithW (width := 64) [1, 2]
+    [.const (3 : BitVec 64), .const (4 : BitVec 64)]
+    (by decide)
+
+example : crepAssignedFreeVarsW
+    (crepNestedSeqW
+      (storeGlobalsW (width := 64) (0 : BitVec 5) ([] : List (CrepExp (BitVec 64))))) = [] :=
+  crepAssignedFreeVars_nestedSeq_storeGlobalsW (width := 64) 0 []
+
 def parityGuard : Bool :=
   (crepAssignedFreeVars parityProg == [2, 3]) &&
   (crepAssignedVars parityProg == [1, 2, 3]) &&

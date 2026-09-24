@@ -141,6 +141,14 @@ def lookupInfoWithRest [BEq String] (name : String) : StructContext →
       if candidate == name then some (info, context)
       else lookupInfoWithRest name context
 
+/-- Production shape well-formedness: `Named nm` succeeds iff `nm` occurs in the
+    context. This is the executable counterpart of HOL `is_wf_shape`
+    (`cakeml/pancake/panLangScript.sml:139`), but it is **not statement-exact**:
+    `StructInfo` carries an extra `shapedFields` field absent from HOL
+    `struct_info`, and `Named` consults `lookupInfo` (canonical String `==`)
+    rather than HOL `ALOOKUP` with `=`. An exact HOL-shaped port over
+    `StructContextHOL` is tracked by `flapjack-pxn.18.3.6.7`; direct HOL oracle
+    rows are in `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
 def isWfShape (context : StructContext) : Shape → Bool
   | .one => true
   | .comb shapes => isWfShapeList context shapes

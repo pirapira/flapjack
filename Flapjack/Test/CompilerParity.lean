@@ -699,6 +699,7 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsCompileDecsThreadingParity.runChecks,
     Flapjack.Test.PanGlobalsAlookupMapParity.runChecks,
     Flapjack.Test.PanLangFunctionsParity.runChecks,
+    Flapjack.Test.PanLangWfShapeParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
     Flapjack.Test.LoopCallParity.runChecks,

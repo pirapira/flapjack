@@ -137,6 +137,48 @@ def targetLoadsPairPayload : Bool :=
 
 #guard targetLoadsPairPayload
 
+/-! Exercise the full state-owned target Call dispatcher with the two-word
+payload from HOL `call_handles_struct_exception_7_8`, rather than testing
+`exp_hdl` alone. The handler loads both return-global cells into its existing
+local slots and returns the pair. -/
+private def pairCallContext : PanToCrepProofContext Word64 :=
+  { vars := pairHandlerVariables
+    funcs := FUPDATE FEMPTY ("raisePair", ([], .comb [.one, .one]))
+    eids := FUPDATE FEMPTY ("E", exceptionCode)
+    vmax := 2 }
+
+private def pairCallProgram : Prog Word64 :=
+  .call (some (none, some ("E", "caught",
+    .return (.var .local "caught")))) "raisePair" []
+
+private def pairCallBody : Prog Word64 :=
+  .raise "E" (.rStruct [.const payload, .const (BitVec.ofNat 64 8)])
+
+private def pairCallCode : FunName → Option (List Nat × CrepProg Word64) :=
+  fun function =>
+    if function == "raisePair" then
+      some ([], compileCodeRelProg
+        (ctxtFc pairCallContext.funcs pairCallContext.eids [] [] [])
+        pairCallBody)
+    else none
+
+private def pairCallTargetState : CrepRuntimeState Word64 Unit :=
+  { pairHandlerState with code := pairCallCode }
+
+private def pairCallTargetResult :=
+  evalCrepRuntimeResult handlerTargetFfi handlerTargetPrimitive 12
+    pairCallTargetState (compileCodeRelProg pairCallContext pairCallProgram)
+
+def targetCallCatchesAndReturnsPair : Bool :=
+  match pairCallTargetResult with
+  | some (.returned [first, second], post) =>
+      first == payload && second == BitVec.ofNat 64 8 &&
+      globalsLookup post (.rStruct [.word payload, .word (BitVec.ofNat 64 8)]) =
+        some [.word payload, .word (BitVec.ofNat 64 8)]
+  | _ => false
+
+#guard targetCallCatchesAndReturnsPair
+
 /-! Arbitrary-list target `exp_hdl` support, exercised on a three-word payload.
 The proof uses state-owned return-global cells and writes into preexisting
 handler locals in order. The source HOL `exp_hdl` oracle pins the generated

@@ -241,6 +241,9 @@ run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overla
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_disjoint "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe pan_props_alist_ctxt_max_probeScript.sml pan_props_alist_ctxt_max_probe.out \
+  ctxt_a_bound ctxt_max_value "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
   len0 flookup0 "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -267,6 +270,8 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
   empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_wf_shape_probeScript.sml pan_lang_wf_shape_probe.out \
+  one nested_unknown "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
   one known_named missing_named nested_comb nested_named_size_drop \
   "$cake_dir/pancake/panLangScript.sml"

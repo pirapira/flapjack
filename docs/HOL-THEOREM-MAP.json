@@ -8744,6 +8744,22 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `StackArgs_def` at word_to_stackScript.sml:293-297 - StackArgs dest arg_count (k,f,f') = let n = stack_arg_count dest arg_count k in stack_move n 0 f k (StackAlloc n). HOL is fully polymorphic in the word type and the body uses only stack_arg_count (already ported exact) and stackMove over StackAlloc (num field), so the Lean def is exact over Flapjack.Compiler.Backend.StackCarrier.ProgW gamma with generic alpha/beta/gamma. HOL-EVAL rows sa_inr/sa_inl in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wMoveSingle_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wMoveSingle",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wMoveSingle_def` at word_to_stackScript.sml:62-69 - four-way case on the formatted pair: (INL r1, INL r2) -> Inst (Arith (Binop Or r1 r2 (Reg r2))); (INL r1, INR r2) -> StackLoad r1 (f-1-(r2-k)); (INR r1, INL r2) -> StackStore r2 (f-1-(r1-k)); (INR r1, INR r2) -> Seq (StackLoad k (f-1-(r2-k))) (StackStore k (f-1-(r1-k))). HOL is fully polymorphic in the word type 'a and the fragment uses only Inst/Arith/Binop/Reg (num fields) plus Seq/StackLoad/StackStore; the exact statement is over the canonical shared-word carrier Flapjack.Compiler.Backend.StackCarrier.ProgW with generic alpha. HOL-EVAL rows wms_reg_reg/wms_reg_frame/wms_frame_reg/wms_frame_frame in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wMoveAux_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wMoveAux",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wMoveAux_def` at word_to_stackScript.sml:71-76 - wMoveAux [] kf = Skip; wMoveAux [xy] kf = wMoveSingle xy kf; wMoveAux (xy::xys) kf = Seq (wMoveSingle xy kf) (wMoveAux xys kf). HOL is fully polymorphic in the word type 'a and the body sequences wMoveSingle over Seq; the exact statement is over Flapjack.Compiler.Backend.StackCarrier.ProgW with generic alpha. HOL-EVAL rows wma_empty/wma_two in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean. NOTE: HOL `wMove_def` itself needs parmove (reg_alloc/parmoveScript.sml) and DIV2 (HOL arithmetic), out of scope here.)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",

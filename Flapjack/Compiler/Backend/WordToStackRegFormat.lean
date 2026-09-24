@@ -18,7 +18,8 @@ word operation and no `dimindex (:'a)`, so their tags are unconditional.
 `wRegWrite1`/`wRegWrite2` take `g : num -> stackLang$prog` and return a
 `stackLang$prog`; they are polymorphic in the word type `'a`, and their exact
 statements are over the canonical single-word-parameter carrier
-`Flapjack.Compiler.Backend.StackCarrier.ProgW`. -/
+`Flapjack.Compiler.Backend.StackCarrier.ProgW`.  The same carrier is used for
+`stack_move`, `StackArgs`, `wMoveSingle` and `wMoveAux`. -/
 
 namespace Flapjack.Compiler.Backend.WordToStackRegFormat
 
@@ -153,5 +154,53 @@ def stackArgs {α β γ : Type} (dest : Sum α β) (argCount : Nat)
     (kf : Nat × Nat × Nat) : ProgW γ :=
   let n := Flapjack.Compiler.Backend.WordToStack.stackArgCount dest argCount kf.1
   stackMove n 0 kf.2.1 kf.1 (.stackAlloc n)
+
+/-- Exact port of HOL `wMoveSingle_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:62-69`):
+
+```
+wMoveSingle (x,y) (k,f,f') =
+  case (x,y) of
+  | (INL r1, INL r2) => Inst (Arith (Binop Or r1 r2 (Reg r2)))
+  | (INL r1, INR r2) => StackLoad r1 (f-1 - (r2 - k))
+  | (INR r1, INL r2) => StackStore r2 (f-1 - (r1 - k))
+  | (INR r1, INR r2) => Seq (StackLoad k (f-1 - (r2 - k)))
+                            (StackStore k (f-1 - (r1 - k)))
+```
+
+    Lowers one formatted move pair to the register-format `stackLang$prog`
+    fragment: a register-to-register `Or` (the canonical no-op move), a
+    `StackLoad`/`StackStore`, or a load-then-store through the scratch register
+    `k`.  HOL is polymorphic in the word type `'a` and the fragment uses only
+    `Inst`/`Arith`/`Binop`/`Reg` (num fields), `Seq`, `StackLoad`, `StackStore`;
+    the exact statement is over the canonical shared-word `ProgW` carrier. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wMoveSingle_def"]
+def wMoveSingle {α : Type} (xy : Sum Nat Nat × Sum Nat Nat)
+    (kf : Nat × Nat × Nat) : ProgW α :=
+  match xy with
+  | (.inl r1, .inl r2) => .inst (.arith (.binop .or r1 r2 (.reg r2)))
+  | (.inl r1, .inr r2) => .stackLoad r1 (kf.2.1 - 1 - (r2 - kf.1))
+  | (.inr r1, .inl r2) => .stackStore r2 (kf.2.1 - 1 - (r1 - kf.1))
+  | (.inr r1, .inr r2) =>
+    .seq (.stackLoad kf.1 (kf.2.1 - 1 - (r2 - kf.1)))
+      (.stackStore kf.1 (kf.2.1 - 1 - (r1 - kf.1)))
+
+/-- Exact port of HOL `wMoveAux_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:71-76`):
+
+```
+(wMoveAux [] kf = Skip) /\
+(wMoveAux [xy] kf = wMoveSingle xy kf) /\
+(wMoveAux (xy::xys) kf = Seq (wMoveSingle xy kf) (wMoveAux xys kf))
+```
+
+    Sequences the register-format fragments of a list of formatted move pairs.
+    HOL is polymorphic in the word type `'a`; the exact statement is over the
+    canonical shared-word `ProgW` carrier. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wMoveAux_def"]
+def wMoveAux {α : Type} : List (Sum Nat Nat × Sum Nat Nat) → Nat × Nat × Nat → ProgW α
+  | [], _ => .skip
+  | [xy], kf => wMoveSingle xy kf
+  | xy :: xys, kf => .seq (wMoveSingle xy kf) (wMoveAux xys kf)
 
 end Flapjack.Compiler.Backend.WordToStackRegFormat

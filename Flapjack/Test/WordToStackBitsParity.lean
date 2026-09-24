@@ -350,6 +350,60 @@ example : stackMove (α := BitVec 64) 0 0 5 3 .skip = .skip := rfl
 example : stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
     (Sum.inr 4) 3 (2, 7, 9) = .stackAlloc 0 := rfl
 
+/-! ## wMoveSingle / wMoveAux oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.15`), for `wMoveSingle` (`word_to_stackScript.sml:62`)
+and `wMoveAux` (`:71`):
+
+```
+wms_reg_reg=T   wms_reg_frame=T   wms_frame_reg=T   wms_frame_frame=T
+wma_empty=T     wma_two=T
+```
+
+`ProgW` has no `BEq`/`DecidableEq`, so the rows are compared by pattern
+matching; the register-to-register move is the `Inst (Arith (Binop Or ...))`
+fragment.
+-/
+
+/-- Structural equality for the `wMoveSingle`/`wMoveAux` fragment of `ProgW`,
+including the register-to-register `Or` instruction. -/
+def wMoveProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => wMoveProgBEq a c && wMoveProgBEq b d
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .inst (.arith (.binop .or r1 r2 (.reg r3))),
+    .inst (.arith (.binop .or s1 s2 (.reg s3))) =>
+    r1 == s1 && r2 == s2 && r3 == s3
+  | _, _ => false
+
+def wmsOr (r1 r2 : Nat) : StackMoveProg :=
+  .inst (.arith (.binop .or r1 r2 (.reg r2)))
+
+def wMoveParityGuard : Bool :=
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inl 5) (2, 7, 9))
+    (wmsOr 3 5) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inr 5) (2, 7, 9))
+    (smLoad 3 3) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inr 3, Sum.inl 5) (2, 7, 9))
+    (smStore 5 5) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inr 3, Sum.inr 5) (2, 7, 9))
+    (smSeq (smLoad 2 3) (smStore 2 5)) &&
+  wMoveProgBEq (wMoveAux (α := BitVec 64) [] (2, 7, 9)) smSkip &&
+  wMoveProgBEq
+    (wMoveAux (α := BitVec 64)
+      [(Sum.inl 3, Sum.inl 5), (Sum.inr 4, Sum.inr 6)] (2, 7, 9))
+    (smSeq (wmsOr 3 5) (smSeq (smLoad 2 2) (smStore 2 4)))
+
+#eval wMoveParityGuard
+#guard wMoveParityGuard
+
+example : wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inl 5) (2, 7, 9) =
+    .inst (.arith (.binop .or 3 5 (.reg 5))) := rfl
+example : wMoveAux (α := BitVec 64) [] (2, 7, 9) = .skip := rfl
+
 /-! ## Executable bitmap recursion ↔ tagged recursion
 
 Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
@@ -526,6 +580,6 @@ def runChecks : IO Bool := do
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
-    stackMoveParityGuard)
+    stackMoveParityGuard && wMoveParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

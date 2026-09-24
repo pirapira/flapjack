@@ -25,7 +25,7 @@ fun print_eval label q =
    `dimindex (:'a)`, so the faithful Lean ports are exactly tagged with no width
    index.
 
-   Provenance (bead flapjack-pxn.18.5.15.3.13): generated from the Flapjack
+   Provenance (bead flapjack-pxn.18.5.15.3.13/.15): generated from the Flapjack
    checkout with the coordinator-approved read-only prebuilt CakeML/HOL object
    directory as oracle input, without editing that checkout.  `word_to_stackTheory`
    is prebuilt in flapjack2/3/4/6 (not flapjack7), so the oracle checkout is
@@ -80,4 +80,32 @@ val _ = print_eval "sa_inr"
 val _ = print_eval "sa_inl"
   ``(word_to_stack$StackArgs (INL 4) 7 (2,7,9) : 64 stackLang$prog) =
       (word_to_stack$stack_move 5 0 7 2 (stackLang$StackAlloc 5))``;
+
+(* wMoveSingle / wMoveAux (word_to_stackScript.sml:62-76).  Both are polymorphic
+   in the word type 'a and use only Seq/StackLoad/StackStore plus
+   Inst (Arith (Binop Or r1 r2 (Reg r2))) whose Or/Binop/Reg carry num fields;
+   the `prog` results are compared structurally via a boolean equality at a
+   concrete word type (64) so EVAL can reduce. *)
+
+val _ = print_eval "wms_reg_reg"
+  ``(word_to_stack$wMoveSingle (INL 3, INL 5) (2,7,9) : 64 stackLang$prog) =
+      (stackLang$Inst (Arith (Binop Or 3 5 (Reg 5))))``;
+val _ = print_eval "wms_reg_frame"
+  ``(word_to_stack$wMoveSingle (INL 3, INR 5) (2,7,9) : 64 stackLang$prog) =
+      (stackLang$StackLoad 3 3)``;
+val _ = print_eval "wms_frame_reg"
+  ``(word_to_stack$wMoveSingle (INR 3, INL 5) (2,7,9) : 64 stackLang$prog) =
+      (stackLang$StackStore 5 5)``;
+val _ = print_eval "wms_frame_frame"
+  ``(word_to_stack$wMoveSingle (INR 3, INR 5) (2,7,9) : 64 stackLang$prog) =
+      (stackLang$Seq (stackLang$StackLoad 2 3) (stackLang$StackStore 2 5))``;
+val _ = print_eval "wma_empty"
+  ``(word_to_stack$wMoveAux [] (2,7,9) : 64 stackLang$prog) =
+      (stackLang$Skip)``;
+val _ = print_eval "wma_two"
+  ``(word_to_stack$wMoveAux [(INL 3, INL 5); (INR 4, INR 6)] (2,7,9)
+      : 64 stackLang$prog) =
+      (stackLang$Seq
+        (stackLang$Inst (Arith (Binop Or 3 5 (Reg 5))))
+        (stackLang$Seq (stackLang$StackLoad 2 2) (stackLang$StackStore 2 4)))``;
 

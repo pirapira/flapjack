@@ -692,6 +692,52 @@ def loadByteMatchesGuard : Bool :=
 #guard loadByteMatchesGuard
 #eval loadByteMatchesGuard
 
+/-- A memory model whose alignment, byte-alignment, byte-read, and word-combine
+    hooks are literally the HOL `mem_load_32` primitives at 64 bits, but which is
+    otherwise not the RISC-V target model. -/
+def holLoad32Model : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with
+    byteAlign := fun _ address => holByteAlign64 address,
+    getByte := fun _ address value _ => holGetByte64 address value false }
+
+def holLoad32BaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { loadByteBaseState with memoryModel := holLoad32Model }
+
+theorem holLoad32BaseState_matches :
+    CrepMemoryModelLoad32MatchesHOL64 holLoad32BaseState.memoryModel :=
+  fun address _ =>
+    ⟨panRiscVAligned32_eq_holAligned32 address, rfl, fun _ => rfl,
+      (holWordOfBytes64_eq_panRiscVWordOfBytes false _).symm⟩
+
+example : CrepMemoryModelLoad32MatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_load32_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holLoad32BaseState (.load32 (.const (8 : RiscV.Word 64))) =
+      holMemLoad32_64 holLoad32BaseState.memaddrs
+        (crepRuntimeMemoryView holLoad32BaseState.memory) false 8 :=
+  evalCrepRuntimeExp_load32_const_of_matches holLoad32BaseState
+    holLoad32BaseState_matches rfl rfl 8
+
+/-- The production evaluator over an arbitrary matching 32-bit model agrees with
+    HOL `mem_load_32` on constant, unaligned, out-of-domain, and nested addresses. -/
+def load32MatchesGuard : Bool :=
+  (evalCrepRuntimeExp holLoad32BaseState
+      (.load32 (.const (8 : RiscV.Word 64))) == some (0x55667788 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holLoad32BaseState
+        (.load32 (.const (9 : RiscV.Word 64))) == none) &&
+    (evalCrepRuntimeExp holLoad32BaseState
+        (.load32 (.const (16 : RiscV.Word 64))) == none) &&
+    (evalCrepRuntimeExpWordLab holLoad32BaseState
+        (.load32 (.const (8 : RiscV.Word 64))) ==
+      some (.word (0x55667788 : RiscV.Word 64))) &&
+    (evalCrepRuntimeExp holLoad32BaseState
+        (.load32 (.op .add ([(5 : RiscV.Word 64), 3].map CrepExp.const))) ==
+      some (0x55667788 : RiscV.Word 64))
+
+#guard load32MatchesGuard
+#eval load32MatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -745,9 +791,13 @@ def runChecks : IO Bool := do
     IO.println "PASS crep LoadByte hook matches HOL mem_load_byte over arbitrary model and nested operands"
   else
     IO.println "FAIL crep LoadByte hook matches HOL mem_load_byte over arbitrary model and nested operands"
+  if load32MatchesGuard then
+    IO.println "PASS crep Load32 hook matches HOL mem_load_32 over arbitrary model and nested operands"
+  else
+    IO.println "FAIL crep Load32 hook matches HOL mem_load_32 over arbitrary model and nested operands"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
     crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard && cmpMatchesGuard &&
-    loadByteMatchesGuard)
+    loadByteMatchesGuard && load32MatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

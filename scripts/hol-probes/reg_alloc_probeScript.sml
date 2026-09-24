@@ -89,3 +89,11 @@ val _ = print_eval "node_list_last_in_range"
   ``2 < LENGTH ([7; 11; 13] : num list)``;
 val _ = print_eval "node_list_out_of_range"
   ``3 < LENGTH ([7; 11; 13] : num list)``;
+val _ = print_eval "node_list_lupdate_same"
+  ``EL 1 (LUPDATE 99 1 ([7; 11; 13] : num list)) = 99``;
+val _ = print_eval "node_list_lupdate_other"
+  ``EL 0 (LUPDATE 99 1 ([7; 11; 13] : num list)) = 7``;
+val _ = print_eval "node_list_lupdate_length"
+  ``LENGTH (LUPDATE 99 1 ([7; 11; 13] : num list)) = 3``;
+val _ = print_eval "node_list_lupdate_outside"
+  ``LUPDATE 99 3 ([7; 11; 13] : num list) = [7; 11; 13]``;

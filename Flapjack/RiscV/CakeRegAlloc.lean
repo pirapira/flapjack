@@ -465,6 +465,36 @@ theorem get_ofList_empty (i : Nat) :
     get (ofList ([] : List α)) i = none := by
   simp [get, ofList, cakeMapLookup, Flapjack.lookupNatInfo]
 
+/-! These update laws characterize the HOL `LUPDATE` observations on a dense
+    in-range list embedding.  `CakeNodeMap.set` is persistent, so the original
+    map remains readable after producing the updated map. -/
+theorem get_set_ofList_same {α : Type u} (values : List α) (i : Nat) (v : α)
+    (hi : i < values.length) :
+    get (set (ofList values) i v) i = some v := by
+  simp [get, set, ofList, hi]
+
+theorem get_set_ofList_other {α : Type u} (values : List α)
+    (i j : Nat) (v : α) (hi : i < values.length)
+    (hj : j < values.length) (hji : j ≠ i) :
+    get (set (ofList values) i v) j = some values[j] := by
+  have hij : i ≠ j := Ne.symm hji
+  simp [get, set, ofList, hi, hj, hij]
+
+theorem set_ofList_slots_size {α : Type u} (values : List α)
+    (i : Nat) (v : α) :
+    (set (ofList values) i v).slots.size = values.length := by
+  by_cases hi : i < values.length <;> simp [set, ofList, hi]
+
+/-- Lean's extension map intentionally gives out-of-range updates a location;
+    HOL `LUPDATE` leaves the list unchanged there, so this is not a port of its
+    out-of-range behavior. -/
+theorem get_set_ofList_outside {α : Type u} (values : List α)
+    (i : Nat) (v : α) (hi : values.length ≤ i) :
+    get (set (ofList values) i v) i = some v := by
+  have hbound : ¬ i < values.length := Nat.not_lt.mpr hi
+  simp [get, set, ofList, hbound, cakeMapLookup,
+    Flapjack.lookupNatInfo, cakeMapUpdate]
+
 /-- The association list read as a node-indexed field.  `cakeMapLookup`
     returns the *first* binding for a key, so the earlier entries must win;
     folding from the right lets them overwrite the later ones. -/

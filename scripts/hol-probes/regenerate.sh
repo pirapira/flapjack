@@ -1334,7 +1334,7 @@ run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_prob
 # (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
 # compile / names_ok) against a small renaming map.
 run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
-  ri_reg names_ok_dup \
+  ri_reg compile_map_fst_src \
   "$cake_dir/compiler/backend/stack_namesScript.sml" \
   "$cake_dir/compiler/backend"
 

@@ -25,3 +25,7 @@ val _ = print_eval "compile_row"   ``compile ^names [(1, Halt 3 : 8 stackLang$pr
 val _ = print_eval "names_ok_bad"  ``names_ok ^names 4 [0;1]``;
 val _ = print_eval "names_ok_ok"   ``names_ok (sptree$LN) 8 []``;
 val _ = print_eval "names_ok_dup"  ``names_ok (sptree$insert 0 1 (sptree$insert 1 1 (sptree$LN))) 4 []``;
+val sample = ``[(1, Halt 3 : 8 stackLang$prog); (2, Raise 4 : 8 stackLang$prog)]``;
+val _ = print_eval "compile_map_fst"     ``MAP FST (compile ^names ^sample)``;
+val _ = print_eval "compile_map_fst_src" ``MAP FST ^sample``
+;

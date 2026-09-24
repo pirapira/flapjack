@@ -138,6 +138,18 @@ def compile {α : Type} (names : FiniteMap Nat Nat)
     (program : List (Nat × ProgW α)) : List (Nat × ProgW α) :=
   program.map (progCompEntry names)
 
+/-- HOL `MAP_FST_compile` (`stack_namesProofScript.sml:268-272`): renaming
+preserves the function identifiers of a program. -/
+@[hol "cakeml/compiler/backend/proofs/stack_namesProofScript.sml" "MAP_FST_compile"]
+theorem map_fst_compile {α : Type} (names : FiniteMap Nat Nat)
+    (program : List (Nat × ProgW α)) :
+    (compile names program).map Prod.fst = program.map Prod.fst := by
+  induction program with
+  | nil => rfl
+  | cons head tail ih =>
+      obtain ⟨n, p⟩ := head
+      simp [compile, progCompEntry]
+
 /-- Executable Boolean counterpart of HOL `names_ok`; the tagged predicate
 below retains HOL's proposition-valued result. -/
 def namesOk (names : FiniteMap Nat Nat) (regCount : Nat) (avoidRegs : List Nat) : Bool :=

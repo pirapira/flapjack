@@ -210,31 +210,37 @@ example :
    `empty_locals_def` (crepSemScript.sml:55-73) over the 11-field
    `CrepHolState`. These are local-state helpers only, not a program
    evaluator. -/
-def localBase : CrepHolState Nat Unit :=
-  { holBase with
-    locals := FUPDATE (FEMPTY : FiniteMap Nat (PanWordLab Nat))
-      ((2 : Nat), PanWordLab.word (9 : Nat))
+def localBase : CrepHolState (BitVec 64) Unit :=
+  { locals := FUPDATE (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      ((2 : Nat), PanWordLab.word (9 : BitVec 64))
+    globals := fun _ => none
+    code := FEMPTY
+    memory := fun _ => .word 0
+    memaddrs := fun _ => false
+    shMemaddrs := fun _ => false
     clock := 5
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
     baseAddress := 3
     topAddress := 100 }
 
 -- set_var_hit.
 example :
-    FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).locals 1 =
-      some (PanWordLab.word (7 : Nat)) := by
+    FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).locals 1 =
+      some (PanWordLab.word (7 : BitVec 64)) := by
   rfl
 
 -- set_var_keeps_other.
 example :
-    FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).locals 2 =
-      some (PanWordLab.word (9 : Nat)) := by
+    FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).locals 2 =
+      some (PanWordLab.word (9 : BitVec 64)) := by
   rfl
 
 -- upd_locals_replace: `FEMPTY |++ varargs`, so the old binding is dropped.
 example :
-    FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : Nat))] localBase).locals 1 =
-        some (PanWordLab.word (3 : Nat)) ∧
-      FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : Nat))] localBase).locals 2 =
+    FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : BitVec 64))] localBase).locals 1 =
+        some (PanWordLab.word (3 : BitVec 64)) ∧
+      FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : BitVec 64))] localBase).locals 2 =
         none := by
   constructor <;> rfl
 
@@ -245,9 +251,9 @@ example :
 
 -- set_var_fields_preserved.
 example :
-    (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).clock = 5 ∧
-      (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).baseAddress = 3 ∧
-      (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).topAddress = 100 :=
+    (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).clock = 5 ∧
+      (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).baseAddress = 3 ∧
+      (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).topAddress = 100 :=
   ⟨rfl, rfl, rfl⟩
 
 -- empty_locals_fields_preserved.
@@ -256,9 +262,9 @@ example :
       (emptyCrepHolLocals localBase).memory = localBase.memory :=
   ⟨rfl, rfl⟩
 
-#guard FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : Nat)) localBase).locals 1 ==
-          some (PanWordLab.word (7 : Nat)) &&
-        FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : Nat))] localBase).locals 2 ==
+#guard FLOOKUP (setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase).locals 1 ==
+          some (PanWordLab.word (7 : BitVec 64)) &&
+        FLOOKUP (updCrepHolLocals [(1, PanWordLab.word (3 : BitVec 64))] localBase).locals 2 ==
           none &&
         FLOOKUP (emptyCrepHolLocals localBase).locals 2 == none
 

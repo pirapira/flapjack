@@ -341,7 +341,7 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     leaves every other field of the 11-field state unchanged. The clock
     decrement is the tagged `decCrepHolClock` (`dec_clock_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
-theorem decCrepHolClock_simp {α σ : Type} (s : CrepHolState α σ) :
+theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
     (decCrepHolClock s).locals = s.locals ∧
       (decCrepHolClock s).globals = s.globals ∧
       (decCrepHolClock s).code = s.code ∧
@@ -359,7 +359,7 @@ theorem decCrepHolClock_simp {α σ : Type} (s : CrepHolState α σ) :
     leaves every other field of the 11-field state unchanged. The locals clear
     is the tagged `emptyCrepHolLocals` (`empty_locals_def`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
-theorem emptyCrepHolLocals_simp {α σ : Type} (s : CrepHolState α σ) :
+theorem emptyCrepHolLocals_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
     (emptyCrepHolLocals s).globals = s.globals ∧
       (emptyCrepHolLocals s).code = s.code ∧
       (emptyCrepHolLocals s).memory = s.memory ∧

@@ -8013,7 +8013,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8021,7 +8021,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8029,7 +8029,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "decCrepHolClock_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; 10-conjunct projection equality over the 11-field CrepHolState via tagged decCrepHolClock; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; 10-conjunct projection equality over the 11-field CrepHolState via tagged decCrepHolClock; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8037,7 +8037,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "emptyCrepHolLocals_simp",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; 10-conjunct projection equality over the 11-field CrepHolState via tagged emptyCrepHolLocals; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; 10-conjunct projection equality over the 11-field CrepHolState via tagged emptyCrepHolLocals; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8045,7 +8045,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "wlabWloc",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (definition compared against wlab_wloc_def at crep_to_loopProofScript.sml:45-47; panSem$Word/wordLang$Word rendered as PanWordLab.word/LoopValue.word single-constructor maps; direct HOL-EVAL row wlab_wloc_word=T reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (definition compared against wlab_wloc_def at crep_to_loopProofScript.sml:45-47; panSem$Word/wordLang$Word rendered as PanWordLab.word/LoopValue.word single-constructor maps; direct HOL-EVAL row wlab_wloc_word=T reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8053,7 +8053,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopGlobalsRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (definition compared against globals_rel_def at crep_to_loopProofScript.sml:54-58; both globals fields are BitVec 5-indexed option finite maps so HOL FLOOKUP is the field application; direct HOL-EVAL rows globals_lookup_match=T/globals_lookup_absent=T and negative globals_lookup_wrong=F reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (definition compared against globals_rel_def at crep_to_loopProofScript.sml:54-58; both globals fields are BitVec 5-indexed option finite maps so HOL FLOOKUP is the field application; direct HOL-EVAL rows globals_lookup_match=T/globals_lookup_absent=T and negative globals_lookup_wrong=F reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8061,7 +8061,7 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopGlobalsRel_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209; unfolding of crepToLoopGlobalsRel to the same lookup implication, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209; unfolding of crepToLoopGlobalsRel to the same lookup implication, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8069,6 +8069,6 @@
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopStateRel_clock_add_zero",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean)"
+    "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
   }
 ]

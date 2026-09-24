@@ -11,7 +11,12 @@ State relation of the Crepe-to-Loop lowering, ported from
 
 Only the fields the relation constrains are compared; HOL's `memaddrs`/
 `sh_memaddrs` are `set`s, rendered here as Boolean-valued membership maps
-(`α → Bool`), matching the `mdomain`/`shMdomain` fields of `LoopMachineState`.
+(`BitVec width → Bool`), matching the `mdomain`/`shMdomain` fields of
+`LoopMachineState`.
+
+Every tagged declaration is width-specialized to `BitVec width`: HOL
+`crepSem$state`/`loopSem$state` are word-length indexed (`'a word` fields), so
+a generic-`α` carrier is not an exact counterpart.
 -/
 
 namespace Flapjack
@@ -23,8 +28,8 @@ namespace Flapjack
     The remaining `CrepHolState` fields (`locals`, `globals`, `code`, `memory`)
     are related separately by `locals_rel`/`code_rel`/`mem_rel`/`globals_rel`. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_def"]
-def crepToLoopStateRel {α σ : Type} (s : CrepHolState α σ)
-    (t : LoopMachineState α σ) : Prop :=
+def crepToLoopStateRel {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ)
+    (t : LoopMachineState (BitVec width) σ) : Prop :=
   s.memaddrs = t.mdomain ∧
     s.shMemaddrs = t.shMdomain ∧
     s.clock = t.clock ∧
@@ -37,8 +42,8 @@ def crepToLoopStateRel {α σ : Type} (s : CrepHolState α σ)
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`): the relation
     unfolds to the same seven-field conjunction. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_intro"]
-theorem crepToLoopStateRel_intro {α σ : Type} (s : CrepHolState α σ)
-    (t : LoopMachineState α σ) :
+theorem crepToLoopStateRel_intro {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ)
+    (t : LoopMachineState (BitVec width) σ) :
     crepToLoopStateRel s t ↔
       s.memaddrs = t.mdomain ∧
         s.shMemaddrs = t.shMdomain ∧
@@ -55,7 +60,7 @@ theorem crepToLoopStateRel_intro {α σ : Type} (s : CrepHolState α σ)
     both have a single `word` constructor for word payloads, so the map is the
     identity on the word. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "wlab_wloc_def"]
-def wlabWloc {α : Type} : PanWordLab α → LoopValue α
+def wlabWloc {width : Nat} : PanWordLab (BitVec width) → LoopValue (BitVec width)
   | .word value => .word value
 
 /-- Exact port of HOL `globals_rel_def`
@@ -64,18 +69,18 @@ def wlabWloc {α : Type} : PanWordLab α → LoopValue α
     `FLOOKUP` on `5 word |-> 'a word_loc` is the target field application;
     the source `globals` is the same `BitVec 5`-indexed option finite map. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "globals_rel_def"]
-def crepToLoopGlobalsRel {α : Type}
-    (sglobals : BitVec 5 → Option (PanWordLab α))
-    (tglobals : BitVec 5 → Option (LoopValue α)) : Prop :=
+def crepToLoopGlobalsRel {width : Nat}
+    (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec width))) : Prop :=
   ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value)
 
 /-- Exact port of HOL `globals_rel_intro`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:203-209`): the relation
     unfolds to the same universally quantified implication. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "globals_rel_intro"]
-theorem crepToLoopGlobalsRel_intro {α : Type}
-    (sglobals : BitVec 5 → Option (PanWordLab α))
-    (tglobals : BitVec 5 → Option (LoopValue α)) :
+theorem crepToLoopGlobalsRel_intro {width : Nat}
+    (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec width))) :
     crepToLoopGlobalsRel sglobals tglobals ↔
       ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value) :=
   Iff.rfl
@@ -84,8 +89,9 @@ theorem crepToLoopGlobalsRel_intro {α : Type}
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`): a state
     relation is preserved when the target clock is advanced by zero. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_clock_add_zero"]
-theorem crepToLoopStateRel_clock_add_zero {α σ : Type} (s : CrepHolState α σ)
-    (t : LoopMachineState α σ) (h : crepToLoopStateRel s t) :
+theorem crepToLoopStateRel_clock_add_zero {width : Nat} {σ : Type}
+    (s : CrepHolState (BitVec width) σ)
+    (t : LoopMachineState (BitVec width) σ) (h : crepToLoopStateRel s t) :
     ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
   ⟨0, by
     rw [crepToLoopStateRel] at h ⊢

@@ -988,9 +988,17 @@ theorem compile_all_enc_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfi
     rfl
 
 
-/-- HOL-exact `stack_to_labProofScript.sml` `flatten_line_ok_pre` over the
-`app_list` representation: HOL's conclusion `EVERY (line_ok_pre c) (append ls)`
-is stated with `flattenApp` and `appListAppend`, derived from the flat
+/-- Untagged Flapjack representation bridge/analogue of HOL
+`stack_to_labProofScript.sml` `flatten_line_ok_pre`, whose statement is
+`byte_offset_ok c 0w /\ stack_asm_ok c p /\ flatten t p n m cs bs = (ls,a,b)
+==> EVERY (line_ok_pre c) (append ls)`. Here the conclusion is stated over
+`flattenApp`/`appListAppend` with the Lean side conditions
+`lineOkPreConfig`, `stackAsmOk (asmChecksOfConfig config)` and `asmByteOffsetOk`.
+
+No `@[hol]` tag: the remaining representation gap is that `flattenApp` is
+parameterised by `ops : FlattenOps ...` whereas HOL `flatten` is a single global
+function over the imported assembler constructors (and the flat production
+`flatten` is a separate Lean artefact). Derived from the flat
 `flatten_line_ok_pre` through `flattenApp_appListFlatten_eq_flatten`. -/
 theorem flattenApp_line_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (program : FlattenProg width) (tail : Bool) (sectionId next : Nat)
@@ -1012,10 +1020,12 @@ theorem flattenApp_line_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfi
   exact hflat
 
 
-/-- HOL-exact `stack_to_labProofScript.sml` `compile_all_enc_ok_pre` over the
-`app_list` `prog_to_section`: every section produced by `progToSectionApp` for a
-list of `stack_asm_ok` programs satisfies `line_ok_pre`, via
-`progToSectionApp_lines` and the flat `compile_all_enc_ok_pre`. -/
+/-- Untagged Flapjack representation bridge/analogue of HOL
+`stack_to_labProofScript.sml` `compile_all_enc_ok_pre`: every section produced by
+the app-list `progToSectionApp` for a list of `stack_asm_ok` programs satisfies
+`secOkPreConfig`, via `progToSectionApp_lines` and the flat
+`compile_all_enc_ok_pre`. Not tagged for the same `ops` parameterisation gap as
+`flattenApp_line_ok_pre`. -/
 theorem compile_all_enc_ok_pre_app (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (programs : List (Nat × FlattenProg width))
     (hbyte : Flapjack.Compiler.Encoders.Asm.asmByteOffsetOk config (0 : BitVec width) = true)

@@ -611,45 +611,72 @@ theorem flattenApp_ite (tail : Bool) (condition : Cmp) (register : Nat) (right :
                             rw [appendAux_thm]
                             rw [hxs]
                             simp only [List.append_assoc, List.append_nil]
-set_option linter.defProp false in
-def flattenAppBridgeAux
-    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+/-- Untagged Flapjack representation bridge (not a HOL port): the `appListFlatten`
+of the `app_list` `flattenApp` output equals the flat production `flatten` output.
+HOL has a single global `flatten` over the imported assembler constructors,
+whereas `flattenApp` is parameterised by `ops : FlattenOps ...`; no `@[hol]` tag
+is attached.
+
+The recursion is over `sizeOf program` and the result is a `Prop` equality, so a
+recursive `def` would trip `linter.defProp`. It is stated as a theorem with
+well-founded recursion (`Nat.strongRecOn`), avoiding any linter suppression. -/
+theorem flattenAppBridgeAux
     (tail : Bool) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString)
     (sectionId next : Nat) (conts breaks : List Nat) :
     appListFlatten (flattenApp ops zero tail program sectionId next conts breaks)
-      = flatten ops zero tail program sectionId next conts breaks := by
-  cases program with
-  | seq first second =>
-    exact flattenApp_seq ops zero tail first second sectionId next conts breaks
-      (fun k => flattenAppBridgeAux ops zero false first sectionId k conts breaks)
-      (fun k => flattenAppBridgeAux ops zero false second sectionId k conts breaks)
-  | ite condition register right thenBranch elseBranch =>
-    exact flattenApp_ite ops zero tail condition register right thenBranch elseBranch
-      sectionId next conts breaks
-      (fun k => flattenAppBridgeAux ops zero false thenBranch sectionId k conts breaks)
-      (fun k => flattenAppBridgeAux ops zero false elseBranch sectionId k conts breaks)
-  | loop body =>
-    exact flattenApp_loop ops zero tail body sectionId next conts breaks
-      (fun k c b => flattenAppBridgeAux ops zero false body sectionId k c b)
-  | call returnHandler target handler =>
-    cases returnHandler with
-    | none =>
-      exact flattenApp_call_none ops zero tail target handler sectionId next conts breaks
-    | some triple =>
-      obtain ⟨returnProgram, linkRegister, returnSection, returnLabel⟩ := triple
-      exact flattenApp_call_some ops zero tail returnProgram linkRegister returnSection returnLabel
-        target handler sectionId next conts breaks
-        (fun k => flattenAppBridgeAux ops zero false returnProgram sectionId k conts breaks)
-        (fun hp _hs _hl k _hbound => flattenAppBridgeAux ops zero false hp sectionId k conts breaks)
-  | tick | skip | inst _ | get _ _ | «set» _ _ | opCurrHeap _ _ _ | jumpLower _ _ _
-    | alloc _ | storeConsts _ _ _ | raise _ | ret _ | «break» _ | «continue» _
-    | ffi _ _ _ _ _ _ | locValue _ _ _ | install _ _ _ _ _ | shMemOp _ _ _ 
-    | codeBufferWrite _ _ | dataBufferWrite _ _ | rawCall _ | stackAlloc _ | stackFree _
-    | stackStore _ _ | stackStoreAny _ _ | stackLoad _ _ | stackLoadAny _ _
-    | stackGetSize _ | stackSetSize _ | bitmapLoad _ _ | halt _ =>
-    simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
-termination_by sizeOf program
-decreasing_by all_goals first | exact hbound | decreasing_trivial | assumption | omega
+      = flatten ops zero tail program sectionId next conts breaks :=
+  Nat.strongRecOn (sizeOf program)
+    (motive := fun k => ∀ (program : Prog Inst Cmp RegImm Binop Memop Addr MlString),
+      sizeOf program ≤ k → ∀ (tail : Bool) (sectionId next : Nat) (conts breaks : List Nat),
+        appListFlatten (flattenApp ops zero tail program sectionId next conts breaks)
+          = flatten ops zero tail program sectionId next conts breaks)
+    (fun _ ih => by
+      intro program hle tail sectionId next conts breaks
+      cases program with
+      | seq first second =>
+        exact flattenApp_seq ops zero tail first second sectionId next conts breaks
+          (fun k => ih (sizeOf first)
+            (by have h : sizeOf first < sizeOf (Prog.seq first second) := (by decreasing_trivial); omega)
+            first (Nat.le_refl _) false sectionId k conts breaks)
+          (fun k => ih (sizeOf second)
+            (by have h : sizeOf second < sizeOf (Prog.seq first second) := (by decreasing_trivial); omega)
+            second (Nat.le_refl _) false sectionId k conts breaks)
+      | ite condition register right thenBranch elseBranch =>
+        exact flattenApp_ite ops zero tail condition register right thenBranch elseBranch
+          sectionId next conts breaks
+          (fun k => ih (sizeOf thenBranch)
+            (by have h : sizeOf thenBranch < sizeOf (Prog.ite condition register right thenBranch elseBranch) := (by decreasing_trivial); omega)
+            thenBranch (Nat.le_refl _) false sectionId k conts breaks)
+          (fun k => ih (sizeOf elseBranch)
+            (by have h : sizeOf elseBranch < sizeOf (Prog.ite condition register right thenBranch elseBranch) := (by decreasing_trivial); omega)
+            elseBranch (Nat.le_refl _) false sectionId k conts breaks)
+      | loop body =>
+        exact flattenApp_loop ops zero tail body sectionId next conts breaks
+          (fun k c b => ih (sizeOf body)
+            (by have h : sizeOf body < sizeOf (Prog.loop body) := (by decreasing_trivial); omega)
+            body (Nat.le_refl _) false sectionId k c b)
+      | call returnHandler target handler =>
+        cases returnHandler with
+        | none =>
+          exact flattenApp_call_none ops zero tail target handler sectionId next conts breaks
+        | some triple =>
+          obtain ⟨returnProgram, linkRegister, returnSection, returnLabel⟩ := triple
+          exact flattenApp_call_some ops zero tail returnProgram linkRegister returnSection returnLabel
+            target handler sectionId next conts breaks
+            (fun k => ih (sizeOf returnProgram)
+              (by have h : sizeOf returnProgram < sizeOf (Prog.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target handler) := (by decreasing_trivial); omega)
+              returnProgram (Nat.le_refl _) false sectionId k conts breaks)
+            (fun hp _hs _hl k _hbound => ih (sizeOf hp)
+              (by have h : sizeOf hp < sizeOf (Prog.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target handler) := (by decreasing_trivial); omega)
+              hp (Nat.le_refl _) false sectionId k conts breaks)
+      | tick | skip | inst _ | get _ _ | «set» _ _ | opCurrHeap _ _ _ | jumpLower _ _ _
+        | alloc _ | storeConsts _ _ _ | raise _ | ret _ | «break» _ | «continue» _
+        | ffi _ _ _ _ _ _ | locValue _ _ _ | install _ _ _ _ _ | shMemOp _ _ _
+        | codeBufferWrite _ _ | dataBufferWrite _ _ | rawCall _ | stackAlloc _ | stackFree _
+        | stackStore _ _ | stackStoreAny _ _ | stackLoad _ _ | stackLoadAny _ _
+        | stackGetSize _ | stackSetSize _ | bitmapLoad _ _ | halt _ =>
+        simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux])
+    program (Nat.le_refl _) tail sectionId next conts breaks
 
 theorem flattenApp_appListFlatten_eq_flatten
     (tail : Bool) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString)
@@ -760,9 +787,11 @@ def progToSection {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type
     lines := lines ++ [.label sectionId (if isSeq program then next else 1) 0] }
 
 
-/-- HOL `stack_to_labScript.sml` `prog_to_section_def` over the `app_list`
-representation: the section lines are `append (Append lines (List [Label ...]))`
-of the `flattenApp` output. -/
+/-- Untagged Flapjack representation bridge for HOL `stack_to_labScript.sml`
+`prog_to_section_def` over the `app_list` representation: the section lines are
+`append (Append lines (List [Label ...]))` of the `flattenApp` output. Not tagged
+because `flattenApp` is parameterised by `ops : FlattenOps ...` whereas HOL
+`prog_to_section` uses the fixed global `flatten`. -/
 def progToSectionApp {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
     (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
     (sectionId : Nat) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString) :

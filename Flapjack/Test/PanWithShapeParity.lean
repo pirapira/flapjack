@@ -482,6 +482,35 @@ def distinctListsTaggedGuard : Bool :=
 #eval distinctListsTaggedGuard
 #guard distinctListsTaggedGuard
 
+/-! Exact tagged ports of `distinct_lists_commutes`,
+    `distinct_lists_append_intro` and `distinct_lists_append_right_elim`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116/141/150`). -/
+
+theorem distinctListsCommutes_tagged_fixture :
+    ListDisjoint ([1, 2] : List Nat) [3, 4] ↔
+      ListDisjoint [3, 4] ([1, 2] : List Nat) :=
+  distinct_lists_commutes [1, 2] [3, 4]
+
+theorem distinctListsAppendIntro_tagged_fixture :
+    ListDisjoint ([1, 2] : List Nat) ([3, 4] ++ [5, 6]) :=
+  distinct_lists_append_intro [1, 2] [3, 4] [5, 6]
+    (by
+      intro value hmem h
+      simp at hmem h
+      omega)
+    (by
+      intro value hmem h
+      simp at hmem h
+      omega)
+
+theorem distinctListsAppendRightElim_tagged_fixture :
+    ListDisjoint ([1, 2] : List Nat) [3, 4] ∧
+      ListDisjoint [1, 2] [5, 6] :=
+  distinct_lists_append_right_elim [1, 2] [3, 4] [5, 6] (by
+    intro value hmem h
+    simp at hmem h
+    omega)
+
 /-! Cake's `map_map2_fst`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`). -/
 

@@ -6344,6 +6344,30 @@
     "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_commutes",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_commutes",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Boolean equality of distinct_lists rendered as a biconditional on ListDisjoint, consistent with the Prop rendering of distinct_lists)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_append_intro",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_append_intro",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_append_right_elim",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_append_right_elim",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_exp_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",

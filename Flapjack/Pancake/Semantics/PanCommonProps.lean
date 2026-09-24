@@ -198,4 +198,33 @@ theorem distinct_lists_simp_cons {α : Type} (xs : List α) (y : α) (ys : List 
     (h : ListDisjoint xs (y :: ys)) : ListDisjoint xs ys :=
   listDisjoint_of_cons_right xs y ys h
 
+/-- Exact port of HOL `distinct_lists_commutes`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`): HOL states the
+    Boolean equality `distinct_lists xs ys = distinct_lists ys xs`; since the
+    Lean rendering of `distinct_lists` is the proposition `ListDisjoint`, the
+    equality of decidable predicates becomes a biconditional. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_commutes"]
+theorem distinct_lists_commutes {α : Type} (xs ys : List α) :
+    ListDisjoint xs ys ↔ ListDisjoint ys xs :=
+  ⟨fun h => listDisjoint_comm xs ys h, fun h => listDisjoint_comm ys xs h⟩
+
+/-- Exact port of HOL `distinct_lists_append_intro`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`): the reverse of
+    `distinct_lists_append`, disjoint from both halves implies disjoint from
+    the concatenation. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_intro"]
+theorem distinct_lists_append_intro {α : Type} (xs ys zs : List α)
+    (hys : ListDisjoint xs ys) (hzs : ListDisjoint xs zs) :
+    ListDisjoint xs (ys ++ zs) :=
+  listDisjoint_append_right xs ys zs hys hzs
+
+/-- Exact port of HOL `distinct_lists_append_right_elim`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`): disjointness
+    from a concatenation splits into disjointness from each half. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_right_elim"]
+theorem distinct_lists_append_right_elim {α : Type} (xs ys zs : List α)
+    (h : ListDisjoint xs (ys ++ zs)) :
+    ListDisjoint xs ys ∧ ListDisjoint xs zs :=
+  listDisjoint_append_right_elim xs ys zs h
+
 end Flapjack

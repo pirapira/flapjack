@@ -463,6 +463,109 @@ theorem panSemEvaluateCodeStateWithFuel_assign
         panValueAssignGlobalResult, evalPanValueExpCounted, hvalue] <;>
       split <;> simp
 
+/-- Production source-state `Assign` equation with an explicit memory access.
+
+    The executed `Assign` leaves thread the caller's `memoryAccess` into the
+    source-expression evaluation (`panValueAssignLocalResult` and
+    `panValueAssignGlobalResult` both take it), so this equation is stated over
+    the same access the evaluator receives.  For a memory-reading source
+    (`Load`/`Load32`/`LoadByte`) this is the faithful path: the source state's
+    `memaddrs`, `sharedMemaddrs`, and `be` drive the read, and a read outside
+    the domain yields HOL's `(SOME Error, s)` carrying the unchanged state.
+    Untagged boundary equation because the structured result is reduced rather
+    than HOL's `(prog_result, state)` pair.  Reference:
+    cakeml/pancake/semantics/panSemScript.sml:566-572 (`Assign`). -/
+theorem panSemEvaluateCodeStateWithFuel_assign_withAccess
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (vk : VarKind) (name : VarName) (value : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.assign vk name value : Prog α)
+        (memoryAccess := memoryAccess) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value
+          (memoryAccess := memoryAccess) with
+      | some evaluated =>
+          if panValueAssignmentValid state.structs state.locals state.globals vk name evaluated then
+            match vk with
+            | .local =>
+                some ((.control (.normal (updatePanValueMap state.locals name evaluated)
+                    state.globals state.memory state.ffi), state.clock))
+            | .global =>
+                some ((.control (.normal state.locals
+                    (updatePanValueMap state.globals name evaluated)
+                    state.memory state.ffi), state.clock))
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) := by
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value
+      (memoryAccess := memoryAccess) with
+  | none =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue]
+  | some evaluated =>
+      cases vk <;>
+      simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
+        evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueAssignLocalResult,
+        panValueAssignGlobalResult, evalPanValueExpCounted, hvalue] <;>
+      split <;> simp
+
+/-- The `Assign` equation instantiated with the state-derived memory access: the
+    source reads memory through `state.memaddrs`, `state.sharedMemaddrs`, and
+    `state.be` via the word model, matching the state-owned
+    `panSemEvaluateCodeStateWithMemoryModel` entry point.  Untagged boundary
+    equation for the same reason as
+    `panSemEvaluateCodeStateWithFuel_assign_withAccess`. -/
+theorem panSemEvaluateCodeStateWithFuel_assign_state_memory
+    [BEq α] [OfNat α 0] [OfNat α 1] [OfNat α 2] [OfNat α 3] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (model : PanMemoryModel α) (bytesInWord : α) (fuel : Nat)
+    (state : PanSemState α (FfiState σ))
+    (vk : VarKind) (name : VarName) (value : Exp α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.assign vk name value : Prog α)
+        (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+          state.sharedMemaddrs state.be)) =
+      match evalPanValueExp state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord value
+          (memoryAccess := some (panValueMemoryAccessOfModel model state.memaddrs
+            state.sharedMemaddrs state.be)) with
+      | some evaluated =>
+          if panValueAssignmentValid state.structs state.locals state.globals vk name evaluated then
+            match vk with
+            | .local =>
+                some ((.control (.normal (updatePanValueMap state.locals name evaluated)
+                    state.globals state.memory state.ffi), state.clock))
+            | .global =>
+                some ((.control (.normal state.locals
+                    (updatePanValueMap state.globals name evaluated)
+                    state.memory state.ffi), state.clock))
+          else
+            some ((.control (.error state.locals state.globals state.memory state.ffi),
+              state.clock))
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock)) :=
+  panSemEvaluateCodeStateWithFuel_assign_withAccess context primitive handler bytesInWord
+    fuel state vk name value (some (panValueMemoryAccessOfModel model state.memaddrs
+      state.sharedMemaddrs state.be))
+
 /-- Production source-state `Dec` equation. When the initialiser evaluates to a
     value whose shape matches the declared shape, the body runs with the
     declaration bound in the local map and, on completion, the declared local is

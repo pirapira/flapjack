@@ -338,6 +338,22 @@ example :
   apply crepSimpExpCorrect1HolFiniteWordSource id boolDimensionHolState _
   simp [evalCrepRuntimeExp]
 
+/-! Instantiate the complete successful-result theorem at the non-`Fin`
+    Bool index carrier. The premise remains universally supplied, matching
+    HOL's conditional result statement rather than fixing a single output. -/
+example (value : PanWordLab (Bool → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (.crepOp .mul [.var 0, .const boolDimensionWord])).map PanWordLab.word =
+        some value) :
+    (evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.crepOp .mul [.var 0, .const boolDimensionWord]))).map PanWordLab.word =
+      some value := by
+  exact @crepSimpExpCorrectHolFiniteWordSourceEvalClass Bool Unit
+    boolWordDimension id boolDimensionHolState
+    (.crepOp .mul [.var 0, .const boolDimensionWord]) value h
+
 example : True := by
   letI : HolFiniteDimension Bool := boolWordDimensionSwapped
   have hresult :

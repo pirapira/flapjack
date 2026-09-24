@@ -1649,16 +1649,16 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The one-word target execution is established by
-`EvaluateCases.crepRuntimeExpHdlOneWord`, and
-`crepRuntimeExpHdlOneWord_localsRel` proves its post-state `locals_rel`
-condition. The corresponding `crepRuntimeExpHdlTwoWords` and
-`crepRuntimeExpHdlTwoWords_localsRel` lemmas establish the same boundary for
-two-word payloads. This lemma supplies the source-to-target map-update
-relation used by those proofs. The full HOL
-`pc_compile_correct[Call_Ret_Exception]` simulation remains open: the general
-Call state transition and arbitrary payload-shape cases are not yet
-established. -/
+For the stated one-word premises, `EvaluateCases.crepRuntimeExpHdlOneWord`
+proves target runtime `exp_hdl` execution and
+`crepRuntimeExpHdlOneWord_localsRel` proves the resulting post-state
+`locals_rel`. `crepRuntimeExpHdlTwoWords` and
+`crepRuntimeExpHdlTwoWords_localsRel` prove the corresponding execution and
+post-state relation for two-word payloads. This lemma supplies the
+source-to-target map-update relation used by those results. These bounded
+runtime cases do not yet prove actual-state `Call_Ret_Exception` branch
+matching/composition or arbitrary payload arities; the full HOL
+`pc_compile_correct[Call_Ret_Exception]` simulation remains open. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1990,6 +1990,58 @@ theorem alookupCompileToCrepCode
   · intro p hp
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq
+
+/-- Exact port of HOL `el_compile_prog_el_prog_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
+    entry at index `n` comes from the source table at the same index, with
+    identical name, empty argument slots, body and return shape.  `List.get?`
+    is the bounded form of HOL `EL` (the same `n < length` hypothesis is
+    present), and `lookupFunctionEntry` is HOL `ALOOKUP` on the
+    `(name, params, body, rshape)` projection.  The HOL-vs-Lean equivalence of
+    the statement is reviewed by comparing the definitions (per SOUNDNESS), not
+    proved by this theorem, which is a within-Lean indexed-table fact. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "el_compile_prog_el_prog_eq"]
+theorem elCompileToCrepElProgEq
+    (declarations : List (Decl (BitVec width))) (n : Nat) (start : FunName)
+    (cprog : CrepProg (BitVec width)) (p : Prog (BitVec width)) (rshape : Shape)
+    (hentry : (compileToCrepHOL declarations)[n]? = some (start, [], cprog))
+    (hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (_hlen : n < (functionEntries declarations).length)
+    (hlookup : lookupFunctionEntry start (functionEntries declarations) =
+      some ([], p, rshape)) :
+    (functionEntries declarations)[n]? = some (start, [], p, rshape) := by
+  rw [compileToCrepHOL_eq_map, List.getElem?_map] at hentry
+  have hsome : (functionEntries declarations)[n]? ≠ none := by
+    intro hnone
+    rw [hnone] at hentry
+    simp at hentry
+  obtain ⟨entry, hentry_eq⟩ := Option.ne_none_iff_exists'.mp hsome
+  have hproj :
+      (entry.1, panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1) = (start, [], cprog) := by
+    rw [hentry_eq] at hentry
+    simpa using hentry
+  have h1 : entry.1 = start := by
+    simpa using congrArg Prod.fst hproj
+  have hlookupEntry :=
+    lookupFunctionEntry_of_getElem? (functionEntries declarations) hdistinct hentry_eq
+  rw [h1] at hlookupEntry
+  rw [hlookup] at hlookupEntry
+  have hp : (entry.2.1, entry.2.2.1, entry.2.2.2) = ([], p, rshape) :=
+    (Option.some.inj hlookupEntry).symm
+  have g1 : entry.2.1 = [] := by simpa using congrArg Prod.fst hp
+  have g2 : entry.2.2.1 = p := by
+    simpa using congrArg Prod.fst (congrArg Prod.snd hp)
+  have g3 : entry.2.2.2 = rshape := by
+    simpa using congrArg Prod.snd (congrArg Prod.snd hp)
+  rw [hentry_eq]
+  congr 1
+  refine Prod.ext (by simpa using h1) ?_
+  refine Prod.ext (by simpa using g1) ?_
+  exact Prod.ext (by simpa using g2) (by simpa using g3)
 
 /-- Exact port of HOL `first_compile_prog_all_distinct`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original

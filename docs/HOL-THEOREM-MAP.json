@@ -483,6 +483,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadHolFiniteWordSourceCase",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact recursive Load constructor case of local simp_exp_correct1. Its sole IH is the same successful-address preservation result for arbitrary states and result binders. HOL eval_def then applies mem_load, corresponding to the source evaluator's memaddrs-gated memory lookup. No target-specific operation premise is present; byte/32-bit loads and the assembled theorem remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact LoadGlob constructor case of local simp_exp_correct1. HOL eval_def uses FLOOKUP s.globals gadr; Lean uses the same BitVec 5-keyed lookup and the code-only update preserves globals. The unused result binder, success premise, and full Option word_lab equality match this constructor case. Other cases and the assembled theorem remain open."
@@ -8671,7 +8679,7 @@
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `store_name` at stackLangScript.sml:18-25 - NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase | CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart | CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd | Temp (5 word). store_name is monomorphic in HOL and its only payload is the fixed 5-bit Temp field, so the Lean inductive with the same 17 nullary constructors plus Temp (BitVec 5) is shape-exact with no side condition. Direct HOL-EVAL rows sn_count=18 (every constructor name), sn_temp_w2n=3, sn_temp_word_bits=31 in scripts/hol-probes/stack_lang_store_name_probe.out are reproduced by Lean constructor checks in Flapjack/Test/WordToStackBitsParity.lean. NOTE: the separate HOL `prog` datatype is NOT yet exact in Lean - it is parameterised by a single shared 'a whereas the Lean Prog carrier has seven independent type parameters - so Prog stays untagged; see flapjack-pxn.18.5.15.3.11)"
   },
-   {
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -8743,38 +8751,38 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
   },
-{
-  "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
-  "hol_name": "is_Label_def",
-  "lean_path": "Flapjack/Compiler/Backend/LabSem.lean",
-  "lean_name": "isLabel",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (labSemScript.sml:47 is_Label returns T exactly on Label, F otherwise; Lean pattern match preserves all constructors)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/semantics/labPropsScript.sml",
-  "hol_name": "sec_ends_with_label_def",
-  "lean_path": "Flapjack/Compiler/Backend/LabProps.lean",
-  "lean_name": "secEndsWithLabelHOL",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (labPropsScript.sml:81 is a HOL predicate, not a Boolean result; the tagged Lean declaration returns Prop with nonempty and final-label conditions, while secEndsWithLabel is an untagged executable Bool counterpart)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "dest_find_name_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "destFindName",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (stack_namesScript.sml:51-54 INR register renamed, other destination unchanged)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "names_ok_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "namesOkHOL",
-  "statement_status": "reviewed_exact",
-  "reviewer": "Codex (stack_namesScript.sml:111-116 names_ok is a HOL predicate; tagged Lean declaration returns Prop with ALL_DISTINCT/Nodup and EVERY/all-members conditions, while namesOk is an untagged executable Bool counterpart)"
-},
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
+    "hol_name": "is_Label_def",
+    "lean_path": "Flapjack/Compiler/Backend/LabSem.lean",
+    "lean_name": "isLabel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (labSemScript.sml:47 is_Label returns T exactly on Label, F otherwise; Lean pattern match preserves all constructors)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/labPropsScript.sml",
+    "hol_name": "sec_ends_with_label_def",
+    "lean_path": "Flapjack/Compiler/Backend/LabProps.lean",
+    "lean_name": "secEndsWithLabelHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (labPropsScript.sml:81 is a HOL predicate, not a Boolean result; the tagged Lean declaration returns Prop with nonempty and final-label conditions, while secEndsWithLabel is an untagged executable Bool counterpart)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "dest_find_name_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "destFindName",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (stack_namesScript.sml:51-54 INR register renamed, other destination unchanged)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "names_ok_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "namesOkHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (stack_namesScript.sml:111-116 names_ok is a HOL predicate; tagged Lean declaration returns Prop with ALL_DISTINCT/Nodup and EVERY/all-members conditions, while namesOk is an untagged executable Bool counterpart)"
+  },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "mem_store_byte_def",
@@ -8791,92 +8799,100 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against panSemScript.sml:309-316; tail-first recursion via panMemStoreByteHOL, a failed store keeps the original outer memory. Direct HOL-EVAL rows write_bytearray_changed/write_bytearray_other_unchanged/write_bytearray_out_of_domain reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
   },
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-  "hol_name": "is_SOME_Word_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "isSomeWord",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-  "hol_name": "read_mem_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "readMem",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-  "hol_name": "addresses_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "addresses",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-  "hol_name": "LENGTH_read_mem",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "length_readMem",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
-  "hol_name": "IN_addresses",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "mem_addresses",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "map_map2_fst",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "mapMap2FstHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against map_map2_fst at crep_to_loopProofScript.sml:3799; HOL MAP2/GENLIST I (LENGTH p) rendered over panMap2 with the program-triple shape; delegates to the untagged panMap2_fst_eq; direct HOL-EVAL rows mm2_pair_eq/mm2_empty=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+  },
 {
   "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
   "hol_name": "ri_find_name_def",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "riFindName",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:16-19 ri_find_name renames only the register payload (Reg r -> Reg (find_name f r)); Imm unchanged. HOL payload is an actual 'a word; Lean width-indexed at BitVec width with [NeZero width].)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
   "hol_name": "inst_find_name_def",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "instFindName",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:21-49 one clause per asm inst constructor with catch-all; only register fields renamed via find_name. Width-indexed at BitVec width.)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
   "hol_name": "comp_def",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "progComp",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:56-99 comp pmatch quotation reproduced branch-for-branch including catch-all p => p; over the shared-word ProgW (BitVec width) carrier matching HOL's single 'a.)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
   "hol_name": "prog_comp_def",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "progCompEntry",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:101-103 prog_comp f (n,p) = (n, comp f p); Lean (entry.1, progComp names entry.2).)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
   "hol_name": "compile_def",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "compile",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:105-107 compile f prog = MAP (prog_comp f) prog; Lean program.map (progCompEntry names).)"
 },
 {
   "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
   "hol_name": "MAP_FST_compile",
   "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
   "lean_name": "map_fst_compile",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesProofScript.sml:268-272 MAP FST (compile f c) = MAP FST c; exact over ProgW (BitVec width).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "is_SOME_Word_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "isSomeWord",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:144-147 exhaustive two clauses (is_SOME_Word (SOME (Word w)) = T; is_SOME_Word _ = F); Lean width-indexed Option (WordLoc (BitVec width)) -> Bool matches. Generic WordLoc payload deliberately untagged (dependency bead tracks exact tagged word_loc datatype).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "read_mem_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2739-2743 read_mem two clauses using bytes_in_word; Lean BitVec width address, memory BitVec width -> WordLoc (BitVec width), same stride.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "addresses_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2745-2748 addresses two clauses; HOL sets modelled in Lean as predicates ({} and INSERT a).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "LENGTH_read_mem",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "length_readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2754-2756 LENGTH (read_mem a m n) = n.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "IN_addresses",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "mem_addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2757-2761 IN_addresses x IN addresses a n <=> ?i. i<n /\\ x = a + n2w i * bytes_in_word; Lean uses BitVec.ofNat width i * bytesInWord width.)"
 }
 ]

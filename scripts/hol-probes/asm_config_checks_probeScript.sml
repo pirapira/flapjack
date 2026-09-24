@@ -82,3 +82,6 @@ val _ = print_eval "stackAddrHw"
   ``stackProps$addr_ok asm$Load16 (asm$Addr 2 (8w:8 word)) ^cfg``
 val _ = print_eval "stackAddrByte"
   ``stackProps$addr_ok asm$Store8 (asm$Addr 2 (8w:8 word)) ^cfg``
+val _ = print_eval "signedHighLeZero" ``(128w:8 word) <= (0w:8 word)``
+val _ = print_eval "unsignedHighLeZero" ``word_ls (128w:8 word) (0w:8 word)``
+val _ = print_eval "signedOffsetBounds" ``asm$offset_ok 0 (0w,255w) (200w:8 word)``

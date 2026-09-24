@@ -35,3 +35,6 @@ instMemByteOk=T
 stackAddrLoad=T
 stackAddrHw=T
 stackAddrByte=T
+signedHighLeZero=T
+unsignedHighLeZero=F
+signedOffsetBounds=F

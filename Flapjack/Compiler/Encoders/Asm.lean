@@ -12,12 +12,13 @@ the pure Boolean validity predicates that `stackProps$stack_asm_ok_def` and
 `Flapjack.Pancake.WordLang` (`WordLangInst`/`WordLangArith`/`WordLangFp`/
 `WordLangAddr`).
 
-The HOL `asm_config` record is represented with exactly the fields these
-predicates read (`ISA`, `code_alignment`, `link_reg`, `avoid_regs`,
-`reg_count`, `fp_reg_count`, `two_reg_arith`, `valid_imm`, and the six
-`(min, max)` offset pairs).  The `encode` and `big_endian` fields are not read
-by any predicate here and are omitted; this is a documented scope, not a
-substitution of a Flapjack RISC-V configuration.  Lean field names are
+The HOL `asm_config` record is represented with all of its fields so the
+quantified configuration carrier is HOL-shaped: `ISA`, `encode`
+(`'a asm -> word8 list`), `big_endian`, `code_alignment`, `link_reg`,
+`avoid_regs`, `reg_count`, `fp_reg_count`, `two_reg_arith`, `valid_imm`, and
+the six `(min, max)` offset pairs.  `encode` and `bigEndian` are carried for
+carrier fidelity even though none of the validity predicates below read them.
+Lean field names are
 lowerCamel (`isa`, `codeAlignment`, ...) where HOL uses `ISA`,
 `code_alignment`, ...; constructor arity and field types match the HOL
 carriers.
@@ -47,6 +48,8 @@ inductive AsmArchitecture where
 (`asmScript.sml:153-172`). -/
 structure AsmConfig (width : Nat) where
   isa : AsmArchitecture
+  encode : WordLangInst (BitVec width) → List UInt8
+  bigEndian : Bool
   codeAlignment : Nat
   linkReg : Option Nat
   avoidRegs : List Nat

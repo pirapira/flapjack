@@ -9,7 +9,7 @@ The fixture `asmConfig8` mirrors the HOL probe configuration exactly
 (8-bit words, `RISC_V`, `code_alignment = 2`, `avoid_regs = [3]`,
 `reg_count = 8`, `fp_reg_count = 4`, `two_reg_arith = T`, offsets
 `addr/hw/byte = (0, 100)` and `jump/cjump/loc = (0, 200)`, `valid_imm`
-always true).  Every row below corresponds to one `label=T|F` line of the
+always true, plus the carried-but-unused `encode`/`big_endian` fields).  Every row below corresponds to one `label=T|F` line of the
 oracle.
 
 Note the HOL oracle pinned an important semantic detail: `offset_ok` compares
@@ -29,6 +29,8 @@ private def w8 (n : Nat) : BitVec 8 := BitVec.ofNat 8 n
 
 private def asmConfig8 : AsmConfig 8 :=
   { isa := .riscv
+    encode := fun _ => []
+    bigEndian := false
     codeAlignment := 2
     linkReg := none
     avoidRegs := [3]
@@ -93,6 +95,9 @@ private def instMemByteOk : Bool :=
 private def stackAddrLoad : Bool := asmAddrOk asmConfig8 .load (.addr 2 (w8 8))
 private def stackAddrHw : Bool := asmAddrOk asmConfig8 .load16 (.addr 2 (w8 8))
 private def stackAddrByte : Bool := asmAddrOk asmConfig8 .store8 (.addr 2 (w8 8))
+private def signedHighLeZero : Bool := decide ((w8 128).toInt ≤ (w8 0).toInt)
+private def unsignedHighLeZero : Bool := decide ((w8 128) < (w8 0))
+private def signedOffsetBounds : Bool := asmOffsetOk 0 (w8 0, w8 255) (w8 200)
 
 private def asmConfigGuard : Bool :=
   aligned0 == true && aligned2 == true && unaligned2 == false &&
@@ -109,7 +114,9 @@ private def asmConfigGuard : Bool :=
   jumpOffsetOk == false && jumpOffsetUnaligned == false &&
   instConstOk == true && instArithOk == false && instFpOk == true &&
   instMemLoadOk == true && instMemHwOk == true && instMemByteOk == true &&
-  stackAddrLoad == true && stackAddrHw == true && stackAddrByte == true
+  stackAddrLoad == true && stackAddrHw == true && stackAddrByte == true &&
+  signedHighLeZero == true && unsignedHighLeZero == false &&
+  signedOffsetBounds == false
 
 #guard asmConfigGuard
 

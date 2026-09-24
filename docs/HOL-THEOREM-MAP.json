@@ -5293,7 +5293,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectNStructCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked NStruct constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp, proving all three case conclusions from per-field induction hypotheses that carry the translated premises and conclusions. It is intentionally untagged because HOL has one universally quantified theorem and no separately named NStruct declaration. Lean replaces direct ctxt.structs equality with projected shape-view equality, finite-map FEVERY validity with pointwise Bool predicates over total lookups, and FMAP_MAP2 equations with pointwise shape-map adapters. structInfosOk is retained and used for declared-field uniqueness. Lean uses PanSemState total lookups and explicit bytesInWord rather than HOL finite maps and fixed-width eval. Other expression constructors remain open."
+    "reviewer": "Kernel-checked NStruct constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExpFull, proving all three case conclusions from per-field induction hypotheses that carry the translated premises and conclusions. Source evaluation, each recursive field IH, and converted execution share one state-derived PanValueMemoryAccess. It is intentionally untagged because HOL has one universally quantified theorem and no separately named NStruct declaration. Lean replaces direct ctxt.structs equality with projected shape-view equality, finite-map FEVERY validity with pointwise Bool predicates over total lookups, and FMAP_MAP2 equations with pointwise shape-map adapters. structInfosOk is retained for declared-field uniqueness. Lean uses PanSemState total lookups, explicit bytesInWord/memory access, and full-evaluator operation dictionaries rather than HOL finite maps and fixed-width eval. The paired direct HOL EVAL and Lean regression cover a nonempty named struct. Other expression constructors remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_projection",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization of HOL compile_exp_correct. It projects successful full named-field evaluation to full evaluation of the field expressions with values in the same order, threading the shared memory adapter. Untagged because the Lean full evaluator and explicit state adapter differ from HOL finite-map evaluation."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_names",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -6638,5 +6654,53 @@
     "lean_name": "compileToCrepHOL_eq_map",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only helper: compileToCrepHOL is the source function list mapped through comp_func/crep_vars with the context built from the same declarations; used to move ALOOKUP over compile_to_crep onto the source table."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_map_fst_eq_map_compileExp",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only compile_exp_list projection lemma used by the Op induction case; it relates the generated recursive list compiler to mapping the single-expression compiler."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panValues_eq_words_map_of_wordProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only list inversion helper: successful word projection of source PanValues implies the list consists exactly of the corresponding PanValue.word entries."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_op_inv",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only source Op inversion helper over PanSemState: successful evaluation yields source word operands and the matching HOL word_op result, but is not a standalone HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExps_member_word",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only source list-evaluation helper deriving a successful word value for each member of an argument list whose evaluation is word-valued."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panValueFlatten_wordList",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only flattening identity for lists of source words; reusable list proof infrastructure, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_op_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-arity Op induction case for compile_exp_val_rel. It consumes full operand IHs and state-owned source evaluation to prove target RISC-V Op evaluation and shape conclusions; the assumptions and conclusion are not the standalone HOL theorem statement."
   }
 ]

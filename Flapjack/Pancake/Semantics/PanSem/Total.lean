@@ -240,4 +240,56 @@ theorem panSemTotalSeqStep_of_ne_normal
       (firstResult, panSemFixClock entryClock firstState) := by
   cases firstResult <;> simp_all [panSemTotalSeqStep]
 
+/-! ## Compositional Assign step
+
+HOL `Assign` (`panSemScript.sml:566-572`) evaluates the source, requires
+`is_valid_value`, writes through `set_kvar`, and returns `(SOME Error, s)`
+unchanged when the source fails or the destination is invalid.  Faithful source
+evaluation is a separate obligation: HOL `panSem$eval` reads memory through the
+source state's `memaddrs`, endianness, and byte width for `Load`/`Load32`/
+`LoadByte`/`Op`, whereas the legacy `evalPanValueExp` default does not.  Until
+that faithful evaluator is connected here, this file keeps only the exact
+post-evaluation composition: given the already evaluated source result, apply
+HOL's validity check and binding update.  No other `Prog` constructor is given a
+fallback. -/
+
+def panSemTotalAssignStep
+    [BEq α] (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName)
+    (evaluated : Option (PanValue α)) : PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  match evaluated with
+  | none => (.error, state)
+  | some value =>
+      if panValueAssignmentValid state.structs state.locals state.globals kind name value then
+        match kind with
+        | .local =>
+            (.normal, { state with locals := updatePanValueMap state.locals name value })
+        | .global =>
+            (.normal, { state with globals := updatePanValueMap state.globals name value })
+      else (.error, state)
+
+theorem panSemTotalAssignStep_none
+    [BEq α] (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName) :
+    panSemTotalAssignStep state kind name none = (.error, state) := rfl
+
+theorem panSemTotalAssignStep_normal_local
+    [BEq α] (state : PanSemState α (FfiState σ)) (name : VarName) (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals .local name evaluated = true) :
+    panSemTotalAssignStep state .local name (some evaluated) =
+      (.normal, { state with locals := updatePanValueMap state.locals name evaluated }) := by
+  simp [panSemTotalAssignStep, h]
+
+theorem panSemTotalAssignStep_normal_global
+    [BEq α] (state : PanSemState α (FfiState σ)) (name : VarName) (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals .global name evaluated = true) :
+    panSemTotalAssignStep state .global name (some evaluated) =
+      (.normal, { state with globals := updatePanValueMap state.globals name evaluated }) := by
+  simp [panSemTotalAssignStep, h]
+
+theorem panSemTotalAssignStep_invalid
+    [BEq α] (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName)
+    (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals kind name evaluated = false) :
+    panSemTotalAssignStep state kind name (some evaluated) = (.error, state) := by
+  simp [panSemTotalAssignStep, h]
+
 end Flapjack

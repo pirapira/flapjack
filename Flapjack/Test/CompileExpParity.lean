@@ -111,6 +111,12 @@ def holLoadsOpsOK : Bool :=
   oneResultOK [.crepOp .mul [.const 5, .const 6]]
       (compileExpHOL finiteMapContext (.panOp .mul [.const 5, .const 6]))
 
+/-! This mirrors the direct HOL `op_nary` fixture and pins the original
+    compile_exp list-preserving case at arity three. -/
+def holNaryOpOK : Bool :=
+  oneResultOK [.op .add [.const 1, .const 2, .const 3]]
+    (compileExpHOL finiteMapContext (.op .add [.const 1, .const 2, .const 3]))
+
 def holCmpShiftOK : Bool :=
   oneResultOK [.cmp .equal (.const 1) (.const 0)]
       (compileExpHOL finiteMapContext (.cmp .equal (.const 1) (.const 0))) &&
@@ -120,7 +126,7 @@ def holCmpShiftOK : Bool :=
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
   finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
-  holLeavesOK && holStructFieldOK && holLoadsOpsOK && holCmpShiftOK
+  holLeavesOK && holStructFieldOK && holLoadsOpsOK && holNaryOpOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =
     ([.load32 (.var 5)], .one) := by

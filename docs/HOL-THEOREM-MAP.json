@@ -4313,6 +4313,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "word_lab",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "HolWordLab",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "empty_locals_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panEmptyLocals",
@@ -8004,6 +8012,38 @@
   "hol_name": "convention_partitions",
   "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
   "lean_name": "conventionPartitions",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_exp_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarExp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_imm_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarImm",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_inst_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "good_handlers_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "goodHandlers",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
 }

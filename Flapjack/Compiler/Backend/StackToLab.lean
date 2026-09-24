@@ -523,6 +523,92 @@ theorem flattenApp_call_some (tail : Bool)
                     rw [appendAux_thm]
                     rw [hys, hnr1, hnr2, hny]
                     simp only [List.append_nil, List.append_assoc]
+
+theorem flattenApp_ite (tail : Bool) (condition : Cmp) (register : Nat) (right : RegImm)
+    (thenBranch elseBranch : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (ihThen : ∀ (n : Nat),
+      appListFlatten (flattenApp ops zero false thenBranch sectionId n conts breaks)
+        = flatten ops zero false thenBranch sectionId n conts breaks)
+    (ihElse : ∀ (n : Nat),
+      appListFlatten (flattenApp ops zero false elseBranch sectionId n conts breaks)
+        = flatten ops zero false elseBranch sectionId n conts breaks) :
+    appListFlatten (flattenApp ops zero tail (.ite condition register right thenBranch elseBranch)
+        sectionId next conts breaks)
+      = flatten ops zero tail (.ite condition register right thenBranch elseBranch)
+        sectionId next conts breaks := by
+  simp only [flattenApp, flatten]
+  cases hA : flattenApp ops zero false thenBranch sectionId next conts breaks with
+  | mk xs rA =>
+    cases rA with
+    | mk nr1 nx =>
+      cases hB : flattenApp ops zero false elseBranch sectionId nx conts breaks with
+      | mk ys rB =>
+        cases rB with
+        | mk nr2 ny =>
+          cases hF : flatten ops zero false thenBranch sectionId next conts breaks with
+          | mk xsf rF =>
+            cases rF with
+            | mk nrf nxf =>
+              cases hG : flatten ops zero false elseBranch sectionId nxf conts breaks with
+              | mk ysf rG =>
+                cases rG with
+                | mk nrg nyf =>
+                  have h1 := ihThen next
+                  rw [hA, hF] at h1
+                  simp only [appListFlatten] at h1
+                  have hxs : appListAppend xs = xsf := congrArg Prod.fst h1
+                  have hnr1 : nr1 = nrf := congrArg (fun p => p.2.1) h1
+                  have hnx : nx = nxf := congrArg (fun p => p.2.2) h1
+                  have h2 := ihElse nx
+                  rw [← hnx] at hG
+                  rw [hB, hG] at h2
+                  simp only [appListFlatten] at h2
+                  have hys : appListAppend ys = ysf := congrArg Prod.fst h2
+                  have hnr2 : nr2 = nrg := congrArg (fun p => p.2.1) h2
+                  have hny : ny = nyf := congrArg (fun p => p.2.2) h2
+                  rw [hnx, hnr1, hnr2, hny]
+                  by_cases hc1 : (stackIsSkip thenBranch && stackIsSkip elseBranch) = true
+                  · simp only [if_pos hc1, appListFlatten, appListAppend, appendAux, List.nil_append]
+                  · by_cases hc2 : stackIsSkip thenBranch = true
+                    · simp only [if_neg hc1, if_pos hc2, appListFlatten, appListAppend, appendAux]
+                      simp only [appListAppend] at hys
+                      rw [appendAux_thm]
+                      rw [hys]
+                      simp only [List.append_assoc, List.append_nil]
+                    · by_cases hc3 : stackIsSkip elseBranch = true
+                      · simp only [if_neg hc1, if_neg hc2, if_pos hc3, appListFlatten,
+                          appListAppend, appendAux]
+                        simp only [appListAppend] at hxs
+                        rw [appendAux_thm]
+                        rw [hxs]
+                        simp only [List.append_assoc, List.append_nil]
+                      · by_cases hc4 : nrf = true
+                        · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_pos hc4,
+                            appListFlatten, appListAppend, appendAux]
+                          simp only [appListAppend] at hxs hys
+                          rw [appendAux_thm]
+                          rw [hxs]
+                          rw [appendAux_thm]
+                          rw [hys]
+                          simp only [List.append_assoc, List.append_nil]
+                        · by_cases hc5 : nrg = true
+                          · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_neg hc4, if_pos hc5,
+                              appListFlatten, appListAppend, appendAux]
+                            simp only [appListAppend] at hxs hys
+                            rw [appendAux_thm]
+                            rw [hys]
+                            rw [appendAux_thm]
+                            rw [hxs]
+                            simp only [List.append_assoc, List.append_nil]
+                          · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_neg hc4, if_neg hc5,
+                              appListFlatten, appListAppend, appendAux]
+                            simp only [appListAppend] at hxs hys
+                            rw [appendAux_thm]
+                            rw [hys]
+                            rw [appendAux_thm]
+                            rw [hxs]
+                            simp only [List.append_assoc, List.append_nil]
 end FlattenAppBridge
 
 

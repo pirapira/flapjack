@@ -147,6 +147,29 @@ theorem fdom_eq_flookup_thm {α : Type} {β : Type} (f1 f2 : FiniteMap α β) :
     · intro h2 hf1
       exact h2 (hnone x hf1)
 
+/-- CakeML's `fdom_subset_flookup_thm` (`crep_inlineProofScript.sml:1456`):
+    `FDOM f` is contained in `FDOM g` iff every defined lookup in `f` is
+    defined in `g`.  Subset of the `FDOM` predicate is pointwise implication. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdom_subset_flookup_thm"]
+theorem fdom_subset_flookup_thm {α : Type} {β : Type} (f g : FiniteMap α β) :
+    (∀ x, FDOM f x → FDOM g x) ↔
+      (∀ x p, FLOOKUP f x = some p → ∃ q, FLOOKUP g x = some q) := by
+  constructor
+  · intro h x p hp
+    have hf : f x ≠ none := by rw [show f x = some p from hp]; exact Option.some_ne_none p
+    have hg : g x ≠ none := h x hf
+    cases hx : g x with
+    | none => exact absurd hx hg
+    | some q => exact ⟨q, hx⟩
+  · intro h x hf
+    cases hx : f x with
+    | none => exact absurd hx hf
+    | some p =>
+        obtain ⟨q, hq⟩ := h x p hx
+        change g x ≠ none
+        rw [show g x = some q from hq]
+        exact Option.some_ne_none q
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

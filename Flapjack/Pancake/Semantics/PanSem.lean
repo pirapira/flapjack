@@ -667,7 +667,7 @@ theorem panSemEvaluateCodeStateWithFuel_ite
   | none => rfl
   | some conditionValue => rfl
 
-/-- The `If` equation over the same `If` equation instantiated with the
+/-- The `If` equation instantiated with the
     state-derived memory access: the condition reads memory through
     `state.memaddrs`, `state.sharedMemaddrs`, and `state.be` (via the word
     model), matching the state-owned `panSemEvaluateCodeStateWithMemoryModel`

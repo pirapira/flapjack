@@ -31,9 +31,12 @@ structure PanToCrepHOLContext (α : Type) where
   eids : FiniteMap ExceptionId α
   vmax : Nat
 
-/-- HOL `mk_ctxt_def` packages the parameter map, function map, maximum
-    temporary number, and exception map into the finite-map compiler context. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "mk_ctxt_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `mk_ctxt_def` keys
+   `vars`/`funcs`/`eids` by `varname`/`funname`/`eid`, which
+   `panLangScript.sml`/`crepLangScript.sml` alias to `mlstring`, while this
+   Lean carrier keys them by `VarName`/`FunName`/`ExceptionId` = `String`.
+   The exact MlString-keyed syntax is tracked in `flapjack-pxn.18.3.5.8` /
+   parent `flapjack-pxn.18.3.5.7.2`. -/
 def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
     (funcs : FiniteMap FunName (List (VarName × Shape) × Shape))
     (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
@@ -60,8 +63,8 @@ def compileField [OfNat α 0] (index : Nat) :
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
-/-! Faithful port of `pan_to_crep$exp_hdl` from
-    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+/-! Clauses mirror `pan_to_crep$exp_hdl`
+    (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
 
     A variable absent from the finite map produces no code; a present variable
     is initialized from the global return area, one word per flattened local,
@@ -70,8 +73,12 @@ def compilePanOp : PanOp → CrepOp
 
     Calls the generic `crepNestedSeq`; the tagged width-indexed `crepNestedSeqW`
     is a definitional delegation of it, so this executed use computes the
-    identical function (`flapjack-pxn.18.4.3.82`). -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
+    identical function (`flapjack-pxn.18.4.3.82`).
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): HOL `exp_hdl` keys its finite map
+    by `varname`, which is `mlstring`, while this carriage uses
+    `VarName = String`.  The exact MlString-keyed syntax is tracked in
+    `flapjack-pxn.18.3.5.8` / parent `flapjack-pxn.18.3.5.7.2`. -/
 def expHdlFiniteMap {α : Type u}
     (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=
   match FLOOKUP fm v with

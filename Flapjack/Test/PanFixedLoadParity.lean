@@ -193,10 +193,14 @@ example :
   some (BitVec.ofNat 24 0x33)
 #guard (finiteWord24BigEndianByteLoad.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x11)
-#guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
-  some (BitVec.ofNat 24 0x113322)
-#guard holWordToBitVec dimension24 finiteWord24Fixed32Load ==
-  BitVec.ofNat 24 0x113322
+example : (finiteWord24Load32.map (holWordToBitVec dimension24)) =
+    some (BitVec.ofNat 24 0x113322) := by
+  native_decide
+example :
+    holWordToBitVec dimension24 finiteWord24Fixed32Load =
+      BitVec.ofNat 24 0x113322 := by
+  rw [finiteWord24Fixed32Load, holFiniteWordSourceWordOfBytes32_toBitVec]
+  native_decide
 #guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
   BitVec.ofNat 17 0x2211
 #guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==

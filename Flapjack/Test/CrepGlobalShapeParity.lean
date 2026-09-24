@@ -268,6 +268,22 @@ example :
           none &&
         FLOOKUP (emptyCrepHolLocals localBase).locals 2 == none
 
+-- Width-indexed tagged counterparts agree with the generic production defs
+-- (exact-shape rule: the HOL tags live on the `BitVec width` carriers).
+example :
+    setCrepHolVarW 1 (PanWordLab.word (7 : BitVec 64)) localBase =
+      setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase :=
+  setCrepHolVarW_eq_setCrepHolVar 1 (PanWordLab.word (7 : BitVec 64)) localBase
+
+example :
+    updCrepHolLocalsW [(1, PanWordLab.word (3 : BitVec 64))] localBase =
+      updCrepHolLocals [(1, PanWordLab.word (3 : BitVec 64))] localBase :=
+  updCrepHolLocalsW_eq_updCrepHolLocals [(1, PanWordLab.word (3 : BitVec 64))] localBase
+
+example :
+    emptyCrepHolLocalsW localBase = emptyCrepHolLocals localBase :=
+  emptyCrepHolLocalsW_eq_emptyCrepHolLocals localBase
+
 /-! ## Production local-update adapters to the tagged HOL local defs
 
 These are Flapjack-only (untagged) bridge lemmas connecting the runtime

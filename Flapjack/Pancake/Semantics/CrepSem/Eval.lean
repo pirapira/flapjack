@@ -1178,6 +1178,30 @@ theorem holFiniteWordSourceGetByte_toBitVec_getLsbD {ι : Type u}
   rw [holWordToBitVec_getLsbD dimension _ index]
   exact holFiniteWordSourceGetByte_atIndex dimension address value bigEndian index
 
+/-- Whole-word form of the HOL `get_byte_def` transport. The result is a
+    carrier-width `w2w` of the low eight bits of the logically shifted source
+    word, including truncation when the carrier is narrower than one byte. -/
+theorem holFiniteWordSourceGetByte_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address value : ι → Bool)
+    (bigEndian : Bool) :
+    holWordToBitVec dimension
+        (holFiniteWordSourceGetByte dimension address value bigEndian) =
+      BitVec.ofNat dimension.width
+        ((holWordToBitVec dimension value >>>
+          (8 * holFiniteWordSourceByteIndex dimension address bigEndian)).toNat % 2^8) := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro index hindex
+  rw [holFiniteWordSourceGetByte_toBitVec_getLsbD
+    dimension address value bigEndian ⟨index, hindex⟩]
+  rw [BitVec.getLsbD_ofNat]
+  by_cases hbyte : index < 8
+  · rw [Nat.testBit_mod_two_pow]
+    simp [hbyte, BitVec.getLsbD_eq_getElem, hindex,
+      BitVec.getElem_eq_testBit_toNat, Nat.testBit_shiftRight]
+  · rw [Nat.testBit_mod_two_pow]
+    simp [hbyte, BitVec.getLsbD_eq_getElem, hindex,
+      BitVec.getElem_eq_testBit_toNat, Nat.testBit_shiftRight]
+
 /-- Pointwise `word_slice_alt`/shift/or expansion of HOL `set_byte_def`. -/
 def holFiniteWordSourceSetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address byte value : ι → Bool)
@@ -1461,6 +1485,22 @@ theorem holFiniteWordSourceMemoryModel_getByte_toBitVec_getLsbD {ι : Type u}
         (holFiniteWordSourceGetByte dimension address value bigEndian)) index.val = _
   exact holFiniteWordSourceGetByte_toBitVec_getLsbD
     dimension address value bigEndian index
+
+/-- The generic source memory model's `getByte` field transports as the
+    carrier-width `w2w` of the low byte of the shifted source word. -/
+theorem holFiniteWordSourceMemoryModel_getByte_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (modelEndian bigEndian : Bool)
+    (bytes address value : ι → Bool) :
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension modelEndian).getByte
+          bytes address value bigEndian) =
+      BitVec.ofNat dimension.width
+        ((holWordToBitVec dimension value >>>
+          (8 * holFiniteWordSourceByteIndex dimension address bigEndian)).toNat %
+            2^8) := by
+  change holWordToBitVec dimension
+      (holFiniteWordSourceGetByte dimension address value bigEndian) = _
+  exact holFiniteWordSourceGetByte_toBitVec dimension address value bigEndian
 
 /-- The source-shaped finite-word model comparison agrees with the generic
     BitVec/HOL comparison after transporting the operands. -/

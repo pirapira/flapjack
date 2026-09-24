@@ -3161,18 +3161,24 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
 
-/-! ## Width-specialized RISC-V64 Crep evaluator
+/-! ## Width-specialized RISC-V64 Crep evaluator (proof-only, not the executed route)
 
-The executed RISC-V64 evaluator below dispatches its `.crepOp` constructor to the
-reviewed tagged `crepOpCrep 64` directly, rather than the generic `crepOpValue`.
-`evalCrepRuntimeExpRV64_eq` proves it agrees with the generic production
-evaluator on the `BitVec 64` carrier. -/
+The definition below is a width-specialized RISC-V64 evaluator whose `.crepOp`
+constructor dispatches to the reviewed tagged `crepOpCrep 64` directly, rather
+than the generic `crepOpValue`. **It is not the executed production route.** The
+production evaluator actually used by the correctness chain remains the generic
+`evalCrepRuntimeExp`, which still routes `.crepOp` through `crepOpValue`; wiring
+execution itself through the tagged definition remains open
+(bead `flapjack-pxn.18.4.3.48.1.20`). `evalCrepRuntimeExpRV64_eq` only proves the
+two evaluators agree on the `BitVec 64` carrier, i.e. that this proof-only
+duplicate denotes the same function. -/
 
-/-- Width-specialized RISC-V64 Crep expression evaluator. It mirrors the generic
-    `evalCrepRuntimeExp` constructor-for-constructor but its `.crepOp` clause
-    dispatches to the reviewed tagged `crepOpCrep 64` directly (rather than the
-    generic `crepOpValue`). It is Flapjack-only infrastructure: the state is
-    target-extended. -/
+/-- Proof-only width-specialized RISC-V64 Crep expression evaluator. It mirrors
+    the generic `evalCrepRuntimeExp` constructor-for-constructor but its
+    `.crepOp` clause dispatches to the reviewed tagged `crepOpCrep 64` directly
+    (rather than the generic `crepOpValue`). It is Flapjack-only infrastructure
+    and is NOT wired to the executed evaluator; the generic `evalCrepRuntimeExp`
+    remains the production route. The state is target-extended. -/
 def evalCrepRuntimeExpRV64 (state : CrepRuntimeState (BitVec 64) σ) :
     CrepExp (BitVec 64) → Option (BitVec 64)
   | .const value => some value

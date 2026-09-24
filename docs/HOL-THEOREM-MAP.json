@@ -121,6 +121,46 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Shape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname vs Lean Shape.one/comb(List Shape)/named(StructName): constructor arities 0/1/1 and field types match; identifiers modelled by String)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "panop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PanOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype panop = Mul vs Lean PanOp.mul: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "varkind",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "VarKind",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype varkind = Local | Global vs Lean VarKind.local/global: two nullary constructors match)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "opsize",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "OpSize",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype opsize = Op8 | OpW | Op32 | Op16 vs Lean OpSize.op8/opW/op32/op16: four nullary constructors match in order)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "primop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PrimOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype primop = AddCarry vs Lean PrimOp.addCarry: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "functions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "functionEntries",
@@ -4345,14 +4385,6 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "code_rel_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "codeRel",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "codeRelImp",
@@ -7774,5 +7806,102 @@
     "lean_name": "allDistinctAlistCtxtMax",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against all_distinct_alist_ctxt_max at panPropsScript.sml:517; HOL ctxt_max/MAX_LIST rendered as Lean ctxtMax/maxList over the alist_to_fmap -> FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns))) encoding with vs : List String; direct HOL-EVAL rows ctxt_a_bound/ctxt_b_bound/ctxt_max_value=T reproduced by Lean guard alistCtxtMaxExample in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgRiscV_eq_compileProgHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge: compileProgRiscV (the tagged compile_def wrapper) is definitionally compileProgHOL on the same PanToCrepHOLContext."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileCodeRelProg_eq_compileProgRiscV",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the tagged compile_def compiler (compileProgRiscV) on the bridged context for every proof context; makes the code_rel_def tag truthful for arbitrary ctxt_fc contexts."
   }
+,
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "reg_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmRegOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "fp_reg_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmFpRegOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "reg_imm_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmRegImmOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "offset_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmOffsetOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "arith_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmArithOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "fp_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmFpOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "cmp_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmCmpOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "inst_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmInstOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/stackPropsScript.sml",
+    "hol_name": "addr_ok_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackProps.lean",
+    "lean_name": "asmAddrOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+{
+  "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+  "hol_name": "asm_ok_def",
+  "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+  "lean_name": "asmOk",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

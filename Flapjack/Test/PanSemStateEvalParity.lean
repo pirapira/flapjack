@@ -352,4 +352,36 @@ example :
       0).map (fun word => BitVec.ofNat 64 word.toNat)
     == some (BitVec.ofNat 64 0x55667788))
 
+/-- The structured `.load` on a `One` shape agrees with the tagged exact
+    `panMemLoadHOL` over the word view of the `PanValue` memory. -/
+example :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 .one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) .one 0
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_one_eq_panMemLoadHOL littleEndianState
+    littleEndianState.memory ([] : StructContext) 0
+
+/- The structured `One` load returns the source word. -/
+#guard
+  isWordResult
+    (panValueFlatLoad ([] : StructContext) littleEndianState.memory
+      panSemBitVec64BytesInWord 0 .one
+      (some (panSemBitVec64MemoryAccess littleEndianState)))
+    sourceMemoryWord
+
+/- The production context-size agrees with the exact HOL context-size. -/
+example : shapeSizeWithContext ([] : StructContext) Shape.one =
+    sizeOfShWithCtxt (StructContext.toHOL ([] : StructContext)) Shape.one :=
+  panValueFlatShapeSize_eq_sizeOfShWithCtxt ([] : StructContext) Shape.one
+
+/- The production offset agrees with the exact `address + bytes_in_word * n`. -/
+example : panValueFlatOffset (8 : RiscV.Word 64) (16 : RiscV.Word 64) 3 =
+    (16 : RiscV.Word 64) + BitVec.ofNat 64 8 * BitVec.ofNat 64 3 :=
+  panValueFlatOffset_eq_widen 16 3
+
 end Flapjack.Test.PanSemStateEvalParity

@@ -53,15 +53,50 @@ where they already model `asm$reg_imm`, `asm$memop`, and
 
 HOL's `num_set` (`num |-> unit`) is represented by the finite map
 `FiniteMap Nat Unit`.  As with every finite-map modeling choice in this
-repository this fixes the lookup behaviour of `num_set`; it does not model
-`sptree` iteration order, which none of the label or convention definitions
-inspect. -/
+repository this fixes the lookup behaviour of `num_set`.  The audit recorded
+in `docs/NUM-SET-AUDIT.md` checks what the wordConvs definitions actually
+inspect: `every_name_def` and the `Loop` clause of `every_var_def` enumerate
+the `sptree$toAList` domain, but only through `EVERY`, so the HOL result is
+independent of `sptree` iteration order (verified directly in
+`scripts/hol-probes/num_set_audit_probe.out`); `wf_names_def`/`wf_cutsets_def`
+use the `sptree$wf` canonicalisation invariant, which the function carrier
+cannot express (see the audit).  The bridge lemmas below state the
+order-insensitive domain form and its equivalence to an explicit domain list. -/
 
 /-- Lean model of HOL `num_set` (`num |-> unit`). -/
 abbrev WordLangNumSet := FiniteMap Nat Unit
 
 /-- HOL `cutsets = num_set # num_set`. -/
 abbrev WordLangCutsets := WordLangNumSet × WordLangNumSet
+
+/-- Order-insensitive reading of HOL's `EVERY P (MAP FST (toAList t))` for a
+Lean `num_set` model: every key present in the map satisfies `P`.
+
+This is the domain form the wordConvs `every_name`/`every_var` ports use; it
+does not mention `sptree` iteration order. -/
+def everyNumSetKey (P : Nat → Bool) (t : WordLangNumSet) : Prop :=
+  ∀ k, t k = some () → P k = true
+
+/-- An explicit domain witness for a `num_set` model: a nodup key list that
+lists exactly the map's keys.  This is the smallest faithful bridge to HOL's
+`toAList` enumeration (order irrelevant) without changing the carrier. -/
+def numSetDomainList (keys : List Nat) (t : WordLangNumSet) : Prop :=
+  keys.Nodup ∧ ∀ k, t k = some () ↔ k ∈ keys
+
+theorem everyNumSetKey_ext {P : Nat → Bool} {t u : WordLangNumSet}
+    (h : ∀ k, t k = u k) : everyNumSetKey P t ↔ everyNumSetKey P u := by
+  constructor <;> intro hP k hk
+  · exact hP k ((h k).trans hk)
+  · exact hP k ((h k).symm.trans hk)
+
+theorem everyNumSetKey_iff_list {P : Nat → Bool} {keys : List Nat} {t : WordLangNumSet}
+    (h : numSetDomainList keys t) : everyNumSetKey P t ↔ keys.all P = true := by
+  rcases h with ⟨_, hmem⟩
+  constructor
+  · intro hP
+    exact List.all_eq_true.mpr (fun k hk => hP k ((hmem k).mpr hk))
+  · intro hall k hk
+    exact List.all_eq_true.mp hall k ((hmem k).mp hk)
 
 /-- `asm$arith` (`cakeml/compiler/encoders/asm/asmScript.sml:85-95`). -/
 inductive WordLangArith (α : Type u) where

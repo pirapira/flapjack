@@ -1,0 +1,16 @@
+ns_empty=[]
+ns_single=[(0,())]
+ns_three_fwd=[(1,()); (0,()); (2,())]
+ns_three_rev=[(1,()); (0,()); (2,())]
+ns_insert_dup=[(0,())]
+ns_union_dup=[(0,())]
+ns_mem_yes=T
+ns_mem_no=F
+ns_wf_empty=T
+ns_wf_insert=T
+ns_wf_union=T
+ns_name_even_ok=T
+ns_name_even_bad=F
+ns_len_two=2
+nsmap_union_left=SOME 5
+nsmap_insert_last=SOME 9

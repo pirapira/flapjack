@@ -200,7 +200,8 @@ example : (functionEntries alookupDecls)[0]? =
         (panToCrepGetEidsFromDeclsHOL alookupDecls)) [] Prog.skip)
     Prog.skip Shape.one
   · simp [compileToCrepHOL, alookupDecls, functionEntries, panToCrepVars,
-      Shape.shapeSize]
+      Shape.shapeSize, functionInfosHOL_eq_makeFuncsHOL,
+      panToCrepCompFuncRiscV_eq_compFuncHOL, panToCrepMkCtxtHOL]
   · decide
   · decide
   · simp [alookupDecls, functionEntries, lookupFunctionEntry]

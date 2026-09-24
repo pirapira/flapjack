@@ -1507,4 +1507,54 @@ theorem evalPanValueExp_bytesInWord_eq_evalHOL {width : Nat} [NeZero width] [Law
       = (evalHOL state .bytesInWord).map HolValue.toPanValue := by
   simp only [evalPanValueExp, evalHOL, hbytes, Option.map_some, HolValue.toPanValue_val]
 
+/-- `.rStruct` clause bridge: under per-element production agreement on the field
+expressions, production `.rStruct` agrees with tagged `evalHOL`. -/
+theorem evalPanValueExp_rStruct_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (fields : List (Exp (RiscV.Word width)))
+    (hfields : ∀ expression ∈ fields,
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+          expression (memoryAccess := access)
+        = (evalHOL state expression).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.rStruct fields) (memoryAccess := access)
+      = (evalHOL state (.rStruct fields)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [evalPanValueExps_eq_evalListHOL state structs locals globals memory baseAddress
+    topAddress bytesInWord access fields hfields]
+  rw [Option.map_map, Option.map_map]
+  congr 1
+  funext value
+  rw [Function.comp_apply, Function.comp_apply, HolValue.toPanValue_rStruct]
+
+/-- `.rField` clause bridge: under production agreement on the structure expression,
+production `.rField` agrees with tagged `evalHOL` (both project the index of a
+`RStruct` value and fail otherwise). -/
+theorem evalPanValueExp_rField_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (index : Nat) (value : Exp (RiscV.Word width))
+    (hvalue : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        value (memoryAccess := access)
+      = (evalHOL state value).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.rField index value) (memoryAccess := access)
+      = (evalHOL state (.rField index value)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [hvalue]
+  cases hv : evalHOL state value with
+  | none => simp
+  | some holValue =>
+      cases holValue with
+      | val word => cases word with | word bits => simp [HolValue.toPanValue_val]
+      | rStruct values => simp [HolValue.toPanValue_rStruct, List.getElem?_map]
+      | nStruct name fields => simp [HolValue.toPanValue_nStruct]
+
 end Flapjack

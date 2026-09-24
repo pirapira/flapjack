@@ -123,4 +123,16 @@ val _ = print_eval "nstruct_name_mismatch"
 val _ = print_eval "nstruct_missing_struct"
   ``eval ^little (panLang$NStruct (strlit "Pair") [(strlit "f", panLang$Const 7w)])``;
 
+(* RStruct/RField rows: structure construction and index projection. *)
+val _ = print_eval "rstruct_pair"
+  ``eval ^little (panLang$RStruct [panLang$Const 3w; panLang$Const 4w])``;
+val _ = print_eval "rfield_first"
+  ``eval ^little (panLang$RField 0 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_second"
+  ``eval ^little (panLang$RField 1 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_out_of_range"
+  ``eval ^little (panLang$RField 2 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_not_rstruct"
+  ``eval ^little (panLang$RField 0 (panLang$Const 3w))``;
+
 val _ = print_eval "pan_sem_state_eval_done" ``0``;

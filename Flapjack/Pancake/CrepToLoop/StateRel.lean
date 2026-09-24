@@ -357,4 +357,25 @@ def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
   | some (n, _) => n
   | none => 0
 
+/-! ## Context construction
+
+`crep_to_loopScript.sml`'s `mk_ctxt`/`make_vmap` build the finite-map compiler
+context. Over `CrepToLoopFiniteMapContext` (whose `vars`/`funcs` are the same
+HOL finite maps) they need no width parameter. -/
+
+/-- Exact port of HOL `mk_ctxt_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:221-228`). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "mk_ctxt_def"]
+def mkCtxtHOL (target : RiscV.Architecture) (vmap : FiniteMap Nat Nat)
+    (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
+    CrepToLoopFiniteMapContext :=
+  { vars := vmap, funcs := functions, vmax := vmax, target := target }
+
+/-- Exact port of HOL `make_vmap_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:230-233`): Cake's
+    `FEMPTY |++ ZIP (params, GENLIST I (LENGTH params))`. -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "make_vmap_def"]
+def makeVmapHOL (params : List Nat) : FiniteMap Nat Nat :=
+  FUPDATE_LIST FEMPTY (params.zip (List.range params.length))
+
 end Flapjack

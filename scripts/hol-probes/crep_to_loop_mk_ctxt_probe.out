@@ -1,0 +1,7 @@
+mk_ctxt_vars=T
+mk_ctxt_funcs=T
+mk_ctxt_vmax=T
+mk_ctxt_target=T
+make_vmap_single_hit=T
+make_vmap_two_second=T
+make_vmap_empty_miss=T

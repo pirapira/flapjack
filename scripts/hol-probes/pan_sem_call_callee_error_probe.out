@@ -1,0 +1,4 @@
+call_error_result=SOME Error
+call_error_param_locals=NONE
+call_error_caller_locals=NONE
+call_error_clock=4

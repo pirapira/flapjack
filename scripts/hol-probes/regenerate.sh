@@ -450,6 +450,12 @@ run_probe pan_sem_call_callee_normal_probeScript.sml pan_sem_call_callee_normal_
 run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_terminal_probe.out \
   call_break_result call_continue_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call callee-error probe observes that a callee whose body finishes with
+# `SOME Error` propagates `SOME Error` through the catch-all `empty_locals st`,
+# clearing the caller-visible locals while keeping the decremented clock.
+run_probe pan_sem_call_callee_error_probeScript.sml pan_sem_call_callee_error_probe.out \
+  call_error_result call_error_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.

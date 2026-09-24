@@ -17,3 +17,13 @@ xor_empty=word_op Xor [] = SOME 0w
 sub_pair=word_op Sub [3w; 5w] = SOME (3w + -5w)
 sub_one=word_op Sub [3w] = NONE
 sub_three=word_op Sub [1w; 2w; 3w] = NONE
+add_one=word_op Add [3w] = SOME (3w + 0w)
+add_three=word_op Add [1w; 2w; 3w] = SOME (1w + (2w + (3w + 0w)))
+and_pair=word_op And [12w; 10w] = SOME (12w && 10w && ¬0w)
+and_three=word_op And [15w; 6w; 3w] = SOME (15w && 6w && 3w && ¬0w)
+or_pair=word_op Or [12w; 3w] = SOME (12w ‖ 3w ‖ 0w)
+or_three=word_op Or [1w; 2w; 4w] = SOME (1w ‖ 2w ‖ 4w ‖ 0w)
+xor_pair=word_op Xor [15w; 10w] = SOME (15w ⊕ 10w ⊕ 0w)
+xor_three=word_op Xor [1w; 2w; 4w] = SOME (1w ⊕ 2w ⊕ 4w ⊕ 0w)
+sub_empty=word_op Sub [] = NONE
+word_op_finite_done=0 = 0

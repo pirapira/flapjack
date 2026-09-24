@@ -72,6 +72,16 @@ theorem wordLabBridge (value : BitVec 64) :
 def observeWordLabBridge : Bool :=
   (HolWordLab.word (3 : BitVec 64)).toPanWordLab == PanWordLab.word 3
 
+/-- The exact `v` port and production `PanValue` are isomorphic at each width. -/
+theorem valueBridge (value : PanValue (BitVec 64)) :
+    value.toHolValue.toPanValue = value :=
+  PanValue.toHolValue_toPanValue value
+
+def observeValueBridge : Bool :=
+  match (PanValue.nStruct "S" [("f", PanValue.word (7 : BitVec 64))]).toHolValue with
+  | .nStruct name fields => name == "S" && fields.length == 1
+  | _ => false
+
 #guard observeConst
 #guard observeLocal
 #guard observeGlobal
@@ -82,6 +92,7 @@ def observeWordLabBridge : Bool :=
 #guard observeNStructShapeMismatch
 #guard observeMissingStruct
 #guard observeWordLabBridge
+#guard observeValueBridge
 
 def runChecks : IO Bool := do
   if observeConst then IO.println "PASS eval constant" else IO.println "FAIL eval constant"
@@ -98,8 +109,10 @@ def runChecks : IO Bool := do
     else IO.println "FAIL eval NStruct missing struct"
   if observeWordLabBridge then IO.println "PASS eval word_lab bridge"
     else IO.println "FAIL eval word_lab bridge"
+  if observeValueBridge then IO.println "PASS eval v bridge"
+    else IO.println "FAIL eval v bridge"
   pure (observeConst && observeLocal && observeGlobal && observeField && observeMissing &&
     observeNStruct && observeNStructNameMismatch && observeNStructShapeMismatch &&
-    observeMissingStruct && observeWordLabBridge)
+    observeMissingStruct && observeWordLabBridge && observeValueBridge)
 
 end Flapjack.Test.PanEvalParity

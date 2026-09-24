@@ -172,4 +172,47 @@ private def observesReturnedWord
   (sourceState false true false)).sharedRead
     littleEndianState.memory panSemBitVec64BytesInWord .opW 0)
 
+
+/- The executed exact-state `.op` path delegates to the tagged `wordOpHOL`
+   list fold for arbitrary operand lists. These build-checked theorems record
+   that delegation; the `#guard`s pin the checked-in direct HOL rows for
+   0/1/2/3 operands and the Sub arities. -/
+theorem panSemBitVec64MemoryAccess_wordOp_tagged :
+    (panSemBitVec64MemoryAccess littleEndianState).wordOp .add
+        [BitVec.ofNat 64 1, BitVec.ofNat 64 2, BitVec.ofNat 64 3] =
+      wordOpHOL .add [BitVec.ofNat 64 1, BitVec.ofNat 64 2, BitVec.ofNat 64 3] :=
+  Flapjack.panSemBitVec64MemoryAccess_wordOp littleEndianState .add _
+
+theorem evalPanSemStateExp_op_delegates (operator : BinOp)
+    (arguments : List (Exp Word64)) :
+    evalPanSemStateExp littleEndianState (.op operator arguments) =
+      (evalPanSemStateExps littleEndianState arguments).bind (fun values =>
+        (values.mapM panValueWordProjection).bind (fun words =>
+          (wordOpHOL operator words).map PanValue.word)) :=
+  Flapjack.evalPanSemStateExp_op littleEndianState operator arguments
+
+#guard isWordResult (evalPanSemStateExp littleEndianState (.op .add []))
+  (BitVec.ofNat 64 0)
+#guard isWordResult (evalPanSemStateExp littleEndianState (.op .add [.const 1]))
+  (BitVec.ofNat 64 1)
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState (.op .add [.const 1, .const 2]))
+  (BitVec.ofNat 64 3)
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState
+    (.op .and [.const 15, .const 6, .const 3]))
+  (BitVec.ofNat 64 2)
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState
+    (.op .or [.const 1, .const 2, .const 4]))
+  (BitVec.ofNat 64 7)
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState
+    (.op .xor [.const 1, .const 2, .const 4]))
+  (BitVec.ofNat 64 7)
+#guard isNoneResult (evalPanSemStateExp littleEndianState (.op .sub []))
+#guard isWordResult
+  (evalPanSemStateExp littleEndianState (.op .sub [.const 3, .const 5]))
+  (BitVec.ofNat 64 0xFFFFFFFFFFFFFFFE)
+
 end Flapjack.Test.PanSemStateEvalParity

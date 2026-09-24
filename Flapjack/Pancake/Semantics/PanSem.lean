@@ -73,6 +73,108 @@ def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWor
 @[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
+/-- Statement-exact port of HOL `panSem$v` (`panSemScript.sml:22`,
+    `v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list) End`).
+    As with `HolWordLab`, the payload word is width-indexed. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
+inductive HolValue (width : Nat) where
+  | val (value : HolWordLab width)
+  | rStruct (fields : List (HolValue width))
+  | nStruct (name : StructName) (fields : List (FieldName × HolValue width))
+  deriving Repr
+
+mutual
+  /-- The isomorphism from production `PanValue` to the exact port `HolValue`. -/
+  def PanValue.toHolValue {width : Nat} : PanValue (BitVec width) → HolValue width
+    | .word value => .val (.word value)
+    | .rStruct fields => .rStruct (fields.map PanValue.toHolValue)
+    | .nStruct name fields =>
+        .nStruct name (fields.map (fun pair : FieldName × PanValue (BitVec width) => (pair.1, pair.2.toHolValue)))
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals
+      simp_wf
+      first
+      | (rename_i hmem
+         have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+         have hmemlt := List.sizeOf_lt_of_mem hmem
+         omega)
+      | (rename_i hmem; have hlt := List.sizeOf_lt_of_mem hmem; omega)
+      | omega
+
+  /-- The isomorphism from the exact port `HolValue` to production `PanValue`. -/
+  def HolValue.toPanValue {width : Nat} : HolValue width → PanValue (BitVec width)
+    | .val (.word bits) => .word bits
+    | .rStruct fields => .rStruct (fields.map HolValue.toPanValue)
+    | .nStruct name fields =>
+        .nStruct name (fields.map (fun pair : FieldName × HolValue width => (pair.1, pair.2.toPanValue)))
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals
+      simp_wf
+      first
+      | (rename_i hmem
+         have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+         have hmemlt := List.sizeOf_lt_of_mem hmem
+         omega)
+      | (rename_i hmem; have hlt := List.sizeOf_lt_of_mem hmem; omega)
+      | omega
+end
+
+mutual
+  @[simp] theorem PanValue.toHolValue_toPanValue {width : Nat} (value : PanValue (BitVec width)) :
+      value.toHolValue.toPanValue = value := by
+    induction value using PanValue.toHolValue.induct with
+    | case1 bits =>
+        unfold PanValue.toHolValue HolValue.toPanValue
+        rfl
+    | case2 fields ih =>
+        unfold PanValue.toHolValue HolValue.toPanValue
+        rw [List.map_map]
+        apply congrArg PanValue.rStruct
+        simpa using (show List.map (HolValue.toPanValue ∘ PanValue.toHolValue) fields =
+              List.map (fun x => x) fields from by
+            apply List.map_congr_left
+            intro x hx
+            exact ih x hx)
+    | case3 name fields ih =>
+        unfold PanValue.toHolValue HolValue.toPanValue
+        rw [List.map_map]
+        apply congrArg (PanValue.nStruct name)
+        simpa using (show List.map ((fun pair : FieldName × HolValue width => (pair.1, pair.2.toPanValue)) ∘
+                fun pair : FieldName × PanValue (BitVec width) => (pair.1, pair.2.toHolValue)) fields =
+              List.map (fun x => x) fields from by
+            apply List.map_congr_left
+            intro pair hmem
+            rw [Function.comp_apply, ih pair hmem])
+
+  @[simp] theorem HolValue.toPanValue_toHolValue {width : Nat} (value : HolValue width) :
+      value.toPanValue.toHolValue = value := by
+    induction value using HolValue.toPanValue.induct with
+    | case1 bits =>
+        unfold HolValue.toPanValue PanValue.toHolValue
+        rfl
+    | case2 fields ih =>
+        unfold HolValue.toPanValue PanValue.toHolValue
+        rw [List.map_map]
+        apply congrArg HolValue.rStruct
+        simpa using (show List.map (PanValue.toHolValue ∘ HolValue.toPanValue) fields =
+              List.map (fun x => x) fields from by
+            apply List.map_congr_left
+            intro x hx
+            exact ih x hx)
+    | case3 name fields ih =>
+        unfold HolValue.toPanValue PanValue.toHolValue
+        rw [List.map_map]
+        apply congrArg (HolValue.nStruct name)
+        simpa using (show List.map ((fun pair : FieldName × PanValue (BitVec width) => (pair.1, pair.2.toHolValue)) ∘
+                fun pair : FieldName × HolValue width => (pair.1, pair.2.toPanValue)) fields =
+              List.map (fun x => x) fields from by
+            apply List.map_congr_left
+            intro pair hmem
+            rw [Function.comp_apply, ih pair hmem])
+end
+
 structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   structs : StructContext
   /-- Compatibility function table. This list cannot stand in for the

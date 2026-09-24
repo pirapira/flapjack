@@ -46,3 +46,23 @@ val _ = print_eval "op_add_fold_three"
       panLang$Const 3w])``;
 val _ = print_eval "op_sub_wrong_arity"
   ``eval ^little (panLang$Op Sub [panLang$Const 1w])``;
+val _ = print_eval "op_add_empty"
+  ``eval ^little (panLang$Op Add [])``;
+val _ = print_eval "op_add_one"
+  ``eval ^little (panLang$Op Add [panLang$Const 1w])``;
+val _ = print_eval "op_add_pair"
+  ``eval ^little (panLang$Op Add [panLang$Const 1w; panLang$Const 2w])``;
+val _ = print_eval "op_and_three"
+  ``eval ^little (panLang$Op And [panLang$Const 15w; panLang$Const 6w;
+      panLang$Const 3w])``;
+val _ = print_eval "op_or_three"
+  ``eval ^little (panLang$Op Or [panLang$Const 1w; panLang$Const 2w;
+      panLang$Const 4w])``;
+val _ = print_eval "op_xor_three"
+  ``eval ^little (panLang$Op Xor [panLang$Const 1w; panLang$Const 2w;
+      panLang$Const 4w])``;
+val _ = print_eval "op_sub_empty"
+  ``eval ^little (panLang$Op Sub [])``;
+val _ = print_eval "op_sub_pair"
+  ``eval ^little (panLang$Op Sub [panLang$Const 3w; panLang$Const 5w])``;
+val _ = print_eval "pan_sem_state_eval_done" ``0``;

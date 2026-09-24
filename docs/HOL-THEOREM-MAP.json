@@ -5195,6 +5195,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeMatches_self_forSourceCall",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only structural reflexivity helper for the executable shape matcher; used to derive the source exception handler shape premise from state_rel's empty struct context"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeListMatches_self_forSourceCall",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-recursive reflexivity helper for the executable shape matcher; no standalone HOL theorem port"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only arbitrary-payload source/target Call composition deriving the source Call run from source callee/handler premises, then carrying its projected result through production target dispatch. The target callee-body IH supplies its evaluator run, state_rel/code_rel/excp_rel, and the state-owned global-word relation consumed by arbitrary finite-map exp_hdl; the handler relation IH remains a premise. Recursive body simulations are unproved, so this is not pc_compile_correct[Call_Ret_Exception]."

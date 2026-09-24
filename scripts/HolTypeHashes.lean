@@ -23,6 +23,7 @@ import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSem.Primop
 import Flapjack.Pancake.WordLang
+import Flapjack.Pancake.WordConvs
 import Flapjack.RiscV.CorrectnessEncoding
 
 open Lean Elab Command Flapjack

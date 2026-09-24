@@ -1,0 +1,9 @@
+labels_rel_refl_ok=T
+labels_rel_subset_ok=T
+labels_rel_superset_bad=F
+labels_rel_dup_old_ok=T
+labels_rel_dup_new_bad=F
+labels_rel_empty_ok=T
+labels_rel_nil_bad=F
+labels_rel_append_concl_ok=T
+labels_rel_pair_ok=T

@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.PanValueFlatten
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -182,5 +183,55 @@ mutual
         rw [panIsWfShapeValueHOL_toHOL context value,
           panIsWfShapeValuesHOL_mapSnd_toHOL context fields]
 end
+
+/-- Cake `list_rel_flatten_with_shape_length`
+    (`cakeml/pancake/semantics/panPropsScript.sml:549`), a prerequisite of the
+    PanToCrep Call case `call_preserve_state_code_locals_rel`
+    (`pan_to_crepProofScript.sml:2440`):
+
+    `LENGTH ns = LENGTH (FLAT (MAP flatten args)) /\
+     size_of_shape (Comb sh) = LENGTH (FLAT (MAP flatten args)) /\
+     EL n args = v /\ n < LENGTH args /\ LENGTH args = LENGTH sh /\
+     LIST_REL (\sh arg. sh = shape_of arg) sh args /\
+     EVERY is_wf_shape_v_nil args ==>
+     LENGTH (EL n (with_shape sh ns)) = LENGTH (flatten v)`.
+
+    Representation notes (why this is not `@[hol]`-tagged): Cake's `LIST_REL`
+    (`shapes` paired pointwise with `args`) is rendered here as the indexed
+    `List.get` equality (the toolchain in this repository does not expose
+    `List.Forall₂`); `EL n args = v` is the indexed `arguments[n]'hn = value`;
+    `flat`/`with_shape`/`size_of_shape`/`shape_of`/`is_wf_shape_v_nil` are
+    `panValueFlatten`/`withShape`/`Shape.shapeSize`/`panValueShape`/
+    `panValueIsWf []` respectively. -/
+theorem listRelFlattenWithShapeLength (shapes : List Shape) (names : List Nat)
+    (arguments : List (PanValue α)) (value : PanValue α) (n : Nat)
+    (hnames : names.length = (arguments.map panValueFlatten).flatten.length)
+    (hsize : Shape.shapeSize (.comb shapes) =
+      (arguments.map panValueFlatten).flatten.length)
+    (hn : n < arguments.length)
+    (hget : arguments[n]'hn = value)
+    (hlen : arguments.length = shapes.length)
+    (hrel : ∀ i (hsi : i < shapes.length) (hai : i < arguments.length),
+      shapes.get ⟨i, hsi⟩ =
+        panValueShape ([] : StructContext) (arguments.get ⟨i, hai⟩))
+    (hwf : arguments.all
+      (fun argument => panValueIsWf ([] : StructContext) argument) = true) :
+    ((withShape shapes names)[n]'(by rw [withShape_length]; omega)).length =
+      (panValueFlatten value).length := by
+  have hvalues : names.length = Shape.shapeSize (.comb shapes) :=
+    hnames.trans hsize.symm
+  have hnshapes : n < shapes.length := by omega
+  have hshape : shapes[n]'hnshapes = panValueShape ([] : StructContext) value := by
+    have h := hrel n hnshapes hn
+    rw [List.get_eq_getElem, List.get_eq_getElem] at h
+    rw [hget] at h
+    exact h
+  have hwfval : panValueIsWf ([] : StructContext) value = true := by
+    have hall := List.all_eq_true.mp hwf
+    exact hall value (by rw [← hget]; exact List.getElem_mem hn)
+  have hflat := panValueFlatten_length_eq_shapeSize value
+    (panValueIsWf_isWfShape_panValueShape ([] : StructContext) value hwfval)
+  rw [withShape_getElem_length shapes names n hvalues hnshapes, hshape]
+  exact hflat.symm
 
 end Flapjack

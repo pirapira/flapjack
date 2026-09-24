@@ -8808,6 +8808,14 @@
    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `asm` at asmScript.sml:138-145 - Inst ('a inst) | Jump ('a word) | JumpCmp cmp reg ('a reg_imm) ('a word) | Call ('a word) | JumpReg reg | Loc reg ('a word). The width-indexed Lean HolAsm width matches constructor-for-constructor: inst (HolInst width); jump/call/loc over BitVec width; jumpCmp HolCmp Nat (HolRegImm width) (BitVec width); jumpReg Nat. The production generic-field rendering AsmData width is kept untagged (same arity, fields at the generic WordLangInst/WordRegImm/Cmp carriers). Direct HOL-EVAL rows as_jump=9/as_jumpCmp=1/as_jumpReg=7/as_loc=14 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by asmJumpTarget/asmJumpCmpReg/asmJumpRegTarget/asmLocSum in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
+   "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+   "hol_name": "prog",
+   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_name": "HolProg",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-deepseek-three (2026-09-25: exact width-indexed port of HOL `prog` at stackLangScript.sml:27-66. HOL parameterises prog by a single shared word type 'a and its FFI field is `mlstring = implode string` (mlstringScript.sml:19-21). HolProg width instantiates the generic seven-parameter StackLang.Prog with the exact width-indexed carriers HolInst width/HolRegImm width/HolAddr width, the monomorphic HolCmp/HolBinop/HolMemop, and the faithful MlString carrier, so it has the single shared word dimension and a matching FFI field; all 34 constructor arities and field types match. The production StackCarrier.ProgW (String FFI) is a separate untagged generic-field carrier; a kernel-checked String<->MlString bridge between the two does not exist yet and is PENDING under flapjack-pxn.18.5.15.3.11.2.3. Direct HOL-EVAL rows pg_skip=Skip/pg_seq=Seq Skip Skip/pg_inst=8/pg_get=7/pg_stackalloc=4/pg_shmem=12/pg_ffi_len=2/pg_ffi_explode=\"AB\"/pg_ffi_eq=T in scripts/hol-probes/stack_lang_prog_carrier_probe.out are reproduced by progCarrierGuard in Flapjack/Test/AsmConfigChecksParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

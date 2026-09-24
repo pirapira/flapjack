@@ -30,9 +30,9 @@ val cfg = ``<| ISA := RISC_V
    ; addr_offset := (0w, 100w)
    ; hw_offset := (0w, 100w)
    ; byte_offset := (0w, 100w)
-   ; jump_offset := (0w, 200w)
-   ; cjump_offset := (0w, 200w)
-   ; loc_offset := (0w, 200w)
+   ; jump_offset := (0w, 100w)
+   ; cjump_offset := (0w, 100w)
+   ; loc_offset := (0w, 100w)
    |> : 8 asm_config``;
 
 val _ = print_eval "aligned0" ``alignment$aligned 0 (8w:8 word)``
@@ -85,3 +85,10 @@ val _ = print_eval "stackAddrByte"
 val _ = print_eval "signedHighLeZero" ``(128w:8 word) <= (0w:8 word)``
 val _ = print_eval "unsignedHighLeZero" ``word_ls (128w:8 word) (0w:8 word)``
 val _ = print_eval "signedOffsetBounds" ``asm$offset_ok 0 (0w,255w) (200w:8 word)``
+val _ = print_eval "asmOkInstConst" ``asm$asm_ok (asm$Inst (asm$Const 2 (0w:8 word))) ^cfg``
+val _ = print_eval "asmOkJump" ``asm$asm_ok (asm$Jump (100w:8 word)) ^cfg``
+val _ = print_eval "asmOkJumpCmp"
+  ``asm$asm_ok (asm$JumpCmp asm$Equal 1 (asm$Reg 2) (100w:8 word)) ^cfg``
+val _ = print_eval "asmOkCallNone" ``asm$asm_ok (asm$Call (100w:8 word)) ^cfg``
+val _ = print_eval "asmOkJumpReg" ``asm$asm_ok (asm$JumpReg 3) ^cfg``
+val _ = print_eval "asmOkLoc" ``asm$asm_ok (asm$Loc 1 (100w:8 word)) ^cfg``

@@ -41,9 +41,9 @@ private def asmConfig8 : AsmConfig 8 :=
     addrOffset := (w8 0, w8 100)
     hwOffset := (w8 0, w8 100)
     byteOffset := (w8 0, w8 100)
-    jumpOffset := (w8 0, w8 200)
-    cjumpOffset := (w8 0, w8 200)
-    locOffset := (w8 0, w8 200) }
+    jumpOffset := (w8 0, w8 100)
+    cjumpOffset := (w8 0, w8 100)
+    locOffset := (w8 0, w8 100) }
 
 private def aligned0 : Bool := asmAligned 0 (w8 8)
 private def aligned2 : Bool := asmAligned 2 (w8 8)
@@ -99,6 +99,13 @@ private def signedHighLeZero : Bool := decide ((w8 128).toInt ≤ (w8 0).toInt)
 private def unsignedHighLeZero : Bool := decide ((w8 128) < (w8 0))
 private def signedOffsetBounds : Bool := asmOffsetOk 0 (w8 0, w8 255) (w8 200)
 
+private def asmOkInstConst : Bool := asmOk asmConfig8 (.inst (.const 2 (w8 0)))
+private def asmOkJump : Bool := asmOk asmConfig8 (.jump (w8 100))
+private def asmOkJumpCmp : Bool := asmOk asmConfig8 (.jumpCmp .equal 1 (.reg 2) (w8 100))
+private def asmOkCallNone : Bool := asmOk asmConfig8 (.call (w8 100))
+private def asmOkJumpReg : Bool := asmOk asmConfig8 (.jumpReg 3)
+private def asmOkLoc : Bool := asmOk asmConfig8 (.loc 1 (w8 100))
+
 private def asmConfigGuard : Bool :=
   aligned0 == true && aligned2 == true && unaligned2 == false &&
   regOk2 == true && regOk3 == false && regOk8 == false &&
@@ -116,7 +123,9 @@ private def asmConfigGuard : Bool :=
   instMemLoadOk == true && instMemHwOk == true && instMemByteOk == true &&
   stackAddrLoad == true && stackAddrHw == true && stackAddrByte == true &&
   signedHighLeZero == true && unsignedHighLeZero == false &&
-  signedOffsetBounds == false
+  signedOffsetBounds == false &&
+  asmOkInstConst == true && asmOkJump == true && asmOkJumpCmp == true &&
+  asmOkCallNone == false && asmOkJumpReg == false && asmOkLoc == true
 
 #guard asmConfigGuard
 
@@ -160,6 +169,11 @@ def runChecks : IO Bool := do
     IO.println "PASS stackProps addr_ok selects the memop offset kind"
   else
     IO.println "FAIL stackProps addr_ok"
+  if asmOkInstConst && asmOkJump && asmOkJumpCmp && !asmOkCallNone &&
+      !asmOkJumpReg && asmOkLoc then
+    IO.println "PASS asm validity covers the full Inst/Jump/JumpCmp/Call/JumpReg/Loc carrier"
+  else
+    IO.println "FAIL asm validity over the full carrier"
   pure asmConfigGuard
 
 end Flapjack.Test.AsmConfigChecksParity

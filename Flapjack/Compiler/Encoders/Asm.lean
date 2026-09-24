@@ -44,11 +44,26 @@ inductive AsmArchitecture where
   | x86_64
   deriving DecidableEq, Repr
 
+/-- HOL `asmScript.sml:139-146`:
+`asm = Inst ('a inst) | Jump ('a word) | JumpCmp cmp reg ('a reg_imm) ('a word)
+       | Call ('a word) | JumpReg reg | Loc reg ('a word)`.
+The assembler's `encode` field consumes this full datatype, not just the
+`Inst` payload. -/
+inductive AsmData (width : Nat) where
+  | inst (value : WordLangInst (BitVec width))
+  | jump (target : BitVec width)
+  | jumpCmp (operator : Cmp) (source : Nat) (right : WordRegImm (BitVec width))
+      (target : BitVec width)
+  | call (target : BitVec width)
+  | jumpReg (target : Nat)
+  | loc (register : Nat) (offset : BitVec width)
+  deriving Repr
+
 /-- The `asm_config` projections read by the HOL validity predicates
 (`asmScript.sml:153-172`). -/
 structure AsmConfig (width : Nat) where
   isa : AsmArchitecture
-  encode : WordLangInst (BitVec width) → List UInt8
+  encode : AsmData width → List UInt8
   bigEndian : Bool
   codeAlignment : Nat
   linkReg : Option Nat
@@ -226,5 +241,20 @@ def asmInstOk {width : Nat} (config : AsmConfig width) : WordLangInst (BitVec wi
           asmHwOffsetOk config offset && !(config.isa == .ag32)
          else
           asmByteOffsetOk config offset)
+
+/-- HOL `asmScript$asm_ok_def` (`asmScript.sml:301-313`). -/
+@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "asm_ok_def"]
+def asmOk {width : Nat} (config : AsmConfig width) : AsmData width → Bool
+  | .inst inner => asmInstOk config inner
+  | .jump target => asmJumpOffsetOk config target
+  | .jumpCmp operator source right target =>
+      asmCjumpOffsetOk config target && asmCmpOk config operator source right
+  | .call target =>
+      (match config.linkReg with
+        | some register => asmRegOk config register
+        | none => false) &&
+        asmJumpOffsetOk config target
+  | .jumpReg target => asmRegOk config target
+  | .loc register offset => asmRegOk config register && asmLocOffsetOk config offset
 
 end Flapjack.Compiler.Encoders.Asm

@@ -7839,5 +7839,13 @@
     "lean_name": "asmAddrOk",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  }
+  },
+{
+  "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+  "hol_name": "asm_ok_def",
+  "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+  "lean_name": "asmOk",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

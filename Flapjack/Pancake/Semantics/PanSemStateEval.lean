@@ -303,4 +303,118 @@ mutual
          omega)
 end
 
+/-! ## Executed-path widening adapter (flapjack-pxn.18.3.6.9.2)
+
+The executed BitVec-64 memory access `readByte` (via `panSemBitVec64MemoryAccess`)
+agrees with the tagged exact `panMemLoadByteHOL` when the faithful word memory is
+derived from a `PanValue` memory.  These declarations are Flapjack-specific
+production-side adapters (not HOL statements); the generic `memoryAccess := none`
+compatibility branch remains untagged and mismatch-tracked. -/
+
+/-- Word view of a `PanValue` memory: word cells are kept, non-word cells and
+    absent addresses are read as the zero word (the `HolWordLab` total memory). -/
+def panValueWordHOL (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) :
+    RiscV.Word 64 → HolWordLab 64 :=
+  fun address => match memory address with
+    | some (.word value) => .word value
+    | _ => .word 0
+
+/-- Definedness of a `PanValue` memory cell as a word (the `Prop` domain's
+    decidable Boolean guard). -/
+def panValueWordDefined
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) :
+    RiscV.Word 64 → Bool :=
+  fun address => match memory address with
+    | some (.word _) => true
+    | _ => false
+
+/-- `panSemBitVec64WordModel.byteAlign` is the exact HOL `byte_align` (clear the
+    low `LOG2(width/8)` bits) at width 64. -/
+theorem panSemBitVec64ByteAlign_eq_panByteAlignHOL (address : RiscV.Word 64) :
+    panSemBitVec64WordModel.byteAlign (8 : RiscV.Word 64) address =
+      panByteAlignHOL (width := 64) address := by
+  have h8 : BitVec.toNat (8 : RiscV.Word 64) = 8 := by decide
+  change RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address =
+    panByteAlignHOL (width := 64) address
+  simp only [RiscV.panRiscVByteAlign, panByteAlignHOL]
+  rw [show Nat.log2 8 = 3 from rfl]
+  apply BitVec.eq_of_toNat_eq
+  have hlt : BitVec.toNat address / 8 * 8 < 2 ^ 64 := by
+    have hle := Nat.div_mul_le_self (BitVec.toNat address) 8
+    have his := BitVec.isLt address
+    omega
+  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft,
+    Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, h8]
+  rw [if_neg (by decide : ¬ (8 = 0)), BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlt]
+
+/-- The model's `getByte` at width 64 equals the exact HOL `get_byte` codec
+    `panRiscVGetByteEndian`, as a width-64 word. -/
+theorem panSemBitVec64GetByte_eq_panRiscVGetByteEndian (address value : RiscV.Word 64)
+    (bigEndian : Bool) :
+    panSemBitVec64WordModel.getByte (8 : RiscV.Word 64) address value bigEndian =
+      BitVec.ofNat 64
+        (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address value bigEndian).toNat := by
+  have h8 : BitVec.toNat (8 : RiscV.Word 64) = 8 := by decide
+  have hidx : 8 - BitVec.toNat address % 8 - 1 =
+      8 - 1 - BitVec.toNat address % 8 := by
+    have := Nat.mod_lt (BitVec.toNat address) (by decide : 0 < 8)
+    omega
+  cases bigEndian
+  · simp only [panSemBitVec64WordModel, RiscV.panRiscVGetByteEndian,
+      RiscV.panRiscVByteIndex, h8]
+    simp only [if_neg (by decide : ¬ (8 = 0)), if_neg (by decide : ¬ (false = true))]
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofNat, Nat.mod_mod]
+  · simp only [panSemBitVec64WordModel, RiscV.panRiscVGetByteEndian,
+      RiscV.panRiscVByteIndex, h8]
+    simp only [if_neg (by decide : ¬ (8 = 0))]
+    rw [hidx]
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofNat, Nat.mod_mod]
+
+/-- `panRiscVGetByteEndian` produces a byte (`< 256`). -/
+theorem panRiscVGetByteEndian_toNat_lt_256 (address value : RiscV.Word 64)
+    (bigEndian : Bool) :
+    (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address value bigEndian).toNat < 256 := by
+  simp only [RiscV.panRiscVGetByteEndian]
+  rw [BitVec.toNat_ofNat]
+  exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (Nat.mod_lt _ (by decide))
+
+/-- Executed `readByte` at BitVec 64 agrees with the tagged exact
+    `panMemLoadByteHOL` (then widened with `BitVec.ofNat 64`). -/
+theorem panSemBitVec64ReadByte_eq_panMemLoadByteHOL
+    (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) (address : RiscV.Word 64) :
+    (panSemBitVec64MemoryAccess state).readByte
+        (panSemBitVec64MemoryAccess state).domain memory panSemBitVec64BytesInWord address =
+      (panMemLoadByteHOL (width := 64) (panValueWordHOL memory)
+          (fun a => state.memaddrs a && panValueWordDefined memory a = true) state.be
+          address).map (fun byte => BitVec.ofNat 64 byte.toNat) := by
+  simp only [panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+    panSemBitVec64BytesInWord, panModelReadByte, panMemLoadByteHOL]
+  rw [panSemBitVec64ByteAlign_eq_panByteAlignHOL address]
+  simp only [panValueWordMemory]
+  cases hcell : memory (panByteAlignHOL (width := 64) address) with
+  | none => simp [panValueWordDefined, hcell]
+  | some cell =>
+      cases cell with
+      | word w =>
+          simp only [panValueWordHOL, panValueWordDefined, hcell,
+            panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
+          cases hb : state.memaddrs (panByteAlignHOL (width := 64) address)
+          · simp
+          · simp only [(by decide : BitVec.ofNat 64 (64 / 8) = (8 : RiscV.Word 64))]
+            simp
+            change RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be =
+              BitVec.ofNat 64 (BitVec.toNat
+                (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64) address w state.be) % 256)
+            apply BitVec.eq_of_toNat_eq
+            rw [BitVec.toNat_ofNat,
+              Nat.mod_eq_of_lt (panRiscVGetByteEndian_toNat_lt_256 address w state.be)]
+            exact (Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le
+              (panRiscVGetByteEndian_toNat_lt_256 address w state.be)
+              (by decide : 256 ≤ 2 ^ 64))).symm
+      | rStruct fs => simp [panValueWordDefined, hcell]
+      | nStruct nm fs => simp [panValueWordDefined, hcell]
+
 end Flapjack

@@ -1534,7 +1534,22 @@ theorem wordAllocateProgramWithClashTreeAndColour_straightLine_simulation
     valid injective colourZero colourNoScratch source target hrelation program
     hprogram
 
-/-! The same simulation contract at the executable graph allocator boundary.
+/-! This is only a straight-line simulation contract at the executable graph
+    allocator boundary; it is not a port of CakeML's
+    `word_allocProof$word_alloc_correct`. That theorem covers every Word
+    statement under `even_starting_locals` and `wf_cutsets`, and obtains its
+    coloring guarantee from liveness-scoped `colouring_ok` via
+    `evaluate_apply_colour`. Here the supported programs are
+    `WordVarStraightLine`, and the proof still requires global
+    `Function.Injective` colouring. Global injectivity is stronger than the
+    allocator's clash constraint: noninterfering variables may share a
+    colour. The production source compiler reaches the full-SSA graph
+    allocator only on its checked-lowering fallback, through
+    `pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked`; the existing
+    theorem does not establish that returned allocation satisfies the
+    liveness-scoped semantic contract. Keep this untagged until the
+    `colouring_ok`-shaped relation and whole-Word evaluator bridge are present.
+
     The graph allocator stores its source colouring directly in the returned
     allocation, rather than wrapping it in a WordContext; exposing this
     equation keeps later lowering proofs independent of allocator internals. -/

@@ -603,6 +603,8 @@ run_probe compile_def_probeScript.sml compile_def_probe.out \
 run_probe compile_to_crep_probeScript.sml compile_to_crep_probe.out \
   empty raise_const raise_pair raise_pair_later raise_pair_later_64 handled_pair done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_alookup_compile_probeScript.sml crep_alookup_compile_probe.out \
+  source_names_distinct alookup_param_entry "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"
@@ -779,7 +781,7 @@ run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \
 # The eval Cmp probe observes HOL word_cmp over constant operands for the RV64
 # target (Equal/Lower/Test true and false).
 run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
-  eval_cmp_equal_true eval_cmp_test_disjoint \
+  eval_cmp_equal_true eval_cmp_not_test_overlap \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 # The eval Shift probe observes HOL word_sh over constant operands for the RV64

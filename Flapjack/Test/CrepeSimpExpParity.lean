@@ -400,6 +400,31 @@ def holWordBitsState64WithLocal : CrepHolState (Fin 64 → Bool) Unit :=
     locals := fun name =>
       if name == 2 then some (.word (holWordBits64 5)) else none }
 
+def holWordBitsCmpResult (operator : Cmp) (left right : Nat) :
+    Option (PanWordLab (Fin 64 → Bool)) :=
+  (evalCrepRuntimeExp
+    (holWordBitsState64.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    (.cmp operator (.const (holWordBits64 left)) (.const (holWordBits64 right)))).map
+      PanWordLab.word
+
+/-! The corresponding original HOL probe exercises all eight `word_cmp`
+    constructors through `crepSem$eval`. These guards run the production
+    source runtime on the same RV64 word cases, including signed-vs-unsigned
+    order and overlapping/disjoint bit tests. -/
+#guard holWordBitsCmpResult .equal 5 5 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .equal 5 6 == some (.word (holWordBits64 0))
+#guard holWordBitsCmpResult .lower 3 5 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .less 0xFFFFFFFFFFFFFFFF 1 ==
+  some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notEqual 5 6 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notLower 5 3 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notLess 1 0xFFFFFFFFFFFFFFFF ==
+  some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .test 0xF0 0x10 == some (.word (holWordBits64 0))
+#guard holWordBitsCmpResult .test 0xF0 0x0F == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notTest 0xF0 0x10 == some (.word (holWordBits64 1))
+
 def holWordBitsMulEight : CrepExp (Fin 64 → Bool) :=
   .crepOp .mul [.var 2, .const (holWordBits64 8)]
 

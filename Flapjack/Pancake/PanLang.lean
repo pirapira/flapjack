@@ -248,6 +248,13 @@ instance natPanShiftWidth : PanShiftWidth Nat where
   width := 64
   amount := id
 
+/-- Lean's executable `Prog` follows the constructor layout of HOL
+    `panLang$prog` (`cakeml/pancake/panLangScript.sml:82-100`), including the
+    recursive program positions and nested `Call` metadata. It is not an exact
+    port: its expression payloads use the generic `Exp α`, whose `Const` case
+    contains `α`, while HOL `Const` is indexed by the target word type. Keep
+    this useful generic syntax untagged until an exact word-indexed expression
+    interface is available. -/
 inductive Prog (α : Type u) where
   | skip
   | dec (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
@@ -274,6 +281,10 @@ inductive Prog (α : Type u) where
   | annot (tag text : String)
   deriving Repr
 
+/-- Lean's `FunDecl` has the HOL field layout
+    (`cakeml/pancake/panLangScript.sml:102-109`), but is not an exact port:
+    `body` uses generic `Prog α` and therefore inherits the mismatch between
+    generic `Exp α.Const` and HOL's word-indexed `Const`. Keep it untagged. -/
 structure FunDecl (α : Type u) where
   name : FunName
   inline : Bool
@@ -283,6 +294,11 @@ structure FunDecl (α : Type u) where
   returnShape : Shape
   deriving Repr
 
+/-- Lean's `Decl` follows the constructor layout of HOL `panLang$decl`
+    (`cakeml/pancake/panLangScript.sml:112-116`), but is not an exact port:
+    function bodies use generic `FunDecl α` and value declarations contain
+    generic `Exp α`, inheriting the mismatch between generic `Exp α.Const` and
+    HOL's word-indexed `Const`. Keep it untagged. -/
 inductive Decl (α : Type u) where
   | function (declaration : FunDecl α)
   | decl (shape : Shape) (name : DeclarationName) (value : Exp α)

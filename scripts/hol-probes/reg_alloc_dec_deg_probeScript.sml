@@ -30,6 +30,8 @@ val _ = print_eval "dec_deg_in_bounds_degrees"
   ``(SND (dec_deg 0 ^state)).degrees``;
 val _ = print_eval "dec_deg_out_of_bounds_result"
   ``FST (dec_deg 1 ^state)``;
+val _ = print_eval "dec_deg_out_of_bounds_state_unchanged"
+  ``SND (dec_deg 1 ^state) = ^state``;
 val _ = print_eval "degrees_sub_out_of_bounds_result"
   ``FST (degrees_sub 1 ^state)``;
 val _ = print_eval "update_degrees_out_of_bounds_result"

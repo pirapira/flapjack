@@ -33,6 +33,42 @@ namespace Flapjack.Compiler.Encoders.Asm
 
 open Flapjack
 
+/-! HOL's signed word order as a Boolean on the width-indexed Lean word.
+This is the two's-complement interpretation of HOL's polymorphic word `<`;
+it is kept local to the assembler counterpart rather than importing a
+particular target's comparison instance. -/
+def holAsmSignedLess {width : Nat} (left right : BitVec width) : Bool :=
+  let sign := 2 ^ (width - 1)
+  if left.toNat < sign then
+    if right.toNat < sign then decide (left.toNat < right.toNat) else false
+  else if right.toNat < sign then
+    true
+  else
+    decide (left.toNat < right.toNat)
+
+/-! Exact width-indexed source counterpart of CakeML
+`asm$word_cmp_def` (`cakeml/compiler/encoders/asm/asmScript.sml:313-321`).
+The result is Boolean as in HOL; the Crep evaluator separately embeds it as
+a word. -/
+@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "word_cmp_def"]
+def wordCmpHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : Bool :=
+  match operator with
+  | .equal => left == right
+  | .less => holAsmSignedLess left right
+  | .lower => decide (left < right)
+  | .test => AndOp.and left right == 0
+  | .notEqual => !(left == right)
+  | .notLess => !(holAsmSignedLess left right)
+  | .notLower => !(decide (left < right))
+  | .notTest => AndOp.and left right != 0
+
+/-! Flapjack's word-valued encoding of the Boolean result used by
+`crepSem$eval`'s `bitstring$v2w [word_cmp ...]` clause. -/
+def wordCmpResultHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : BitVec width :=
+  if wordCmpHOL operator left right then 1 else 0
+
 /-- HOL `architecture` (`asmScript.sml:149-151`).  Distinct from the RISC-V
 state-model `Flapjack.RiscV.Architecture`. -/
 inductive AsmArchitecture where

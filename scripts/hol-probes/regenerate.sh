@@ -1224,4 +1224,3 @@ run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_pr
   flatten_tick flatten_halt \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
-

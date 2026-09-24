@@ -8510,5 +8510,13 @@
     "lean_name": "makeVmapHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against make_vmap_def at crep_to_loopScript.sml:230; HOL FEMPTY |++ ZIP (params, GENLIST I (LENGTH params)) rendered as FUPDATE_LIST FEMPTY (params.zip (List.range params.length)); direct HOL-EVAL rows make_vmap_single_hit/make_vmap_two_second/make_vmap_empty_miss=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "make_funcs_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopMakeFuncsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against make_funcs_def at crep_to_loopScript.sml:247; HOL fnames=MAP FST prog, fnums=GENLIST (n. n + first_name) (LENGTH prog), lens=MAP (LENGTH o FST o SND) prog, fs=MAP2 pairs, alist_to_fmap rendered as FUPDATE_LIST FEMPTY entries.reverse with first-inserted-binding-wins; carriers alpha/beta/gamma kept polymorphic as in HOL; first_name is the tagged firstLoopName; direct HOL-EVAL rows mkf_f/mkf_g/mkf_absent/mkf_dup_first=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

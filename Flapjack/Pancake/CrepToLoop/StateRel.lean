@@ -378,4 +378,20 @@ def mkCtxtHOL (target : RiscV.Architecture) (vmap : FiniteMap Nat Nat)
 def makeVmapHOL (params : List Nat) : FiniteMap Nat Nat :=
   FUPDATE_LIST FEMPTY (params.zip (List.range params.length))
 
+/-- Exact port of HOL `make_funcs` (`cakeml/pancake/crep_to_loopScript.sml:247`).
+    HOL derives, for each program entry `(name, params, body)`,
+    `(name, (num, LENGTH params))` where `num = index + first_name`; the result
+    is `alist_to_fmap` of that association list. HOL is polymorphic in the
+    triple components, so this port keeps `α`, `β`, `γ` polymorphic too; the
+    `alist_to_fmap` first-inserted-binding-wins behaviour is rendered as
+    `FUPDATE_LIST FEMPTY entries.reverse` (matching the `functionInfosHOL`
+    precedent). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "make_funcs_def"]
+def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
+    (prog : List (α × List β × γ)) : FiniteMap α (Nat × Nat) :=
+  FUPDATE_LIST FEMPTY
+    ((prog.zip (List.range prog.length)).map
+      (fun entry =>
+        (entry.1.1, (firstLoopName + entry.2, entry.1.2.1.length)))).reverse
+
 end Flapjack

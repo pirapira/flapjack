@@ -97,6 +97,47 @@ example : lineOkPreConfig cfg8 ((.asm (.asmi (flattenOps.jumpReg 3)) [] 0) :
   lineOkPreConfig_flattenOps_jumpReg cfg8 3 [] 0
 
 
+private abbrev P := Flapjack.Compiler.Backend.StackLang.Prog
+  (WordLangInst W) Flapjack.Cmp (WordRegImm W) Flapjack.BinOp WordMemOp (WordLangAddr W) String
+
+/-- The bridge lets `stack_asm_ok` discharge a per-line `instOk` obligation. -/
+example : Flapjack.Compiler.Encoders.Asm.asmInstOk cfg8 (WordLangInst.skip : WordLangInst W) = true :=
+  stackAsmOk_asmChecksOfConfig_inst cfg8 WordLangInst.skip (by
+    simp [Flapjack.Compiler.Backend.StackProps.stackAsmOk,
+      Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig, asmInstOk])
+
+/-- The bridge exposes the `stack_asm_ok` register bound for `Raise`. -/
+example (h : Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8)
+      (.raise 2 : P) = true) :
+    (2 < cfg8.regCount && !cfg8.avoidRegs.contains 2) = true :=
+  stackAsmOk_asmChecksOfConfig_raise cfg8 2 h
+
+/-- The decomposition lemmas split a recursive `stack_asm_ok` obligation. -/
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8)
+      (.seq (.tick : P) (.skip : P) : P) = true) ↔
+    (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.tick : P) = true ∧
+      Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true) :=
+  stackAsmOk_asmChecksOfConfig_seq cfg8 _ _
+
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.loop (.skip : P) : P) = true) ↔
+    Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true :=
+  stackAsmOk_asmChecksOfConfig_loop cfg8 _
+
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8)
+      (.call (some ((.skip : P), 7, 1, 0)) (.inl 2) (some ((.tick : P), 3, 4)) : P) = true) ↔
+    (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true ∧
+      Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.tick : P) = true) :=
+  stackAsmOk_asmChecksOfConfig_call_some_inl_some cfg8 _ 7 1 0 2 _ 3 4
+
 def runChecks : IO Bool := do
   let guards : List Bool :=
     [ decide (lineOkPreConfig cfg8 asmSkipLine = true)

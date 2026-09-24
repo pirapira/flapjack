@@ -317,4 +317,68 @@ theorem crepInlineEvalCodeInl [NeZero width] [BEq FunName] [LawfulBEq FunName]
   rw [← heval]
   exact (evalCrepHolExp_state_rel_code s t e hstate hlocals hsubset).symm
 
+/-- List-level option-map congruence (the `l1 = l2` case of CakeML's
+    `OPT_MMAP_CONG`, `cakeml/misc/miscScript.sml:2481`): pointwise equal
+    evaluators give equal `OPT_MMAP`/`mapM` results.  Untagged because the Lean
+    evaluator is the fixed-width `evalCrepHolExp` and `mapM` is the
+    `List.mapM` carrier rather than HOL `OPT_MMAP`. -/
+theorem crepOptMmapEvalCongr [NeZero width]
+    (s t : CrepHolState (RiscV.Word width) σ) (es : List (CrepExp (RiscV.Word width)))
+    (h : ∀ e ∈ es, evalCrepHolExp s e = evalCrepHolExp t e) :
+    es.mapM (evalCrepHolExp s) = es.mapM (evalCrepHolExp t) := by
+  induction es with
+  | nil => rfl
+  | cons x xs ih =>
+      simp only [List.mapM_cons]
+      rw [h x (by simp), ih (fun y hy => h y (by simp [hy]))]
+
+/-- CakeML's `opt_mmap_mem_func` (`pan_commonPropsScript.sml:49`): every element
+    of a list that `OPT_MMAP` maps to `SOME` is itself mapped to `SOME`. -/
+theorem crepOptMmapMemFunc [NeZero width] (s : CrepHolState (RiscV.Word width) σ) :
+    ∀ (es : List (CrepExp (RiscV.Word width))) (values : List (RiscV.Word width)),
+      es.mapM (evalCrepHolExp s) = some values →
+      ∀ e ∈ es, ∃ m, evalCrepHolExp s e = some m := by
+  intro es
+  induction es with
+  | nil => intro values h e he; simp at he
+  | cons x xs ih =>
+      intro values h e he
+      simp only [List.mapM_cons] at h
+      cases hx : evalCrepHolExp s x with
+      | none => simp [hx] at h
+      | some v =>
+          cases hxs : xs.mapM (evalCrepHolExp s) with
+          | none => simp [hx, hxs] at h
+          | some vs =>
+              rw [List.mem_cons] at he
+              rcases he with rfl | he
+              · exact ⟨v, hx⟩
+              · exact ih vs hxs e he
+
+/-- CakeML's `opt_mmap_eval_code_inl` (`crep_inlineProofScript.sml:1530`): the
+    `eval_code_inl` expression transfer lifted across a whole expression list,
+    `OPT_MMAP (eval s) es = SOME vals` implies `OPT_MMAP (eval s1) es = SOME vals`
+    under `state_rel_code`, `locals_strong_rel` and `code_inl_rel`.  Untagged:
+    fixed-width `evalCrepHolExp`/`List.mapM` versus HOL's polymorphic `eval` and
+    `OPT_MMAP`. -/
+theorem crepInlineOptMmapEvalCodeInl [NeZero width] [BEq FunName] [LawfulBEq FunName]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    (s t : CrepHolState (RiscV.Word width) σ) (es : List (CrepExp (RiscV.Word width)))
+    (values : List (RiscV.Word width)) (inlFs : CrepInlineFmap (RiscV.Word width))
+    (heval : es.mapM (evalCrepHolExp s) = some values)
+    (hstate : crepInlineStateRelCode s t)
+    (hlocals : crepInlineLocalsStrongRel s t)
+    (hcode : crepInlineCodeInlRel inlFs s t) :
+    es.mapM (evalCrepHolExp t) = some values := by
+  have hsubset := crepInlineCodeInlRel_fdom_subset inlFs s t hcode
+  have hpoint : ∀ e ∈ es, evalCrepHolExp s e = evalCrepHolExp t e := by
+    intro e he
+    obtain ⟨m, hm⟩ := crepOptMmapMemFunc s es values heval e he
+    have hse := evalCrepHolExp_state_rel_code s t e hstate hlocals hsubset
+    rw [hm] at hse
+    rw [hm]
+    exact hse
+  rw [← crepOptMmapEvalCongr s t es hpoint]
+  exact heval
+
 end Flapjack

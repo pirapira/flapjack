@@ -4564,16 +4564,32 @@
     "hol_name": "MEM_compile_exp_vmax",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "memCompileExpVmax",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.4): statement is generic in the element type a with [BEq a] [OfNat a 0] [Add a] [CrepBytesInWord a] and calls the generic-a compileExpHOL, whereas HOL MEM_compile_exp_vmax (pan_to_crepProofScript.sml:410) is over compile_exp/context indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions. Following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) the exact tag is carried by memCompileExpVmaxW; this generic form is Flapjack support. Faithful width-indexed port tracked by flapjack-pxn.18.4.3.78.4."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "MEM_compile_exp_vmax",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "memCompileExpVmaxW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.4): width-indexed faithful port of HOL MEM_compile_exp_vmax (pan_to_crepProofScript.sml:410). HOL compile_exp/context are indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101); following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) the carrier is BitVec width with [NeZero width], the only side condition is ctxt_max ctxt.vmax ctxt.vars rendered as ctxtMax, and the conclusion n <= ctxt.vmax is unchanged. Proof delegates to the generic memCompileExpVmax."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "genlistVmaxDistinctListsCompiledExps",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-three (coordinator review HOLD on 8556c6d1f): the conclusion is the exact Boolean distinctListsHol and the ctxt_max premise is exact, but the declaration is generic in the element type a with [DecidableEq a][BEq a] and calls the generic-alpha compileExpHOL, while HOL compile_exp/context are word-indexed ('a word; pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions; per the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) an exact statement needs a BitVec width + [NeZero width] carrier. Untagged; faithful port tracked by bead flapjack-pxn.18.4.3.78.3. Direct HOL/Lean oracle rows remain in scripts/hol-probes/pan_common_distinct_lists_probe.out. The exact width-indexed @[hol] tag is now carried by genlistVmaxDistinctListsCompiledExpsW in the same file."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "genlistVmaxDistinctListsCompiledExpsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.3): width-indexed faithful port of HOL genlist_vmax_distinct_lists_compiled_exps (pan_to_crepProofScript.sml:3094). HOL compile_exp/context are indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101); following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-231) the carrier is BitVec width with [NeZero width], the only side condition is ctxt_max ctxt.vmax ctxt.vars rendered as ctxtMax, and the conclusion is the exact Boolean distinctListsHol. Direct HOL oracle rows genlist_vmax_bound/genlist_vmax_hit/genlist_vmax_disjoint in scripts/hol-probes/pan_common_distinct_lists_probe.out; Lean fixture in Flapjack/Test/PanCommonParity.lean."
   },
   {
     "hol_path": null,
@@ -6461,7 +6477,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6469,7 +6485,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_cons",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6477,7 +6493,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_simp_cons",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6485,7 +6501,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_commutes",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Boolean equality of distinct_lists rendered as a biconditional on ListDisjoint, consistent with the Prop rendering of distinct_lists)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL Boolean equality of distinct_lists rendered as the exact Boolean distinctListsHol ... = distinctListsHol ..., stated as Bool equality over [DecidableEq a]; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6493,7 +6509,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol ... = true over [DecidableEq a], ALL_DISTINCT as List.Nodup; exact implication shape; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6501,7 +6517,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append_right_elim",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol ... = true over [DecidableEq a], ALL_DISTINCT as List.Nodup; exact implication shape; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6550,14 +6566,6 @@
     "lean_name": "set_eq_membership",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against set_eq_membership at pan_commonPropsScript.sml:624: `a = b /\\ x IN a ==> x IN b` over HOL sets `'a set = 'a -> bool`; membership is rendered as the proposition `a x`, so the Lean statement is over `a b : α → Prop` with `a x`/`b x`; the list reading remains as the untagged `memTransportsOfEq` client helper)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_exp_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileExpHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor comparison against compile_exp_def pan_to_crepScript.sml:39-101; compileExpListHOL stands for MAP (compile_exp ctxt), CrepBytesInWord stride for implicit bytes_in_word; compile_exp_probe.out rows reproduced through compileExpHOL in Flapjack/Test/CompileExpParity.lean)"
   },
   {
     "hol_path": null,
@@ -7837,7 +7845,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "noOverlapFlookupDistinct",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519; HOL distinct_lists xs ys rendered as Lean distinctLists xs ys; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+    "reviewer": "flapjack-deepseek-three (manifest correction, statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519): HOL distinct_lists xs ys is rendered as the exact Boolean distinctListsHol xs ys = true over [DecidableEq Nat], not the BEq distinctLists; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -8375,12 +8383,20 @@
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only generic-α helper (untagged): the exact width-indexed tag is on crepInlineLocalsRel_decClockW."
   },
-{
-  "hol_path": "cakeml/pancake/pan_commonScript.sml",
-  "hol_name": "distinct_lists_def",
-  "lean_path": "Flapjack/Pancake/PanCommon.lean",
-  "lean_name": "distinctListsHol",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-}
+  {
+    "hol_path": "cakeml/pancake/pan_commonScript.sml",
+    "hol_name": "distinct_lists_def",
+    "lean_path": "Flapjack/Pancake/PanCommon.lean",
+    "lean_name": "distinctListsHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_exp_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compileExpHOLW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (exact width-indexed port): carrier BitVec width with [NeZero width] matching HOL 'a word; body delegates to the generic compileExpHOL; mirrors the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228). Recursive compile_exp dependency of memCompileExpVmaxW and genlistVmaxDistinctListsCompiledExpsW is stated through this tag."
+  }
 ]

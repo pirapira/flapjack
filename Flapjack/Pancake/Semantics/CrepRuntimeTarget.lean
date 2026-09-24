@@ -3136,4 +3136,105 @@ theorem evalCrepRuntimeExp_load32_map_eq_holCrepEval64
       holCrepEval64 base (.load32 address) :=
   evalCrepRuntimeExp_map_eq_holCrepEval64 base _
 
+/-! Generic program equations for the store family.  The production store arms
+of `evalCrepRuntimeProg` evaluate both operands and then call the corresponding
+`crepRuntimeStore*`; these equations expose that structure for arbitrary
+operands (the `holCrepEval64` reference evaluator only covers expressions). -/
+
+theorem evalCrepRuntimeProg_store
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.store address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStore base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStore base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
+
+theorem evalCrepRuntimeProg_store32
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.store32 address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStore32 base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStore32 base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
+
+theorem evalCrepRuntimeProg_storeByte
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)] [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat) (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (address value : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeProg handler primitive (fuel + 1) base (.storeByte address value) =
+      match evalCrepRuntimeExp base address with
+      | none => some (.error, base)
+      | some addressWord =>
+          match evalCrepRuntimeExp base value with
+          | none => some (.error, base)
+          | some valueWord =>
+              match crepRuntimeStoreByte base addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, base) := by
+  cases h : evalCrepRuntimeExp base address with
+  | none => simp only [evalCrepRuntimeProg, h]
+  | some addressWord =>
+    cases h2 : evalCrepRuntimeExp base value with
+    | none => simp only [evalCrepRuntimeProg, h, h2]
+    | some valueWord =>
+      cases hs : crepRuntimeStoreByte base addressWord valueWord with
+      | none => simp only [evalCrepRuntimeProg, h, h2, hs]
+      | some state => simp only [evalCrepRuntimeProg, h, h2, hs]
+
 end Flapjack

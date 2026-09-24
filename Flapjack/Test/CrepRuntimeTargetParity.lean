@@ -883,6 +883,39 @@ def store32MatchesGuard : Bool :=
 #guard store32MatchesGuard
 #eval store32MatchesGuard
 
+/-! ## Generic program store equations
+
+`evalCrepRuntimeProg_store`, `_store32`, and `_storeByte` expose the production
+program store arms of `evalCrepRuntimeProg` over arbitrary operand expressions. -/
+
+def storeProgHandler : CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent :=
+  riscv64SharedMemCallFfiHandler
+
+def storeProgPrimitive : CrepPrimitiveHandler (RiscV.Word 64) := fun _ _ => none
+
+def storeProgStep : Option (CrepRuntimeStep (RiscV.Word 64) Unit FfiFinalEvent) :=
+  evalCrepRuntimeProg storeProgHandler storeProgPrimitive 3 holStoreByteBaseState
+    (.store (.const (8 : RiscV.Word 64)) (.const (0x77 : RiscV.Word 64)))
+
+def storeProgGuard : Bool :=
+  (storeProgStep.map (fun step => step.2.memory 8)) == some (PanWordLab.word 0x77)
+
+#guard storeProgGuard
+
+example : evalCrepRuntimeProg storeProgHandler storeProgPrimitive 4 holStoreByteBaseState
+    (.store (.const (8 : RiscV.Word 64)) (.const (0x77 : RiscV.Word 64))) =
+      match evalCrepRuntimeExp holStoreByteBaseState (.const (8 : RiscV.Word 64)) with
+      | none => some (.error, holStoreByteBaseState)
+      | some addressWord =>
+          match evalCrepRuntimeExp holStoreByteBaseState (.const (0x77 : RiscV.Word 64)) with
+          | none => some (.error, holStoreByteBaseState)
+          | some valueWord =>
+              match crepRuntimeStore holStoreByteBaseState addressWord valueWord with
+              | some state => some (.normal, state)
+              | none => some (.error, holStoreByteBaseState) :=
+  evalCrepRuntimeProg_store storeProgHandler storeProgPrimitive 3 holStoreByteBaseState
+    (.const (8 : RiscV.Word 64)) (.const (0x77 : RiscV.Word 64))
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -948,9 +981,14 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Store32 hook matches HOL mem_store_32 over arbitrary model"
   else
     IO.println "FAIL crep Store32 hook matches HOL mem_store_32 over arbitrary model"
+  if storeProgGuard then
+    IO.println "PASS crep program store step exposes HOL mem_store over arbitrary operands"
+  else
+    IO.println "FAIL crep program store step exposes HOL mem_store over arbitrary operands"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
     crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard && cmpMatchesGuard &&
-    loadByteMatchesGuard && load32MatchesGuard && storeByteMatchesGuard && store32MatchesGuard)
+    loadByteMatchesGuard && load32MatchesGuard && storeByteMatchesGuard && store32MatchesGuard &&
+    storeProgGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

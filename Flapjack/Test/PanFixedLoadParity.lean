@@ -159,6 +159,19 @@ def finiteWord5LittleGetByte : Fin 5 → Bool :=
 def finiteWord5BigGetByte : Fin 5 → Bool :=
   holFiniteWordSourceGetByte dimension5 (finiteWord5 1) (finiteWord5 31) true
 
+/-! Whole-word transport for `get_byte` remains valid when the carrier is
+    narrower than one byte: the result is truncated to the five-bit carrier. -/
+#guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
+
+example :
+    holWordToBitVec dimension5
+        ((holFiniteWordSourceMemoryModel dimension5 false).getByte
+          (finiteWord5 1) (finiteWord5 1) (finiteWord5 31) false) =
+      BitVec.ofNat 5
+        ((holWordToBitVec dimension5 (finiteWord5 31) >>> 8).toNat % 2^8) :=
+  holFiniteWordSourceMemoryModel_getByte_toBitVec dimension5 false false
+    (finiteWord5 1) (finiteWord5 1) (finiteWord5 31)
+
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
 #guard byteHit == originalByteHit

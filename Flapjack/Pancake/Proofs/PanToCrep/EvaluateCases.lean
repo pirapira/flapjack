@@ -3468,6 +3468,89 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
           compileArgRFieldInnerIH context source target expression) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.rStruct fields)
+  | rStructNested (fields : List (Exp (RiscV.Word 64)))
+      (hfields : ∀ expression, expression ∈ fields →
+        compileArgConstLocalStructAddressOrRFieldInnerIH context source target expression) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.rStruct fields)
+
+private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    {expression : Exp (RiscV.Word 64)}
+    (evidence : compileArgConstLocalStructAddressOrRFieldInnerIH
+      context source target expression)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp source expression = some value) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expression).1 = some (panValueFlatten value) := by
+  revert value
+  induction evidence with
+  | existing expression supported =>
+      intro value heval
+      exact compileExpHOL_constLocalStructAddress_eval_flatten context source
+        target expression value hstate hlocals supported heval
+  | rField inner index supported =>
+      cases supported with
+      | rField _ _ fields compiledExpressions fieldShapes hsourceInner
+          hindex hlocalized hcompileInner hinnerIH =>
+        intro value heval
+        have hsourceField : evalPanSemStateExp source
+            (.rField index inner) = some fields[index] := by
+          have hsourceInner' : evalPanValueExp source.structs source.locals
+              source.globals source.memory source.baseAddress source.topAddress
+              panSemBitVec64BytesInWord inner
+              (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+            some (.rStruct fields) := by
+            simpa [evalPanSemStateExp] using hsourceInner
+          simp [evalPanSemStateExp, evalPanValueExp, hsourceInner', hindex]
+        have hvalue : value = fields[index] :=
+          Option.some.inj (heval.symm.trans hsourceField)
+        subst value
+        exact compileExpHOL_rField_eval_flatten_ofHOLIH context source target
+          inner index fields fields[index] compiledExpressions fieldShapes
+          hstate hcode hlocals hsourceInner hsourceField hindex hlocalized
+          hcompileInner hinnerIH
+  | rStructRField fields hfields =>
+      intro value heval
+      cases value with
+      | word word => simp [evalPanSemStateExp, evalPanValueExp] at heval
+      | nStruct name values => simp [evalPanSemStateExp, evalPanValueExp] at heval
+      | rStruct fieldValues =>
+          exact compileExpHOL_rStruct_constOrRFieldInnerIH_eval_flatten
+            context source target fields fieldValues hstate hcode hlocals
+            hfields heval
+  | rStructNested fields hfields ih =>
+      intro value heval
+      cases value with
+      | word word => simp [evalPanSemStateExp, evalPanValueExp] at heval
+      | nStruct name values => simp [evalPanSemStateExp, evalPanValueExp] at heval
+      | rStruct fieldValues =>
+          have hsourceFields : evalPanSemStateExps source fields = some fieldValues := by
+            simpa [evalPanSemStateExp, evalPanSemStateExps, evalPanValueExp,
+              evalPanValueExps] using heval
+          let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+          have heach : ∀ field, field ∈ fields → ∀ fieldValue,
+              evalPanSemStateExp source field = some fieldValue →
+              evalCrepRuntimeExps target
+                (compileExpHOL compilerContext field).1 =
+                  some (panValueFlatten fieldValue) := by
+            intro field hmem fieldValue hfield
+            exact ih field hmem fieldValue hfield
+          have hcompiled := evalMapCompileArgsFlat_of_each compilerContext
+            source target fields fieldValues hsourceFields heach
+          simpa [compilerContext, compileExpHOL,
+            compileExpListHOL_flatMap_eq_compileArgsHOL,
+            panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap] using hcompiled
 
 /-! Lift mixed Const/Local/RStruct/address/RField-supported arguments through
 the HOL `compile_args` list evaluator. This is a larger subset of the argument
@@ -3498,38 +3581,9 @@ theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
       evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
         some (panValueFlatten value) := by
     intro expression hmem value heval
-    cases hsupported expression hmem with
-    | existing _ supported =>
-        exact compileExpHOL_constLocalStructAddress_eval_flatten context source
-          target expression value hstate hlocals supported heval
-    | rField inner index evidence =>
-        cases evidence with
-        | rField _ _ fields compiledExpressions fieldShapes hsourceInner hindex
-            hlocalized hcompileInner hinnerIH =>
-          have hsourceField : evalPanSemStateExp source
-              (.rField index inner) = some fields[index] := by
-            have hsourceInner' : evalPanValueExp source.structs source.locals
-                source.globals source.memory source.baseAddress source.topAddress
-                panSemBitVec64BytesInWord inner
-                (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
-              some (.rStruct fields) := by
-              simpa [evalPanSemStateExp] using hsourceInner
-            simp [evalPanSemStateExp, evalPanValueExp, hsourceInner', hindex]
-          have hvalue : value = fields[index] := by
-            exact Option.some.inj (heval.symm.trans hsourceField)
-          subst value
-          exact compileExpHOL_rField_eval_flatten_ofHOLIH context source target
-            inner index fields fields[index] compiledExpressions fieldShapes
-            hstate hcode hlocals hsourceInner hsourceField hindex hlocalized
-            hcompileInner hinnerIH
-    | rStructRField fields hfields =>
-        cases value with
-        | word word => simp [evalPanSemStateExp, evalPanValueExp] at heval
-        | nStruct name values => simp [evalPanSemStateExp, evalPanValueExp] at heval
-        | rStruct fieldValues =>
-            exact compileExpHOL_rStruct_constOrRFieldInnerIH_eval_flatten
-              context source target fields fieldValues hstate hcode hlocals
-              hfields heval
+    exact compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
+      context source target (hsupported expression hmem) hstate hcode hlocals
+      value heval
   simpa [compilerContext] using
     evalMapCompileArgsFlat_of_each compilerContext source target expressions values
       hsource heach

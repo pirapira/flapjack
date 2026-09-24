@@ -776,6 +776,14 @@
     "reviewer": "Codex (source comparison; HOL ZIP (vs, MAP f vs) is Lean vs.zip (vs.map f), FOLDL is List.foldl; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "flookup_res_var_is_mem_zip_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "flookup_res_var_is_mem_zip_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",

@@ -306,6 +306,9 @@ run_probe word_to_stack_write_bitmap_probeScript.sml word_to_stack_write_bitmap_
 run_probe word_to_stack_insert_bitmap_probeScript.sml word_to_stack_insert_bitmap_probe.out \
   ib_empty ib_new_len "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_probe.out \
+  ss_num_stack_ret_pair ss_stack_free_inl "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

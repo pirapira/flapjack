@@ -9,8 +9,10 @@ Word-to-Stack pass of the CakeML RISC-V backend.  This module currently ports
 the pure bitmap prerequisites `bits_to_word`, `word_list`, `chunk_to_bits`,
 `chunk_to_bitmap`, `const_words_to_bitmap` and `insert_bitmap`, which the pass
 uses to build the
-GC/liveness bitmaps consumed by `compile_word_to_stack` and, eventually, by the
-Word-to-Stack `compile_semantics` theorem
+GC/liveness bitmaps consumed by `compile_word_to_stack`, together with the pure
+stack-slot arithmetic helpers `num_stack_ret`, `skip_free`, `stack_arg_count`
+and `stack_free` used by the return/argument path of `comp`; eventually these
+feed the Word-to-Stack `compile_semantics` theorem
 (`word_to_stackProofScript.sml:10709`).
 
 HOL's `bits_to_word` is polymorphic over the word carrier (`'a word`) and has
@@ -205,5 +207,65 @@ def insertBitmap {α : Type} (ws : List α) (bitmaps : AppList α × Nat) :
     (AppList α × Nat) × Nat :=
   let l := ws.length
   ((AppList.append bitmaps.1 (AppList.list ws), bitmaps.2 + l), bitmaps.2)
+
+/-- Exact port of HOL `num_stack_ret_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:417`):
+
+```
+num_stack_ret k vs = LENGTH vs + 1 - k
+```
+
+    Number of stack slots holding the multi-arg return value.  HOL is
+    polymorphic in the value type (`vs` is only measured by `LENGTH`, which is
+    the list length), and the subtraction is HOL `num` truncation, exactly
+    Lean `Nat` subtraction, so the generic-`α` body below is the exact HOL
+    statement with no side condition. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "num_stack_ret_def"]
+def numStackRet {α : Type} (k : Nat) (vs : List α) : Nat := vs.length + 1 - k
+
+/-- Exact port of HOL `skip_free_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:423`):
+
+```
+skip_free (k,f,f') vs = f - num_stack_ret k vs
+```
+
+    Number of slots the callee frees.  The `(k,f,f')` is a HOL `num # num # num`
+    triple; `f'` is unused here, matching HOL.  Pure `num` arithmetic, so the
+    generic-`α` body is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "skip_free_def"]
+def skipFree {α : Type} (k f _f' : Nat) (vs : List α) : Nat := f - numStackRet k vs
+
+/-- Exact port of HOL `stack_arg_count_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:274`):
+
+```
+stack_arg_count dest arg_count k =
+  case dest of
+  | INL _ => (arg_count - k:num)
+  | INR _ => ((arg_count - 1) - k:num)
+```
+
+    HOL's `dest` is a `('a, 'b) sum` (the call-target position or register);
+    only the constructor is inspected.  The faithful Lean carrier is
+    `Sum α β` with the same two `num` results, so the generic body is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_arg_count_def"]
+def stackArgCount {α β : Type} (dest : Sum α β) (arg_count k : Nat) : Nat :=
+  match dest with
+  | .inl _ => arg_count - k
+  | .inr _ => (arg_count - 1) - k
+
+/-- Exact port of HOL `stack_free_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:281`):
+
+```
+stack_free dest arg_count (k,f,f') = f - stack_arg_count dest arg_count k
+```
+
+    Pure `num` arithmetic on top of `stackArgCount`; `f'` is unused, matching
+    HOL.  Generic in the `sum` carriers, so exact with no side condition. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_free_def"]
+def stackFree {α β : Type} (dest : Sum α β) (arg_count k f _f' : Nat) : Nat :=
+  f - stackArgCount dest arg_count k
 
 end Flapjack.Compiler.Backend.WordToStack

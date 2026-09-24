@@ -207,4 +207,37 @@ def insertBitmapParityGuard : Bool :=
 example : insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5) =
     ((AppList.append (AppList.list [9, 8]) (AppList.list [1, 2, 3]), 8), 5) := rfl
 
+/-!
+## stack-slot arithmetic oracle parity
+
+`numStackRet`, `skipFree`, `stackArgCount` and `stackFree` are the exact
+generic ports of HOL `num_stack_ret_def`, `skip_free_def`, `stack_arg_count_def`
+and `stack_free_def` (`word_to_stackScript.sml:417,423,274,281`).  They are pure
+`num`/`sum` arithmetic with no word operation, so the ports carry no side
+condition.  Rows from the direct HOL `EVAL` probe
+`scripts/hol-probes/word_to_stack_stack_slots_probe.out`:
+
+```
+ss_num_stack_ret_pair=2   ss_num_stack_ret_three=1   ss_skip_free_pair=5
+ss_arg_count_inl=5        ss_arg_count_inr=4
+ss_stack_free_inr=3       ss_stack_free_inl=2
+```
+-/
+
+def stackSlotsParityGuard : Bool :=
+  (numStackRet 1 [10, 20] == 2) &&
+  (numStackRet (α := Nat) 3 [10, 20, 30] == 1) &&
+  (skipFree (α := Nat) 1 7 9 [10, 20] == 5) &&
+  (stackArgCount (α := Nat) (β := Nat) (Sum.inl 4) 7 2 == 5) &&
+  (stackArgCount (α := Nat) (β := Nat) (Sum.inr 4) 7 2 == 4) &&
+  (stackFree (α := Nat) (β := Nat) (Sum.inr 4) 7 2 7 9 == 3) &&
+  (stackFree (α := Nat) (β := Nat) (Sum.inl 4) 7 2 7 9 == 2)
+
+#eval stackSlotsParityGuard
+#guard stackSlotsParityGuard
+
+example : numStackRet 1 [10, 20] = 2 := rfl
+example : stackArgCount (α := Nat) (β := Nat) (Sum.inr 4) 7 2 = 4 := rfl
+example : stackFree (α := Nat) (β := Nat) (Sum.inr 4) 7 2 7 9 = 3 := rfl
+
 end Flapjack.Test.WordToStackBitsParity

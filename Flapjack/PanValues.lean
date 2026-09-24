@@ -599,7 +599,7 @@ theorem panValueIsWf_isWfShape_panValueShape (structs : StructContext)
       simp only [panValueIsWf, Bool.and_eq_true] at h
       obtain ⟨hname, _⟩ := h
       simp only [panValueShape, isWfShape]
-      exact hname
+      simpa only [isWfShapeHOL_named, lookupInfo_toHOL_isSome] using hname
   | case4 => simp
   | case5 fst value fields ihValue ihFields =>
       rename_i h
@@ -1117,6 +1117,39 @@ mutual
           panShapeListMatches_comm leftRest rightRest]
     | [], _ :: _ => by simp only [panShapeMatches.panShapeListMatches]
     | _ :: _, [] => by simp only [panShapeMatches.panShapeListMatches]
+end
+
+/-! Truth of the executable `panShapeMatches` is exactly HOL structural equality
+    on `Shape`, provided the key type has a lawful `BEq`.  This is the bridge used
+    to justify rendering HOL's `s = shape_of v` by `panShapeMatches s (shape_of v)`
+    in the exact `panSem$eval_def` port. -/
+mutual
+  theorem panShapeMatches_eq_true [LawfulBEq String] : (left right : Shape) →
+      (panShapeMatches left right = true ↔ left = right)
+    | .one, .one => by simp only [panShapeMatches]
+    | .named left, .named right => by
+        simp only [panShapeMatches, Shape.named.injEq]
+        exact ⟨fun h => beq_iff_eq.mp h, fun h => beq_iff_eq.mpr h⟩
+    | .comb left, .comb right => by
+        simp only [panShapeMatches, Shape.comb.injEq]
+        exact panShapeListMatches_eq_true left right
+    | .one, .named _ => by simp [panShapeMatches]
+    | .one, .comb _ => by simp [panShapeMatches]
+    | .named _, .one => by simp [panShapeMatches]
+    | .named _, .comb _ => by simp [panShapeMatches]
+    | .comb _, .one => by simp [panShapeMatches]
+    | .comb _, .named _ => by simp [panShapeMatches]
+
+  theorem panShapeListMatches_eq_true [LawfulBEq String] : (left right : List Shape) →
+      (panShapeMatches.panShapeListMatches left right = true ↔ left = right)
+    | [], [] => by simp only [panShapeMatches.panShapeListMatches]
+    | left :: leftRest, right :: rightRest => by
+        simp only [panShapeMatches.panShapeListMatches, Bool.and_eq_true]
+        rw [panShapeMatches_eq_true left right,
+          panShapeListMatches_eq_true leftRest rightRest]
+        exact ⟨fun h => (List.cons.injEq ..).mpr h, fun h => (List.cons.injEq ..).mp h⟩
+    | [], _ :: _ => by simp [panShapeMatches.panShapeListMatches]
+    | _ :: _, [] => by simp [panShapeMatches.panShapeListMatches]
 end
 
 /-! Declaration-level contracts used by the call-aware evaluators.  The

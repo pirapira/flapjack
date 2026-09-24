@@ -182,7 +182,7 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_state_eval_probeScript.sml pan_sem_state_eval_probe.out \
-  word_load_hit op_add_fold_three op_sub_wrong_arity \
+  word_load_hit pan_sem_state_eval_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -820,7 +820,7 @@ run_probe hol_word_arithmetic_probeScript.sml hol_word_arithmetic_probe.out \
   word_add_definition sub_3_5_8 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"
 run_probe word_op_finite_probeScript.sml word_op_finite_probe.out \
-  word_op_definition sub_three \
+  word_op_definition word_op_finite_done \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_sh_finite_probeScript.sml word_sh_finite_probe.out \
@@ -1165,3 +1165,10 @@ run_probe num_set_audit_probeScript.sml num_set_audit_probe.out \
   ns_empty nsmap_insert_last \
   "$cake_dir/misc/miscScript.sml" \
   "$cake_dir/misc"
+
+# Every name/var/stack-var predicates (num_set domain model): the probe also
+# shows every_stack_var ignores the scalar FFI registers (only every_name / body).
+run_probe word_lang_every_name_probeScript.sml word_lang_every_name_probe.out \
+  en_empty esv_seq_bad \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

@@ -1,3 +1,4 @@
+import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.WordLang
 import Flapjack.PanSemWriteBytearray
@@ -406,6 +407,34 @@ theorem panRiscVShift_eq_evalPanShiftFull [NeZero width]
       intro hz
       omega
     simp [RiscV.panRiscVShift, hlt, hle, hnz]
+
+theorem panRiscVBitVecOfNatIte (width : Nat) (p : Prop) [Decidable p] :
+    BitVec.ofNat width (if p then 1 else 0) = (if p then (1 : BitVec width) else 0) := by
+  by_cases h : p <;> simp [h]
+
+theorem panRiscVSignedLess_eq_holAsmSignedLess {width : Nat} (left right : RiscV.Word width) :
+    RiscV.signedLess left right = Compiler.Encoders.Asm.holAsmSignedLess left right := rfl
+
+theorem panRiscVDecide_not (p : Prop) [Decidable p] : decide (¬ p) = !decide p := by
+  by_cases h : p <;> simp [h]
+
+/-- The executed RISC-V comparison is the HOL `word_cmp` word-valued encoding
+`asm$word_cmp_def` (`cakeml/compiler/encoders/asm/asmScript.sml:313-321`). -/
+theorem panRiscVCmp_eq_wordCmpResultHOL [NeZero width]
+    (operator : Cmp) (left right : RiscV.Word width) :
+    RiscV.panRiscVCmp operator left right
+      = Compiler.Encoders.Asm.wordCmpResultHOL operator left right := by
+  cases operator <;>
+    simp only [RiscV.panRiscVCmp, Compiler.Encoders.Asm.wordCmpResultHOL,
+      Compiler.Encoders.Asm.wordCmpHOL, panRiscVSignedLess_eq_holAsmSignedLess,
+      panRiscVDecide_not] <;>
+    (first | rfl | (exact panRiscVBitVecOfNatIte width _) | (split <;> rfl))
+
+/-- The executed RISC-V shift is the HOL `word_sh_def` codec. -/
+theorem panRiscVShift_eq_wordShiftHOL [NeZero width]
+    (operator : Shift) (left right : RiscV.Word width) :
+    RiscV.panRiscVShift operator left right = wordShiftHOL operator left right.toNat := by
+  rw [panRiscVShift_eq_evalPanShiftFull, ← wordShiftHOL_eq_evalPanShiftFull]
 
 theorem panRiscVCmp_eq_evalPanCmp [NeZero width]
     (operator : Cmp) (left right : RiscV.Word width) :

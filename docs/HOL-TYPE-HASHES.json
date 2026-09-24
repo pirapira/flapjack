@@ -1,214 +1,1749 @@
 {
   "lean_toolchain": "leanprover/lean4:v4.33.1",
   "records": [
-    {"lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean", "lean_name": "wordAddCarryHOL", "lean_full_name": "Flapjack.wordAddCarryHOL", "hol_path": "cakeml/compiler/backend/backend_commonScript.sml", "hol_name": "word_add_carry_def", "sha256": "a4b11a373b5a4a4b6f179c8f0b3180fc6dc5936c8b270199f11d781b1333a732"},
-    {"lean_path": "Flapjack/Pancake/CrepInline/Pass.lean", "lean_name": "compileInlTopHOL", "lean_full_name": "Flapjack.compileInlTopHOL", "hol_path": "cakeml/pancake/crep_inlineScript.sml", "hol_name": "compile_inl_top_def", "sha256": "022d4b08fd97227db63dd1f62dab2cf44df95cb7b373ff8e2b4f116397f6be8a"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "compileDecsCake", "lean_full_name": "Flapjack.compileDecsCake", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "compile_decs_def", "sha256": "d37df8228f90a8be03dc49580cb8b44887b9a76328705519abd0252e59206006"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "compileExpCake", "lean_full_name": "Flapjack.compileExpCake", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "compile_exp_def", "sha256": "b3d6f9745c1d53095f5af3063f32ee21d3fe01f3d9a7695f862a0f05750c2a40"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "compileProgCake", "lean_full_name": "Flapjack.compileProgCake", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "compile_def", "sha256": "7e32934404fa0333dc1d2e2e4353a04b65954ae96588a8c6a7bf8162f5ae2273"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "freshNameHOL", "lean_full_name": "Flapjack.freshNameHOL", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "fresh_name_def", "sha256": "ce1c6667ffd67a2bc485cf6b3a3ebebc4e2f4559e49daed7a810d3745d5ad361"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalDeclShapes", "lean_full_name": "Flapjack.globalDeclShapes", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "dec_shapes_def", "sha256": "4fb76bdb020bd9f1daff5463a2a31f94821ec52ecd9af5cd968ea49ec33ca431"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalNewMainName", "lean_full_name": "Flapjack.globalNewMainName", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "new_main_name_def", "sha256": "563896af29d37ef7b47bdcd9725f532197717fe0d2fd5cdb6e633572a7d0ef30"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalRenameDecls", "lean_full_name": "Flapjack.globalRenameDecls", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "fperm_decs_def", "sha256": "64d7d6278ff3780e9903dd5e00819f679bff9a67cfe8b967d7cace072ee00b46"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalRenameFunctionName", "lean_full_name": "Flapjack.globalRenameFunctionName", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "fperm_name_def", "sha256": "68d86b65d4cbdfd8531c5f5be322034e1d9ea1b321708e6d2c8f2f3b018f4eb6"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalRenameProg", "lean_full_name": "Flapjack.globalRenameProg", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "fperm_def", "sha256": "a12be19a4ef4f8cc6dee330721f62f384aaf4ae23d003c646b0744dc49286a5c"},
-    {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "globalResortDecls", "lean_full_name": "Flapjack.globalResortDecls", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "resort_decls_def", "sha256": "f21099836c80c35afd0e4a0aa19aa3ab69900836404dde5d1e486dfd212138e9"},
-    {"lean_path": "Flapjack/Pancake/PanLang.lean", "lean_name": "exceptionEntries", "lean_full_name": "Flapjack.exceptionEntries", "hol_path": "cakeml/pancake/panLangScript.sml", "hol_name": "exceptions_def", "sha256": "bd5537f41be944043cabe953f209c5acc8213e8cc4910230eb63794dfeffa70e"},
-    {"lean_path": "Flapjack/Pancake/PanLang.lean", "lean_name": "expLocalVars", "lean_full_name": "Flapjack.expLocalVars", "hol_path": "cakeml/pancake/panLangScript.sml", "hol_name": "var_exp_def", "sha256": "2437fd3d2316dd42092108a62eb12c8301960d54bd367b874f5cf31f452ffab2"},
-    {"lean_path": "Flapjack/Pancake/PanLang.lean", "lean_name": "freeVarIds", "lean_full_name": "Flapjack.freeVarIds", "hol_path": "cakeml/pancake/panLangScript.sml", "hol_name": "free_var_ids_def", "sha256": "b5c355e139251a6793878f1bbac2fb64fb5f1cf783ca1df3c04e8b41023e4f37"},
-    {"lean_path": "Flapjack/Pancake/PanLang.lean", "lean_name": "functionEntries", "lean_full_name": "Flapjack.functionEntries", "hol_path": "cakeml/pancake/panLangScript.sml", "hol_name": "functions_def", "sha256": "53d3099c6b872d46e66959289c08d1eee026bce087e8757984347df590fa44f2"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep.lean", "lean_name": "panToCrepMkCtxtHOL", "lean_full_name": "Flapjack.panToCrepMkCtxtHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "mk_ctxt_def", "sha256": "2fb6414bbbb6b2f85cf2964e90496801167004216d65b45e345f456572f3e6eb"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "compFuncHOL", "lean_full_name": "Flapjack.compFuncHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "comp_func_def", "sha256": "f8403e4a11b7e0dc1ae5204289d546e4dadc2dec4e07f0caacec00a1b41d5f4e"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "compileExpHOL", "lean_full_name": "Flapjack.compileExpHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "compile_exp_def", "sha256": "a45cc7aaf08e9df1c883ce3732f6232c5c8fa1aba588fa9dc0d63da21cde06f9"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "compileProgRiscV", "lean_full_name": "Flapjack.compileProgRiscV", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "compile_def", "sha256": "68386a47a50b946e6b97968a0dc3cc8a5c6e4db800d6b56357e3f30d201786e3"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "compileToCrepHOL", "lean_full_name": "Flapjack.compileToCrepHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "compile_to_crep_def", "sha256": "3b33359d3be7b160675a8edee160defe97f2ef20d2fe3079e4b104fea6c4c260"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "makeFuncsHOL", "lean_full_name": "Flapjack.makeFuncsHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "make_funcs_def", "sha256": "66654e7ddeaea94e58b2094659693f8a630937751cc70d496cef564c1876d28b"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "panToCrepGetEidsFromDeclsHOL", "lean_full_name": "Flapjack.panToCrepGetEidsFromDeclsHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "get_eids_from_decls_def", "sha256": "466edb304b5c7fbe159e4d8db58de1a5ae83bf211a7326900f7d9cb61429a07f"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "panToCrepMakeVmapHOL", "lean_full_name": "Flapjack.panToCrepMakeVmapHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "make_vmap_def", "sha256": "4b22a819a6883409146c4eedb9704071e4208391fb812310564e51c9ce9d09b6"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean", "lean_name": "panToCrepVars", "lean_full_name": "Flapjack.panToCrepVars", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "crep_vars_def", "sha256": "ce8c42412c42bfedfe3fb8d20e4b8993b58c0f45de4fa25f79507e8188887619"},
-    {"lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean", "lean_name": "compileProgTopHOL", "lean_full_name": "Flapjack.compileProgTopHOL", "hol_path": "cakeml/pancake/pan_to_crepScript.sml", "hol_name": "compile_prog_def", "sha256": "a9168bd7e55e133d46dbfe511a843839b8030bc240f9801b34c4878c73bd54f9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean", "lean_name": "crepArithLookupCodeSimpProg", "lean_full_name": "Flapjack.crepArithLookupCodeSimpProg", "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml", "hol_name": "lookup_code", "sha256": "7304d9708019e75748873dfa39abcf50ffeb0b12473ff79719d6a90f4627fab0"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean", "lean_name": "crepDestConst_eq_const", "lean_full_name": "Flapjack.crepDestConst_eq_const", "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml", "hol_name": "dest_const_thm", "sha256": "c7db625a013f0bc6fb69b967deb297ec3ea6a27bc76bc073efd7a0fe507826d7"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean", "lean_name": "optMmapEqSomeMono", "lean_full_name": "Flapjack.optMmapEqSomeMono", "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml", "hol_name": "OPT_MMAP_EQ_SOME_MONO", "sha256": "7476e5015843d547b136b8dd6363da2f10bcd17bb55b0da9d242c58a4a2c5bd7"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "OPT_MMAP_ALL_EQ", "lean_full_name": "Flapjack.OPT_MMAP_ALL_EQ", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "OPT_MMAP_ALL_EQ", "sha256": "9f3ec7cc7cd45e4459b864ea87d466e627d2a1582d25a75a4c6d1e48544e0975"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "OPT_MMAP_SOME_ALL", "lean_full_name": "Flapjack.OPT_MMAP_SOME_ALL", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "OPT_MMAP_SOME_ALL", "sha256": "7bc71d0b424ff93ec0512f5c39a5b8bcb75d22ea333616321a8e4cd68013d368"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "contResHOL", "lean_full_name": "Flapjack.contResHOL", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "cont_res_def", "sha256": "8276a1302bfff58b212adc6224b85c3f204b3f97522da2e39f939e7954c96b31"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineLocalsExtRel", "lean_full_name": "Flapjack.crepInlineLocalsExtRel", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "locals_ext_rel_def", "sha256": "6bf9f9726d5dab321163a925bd9dc96b97a8b17fe337b829a797b034204c2105"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineLocalsRel", "lean_full_name": "Flapjack.crepInlineLocalsRel", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "locals_rel_def", "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineLocalsRel_decClock", "lean_full_name": "Flapjack.crepInlineLocalsRel_decClock", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "locals_rel_dec_clock", "sha256": "c9c09526fe2c37abd182ea3c94b8957f02539ab6cb24e34748b560198f067724"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineLocalsStrongRel", "lean_full_name": "Flapjack.crepInlineLocalsStrongRel", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "locals_strong_rel_def", "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineStateRel", "lean_full_name": "Flapjack.crepInlineStateRel", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "state_rel_def", "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "crepInlineStateRelCode", "lean_full_name": "Flapjack.crepInlineStateRelCode", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "state_rel_code_def", "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "fdom_eq_flookup_thm", "lean_full_name": "Flapjack.fdom_eq_flookup_thm", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "fdom_eq_flookup_thm", "sha256": "e91f2d5d2c19840727f23f998fa2c399acff0ca6ece409ddb82eaa5c4a693f05"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "fdom_subset_flookup_thm", "lean_full_name": "Flapjack.fdom_subset_flookup_thm", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "fdom_subset_flookup_thm", "sha256": "093451f4fbfd7d1addb2a68b8abc50000af3ab4c6a1c450e920c769b646b1264"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "fdoms_eq_opt_mmap_flookup_some", "lean_full_name": "Flapjack.fdoms_eq_opt_mmap_flookup_some", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "fdoms_eq_opt_mmap_flookup_some", "sha256": "233b6b48be351b34d97eee3497d15887e7a8b9501500ea8ef919cac79fa1c2c8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "genlist_all_distinct", "lean_full_name": "Flapjack.genlist_all_distinct", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "genlist_all_distinct", "sha256": "ecf886cca9b7b3e8a982fae234682dc5a7253ce16f6a3446ddf4e61f859580fa"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "genlist_less_than", "lean_full_name": "Flapjack.genlist_less_than", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "genlist_less_than", "sha256": "65001d9b2532e10e4d0416dbb76e7af867e4e7ad6865ab5b5b1d0447d4e75970"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "genlist_not_in", "lean_full_name": "Flapjack.genlist_not_in", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "genlist_not_in", "sha256": "4024b760cca4aae45ffc15666a36d2d642c7d299102ee645cd7da17e68fef6a2"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "max_list_genlist_add_suc_val", "lean_full_name": "Flapjack.max_list_genlist_add_suc_val", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "max_list_genlist_add_suc_val", "sha256": "7426848b0bd7905a73f7c1591c0dd5f1f9e38f4fdc046c6356e1eaf01f152b8c"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "moreThenNotMaxList", "lean_full_name": "Flapjack.moreThenNotMaxList", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "MORE_THEN_NOT_MAX_LIST", "sha256": "445c967e9fe22b04e8fab4f9a1d0626d85786f04cd5189bbdea093fccb54cc71"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "not_some_is_none", "lean_full_name": "Flapjack.not_some_is_none", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "not_some_is_none", "sha256": "29b1b0f51578b7af8548614432bcb75394f9d21cb59fb19cd496533c2961f044"},
-    {"lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean", "lean_name": "panMap2_mem", "lean_full_name": "Flapjack.panMap2_mem", "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml", "hol_name": "MEM_MAP2_IMP", "sha256": "aca371d08f4fbb2a6e34063626178ced40caa610527bfea277f38186b03cc560"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "ALL_DISTINCT_fperm_decs", "lean_full_name": "Flapjack.ALL_DISTINCT_fperm_decs", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "ALL_DISTINCT_fperm_decs", "sha256": "e0072c92aa87de6ce05664592927113488fd300bee28b4c98e0309749e9ee00d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "ALOOKUP_MAP3", "lean_full_name": "Flapjack.ALOOKUP_MAP3", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "ALOOKUP_MAP3", "sha256": "573ef4ff888910a26da40c9d49f4148fef821bc8496c24e478eba6e5d1e48d93"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "ALOOKUP_MAP4", "lean_full_name": "Flapjack.ALOOKUP_MAP4", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "ALOOKUP_MAP4", "sha256": "b75a7700927c3925a838274b0539dcb104acf2465f4bedef60891eabc8f4fa6e"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "EVERY_fperm_decs", "lean_full_name": "Flapjack.EVERY_fperm_decs", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "EVERY_fperm_decs", "sha256": "4c8f1f90e3e724aafabe94153a7f52d3f8ee72f73e5cba783c1302fb6470329d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "FILTER_decs_fperm_decs", "lean_full_name": "Flapjack.FILTER_decs_fperm_decs", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "FILTER_decs_fperm_decs", "sha256": "106c52bd38e365c1cbb6a55e7c1640620abcef58da1a3786e78a51c400886205"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "MEM_functions", "lean_full_name": "Flapjack.MEM_functions", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "MEM_functions", "sha256": "eebb608144e9f9c33622cfbf0559c2c5583143b5a7c9688e0b313e23ca8eca03"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "compile_decls_append_cake", "lean_full_name": "Flapjack.compile_decls_append_cake", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "compile_decls_append", "sha256": "43016006de1733cb8ea6086d315e074fbf77636fad59a0f04aa18fc6c465f24d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "compile_decs_EVERY_is_function_cake", "lean_full_name": "Flapjack.compile_decs_EVERY_is_function_cake", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "compile_decs_EVERY_is_function", "sha256": "7f68451db3d9a497fbdcff36a897f48c35a32aad5782e97859f6cfe1f18a8f76"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "compile_decs_decls_thm_cake", "lean_full_name": "Flapjack.compile_decs_decls_thm_cake", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "compile_decs_decls_thm", "sha256": "18342fb09582acdd82ede5dbd4b13d20864dbfae09444f630e71fedd39cb9cee"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "dec_shapes_FILTER", "lean_full_name": "Flapjack.dec_shapes_FILTER", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "dec_shapes_FILTER", "sha256": "77801467bbaadee3ee8f366acecc96ac31b217cea7d05af5db7b55e3e66c23c9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "dec_shapes_append", "lean_full_name": "Flapjack.dec_shapes_append", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "dec_shapes_append", "sha256": "533159bcc61af0c03c42b061063718b933bfafb64a489b12a3554972314a2750"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "dec_shapes_fperm_decs", "lean_full_name": "Flapjack.dec_shapes_fperm_decs", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "dec_shapes_fperm_decs", "sha256": "ae983ecf5e833d3d91b64f16c76a5298b3174aba610e463e233dd912495d7281"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "dec_shapes_functions", "lean_full_name": "Flapjack.dec_shapes_functions", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "dec_shapes_functions", "sha256": "e530e7e96a15677a86a27a33cdb63b0bbd8b6f5da2b6ad930901f27168c05f77"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "dec_shapes_resort_decls_def", "lean_full_name": "Flapjack.dec_shapes_resort_decls_def", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "dec_shapes_resort_decls_def", "sha256": "1167159d678d4c7bf1898e6d54b5041a9d7cced19ac85889c3ef520c59232f8e"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "decl_distinct", "lean_full_name": "Flapjack.decl_distinct", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "decl_distinct", "sha256": "8b3f6556dc5524c92f21bda304440172ad28c6a9bd2ba469abb05fb23fdf0c7c"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "exceptions_FILTER_is_function", "lean_full_name": "Flapjack.exceptions_FILTER_is_function", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "exceptions_FILTER_is_function", "sha256": "1011ab512e42be54c147ec34e721eefdd46e4cb7c04e5638ddf308893633a791"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "exceptions_append", "lean_full_name": "Flapjack.exceptions_append", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "exceptions_append", "sha256": "572bbb3df9f302011f63c4bfc8589d5362289d7303d1aef83e77990a480ff4dd"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fperm_decs_FILTER_is_function", "lean_full_name": "Flapjack.fperm_decs_FILTER_is_function", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fperm_decs_FILTER_is_function", "sha256": "20f7948fff0ddea4206199b2a58559b747d9441b65099e7a78f7e04bd2e18ddf"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fperm_decs_append", "lean_full_name": "Flapjack.fperm_decs_append", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fperm_decs_append", "sha256": "dd9ae220284a140de7dd06dcdaf096cd1b4a10b454d4e697ff14fb34c5a5ebd5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fperm_decs_decls", "lean_full_name": "Flapjack.fperm_decs_decls", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fperm_decs_decls", "sha256": "9d6b3f99fd2569f0d1cc4150edb29edfa91dfad3a3a76590b6b83c9d9bb3cfb5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fperm_name_cancel", "lean_full_name": "Flapjack.fperm_name_cancel", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fperm_name_cancel", "sha256": "4b9d1b3654239a0db2965920770ddaff1e4fabb3586144d72e519118709cb945"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fperm_name_cong", "lean_full_name": "Flapjack.fperm_name_cong", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fperm_name_cong", "sha256": "c2de74b9a7cd11f0409691c8b8994f7bb896f9a56e88c962eca418386d27f44d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fresh_name_correct", "lean_full_name": "Flapjack.fresh_name_correct", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fresh_name_correct", "sha256": "b20a5fad57193cef5e5aa243560addc00f4097f2d189efacabdc8a50895e0997"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "fresh_name_correct'", "lean_full_name": "Flapjack.fresh_name_correct'", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "fresh_name_correct'", "sha256": "797f1da3d6ceb93a080a2f431c1883081f2b86903722a51a188c40ff0e4299ec"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "functions_FILTER_exn_decl", "lean_full_name": "Flapjack.functions_FILTER_exn_decl", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "functions_FILTER_exn_decl", "sha256": "badb22f3c474c6945d2f15db2bccf9b031312f973221f7e657ad2d0140982a6a"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "functions_FILTER_is_name", "lean_full_name": "Flapjack.functions_FILTER_is_name", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "functions_FILTER_is_name", "sha256": "f246a3c09e0175483d205d515f6e94125b8cf276c0f8c5c23f59d50710041f12"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "functions_filter_nil", "lean_full_name": "Flapjack.functions_filter_nil", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "functions_filter_nil", "sha256": "3f654c637a2ed775c3411c1b94a4cadd10992e68f7b0eebf5f0a99fa45a0b524"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "functions_fperm_decs", "lean_full_name": "Flapjack.functions_fperm_decs", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "functions_fperm_decs", "sha256": "b2ae2980e206370784217e0b6f36cf1032d99eedaf5dfc8167ec1460a3ad55a1"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "globalCompileTopCake_shapes_wf", "lean_full_name": "Flapjack.globalCompileTopCake_shapes_wf", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "compile_top_shape_wf", "sha256": "b82bd83dbbb181611be8a0f007812c3aceddff684e8d0e59743ef6be30467451"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "globalCompileTopCake_shapes_wf_nil", "lean_full_name": "Flapjack.globalCompileTopCake_shapes_wf_nil", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "compile_top_shape_wf_nil", "sha256": "2dbca82c7964d647655c340ee8d4b084d6e48cfceece7edd5b7888bd5b9da6f8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "map_pick_up_first", "lean_full_name": "Flapjack.map_pick_up_first", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "map_pick_up_first", "sha256": "0d0859cb1cd90d1238eead6bcf7ab96bf39b802b01b4aa3e023bd862a35c301d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "new_main_name_correct", "lean_full_name": "Flapjack.new_main_name_correct", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "new_main_name_correct", "sha256": "b44ee3ac2461d1665a6374056da77fcf3ccd6632d4ef69167c75166867249acc"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "not_is_function", "lean_full_name": "Flapjack.not_is_function", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "not_is_function", "sha256": "daf0a411c02644e748c202911c923f481d678d29563af147837d3c66bdad8ee6"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "resort_decls_preserve_functions", "lean_full_name": "Flapjack.resort_decls_preserve_functions", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "resort_decls_preserve_functions", "sha256": "5e48cf1e52f2109aa3af7af90db2a8ce3ac1e7cee09c4022a47c676ad86a3c6e"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean", "lean_name": "tuple_4_o", "lean_full_name": "Flapjack.tuple_4_o", "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml", "hol_name": "tuple_4_o", "sha256": "0cb2c3049a1f819e49607caab61c61bd6bc99ac1c00f2f5df9ece8fdec643b77"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_append", "lean_full_name": "Flapjack.afindi_append", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "afindi_append", "sha256": "a52fccfeff7a977f63609b2f5eef51876f7b4d1709a0204b080f424b114ec2f7"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_dropWhile", "lean_full_name": "Flapjack.afindi_dropWhile", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "dropWhile_afindi", "sha256": "b86afd6941ac8bc90bfe75b1ca1b2cfe9572ed00ce8aba721fa45ec21f5792b5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_el_fst", "lean_full_name": "Flapjack.afindi_el_fst", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "afindi_EL", "sha256": "92febe4db780a9e09ba3a976078279d7fb93ca9f1bb3df0a8e6ac7bd20751c8d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_less_length", "lean_full_name": "Flapjack.afindi_less_length", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "afindi_less_length", "sha256": "ba2ca18e2dc4784306a166f5cde6f035c8381495a055bf0eee974500d6a1dd88"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_lookup", "lean_full_name": "Flapjack.afindi_lookup", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "ALOOKUP_eq_afindi", "sha256": "e9d13de212758421af26ea75e8929d8c8b147d93436055bd33f859bc86278dda"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "afindi_map_eq", "lean_full_name": "Flapjack.afindi_map_eq", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "afindi_MAP_eq", "sha256": "ecdcacb36efe2583194b49c008c7725daf983b1d957ec8c86638aa3cd9248634"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "dropWhile_map_helper", "lean_full_name": "Flapjack.dropWhile_map_helper", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "dropWhile_MAP_helper", "sha256": "627d91cf2ca656d9692d378a3a47679b33f4e5484c1020620ee98e7f624f9be5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "fieldsInOrderReorderNoop", "lean_full_name": "Flapjack.fieldsInOrderReorderNoop", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "fields_in_order_reorder_noop", "sha256": "6bc6caa08762202846205a7b5f7f650163374aa958ad58968a9028e698c6f7c3"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "isWfShape_drop", "lean_full_name": "Flapjack.isWfShape_drop", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "is_wf_shape_drop", "sha256": "88fcf1bfe26f1262dd69fc4a3fb10e452ea3081067814717e27c03da2fc4e00c"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "list_mapM_all_of_mem", "lean_full_name": "Flapjack.list_mapM_all_of_mem", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "opt_mmap_eq_every", "sha256": "b9de196515a6802e5895dd32f914b201d9c33d76c9ac298fda10cf42c2d4b8f8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "list_zip_map_eq", "lean_full_name": "Flapjack.list_zip_map_eq", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "map_uncurry_zip_again", "sha256": "9675c5aed94e05b010dbb624840b48b6455f2aab53f640546c275ed81a39bda3"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "lookupInfo_fields_nodup", "lean_full_name": "Flapjack.lookupInfo_fields_nodup", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "alookup_map_structs_ok", "sha256": "b5db48db7289959dd94517261985f3c7e2a89a9c9bbdb76098091338f5863a41"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "lookup_drop_helper", "lean_full_name": "Flapjack.lookup_drop_helper", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "alookup_drop_helper", "sha256": "f1bed5ba7e2f44ee23adbc79e4d603082e63f015ac225e6cae60f2a7b48cf53a"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "map_fst_eq_lookup", "lean_full_name": "Flapjack.map_fst_eq_lookup", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "map_fst_eq_alookup", "sha256": "1905bc4db82be2842628afd1864c4d76b2d62d33b335f830e3da89302cd2a3dc"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "optMmapEqSomeEl", "lean_full_name": "Flapjack.optMmapEqSomeEl", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "opt_mmap_eq_some_el", "sha256": "81304f14cfb269debfb5197095384852852b9cc0f4c118bf136af84770392c6a"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "prod_uncurry_const_eq_comp_snd", "lean_full_name": "Flapjack.prod_uncurry_const_eq_comp_snd", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "UNCURRY_EQ_o_SND", "sha256": "5392d683791b886fea7465a4c08a2bf67c5672c92e9680697f6f64f5c0030b50"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "shapeSizeWithContext_drop", "lean_full_name": "Flapjack.shapeSizeWithContext_drop", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "size_of_sh_with_ctxt_drop", "sha256": "a817ad93932c6de2c3e9480124914048c6caf2b45648951efc1eacebd1096147"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structCompileExps_eq_map", "lean_full_name": "Flapjack.structCompileExps_eq_map", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "compile_exps_eq_map", "sha256": "001052b43ad072feb5750a70c91309675232f2d665f97747e899de19e9ae5a95"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structCompileShapeWF_isWfShape", "lean_full_name": "Flapjack.structCompileShapeWF_isWfShape", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "is_wf_shape_compile_shape", "sha256": "8e1016474a47bcbbe2777c65761e0eb4aa1f6c8a0a4e4054defaafe50f0f36c2"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structCompileShapeWF_size", "lean_full_name": "Flapjack.structCompileShapeWF_size", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "size_of_compile_shape", "sha256": "e34d4cb86c78c88c3da591b2b8b0bdfef6cdcb5eab1064c0f3820a755a4b4e98"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structCompileShapes_eq_map", "lean_full_name": "Flapjack.structCompileShapes_eq_map", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "compile_shapes_eq_map", "sha256": "94e5a4faf524fa527ee1c564747522f8f2e19584da4aa68c7e2596c8d21782ce"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structInfosOk", "lean_full_name": "Flapjack.structInfosOk", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "struct_infos_ok_def", "sha256": "dd41532d5b26ed3098f78994201a1ad1b00db184bdb8ec45878fa2a48c3f4261"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structInfosOk_append", "lean_full_name": "Flapjack.structInfosOk_append", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "struct_infos_ok_append", "sha256": "d49ab4eb2f7eec96d1e2987f2e06cdb168f25dee5d8214a1070764f3681d830d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structInfosOk_cons", "lean_full_name": "Flapjack.structInfosOk_cons", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "struct_infos_ok_cons", "sha256": "7578a26fa60cddf9dda8ee5dc8e69b62d1f8f7d65d94a496db76c434fcb8f82c"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structInfosOk_drop", "lean_full_name": "Flapjack.structInfosOk_drop", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "struct_infos_ok_drop", "sha256": "da6958a1ac4756be12ca8cc8e1dfd5daa41b53b168777809a6bb531c0c4514cd"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean", "lean_name": "structOldExpShapes_eq_map", "lean_full_name": "Flapjack.structOldExpShapes_eq_map", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "old_exp_shapes_eq", "sha256": "558b7ddba28011fe4818e764084817caba3e6c1bfe66943d4f9c17373f8c6614"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean", "lean_name": "panStructConvertValue", "lean_full_name": "Flapjack.panStructConvertValue", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "convert_v_def", "sha256": "d4ab3c2a5bcc9b2a4e8270a0a77d8e502d74c9babc1e81a8bb0bc447b0911956"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean", "lean_name": "panValueFldsOk", "lean_full_name": "Flapjack.panValueFldsOk", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "v_flds_ok_def", "sha256": "e145a951122156da6b52c6cef3dea5809ffba34fcc32ad3286d514c3125eafe0"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean", "lean_name": "panValueFldsOk_append", "lean_full_name": "Flapjack.panValueFldsOk_append", "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml", "hol_name": "v_flds_ok_append", "sha256": "f28ea3e9d3b0f9df27fbc0451ea799815989e8cfc1990b42dc8d1e745f9644a2"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "alookupCompileToCrepCode", "lean_full_name": "Flapjack.alookupCompileToCrepCode", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "alookup_compile_prog_code", "sha256": "d74eb64ce6c1015cfffcf8a0337809735cc9fdcff04d4c351a40a86ac3fd9f1d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "cexpHeads_eq_cexpHeadsSimp", "lean_full_name": "Flapjack.cexpHeads_eq_cexpHeadsSimp", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "cexp_heads_eq", "sha256": "422170407162a4bcd00d64f1bb0219a072140cb8567f4cafad62f738eb785ec8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "codeRelEmptyLocals", "lean_full_name": "Flapjack.codeRelEmptyLocals", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "code_rel_empty_locals", "sha256": "5240b95cd72b11957539b0e4ebcbd0a627541aa63181ee895502a5342b707373"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "compileExpNotMemLoadGlob", "lean_full_name": "Flapjack.compileExpNotMemLoadGlob", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "compile_exp_not_mem_load_glob", "sha256": "a92c9df9ad9f101cda046c7e851aa5dd629bd8a39269e344f6472082b92cb0e0"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "compileField_mem_of_record_shape", "lean_full_name": "Flapjack.compileField_mem_of_record_shape", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "mem_comp_field", "sha256": "37196656ed2fed1609d9f3835af8044acd2d88ae57995b969d44c6edfbf4ecd9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "compileField_mem_or_zero", "lean_full_name": "Flapjack.compileField_mem_or_zero", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "mem_comp_field_lem", "sha256": "1a82968bd5df245ddb627231a88928337fce88067684373ce268686fd46a9845"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "crepLocalsIdUpdate", "lean_full_name": "Flapjack.crepLocalsIdUpdate", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "locals_id_update", "sha256": "49dc1fdcfe7434d1670fb7c01920f9c3a2a4911e395e84715abdbbca9a53f1d2"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "ctxtFcFuncsEq", "lean_full_name": "Flapjack.ctxtFcFuncsEq", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "ctxt_fc_funcs_eq", "sha256": "229f28f7a660534c71cc633b862c17b41da763e83efb4a823e033d01be2c2c0d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "ctxtFcVmax", "lean_full_name": "Flapjack.ctxtFcVmax", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "ctxt_fc_vmax", "sha256": "a5ea4c864e001045f96e70917d70eead19aca0c9d95799b9b31bea02d753d271"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "elCompileToCrepElProgEq", "lean_full_name": "Flapjack.elCompileToCrepElProgEq", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "el_compile_prog_el_prog_eq", "sha256": "feb4785a5c52801eb9e152448e3e1c54307e0add86a32116b626a73bf6a01bfe"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "elLoadGlobals", "lean_full_name": "Flapjack.elLoadGlobals", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "EL_load_globals", "sha256": "c40e1dae71d8fb8e880a1bba6c7af07c77b32c972fd7de738b17f156661c1e1f"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "filter_not_mem_self", "lean_full_name": "Flapjack.filter_not_mem_self", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "filter_not_mem_self", "sha256": "f2d8284694193ee066e348e2d8dfaf4986e01808bb3206f0143c8d942c6e75e9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "firstCompileProgAllDistinct", "lean_full_name": "Flapjack.firstCompileProgAllDistinct", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "first_compile_prog_all_distinct", "sha256": "c48108bf1ad35b37c96509a73079b9e99bfb91d1b8011c49bd5182d6fcce3be5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "firstCompileToCrepAllDistinct", "lean_full_name": "Flapjack.firstCompileToCrepAllDistinct", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "first_compile_to_crep_all_distinct", "sha256": "98de5172fef5d2e68fafeb7b830cd8e04eebd9b1f8c0999fad5e33f016027ad5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "flattenNilNoSize", "lean_full_name": "Flapjack.flattenNilNoSize", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "flatten_nil_no_size", "sha256": "d076654959d15e530bb25dfa942148b8796d50b99a7e09ff411ddc00b949de2d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "flookupResVarQuant", "lean_full_name": "Flapjack.flookupResVarQuant", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "flookup_res_var_thm_quant", "sha256": "23304b2b2aad5fb6a90395baa5843ce74dc6a9bb0e48ff81f92152e8d53a4f4a"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "getEidsFromDeclsImpExcpRel", "lean_full_name": "Flapjack.getEidsFromDeclsImpExcpRel", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "get_eids_imp_excp_rel", "sha256": "93d41fcea2c31fdbdc70b4e6b50bb33555e06130263919dba96a65a36dca4a36"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "globalsLookup", "lean_full_name": "Flapjack.globalsLookup", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "globals_lookup_def", "sha256": "ae83ad986d6dddb92d9ef1719ac2a9b78d3bcae7c8c60819f0976657c11c79e8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "isWfShapeNil_length_flatten", "lean_full_name": "Flapjack.isWfShapeNil_length_flatten", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "is_wf_shape_nil_length_flatten", "sha256": "8b0001b271657293244a5f09970de16398c6da85fd28a1a687f02e8e96e209a5"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "loadShapeBytes_getElem_rel", "lean_full_name": "Flapjack.loadShapeBytes_getElem_rel", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "load_shape_el_rel", "sha256": "f16437c692e05afbf703fd79f2e12a24362bb2f7c0dbae6e59b851c26fa5eb00"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "localRelLeZipUpdatePreserved", "lean_full_name": "Flapjack.localRelLeZipUpdatePreserved", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "local_rel_le_zip_update_preserved", "sha256": "44a2e70ee9f439bcf9fe596d74ead72aaa49c4249ad00dfff4556efd0f34a9fb"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "localsRelExtendNewVar", "lean_full_name": "Flapjack.localsRelExtendNewVar", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "locals_rel_extend_new_var", "sha256": "f789365eaa11405fed9a2a83402ffa6cf5f5fa79e3e7f4638705002528ec8b6d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "localsRelLookupCtxt", "lean_full_name": "Flapjack.localsRelLookupCtxt", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "locals_rel_lookup_ctxt", "sha256": "5f2fc3db0575801f8aadd0bce21a68a61d862ae72c7384a5d21959dd5945e9a1"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "mapSomeMemLemma", "lean_full_name": "Flapjack.mapSomeMemLemma", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "MAP_SOME_MEM_lemma", "sha256": "9c9df4eba8ade32e5e3ff9ce573aa65c02d69db7d7bfa66835cf6f516bf94674"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "maxListAppendHol", "lean_full_name": "Flapjack.maxListAppendHol", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "MAX_LIST_APPEND", "sha256": "2a5efb7d59a7fb459d470aa57d518e628ae54ba55972fc25fc5fa5758c8332e7"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "maxListNotMemHol", "lean_full_name": "Flapjack.maxListNotMemHol", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "MAX_LIST_NOT_MEM", "sha256": "bd5c6d9635bf5bc1a82b9b4a476d83cb7ea54952db3a06997935bb07bbea6179"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "mkCtxtCodeImpCodeRel", "lean_full_name": "Flapjack.mkCtxtCodeImpCodeRel", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "mk_ctxt_code_imp_code_rel", "sha256": "d57ffc3d59df7699ff99f94db9d18e77e91f53abd3d1e1f68490c33d127d1184"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "mkCtxtImpLocalsRel", "lean_full_name": "Flapjack.mkCtxtImpLocalsRel", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "mk_ctxt_imp_locals_rel", "sha256": "208cde8d301ba765b0a95055dc5add00497e2ad2363c0af7e8586b0b2fee7bd9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "mod_eq_of_lt_eq", "lean_full_name": "Flapjack.mod_eq_of_lt_eq", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "mod_eq_lt_eq", "sha256": "e444ecc3a28f19b22c03938fdc76d94465da9f6e79b34ec85702d65d3dc4cf0d"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "noOverlapWrapRtNodup", "lean_full_name": "Flapjack.noOverlapWrapRtNodup", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "no_overlap_wrap_rt_some_all_distinct", "sha256": "dc27c9ef803ef7a59cdf19444de451d21411a11238c9801cb77d26adda4cab6c"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "notMemContextAssignedMemGt", "lean_full_name": "Flapjack.notMemContextAssignedMemGt", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "not_mem_context_assigned_mem_gt", "sha256": "80c7ccfc49aa5e471d17dc0785b9a8a642a45a62ca16d10cf55c01d77259beb2"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "option_ne_none_iff_exists", "lean_full_name": "Flapjack.option_ne_none_iff_exists", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "not_none_then_some", "sha256": "33eeae433bf222dc0c03d7eca4f66219306d90547e65945e929af4a18ee0f941"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "panSemShapeOf_word", "lean_full_name": "Flapjack.panSemShapeOf_word", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "shape_of_alt", "sha256": "16f4deb87b4ce320b136241c9d914e18a0936832384afb199f6f4097f2df25bb"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "prod_mk_pair_eq_id", "lean_full_name": "Flapjack.prod_mk_pair_eq_id", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "pair_map_I", "sha256": "d768c25e821217c41e4ee9271a1cc2e3824d11e61870765ab77facf07fdcfcae"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "resVarCommutesPrime", "lean_full_name": "Flapjack.resVarCommutesPrime", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "res_var_commutes'", "sha256": "5fe77208cf4d6d2e96fa4fc2dea21d4451dbaa82d78a5ec9c0b1b5472f74dabc"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean", "lean_name": "rewrittenContextUnassigned", "lean_full_name": "Flapjack.rewrittenContextUnassigned", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "rewritten_context_unassigned", "sha256": "b21309e05821946c4055a3c43d6e3da8ecf7f9baca7a2a3db2dd67e1f1920187"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "lean_name": "genlistVmaxDistinctListsCompiledExps", "lean_full_name": "Flapjack.genlistVmaxDistinctListsCompiledExps", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "genlist_vmax_distinct_lists_compiled_exps", "sha256": "08e4ffdbaa480268aa9269578459e2429848c4c5eb441ae118cd8c312e185579"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "lean_name": "memCompileExpVmax", "lean_full_name": "Flapjack.memCompileExpVmax", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "MEM_compile_exp_vmax", "sha256": "f5a4881b136b13628110026d4174afdcc9951ee4ff69515b73930d4522b461f8"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean", "lean_name": "compileProgTopHOL_params_nodup", "lean_full_name": "Flapjack.compileProgTopHOL_params_nodup", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "compile_prog_distinct_params", "sha256": "99e9500f09f632bbcb5e0e893298dd963d4c992119529e7b51350a1f84f6c3e9"},
-    {"lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean", "lean_name": "panPrimopCrepPrimop", "lean_full_name": "Flapjack.panPrimopCrepPrimop", "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml", "hol_name": "pan_primop_crep_primop", "sha256": "0a711bed9bb18804333bc0a6475b11f80e4514f589b03766d52d3025e1e943de"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "cexpHeadsSimp", "lean_full_name": "Flapjack.cexpHeadsSimp", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "cexp_heads_simp_def", "sha256": "4840696a652ee473fd31aac072380afbb2add7068c2ac86ccca38160766088cc"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith", "lean_full_name": "Flapjack.crepAssignedFreeVars_nestedSeq_assign_zipWith", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "nested_seq_assigned_free_vars_eq", "sha256": "3a0c53bedb19f0dc9614309173cbab7ae893b99cc7f9a1c4c0ae43c6fb737a78"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "crepAssignedVars_nestedSeq_assign_zipWith", "lean_full_name": "Flapjack.crepAssignedVars_nestedSeq_assign_zipWith", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "nested_seq_assigned_vars_eq", "sha256": "08677167fa19980fa419ceb44c5211a3e151ce2a0aa38da40ed02dbce85ad410"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "crepEveryExp", "lean_full_name": "Flapjack.crepEveryExp", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "every_exp_def", "sha256": "1e85d62e4e91012f31a12c3819f5cc356942553fee3f502f33031de5a608b6d3"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "flookup_setCrepHolGlobals_locals", "lean_full_name": "Flapjack.flookup_setCrepHolGlobals_locals", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "FLOOKUP_set_globals", "sha256": "269cb81116500956a016ad00bbb312ec84cfa71aafc41ff717faa613ae0a95a4"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "loadGlobals_getElem", "lean_full_name": "Flapjack.loadGlobals_getElem", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "el_load_globals_elem", "sha256": "ac16a582fd50fd3d8ad7490583c247bd18ce67fc8ed0abcd187ad718c3139771"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean", "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVars", "lean_full_name": "Flapjack.mem_crepAssignedFreeVars_imp_mem_crepAssignedVars", "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml", "hol_name": "assigned_free_vars_IMP_assigned_vars", "sha256": "6ec950c71322901a1ad7bef8d50285e5ae50a5c0a7badce5d05601e6ceec343e"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "crepOpCrep", "lean_full_name": "Flapjack.crepOpCrep", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "crep_op_def", "sha256": "2c65e024c9f5ad4d63bd402a0de81eccb728b6f3973ae31a849c4f3eefed1cb4"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "decCrepHolClock", "lean_full_name": "Flapjack.decCrepHolClock", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "dec_clock_def", "sha256": "baf1c92ed002a65ce60c5d79814b253e421cf43f040b6989996f2ea063ade08d"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "emptyCrepHolLocals", "lean_full_name": "Flapjack.emptyCrepHolLocals", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "empty_locals_def", "sha256": "05f1e199fc58bb13c725d03ff36bdc1dbf6faa4c94e95237a727540ca3b247ca"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "fixCrepHolClock", "lean_full_name": "Flapjack.fixCrepHolClock", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "fix_clock_def", "sha256": "ffd493ff1cc35920bf043f60b8b1d6f60609a5c7b4bd0b7100d651e66aad54fb"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "fixCrepHolClock_IMP_LESS_EQ", "lean_full_name": "Flapjack.fixCrepHolClock_IMP_LESS_EQ", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "fix_clock_IMP_LESS_EQ", "sha256": "ac4a4db553151890053754b7f25acd744250c12ab72a1fc49ffeb0010da8fe2b"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "lookupCrepHolCode", "lean_full_name": "Flapjack.lookupCrepHolCode", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "lookup_code_def", "sha256": "431cea2cd5e80d463e05c4ea8cc105bdba3d6b54853137cc181429abbf241b0e"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "memLoadCrepHol", "lean_full_name": "Flapjack.memLoadCrepHol", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "mem_load_def", "sha256": "1c48a0555acfe5070de1c06870c7a8a50632b71658b22eb00fa17b8477695f5c"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "resVar", "lean_full_name": "Flapjack.resVar", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "res_var_def", "sha256": "98f85b5b71701b093d371e4a543eafedea225f3985409889a1dc8bd479e96f4f"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "setCrepHolGlobals", "lean_full_name": "Flapjack.setCrepHolGlobals", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "set_globals_def", "sha256": "6e3689beddcc41270cbed9229564100c871599904092c60d74cd2407000fee90"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "setCrepHolVar", "lean_full_name": "Flapjack.setCrepHolVar", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "set_var_def", "sha256": "8ca731a5a87b1b838bc182c098acd97a3269454e741e0464cd52aeffebd1daef"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean", "lean_name": "updCrepHolLocals", "lean_full_name": "Flapjack.updCrepHolLocals", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "upd_locals_def", "sha256": "63719bcaa4f3ce6e34aa6a8fedd4ac908ec9f4213312402a10d253d48254a097"},
-    {"lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean", "lean_name": "crepPrimopHOL", "lean_full_name": "Flapjack.crepPrimopHOL", "hol_path": "cakeml/pancake/semantics/crepSemScript.sml", "hol_name": "crep_primop_def", "sha256": "baef92ede5fb8f17770db702d9210dedbaab0f527b27d4d001fa1dedefbf678a"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "loopPrimopHOL", "lean_full_name": "Flapjack.loopPrimopHOL", "hol_path": "cakeml/pancake/semantics/loopSemScript.sml", "hol_name": "loop_primop_def", "sha256": "fa7a3829c406bdff4d9efea06466db842d90d4fe745d1d0c8f5cbd442235cff5"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "memLoad32HOL", "lean_full_name": "Flapjack.memLoad32HOL", "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml", "hol_name": "mem_load_32_def", "sha256": "f1f7b74ea009e98ad400223a0f90e153ec315d6189d51d91d0148dfbe3f932e6"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "memLoadByteAuxHOL", "lean_full_name": "Flapjack.memLoadByteAuxHOL", "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml", "hol_name": "mem_load_byte_aux_def", "sha256": "ceefd5a613b7e85f3b31552b358bbad603d0944886d0060337c97e72f34528e3"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "memStore32HOL", "lean_full_name": "Flapjack.memStore32HOL", "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml", "hol_name": "mem_store_32_def", "sha256": "a8cb7e2fd1cc4f9c36851b7b29776cfeb3aad9a527c0eaf3f41daf6362c577b0"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "memStoreByteAuxHOL", "lean_full_name": "Flapjack.memStoreByteAuxHOL", "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml", "hol_name": "mem_store_byte_aux_def", "sha256": "cefa3f5c46bcf79dfcf5f5668f575c46cbea05654395b7f2cd292300f67256d9"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "readBytearrayHOL", "lean_full_name": "Flapjack.readBytearrayHOL", "hol_path": "cakeml/misc/miscScript.sml", "hol_name": "read_bytearray_def", "sha256": "a7eb51522ec6137c65e44fa6b9776b93dab49402faea57d50789a1274b1f35fb"},
-    {"lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean", "lean_name": "writeBytearrayHOL", "lean_full_name": "Flapjack.writeBytearrayHOL", "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml", "hol_name": "write_bytearray_def", "sha256": "3f3e5aae3d54716abbc64801c6e3693223d6670b6087695e542f74e7517a1a02"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "MAP3_MAP2", "lean_full_name": "Flapjack.MAP3_MAP2", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "MAP3_MAP2", "sha256": "88510284a26a2f66165a1ddcaadb39e9af75ad4be71d559bf92d8be3d1d9c290"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "MAX_LIST_add_not_mem", "lean_full_name": "Flapjack.MAX_LIST_add_not_mem", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "MAX_LIST_add_not_mem", "sha256": "b5b2e7b38ab544d1ddbeba43bd901eb8e8751692ecceea08b576232a383ae962"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "MAX_LIST_i_genlist", "lean_full_name": "Flapjack.MAX_LIST_i_genlist", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "MAX_LIST_i_genlist", "sha256": "422c291e864afb691995ced383b04f426aeb077f965b018114d39cdd6a18368c"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "allDistinctFlookupAllDistinct", "lean_full_name": "Flapjack.allDistinctFlookupAllDistinct", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "all_distinct_flookup_all_distinct", "sha256": "b14e11ef4ff792b68e2cf882527df62d44b04502586e8d6b5263197fbb0611fe"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "all_distinct_drop", "lean_full_name": "Flapjack.all_distinct_drop", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "all_distinct_drop", "sha256": "a2ac585fad013f6075d314e4fcceeef04d0ba7d4a206f197b073e2d29c36fae1"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "all_distinct_take", "lean_full_name": "Flapjack.all_distinct_take", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "all_distinct_take", "sha256": "8ab40393afa43abff1aeac3292f2a3ac31fb4f87cff0eac6dd5c4ac6586967a6"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "distinct_lists_append", "lean_full_name": "Flapjack.distinct_lists_append", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "distinct_lists_append", "sha256": "dcb4dd9d14adc19f96dde16e2e7e5ead1c87a459b07262ab770dba12440c05c4"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "distinct_lists_cons", "lean_full_name": "Flapjack.distinct_lists_cons", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "distinct_lists_cons", "sha256": "23cc159bd91a2f434f37f8331eec6231c26e8e26ea534f5917c32460573709cd"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "distinct_lists_simp_cons", "lean_full_name": "Flapjack.distinct_lists_simp_cons", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "distinct_lists_simp_cons", "sha256": "405ad5ebce5fa8ee7804e2b4af124f047c9ba86345a6069296189796a55fde2b"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "fmEmptyZipAlist", "lean_full_name": "Flapjack.fmEmptyZipAlist", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "fm_empty_zip_alist", "sha256": "de4c5cfb1ffac5f950d091694f8ad5b89f0383800f5b8af2acae8ce071a4a2cf"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "fmEmptyZipFlookup", "lean_full_name": "Flapjack.fmEmptyZipFlookup", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "fm_empty_zip_flookup", "sha256": "a047728f07a963782011958afa9a0a70aed4e4f13fcb0be9129d0aa0dc72ef31"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "fmEmptyZipFlookupEl", "lean_full_name": "Flapjack.fmEmptyZipFlookupEl", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "fm_empty_zip_flookup_el", "sha256": "b73d72942fa39e3650d7a89c5599086bb70d2543aa12844b5422d8d9c7d969b5"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "max_foldr_lt", "lean_full_name": "Flapjack.max_foldr_lt", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "max_foldr_lt", "sha256": "4ca8a12bda204048c1639bac651df3d280722c092984afbdfe45a785360fbd7e"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "noOverlapFlookupDistinct", "lean_full_name": "Flapjack.noOverlapFlookupDistinct", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "no_overlap_flookup_distinct", "sha256": "4da4298dffb41409b072ad1129b9057ecc6e1ee38b2dbdea31ecf163740f9de7"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean", "lean_name": "optMmapEqSome", "lean_full_name": "Flapjack.optMmapEqSome", "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml", "hol_name": "opt_mmap_eq_some", "sha256": "73207fbf1f460ec95c2ddcfcba8188d7e1f2b10dc97e9c0f65f2a4211746d80a"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanProps.lean", "lean_name": "OPT_MMAP_MEM_IMP", "lean_full_name": "Flapjack.OPT_MMAP_MEM_IMP", "hol_path": "cakeml/pancake/semantics/panPropsScript.sml", "hol_name": "OPT_MMAP_MEM_IMP", "sha256": "4815157615f3955deb7b72fc3f831f7c22d91dfe7d2f84cd0df9236f073e20f7"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanProps.lean", "lean_name": "fdoms_eq_flookup_some_none", "lean_full_name": "Flapjack.fdoms_eq_flookup_some_none", "hol_path": "cakeml/pancake/semantics/panPropsScript.sml", "hol_name": "fdoms_eq_flookup_some_none", "sha256": "6fec5e3955e2504287b8177fdf79884b7b0d1303d457088c953d188644a4b71b"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanProps.lean", "lean_name": "panIsWfShapeValueHOL", "lean_full_name": "Flapjack.panIsWfShapeValueHOL", "hol_path": "cakeml/pancake/semantics/panPropsScript.sml", "hol_name": "is_wf_shape_v_def", "sha256": "e145a951122156da6b52c6cef3dea5809ffba34fcc32ad3286d514c3125eafe0"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanSem.lean", "lean_name": "panEmptyLocals", "lean_full_name": "Flapjack.panEmptyLocals", "hol_path": "cakeml/pancake/semantics/panSemScript.sml", "hol_name": "empty_locals_def", "sha256": "cc24249ae0bb31e5e257c97e5b7aa15277437ff9d11ad06bad6f8f38953d58f8"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanSem.lean", "lean_name": "panSemShapeOf", "lean_full_name": "Flapjack.panSemShapeOf", "hol_path": "cakeml/pancake/semantics/panSemScript.sml", "hol_name": "shape_of_def", "sha256": "b2a3299ac9e5a123bc917a41f5b9090741ebf4ae569c659bee932af9681eebb9"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean", "lean_name": "panPrimopHOL", "lean_full_name": "Flapjack.panPrimopHOL", "hol_path": "cakeml/pancake/semantics/panSemScript.sml", "hol_name": "pan_primop_def", "sha256": "a4ecbd7818551036a63ed702424d198cfb9ffca80a5498c47006484c242a6136"},
-    {"lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean", "lean_name": "panSemFlattenHOL", "lean_full_name": "Flapjack.panSemFlattenHOL", "hol_path": "cakeml/pancake/semantics/panSemScript.sml", "hol_name": "flatten_def", "sha256": "ac99b69fa1a80fb9128bdb8d0734d37c453f4bf0000887360125e37ffdbe29ae"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "extractLabels", "lean_full_name": "Flapjack.extractLabels", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "extract_labels_def", "sha256": "5a5ad9a150c560f574aea3673cce610fe31540952a5ca3b2759ce03490bd41e4"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel", "lean_full_name": "Flapjack.labelsRel", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "labels_rel_def", "sha256": "cf3956d0abaa96f0c04a8741a0b1c37db21d69d72d503d989a0900e87e5bdac6"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel_append", "lean_full_name": "Flapjack.labelsRel_append", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "labels_rel_APPEND", "sha256": "4a4af97b0ba3c246460a4aec68f425588be496bd4afb5ee70cbea3b04ff62cfc"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel_cons", "lean_full_name": "Flapjack.labelsRel_cons", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "labels_rel_CONS", "sha256": "062f69c05b683e162095d5d45e237263965143b3fb87f89fabb730be508ceb30"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel_of_perm", "lean_full_name": "Flapjack.labelsRel_of_perm", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "PERM_IMP_labels_rel", "sha256": "9073535836f6b0b6d4e1ce910aabb1fc827898b7eee5130f229e6f1889a5d4d9"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel_refl", "lean_full_name": "Flapjack.labelsRel_refl", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "labels_rel_refl", "sha256": "3b69a141e16168195a3498bdf7385afb449f331026a3955bfdf817d2be1f5ea0"},
-    {"lean_path": "Flapjack/Pancake/WordConvs.lean", "lean_name": "labelsRel_trans", "lean_full_name": "Flapjack.labelsRel_trans", "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml", "hol_name": "labels_rel_TRANS", "sha256": "538b71569481f72eaf0886b66da6d4f005c6282d13f6288fa46389d94aa28183"},
-    {"lean_path": "Flapjack/Pancake/WordLang.lean", "lean_name": "wordOpHOL", "lean_full_name": "Flapjack.wordOpHOL", "hol_path": "cakeml/compiler/backend/wordLangScript.sml", "hol_name": "word_op_def", "sha256": "01a0c8f39500986bd8a0676e88f2879323d88bcedeca19dd2f3e31146d3223cb"},
-    {"lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean", "lean_name": "wordExtract6OfLt64", "lean_full_name": "Flapjack.RiscV.wordExtract6OfLt64", "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml", "hol_name": "word_extract_6", "sha256": "f3aab99fef9af0a8d32d0b30b71824f77f87aae5228879841b1347bff824954f"}
+    {
+      "lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean",
+      "lean_name": "wordAddCarryHOL",
+      "lean_full_name": "Flapjack.wordAddCarryHOL",
+      "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
+      "hol_name": "word_add_carry_def",
+      "sha256": "a4b11a373b5a4a4b6f179c8f0b3180fc6dc5936c8b270199f11d781b1333a732"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
+      "lean_name": "compileInlTopHOL",
+      "lean_full_name": "Flapjack.compileInlTopHOL",
+      "hol_path": "cakeml/pancake/crep_inlineScript.sml",
+      "hol_name": "compile_inl_top_def",
+      "sha256": "022d4b08fd97227db63dd1f62dab2cf44df95cb7b373ff8e2b4f116397f6be8a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "compileDecsCake",
+      "lean_full_name": "Flapjack.compileDecsCake",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "compile_decs_def",
+      "sha256": "d37df8228f90a8be03dc49580cb8b44887b9a76328705519abd0252e59206006"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "compileExpCake",
+      "lean_full_name": "Flapjack.compileExpCake",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "compile_exp_def",
+      "sha256": "b3d6f9745c1d53095f5af3063f32ee21d3fe01f3d9a7695f862a0f05750c2a40"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "compileProgCake",
+      "lean_full_name": "Flapjack.compileProgCake",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "compile_def",
+      "sha256": "7e32934404fa0333dc1d2e2e4353a04b65954ae96588a8c6a7bf8162f5ae2273"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "freshNameHOL",
+      "lean_full_name": "Flapjack.freshNameHOL",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "fresh_name_def",
+      "sha256": "ce1c6667ffd67a2bc485cf6b3a3ebebc4e2f4559e49daed7a810d3745d5ad361"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalDeclShapes",
+      "lean_full_name": "Flapjack.globalDeclShapes",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "dec_shapes_def",
+      "sha256": "4fb76bdb020bd9f1daff5463a2a31f94821ec52ecd9af5cd968ea49ec33ca431"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalNewMainName",
+      "lean_full_name": "Flapjack.globalNewMainName",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "new_main_name_def",
+      "sha256": "563896af29d37ef7b47bdcd9725f532197717fe0d2fd5cdb6e633572a7d0ef30"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalRenameDecls",
+      "lean_full_name": "Flapjack.globalRenameDecls",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "fperm_decs_def",
+      "sha256": "64d7d6278ff3780e9903dd5e00819f679bff9a67cfe8b967d7cace072ee00b46"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalRenameFunctionName",
+      "lean_full_name": "Flapjack.globalRenameFunctionName",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "fperm_name_def",
+      "sha256": "68d86b65d4cbdfd8531c5f5be322034e1d9ea1b321708e6d2c8f2f3b018f4eb6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalRenameProg",
+      "lean_full_name": "Flapjack.globalRenameProg",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "fperm_def",
+      "sha256": "a12be19a4ef4f8cc6dee330721f62f384aaf4ae23d003c646b0744dc49286a5c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+      "lean_name": "globalResortDecls",
+      "lean_full_name": "Flapjack.globalResortDecls",
+      "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+      "hol_name": "resort_decls_def",
+      "sha256": "f21099836c80c35afd0e4a0aa19aa3ab69900836404dde5d1e486dfd212138e9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanLang.lean",
+      "lean_name": "exceptionEntries",
+      "lean_full_name": "Flapjack.exceptionEntries",
+      "hol_path": "cakeml/pancake/panLangScript.sml",
+      "hol_name": "exceptions_def",
+      "sha256": "bd5537f41be944043cabe953f209c5acc8213e8cc4910230eb63794dfeffa70e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanLang.lean",
+      "lean_name": "expLocalVars",
+      "lean_full_name": "Flapjack.expLocalVars",
+      "hol_path": "cakeml/pancake/panLangScript.sml",
+      "hol_name": "var_exp_def",
+      "sha256": "2437fd3d2316dd42092108a62eb12c8301960d54bd367b874f5cf31f452ffab2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanLang.lean",
+      "lean_name": "freeVarIds",
+      "lean_full_name": "Flapjack.freeVarIds",
+      "hol_path": "cakeml/pancake/panLangScript.sml",
+      "hol_name": "free_var_ids_def",
+      "sha256": "b5c355e139251a6793878f1bbac2fb64fb5f1cf783ca1df3c04e8b41023e4f37"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanLang.lean",
+      "lean_name": "functionEntries",
+      "lean_full_name": "Flapjack.functionEntries",
+      "hol_path": "cakeml/pancake/panLangScript.sml",
+      "hol_name": "functions_def",
+      "sha256": "53d3099c6b872d46e66959289c08d1eee026bce087e8757984347df590fa44f2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+      "lean_name": "panToCrepMkCtxtHOL",
+      "lean_full_name": "Flapjack.panToCrepMkCtxtHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "mk_ctxt_def",
+      "sha256": "2fb6414bbbb6b2f85cf2964e90496801167004216d65b45e345f456572f3e6eb"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "compFuncHOL",
+      "lean_full_name": "Flapjack.compFuncHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "comp_func_def",
+      "sha256": "f8403e4a11b7e0dc1ae5204289d546e4dadc2dec4e07f0caacec00a1b41d5f4e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "compileExpHOL",
+      "lean_full_name": "Flapjack.compileExpHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "compile_exp_def",
+      "sha256": "a45cc7aaf08e9df1c883ce3732f6232c5c8fa1aba588fa9dc0d63da21cde06f9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "compileProgRiscV",
+      "lean_full_name": "Flapjack.compileProgRiscV",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "compile_def",
+      "sha256": "68386a47a50b946e6b97968a0dc3cc8a5c6e4db800d6b56357e3f30d201786e3"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "compileToCrepHOL",
+      "lean_full_name": "Flapjack.compileToCrepHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "compile_to_crep_def",
+      "sha256": "3b33359d3be7b160675a8edee160defe97f2ef20d2fe3079e4b104fea6c4c260"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "makeFuncsHOL",
+      "lean_full_name": "Flapjack.makeFuncsHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "make_funcs_def",
+      "sha256": "66654e7ddeaea94e58b2094659693f8a630937751cc70d496cef564c1876d28b"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "panToCrepGetEidsFromDeclsHOL",
+      "lean_full_name": "Flapjack.panToCrepGetEidsFromDeclsHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "get_eids_from_decls_def",
+      "sha256": "466edb304b5c7fbe159e4d8db58de1a5ae83bf211a7326900f7d9cb61429a07f"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "panToCrepMakeVmapHOL",
+      "lean_full_name": "Flapjack.panToCrepMakeVmapHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "make_vmap_def",
+      "sha256": "4b22a819a6883409146c4eedb9704071e4208391fb812310564e51c9ce9d09b6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+      "lean_name": "panToCrepVars",
+      "lean_full_name": "Flapjack.panToCrepVars",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "crep_vars_def",
+      "sha256": "ce8c42412c42bfedfe3fb8d20e4b8993b58c0f45de4fa25f79507e8188887619"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
+      "lean_name": "compileProgTopHOL",
+      "lean_full_name": "Flapjack.compileProgTopHOL",
+      "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+      "hol_name": "compile_prog_def",
+      "sha256": "a9168bd7e55e133d46dbfe511a843839b8030bc240f9801b34c4878c73bd54f9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+      "lean_name": "crepArithLookupCodeSimpProg",
+      "lean_full_name": "Flapjack.crepArithLookupCodeSimpProg",
+      "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+      "hol_name": "lookup_code",
+      "sha256": "7304d9708019e75748873dfa39abcf50ffeb0b12473ff79719d6a90f4627fab0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+      "lean_name": "crepDestConst_eq_const",
+      "lean_full_name": "Flapjack.crepDestConst_eq_const",
+      "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+      "hol_name": "dest_const_thm",
+      "sha256": "c7db625a013f0bc6fb69b967deb297ec3ea6a27bc76bc073efd7a0fe507826d7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+      "lean_name": "optMmapEqSomeMono",
+      "lean_full_name": "Flapjack.optMmapEqSomeMono",
+      "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+      "hol_name": "OPT_MMAP_EQ_SOME_MONO",
+      "sha256": "7476e5015843d547b136b8dd6363da2f10bcd17bb55b0da9d242c58a4a2c5bd7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "OPT_MMAP_ALL_EQ",
+      "lean_full_name": "Flapjack.OPT_MMAP_ALL_EQ",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "OPT_MMAP_ALL_EQ",
+      "sha256": "9f3ec7cc7cd45e4459b864ea87d466e627d2a1582d25a75a4c6d1e48544e0975"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "OPT_MMAP_SOME_ALL",
+      "lean_full_name": "Flapjack.OPT_MMAP_SOME_ALL",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "OPT_MMAP_SOME_ALL",
+      "sha256": "7bc71d0b424ff93ec0512f5c39a5b8bcb75d22ea333616321a8e4cd68013d368"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "contResHOL",
+      "lean_full_name": "Flapjack.contResHOL",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "cont_res_def",
+      "sha256": "8276a1302bfff58b212adc6224b85c3f204b3f97522da2e39f939e7954c96b31"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineLocalsExtRel",
+      "lean_full_name": "Flapjack.crepInlineLocalsExtRel",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "locals_ext_rel_def",
+      "sha256": "6bf9f9726d5dab321163a925bd9dc96b97a8b17fe337b829a797b034204c2105"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineLocalsRel",
+      "lean_full_name": "Flapjack.crepInlineLocalsRel",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "locals_rel_def",
+      "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineLocalsRel_decClock",
+      "lean_full_name": "Flapjack.crepInlineLocalsRel_decClock",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "locals_rel_dec_clock",
+      "sha256": "c9c09526fe2c37abd182ea3c94b8957f02539ab6cb24e34748b560198f067724"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineLocalsStrongRel",
+      "lean_full_name": "Flapjack.crepInlineLocalsStrongRel",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "locals_strong_rel_def",
+      "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineStateRel",
+      "lean_full_name": "Flapjack.crepInlineStateRel",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "state_rel_def",
+      "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "crepInlineStateRelCode",
+      "lean_full_name": "Flapjack.crepInlineStateRelCode",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "state_rel_code_def",
+      "sha256": "5eb7f8fb0cefe3d07a1d29810b7508c3e3c79d23ba9891c731a902227dbace55"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "fdom_eq_flookup_thm",
+      "lean_full_name": "Flapjack.fdom_eq_flookup_thm",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "fdom_eq_flookup_thm",
+      "sha256": "e91f2d5d2c19840727f23f998fa2c399acff0ca6ece409ddb82eaa5c4a693f05"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "fdom_subset_flookup_thm",
+      "lean_full_name": "Flapjack.fdom_subset_flookup_thm",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "fdom_subset_flookup_thm",
+      "sha256": "093451f4fbfd7d1addb2a68b8abc50000af3ab4c6a1c450e920c769b646b1264"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "fdoms_eq_opt_mmap_flookup_some",
+      "lean_full_name": "Flapjack.fdoms_eq_opt_mmap_flookup_some",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "fdoms_eq_opt_mmap_flookup_some",
+      "sha256": "233b6b48be351b34d97eee3497d15887e7a8b9501500ea8ef919cac79fa1c2c8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "genlist_all_distinct",
+      "lean_full_name": "Flapjack.genlist_all_distinct",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "genlist_all_distinct",
+      "sha256": "ecf886cca9b7b3e8a982fae234682dc5a7253ce16f6a3446ddf4e61f859580fa"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "genlist_less_than",
+      "lean_full_name": "Flapjack.genlist_less_than",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "genlist_less_than",
+      "sha256": "65001d9b2532e10e4d0416dbb76e7af867e4e7ad6865ab5b5b1d0447d4e75970"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "genlist_not_in",
+      "lean_full_name": "Flapjack.genlist_not_in",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "genlist_not_in",
+      "sha256": "4024b760cca4aae45ffc15666a36d2d642c7d299102ee645cd7da17e68fef6a2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "max_list_genlist_add_suc_val",
+      "lean_full_name": "Flapjack.max_list_genlist_add_suc_val",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "max_list_genlist_add_suc_val",
+      "sha256": "7426848b0bd7905a73f7c1591c0dd5f1f9e38f4fdc046c6356e1eaf01f152b8c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "moreThenNotMaxList",
+      "lean_full_name": "Flapjack.moreThenNotMaxList",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "MORE_THEN_NOT_MAX_LIST",
+      "sha256": "445c967e9fe22b04e8fab4f9a1d0626d85786f04cd5189bbdea093fccb54cc71"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "not_some_is_none",
+      "lean_full_name": "Flapjack.not_some_is_none",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "not_some_is_none",
+      "sha256": "29b1b0f51578b7af8548614432bcb75394f9d21cb59fb19cd496533c2961f044"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+      "lean_name": "panMap2_mem",
+      "lean_full_name": "Flapjack.panMap2_mem",
+      "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+      "hol_name": "MEM_MAP2_IMP",
+      "sha256": "aca371d08f4fbb2a6e34063626178ced40caa610527bfea277f38186b03cc560"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "ALL_DISTINCT_fperm_decs",
+      "lean_full_name": "Flapjack.ALL_DISTINCT_fperm_decs",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "ALL_DISTINCT_fperm_decs",
+      "sha256": "e0072c92aa87de6ce05664592927113488fd300bee28b4c98e0309749e9ee00d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "ALOOKUP_MAP3",
+      "lean_full_name": "Flapjack.ALOOKUP_MAP3",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "ALOOKUP_MAP3",
+      "sha256": "573ef4ff888910a26da40c9d49f4148fef821bc8496c24e478eba6e5d1e48d93"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "ALOOKUP_MAP4",
+      "lean_full_name": "Flapjack.ALOOKUP_MAP4",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "ALOOKUP_MAP4",
+      "sha256": "b75a7700927c3925a838274b0539dcb104acf2465f4bedef60891eabc8f4fa6e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "EVERY_fperm_decs",
+      "lean_full_name": "Flapjack.EVERY_fperm_decs",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "EVERY_fperm_decs",
+      "sha256": "4c8f1f90e3e724aafabe94153a7f52d3f8ee72f73e5cba783c1302fb6470329d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "FILTER_decs_fperm_decs",
+      "lean_full_name": "Flapjack.FILTER_decs_fperm_decs",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "FILTER_decs_fperm_decs",
+      "sha256": "106c52bd38e365c1cbb6a55e7c1640620abcef58da1a3786e78a51c400886205"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "MEM_functions",
+      "lean_full_name": "Flapjack.MEM_functions",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "MEM_functions",
+      "sha256": "eebb608144e9f9c33622cfbf0559c2c5583143b5a7c9688e0b313e23ca8eca03"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "compile_decls_append_cake",
+      "lean_full_name": "Flapjack.compile_decls_append_cake",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "compile_decls_append",
+      "sha256": "43016006de1733cb8ea6086d315e074fbf77636fad59a0f04aa18fc6c465f24d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "compile_decs_EVERY_is_function_cake",
+      "lean_full_name": "Flapjack.compile_decs_EVERY_is_function_cake",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "compile_decs_EVERY_is_function",
+      "sha256": "7f68451db3d9a497fbdcff36a897f48c35a32aad5782e97859f6cfe1f18a8f76"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "compile_decs_decls_thm_cake",
+      "lean_full_name": "Flapjack.compile_decs_decls_thm_cake",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "compile_decs_decls_thm",
+      "sha256": "18342fb09582acdd82ede5dbd4b13d20864dbfae09444f630e71fedd39cb9cee"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "dec_shapes_FILTER",
+      "lean_full_name": "Flapjack.dec_shapes_FILTER",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "dec_shapes_FILTER",
+      "sha256": "77801467bbaadee3ee8f366acecc96ac31b217cea7d05af5db7b55e3e66c23c9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "dec_shapes_append",
+      "lean_full_name": "Flapjack.dec_shapes_append",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "dec_shapes_append",
+      "sha256": "533159bcc61af0c03c42b061063718b933bfafb64a489b12a3554972314a2750"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "dec_shapes_fperm_decs",
+      "lean_full_name": "Flapjack.dec_shapes_fperm_decs",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "dec_shapes_fperm_decs",
+      "sha256": "ae983ecf5e833d3d91b64f16c76a5298b3174aba610e463e233dd912495d7281"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "dec_shapes_functions",
+      "lean_full_name": "Flapjack.dec_shapes_functions",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "dec_shapes_functions",
+      "sha256": "e530e7e96a15677a86a27a33cdb63b0bbd8b6f5da2b6ad930901f27168c05f77"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "dec_shapes_resort_decls_def",
+      "lean_full_name": "Flapjack.dec_shapes_resort_decls_def",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "dec_shapes_resort_decls_def",
+      "sha256": "1167159d678d4c7bf1898e6d54b5041a9d7cced19ac85889c3ef520c59232f8e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "decl_distinct",
+      "lean_full_name": "Flapjack.decl_distinct",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "decl_distinct",
+      "sha256": "8b3f6556dc5524c92f21bda304440172ad28c6a9bd2ba469abb05fb23fdf0c7c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "exceptions_FILTER_is_function",
+      "lean_full_name": "Flapjack.exceptions_FILTER_is_function",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "exceptions_FILTER_is_function",
+      "sha256": "1011ab512e42be54c147ec34e721eefdd46e4cb7c04e5638ddf308893633a791"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "exceptions_append",
+      "lean_full_name": "Flapjack.exceptions_append",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "exceptions_append",
+      "sha256": "572bbb3df9f302011f63c4bfc8589d5362289d7303d1aef83e77990a480ff4dd"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fperm_decs_FILTER_is_function",
+      "lean_full_name": "Flapjack.fperm_decs_FILTER_is_function",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fperm_decs_FILTER_is_function",
+      "sha256": "20f7948fff0ddea4206199b2a58559b747d9441b65099e7a78f7e04bd2e18ddf"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fperm_decs_append",
+      "lean_full_name": "Flapjack.fperm_decs_append",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fperm_decs_append",
+      "sha256": "dd9ae220284a140de7dd06dcdaf096cd1b4a10b454d4e697ff14fb34c5a5ebd5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fperm_decs_decls",
+      "lean_full_name": "Flapjack.fperm_decs_decls",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fperm_decs_decls",
+      "sha256": "9d6b3f99fd2569f0d1cc4150edb29edfa91dfad3a3a76590b6b83c9d9bb3cfb5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fperm_name_cancel",
+      "lean_full_name": "Flapjack.fperm_name_cancel",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fperm_name_cancel",
+      "sha256": "4b9d1b3654239a0db2965920770ddaff1e4fabb3586144d72e519118709cb945"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fperm_name_cong",
+      "lean_full_name": "Flapjack.fperm_name_cong",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fperm_name_cong",
+      "sha256": "c2de74b9a7cd11f0409691c8b8994f7bb896f9a56e88c962eca418386d27f44d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fresh_name_correct",
+      "lean_full_name": "Flapjack.fresh_name_correct",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fresh_name_correct",
+      "sha256": "b20a5fad57193cef5e5aa243560addc00f4097f2d189efacabdc8a50895e0997"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "fresh_name_correct'",
+      "lean_full_name": "Flapjack.fresh_name_correct'",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "fresh_name_correct'",
+      "sha256": "797f1da3d6ceb93a080a2f431c1883081f2b86903722a51a188c40ff0e4299ec"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "functions_FILTER_exn_decl",
+      "lean_full_name": "Flapjack.functions_FILTER_exn_decl",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "functions_FILTER_exn_decl",
+      "sha256": "badb22f3c474c6945d2f15db2bccf9b031312f973221f7e657ad2d0140982a6a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "functions_FILTER_is_name",
+      "lean_full_name": "Flapjack.functions_FILTER_is_name",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "functions_FILTER_is_name",
+      "sha256": "f246a3c09e0175483d205d515f6e94125b8cf276c0f8c5c23f59d50710041f12"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "functions_filter_nil",
+      "lean_full_name": "Flapjack.functions_filter_nil",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "functions_filter_nil",
+      "sha256": "3f654c637a2ed775c3411c1b94a4cadd10992e68f7b0eebf5f0a99fa45a0b524"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "functions_fperm_decs",
+      "lean_full_name": "Flapjack.functions_fperm_decs",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "functions_fperm_decs",
+      "sha256": "b2ae2980e206370784217e0b6f36cf1032d99eedaf5dfc8167ec1460a3ad55a1"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "globalCompileTopCake_shapes_wf",
+      "lean_full_name": "Flapjack.globalCompileTopCake_shapes_wf",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "compile_top_shape_wf",
+      "sha256": "b82bd83dbbb181611be8a0f007812c3aceddff684e8d0e59743ef6be30467451"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "globalCompileTopCake_shapes_wf_nil",
+      "lean_full_name": "Flapjack.globalCompileTopCake_shapes_wf_nil",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "compile_top_shape_wf_nil",
+      "sha256": "2dbca82c7964d647655c340ee8d4b084d6e48cfceece7edd5b7888bd5b9da6f8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "map_pick_up_first",
+      "lean_full_name": "Flapjack.map_pick_up_first",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "map_pick_up_first",
+      "sha256": "0d0859cb1cd90d1238eead6bcf7ab96bf39b802b01b4aa3e023bd862a35c301d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "new_main_name_correct",
+      "lean_full_name": "Flapjack.new_main_name_correct",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "new_main_name_correct",
+      "sha256": "b44ee3ac2461d1665a6374056da77fcf3ccd6632d4ef69167c75166867249acc"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "not_is_function",
+      "lean_full_name": "Flapjack.not_is_function",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "not_is_function",
+      "sha256": "daf0a411c02644e748c202911c923f481d678d29563af147837d3c66bdad8ee6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "resort_decls_preserve_functions",
+      "lean_full_name": "Flapjack.resort_decls_preserve_functions",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "resort_decls_preserve_functions",
+      "sha256": "5e48cf1e52f2109aa3af7af90db2a8ce3ac1e7cee09c4022a47c676ad86a3c6e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+      "lean_name": "tuple_4_o",
+      "lean_full_name": "Flapjack.tuple_4_o",
+      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+      "hol_name": "tuple_4_o",
+      "sha256": "0cb2c3049a1f819e49607caab61c61bd6bc99ac1c00f2f5df9ece8fdec643b77"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_append",
+      "lean_full_name": "Flapjack.afindi_append",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "afindi_append",
+      "sha256": "a52fccfeff7a977f63609b2f5eef51876f7b4d1709a0204b080f424b114ec2f7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_dropWhile",
+      "lean_full_name": "Flapjack.afindi_dropWhile",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "dropWhile_afindi",
+      "sha256": "b86afd6941ac8bc90bfe75b1ca1b2cfe9572ed00ce8aba721fa45ec21f5792b5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_el_fst",
+      "lean_full_name": "Flapjack.afindi_el_fst",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "afindi_EL",
+      "sha256": "92febe4db780a9e09ba3a976078279d7fb93ca9f1bb3df0a8e6ac7bd20751c8d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_less_length",
+      "lean_full_name": "Flapjack.afindi_less_length",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "afindi_less_length",
+      "sha256": "ba2ca18e2dc4784306a166f5cde6f035c8381495a055bf0eee974500d6a1dd88"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_lookup",
+      "lean_full_name": "Flapjack.afindi_lookup",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "ALOOKUP_eq_afindi",
+      "sha256": "e9d13de212758421af26ea75e8929d8c8b147d93436055bd33f859bc86278dda"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "afindi_map_eq",
+      "lean_full_name": "Flapjack.afindi_map_eq",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "afindi_MAP_eq",
+      "sha256": "ecdcacb36efe2583194b49c008c7725daf983b1d957ec8c86638aa3cd9248634"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "dropWhile_map_helper",
+      "lean_full_name": "Flapjack.dropWhile_map_helper",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "dropWhile_MAP_helper",
+      "sha256": "627d91cf2ca656d9692d378a3a47679b33f4e5484c1020620ee98e7f624f9be5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "fieldsInOrderReorderNoop",
+      "lean_full_name": "Flapjack.fieldsInOrderReorderNoop",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "fields_in_order_reorder_noop",
+      "sha256": "6bc6caa08762202846205a7b5f7f650163374aa958ad58968a9028e698c6f7c3"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "isWfShape_drop",
+      "lean_full_name": "Flapjack.isWfShape_drop",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "is_wf_shape_drop",
+      "sha256": "88fcf1bfe26f1262dd69fc4a3fb10e452ea3081067814717e27c03da2fc4e00c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "list_mapM_all_of_mem",
+      "lean_full_name": "Flapjack.list_mapM_all_of_mem",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "opt_mmap_eq_every",
+      "sha256": "b9de196515a6802e5895dd32f914b201d9c33d76c9ac298fda10cf42c2d4b8f8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "list_zip_map_eq",
+      "lean_full_name": "Flapjack.list_zip_map_eq",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "map_uncurry_zip_again",
+      "sha256": "9675c5aed94e05b010dbb624840b48b6455f2aab53f640546c275ed81a39bda3"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "lookupInfo_fields_nodup",
+      "lean_full_name": "Flapjack.lookupInfo_fields_nodup",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "alookup_map_structs_ok",
+      "sha256": "b5db48db7289959dd94517261985f3c7e2a89a9c9bbdb76098091338f5863a41"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "lookup_drop_helper",
+      "lean_full_name": "Flapjack.lookup_drop_helper",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "alookup_drop_helper",
+      "sha256": "f1bed5ba7e2f44ee23adbc79e4d603082e63f015ac225e6cae60f2a7b48cf53a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "map_fst_eq_lookup",
+      "lean_full_name": "Flapjack.map_fst_eq_lookup",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "map_fst_eq_alookup",
+      "sha256": "1905bc4db82be2842628afd1864c4d76b2d62d33b335f830e3da89302cd2a3dc"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "optMmapEqSomeEl",
+      "lean_full_name": "Flapjack.optMmapEqSomeEl",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "opt_mmap_eq_some_el",
+      "sha256": "81304f14cfb269debfb5197095384852852b9cc0f4c118bf136af84770392c6a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "prod_uncurry_const_eq_comp_snd",
+      "lean_full_name": "Flapjack.prod_uncurry_const_eq_comp_snd",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "UNCURRY_EQ_o_SND",
+      "sha256": "5392d683791b886fea7465a4c08a2bf67c5672c92e9680697f6f64f5c0030b50"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "shapeSizeWithContext_drop",
+      "lean_full_name": "Flapjack.shapeSizeWithContext_drop",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "size_of_sh_with_ctxt_drop",
+      "sha256": "a817ad93932c6de2c3e9480124914048c6caf2b45648951efc1eacebd1096147"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structCompileExps_eq_map",
+      "lean_full_name": "Flapjack.structCompileExps_eq_map",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "compile_exps_eq_map",
+      "sha256": "001052b43ad072feb5750a70c91309675232f2d665f97747e899de19e9ae5a95"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structCompileShapeWF_isWfShape",
+      "lean_full_name": "Flapjack.structCompileShapeWF_isWfShape",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "is_wf_shape_compile_shape",
+      "sha256": "8e1016474a47bcbbe2777c65761e0eb4aa1f6c8a0a4e4054defaafe50f0f36c2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structCompileShapeWF_size",
+      "lean_full_name": "Flapjack.structCompileShapeWF_size",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "size_of_compile_shape",
+      "sha256": "e34d4cb86c78c88c3da591b2b8b0bdfef6cdcb5eab1064c0f3820a755a4b4e98"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structCompileShapes_eq_map",
+      "lean_full_name": "Flapjack.structCompileShapes_eq_map",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "compile_shapes_eq_map",
+      "sha256": "94e5a4faf524fa527ee1c564747522f8f2e19584da4aa68c7e2596c8d21782ce"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structInfosOk",
+      "lean_full_name": "Flapjack.structInfosOk",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "struct_infos_ok_def",
+      "sha256": "dd41532d5b26ed3098f78994201a1ad1b00db184bdb8ec45878fa2a48c3f4261"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structInfosOk_append",
+      "lean_full_name": "Flapjack.structInfosOk_append",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "struct_infos_ok_append",
+      "sha256": "d49ab4eb2f7eec96d1e2987f2e06cdb168f25dee5d8214a1070764f3681d830d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structInfosOk_cons",
+      "lean_full_name": "Flapjack.structInfosOk_cons",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "struct_infos_ok_cons",
+      "sha256": "7578a26fa60cddf9dda8ee5dc8e69b62d1f8f7d65d94a496db76c434fcb8f82c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structInfosOk_drop",
+      "lean_full_name": "Flapjack.structInfosOk_drop",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "struct_infos_ok_drop",
+      "sha256": "da6958a1ac4756be12ca8cc8e1dfd5daa41b53b168777809a6bb531c0c4514cd"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+      "lean_name": "structOldExpShapes_eq_map",
+      "lean_full_name": "Flapjack.structOldExpShapes_eq_map",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "old_exp_shapes_eq",
+      "sha256": "558b7ddba28011fe4818e764084817caba3e6c1bfe66943d4f9c17373f8c6614"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+      "lean_name": "panStructConvertValue",
+      "lean_full_name": "Flapjack.panStructConvertValue",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "convert_v_def",
+      "sha256": "d4ab3c2a5bcc9b2a4e8270a0a77d8e502d74c9babc1e81a8bb0bc447b0911956"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+      "lean_name": "panValueFldsOk",
+      "lean_full_name": "Flapjack.panValueFldsOk",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "v_flds_ok_def",
+      "sha256": "e145a951122156da6b52c6cef3dea5809ffba34fcc32ad3286d514c3125eafe0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+      "lean_name": "panValueFldsOk_append",
+      "lean_full_name": "Flapjack.panValueFldsOk_append",
+      "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+      "hol_name": "v_flds_ok_append",
+      "sha256": "f28ea3e9d3b0f9df27fbc0451ea799815989e8cfc1990b42dc8d1e745f9644a2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "alookupCompileToCrepCode",
+      "lean_full_name": "Flapjack.alookupCompileToCrepCode",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "alookup_compile_prog_code",
+      "sha256": "d74eb64ce6c1015cfffcf8a0337809735cc9fdcff04d4c351a40a86ac3fd9f1d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "cexpHeads_eq_cexpHeadsSimp",
+      "lean_full_name": "Flapjack.cexpHeads_eq_cexpHeadsSimp",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "cexp_heads_eq",
+      "sha256": "422170407162a4bcd00d64f1bb0219a072140cb8567f4cafad62f738eb785ec8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "codeRelEmptyLocals",
+      "lean_full_name": "Flapjack.codeRelEmptyLocals",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "code_rel_empty_locals",
+      "sha256": "5240b95cd72b11957539b0e4ebcbd0a627541aa63181ee895502a5342b707373"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "compileExpNotMemLoadGlob",
+      "lean_full_name": "Flapjack.compileExpNotMemLoadGlob",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "compile_exp_not_mem_load_glob",
+      "sha256": "a92c9df9ad9f101cda046c7e851aa5dd629bd8a39269e344f6472082b92cb0e0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "compileField_mem_of_record_shape",
+      "lean_full_name": "Flapjack.compileField_mem_of_record_shape",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "mem_comp_field",
+      "sha256": "37196656ed2fed1609d9f3835af8044acd2d88ae57995b969d44c6edfbf4ecd9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "compileField_mem_or_zero",
+      "lean_full_name": "Flapjack.compileField_mem_or_zero",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "mem_comp_field_lem",
+      "sha256": "1a82968bd5df245ddb627231a88928337fce88067684373ce268686fd46a9845"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "crepLocalsIdUpdate",
+      "lean_full_name": "Flapjack.crepLocalsIdUpdate",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "locals_id_update",
+      "sha256": "49dc1fdcfe7434d1670fb7c01920f9c3a2a4911e395e84715abdbbca9a53f1d2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "ctxtFcFuncsEq",
+      "lean_full_name": "Flapjack.ctxtFcFuncsEq",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "ctxt_fc_funcs_eq",
+      "sha256": "229f28f7a660534c71cc633b862c17b41da763e83efb4a823e033d01be2c2c0d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "ctxtFcVmax",
+      "lean_full_name": "Flapjack.ctxtFcVmax",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "ctxt_fc_vmax",
+      "sha256": "a5ea4c864e001045f96e70917d70eead19aca0c9d95799b9b31bea02d753d271"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "elCompileToCrepElProgEq",
+      "lean_full_name": "Flapjack.elCompileToCrepElProgEq",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "el_compile_prog_el_prog_eq",
+      "sha256": "feb4785a5c52801eb9e152448e3e1c54307e0add86a32116b626a73bf6a01bfe"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "elLoadGlobals",
+      "lean_full_name": "Flapjack.elLoadGlobals",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "EL_load_globals",
+      "sha256": "c40e1dae71d8fb8e880a1bba6c7af07c77b32c972fd7de738b17f156661c1e1f"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "filter_not_mem_self",
+      "lean_full_name": "Flapjack.filter_not_mem_self",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "filter_not_mem_self",
+      "sha256": "f2d8284694193ee066e348e2d8dfaf4986e01808bb3206f0143c8d942c6e75e9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "firstCompileProgAllDistinct",
+      "lean_full_name": "Flapjack.firstCompileProgAllDistinct",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "first_compile_prog_all_distinct",
+      "sha256": "c48108bf1ad35b37c96509a73079b9e99bfb91d1b8011c49bd5182d6fcce3be5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "firstCompileToCrepAllDistinct",
+      "lean_full_name": "Flapjack.firstCompileToCrepAllDistinct",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "first_compile_to_crep_all_distinct",
+      "sha256": "98de5172fef5d2e68fafeb7b830cd8e04eebd9b1f8c0999fad5e33f016027ad5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "flattenNilNoSize",
+      "lean_full_name": "Flapjack.flattenNilNoSize",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "flatten_nil_no_size",
+      "sha256": "d076654959d15e530bb25dfa942148b8796d50b99a7e09ff411ddc00b949de2d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "flookupResVarQuant",
+      "lean_full_name": "Flapjack.flookupResVarQuant",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "flookup_res_var_thm_quant",
+      "sha256": "23304b2b2aad5fb6a90395baa5843ce74dc6a9bb0e48ff81f92152e8d53a4f4a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "getEidsFromDeclsImpExcpRel",
+      "lean_full_name": "Flapjack.getEidsFromDeclsImpExcpRel",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "get_eids_imp_excp_rel",
+      "sha256": "93d41fcea2c31fdbdc70b4e6b50bb33555e06130263919dba96a65a36dca4a36"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "globalsLookup",
+      "lean_full_name": "Flapjack.globalsLookup",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "globals_lookup_def",
+      "sha256": "ae83ad986d6dddb92d9ef1719ac2a9b78d3bcae7c8c60819f0976657c11c79e8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "isWfShapeNil_length_flatten",
+      "lean_full_name": "Flapjack.isWfShapeNil_length_flatten",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "is_wf_shape_nil_length_flatten",
+      "sha256": "8b0001b271657293244a5f09970de16398c6da85fd28a1a687f02e8e96e209a5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "loadShapeBytes_getElem_rel",
+      "lean_full_name": "Flapjack.loadShapeBytes_getElem_rel",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "load_shape_el_rel",
+      "sha256": "f16437c692e05afbf703fd79f2e12a24362bb2f7c0dbae6e59b851c26fa5eb00"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "localRelLeZipUpdatePreserved",
+      "lean_full_name": "Flapjack.localRelLeZipUpdatePreserved",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "local_rel_le_zip_update_preserved",
+      "sha256": "44a2e70ee9f439bcf9fe596d74ead72aaa49c4249ad00dfff4556efd0f34a9fb"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "localsRelExtendNewVar",
+      "lean_full_name": "Flapjack.localsRelExtendNewVar",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "locals_rel_extend_new_var",
+      "sha256": "f789365eaa11405fed9a2a83402ffa6cf5f5fa79e3e7f4638705002528ec8b6d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "localsRelLookupCtxt",
+      "lean_full_name": "Flapjack.localsRelLookupCtxt",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "locals_rel_lookup_ctxt",
+      "sha256": "5f2fc3db0575801f8aadd0bce21a68a61d862ae72c7384a5d21959dd5945e9a1"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "mapSomeMemLemma",
+      "lean_full_name": "Flapjack.mapSomeMemLemma",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "MAP_SOME_MEM_lemma",
+      "sha256": "9c9df4eba8ade32e5e3ff9ce573aa65c02d69db7d7bfa66835cf6f516bf94674"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "maxListAppendHol",
+      "lean_full_name": "Flapjack.maxListAppendHol",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "MAX_LIST_APPEND",
+      "sha256": "2a5efb7d59a7fb459d470aa57d518e628ae54ba55972fc25fc5fa5758c8332e7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "maxListNotMemHol",
+      "lean_full_name": "Flapjack.maxListNotMemHol",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "MAX_LIST_NOT_MEM",
+      "sha256": "bd5c6d9635bf5bc1a82b9b4a476d83cb7ea54952db3a06997935bb07bbea6179"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "mkCtxtCodeImpCodeRel",
+      "lean_full_name": "Flapjack.mkCtxtCodeImpCodeRel",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "mk_ctxt_code_imp_code_rel",
+      "sha256": "d57ffc3d59df7699ff99f94db9d18e77e91f53abd3d1e1f68490c33d127d1184"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "mkCtxtImpLocalsRel",
+      "lean_full_name": "Flapjack.mkCtxtImpLocalsRel",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "mk_ctxt_imp_locals_rel",
+      "sha256": "208cde8d301ba765b0a95055dc5add00497e2ad2363c0af7e8586b0b2fee7bd9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "mod_eq_of_lt_eq",
+      "lean_full_name": "Flapjack.mod_eq_of_lt_eq",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "mod_eq_lt_eq",
+      "sha256": "e444ecc3a28f19b22c03938fdc76d94465da9f6e79b34ec85702d65d3dc4cf0d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "noOverlapWrapRtNodup",
+      "lean_full_name": "Flapjack.noOverlapWrapRtNodup",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "no_overlap_wrap_rt_some_all_distinct",
+      "sha256": "dc27c9ef803ef7a59cdf19444de451d21411a11238c9801cb77d26adda4cab6c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "notMemContextAssignedMemGt",
+      "lean_full_name": "Flapjack.notMemContextAssignedMemGt",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "not_mem_context_assigned_mem_gt",
+      "sha256": "80c7ccfc49aa5e471d17dc0785b9a8a642a45a62ca16d10cf55c01d77259beb2"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "option_ne_none_iff_exists",
+      "lean_full_name": "Flapjack.option_ne_none_iff_exists",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "not_none_then_some",
+      "sha256": "33eeae433bf222dc0c03d7eca4f66219306d90547e65945e929af4a18ee0f941"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "panSemShapeOf_word",
+      "lean_full_name": "Flapjack.panSemShapeOf_word",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "shape_of_alt",
+      "sha256": "16f4deb87b4ce320b136241c9d914e18a0936832384afb199f6f4097f2df25bb"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "prod_mk_pair_eq_id",
+      "lean_full_name": "Flapjack.prod_mk_pair_eq_id",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "pair_map_I",
+      "sha256": "d768c25e821217c41e4ee9271a1cc2e3824d11e61870765ab77facf07fdcfcae"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "resVarCommutesPrime",
+      "lean_full_name": "Flapjack.resVarCommutesPrime",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "res_var_commutes'",
+      "sha256": "5fe77208cf4d6d2e96fa4fc2dea21d4451dbaa82d78a5ec9c0b1b5472f74dabc"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+      "lean_name": "rewrittenContextUnassigned",
+      "lean_full_name": "Flapjack.rewrittenContextUnassigned",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "rewritten_context_unassigned",
+      "sha256": "b21309e05821946c4055a3c43d6e3da8ecf7f9baca7a2a3db2dd67e1f1920187"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+      "lean_name": "genlistVmaxDistinctListsCompiledExps",
+      "lean_full_name": "Flapjack.genlistVmaxDistinctListsCompiledExps",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
+      "sha256": "08e4ffdbaa480268aa9269578459e2429848c4c5eb441ae118cd8c312e185579"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+      "lean_name": "memCompileExpVmax",
+      "lean_full_name": "Flapjack.memCompileExpVmax",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "MEM_compile_exp_vmax",
+      "sha256": "f5a4881b136b13628110026d4174afdcc9951ee4ff69515b73930d4522b461f8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean",
+      "lean_name": "compileProgTopHOL_params_nodup",
+      "lean_full_name": "Flapjack.compileProgTopHOL_params_nodup",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "compile_prog_distinct_params",
+      "sha256": "99e9500f09f632bbcb5e0e893298dd963d4c992119529e7b51350a1f84f6c3e9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean",
+      "lean_name": "panPrimopCrepPrimop",
+      "lean_full_name": "Flapjack.panPrimopCrepPrimop",
+      "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+      "hol_name": "pan_primop_crep_primop",
+      "sha256": "0a711bed9bb18804333bc0a6475b11f80e4514f589b03766d52d3025e1e943de"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "cexpHeadsSimp",
+      "lean_full_name": "Flapjack.cexpHeadsSimp",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "cexp_heads_simp_def",
+      "sha256": "4840696a652ee473fd31aac072380afbb2add7068c2ac86ccca38160766088cc"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
+      "lean_full_name": "Flapjack.crepAssignedFreeVars_nestedSeq_assign_zipWith",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "nested_seq_assigned_free_vars_eq",
+      "sha256": "3a0c53bedb19f0dc9614309173cbab7ae893b99cc7f9a1c4c0ae43c6fb737a78"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "crepAssignedVars_nestedSeq_assign_zipWith",
+      "lean_full_name": "Flapjack.crepAssignedVars_nestedSeq_assign_zipWith",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "nested_seq_assigned_vars_eq",
+      "sha256": "08677167fa19980fa419ceb44c5211a3e151ce2a0aa38da40ed02dbce85ad410"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "crepEveryExp",
+      "lean_full_name": "Flapjack.crepEveryExp",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "every_exp_def",
+      "sha256": "1e85d62e4e91012f31a12c3819f5cc356942553fee3f502f33031de5a608b6d3"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "flookup_setCrepHolGlobals_locals",
+      "lean_full_name": "Flapjack.flookup_setCrepHolGlobals_locals",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "FLOOKUP_set_globals",
+      "sha256": "269cb81116500956a016ad00bbb312ec84cfa71aafc41ff717faa613ae0a95a4"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "loadGlobals_getElem",
+      "lean_full_name": "Flapjack.loadGlobals_getElem",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "el_load_globals_elem",
+      "sha256": "ac16a582fd50fd3d8ad7490583c247bd18ce67fc8ed0abcd187ad718c3139771"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+      "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVars",
+      "lean_full_name": "Flapjack.mem_crepAssignedFreeVars_imp_mem_crepAssignedVars",
+      "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+      "hol_name": "assigned_free_vars_IMP_assigned_vars",
+      "sha256": "6ec950c71322901a1ad7bef8d50285e5ae50a5c0a7badce5d05601e6ceec343e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "crepOpCrep",
+      "lean_full_name": "Flapjack.crepOpCrep",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "crep_op_def",
+      "sha256": "2c65e024c9f5ad4d63bd402a0de81eccb728b6f3973ae31a849c4f3eefed1cb4"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "decCrepHolClock",
+      "lean_full_name": "Flapjack.decCrepHolClock",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "dec_clock_def",
+      "sha256": "baf1c92ed002a65ce60c5d79814b253e421cf43f040b6989996f2ea063ade08d"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "emptyCrepHolLocals",
+      "lean_full_name": "Flapjack.emptyCrepHolLocals",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "empty_locals_def",
+      "sha256": "05f1e199fc58bb13c725d03ff36bdc1dbf6faa4c94e95237a727540ca3b247ca"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "fixCrepHolClock",
+      "lean_full_name": "Flapjack.fixCrepHolClock",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "fix_clock_def",
+      "sha256": "ffd493ff1cc35920bf043f60b8b1d6f60609a5c7b4bd0b7100d651e66aad54fb"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "fixCrepHolClock_IMP_LESS_EQ",
+      "lean_full_name": "Flapjack.fixCrepHolClock_IMP_LESS_EQ",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "fix_clock_IMP_LESS_EQ",
+      "sha256": "ac4a4db553151890053754b7f25acd744250c12ab72a1fc49ffeb0010da8fe2b"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "lookupCrepHolCode",
+      "lean_full_name": "Flapjack.lookupCrepHolCode",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "lookup_code_def",
+      "sha256": "431cea2cd5e80d463e05c4ea8cc105bdba3d6b54853137cc181429abbf241b0e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "memLoadCrepHol",
+      "lean_full_name": "Flapjack.memLoadCrepHol",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "mem_load_def",
+      "sha256": "1c48a0555acfe5070de1c06870c7a8a50632b71658b22eb00fa17b8477695f5c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "resVar",
+      "lean_full_name": "Flapjack.resVar",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "res_var_def",
+      "sha256": "98f85b5b71701b093d371e4a543eafedea225f3985409889a1dc8bd479e96f4f"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "setCrepHolGlobals",
+      "lean_full_name": "Flapjack.setCrepHolGlobals",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "set_globals_def",
+      "sha256": "6e3689beddcc41270cbed9229564100c871599904092c60d74cd2407000fee90"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "setCrepHolVar",
+      "lean_full_name": "Flapjack.setCrepHolVar",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "set_var_def",
+      "sha256": "8ca731a5a87b1b838bc182c098acd97a3269454e741e0464cd52aeffebd1daef"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+      "lean_name": "updCrepHolLocals",
+      "lean_full_name": "Flapjack.updCrepHolLocals",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "upd_locals_def",
+      "sha256": "63719bcaa4f3ce6e34aa6a8fedd4ac908ec9f4213312402a10d253d48254a097"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean",
+      "lean_name": "crepPrimopHOL",
+      "lean_full_name": "Flapjack.crepPrimopHOL",
+      "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+      "hol_name": "crep_primop_def",
+      "sha256": "baef92ede5fb8f17770db702d9210dedbaab0f527b27d4d001fa1dedefbf678a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "loopPrimopHOL",
+      "lean_full_name": "Flapjack.loopPrimopHOL",
+      "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
+      "hol_name": "loop_primop_def",
+      "sha256": "fa7a3829c406bdff4d9efea06466db842d90d4fe745d1d0c8f5cbd442235cff5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "memLoad32HOL",
+      "lean_full_name": "Flapjack.memLoad32HOL",
+      "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+      "hol_name": "mem_load_32_def",
+      "sha256": "f1f7b74ea009e98ad400223a0f90e153ec315d6189d51d91d0148dfbe3f932e6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "memLoadByteAuxHOL",
+      "lean_full_name": "Flapjack.memLoadByteAuxHOL",
+      "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+      "hol_name": "mem_load_byte_aux_def",
+      "sha256": "ceefd5a613b7e85f3b31552b358bbad603d0944886d0060337c97e72f34528e3"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "memStore32HOL",
+      "lean_full_name": "Flapjack.memStore32HOL",
+      "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+      "hol_name": "mem_store_32_def",
+      "sha256": "a8cb7e2fd1cc4f9c36851b7b29776cfeb3aad9a527c0eaf3f41daf6362c577b0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "memStoreByteAuxHOL",
+      "lean_full_name": "Flapjack.memStoreByteAuxHOL",
+      "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+      "hol_name": "mem_store_byte_aux_def",
+      "sha256": "cefa3f5c46bcf79dfcf5f5668f575c46cbea05654395b7f2cd292300f67256d9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "readBytearrayHOL",
+      "lean_full_name": "Flapjack.readBytearrayHOL",
+      "hol_path": "cakeml/misc/miscScript.sml",
+      "hol_name": "read_bytearray_def",
+      "sha256": "a7eb51522ec6137c65e44fa6b9776b93dab49402faea57d50789a1274b1f35fb"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
+      "lean_name": "writeBytearrayHOL",
+      "lean_full_name": "Flapjack.writeBytearrayHOL",
+      "hol_path": "cakeml/compiler/backend/semantics/wordSemScript.sml",
+      "hol_name": "write_bytearray_def",
+      "sha256": "3f3e5aae3d54716abbc64801c6e3693223d6670b6087695e542f74e7517a1a02"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "MAP3_MAP2",
+      "lean_full_name": "Flapjack.MAP3_MAP2",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "MAP3_MAP2",
+      "sha256": "88510284a26a2f66165a1ddcaadb39e9af75ad4be71d559bf92d8be3d1d9c290"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "MAX_LIST_add_not_mem",
+      "lean_full_name": "Flapjack.MAX_LIST_add_not_mem",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "MAX_LIST_add_not_mem",
+      "sha256": "b5b2e7b38ab544d1ddbeba43bd901eb8e8751692ecceea08b576232a383ae962"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "MAX_LIST_i_genlist",
+      "lean_full_name": "Flapjack.MAX_LIST_i_genlist",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "MAX_LIST_i_genlist",
+      "sha256": "422c291e864afb691995ced383b04f426aeb077f965b018114d39cdd6a18368c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "allDistinctFlookupAllDistinct",
+      "lean_full_name": "Flapjack.allDistinctFlookupAllDistinct",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "all_distinct_flookup_all_distinct",
+      "sha256": "b14e11ef4ff792b68e2cf882527df62d44b04502586e8d6b5263197fbb0611fe"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "all_distinct_drop",
+      "lean_full_name": "Flapjack.all_distinct_drop",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "all_distinct_drop",
+      "sha256": "a2ac585fad013f6075d314e4fcceeef04d0ba7d4a206f197b073e2d29c36fae1"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "all_distinct_take",
+      "lean_full_name": "Flapjack.all_distinct_take",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "all_distinct_take",
+      "sha256": "8ab40393afa43abff1aeac3292f2a3ac31fb4f87cff0eac6dd5c4ac6586967a6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_append",
+      "lean_full_name": "Flapjack.distinct_lists_append",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_append",
+      "sha256": "dcb4dd9d14adc19f96dde16e2e7e5ead1c87a459b07262ab770dba12440c05c4"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_append_intro",
+      "lean_full_name": "Flapjack.distinct_lists_append_intro",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_append_intro",
+      "sha256": "a6e8c32570359443d3ea39dc7e69b3e15307c338ac6008b9d82f834528ba2eba"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_append_right_elim",
+      "lean_full_name": "Flapjack.distinct_lists_append_right_elim",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_append_right_elim",
+      "sha256": "b2dd19b140469c34a946452964696a83da9bdc461bdcb784cc6c9c1efee38f2f"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_commutes",
+      "lean_full_name": "Flapjack.distinct_lists_commutes",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_commutes",
+      "sha256": "9489148f8d2bcd4ea7cb0cd1bfe81d492887f1c3b0d3e0ac2a9b4c4424056497"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_cons",
+      "lean_full_name": "Flapjack.distinct_lists_cons",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_cons",
+      "sha256": "23cc159bd91a2f434f37f8331eec6231c26e8e26ea534f5917c32460573709cd"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "distinct_lists_simp_cons",
+      "lean_full_name": "Flapjack.distinct_lists_simp_cons",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "distinct_lists_simp_cons",
+      "sha256": "405ad5ebce5fa8ee7804e2b4af124f047c9ba86345a6069296189796a55fde2b"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "fmEmptyZipAlist",
+      "lean_full_name": "Flapjack.fmEmptyZipAlist",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "fm_empty_zip_alist",
+      "sha256": "de4c5cfb1ffac5f950d091694f8ad5b89f0383800f5b8af2acae8ce071a4a2cf"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "fmEmptyZipFlookup",
+      "lean_full_name": "Flapjack.fmEmptyZipFlookup",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "fm_empty_zip_flookup",
+      "sha256": "a047728f07a963782011958afa9a0a70aed4e4f13fcb0be9129d0aa0dc72ef31"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "fmEmptyZipFlookupEl",
+      "lean_full_name": "Flapjack.fmEmptyZipFlookupEl",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "fm_empty_zip_flookup_el",
+      "sha256": "b73d72942fa39e3650d7a89c5599086bb70d2543aa12844b5422d8d9c7d969b5"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "map_append_eq_drop",
+      "lean_full_name": "Flapjack.map_append_eq_drop",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "map_append_eq_drop",
+      "sha256": "be36ca8201ff5952f91d37332179de7fd75b0dd08348362a7d33babbf908d2ba"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "max_foldr_lt",
+      "lean_full_name": "Flapjack.max_foldr_lt",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "max_foldr_lt",
+      "sha256": "4ca8a12bda204048c1639bac651df3d280722c092984afbdfe45a785360fbd7e"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "noOverlapFlookupDistinct",
+      "lean_full_name": "Flapjack.noOverlapFlookupDistinct",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "no_overlap_flookup_distinct",
+      "sha256": "4da4298dffb41409b072ad1129b9057ecc6e1ee38b2dbdea31ecf163740f9de7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "optMmapEqSome",
+      "lean_full_name": "Flapjack.optMmapEqSome",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "opt_mmap_eq_some",
+      "sha256": "73207fbf1f460ec95c2ddcfcba8188d7e1f2b10dc97e9c0f65f2a4211746d80a"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "opt_mmap_length_eq",
+      "lean_full_name": "Flapjack.opt_mmap_length_eq",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "opt_mmap_length_eq",
+      "sha256": "993d0287aa87e0c6cac6accfd5bab808eb096711170b2e3226fa8a6bb691b933"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "opt_mmap_mem_defined",
+      "lean_full_name": "Flapjack.opt_mmap_mem_defined",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "opt_mmap_mem_defined",
+      "sha256": "8d533a454b18c1c7ad92715bb0ae9ee1fa7560e553ba205cb1b81b5462803204"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "opt_mmap_mem_func",
+      "lean_full_name": "Flapjack.opt_mmap_mem_func",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "opt_mmap_mem_func",
+      "sha256": "5a703e1c0fe46dce3fd977cc7967bceaa68841491922b483d3b1d9206c3c4b86"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "opt_mmap_opt_map",
+      "lean_full_name": "Flapjack.opt_mmap_opt_map",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "opt_mmap_opt_map",
+      "sha256": "9fa5e7a36bc93d6f646f1ab0518ac742c93167d2ca21be78a7fb38e316d1f507"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+      "lean_name": "set_eq_membership",
+      "lean_full_name": "Flapjack.set_eq_membership",
+      "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+      "hol_name": "set_eq_membership",
+      "sha256": "39e8d6fef118db40c7d6b692f74d8a3fc907587800adab6cdfa2572687b04e4c"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+      "lean_name": "OPT_MMAP_MEM_IMP",
+      "lean_full_name": "Flapjack.OPT_MMAP_MEM_IMP",
+      "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+      "hol_name": "OPT_MMAP_MEM_IMP",
+      "sha256": "4815157615f3955deb7b72fc3f831f7c22d91dfe7d2f84cd0df9236f073e20f7"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+      "lean_name": "fdoms_eq_flookup_some_none",
+      "lean_full_name": "Flapjack.fdoms_eq_flookup_some_none",
+      "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+      "hol_name": "fdoms_eq_flookup_some_none",
+      "sha256": "6fec5e3955e2504287b8177fdf79884b7b0d1303d457088c953d188644a4b71b"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+      "lean_name": "panIsWfShapeValueHOL",
+      "lean_full_name": "Flapjack.panIsWfShapeValueHOL",
+      "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+      "hol_name": "is_wf_shape_v_def",
+      "sha256": "e145a951122156da6b52c6cef3dea5809ffba34fcc32ad3286d514c3125eafe0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+      "lean_name": "panEmptyLocals",
+      "lean_full_name": "Flapjack.panEmptyLocals",
+      "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+      "hol_name": "empty_locals_def",
+      "sha256": "cc24249ae0bb31e5e257c97e5b7aa15277437ff9d11ad06bad6f8f38953d58f8"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+      "lean_name": "panSemShapeOf",
+      "lean_full_name": "Flapjack.panSemShapeOf",
+      "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+      "hol_name": "shape_of_def",
+      "sha256": "b2a3299ac9e5a123bc917a41f5b9090741ebf4ae569c659bee932af9681eebb9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+      "lean_name": "panPrimopHOL",
+      "lean_full_name": "Flapjack.panPrimopHOL",
+      "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+      "hol_name": "pan_primop_def",
+      "sha256": "a4ecbd7818551036a63ed702424d198cfb9ffca80a5498c47006484c242a6136"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
+      "lean_name": "panSemFlattenHOL",
+      "lean_full_name": "Flapjack.panSemFlattenHOL",
+      "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+      "hol_name": "flatten_def",
+      "sha256": "ac99b69fa1a80fb9128bdb8d0734d37c453f4bf0000887360125e37ffdbe29ae"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "extractLabels",
+      "lean_full_name": "Flapjack.extractLabels",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "extract_labels_def",
+      "sha256": "5a5ad9a150c560f574aea3673cce610fe31540952a5ca3b2759ce03490bd41e4"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel",
+      "lean_full_name": "Flapjack.labelsRel",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "labels_rel_def",
+      "sha256": "cf3956d0abaa96f0c04a8741a0b1c37db21d69d72d503d989a0900e87e5bdac6"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel_append",
+      "lean_full_name": "Flapjack.labelsRel_append",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "labels_rel_APPEND",
+      "sha256": "4a4af97b0ba3c246460a4aec68f425588be496bd4afb5ee70cbea3b04ff62cfc"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel_cons",
+      "lean_full_name": "Flapjack.labelsRel_cons",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "labels_rel_CONS",
+      "sha256": "062f69c05b683e162095d5d45e237263965143b3fb87f89fabb730be508ceb30"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel_of_perm",
+      "lean_full_name": "Flapjack.labelsRel_of_perm",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "PERM_IMP_labels_rel",
+      "sha256": "9073535836f6b0b6d4e1ce910aabb1fc827898b7eee5130f229e6f1889a5d4d9"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel_refl",
+      "lean_full_name": "Flapjack.labelsRel_refl",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "labels_rel_refl",
+      "sha256": "3b69a141e16168195a3498bdf7385afb449f331026a3955bfdf817d2be1f5ea0"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordConvs.lean",
+      "lean_name": "labelsRel_trans",
+      "lean_full_name": "Flapjack.labelsRel_trans",
+      "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+      "hol_name": "labels_rel_TRANS",
+      "sha256": "538b71569481f72eaf0886b66da6d4f005c6282d13f6288fa46389d94aa28183"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/WordLang.lean",
+      "lean_name": "wordOpHOL",
+      "lean_full_name": "Flapjack.wordOpHOL",
+      "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+      "hol_name": "word_op_def",
+      "sha256": "01a0c8f39500986bd8a0676e88f2879323d88bcedeca19dd2f3e31146d3223cb"
+    },
+    {
+      "lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean",
+      "lean_name": "wordExtract6OfLt64",
+      "lean_full_name": "Flapjack.RiscV.wordExtract6OfLt64",
+      "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml",
+      "hol_name": "word_extract_6",
+      "sha256": "f3aab99fef9af0a8d32d0b30b71824f77f87aae5228879841b1347bff824954f"
+    }
   ]
 }

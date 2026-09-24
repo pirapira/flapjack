@@ -353,9 +353,10 @@ def everyStackVar {width : Nat} (P : Nat -> Bool) :
 /-! ## Word locations
 
 HOL `wordLang$word_loc = Word ('a word) | Loc num num`
-(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Kept generic in the
-word carrier `α`, matching HOL's polymorphic `'a word`. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_loc"]
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Deliberately UNTAGGED:
+HOL's constructor payload is the fixed-width `'a word`, so only width-indexed
+uses such as `StackRemove.isSomeWord` over `WordLoc (BitVec width)` are
+HOL-shaped. -/
 inductive WordLoc (α : Type u) where
   | word (value : α)
   | loc (block offset : Nat)

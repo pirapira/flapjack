@@ -17,18 +17,16 @@ backend phase:
 * `names_ok_def`.
 
 HOL's `find_name` is the `misc$tlookup` overload, i.e.
-`find_name f r = (FLOOKUP f r).getD r`, here `findName`.  The definitions are
-polymorphic in the machine word (`'a` in HOL) and only inspect registers, so
-the Lean port keeps the word carrier as a parameter `α` (the register map is
-`Nat |-> Nat`).
+`find_name f r = (FLOOKUP f r).getD r`, here `findName`.  The register map is
+`Nat |-> Nat`.
 
-The imported `WordLangInst`/`WordRegImm`/`WordLangAddr` are the faithful asm
-ports over one shared word type, and the program-level transformations below
-are stated over the canonical shared-word carrier `StackCarrier.ProgW`, whose
-single parameter matches HOL's `'a`.  The register-immediate/instruction
-transformations are polymorphic in the word type, exactly as HOL is; only the
-executable Boolean `namesOk` remains untagged, with the tagged
-proposition-valued `namesOkHOL` beside it.
+HOL's transformations are polymorphic in `'a`, but `'a` is an actual word type
+carried by `Reg`/`Imm`/`inst`/`addr`; the tagged ports are therefore
+width-indexed at `BitVec width` (with `[NeZero width]`), and the
+program-level transformations are stated over the canonical shared-word
+carrier `StackCarrier.ProgW (BitVec width)`, whose single parameter matches
+HOL's `'a`.  Only the executable Boolean `namesOk` remains untagged, with the
+tagged proposition-valued `namesOkHOL` beside it.
 -/
 
 namespace Flapjack.Compiler.Backend.StackNames
@@ -45,16 +43,18 @@ def findName (names : FiniteMap Nat Nat) (register : Nat) : Nat :=
   | none => register
 
 /-- HOL `ri_find_name_def` (`stack_namesScript.sml:16-19`), polymorphic in the
-word type as in HOL: rename the register of a register-immediate. -/
+word type as in HOL (width-indexed, since HOL's `'a` is an actual word): rename the register of a register-immediate. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "ri_find_name_def"]
-def riFindName {α : Type} (names : FiniteMap Nat Nat) : WordRegImm α → WordRegImm α
+def riFindName {width : Nat} [NeZero width] (names : FiniteMap Nat Nat) :
+    WordRegImm (BitVec width) → WordRegImm (BitVec width)
   | .reg register => .reg (findName names register)
   | .imm value => .imm value
 
 /-- HOL `inst_find_name_def` (`stack_namesScript.sml:21-49`), polymorphic in
-the word type as in HOL: rename every register of an instruction. -/
+the word type as in HOL (width-indexed, since HOL's `'a` is an actual word): rename every register of an instruction. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "inst_find_name_def"]
-def instFindName {α : Type} (names : FiniteMap Nat Nat) : WordLangInst α → WordLangInst α
+def instFindName {width : Nat} [NeZero width] (names : FiniteMap Nat Nat) :
+    WordLangInst (BitVec width) → WordLangInst (BitVec width)
   | .skip => .skip
   | .const destination value => .const (findName names destination) value
   | .arith (.binop operator destination source right) =>
@@ -92,7 +92,8 @@ def destFindName (names : FiniteMap Nat Nat) : Sum Nat Nat → Sum Nat Nat
 a program.  Stated over the canonical shared-word carrier `ProgW`, whose single
 type parameter matches HOL's `'a`. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "comp_def"]
-def progComp {α : Type} (names : FiniteMap Nat Nat) : ProgW α → ProgW α
+def progComp {width : Nat} [NeZero width] (names : FiniteMap Nat Nat) :
+    ProgW (BitVec width) → ProgW (BitVec width)
   | .halt register => .halt (findName names register)
   | .raise exception => .raise (findName names exception)
   | .break label => .break label
@@ -128,21 +129,21 @@ def progComp {α : Type} (names : FiniteMap Nat Nat) : ProgW α → ProgW α
 
 /-- HOL `prog_comp_def` (`stack_namesScript.sml:101-103`) over `ProgW`. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "prog_comp_def"]
-def progCompEntry {α : Type} (names : FiniteMap Nat Nat)
-    (entry : Nat × ProgW α) : Nat × ProgW α :=
+def progCompEntry {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
+    (entry : Nat × ProgW (BitVec width)) : Nat × ProgW (BitVec width) :=
   (entry.1, progComp names entry.2)
 
 /-- HOL `compile_def` (`stack_namesScript.sml:105-107`) over `ProgW`. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "compile_def"]
-def compile {α : Type} (names : FiniteMap Nat Nat)
-    (program : List (Nat × ProgW α)) : List (Nat × ProgW α) :=
+def compile {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
+    (program : List (Nat × ProgW (BitVec width))) : List (Nat × ProgW (BitVec width)) :=
   program.map (progCompEntry names)
 
 /-- HOL `MAP_FST_compile` (`stack_namesProofScript.sml:268-272`): renaming
 preserves the function identifiers of a program. -/
 @[hol "cakeml/compiler/backend/proofs/stack_namesProofScript.sml" "MAP_FST_compile"]
-theorem map_fst_compile {α : Type} (names : FiniteMap Nat Nat)
-    (program : List (Nat × ProgW α)) :
+theorem map_fst_compile {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
+    (program : List (Nat × ProgW (BitVec width))) :
     (compile names program).map Prod.fst = program.map Prod.fst := by
   induction program with
   | nil => rfl

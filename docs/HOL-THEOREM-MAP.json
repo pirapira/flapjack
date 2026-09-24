@@ -8784,14 +8784,6 @@
     "reviewer": "Codex (statement compared against panSemScript.sml:309-316; tail-first recursion via panMemStoreByteHOL, a failed store keeps the original outer memory. Direct HOL-EVAL rows write_bytearray_changed/write_bytearray_other_unchanged/write_bytearray_out_of_domain reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
   },
 {
-  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
-  "hol_name": "word_loc",
-  "lean_path": "Flapjack/Pancake/WordLang.lean",
-  "lean_name": "WordLoc",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
   "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
   "hol_name": "is_SOME_Word_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",

@@ -31,9 +31,10 @@ open Flapjack
 /-- HOL `bytes_in_word` at width `width` (`n2w (dimindex (:'a) DIV 8)`). -/
 def bytesInWord (width : Nat) : BitVec width := BitVec.ofNat width (width / 8)
 
-/-- HOL `is_SOME_Word` (`cakeml/compiler/backend/proofs/stack_removeProofScript.sml:144-146`). -/
+/-- HOL `is_SOME_Word` (`cakeml/compiler/backend/proofs/stack_removeProofScript.sml:144-146`),
+width-indexed: HOL's `word_loc` payload is the actual `'a word`. -/
 @[hol "cakeml/compiler/backend/proofs/stack_removeProofScript.sml" "is_SOME_Word_def"]
-def isSomeWord {α : Type} : Option (WordLoc α) → Bool
+def isSomeWord {width : Nat} [NeZero width] : Option (WordLoc (BitVec width)) → Bool
   | some (.word _) => true
   | _ => false
 

@@ -1,4 +1,5 @@
 import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.CrepToLoop.StateRel
 
 /-!
 Direct parity for `crep_to_loop$compile` (`crep_to_loopScript.sml:120`).
@@ -306,5 +307,19 @@ def runChecks : IO Bool := do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"
     all := all && result
   pure all
+
+/-- HOL `crep_to_loopProofScript.sml` `state_rel_intro`: the Crepe-to-Loop
+    state relation unfolds to the seven-field conjunction, matching the direct
+    HOL-EVAL rows in `scripts/hol-probes/crep_to_loop_state_rel_probe.out`. -/
+example (s : CrepHolState Nat Unit) (t : LoopMachineState Nat Unit) :
+    crepToLoopStateRel s t ↔
+      s.memaddrs = t.mdomain ∧
+        s.shMemaddrs = t.shMdomain ∧
+        s.clock = t.clock ∧
+        s.bigEndian = t.be ∧
+        s.ffi = t.ffi ∧
+        s.baseAddress = t.baseAddr ∧
+        s.topAddress = t.topAddr :=
+  crepToLoopStateRel_intro s t
 
 end Flapjack.Test.CrepToLoopParity

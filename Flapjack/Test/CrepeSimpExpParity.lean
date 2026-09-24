@@ -652,6 +652,49 @@ def holState8 : CrepHolState (RiscV.Word 8) Unit :=
     baseAddress := 0
     topAddress := 0 }
 
+def holState8WithGlobal : CrepHolState (RiscV.Word 8) Unit :=
+  { holState8 with globals := fun _ => some (.word (word8 9)) }
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.const (word8 4))) =
+    evalCrepHolExpWordLab holState8 (.const (word8 4)) :=
+  crepSimpExpCorrect1ConstCase (fun entry => entry) holState8 (word8 4)
+    (.word (word8 4)) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.var 2)) =
+    evalCrepHolExpWordLab holState8 (.var 2) :=
+  crepSimpExpCorrect1VarCase (fun entry => entry) holState8 2
+    (.word (word8 7)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8,
+        updateCrepRuntimeLocal, panTheWord])
+
+example :
+    evalCrepHolExpWordLab
+        (crepArithHolMapCode (fun entry => entry) holState8WithGlobal)
+        (crepSimpExp (BitVec.ofNat 8) (.loadGlob 0)) =
+      evalCrepHolExpWordLab holState8WithGlobal (.loadGlob 0) :=
+  crepSimpExpCorrect1LoadGlobCase (fun entry => entry) holState8WithGlobal 0
+    (.word (word8 9)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8WithGlobal,
+        holState8, panTheWord])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .baseAddr) =
+    evalCrepHolExpWordLab holState8 .baseAddr :=
+  crepSimpExpCorrect1BaseAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .topAddr) =
+    evalCrepHolExpWordLab holState8 .topAddr :=
+  crepSimpExpCorrect1TopAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
 def holExpression8 : CrepExp (RiscV.Word 8) :=
   .crepOp .mul [.var 2, .const (word8 8)]
 

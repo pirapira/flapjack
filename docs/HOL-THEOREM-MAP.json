@@ -248,6 +248,14 @@
     "reviewer": "Generic Option-list statement matches local HOL theorem; Lean List.mapM with Option is the OPT_MMAP encoding"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "lookup_code",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithLookupCodeSimpProg",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause with local lookup_code at line 162: FMAP_MAP2 maps each stored simp_prog body, and OPTION_MAP (simp_prog ## I) changes only the returned program; Lean fromNat exposes the word type's implicit n2w operation, len is retained as the unused HOL input, and lookup uses lookupCrepHolCode"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_2exp_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -334,6 +342,46 @@
     "lean_name": "crepSimpExpEvalPreservesHolFiniteDimension",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only all-constructor production evaluator preservation helper using an explicit finite-dimension RISC-V/BitVec interpretation"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1ConstCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific Const case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1VarCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific Var case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadGlobCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific LoadGlob case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1BaseAddrCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific BaseAddr case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1TopAddrCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific TopAddr case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -5115,6 +5163,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-payload target Call dispatcher deriving compiled arguments and state-owned callee lookup, then composing the finite-map exp_hdl state_rel/code_rel/excp_rel/locals_rel boundary with the handler-body IH. The recursive callee and handler simulations remain premises; this is not pc_compile_correct[Call_Ret_Exception]."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only target Call_Ret_Exception dispatcher for a two-word payload using a full expression IH to derive compiled arguments and the state-owned callee lookup, then composing two-word exp_hdl state_rel/code_rel/excp_rel/locals_rel with the handler-body IH. The callee and handler simulations remain premises; this is not the full pc_compile_correct case."
@@ -5139,9 +5195,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedTwoWords_postRelations",
+    "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only composition of an actual state-owned source Call run and two-word production target Call dispatch. Full expression IHs derive target arguments and callee locals; a recursive target callee IH supplies the raised run and related post-state/global cells, then a handler IH supplies the result relations. Both recursive simulations remain premises; this is not the full pc_compile_correct Call_Ret_Exception theorem."
+    "reviewer": "Flapjack-only arbitrary-payload source/target Call composition deriving the source Call run from source callee/handler premises, then carrying its projected result through production target dispatch. The target callee-body IH supplies its evaluator run, state_rel/code_rel/excp_rel, and the state-owned global-word relation consumed by arbitrary finite-map exp_hdl; the handler relation IH remains a premise. Recursive body simulations are unproved, so this is not pc_compile_correct[Call_Ret_Exception]."
   },
   {
     "hol_path": null,
@@ -6358,6 +6414,14 @@
     "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeGlobalWordsRel_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only consequence of the Flapjack global-word relation: each related destination slot has exactly one corresponding loaded word; no standalone HOL declaration"
   },
   {
     "hol_path": null,

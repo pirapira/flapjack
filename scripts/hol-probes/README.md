@@ -82,6 +82,12 @@ missing global; the matching Lean guards live in
 `cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
 and multiplication expression. Its Lean constructor checks live in
 `Flapjack.Test.CrepeDestConstParity`.
+`crep_arith_lookup_code_probe.out` records the original
+`OPTION_MAP (simp_prog ## I)` result for a nonempty code map, directly
+exercising the result side of the local `lookup_code` lemma at
+`cakeml/pancake/proofs/crep_arithProofScript.sml:162`. Its Lean comparison
+uses the exact `lookupCrepHolCode` path in
+`Flapjack.Test.CrepeArithLookupCodeParity`.
 `crep_dest_2exp_probe.out` records direct HOL EVAL of
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean

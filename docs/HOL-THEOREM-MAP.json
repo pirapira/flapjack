@@ -5299,22 +5299,6 @@
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "evalPanValueFieldsFull_projection",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Private support for the NStruct specialization of HOL compile_exp_correct. It projects successful full named-field evaluation to full evaluation of the field expressions with values in the same order, threading the shared memory adapter. Untagged because the Lean full evaluator and explicit state adapter differ from HOL finite-map evaluation."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "compile_exp_correct",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "evalPanValueFieldsFull_names",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "compile_exp_correct",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectRStructCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked RStruct constructor specialization of HOL compile_exp_correct over evalPanValueExpFull. It retains successful evaluation, context-view equality, pointwise field-validity, struct_infos_ok, local/global shape-map premises, and all three parent conclusions; the per-field IHs carry the same premises. One explicit PanValueMemoryAccess is shared by source evaluation, every recursive IH, and converted evaluation. It remains untagged because HOL has one universal theorem with no named RStruct case, while Lean uses total lookup/Bool adapters, explicit bytesInWord, memory access, and full-evaluator operation dictionaries instead of HOL finite maps and fixed-width eval. Paired direct HOL EVAL and Lean regressions cover the nonempty RStruct case."
@@ -6640,22 +6624,6 @@
     "reviewer": "Lean-only list representation bridge: if every expression compiles to one word expression, cexpHeads over mapped compileExpHOL results equals compileArgsHOL. This is reusable induction infrastructure, not a standalone HOL declaration."
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "alookup_compile_prog_code",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "alookupCompileToCrepCode",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry)."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "compileToCrepHOL_eq_map",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only helper: compileToCrepHOL is the source function list mapped through comp_func/crep_vars with the context built from the same declarations; used to move ALOOKUP over compile_to_crep onto the source table."
-  },
-  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
@@ -6710,5 +6678,37 @@
     "lean_name": "elCompileToCrepElProgEq",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "alookup_compile_prog_code",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "alookupCompileToCrepCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileToCrepHOL_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper: compileToCrepHOL is the source function list mapped through comp_func/crep_vars with the context built from the same declarations; used to move ALOOKUP over compile_to_crep onto the source table."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_projection",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization of HOL compile_exp_correct. It projects successful full named-field evaluation to full evaluation of the field expressions with values in the same order, threading the shared memory adapter. Untagged because the Lean full evaluator and explicit state adapter differ from HOL finite-map evaluation."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "evalPanValueFieldsFull_names",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
   }
 ]

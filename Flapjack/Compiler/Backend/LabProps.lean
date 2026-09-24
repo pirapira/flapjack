@@ -2,6 +2,7 @@ import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Backend.StackToLab
+import Flapjack.Compiler.Backend.StackProps
 
 /-!
 # Cake labProps pre-encoding predicates
@@ -549,6 +550,54 @@ theorem flatten_install_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmCo
   simp [lineOkPreConfig_labAsm, lineOkPreConfig_label]
 
 end FlattenBaseLinesAll
+
+/-
+Compatibility facts pulling the per-constructor validity information out of
+`StackProps.stackAsmOk` instantiated with the real `asm_config` predicates, so
+the `flatten_line_ok_pre` induction can discharge its hypotheses from HOL's
+`stack_asm_ok c p` and `byte_offset_ok c 0w` premises. -/
+section StackAsmOkBridge
+
+variable {width : Nat} (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+
+theorem stackAsmOk_asmChecksOfConfig_inst
+    (instruction : WordLangInst (BitVec width))
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.inst instruction : FlattenProg width) = true) :
+    Flapjack.Compiler.Encoders.Asm.asmInstOk config instruction = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_shMemOp
+    (operator : WordMemOp) (register : Nat) (address : WordLangAddr (BitVec width))
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.shMemOp operator register address : FlattenProg width) = true) :
+    (Flapjack.Compiler.Encoders.Asm.asmRegOk config register &&
+      StackProps.asmAddrOk config operator address) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_raise
+    (register : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.raise register : FlattenProg width) = true) :
+    (register < config.regCount && !config.avoidRegs.contains register) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_ret
+    (register : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.ret register : FlattenProg width) = true) :
+    (register < config.regCount && !config.avoidRegs.contains register) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_codeBufferWrite
+    (left right : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.codeBufferWrite left right : FlattenProg width) = true) :
+    (left < config.regCount && right < config.regCount &&
+      !config.avoidRegs.contains left && !config.avoidRegs.contains right) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+end StackAsmOkBridge
 
 end Flapjack.Compiler.Backend.LabProps
 

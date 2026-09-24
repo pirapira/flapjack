@@ -7726,5 +7726,13 @@
     "lean_name": "fmEmptyZipFlookupEl",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against fm_empty_zip_flookup_el at pan_commonPropsScript.sml:479; HOL EL n rendered as bounded getElem as in elLoadGlobals, nested ZIP as (ys.zip zs); direct HOL-EVAL row nested_zip_lookup=T reproduced by Lean guard nestedZipLookupEl in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "all_distinct_alist_no_overlap",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "allDistinctAlistNoOverlap",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against all_distinct_alist_no_overlap at panPropsScript.sml:476; HOL alist_to_fmap (ZIP (vs,ZIP (sh,with_shape sh ns))) rendered as FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns))), with vs : List String matching mlstring var names; direct HOL-EVAL rows alist_a_nodup/alist_b_nodup/alist_a_slots/alist_b_slots/alist_disjoint reproduced by Lean guard in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

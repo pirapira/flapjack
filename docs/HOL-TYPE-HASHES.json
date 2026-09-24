@@ -1627,6 +1627,14 @@
     },
     {
       "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+      "lean_name": "allDistinctAlistNoOverlap",
+      "lean_full_name": "Flapjack.allDistinctAlistNoOverlap",
+      "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+      "hol_name": "all_distinct_alist_no_overlap",
+      "sha256": "dafe53c89ad1979c2119d3686f5ff744756e824e728ed08ad5c4236017a93745"
+    },
+    {
+      "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
       "lean_name": "fdoms_eq_flookup_some_none",
       "lean_full_name": "Flapjack.fdoms_eq_flookup_some_none",
       "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

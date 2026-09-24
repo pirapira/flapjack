@@ -8730,7 +8730,7 @@
   {
     "hol_path": "cakeml/basis/pure/mlstringScript.sml",
     "hol_name": "mlstring",
-    "lean_path": "Flapjack/Compiler/Backend/MlString.lean",
+    "lean_path": "Flapjack/Basis/Pure/MlString.lean",
     "lean_name": "MlString",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `mlstring` at cakeml/basis/pure/mlstringScript.sml:19-21 - Datatype: mlstring = implode string, where HOL string = char list. HOL char is the canonical 256-element type (bijection CHR/ORD with num, HOL/src/string/stringScript.sml:29); Flapjack models it by HolChar = BitVec 8, the canonical 256-element carrier, exactly as HOL word types are modeled by BitVec width. The Lean inductive MlString = implode (List HolChar) is a single-constructor datatype with the same field, no width index and no typeclass side condition. Direct HOL-EVAL rows ml_strlen=3/ml_ord0=0/ml_ord255=255/ml_chr_ord=T/ml_explode_len=2/ml_implode_explode=T/ml_explode_implode=T/ml_concat_len=3 in scripts/hol-probes/mlstring_carrier_probe.out are reproduced by Lean guards in Flapjack/Test/MlStringParity.lean. This carrier is the prerequisite for the exact shared-word stackLang program theorems; see flapjack-pxn.18.5.15.3.11.2)"
@@ -8810,10 +8810,10 @@
   {
    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
    "hol_name": "prog",
-   "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+   "lean_path": "Flapjack/Compiler/Backend/StackLang/Prog.lean",
    "lean_name": "HolProg",
    "statement_status": "reviewed_exact",
-   "reviewer": "flapjack-deepseek-three (2026-09-25: exact width-indexed port of HOL `prog` at stackLangScript.sml:27-66. HOL parameterises prog by a single shared word type 'a and its FFI field is `mlstring = implode string` (mlstringScript.sml:19-21). HolProg width instantiates the generic seven-parameter StackLang.Prog with the exact width-indexed carriers HolInst width/HolRegImm width/HolAddr width, the monomorphic HolCmp/HolBinop/HolMemop, and the faithful MlString carrier, so it has the single shared word dimension and a matching FFI field; all 34 constructor arities and field types match. The production StackCarrier.ProgW (String FFI) is a separate untagged generic-field carrier; a kernel-checked String<->MlString bridge between the two does not exist yet and is PENDING under flapjack-pxn.18.5.15.3.11.2.3. Direct HOL-EVAL rows pg_skip=Skip/pg_seq=Seq Skip Skip/pg_inst=8/pg_get=7/pg_stackalloc=4/pg_shmem=12/pg_ffi_len=2/pg_ffi_explode=\"AB\"/pg_ffi_eq=T in scripts/hol-probes/stack_lang_prog_carrier_probe.out are reproduced by progCarrierGuard in Flapjack/Test/AsmConfigChecksParity.lean)"
+   "reviewer": "flapjack-deepseek-three (2026-09-25: exact width-indexed port of HOL `prog` at stackLangScript.sml:27-66. HOL parameterises prog by a single shared word type 'a and its FFI field is `mlstring = implode string` (mlstringScript.sml:19-21). HolProg width instantiates the generic seven-parameter StackLang.Prog with the exact width-indexed carriers HolInst width/HolRegImm width/HolAddr width, the monomorphic HolCmp/HolBinop/HolMemop, and the faithful MlString carrier, so it has the single shared word dimension and a matching FFI field; all 34 constructor arities and field types match. The production StackCarrier.ProgW (String FFI) is a separate untagged generic-field carrier; the kernel-checked String<->MlString bridge between the two is holProgToProgW/progWToHolProg with roundtrip progWToHolProg_holProgToProgW in Flapjack/Compiler/Backend/MlStringBridge.lean (flapjack-pxn.18.5.15.3.11.2.3, now implemented). Direct HOL-EVAL rows pg_skip=Skip/pg_seq=Seq Skip Skip/pg_inst=8/pg_get=7/pg_stackalloc=4/pg_shmem=12/pg_ffi_len=2/pg_ffi_explode=\"AB\"/pg_ffi_eq=T in scripts/hol-probes/stack_lang_prog_carrier_probe.out are reproduced by progCarrierGuard in Flapjack/Test/AsmConfigChecksParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",

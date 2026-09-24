@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackLang.Prog
 
 /-!
 Kernel-checked parity guards for the assembler configuration validity
@@ -22,6 +23,7 @@ namespace Flapjack.Test.AsmConfigChecksParity
 
 open Flapjack
 open Flapjack.Compiler.Encoders.Asm
+open Flapjack.Compiler.Backend.StackLang (HolProg)
 open Flapjack.Compiler.Backend.StackProps
 
 private abbrev W := BitVec 8
@@ -329,7 +331,7 @@ example : (Flapjack.BinOp.add : HolBinop) = Flapjack.BinOp.add := rfl
 example : (Flapjack.WordMemOp.store32 : HolMemop) = Flapjack.WordMemOp.store32 := rfl
 example : (HolProg 64) = Flapjack.Compiler.Backend.StackLang.Prog (HolInst 64)
     HolCmp (HolRegImm 64) HolBinop HolMemop (HolAddr 64)
-    Flapjack.Compiler.Backend.MlString.MlString := rfl
+    Flapjack.Basis.Pure.MlString.MlString := rfl
 
 /-! ### Exact `stackLang$prog` carrier oracle parity (bead 18.5.15.3.11.2.2)
 
@@ -356,12 +358,12 @@ private def pStackAlloc (words : Nat) : P64 :=
 private def pShMem (operator : HolMemop) (register : Nat) (address : HolAddr 64) : P64 :=
   Flapjack.Compiler.Backend.StackLang.Prog.shMemOp operator register address
 
-private def pFfi (function : Flapjack.Compiler.Backend.MlString.MlString)
+private def pFfi (function : Flapjack.Basis.Pure.MlString.MlString)
     (configuration configurationLength array arrayLength returnAddress : Nat) : P64 :=
   Flapjack.Compiler.Backend.StackLang.Prog.ffi function configuration configurationLength
     array arrayLength returnAddress
 
-private def c8 (n : Nat) : Flapjack.Compiler.Backend.MlString.HolChar := BitVec.ofNat 8 n
+private def c8 (n : Nat) : Flapjack.Basis.Pure.MlString.HolChar := BitVec.ofNat 8 n
 
 private def progInstTag : Nat :=
   match pInst (.const 3 (w64 5)) with
@@ -384,7 +386,7 @@ private def progShMemTag : Nat :=
   | _ => 0
 
 private def progFfiLen : Nat :=
-  match pFfi (Flapjack.Compiler.Backend.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
+  match pFfi (Flapjack.Basis.Pure.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
   | .ffi s _ _ _ _ _ => s.explode.length
   | _ => 0
 
@@ -393,8 +395,8 @@ private def progSkipSeq : Bool :=
   | .seq .skip .skip => true
   | _ => false
 
-private def progFfiExplode : List Flapjack.Compiler.Backend.MlString.HolChar :=
-  match pFfi (Flapjack.Compiler.Backend.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
+private def progFfiExplode : List Flapjack.Basis.Pure.MlString.HolChar :=
+  match pFfi (Flapjack.Basis.Pure.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
   | .ffi s _ _ _ _ _ => s.explode
   | _ => []
 

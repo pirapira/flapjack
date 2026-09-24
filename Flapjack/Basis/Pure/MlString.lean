@@ -25,7 +25,7 @@ and its FFI constructor stores an `mlstring`, whereas the executable
 `Flapjack.Compiler.Backend.StackCarrier.ProgW` uses Lean `String`.
 -/
 
-namespace Flapjack.Compiler.Backend.MlString
+namespace Flapjack.Basis.Pure.MlString
 
 /-- Model of HOL `char`: the canonical 256-element type.  HOL `char` is an
 abstract type with a bijection `CHR`/`ORD` to the 256 values; `BitVec 8` has the
@@ -139,4 +139,4 @@ theorem toStringOfBytes_ofString_of_bytes (s : String)
         rw [Function.comp_apply, char_of_byte_toNat c (h c hc)]
         simp [Char.ofNat_toNat])
 
-end Flapjack.Compiler.Backend.MlString
+end Flapjack.Basis.Pure.MlString

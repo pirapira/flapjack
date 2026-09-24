@@ -170,6 +170,39 @@ theorem fdom_subset_flookup_thm {α : Type} {β : Type} (f g : FiniteMap α β) 
         rw [show g x = some q from hq]
         exact Option.some_ne_none q
 
+/-- CakeML's `res_var_commutes_strong` (`crep_inlineProofScript.sml:699`):
+    `res_var` updates at two keys commute, with no `n ≠ h` side condition (the
+    equal case is definitional).  Stated over the reviewed `resVar`
+    (`res_var_def`), whose Boolean key equality reflects HOL's `=` under
+    `[LawfulBEq α]`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "res_var_commutes_strong"]
+theorem res_var_commutes_strong [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β)
+    (n h : α) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  by_cases hne : n = h
+  · subst hne
+    rfl
+  · exact resVar_commutes lc lc' n h hne
+
+/-- CakeML's `res_var_foldl_commutes_strong`
+    (`crep_inlineProofScript.sml:706`): commuting a single `res_var` update past
+    a `foldl` of `res_var` over the `ZIP`ped lookup list.  `ZIP (vs, MAP f vs)`
+    is Lean's `vs.zip (vs.map f)`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "res_var_foldl_commutes_strong"]
+theorem res_var_foldl_commutes_strong [BEq α] [LawfulBEq α]
+    (h : α) (vs : List α) (lc1 lc2 : FiniteMap α β) :
+    resVar ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVar lc1)
+        (h, FLOOKUP lc2 h) =
+      (vs.zip (vs.map (FLOOKUP lc2))).foldl resVar
+        (resVar lc1 (h, FLOOKUP lc2 h)) := by
+  induction vs generalizing lc1 with
+  | nil => simp
+  | cons v vs ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [ih (resVar lc1 (v, FLOOKUP lc2 v)),
+        (res_var_commutes_strong lc1 lc2 v h).symm]
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

@@ -30,6 +30,15 @@ OLD_DECL_RE = re.compile(
 THEORY_RE = re.compile(r"^\s*Theory\s+(\S+)")
 OLD_THEORY_RE = re.compile(r'^\s*val\s+_\s*=\s*new_theory\s+"([^"]+)"')
 ANCESTORS_RE = re.compile(r"^\s*Ancestors\b(.*)$")
+# A line beginning a new header section or the theory body; it terminates an
+# ``Ancestors`` list.  Used instead of "collect until the next known keyword"
+# so that unrelated body lines cannot leak into the dependency graph.
+SECTION_RE = re.compile(
+    r"^\s*(?:Libs\b|Type\b|Datatype:|Definition\b|Theorem\b|Triviality\b|"
+    r"val\b|Overload\b|open\b|local\b|structure\b|signature\b|functor\b|"
+    r"fun\b|end\b|Infrastructure\b|Tests?\b|Proof\b)"
+)
+IDENT_ONLY = re.compile(r"^" + IDENT + r"$")
 
 
 @dataclass(frozen=True)
@@ -182,21 +191,40 @@ def parse_file(root: Path, path: Path) -> tuple[list[Entry], list[tuple[str, str
         match = ANCESTORS_RE.match(line)
         if not match:
             continue
-        rest = match.group(1).split()
+        rest = [
+            ancestor
+            for tok in match.group(1).split()
+            if (ancestor := clean_name(tok)) and IDENT_ONLY.match(ancestor)
+        ]
         j = i + 1
-        while j < len(masked) and not re.match(
-            r"^\s*(?:Libs\b|Type\b|Datatype:\b|Definition\b|Theorem\b|"
-            r"Triviality\b|val\b|Overload\b)",
-            masked[j],
-        ):
-            # A blank line is part of an empty/multiline Ancestors section;
-            # stop at a second obvious top-level section instead.
-            if masked[j].strip():
-                rest.extend(masked[j].split())
+        while j < len(masked):
+            line_j = masked[j]
+            if not line_j.strip():
+                # Blank lines are tolerated only when an indented,
+                # non-section continuation line follows.
+                k = j + 1
+                while k < len(masked) and not masked[k].strip():
+                    k += 1
+                if (
+                    k < len(masked)
+                    and masked[k][0].isspace()
+                    and not SECTION_RE.match(masked[k])
+                ):
+                    j = k
+                    continue
+                break
+            if not line_j[0].isspace():
+                break
+            if SECTION_RE.match(line_j):
+                break
+            rest.extend(
+                ancestor
+                for tok in line_j.split()
+                if (ancestor := clean_name(tok)) and IDENT_ONLY.match(ancestor)
+            )
             j += 1
-        for ancestor in rest:
-            ancestor = clean_name(ancestor)
-            if ancestor:
+        for ancestor in dict.fromkeys(rest):
+            if ancestor and ancestor != theory:
                 dependencies.append((theory, ancestor))
         break
 

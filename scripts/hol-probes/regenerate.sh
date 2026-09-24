@@ -236,7 +236,7 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq flookup_absent "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
-  len0 wf_ok "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  len0 flookup0 "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   flookup_f skip_identity "$cake_dir/pancake/crep_inlineScript.sml" \
@@ -1024,3 +1024,9 @@ run_probe pan_itree_h_prog_call_probeScript.sml \
 run_probe word_byte_memory_probeScript.sml word_byte_memory_probe.out \
   byte_index_definition set_byte_width17_big_nonzero_numeric \
   "$hol_dir/src/n-bit/byteScript.sml" "$hol_dir/src/n-bit"
+# `labels_rel` is the wordConvs label-preservation relation; the fixture
+# simplifies under `labels_rel_def` because `EVAL` leaves `set ... SUBSET ...`.
+run_probe word_convs_labels_rel_probeScript.sml word_convs_labels_rel_probe.out \
+  labels_rel_refl_ok labels_rel_pair_ok \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

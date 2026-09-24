@@ -309,6 +309,10 @@ run_probe get_forced_probeScript.sml get_forced_probe.out \
 run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe reg_alloc_dec_deg_probeScript.sml reg_alloc_dec_deg_probe.out \
+  dec_deg_in_bounds_result update_degrees_out_of_bounds_result \
+  "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend/reg_alloc"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"

@@ -659,6 +659,36 @@ private theorem crepDest2ExpFuel_sound {n : Nat} [NeZero n]
               _ = 2 ^ (result - start) % 2 ^ n := by
                 rw [hdiff, Nat.mod_eq_of_lt hpowlt]
 
+/-- Width-parametric BitVec support for HOL's `dest_2exp_bound`
+    (`crep_arithProofScript.sml:10`). HOL defines `word_log2 w` as
+    `n2w (LOG2 (w2n w))`; `BitVec.ofNat` and `BitVec.toNat` express those
+    operations for the Lean width-indexed word representation. This follows
+    from production `crepDest2Exp` soundness without assuming an
+    evaluator-preservation result. It is intentionally untagged: the Lean
+    theorem quantifies over `BitVec n`, while HOL quantifies over its
+    polymorphic `'a word`/implicit `dimindex`; the finite-index carrier
+    identification needed to claim the exact polymorphic HOL declaration has
+    not been established. -/
+theorem crepDest2ExpBound {n : Nat} [NeZero n]
+    (start : Nat) (word : BitVec n) (result : Nat)
+    (h : crepDest2Exp start word = some result) :
+    result ≤ start + (BitVec.ofNat n (Nat.log2 word.toNat)).toNat := by
+  change crepDest2ExpFuel (n + 1) start word = some result at h
+  have hs := crepDest2ExpFuel_sound (n + 1) start word result h
+  obtain ⟨hstart, hwidth, hword⟩ := hs
+  have hdiff : result - start < n := hwidth
+  have hpowlt : 2 ^ (result - start) < 2 ^ n :=
+    Nat.pow_lt_pow_right (by decide) hdiff
+  have hwordNat : word.toNat = 2 ^ (result - start) := by
+    rw [hword, Nat.mod_eq_of_lt hpowlt]
+  have hlog : Nat.log2 word.toNat = result - start := by
+    rw [hwordNat, Nat.log2_two_pow]
+  have hlogWrap : (BitVec.ofNat n (Nat.log2 word.toNat)).toNat = result - start := by
+    rw [hlog, BitVec.toNat_ofNat, Nat.mod_eq_of_lt]
+    exact Nat.lt_trans hdiff (Nat.lt_two_pow_self (n := n))
+  rw [hlogWrap]
+  omega
+
 /-- Fixed-width support instance of HOL `dest_2exp_thm`. The HOL theorem is
     polymorphic in `'a word`; this declaration proves only the `RiscV.Word n`
     representation and therefore has no HOL tag. A genuinely generic theorem

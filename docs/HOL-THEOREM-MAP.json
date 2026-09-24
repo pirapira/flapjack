@@ -7895,5 +7895,13 @@
   "lean_name": "asmOk",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "inst_ok_less_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "instOkLess",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

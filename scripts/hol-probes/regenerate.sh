@@ -1101,3 +1101,10 @@ run_probe asm_config_checks_probeScript.sml asm_config_checks_probe.out \
   aligned0 asmOkLoc \
   "$cake_dir/compiler/backend/semantics/stackPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# Direct HOL fixture for wordConvs$inst_ok_less, the weaker per-instruction
+# well-formedness predicate consumed by compile_to_word_conventions2.
+run_probe word_convs_inst_ok_less_probeScript.sml word_convs_inst_ok_less_probe.out \
+  iol_binop_imm iol_movtoreg_ok \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

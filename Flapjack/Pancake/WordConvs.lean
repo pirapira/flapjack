@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.WordLang
+import Flapjack.Compiler.Encoders.Asm
 
 /-!
 # CakeML backend `wordConvs` syntactic conventions
@@ -18,6 +19,8 @@ The `num_set` cut-set carriers of `WordLangProg` are modelled by
 -/
 
 namespace Flapjack
+
+open Flapjack.Compiler.Encoders.Asm
 
 /-- Exact source counterpart of CakeML `wordConvs$labels_rel_def`
 (`cakeml/compiler/backend/semantics/wordConvsScript.sml:139-143`): labels may be
@@ -180,6 +183,80 @@ def flatExpConventions {width : Nat} : WordLangProg (BitVec width) → Bool
         (match handler with
           | none => true
           | some (_, handlerProg, _, _) => flatExpConventions handlerProg)
+  | _ => true
+
+/-- Exact source counterpart of CakeML `wordConvs$inst_ok_less_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:208-249`).  This is the
+weaker per-instruction well-formedness predicate used by
+`compile_to_word_conventions2`: unlike `asm$inst_ok` it omits the operand
+register checks and only constrains the configuration-dependent immediate and
+offset conditions.  The `Mem` branch lists `Load`/`Store`/`Load16`/`Store16`/
+`Load32`/`Store32` in its first case, so the `hw_offset_ok` case is only
+reachable for the remaining memops in the HOL definition. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_ok_less_def"]
+def instOkLess {width : Nat} (config : AsmConfig width) :
+    WordLangInst (BitVec width) → Bool
+  | .arith (.binop operator _ _ (.imm value)) => config.validImm (.inl operator) value
+  | .arith (.shift operator _ _ (.imm value)) =>
+      (!(value == 0) || operator == .lsl) && value.toNat < width
+  | .arith (.div ..) =>
+      config.isa == .armv8 || config.isa == .mips || config.isa == .riscv
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      (!(config.isa == .armv7) || !(destinationLeft == destinationRight)) &&
+        (!(config.isa == .armv8 || config.isa == .riscv || config.isa == .ag32) ||
+          (!(destinationLeft == sourceLeft) && !(destinationLeft == sourceRight)))
+  | .arith (.longDiv ..) => config.isa == .x86_64
+  | .arith (.addCarry destination _ sourceLeft sourceRight) =>
+      (!(config.isa == .mips || config.isa == .riscv) ||
+        (!(destination == sourceLeft) && !(destination == sourceRight)))
+  | .arith (.addOverflow destination _ sourceLeft _) =>
+      (!(config.isa == .mips || config.isa == .riscv) || !(destination == sourceLeft))
+  | .arith (.subOverflow destination _ sourceLeft _) =>
+      (!(config.isa == .mips || config.isa == .riscv) || !(destination == sourceLeft))
+  | .mem operator _ (.addr _ offset) =>
+      (if operator == .load || operator == .store || operator == .load16 ||
+          operator == .store16 || operator == .load32 || operator == .store32 then
+        asmAddrOffsetOk config offset
+       else if operator == .load16 || operator == .store16 then
+        asmHwOffsetOk config offset
+       else
+        asmByteOffsetOk config offset)
+  | .fp (.fpLess _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpLessEqual _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpEqual _ left right) => asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpAbs destination source) =>
+      (!config.twoRegArith || !(destination == source)) &&
+        asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpNeg destination source) =>
+      (!config.twoRegArith || !(destination == source)) &&
+        asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpSqrt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpAdd destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpSub destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpMul destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpDiv destination left right) =>
+      (!config.twoRegArith || destination == left) && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpFma destination left right) =>
+      (config.isa == .armv7) && 2 < config.fpRegCount && asmFpRegOk config destination &&
+        asmFpRegOk config left && asmFpRegOk config right
+  | .fp (.fpMov destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpMovToReg destinationInteger second _) =>
+      (!(width == 32) || !(destinationInteger == second))
+  | .fp (.fpMovFromReg _ destinationInteger second) =>
+      (!(width == 32) || !(destinationInteger == second))
+  | .fp (.fpToInt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
+  | .fp (.fpFromInt destination source) =>
+      asmFpRegOk config destination && asmFpRegOk config source
   | _ => true
 
 end Flapjack

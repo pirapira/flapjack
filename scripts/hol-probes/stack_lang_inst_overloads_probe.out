@@ -1,0 +1,6 @@
+left_shift_inst_2_3=T
+right_shift_inst_2_3=T
+const_inst_1_0=T
+load_inst_2_3=T
+store_inst_2_3=T
+halt_inst_0=T

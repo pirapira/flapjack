@@ -1466,3 +1466,9 @@ run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
   ex_const ex_bytesinword \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+# The num_set/spt probe observes the exact HOL sptree lookup/insert/wf/isEmpty
+# behaviour for the unit-spt carrier used as num_set.
+run_probe num_set_spt_probeScript.sml num_set_spt_probe.out \
+  lookup_ln insert_ovw \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"

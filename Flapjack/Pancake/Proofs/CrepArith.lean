@@ -1599,8 +1599,9 @@ theorem crepSimpExpEvalPreservesHolFiniteDimension {ι : Type} {σ : Type}
 
 /-! This target-specific helper proves the hard `CrepOp.mul` case of the
     recursive `simp_exp` preservation argument. It uses the generated
-    `crepSimpExp` equations and the untagged RISC-V multiplication support;
-    the HOL evaluator correspondence gap documented above remains open. -/
+    `crepSimpExp` equations, the width-parametric word port of HOL
+    `dest_const_thm`, and the untagged RISC-V multiplication support; the HOL
+    evaluator correspondence gap documented above remains open. -/
 theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (left right : CrepExp (RiscV.Word n)) (leftValue rightValue : RiscV.Word n)
@@ -1613,11 +1614,11 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
         some (leftValue * rightValue) := by
   cases hL : crepDestConst (crepSimpExp (BitVec.ofNat n) left) with
   | some leftConstant =>
-      have hLshape := crepDestConst_eq_const
+      have hLshape := crepDestConstWord_eq_const
         (crepSimpExp (BitVec.ofNat n) left) leftConstant hL
       cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
       | some rightConstant =>
-          have hRshape := crepDestConst_eq_const
+          have hRshape := crepDestConstWord_eq_const
             (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
           have hmulShape := crepSimpExp.eq_5 (BitVec.ofNat n) [left, right]
             leftConstant rightConstant (by simp [hLshape, hRshape])
@@ -1644,7 +1645,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
   | none =>
       cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
       | some rightConstant =>
-          have hRshape := crepDestConst_eq_const
+          have hRshape := crepDestConstWord_eq_const
             (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
           have hLnotConst : ∀ value,
               crepSimpExp (BitVec.ofNat n) left = .const value → False := by

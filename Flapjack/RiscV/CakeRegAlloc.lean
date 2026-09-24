@@ -621,6 +621,14 @@ structure CakeRaState where
   failure : Option CakeRaFailure := none
   deriving Repr
 
+/-- State-monad result carrier for one Cake allocator transition.  HOL's
+    `st_ex` result keeps the state on both success and failure; the pure
+    allocator pipeline below separately encodes a failure in `CakeRaState`. -/
+inductive CakeRaMResult where
+  | success (value : Unit) (state : CakeRaState)
+  | failure (error : CakeRaFailure) (state : CakeRaState)
+  deriving Repr
+
 /-- The empty allocator state for `n` nodes. -/
 def CakeRaState.empty (n : Nat) : CakeRaState :=
   { adjLists := CakeNodeMap.ofSize n, adjSets := none,
@@ -1080,25 +1088,40 @@ arrays; this port threads `CakeRaState` functionally. -/
     failure explicitly, checks the dense array bound before using `set!`, and
     treats an in-range missing option slot as an invalid array representation
     rather than silently inventing degree zero. -/
-def cakeDecDegStep (v : Nat) (state : CakeRaState) : Except CakeRaFailure CakeRaState :=
+/-- The explicit result/state form of HOL `dec_deg` over the allocator's
+    represented array.  Failed transitions retain their input state, as the
+    HOL `st_ex` equations do.  An in-range absent slot is an extra Lean
+    representation failure with no HOL list counterpart. -/
+def cakeDecDegMonadic (v : Nat) (state : CakeRaState) : CakeRaMResult :=
   if v < state.degrees.slots.size then
     match state.degrees.slots[v]? with
     | some (some degree) =>
-        .ok { state with degrees := state.degrees.set v (degree - 1) }
-    | _ => .error .missingDegreeSlot
+        .success () { state with degrees := state.degrees.set v (degree - 1) }
+    | _ => .failure .missingDegreeSlot state
   else
-    .error .subscript
+    .failure .subscript state
 
-/-! This is deliberately not tagged as HOL `dec_deg_def`: HOL's `dec_deg`
-    (`reg_allocScript.sml:252-257`) returns a state-monad result/state pair,
-    including `M_failure Subscript`, whereas this allocator pipeline is pure
-    and records failure in `CakeRaState.failure`. `cakeDecDegStep` exposes an
-    `Except CakeRaFailure CakeRaState` result and distinguishes an in-range
-    missing option slot (`.missingDegreeSlot`), which has no HOL list analogue.
-    The pipeline latches a failed update and rejects the overall colouring
-    result; subsequent updates preserve the first failure. On valid dense
-    states the successful path reduces to the same single `Array.set!` update
-    as `CakeNodeMap.set`. -/
+@[simp] theorem cakeDecDegMonadic_subscript (v : Nat) (state : CakeRaState)
+    (h : state.degrees.slots.size ≤ v) :
+    cakeDecDegMonadic v state = .failure .subscript state := by
+  simp [cakeDecDegMonadic, Nat.not_lt_of_ge h]
+
+def cakeDecDegStep (v : Nat) (state : CakeRaState) : Except CakeRaFailure CakeRaState :=
+  match cakeDecDegMonadic v state with
+  | .success () updated => .ok updated
+  | .failure error _ => .error error
+
+/-! This pipeline wrapper is deliberately not tagged as HOL `dec_deg_def`.
+    HOL's `dec_deg` (`reg_allocScript.sml:252-257`) returns a state-monad
+    result/state pair; the executed core `cakeDecDegMonadic` now exposes both
+    outcomes with their resulting state. The production wrapper projects that
+    result into `CakeRaState.failure` and the intermediate `cakeDecDegStep`
+    projects it to `Except`. The carrier still differs from HOL: it uses the
+    Lean `CakeRaFailure` type and a `CakeRaState` with extra `adjSets` and
+    `failure` fields, and an in-range missing option slot is an extra
+    `.missingDegreeSlot` case with no HOL list analogue. The pipeline latches a
+    failed update and rejects the overall colouring result; subsequent degree
+    updates preserve the first failure. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
   match state.failure with
   | some _ => state
@@ -1110,22 +1133,36 @@ def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
 private theorem cakeDecDegStep_stack_of_ok (v : Nat) (state updated : CakeRaState)
     (h : cakeDecDegStep v state = .ok updated) : updated.stack = state.stack := by
   unfold cakeDecDegStep at h
-  split at h
-  · split at h
-    · cases h
-      rfl
-    · cases h
-  · cases h
+  cases hm : cakeDecDegMonadic v state with
+  | success value newState =>
+      simp [hm] at h
+      cases h
+      cases value
+      unfold cakeDecDegMonadic at hm
+      split at hm
+      · split at hm
+        · cases hm
+          rfl
+        · cases hm
+      · cases hm
+  | failure error oldState => simp [hm] at h
 
 private theorem cakeDecDegStep_simpWl_of_ok (v : Nat) (state updated : CakeRaState)
     (h : cakeDecDegStep v state = .ok updated) : updated.simpWl = state.simpWl := by
   unfold cakeDecDegStep at h
-  split at h
-  · split at h
-    · cases h
-      rfl
-    · cases h
-  · cases h
+  cases hm : cakeDecDegMonadic v state with
+  | success value newState =>
+      simp [hm] at h
+      cases h
+      cases value
+      unfold cakeDecDegMonadic at hm
+      split at hm
+      · split at hm
+        · cases hm
+          rfl
+        · cases hm
+      · cases hm
+  | failure error oldState => simp [hm] at h
 
 @[simp] theorem cakeDecDeg_stack (v : Nat) (state : CakeRaState) :
     (cakeDecDeg v state).stack = state.stack := by

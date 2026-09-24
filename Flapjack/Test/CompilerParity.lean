@@ -233,8 +233,10 @@ import Flapjack.Test.WordLangEveryNameParity
 import Flapjack.Test.WordLangAllocConventionsParity
 import Flapjack.Test.LabPropsLineOkPreParity
 import Flapjack.Test.RiscvConfigParity
+import Flapjack.Test.MiscAppListParity
 import Flapjack.Test.StackToLabFlattenOpsParity
 import Flapjack.Test.StackToLabFlattenBaseParity
+import Flapjack.Test.StackToLabFlattenAppParity
 import Flapjack.Test.AsmConfigChecksParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
@@ -848,8 +850,10 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.WordLangAllocConventionsParity.runChecks,
     Flapjack.Test.LabPropsLineOkPreParity.runChecks,
     Flapjack.Test.RiscvConfigParity.runChecks,
+    Flapjack.Test.MiscAppListParity.runChecks,
     Flapjack.Test.StackToLabFlattenOpsParity.runChecks,
     Flapjack.Test.StackToLabFlattenBaseParity.runChecks,
+    Flapjack.Test.StackToLabFlattenAppParity.runChecks,
     Flapjack.Test.AsmConfigChecksParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,

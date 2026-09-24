@@ -6712,6 +6712,22 @@
     "reviewer": "Flapjack-only full localized-expression case for NField. It derives contradiction from stateRel's empty source struct table and PanSem lookupInfo semantics; it does not claim the target compiler's fallback is a semantic translation or port standalone HOL theorem text."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadOne_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH case for Load One at fixed RV64 width. It consumes the address full IH and uses stateRel to relate the source word-cell load to production Crep Load; arbitrary shapes remain unproved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_loadOne_const_stateRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned Load One at a constant address with production target Crep Load under stateRel; a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "el_compile_prog_el_prog_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

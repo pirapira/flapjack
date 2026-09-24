@@ -215,6 +215,227 @@ theorem panSemCodeEvaluateFuel_covers_clocked_bodies
       simp only [Nat.add_mul, Nat.mul_add, Nat.one_mul]
       omega
 
+/-! ### Canonical source fuel decomposition
+
+HOL's `pc_compile_correct` Call/DecCall cases need the callee and handler
+bodies to run at a fuel derived from the production canonical bound
+`panSemCodeEvaluateFuel`, rather than taken as an external premise.  The
+lemmas below record (a) that a stored body's structural fuel is bounded by the
+state code body fuel, and (b) that the canonical fuel of a Call/DecCall
+supplies at least the canonical fuel of the callee, handler and continuation
+programs after the dispatch steps the call clauses consume. -/
+
+/-- A `max`-fold never decreases its accumulator. -/
+theorem le_foldl_max {β : Type u} (f : β → Nat) (entries : List β) (acc : Nat) :
+    acc ≤ entries.foldl (fun acc entry => max acc (f entry)) acc := by
+  induction entries generalizing acc with
+  | nil => simp
+  | cons entry rest ih =>
+      simp only [List.foldl_cons]
+      exact Nat.le_trans (Nat.le_max_left acc (f entry)) (ih (max acc (f entry)))
+
+/-- A `max`-fold over a list bounds the value of each member. -/
+theorem mem_le_foldl_max {β : Type u} (f : β → Nat) {entries : List β} {entry : β}
+    (hmem : entry ∈ entries) (acc : Nat) :
+    f entry ≤ entries.foldl (fun acc item => max acc (f item)) acc := by
+  induction entries generalizing acc with
+  | nil => exact absurd hmem (List.not_mem_nil)
+  | cons head rest ih =>
+      simp only [List.foldl_cons, List.mem_cons] at hmem ⊢
+      rcases hmem with heq | hmem
+      · subst heq
+        exact Nat.le_trans (Nat.le_max_right acc (f entry))
+          (le_foldl_max f rest (max acc (f entry)))
+      · exact ih hmem (max acc (f head))
+
+/-- Every structural program cost is at least one. -/
+theorem panSemProgFuel_pos (program : Prog α) : 1 ≤ panSemProgFuel program := by
+  cases program <;> simp [panSemProgFuel] <;> omega
+
+/-- A body stored in the state code map has structural fuel at most the code
+    body fuel bound. -/
+theorem panSemProgFuel_le_codeBodyFuel_of_mem
+    (code : PanSemCodeMap α)
+    {entry : FunName × (List (VarName × Shape) × Prog α × Shape)}
+    (hmem : entry ∈ code) :
+    panSemProgFuel entry.2.2.1 ≤ panSemCodeBodyFuel code := by
+  simpa [panSemCodeBodyFuel] using
+    mem_le_foldl_max (fun item => panSemProgFuel item.2.2.1) hmem 0
+
+/-- Projection of the canonical fuel through a clock/locals update: only the
+    clock field changes, the code field is preserved. -/
+theorem panSemCodeEvaluateFuel_update
+    (state : PanSemState α ffi) (clock : Nat)
+    (locals : VarName → Option (PanValue α)) (program : Prog α) :
+    panSemCodeEvaluateFuel { state with clock := clock, locals := locals } program =
+      (clock + 1) * (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) + 1 :=
+  rfl
+
+/-- **Canonical fuel lower bound.**  When the source clock is positive, the
+    canonical fuel of `program` supplies at least the canonical fuel of any
+    sub-program whose structural fuel is bounded by `program`'s, after the two
+    dispatch steps a source call consumes.  This is the lemma that lets the
+    Pan-to-Crep Call/DecCall cases derive the callee, handler and continuation
+    fuel instead of assuming `hsourceFuel`. -/
+theorem panSemCodeEvaluateFuel_sub_le
+    (state : PanSemState α ffi) (program sub : Prog α)
+    (locals : VarName → Option (PanValue α))
+    (hclock : state.clock ≠ 0)
+    (hsub : panSemProgFuel sub ≤
+      max (panSemProgFuel program) (panSemCodeBodyFuel state.code)) :
+    panSemCodeEvaluateFuel
+        { state with clock := decPanClock state.clock, locals := locals } sub
+      ≤ panSemCodeEvaluateFuel state program - 2 := by
+  rw [panSemCodeEvaluateFuel_update, panSemCodeEvaluateFuel, decPanClock]
+  have hpos : 0 < state.clock := Nat.pos_of_ne_zero hclock
+  have hsucc : state.clock - 1 + 1 = state.clock :=
+    Nat.sub_add_cancel (Nat.succ_le_of_lt hpos)
+  rw [hsucc]
+  have hM : max (panSemProgFuel sub) (panSemCodeBodyFuel state.code) ≤
+      max (panSemProgFuel program) (panSemCodeBodyFuel state.code) :=
+    Nat.max_le.2 ⟨hsub, Nat.le_max_right _ _⟩
+  have h1 : state.clock *
+        (max (panSemProgFuel sub) (panSemCodeBodyFuel state.code) + 1)
+      ≤ state.clock *
+        (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) :=
+    Nat.mul_le_mul_left _ (Nat.succ_le_succ hM)
+  have hMpos : 1 ≤ max (panSemProgFuel program) (panSemCodeBodyFuel state.code) :=
+    Nat.le_trans (panSemProgFuel_pos program)
+      (Nat.le_max_left (panSemProgFuel program) (panSemCodeBodyFuel state.code))
+  have hexp : (state.clock + 1) *
+        (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1)
+      = state.clock *
+          (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) +
+        (max (panSemProgFuel program) (panSemCodeBodyFuel state.code) + 1) := by
+    rw [Nat.add_mul, Nat.one_mul]
+  rw [hexp]
+  omega
+
+/-- A callee body stored in the state code has canonical fuel within the
+    canonical Call fuel after the two dispatch steps. -/
+theorem panSemCodeEvaluateFuel_call_callee_le
+    (state : PanSemState α ffi)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) (body : Prog α)
+    (parameters : List (VarName × Shape)) (returnShape : Shape)
+    (calleeLocals : VarName → Option (PanValue α))
+    (hclock : state.clock ≠ 0)
+    (hentry : (function, (parameters, body, returnShape)) ∈ state.code) :
+    panSemCodeEvaluateFuel
+        { state with clock := decPanClock state.clock, locals := calleeLocals } body
+      ≤ panSemCodeEvaluateFuel state (.call info function arguments) - 2 := by
+  refine panSemCodeEvaluateFuel_sub_le state (.call info function arguments) body
+    calleeLocals hclock ?_
+  exact Nat.le_trans (panSemProgFuel_le_codeBodyFuel_of_mem state.code hentry)
+    (Nat.le_max_right _ _)
+
+/-- A handler program carried in the call metadata has canonical fuel within
+    the canonical Call fuel after the two dispatch steps. -/
+theorem panSemCodeEvaluateFuel_call_handler_le
+    (state : PanSemState α ffi)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) (handlerProgram : Prog α)
+    (exceptionId handlerVariable : String)
+    (handlerLocals : VarName → Option (PanValue α))
+    (hclock : state.clock ≠ 0)
+    (hinfo : info = some (none, some (exceptionId, handlerVariable, handlerProgram))) :
+    panSemCodeEvaluateFuel
+        { state with clock := decPanClock state.clock, locals := handlerLocals }
+        handlerProgram
+      ≤ panSemCodeEvaluateFuel state (.call info function arguments) - 2 := by
+  refine panSemCodeEvaluateFuel_sub_le state (.call info function arguments)
+    handlerProgram handlerLocals hclock ?_
+  subst hinfo
+  simp only [panSemProgFuel, panSemCallInfoFuel]
+  omega
+
+/-- **Call dispatch decomposition.**  At the production canonical fuel, the
+    code evaluator dispatches a `Call` to the state-owned call clause at
+    canonical fuel minus one, so the callee body runs at canonical fuel minus
+    two (the `Call` case and the call helper each consume one step). -/
+theorem panSemCodeEvaluateFuel_call_delegates
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.call info function arguments))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.call info function arguments) memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.call info function arguments) - 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        info function arguments memoryAccess contracts memoryHandler := by
+  obtain ⟨k, hk⟩ : ∃ k,
+      panSemCodeEvaluateFuel state (.call info function arguments) = k + 1 := by
+    refine ⟨panSemCodeEvaluateFuel state (.call info function arguments) - 1, ?_⟩
+    have hpos : 0 < panSemCodeEvaluateFuel state (.call info function arguments) := by
+      simp only [panSemCodeEvaluateFuel]
+      omega
+    omega
+  rw [hk]
+  simp only [evalPanValueFfiClockCodeProg, Nat.add_sub_cancel]
+
+/-- A continuation/body program of a `DecCall` has canonical fuel within the
+    canonical DecCall fuel after the dispatch steps. -/
+theorem panSemCodeEvaluateFuel_decCall_body_le
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (outerBody sub : Prog α)
+    (subLocals : VarName → Option (PanValue α))
+    (hclock : state.clock ≠ 0)
+    (hsub : panSemProgFuel sub ≤
+      max (panSemProgFuel (.decCall name shape function arguments outerBody))
+        (panSemCodeBodyFuel state.code)) :
+    panSemCodeEvaluateFuel
+        { state with clock := decPanClock state.clock, locals := subLocals } sub
+      ≤ panSemCodeEvaluateFuel state (.decCall name shape function arguments outerBody) - 1 := by
+  -- one dispatch step only for the DecCall continuation
+  rw [panSemCodeEvaluateFuel_update, panSemCodeEvaluateFuel, decPanClock]
+  have hpos : 0 < state.clock := Nat.pos_of_ne_zero hclock
+  have hsucc : state.clock - 1 + 1 = state.clock :=
+    Nat.sub_add_cancel (Nat.succ_le_of_lt hpos)
+  rw [hsucc]
+  have hM : max (panSemProgFuel sub) (panSemCodeBodyFuel state.code) ≤
+      max (panSemProgFuel (.decCall name shape function arguments outerBody))
+        (panSemCodeBodyFuel state.code) :=
+    Nat.max_le.2 ⟨hsub, Nat.le_max_right _ _⟩
+  have h1 : state.clock *
+        (max (panSemProgFuel sub) (panSemCodeBodyFuel state.code) + 1)
+      ≤ state.clock *
+        (max (panSemProgFuel (.decCall name shape function arguments outerBody))
+          (panSemCodeBodyFuel state.code) + 1) :=
+    Nat.mul_le_mul_left _ (Nat.succ_le_succ hM)
+  have hMpos : 1 ≤
+      max (panSemProgFuel (.decCall name shape function arguments outerBody))
+        (panSemCodeBodyFuel state.code) :=
+    Nat.le_trans (panSemProgFuel_pos (.decCall name shape function arguments outerBody))
+      (Nat.le_max_left (panSemProgFuel (.decCall name shape function arguments outerBody))
+        (panSemCodeBodyFuel state.code))
+  have hexp : (state.clock + 1) *
+        (max (panSemProgFuel (.decCall name shape function arguments outerBody))
+          (panSemCodeBodyFuel state.code) + 1)
+      = state.clock *
+          (max (panSemProgFuel (.decCall name shape function arguments outerBody))
+            (panSemCodeBodyFuel state.code) + 1) +
+        (max (panSemProgFuel (.decCall name shape function arguments outerBody))
+          (panSemCodeBodyFuel state.code) + 1) := by
+    rw [Nat.add_mul, Nat.one_mul]
+  rw [hexp]
+  omega
+
 /-- Clocked production evaluator whose recursive Call and DecCall clauses read
     each callee from `state.code`. The compatibility function list is empty;
     code lookup and the fuel bound both remain tied to the source state. -/

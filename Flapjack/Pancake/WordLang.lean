@@ -157,4 +157,13 @@ inductive WordLangProg (α : Type u) where
       (live : WordLangCutsets)
   | shareInst (operator : WordMemOp) (name : Nat) (address : WordLangExp α)
 
+/-- HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises a
+`Var` or `Op Add [Var; Const]` address expression. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp_to_addr_def"]
+def expToAddr {width : Nat} :
+    WordLangExp (BitVec width) -> Option (WordLangAddr (BitVec width))
+  | .var name => some (.addr name 0)
+  | .op .add [.var name, .const offset] => some (.addr name offset)
+  | _ => none
+
 end Flapjack

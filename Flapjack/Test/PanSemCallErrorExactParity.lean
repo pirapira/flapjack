@@ -146,6 +146,35 @@ private def fallThroughState : PanSemExactState Word64 Unit :=
 private def callFallThroughGuard : Bool :=
   isFallThroughError 4 1 (evaluate fallThroughState (.call none "f" [.const 1]))
 
+/-- Result matcher for a callee that finishes with `Break` or `Continue`: an
+    `Error` at the decremented callee clock whose `p` local holds the bound
+    argument. -/
+private def isTerminalError (clock value : Nat)
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control control, n) =>
+      match control with
+      | .error locals _ _ _ =>
+          n == clock && (match locals "p" with
+            | some (.word w) => w == BitVec.ofNat 64 value
+            | _ => false)
+      | _ => false
+  | _ => false
+
+private def breakState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none)
+      parameterContracts) with functions := [("f", ["p"], .break)] }
+
+private def continueState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none)
+      parameterContracts) with functions := [("f", ["p"], .continue)] }
+
+private def callBreakGuard : Bool :=
+  isTerminalError 4 1 (evaluate breakState (.call none "f" [.const 1]))
+
+private def callContinueGuard : Bool :=
+  isTerminalError 4 1 (evaluate continueState (.call none "f" [.const 1]))
+
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
 
@@ -163,7 +192,8 @@ private def callDomainGuard : Bool :=
 
 private def callGuard : Bool :=
   callLoadMissGuard && callMissingGuard && callDomainGuard &&
-    callParamArityGuard && callParamShapeGuard && callFallThroughGuard
+    callParamArityGuard && callParamShapeGuard && callFallThroughGuard &&
+    callBreakGuard && callContinueGuard
 
 #guard callGuard
 
@@ -225,6 +255,12 @@ def runChecks : IO Bool := do
   if callFallThroughGuard then
     IO.println "PASS exact-state Call callee fallthrough rejects with Error and callee locals"
   else IO.println "FAIL exact-state Call callee fallthrough rejects with Error and callee locals"
+  if callBreakGuard then
+    IO.println "PASS exact-state Call callee break rejects with Error and callee locals"
+  else IO.println "FAIL exact-state Call callee break rejects with Error and callee locals"
+  if callContinueGuard then
+    IO.println "PASS exact-state Call callee continue rejects with Error and callee locals"
+  else IO.println "FAIL exact-state Call callee continue rejects with Error and callee locals"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

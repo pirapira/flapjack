@@ -1193,6 +1193,116 @@ theorem panSemEvaluateExactState_call_error_of_callee_normal
     (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
     harguments hlookup hbind hparameters hclock hbody
 
+/-- Flapjack's exact-state Call equation for a callee Break: the Error result
+    retains the callee's final locals, globals, memory, FFI state, and clock.
+    Untagged because Lean's structured result is not HOL's literal
+    `result option × state` pair. -/
+theorem panSemEvaluateExactState_call_error_of_callee_broke
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α)) (parameters : List VarName) (body : Prog α)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (finalClock fuel : Nat)
+    (harguments :
+      evalPanValueExps state.legacy.structs state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.baseAddress state.legacy.topAddress
+        state.legacy.bytesInWord arguments (memoryAccess := some state.memoryAccess) =
+        some values)
+    (hlookup : lookupPanFunction function state.legacy.functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters :
+      panValueParametersValid state.legacy.structs state.legacy.contracts function values =
+        true)
+    (hclock : state.legacy.clock ≠ 0)
+    (hfuel :
+      state.legacy.clock +
+          max (panSemProgFuel (Prog.call info function arguments))
+            (panSemFunctionFuel state.legacy.functions) = fuel + 1)
+    (hbody :
+      evalPanValueFfiClockProg context primitive handler state.legacy.structs
+        state.legacy.functions state.legacy.baseAddress state.legacy.topAddress
+        state.legacy.bytesInWord fuel calleeLocals state.legacy.globals
+        state.legacy.memory state.legacy.ffi (state.legacy.clock - 1) body
+        (memoryAccess := some state.memoryAccess) (contracts := state.legacy.contracts)
+        (memoryHandler := state.legacy.memoryHandler) =
+        some (.control (.broke bodyLocals finalGlobals finalMemory finalFfi), finalClock)) :
+    panSemEvaluateExactState context primitive handler state (.call info function arguments) =
+      some (.control (.error bodyLocals finalGlobals finalMemory finalFfi), finalClock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  rw [hfuel]
+  exact evalPanValueFfiClockCall_callee_broke_error context primitive handler
+    state.legacy.structs state.legacy.functions state.legacy.baseAddress
+    state.legacy.topAddress state.legacy.bytesInWord fuel state.legacy.locals
+    state.legacy.globals state.legacy.memory state.legacy.ffi state.legacy.clock
+    info function arguments values parameters calleeLocals bodyLocals finalGlobals
+    finalMemory finalFfi body finalClock (memoryAccess := some state.memoryAccess)
+    (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
+    harguments hlookup hbind hparameters hclock hbody
+
+/-- Flapjack's exact-state Call equation for a callee Continue, preserving the
+    callee's final state in the resulting Error. Untagged because Lean's
+    structured result is not HOL's literal `result option × state` pair. -/
+theorem panSemEvaluateExactState_call_error_of_callee_continued
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α)) (parameters : List VarName) (body : Prog α)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (finalClock fuel : Nat)
+    (harguments :
+      evalPanValueExps state.legacy.structs state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.baseAddress state.legacy.topAddress
+        state.legacy.bytesInWord arguments (memoryAccess := some state.memoryAccess) =
+        some values)
+    (hlookup : lookupPanFunction function state.legacy.functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters :
+      panValueParametersValid state.legacy.structs state.legacy.contracts function values =
+        true)
+    (hclock : state.legacy.clock ≠ 0)
+    (hfuel :
+      state.legacy.clock +
+          max (panSemProgFuel (Prog.call info function arguments))
+            (panSemFunctionFuel state.legacy.functions) = fuel + 1)
+    (hbody :
+      evalPanValueFfiClockProg context primitive handler state.legacy.structs
+        state.legacy.functions state.legacy.baseAddress state.legacy.topAddress
+        state.legacy.bytesInWord fuel calleeLocals state.legacy.globals
+        state.legacy.memory state.legacy.ffi (state.legacy.clock - 1) body
+        (memoryAccess := some state.memoryAccess) (contracts := state.legacy.contracts)
+        (memoryHandler := state.legacy.memoryHandler) =
+        some (.control (.continued bodyLocals finalGlobals finalMemory finalFfi),
+          finalClock)) :
+    panSemEvaluateExactState context primitive handler state (.call info function arguments) =
+      some (.control (.error bodyLocals finalGlobals finalMemory finalFfi), finalClock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  rw [hfuel]
+  exact evalPanValueFfiClockCall_callee_continued_error context primitive handler
+    state.legacy.structs state.legacy.functions state.legacy.baseAddress
+    state.legacy.topAddress state.legacy.bytesInWord fuel state.legacy.locals
+    state.legacy.globals state.legacy.memory state.legacy.ffi state.legacy.clock
+    info function arguments values parameters calleeLocals bodyLocals finalGlobals
+    finalMemory finalFfi body finalClock (memoryAccess := some state.memoryAccess)
+    (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
+    harguments hlookup hbind hparameters hclock hbody
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

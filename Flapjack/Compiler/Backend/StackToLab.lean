@@ -471,6 +471,8 @@ theorem flattenApp_call_some (tail : Bool)
       appListFlatten (flattenApp ops zero false returnProgram sectionId n conts breaks)
         = flatten ops zero false returnProgram sectionId n conts breaks)
     (ihHandler : ∀ (hp : Prog Inst Cmp RegImm Binop Memop Addr MlString) (_hs _hl n : Nat),
+      sizeOf hp < sizeOf (.call (some (returnProgram, linkRegister, returnSection, returnLabel))
+        target handler : Prog Inst Cmp RegImm Binop Memop Addr MlString) →
       appListFlatten (flattenApp ops zero false hp sectionId n conts breaks)
         = flatten ops zero false hp sectionId n conts breaks) :
     appListFlatten (flattenApp ops zero tail
@@ -510,7 +512,7 @@ theorem flattenApp_call_some (tail : Bool)
                 | mk ysf rG =>
                   cases rG with
                   | mk nrg nyf =>
-                    have h2 := ihHandler handlerProgram handlerSection handlerLabel nxf
+                    have h2 := ihHandler handlerProgram handlerSection handlerLabel nxf (by decreasing_trivial)
                     rw [hB, hG] at h2
                     simp only [appListFlatten] at h2
                     injection h2 with hys hrest2
@@ -609,6 +611,53 @@ theorem flattenApp_ite (tail : Bool) (condition : Cmp) (register : Nat) (right :
                             rw [appendAux_thm]
                             rw [hxs]
                             simp only [List.append_assoc, List.append_nil]
+set_option linter.defProp false in
+def flattenAppBridgeAux
+    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (tail : Bool) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail program sectionId next conts breaks)
+      = flatten ops zero tail program sectionId next conts breaks := by
+  cases program with
+  | seq first second =>
+    exact flattenApp_seq ops zero tail first second sectionId next conts breaks
+      (fun k => flattenAppBridgeAux ops zero false first sectionId k conts breaks)
+      (fun k => flattenAppBridgeAux ops zero false second sectionId k conts breaks)
+  | ite condition register right thenBranch elseBranch =>
+    exact flattenApp_ite ops zero tail condition register right thenBranch elseBranch
+      sectionId next conts breaks
+      (fun k => flattenAppBridgeAux ops zero false thenBranch sectionId k conts breaks)
+      (fun k => flattenAppBridgeAux ops zero false elseBranch sectionId k conts breaks)
+  | loop body =>
+    exact flattenApp_loop ops zero tail body sectionId next conts breaks
+      (fun k c b => flattenAppBridgeAux ops zero false body sectionId k c b)
+  | call returnHandler target handler =>
+    cases returnHandler with
+    | none =>
+      exact flattenApp_call_none ops zero tail target handler sectionId next conts breaks
+    | some triple =>
+      obtain ⟨returnProgram, linkRegister, returnSection, returnLabel⟩ := triple
+      exact flattenApp_call_some ops zero tail returnProgram linkRegister returnSection returnLabel
+        target handler sectionId next conts breaks
+        (fun k => flattenAppBridgeAux ops zero false returnProgram sectionId k conts breaks)
+        (fun hp _hs _hl k _hbound => flattenAppBridgeAux ops zero false hp sectionId k conts breaks)
+  | tick | skip | inst _ | get _ _ | «set» _ _ | opCurrHeap _ _ _ | jumpLower _ _ _
+    | alloc _ | storeConsts _ _ _ | raise _ | ret _ | «break» _ | «continue» _
+    | ffi _ _ _ _ _ _ | locValue _ _ _ | install _ _ _ _ _ | shMemOp _ _ _ 
+    | codeBufferWrite _ _ | dataBufferWrite _ _ | rawCall _ | stackAlloc _ | stackFree _
+    | stackStore _ _ | stackStoreAny _ _ | stackLoad _ _ | stackLoadAny _ _
+    | stackGetSize _ | stackSetSize _ | bitmapLoad _ _ | halt _ =>
+    simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+termination_by sizeOf program
+decreasing_by all_goals first | exact hbound | decreasing_trivial | assumption | omega
+
+theorem flattenApp_appListFlatten_eq_flatten
+    (tail : Bool) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail program sectionId next conts breaks)
+      = flatten ops zero tail program sectionId next conts breaks :=
+  flattenAppBridgeAux ops zero tail program sectionId next conts breaks
+
 end FlattenAppBridge
 
 

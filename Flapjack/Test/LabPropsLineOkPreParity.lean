@@ -146,6 +146,15 @@ example : ((Flapjack.Compiler.Backend.StackToLab.flatten (flattenOps (width := 8
     (by simp [Flapjack.Compiler.Backend.StackProps.stackAsmOk,
       Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig])
 
+/-- The HOL-exact `append`-form `flatten_line_ok_pre` over `flattenApp` fires. -/
+example : (appListAppend (.list ([.labAsm .halt (0 : W) [] 0] : List (Flapjack.Compiler.Backend.StackToLab.FlatLine WordMemOp (WordLangAddr W) Flapjack.Cmp (WordRegImm W) String (AsmData 8) W)))).all (lineOkPreConfig cfg8) = true :=
+  flattenApp_line_ok_pre cfg8 (.halt 0 : P) true 0 0 [] []
+    (.list [.labAsm .halt (0 : W) [] 0]) true 0
+    (by decide)
+    (by simp [Flapjack.Compiler.Backend.StackProps.stackAsmOk,
+      Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig])
+    (by simp [Flapjack.Compiler.Backend.StackToLab.flattenApp])
+
 def runChecks : IO Bool := do
   let guards : List Bool :=
     [ decide (lineOkPreConfig cfg8 asmSkipLine = true)

@@ -987,6 +987,30 @@ theorem compile_all_enc_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfi
     rw [hsec, ih hokTail]
     rfl
 
+
+/-- HOL-exact `stack_to_labProofScript.sml` `flatten_line_ok_pre` over the
+`app_list` representation: HOL's conclusion `EVERY (line_ok_pre c) (append ls)`
+is stated with `flattenApp` and `appListAppend`, derived from the flat
+`flatten_line_ok_pre` through `flattenApp_appListFlatten_eq_flatten`. -/
+theorem flattenApp_line_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (program : FlattenProg width) (tail : Bool) (sectionId next : Nat)
+    (conts breaks : List Nat) (ls : AppList (FlatLineC width)) (a : Bool) (b : Nat)
+    (hbyte : Flapjack.Compiler.Encoders.Asm.asmByteOffsetOk config (0 : BitVec width) = true)
+    (hok : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) program = true)
+    (hflatten : StackToLab.flattenApp (flattenOps (width := width)) (0 : BitVec width) tail program
+      sectionId next conts breaks = (ls, a, b)) :
+    (appListAppend ls).all (lineOkPreConfig config) = true := by
+  have hbridge := StackToLab.flattenApp_appListFlatten_eq_flatten (flattenOps (width := width))
+    (0 : BitVec width) tail program sectionId next conts breaks
+  have hflat := flatten_line_ok_pre config program tail sectionId next conts breaks hbyte hok
+  rw [hflatten] at hbridge
+  have hfst : appListAppend ls =
+      (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) tail program
+        sectionId next conts breaks).1 := by
+    simpa [appListFlatten] using congrArg Prod.fst hbridge
+  rw [hfst]
+  exact hflat
+
 end FlattenLineOkPre
 
 end Flapjack.Compiler.Backend.LabProps

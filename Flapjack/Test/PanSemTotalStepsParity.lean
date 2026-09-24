@@ -83,18 +83,44 @@ def assignMissingGuard : Bool :=
   let result := panSemTotalAssignClause stepsState .local "y" (.const (BitVec.ofNat 64 9))
   isErrorResult result.1 && wordAt result.2.locals "x" 7 && !(wordAt result.2.locals "y" 9)
 
-/-- A `Return` of an evaluable expression returns the value, state unchanged. -/
+/-- A `Return` of a value whose shape size is at most 32 returns it and clears
+    the locals (HOL `empty_locals`). -/
 def returnGuard : Bool :=
   let result := panSemTotalReturnClause stepsState (.const (BitVec.ofNat 64 3))
-  isReturnedWord 3 result.1 && wordAt result.2.locals "x" 7
+  isReturnedWord 3 result.1 && (result.2.locals "x").isNone
+
+/-- A `Return` of a value whose shape size exceeds 32 is `SOME Error`. -/
+def returnSizeErrorGuard : Bool :=
+  isErrorResult (panSemTotalReturnClause stepsState
+    (.rStruct (List.replicate 33 (.const (BitVec.ofNat 64 0))))).1
 
 /-- A `Return` whose expression fails is `SOME Error`. -/
 def returnErrorGuard : Bool :=
   isErrorResult (panSemTotalReturnClause stepsState (.var .local "missing")).1
 
-/-- A `Raise` of an evaluable expression returns `SOME (Exception eid v)`. -/
+/-- A state with declared exception shape `E` = `One`. -/
+def raiseState : PanSemState Word64 (FfiState Unit) :=
+  { stepsState with exceptionShapes := fun name =>
+      if name == "E" then some Shape.one else none }
+
+/-- A `Raise` of an `One`-shaped value under a matching declared exception
+    returns `SOME (Exception eid v)` and clears the locals. -/
 def raiseGuard : Bool :=
-  isExceptionOf "E" 4 (panSemTotalRaiseClause stepsState "E" (.const (BitVec.ofNat 64 4))).1
+  let result := panSemTotalRaiseClause raiseState "E" (.const (BitVec.ofNat 64 4))
+  isExceptionOf "E" 4 result.1 && (result.2.locals "x").isNone
+
+/-- A `Raise` of an undeclared exception is `SOME Error`. -/
+def raiseMissingGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "F" (.const (BitVec.ofNat 64 4))).1
+
+/-- A `Raise` whose value shape does not match the declared exception is
+    `SOME Error`. -/
+def raiseShapeErrorGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "E" (.rStruct [])).1
+
+/-- A `Raise` whose expression fails is `SOME Error`. -/
+def raiseErrorGuard : Bool :=
+  isErrorResult (panSemTotalRaiseClause raiseState "E" (.var .local "missing")).1
 
 /-- The shared glue leaves a failed expression as `SOME Error`. -/
 def exprStepErrorGuard : Bool :=
@@ -200,29 +226,33 @@ def decBody (state : PanSemState Word64 (FfiState Unit)) :
   | some value => (some (.returned value), state)
   | none => (some .error, state)
 
-/-- `Dec` of a valid local initialiser updates the binding and runs the body. -/
+/-- `Dec` of a valid local initialiser updates the binding, runs the body, then
+    restores the previous local binding of the name. -/
 def decOkGuard : Bool :=
-  let result := panSemTotalDecClause stepsState .local "x"
+  let result := panSemTotalDecClause stepsState .local "x" Shape.one
     (.const (BitVec.ofNat 64 9)) decBody
-  isReturnedWord 9 result.1
+  isReturnedWord 9 result.1 && wordAt result.2.locals "x" 7
 
-/-- `Dec` with an invalid binding shape is `SOME Error`. -/
-def decInvalidGuard : Bool :=
-  isErrorResult (panSemTotalDecClause stepsState .local "x" (.rStruct []) decBody).1
+/-- `Dec` whose declared shape does not match the value shape is `SOME Error`. -/
+def decShapeErrorGuard : Bool :=
+  isErrorResult (panSemTotalDecClause stepsState .local "x" Shape.one
+    (.rStruct []) decBody).1
 
 /-- `Dec` whose initialiser fails to evaluate is `SOME Error`. -/
 def decErrorGuard : Bool :=
-  isErrorResult (panSemTotalDecClause stepsState .local "x"
+  isErrorResult (panSemTotalDecClause stepsState .local "x" Shape.one
     (.var .local "missing") decBody).1
 
 def stepsGuard : Bool :=
-  assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
-    raiseGuard && exprStepErrorGuard && exprStepSomeGuard &&
+  assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
+    returnErrorGuard &&
+    raiseGuard && raiseMissingGuard && raiseShapeErrorGuard && raiseErrorGuard &&
+    exprStepErrorGuard && exprStepSomeGuard &&
     primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
     primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
     storeGuard && storeNonWordGuard && storeErrorGuard &&
     store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard &&
-    decOkGuard && decInvalidGuard && decErrorGuard
+    decOkGuard && decShapeErrorGuard && decErrorGuard
 
 #eval stepsGuard
 #guard stepsGuard

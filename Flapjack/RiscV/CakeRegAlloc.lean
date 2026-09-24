@@ -440,17 +440,82 @@ def ofSize {α : Type u} (n : Nat) : CakeNodeMap α :=
 def ofList {α : Type u} (values : List α) : CakeNodeMap α :=
   { slots := values.toArray.map some, outside := [] }
 
-/-! HOL's `st_ex_MAP_*_sub` facts read node fields with `EL i xs` under an
-    explicit `i < LENGTH xs` premise.  This bridge covers that same in-range
-    lookup when the Lean array-backed map is the dense embedding `ofList xs`.
-    It does not identify arbitrary `CakeNodeMap`s with HOL lists: Lean also
-    permits keys in `outside`, which have no HOL `EL` counterpart, and HOL
-    `EL` is only read under its bounds premise. -/
+/-- HOL `EL` reads agree with the dense list embedding at every valid index. -/
 theorem get_ofList_of_lt {α : Type u} (values : List α) (i : Nat)
     (hi : i < values.length) :
     get (ofList values) i = some values[i] := by
   simp [get, ofList, hi]
 
+/-- A bounded node field is represented by a `CakeNodeMap` when its extension
+    map is empty, its dense dimension agrees with the HOL list length, and each
+    in-range lookup returns the corresponding HOL list element. -/
+def RepresentsHOLNodeList {α : Type u} (m : CakeNodeMap α)
+    (values : List α) : Prop :=
+  m.outside = [] ∧ m.slots.size = values.length ∧
+    ∀ i, (hi : i < values.length) →
+      m.get i = some (values.get ⟨i, hi⟩)
+
+/-- `CakeNodeMap.set` leaves the array dimension unchanged. -/
+theorem slots_size_set {α : Type u} (m : CakeNodeMap α) (i : Nat) (v : α) :
+    (set m i v).slots.size = m.slots.size := by
+  by_cases hi : i < m.slots.size <;> simp [set, hi]
+
+/-- An in-range update reads back the assigned value. -/
+theorem get_set_same_of_lt {α : Type u} (m : CakeNodeMap α)
+    (i : Nat) (v : α) (hi : i < m.slots.size) :
+    get (set m i v) i = some v := by
+  simp [get, set, hi]
+
+/-- An in-range update leaves a distinct in-range slot unchanged. -/
+theorem get_set_other_of_lt {α : Type u} (m : CakeNodeMap α)
+    (i j : Nat) (v : α) (hi : i < m.slots.size)
+    (hj : j < m.slots.size) (hji : j ≠ i) :
+    get (set m i v) j = get m j := by
+  simp [get, set, hi, hj, Ne.symm hji]
+
+/-- The dense list embedding establishes the representation invariant. -/
+theorem ofList_representsHOLNodeList {α : Type u} (values : List α) :
+    RepresentsHOLNodeList (ofList values) values := by
+  constructor
+  · rfl
+  constructor
+  · simp [ofList]
+  · intro i hi
+    exact get_ofList_of_lt values i hi
+
+/-- A bounded production update preserves the HOL node-list representation,
+    with exactly the list update `LUPDATE` at the same index. -/
+theorem set_representsHOLNodeList {α : Type u} (m : CakeNodeMap α)
+    (values : List α) (hrep : RepresentsHOLNodeList m values)
+    (i : Nat) (v : α) (hi : i < values.length) :
+    RepresentsHOLNodeList (set m i v) (values.set i v) := by
+  rcases hrep with ⟨houtside, hsize, hget⟩
+  have hisize : i < m.slots.size := by simpa [hsize] using hi
+  constructor
+  · simp [set, hisize, houtside]
+  constructor
+  · rw [slots_size_set, hsize]
+    simp
+  · intro j hj
+    have hj' : j < values.length := by simpa using hj
+    by_cases hji : j = i
+    · subst j
+      rw [get_set_same_of_lt _ _ _ hisize]
+      simp
+    · rw [get_set_other_of_lt _ _ _ _ hisize (by simpa [hsize] using hj') hji]
+      rw [hget j hj']
+      simp [Ne.symm hji]
+
+/-! HOL `reg_allocProofScript.sml:st_ex_MAP_node_tag_sub` reads node fields by
+    `EL i xs` under `i < LENGTH xs`.  `RepresentsHOLNodeList` is the narrow
+    production invariant for that access pattern: `outside=[]`, equal dense
+    length, and matching in-range reads.  `ofList` establishes it, and
+    `set_representsHOLNodeList` proves production `CakeNodeMap.set` preserves
+    it for bounded updates, corresponding to HOL `LUPDATE`.  This does not
+    cover arbitrary maps or out-of-range writes: those use Lean's `outside`
+    map and have no HOL list counterpart.  These support statements remain
+    untagged; they do not by themselves authorize `list_as_array` on a HOL
+    theorem. -/
 /-- Out-of-range reads are `none` in the dense list embedding.  This is a
     Lean-side default and deliberately makes no claim about HOL `EL` outside
     its list-length premise. -/

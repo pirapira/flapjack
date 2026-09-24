@@ -42,8 +42,10 @@ def cakeNodeMapHolListUpdateGuard : Bool :=
   let nodes : List Nat := [7, 11, 13]
   let original := CakeNodeMap.ofList nodes
   let updated := CakeNodeMap.set original 1 99
+  let sibling := CakeNodeMap.set original 1 77
   let extended := CakeNodeMap.set original 3 99
   CakeNodeMap.get updated 1 == some 99 &&
+    CakeNodeMap.get sibling 1 == some 77 &&
     CakeNodeMap.get updated 0 == some 7 &&
     CakeNodeMap.get original 1 == some 11 &&
     updated.slots.size == nodes.length &&
@@ -51,6 +53,33 @@ def cakeNodeMapHolListUpdateGuard : Bool :=
     extended.slots.size == nodes.length
 
 #guard cakeNodeMapHolListUpdateGuard
+
+example :
+    CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      [7, 99, 13] := by
+  have h := CakeNodeMap.set_representsHOLNodeList
+    (CakeNodeMap.ofList [7, 11, 13]) [7, 11, 13]
+    (CakeNodeMap.ofList_representsHOLNodeList [7, 11, 13]) 1 99 (by decide)
+  simpa using h
+
+example :
+    CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set
+        (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99) 2 88)
+      [7, 99, 88] := by
+  have h₁ : CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      [7, 99, 13] := by
+    exact (show CakeNodeMap.RepresentsHOLNodeList
+      (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+      (List.set [7, 11, 13] 1 99) from
+        CakeNodeMap.set_representsHOLNodeList _ _
+          (CakeNodeMap.ofList_representsHOLNodeList _) _ _ (by decide))
+  have h₂ := CakeNodeMap.set_representsHOLNodeList
+    (CakeNodeMap.set (CakeNodeMap.ofList [7, 11, 13]) 1 99)
+    [7, 99, 13] h₁ 2 88 (by decide)
+  simpa using h₂
 
 example : CakeNodeMap.get (CakeNodeMap.ofList [7, 11, 13]) 0 = some 7 := by
   exact CakeNodeMap.get_ofList_of_lt _ _ (by decide)
@@ -1735,7 +1764,7 @@ def parityGuard : Bool :=
    select and repair without blocking the whole build on stale expectations. -/
 def runChecks : IO Bool := do
   let results := [
-    cakeNodeMapHolListLookupGuard,
+    cakeNodeMapHolListLookupGuard, cakeNodeMapHolListUpdateGuard,
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, ifImmediateRemovesTempGuard, callMergeGuard,
     callTailGuard, mustTerminateGuard,
@@ -1785,8 +1814,8 @@ def runChecks : IO Bool := do
     worklistPrependGuard, extendCliqueGuard, splitDegreeGuard,
     smergePriorityGuard, applyColourProbeGuard]
   let names := [
-    "CakeNodeMap HOL-list lookup range", "get_stack_only move chain",
-    "get_stack_only move from reg",
+    "CakeNodeMap HOL-list lookup range", "CakeNodeMap HOL-list update range",
+    "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
     "get_stack_only if merge alloc", "get_stack_only immediate removes temp",
     "get_stack_only call merge",

@@ -216,6 +216,18 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
 
+/-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
+    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`
+    rendered as `FDOMSUB` and `|+` as `FUPDATE`.  Lives in the crepSem counterpart module
+    because it is the HOL `crepSem` `res_var` used by the `Dec` restore; the generic
+    `FDOMSUB` stays in `Flapjack.FiniteMap.Basic`.  `[LawfulBEq α]` ties the Boolean key
+    equality used by the representation (`key == k`) to HOL's propositional equality. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
+def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB f entry.1
+  | some v => FUPDATE f (entry.1, v)
+
 /-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
     over the 11-field `CrepHolState`:
     `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.

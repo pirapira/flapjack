@@ -1,4 +1,3 @@
-import Flapjack.HolRef
 
 /-!
 Primitive HOL4/CakeML finite-map interface.
@@ -147,16 +146,5 @@ theorem FUPDATE_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
 maps: `FDOMSUB f key` removes `key` from the domain of `f`. -/
 def FDOMSUB [BEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
   fun k => if key == k then none else f k
-
-/-- Exact port of Cake's `res_var_def`
-(cakeml/pancake/semantics/crepSemScript.sml:163): `res_var lc (n, NONE) = lc \\ n`
-and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\` rendered as `FDOMSUB` and
-`|+` as `FUPDATE`.  `[LawfulBEq α]` ties the Boolean equality to HOL's
-propositional equality. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
-def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
-  match entry.2 with
-  | none => FDOMSUB f entry.1
-  | some v => FUPDATE f (entry.1, v)
 
 end Flapjack

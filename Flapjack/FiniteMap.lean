@@ -1,4 +1,5 @@
 import Flapjack.FiniteMap.Basic
+import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Proofs.PanSimp
 import Flapjack.PanValueFlatten
 import Flapjack.PanToCrepCorrectnessBoundary

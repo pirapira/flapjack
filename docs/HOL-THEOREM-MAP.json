@@ -6466,7 +6466,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "res_var_def",
-    "lean_path": "Flapjack/FiniteMap/Basic.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "resVar",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (clause-for-clause against res_var_def: res_var lc (n,NONE) = lc \\\\ n -> FDOMSUB, res_var lc (n,SOME v) = lc |+ (n,v) -> FUPDATE, with [BEq]/[LawfulBEq]; production Dec restore routed through resVar; oracle scripts/hol-probes/crep_res_var_probe.out reproduced by Lean guards in Flapjack/Test/FiniteMapParity.lean)"

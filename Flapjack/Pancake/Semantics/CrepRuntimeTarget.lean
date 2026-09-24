@@ -1684,4 +1684,45 @@ theorem evalCrepRuntimeExpWordLab_load32_rv64_const
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
 
+/-- HOL-shaped word-cell load primitive for the RV64 target, mirroring
+`crepSem$mem_load_def` (`if addr IN s.memaddrs then SOME (s.memory addr) else
+NONE`) over a total `word -> word_lab`-viewed memory.  Flapjack-only adapter;
+untagged pending full statement-shape review. -/
+def holMemLoad64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    Option (RiscV.Word 64) :=
+  if domain address then memory address else none
+
+/-- The RISC-V word-cell read primitive is exactly the HOL `mem_load` shape. -/
+theorem panRiscVReadWord_eight_eq_holMemLoad64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVReadWord domain memory address = holMemLoad64 domain memory address := rfl
+
+/-- Production `crepRuntimeLoad` at the RV64 target equals the HOL-shaped
+`mem_load` primitive over the total memory view. -/
+theorem crepRuntimeLoad_rv64_eq_holMemLoad64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoad (riscv64CrepRuntimeTarget base) address =
+      holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address := by
+  rw [crepRuntimeLoad_target_eq_riscv, panRiscVReadWord_eight_eq_holMemLoad64]
+
+/-- Plain evaluator case: the production evaluator's `Load (Const address)` at
+the RV64 target is the HOL-shaped `mem_load` primitive. -/
+theorem evalCrepRuntimeExp_load_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load (.const address)) =
+      holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoad_rv64_eq_holMemLoad64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Load (Const
+address)` at the RV64 target is HOL `mem_load` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_load_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.load (.const address)) =
+      (holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) address).map
+        PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoad_rv64_eq_holMemLoad64]
+
 end Flapjack

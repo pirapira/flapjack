@@ -166,9 +166,6 @@ def writeBitmapParityGuard : Bool :=
 #guard writeBitmapParityGuard
 
 example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
-    writeBitmapHOL (width := 8) [2, 0, 1] 0 8 := by native_decide
-
-example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
     writeBitmapHOL (width := 8) [2, 0, 1] 0 8 :=
   writeBitmapHOL_domain_insensitive [0, 1, 2] [2, 0, 1] 0 8
     (by intro r; simp only [List.mem_cons, List.not_mem_nil, or_false]; omega)

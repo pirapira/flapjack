@@ -585,6 +585,45 @@ theorem panSemEvaluateCodeStateWithFuel_primitive
               · simp [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg,
                   evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValuePrimitiveResult,
                   evalPanValueExpsCounted, hvalues, hprim, hlocal, hshape]
+/-- Production source-state `Seq` equation. The first command is evaluated and
+    its clock clamped to the entry clock (`fix_clock`); a normal (`NONE`)
+    outcome continues with the second command in the resulting state, while any
+    other outcome (including an explicit `Error`) is returned unchanged. This is
+    an untagged boundary equation because the structured result is reduced
+    rather than HOL's `(prog_result, state)` pair. Reference:
+    cakeml/pancake/semantics/panSemScript.sml:615-618 (`Seq`). -/
+theorem panSemEvaluateCodeStateWithFuel_seq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (first second : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.seq first second : Prog α) =
+      match panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+          state first with
+      | some firstStep =>
+          let fixedStep := fixPanClock state.clock firstStep
+          match fixedStep.1 with
+          | .control (.normal nextLocals nextGlobals nextMemory nextFfi) =>
+              panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel
+                { state with
+                  locals := nextLocals
+                  globals := nextGlobals
+                  memory := nextMemory
+                  ffi := nextFfi
+                  clock := fixedStep.2 } second
+          | _ => some fixedStep
+      | none => none := by
+  simp only [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg, fixPanClock]
+  cases h : evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+      state.exceptionShapes state.baseAddress state.topAddress bytesInWord fuel state.locals
+      state.globals state.memory state.ffi state.clock first with
+  | none => simp
+  | some firstStep => rfl
 
 /-!
   Exact source-memory entry point.

@@ -1,0 +1,10 @@
+seq_normal_result=NONE
+seq_normal_clock=5
+seq_normal_locals=SOME (ValWord 3w)
+seq_break_result=SOME Break
+seq_break_locals=SOME (ValWord 3w)
+seq_continue_result=SOME Continue
+seq_error_result=SOME Error
+seq_error_clock=5
+seq_tick_result=NONE
+seq_tick_clock=4

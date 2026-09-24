@@ -2634,6 +2634,53 @@ theorem compileArgsHOL_eval_flatten_of_each
             hcompiledHead hcompiledTail
           simpa [compileArgsHOL, List.flatMap_cons] using happend
 
+/-! When every operand compiles to one word expression, HOL's `cexp_heads`
+projection of `compile_exp_list` is exactly the production `compile_args`
+list. This bridges the representation used by the Op constructor to the
+generic list-evaluation theorem above. -/
+private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
+    (compilerContext : PanToCrepHOLContext (RiscV.Word 64))
+    (expressions : List (Exp (RiscV.Word 64)))
+    (hshape : ∀ expression, expression ∈ expressions →
+      (compileExpHOL compilerContext expression).2 = .one)
+    (hlen : ∀ expression, expression ∈ expressions →
+      (compileExpHOL compilerContext expression).1.length = 1) :
+    cexpHeads (expressions.map (compileExpHOL compilerContext) |>.map Prod.fst) =
+      some (compileArgsHOL compilerContext expressions) := by
+  induction expressions with
+  | nil => simp [compileArgsHOL, cexpHeads]
+  | cons expression expressions ih =>
+      have hheadShape := hshape expression (by simp)
+      have hheadLength := hlen expression (by simp)
+      have htailShape : ∀ item, item ∈ expressions →
+          (compileExpHOL compilerContext item).2 = .one := by
+        intro item hmem
+        exact hshape item (by simp [hmem])
+      have htailLength : ∀ item, item ∈ expressions →
+          (compileExpHOL compilerContext item).1.length = 1 := by
+        intro item hmem
+        exact hlen item (by simp [hmem])
+      have htail := ih htailShape htailLength
+      cases hcompiled : (compileExpHOL compilerContext expression).1 with
+      | nil => simp [hcompiled] at hheadLength
+      | cons head tail =>
+          cases tail with
+          | nil =>
+              have hcompiledPair : compileExpHOL compilerContext expression =
+                  ([head], .one) := by
+                apply Prod.ext
+                · simp [hcompiled]
+                · exact hheadShape
+              change cexpHeads
+                ((compileExpHOL compilerContext expression).1 ::
+                  (expressions.map (compileExpHOL compilerContext)).map Prod.fst) =
+                some (compileArgsHOL compilerContext (expression :: expressions))
+              rw [hcompiledPair]
+              simp only [cexpHeads]
+              rw [htail]
+              simp [compileArgsHOL, hcompiledPair]
+          | cons _ _ => simp [hcompiled] at hheadLength
+
 /-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
 the `compile_args` evaluator boundary. The target evaluation premise consumed
 by the list induction is projected from the expression IH itself; callers do

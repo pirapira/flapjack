@@ -3,3 +3,4 @@ alist_b_nodup=T
 alist_a_slots=T
 alist_b_slots=T
 alist_disjoint=T
+alist_duplicate_first=T

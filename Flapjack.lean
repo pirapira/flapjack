@@ -187,6 +187,7 @@ import Flapjack.Word
 import Flapjack.Stack
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Compiler.Backend.LabLang
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.StackAlloc.Machine

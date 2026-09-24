@@ -486,4 +486,16 @@ example :
     simpa [HolValue.toPanValue_val] using
       HolValue.toPanValue_nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]
 
+/-- Fuel-indexed Comb/List/Fields/Named equivalence with the tagged exact `mem_load_def`
+port, extracted from the conjunction produced by the mutual fuel induction. -/
+example :
+    panValueFlatLoadFuel ([] : StructContext)
+        (panValueFlatMachineReadWord littleEndianState littleEndianState.memory)
+        panSemBitVec64BytesInWord 3 (.comb [Shape.one]) 0 =
+      (panMemLoadHOL (width := 64) (.comb [Shape.one]) 0
+        (panValueFlatMachineDomain littleEndianState littleEndianState.memory)
+        (panValueWordHOL littleEndianState.memory) (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  (panValueFlatLoadFuel_eq_panMemLoadHOL littleEndianState littleEndianState.memory 3).1
+    [] (.comb [Shape.one]) 0 (by decide)
+
 end Flapjack.Test.PanSemStateEvalParity

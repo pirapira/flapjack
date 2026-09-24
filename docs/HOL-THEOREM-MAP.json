@@ -8720,6 +8720,54 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `format_var_def` at word_to_stackScript.sml:78-80 - format_var k NONE = INL (k+1) /\\ format_var k (SOME x) = if x < k then INL x else INR x - pure num/option/sum, no word operation or dimindex, exact with no width index; HOL-EVAL rows rf_format_var_none=INL 6/rf_format_var_some_reg=INL 2/rf_format_var_some_frame=INR 7 in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "wRegWrite1_def",
+    "lean_name": "wRegWrite1",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wRegWrite1_def` at word_to_stackScript.sml:40-44 - wRegWrite1 g r (k,f,f') = let r = r DIV 2 in if r < k then g r else Seq (g k) (StackStore k (f-1 - (r - k))). Stated over the exact shared-word carrier ProgM alpha (single word type parameter, faithful MlString FFI field), so the conclusion carrier is exact. Reproduced by the reg-format oracle rows sm_zero/sm_one/sm_two and wms_* in scripts/hol-probes/word_to_stack_reg_format_probe.out and by the guards in Flapjack/Test/WordToStackBitsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "wRegWrite2_def",
+    "lean_name": "wRegWrite2",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wRegWrite2_def` at word_to_stackScript.sml:46-50 - biased to the k+1 frame slot, same exact ProgM alpha carrier. Reproduced by the reg-format oracle rows in scripts/hol-probes/word_to_stack_reg_format_probe.out.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "stack_move_def",
+    "lean_name": "stackMove",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `stack_move_def` at word_to_stackScript.sml:288-291 - recursion over n with base p and step Seq (stack_move n (start+1) offset i p) (Seq (StackLoad i (start+offset)) (StackStore i start)). Stated over the exact shared-word carrier ProgM alpha; HOL-EVAL rows sm_zero=T/sm_one=T/sm_two=T in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by stackMoveParityGuard in Flapjack/Test/WordToStackBitsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "StackArgs_def",
+    "lean_name": "stackArgs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `StackArgs_def` at word_to_stackScript.sml:293-297 - StackArgs dest arg_count (k,f,f') = let n = stack_arg_count dest arg_count k in stack_move n 0 f k (StackAlloc n). Uses the tagged stackArgCount and stackMove over the exact carrier ProgM gamma; HOL-EVAL rows sa_inr=T/sa_inl=T reproduced by stackMoveParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "wMoveSingle_def",
+    "lean_name": "wMoveSingle",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wMoveSingle_def` at word_to_stackScript.sml:62-69 - four-way case producing Inst (Arith (Binop Or r1 r2 (Reg r2))) or StackLoad/StackStore fragments. Stated over the exact shared-word carrier ProgM alpha; HOL-EVAL rows wms_reg_reg=T/wms_reg_frame=T/wms_frame_reg=T/wms_frame_frame=T reproduced by wMoveParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "wMoveAux_def",
+    "lean_name": "wMoveAux",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wMoveAux_def` at word_to_stackScript.sml:71-76 - [] -> Skip; [xy] -> wMoveSingle xy kf; xy::xys -> Seq (wMoveSingle xy kf) (wMoveAux xys kf), over the exact carrier ProgM alpha; HOL-EVAL rows wma_empty=T/wma_two=T reproduced by wMoveParityGuard.)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",

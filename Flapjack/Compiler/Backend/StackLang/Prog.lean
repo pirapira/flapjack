@@ -22,6 +22,21 @@ namespace Flapjack.Compiler.Backend.StackLang
 
 open Flapjack.Compiler.Encoders.Asm
 
+/-- The exact HOL `stackLang$prog` carrier over an arbitrary word type `α`,
+using the faithful generic payload mirrors and the faithful `MlString` FFI
+field (unlike `StackCarrier.ProgW`, whose FFI field is Lean `String`).
+
+HOL `prog` (`stackLangScript.sml:27-66`) is polymorphic in one word type `'a`
+and its `FFI` field is `mlstring`; instantiating the seven parameters of the
+generic Lean `Prog` on that single dimension with `MlString` in the FFI field is
+exact for an arbitrary `α`, exactly as HOL permits an arbitrary `'a`.  This is
+the polymorphic exact carrier used by the program-level helper ports;
+`HolProg` is the width-indexed exact carrier over the `Hol*` payload
+inductives. -/
+abbrev ProgM (α : Type) : Type :=
+  Flapjack.Compiler.Backend.StackLang.Prog (WordLangInst α) Cmp (WordRegImm α)
+    BinOp WordMemOp (WordLangAddr α) Flapjack.Basis.Pure.MlString.MlString
+
 /-- Exact width-indexed `stackLang$prog` (`cakeml/compiler/backend/stackLangScript.sml:27-66`)
 over the exact asm payload carriers.  This instantiates the seven-parameter
 `Flapjack.Compiler.Backend.StackLang.Prog` with the exact `HolInst`/`HolCmp`/

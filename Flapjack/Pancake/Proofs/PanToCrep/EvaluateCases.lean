@@ -8945,10 +8945,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (handlerBody : CrepProg (RiscV.Word 64))
     (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
     (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
-    (hsourceRun : panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive
-      sourceHandler source
-      (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
-        function expressions) = some sourceResult)
     (hsourceCalleeBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel sourceCalleeLocals
@@ -8956,6 +8952,25 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
         sourceException payload), calleeClock))
+    (hsourceFuel : panSemCodeEvaluateFuel source
+      (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
+        function expressions) = fuel + 2)
+    (hsourceExceptionValid : panValueExceptionValid source.structs none
+      sourceException payload = true)
+    (hsourceExceptionShapeMatches : panShapeMatches
+      (panValueShape source.structs payload) shape = true)
+    (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
+    (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
+      (fun _ => none) .local handlerVariable payload = true)
+    (hsourceHandlerContract : panValueHandlerValid source.structs none source.locals
+      handlerVariable payload = true)
+    (hsourceHandlerBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
+      sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
+      source.topAddress panSemBitVec64BytesInWord fuel
+      (updatePanValueMap source.locals handlerVariable payload)
+      calleeGlobals calleeMemory calleeFfi
+      (min (decPanClock source.clock) calleeClock) handlerProgram
+      (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some sourceResult)
     (hsourceAfterCallee : sourceAfterCallee =
       { { { { source with globals := calleeGlobals } with memory := calleeMemory }
           with ffi := calleeFfi }
@@ -9090,12 +9105,27 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
     localsRel context (panSemCodeStateAfter source sourceResult).locals
       handlerResult.2.locals := by
-  have hsourceCallRun := hsourceRun
   subst sourceAfterCallee
   let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }
-        with ffi := calleeFfi }
+      with ffi := calleeFfi }
       with clock := min (decPanClock source.clock) calleeClock }
+  have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
+    simpa [sourceAfterCallee] using hsourceExceptionShape
+  have hsourceClock : source.clock ≠ 0 := by
+    rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
+    intro hzero
+    apply hclock
+    simpa [hclockRel] using hzero
+  have hsourceRun := panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
+    sourceContext sourcePrimitive sourceHandler source fuel function sourceException
+    handlerVariable expressions arguments returnShape sourceBody sourceCalleeLocals
+    calleeRaisedLocals calleeGlobals calleeMemory calleeFfi payload calleeClock
+    handlerProgram sourceResult hsourceFuel hsourceArgs hsourceCall hsourceClock
+    hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceExceptionShapeMatches⟩
+    hsourceExceptionValid hsourcePayloadWithinLimit hsourceHandlerAssignment
+    hsourceHandlerContract hsourceHandlerBody
+  have hsourceCallRun := hsourceRun.1
   have hargumentLength := by
     have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
       source.code function parameters arguments sourceBody returnShape

@@ -406,6 +406,31 @@ example : (5 : Nat) ∉ crepAssignedFreeVars
     simp [freshContext] at hlk
   · decide
 
+/-- `distinctLists` is exactly set-disjointness, used by the context-rewrite
+    theorem. -/
+example : distinctLists [1, 2] [3, 4] = true := by decide
+
+/-- The exact HOL `rewritten_context_unassigned` shape: extending a context with
+    a variable's rewritten slot list (kept disjoint from the old list) leaves
+    every old slot outside the compiled program's assigned free variables. -/
+example (program : Prog Nat) (nctxt ctxt : PanToCrepHOLContext Nat) (v : VarName)
+    (ns nvars : List Nat) (sh sh' : Shape)
+    (hnctxt : nctxt =
+      { ctxt with
+        vars := FUPDATE ctxt.vars (v, (sh, nvars))
+        vmax := ctxt.vmax + Shape.shapeSize sh })
+    (hlookup : FLOOKUP ctxt.vars v = some (sh', ns))
+    (hnoOverlap : noOverlap ctxt.vars) (hctxtMax : ctxtMax ctxt.vmax ctxt.vars)
+    (hnoOverlapN : noOverlap nctxt.vars)
+    (hctxtMaxN : ctxtMax nctxt.vmax nctxt.vars)
+    (hdistinct : distinctLists nvars ns = true) :
+    distinctLists ns (crepAssignedFreeVars (compileProgHOL nctxt program)) = true :=
+  rewrittenContextUnassigned program nctxt ctxt v ns nvars sh sh' hnctxt hlookup
+    hnoOverlap hctxtMax hnoOverlapN hctxtMaxN hdistinct
+
+def rewrittenContextGuard : Bool :=
+  distinctLists [1, 2] [3, 4]
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -419,7 +444,8 @@ def runChecks : IO Bool := do
     ("HOL mk_ctxt_code_imp_code_rel makeFuncsHOL/alookup link", generalAlookupGuard),
     ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard),
     ("HOL mk_ctxt_code_imp_code_rel compiled code_rel", mkCtxtCodeRelGuard),
-    ("HOL-context compiler temporary freshness bounds", freshnessGuard)]
+    ("HOL-context compiler temporary freshness bounds", freshnessGuard),
+    ("HOL rewritten_context_unassigned context rewrite", rewrittenContextGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

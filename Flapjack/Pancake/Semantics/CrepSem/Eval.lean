@@ -2159,6 +2159,17 @@ def evalCrepHolFiniteWordSourceExp {ι : Type}
   | .topAddr => some state.topAddress
 termination_by expression => sizeOf expression
 
+/-- Complete HOL `word_lab` result view of the explicitly finite-index
+    source evaluator. Since `word_lab` has only the `Word` constructor, this
+    is the corresponding `Option (PanWordLab word)` encoding. -/
+def evalCrepHolFiniteWordSourceExpWordLab {ι : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) :
+    CrepExp (ι → Bool) → Option (PanWordLab (ι → Bool)) :=
+  fun expression =>
+    (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word
+
 /-! This all-constructor bridge connects production evaluation to the explicit
     source equations above, including the source load model and source
     multiplication. It remains Flapjack representation support until the

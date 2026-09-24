@@ -16,7 +16,7 @@ namespace Flapjack
     production recursive helper used by `structCompileExp` maps the production
     single-expression compiler over the list. `List.map` represents HOL `MAP`;
     `[BEq String]` is the typeclass needed by the Lean implementation's lookup. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_exps_eq_map"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassContext) :
     (structCompileExp.structCompileExps (α := α) context :
       List (Exp α) → List (Exp α)) =
@@ -46,7 +46,7 @@ theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
     (`pan_structsProofScript.sml:310`). The production mutually recursive
     compiler decreases on the HOL context-suffix/syntax-size measure, so this
     statement keeps the source theorem's context and list arguments unchanged. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "compile_shapes_eq_map"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structCompileShapes_eq_map (context : StructContext) :
     (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
       fun shapes => shapes.map (structCompileShapeWF context) := by
@@ -96,7 +96,7 @@ theorem isWfShapeList_of_all {context : StructContext} {shapes : List Shape}
 
 /-- The `struct_infos_ok` predicate from `pan_structsProofScript.sml`, over
     the production Pancake structure context. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 def structInfosOk (context : StructContext) : Prop :=
   (∀ entry ∈ context, (entry.2.fields.map Prod.fst).Nodup) ∧
   (context.map Prod.fst).Nodup ∧
@@ -112,7 +112,7 @@ def structInfosOk (context : StructContext) : Prop :=
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in
     any outer structure context. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_compile_shape"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structCompileShapeWF_isWfShape [BEq String]
     (outer : StructContext) :
     (∀ (context : StructContext) (shape : Shape),
@@ -185,7 +185,7 @@ theorem lookupInfo_isSome_drop (name : String) (context : StructContext)
 /-- Exact API translation of HOL `is_wf_shape_drop`
     (`pan_structsProofScript.sml:114`): a shape well formed in a context
     suffix remains well formed in the full context. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "is_wf_shape_drop"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
     (n : Nat) :
     isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
@@ -288,7 +288,7 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
 /-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
     (`pan_structsProofScript.sml:99`): a well-formed shape has the same
     context-sensitive size in a distinct-key context and its suffix. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_sh_with_ctxt_drop"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)
@@ -334,7 +334,7 @@ theorem shapeSizeWithContext_drop (context : StructContext)
 /-- Exact API translation of HOL `struct_infos_ok_drop`
     (`pan_structsProofScript.sml:169`): dropping a context prefix preserves
     distinct field and structure names, suffix well-formedness, and sizes. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_drop"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structInfosOk_drop (n : Nat) (context : StructContext)
     (h : structInfosOk context) : structInfosOk (context.drop n) := by
   obtain ⟨h1, h2, h3, h4⟩ := h
@@ -489,7 +489,7 @@ private theorem shapeSizeWithContext_fold_drop
     (`pan_structsProofScript.sml:512`). It compares Cake's context-sensitive
     shape size before and after `compile_shape`; Lean's extra `shapedFields`
     cache is not inspected. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_compile_shape"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structCompileShapeWF_size
     (context : StructContext) (shape : Shape)
     (hshape : isWfShape context shape = true) (hok : structInfosOk context) :
@@ -579,7 +579,7 @@ theorem structCompileShapeWF_size
 /-- Exact API translation of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
     remains valid in its suffix. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_append"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structInfosOk_append (xs ys : StructContext)
     (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
@@ -589,7 +589,7 @@ theorem structInfosOk_append (xs ys : StructContext)
     (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
     fields, well-formed field shapes, and its computed size preserves the
     structure-context invariant. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "struct_infos_ok_cons"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
     (hxs : structInfosOk xs)
     (hflds : (info.fields.map Prod.fst).Nodup)
@@ -652,7 +652,7 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
 /-- Exact translation of HOL's local `alookup_map_structs_ok`
     (`pan_structsProofScript.sml:243`): a found structure in a valid context
     has distinct field names. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "alookup_map_structs_ok"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (context : StructContext) (info : StructInfo)
     (hlookup : lookupInfo name context = some info)
@@ -675,7 +675,7 @@ theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (`pan_structsProofScript.sml:218`): selecting fields from compiled
     expressions in the original field-name order yields the compiled source
     expressions. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "fields_in_order_reorder_noop"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
     (context : StructPassContext) (eflds : List (FieldName × Exp α))
     (infoFields : List (FieldName × Shape))
@@ -820,7 +820,7 @@ theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
 /-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
     production old-shape list helper equals `MAP` of the production
     single-expression old-shape function, with no additional premises. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "old_exp_shapes_eq"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem structOldExpShapes_eq_map {α : Type} (context : StructPassContext) :
     (structOldExpShape.structOldExpShapes (α := α) context :
       List (Exp α) → List Shape) =
@@ -1070,7 +1070,7 @@ theorem afindi_eq_of_map_fst_eq [DecidableEq α] (key : α) :
 
 /-! Lean option-indexing adaptation of Cake's local `map_fst_eq_alookup`
     (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_fst_eq_alookup"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem map_fst_eq_lookup
     (xs ys : List (String × β)) (nm : String) {v : β}
     (hlen : xs.map Prod.fst = ys.map Prod.fst)

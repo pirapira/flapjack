@@ -388,25 +388,25 @@ def lookupCodeMap : FunName → Option (List Nat × CrepProg Nat) :=
   fun name => if name == "id" then some ([1], CrepProg.skip) else none
 
 example :
-    (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+    (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7] 1).map
         (fun pair => FLOOKUP pair.2 1) = some (some (PanWordLab.word 7)) := by
   rfl
 
-example : lookupCrepHolCode lookupCodeMap "missing" [] = none := by
+example : lookupCrepHolCode lookupCodeMap "missing" [] 0 = none := by
   rfl
 
-#guard (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+#guard (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7] 0).map
           (fun pair => FLOOKUP pair.2 1) == some (some (PanWordLab.word 7)) &&
-        (lookupCrepHolCode lookupCodeMap "missing" []).isNone &&
-        (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8]).isNone
+        (lookupCrepHolCode lookupCodeMap "missing" [] 0).isNone &&
+        (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8] 2).isNone
 
 /-- Kernel-checked adapter: the executed raw `lookupCrepRuntimeCode` agrees with
     the tagged HOL-shaped `lookupCrepHolCode` on the wrapped arguments, and the
     raw `eraseDups`-length distinctness check agrees with HOL `ALL_DISTINCT`. -/
 example :
     lookupCrepRuntimeCode "id" [(7 : Nat)] lookupCodeMap =
-      lookupCrepHolCode lookupCodeMap "id" [(PanWordLab.word 7 : PanWordLab Nat)] :=
-  lookupCrepRuntimeCode_eq_lookupCrepHolCode "id" [(7 : Nat)] lookupCodeMap
+      lookupCrepHolCode lookupCodeMap "id" [(PanWordLab.word 7 : PanWordLab Nat)] 0 :=
+  lookupCrepRuntimeCode_eq_lookupCrepHolCode "id" [(7 : Nat)] 0 lookupCodeMap
 
 example : ([1, 2, 1] : List Nat).eraseDups.length = ([1, 2, 1] : List Nat).length ↔
     ([1, 2, 1] : List Nat).Nodup :=

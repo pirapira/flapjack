@@ -352,4 +352,26 @@ example :
       0).map (fun word => BitVec.ofNat 64 word.toNat)
     == some (BitVec.ofNat 64 0x55667788))
 
+/-- The structured `.load` on a `One` shape agrees with the tagged exact
+    `panMemLoadHOL` over the word view of the `PanValue` memory. -/
+example :
+    panValueFlatLoad ([] : StructContext) littleEndianState.memory
+        panSemBitVec64BytesInWord 0 .one
+        (some (panSemBitVec64MemoryAccess littleEndianState)) =
+      (panMemLoadHOL (width := 64) .one 0
+        (fun a => littleEndianState.memaddrs a &&
+          panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map HolValue.toPanValue :=
+  panValueFlatLoad_one_eq_panMemLoadHOL littleEndianState
+    littleEndianState.memory ([] : StructContext) 0
+
+/- The structured `One` load returns the source word. -/
+#guard
+  isWordResult
+    (panValueFlatLoad ([] : StructContext) littleEndianState.memory
+      panSemBitVec64BytesInWord 0 .one
+      (some (panSemBitVec64MemoryAccess littleEndianState)))
+    sourceMemoryWord
+
 end Flapjack.Test.PanSemStateEvalParity

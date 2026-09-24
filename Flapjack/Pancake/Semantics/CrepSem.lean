@@ -525,6 +525,22 @@ inductive CrepRuntimeResult (α ε : Type u) where
   | finalFfi (event : ε)
   deriving DecidableEq, Repr
 
+/-- Exact constructor-by-constructor encoding of HOL's `crepSem$result`
+    (`crepSemScript.sml:37-44`): `Error | TimeOut | Break num | Continue num |
+    Return (('a word_lab) list) | Exception ('a word) | FinalFFI final_event`.
+    Unlike `CrepRuntimeResult` it has no Flapjack-only `normal` convenience
+    constructor, so it is the exact carrier for ports of proof-script
+    definitions stated over `crepSem$result` such as `cont_res_def`. -/
+inductive CrepResultHOL (α ε : Type u) where
+  | error
+  | timeOut
+  | break (label : Nat)
+  | continue (label : Nat)
+  | return (values : List (PanWordLab α))
+  | exception (value : α)
+  | finalFfi (event : ε)
+  deriving DecidableEq, Repr
+
 abbrev CrepRuntimeStep (α σ ε : Type u) :=
   CrepRuntimeResult α ε × CrepRuntimeState α σ
 

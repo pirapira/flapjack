@@ -236,6 +236,9 @@ run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
+run_probe crep_inline_cont_res_probeScript.sml crep_inline_cont_res_probe.out \
+  cont_res_none cont_res_done "$cake_dir/pancake/proofs/crep_inlineProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_inline_eval_probeScript.sml crep_inline_eval_probe.out \
   src_main_is_call continue_eval "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -459,6 +462,12 @@ run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_termi
 # clearing the caller-visible locals while keeping the decremented clock.
 run_probe pan_sem_call_callee_error_probeScript.sml pan_sem_call_callee_error_probe.out \
   call_error_result call_error_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call return-invalid probe observes that a callee returning a value whose
+# shape does not match the declared return shape rejects the call with
+# `SOME Error` at the decremented callee clock.
+run_probe pan_sem_call_return_invalid_probeScript.sml pan_sem_call_return_invalid_probe.out \
+  call_retinvalid_result call_retinvalid_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with

@@ -230,6 +230,29 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWith {α : Type u} (names : Lis
           simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
           simp [crepNestedSeq, crepAssignedFreeVars, ih values (by omega)]
 
+/-- Variable-form of `nested_seq_assigned_free_vars_eq`: assigning each name
+    from a temporary variable still assigns exactly the names. This is the form
+    emitted by the non-`distinctLists` branch of `compileProgHOL`. -/
+theorem crepAssignedFreeVars_nestedSeq_assign_var_zipWith {α : Type u}
+    (names temporaries : List Nat) (h : names.length = temporaries.length) :
+    crepAssignedFreeVars
+        (crepNestedSeq
+          (names.zipWith
+            (fun name temporary => CrepProg.assign name (.var temporary : CrepExp α))
+            temporaries)) =
+      names := by
+  induction names generalizing temporaries with
+  | nil =>
+      cases temporaries with
+      | nil => simp [crepNestedSeq, crepAssignedFreeVars]
+      | cons temporary temporaries => simp at h
+  | cons name names ih =>
+      cases temporaries with
+      | nil => simp at h
+      | cons temporary temporaries =>
+          simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
+          simp [crepNestedSeq, crepAssignedFreeVars, ih temporaries (by omega)]
+
 /-- Untagged production adapter: writing a `word_lab` global cell on the
     14-field `CrepRuntimeState` leaves every local binding unchanged. HOL's
     exact `FLOOKUP_set_globals` (crepPropsScript.sml:297) is over the 11-field
@@ -248,5 +271,57 @@ theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     (gv : BitVec 5) (w : PanWordLab α) (s : CrepHolState α σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobals gv w s).locals n = FLOOKUP s.locals n :=
   rfl
+
+/-! Membership equations for `crepAssignedFreeVars`, exposing Cake's
+`assigned_free_vars_def` (`cakeml/pancake/crepLangScript.sml:149`) clause by
+clause.  These keep the `not_mem_context_assigned_mem_gt` induction from
+unfolding the well-founded definition at every `compileProgHOL` branch. -/
+
+theorem mem_crepAssignedFreeVars_assign {α : Type u} (name : Nat)
+    (value : CrepExp α) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.assign name value : CrepProg α) ↔ x = name := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_primitive {α : Type u} (names : List Nat)
+    (operator : PrimOp) (arguments : List Nat) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.primitive names operator arguments : CrepProg α) ↔
+      x ∈ names := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_seq {α : Type u} (first second : CrepProg α)
+    (x : Nat) :
+    x ∈ crepAssignedFreeVars (.seq first second) ↔
+      x ∈ crepAssignedFreeVars first ∨ x ∈ crepAssignedFreeVars second := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_ite {α : Type u} (condition : CrepExp α)
+    (thenBranch elseBranch : CrepProg α) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.ite condition thenBranch elseBranch) ↔
+      x ∈ crepAssignedFreeVars thenBranch ∨ x ∈ crepAssignedFreeVars elseBranch := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_while {α : Type u} (condition : CrepExp α)
+    (body : CrepProg α) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.while condition body) ↔
+      x ∈ crepAssignedFreeVars body := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_shMem {α : Type u} (operator : CrepMemOp)
+    (name : Nat) (address : CrepExp α) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.shMem operator name address) ↔ x = name := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_call_some_some {α : Type u} (returns : List Nat)
+    (code : α) (handler : CrepProg α) (name : FunName)
+    (arguments : List (CrepExp α)) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.call (some (returns, some (code, handler))) name arguments) ↔
+      x ∈ returns ∨ x ∈ crepAssignedFreeVars handler := by
+  simp [crepAssignedFreeVars]
+
+theorem mem_crepAssignedFreeVars_call_some_none {α : Type u} (returns : List Nat)
+    (name : FunName) (arguments : List (CrepExp α)) (x : Nat) :
+    x ∈ crepAssignedFreeVars (.call (some (returns, none)) name arguments) ↔
+      x ∈ returns := by
+  simp [crepAssignedFreeVars]
 
 end Flapjack

@@ -2915,7 +2915,8 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     not inspect, and its evaluator takes an explicit `bytesInWord` parameter.
     Its three conclusions are the Var instance of HOL's old-shape,
     `v_flds_ok`, and converted-evaluation conclusions. Other expression
-    constructors remain open. -/
+    constructors remain open. This mismatch note belongs to this Var theorem;
+    the private lookup bridge above has its own separate documentation. -/
 theorem panStructCompileExpCorrectVarCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

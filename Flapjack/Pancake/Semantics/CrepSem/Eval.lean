@@ -1138,6 +1138,25 @@ theorem holFiniteWordSourceGetByte_atIndex {ι : Type u}
   simp [holFiniteWordSourceGetByte, holFiniteWordSourceByteIndex,
     dimension.encode_decode, Nat.add_comm]
 
+/-- After transporting the source `get_byte` result to BitVec, each output
+    bit is exactly the corresponding bit of the logically shifted source word,
+    restricted to the low eight positions. This exposes HOL's `w2w`/logical
+    shift behavior at the memory-model field boundary for every dimension. -/
+theorem holFiniteWordSourceGetByte_toBitVec_getLsbD {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address value : ι → Bool)
+    (bigEndian : Bool) (index : Fin dimension.width) :
+    BitVec.getLsbD
+        (holWordToBitVec dimension
+          (holFiniteWordSourceGetByte dimension address value bigEndian))
+        index.val =
+      (decide (index.val < 8) &&
+        BitVec.getLsbD
+          (holWordToBitVec dimension value >>>
+            (8 * holFiniteWordSourceByteIndex dimension address bigEndian))
+          index.val) := by
+  rw [holWordToBitVec_getLsbD dimension _ index]
+  exact holFiniteWordSourceGetByte_atIndex dimension address value bigEndian index
+
 /-- Pointwise `word_slice_alt`/shift/or expansion of HOL `set_byte_def`. -/
 def holFiniteWordSourceSetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address byte value : ι → Bool)
@@ -1349,6 +1368,26 @@ theorem holFiniteWordSourceMemoryModel_byteAlign_toBitVec {ι : Type u}
   change holWordToBitVec dimension
       (holFiniteWordSourceByteAlign dimension address) = _
   exact holFiniteWordSourceByteAlign_toBitVec dimension address
+
+/-- The generic source memory model's `getByte` field has the same BitVec
+    pointwise extraction equation as the HOL `get_byte` formula. -/
+theorem holFiniteWordSourceMemoryModel_getByte_toBitVec_getLsbD {ι : Type u}
+    (dimension : HolFiniteDimension ι) (modelEndian bigEndian : Bool)
+    (bytes address value : ι → Bool) (index : Fin dimension.width) :
+    BitVec.getLsbD
+        (holWordToBitVec dimension
+          ((holFiniteWordSourceMemoryModel dimension modelEndian).getByte
+            bytes address value bigEndian)) index.val =
+      (decide (index.val < 8) &&
+        BitVec.getLsbD
+          (holWordToBitVec dimension value >>>
+            (8 * holFiniteWordSourceByteIndex dimension address bigEndian))
+          index.val) := by
+  change BitVec.getLsbD
+      (holWordToBitVec dimension
+        (holFiniteWordSourceGetByte dimension address value bigEndian)) index.val = _
+  exact holFiniteWordSourceGetByte_toBitVec_getLsbD
+    dimension address value bigEndian index
 
 /-- The source-shaped finite-word model comparison agrees with the generic
     BitVec/HOL comparison after transporting the operands. -/

@@ -303,7 +303,7 @@ def setCrepRuntimeLocal (name : Nat) (value : PanWordLab α)
   { state with locals := (setCrepHolVar name value state.toHolState).locals }
 
 /-- `setCrepRuntimeLocal` has HOL's `set_var` locals component. -/
-theorem setCrepRuntimeLocal_eq_update
+@[simp] theorem setCrepRuntimeLocal_eq_update
     (name : Nat) (value : PanWordLab α) (state : CrepRuntimeState α σ) :
     setCrepRuntimeLocal name value state =
       { state with locals := updateCrepRuntimeLocal state.locals name value } := rfl
@@ -688,6 +688,50 @@ def crepRuntimeAssignExisting
       (fun locals (name, value) => updateCrepRuntimeLocal locals name (.word value))
       locals)
 
+/-- State-level `crepRuntimeAssignExisting` whose fold routes through the tagged
+    HOL `set_var` definition via `setCrepRuntimeLocal`. -/
+def setCrepRuntimeLocalsExisting (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) : Option (CrepRuntimeState α σ) :=
+  if names.length != values.length then none
+  else if !names.all (fun name => (state.locals name).isSome) then none
+  else if names.eraseDups.length != names.length then none
+  else
+    some ((names.zip values).foldl
+      (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state) state)
+
+theorem foldl_setCrepRuntimeLocal_eq (entries : List (Nat × α))
+    (state : CrepRuntimeState α σ) :
+    entries.foldl (fun state pair => setCrepRuntimeLocal pair.1 (.word pair.2) state)
+        state =
+      { state with
+        locals :=
+          entries.foldl
+            (fun locals pair => updateCrepRuntimeLocal locals pair.1 (.word pair.2))
+            state.locals } := by
+  induction entries generalizing state with
+  | nil => rfl
+  | cons pair rest ih =>
+      simp only [List.foldl_cons]
+      rw [setCrepRuntimeLocal_eq_update, ih]
+
+theorem setCrepRuntimeLocalsExisting_eq (names : List Nat) (values : List α)
+    (state : CrepRuntimeState α σ) :
+    setCrepRuntimeLocalsExisting names values state =
+      (crepRuntimeAssignExisting state.locals names values).map
+        (fun locals => { state with locals := locals }) := by
+  unfold setCrepRuntimeLocalsExisting crepRuntimeAssignExisting
+  cases hlen : names.length != values.length with
+  | true => rfl
+  | false =>
+      cases hall : !names.all (fun name => (state.locals name).isSome) with
+      | true => rfl
+      | false =>
+          cases hdup : names.eraseDups.length != names.length with
+          | true => rfl
+          | false =>
+              rw [foldl_setCrepRuntimeLocal_eq]
+              rfl
+
 def crepRuntimeReadBytes [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Nat → Option (List UInt8)
   | 0 => some []
@@ -753,7 +797,7 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
             let state := { state with ffi := ffi }
-            (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+            (.normal, setCrepRuntimeLocal name (.word value) state)
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
         match (state.locals name).map panTheWord with
@@ -1286,8 +1330,7 @@ mutual
         match evalCrepRuntimeExp state value with
         | none => some (.error, state)
         | some value =>
-            let nextState :=
-              { state with locals := updateCrepRuntimeLocal state.locals name (.word value) }
+            let nextState := setCrepRuntimeLocal name (.word value) state
             match evalCrepRuntimeProg handler primitive fuel nextState body with
             | none => none
             | some result => some (restoreCrepRuntimeStep name (state.locals name) result)
@@ -1297,7 +1340,7 @@ mutual
         | some value =>
             match state.locals name with
             | some _ =>
-                some (.normal, { state with locals := updateCrepRuntimeLocal state.locals name (.word value) })
+                some (.normal, setCrepRuntimeLocal name (.word value) state)
             | none => some (.error, state)
     | _fuel + 1, state, .primitive names operator arguments =>
         match arguments.mapM (fun name => (state.locals name).map panTheWord) with
@@ -1306,8 +1349,8 @@ mutual
             match primitive operator arguments with
             | none => some (.error, state)
             | some values =>
-                match crepRuntimeAssignExisting state.locals names values with
-                | some locals => some (.normal, { state with locals := locals })
+                match setCrepRuntimeLocalsExisting names values state with
+                | some state' => some (.normal, state')
                 | none => some (.error, state)
     | _fuel + 1, state, .store address value =>
         match evalCrepRuntimeExp state address, evalCrepRuntimeExp state value with

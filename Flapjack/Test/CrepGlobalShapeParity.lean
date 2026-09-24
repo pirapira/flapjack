@@ -319,6 +319,22 @@ example :
         directUpdateState.toHolState :=
   setCrepRuntimeLocalsFEMPTY_toHolState _ directUpdateState
 
+-- The primitive/`Dec` production fold routes through `setCrepRuntimeLocal`
+-- (hence the tagged HOL `set_var`), agreeing with the raw locals fold.
+example :
+    (List.foldl (fun s (p : Nat × Nat) => setCrepRuntimeLocal p.1 (.word p.2) s)
+        directUpdateState [(1, 5), (2, 6)]).locals =
+      List.foldl (fun l (p : Nat × Nat) => updateCrepRuntimeLocal l p.1 (.word p.2))
+        directUpdateState.locals [(1, 5), (2, 6)] := by
+  rw [foldl_setCrepRuntimeLocal_eq [(1, 5), (2, 6)] directUpdateState]
+
+-- The state-level primitive local assignment agrees with the locals-level one.
+example :
+    setCrepRuntimeLocalsExisting [1, 2] [(5 : Nat), 6] directUpdateState =
+      (crepRuntimeAssignExisting directUpdateState.locals [1, 2] [(5 : Nat), 6]).map
+        (fun locals => { directUpdateState with locals := locals }) :=
+  setCrepRuntimeLocalsExisting_eq [1, 2] [(5 : Nat), 6] directUpdateState
+
 -- Concrete observations mirroring crep_local_updates_probe.out under the
 -- production adapters.
 #guard FLOOKUP (setCrepRuntimeLocal 3 (.word (9 : Nat)) directUpdateState).toHolState.locals 3 ==

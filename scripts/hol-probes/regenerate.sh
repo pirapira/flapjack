@@ -422,6 +422,12 @@ run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.ou
 run_probe pan_sem_call_error_state_probeScript.sml pan_sem_call_error_state_probe.out \
   call_error_load_result call_error_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call arity probe observes that a parameter-shape/arity mismatch rejects the
+# call with `SOME Error` and the unchanged caller state, while a matching
+# argument yields the callee's `Return` result.
+run_probe pan_sem_call_arity_probeScript.sml pan_sem_call_arity_probe.out \
+  call_arity_miss_result call_arity_shape_miss_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.

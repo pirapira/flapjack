@@ -3600,6 +3600,15 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.loadByte (.var .local name))
+  | load32SupportedAddress (address : Exp (RiscV.Word 64))
+      (supported : compileArgConstLocalStructAddressOrRFieldInnerIH
+        context source target address)
+      (hshape : (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax } address).2 = .one)
+      (hcanonical : target = riscvCrepWordTarget target) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.load32 address)
   | panOpMul (left right : Exp (RiscV.Word 64))
       (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
       (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
@@ -3884,6 +3893,119 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
               have hlocal : source.locals name = some (.nStruct structName fields) := by
                 simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
               simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+  | load32SupportedAddress address supported hshape hcanonical ihAddress =>
+      intro value heval
+      cases haddress : evalPanSemStateExp source address with
+      | none =>
+          have hsourceAddress :
+              evalPanValueExp source.structs source.locals source.globals
+                source.memory source.baseAddress source.topAddress
+                panSemBitVec64BytesInWord address
+                (memoryAccess := some (panSemBitVec64MemoryAccess source)) = none := by
+            simpa [evalPanSemStateExp] using haddress
+          simp [evalPanSemStateExp, evalPanValueExp, hsourceAddress] at heval
+      | some addressValue =>
+          cases addressValue with
+          | word addressWord =>
+              have hsourceAddress :
+                  evalPanValueExp source.structs source.locals source.globals
+                    source.memory source.baseAddress source.topAddress
+                    panSemBitVec64BytesInWord address
+                    (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.word addressWord) := by
+                simpa [evalPanSemStateExp] using haddress
+              have hsourceConst :
+                  evalPanSemStateExp source (.load32 address) =
+                    evalPanSemStateExp source (.load32 (.const addressWord)) := by
+                simp [evalPanSemStateExp, evalPanValueExp, hsourceAddress]
+              let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+                { vars := context.vars, funcs := context.funcs,
+                  eids := context.eids, vmax := context.vmax }
+              have hshape' : (compileExpHOL compilerContext address).2 = .one := by
+                simpa [compilerContext] using hshape
+              have hcompiledAddressRun :
+                  evalCrepRuntimeExps target
+                    (compileExpHOL compilerContext address).1 = some [addressWord] := by
+                simpa [panValueFlatten] using
+                  ihAddress (.word addressWord) haddress
+              have hcompiledAddressLength :
+                  (compileExpHOL compilerContext address).1.length = 1 := by
+                simpa using (evalCrepRuntimeExps_length_of_some target
+                  (compileExpHOL compilerContext address).1 [addressWord]
+                  hcompiledAddressRun).symm
+              cases hcompiledAddress : (compileExpHOL compilerContext address).1 with
+              | nil => simp [hcompiledAddress] at hcompiledAddressLength
+              | cons targetAddress targetAddressTail =>
+                  cases targetAddressTail with
+                  | nil =>
+                      have hcompiledAddressSingleton :
+                          (compileExpHOL compilerContext address).1 =
+                            [targetAddress] := by
+                        simp [hcompiledAddress]
+                      have hcompiledAddressPair :
+                          compileExpHOL compilerContext address =
+                            ([targetAddress], .one) := by
+                        apply Prod.ext
+                        · exact hcompiledAddressSingleton
+                        · exact hshape'
+                      have htargetAddress :
+                          evalCrepRuntimeExp target targetAddress =
+                            some addressWord := by
+                        rw [hcompiledAddressSingleton] at hcompiledAddressRun
+                        cases hvalue : evalCrepRuntimeExp target targetAddress with
+                        | none => simp [evalCrepRuntimeExps, hvalue] at hcompiledAddressRun
+                        | some word =>
+                            have hword : word = addressWord := by
+                              simpa [evalCrepRuntimeExps, hvalue] using
+                                hcompiledAddressRun
+                            simp [hword]
+                      have hcompiledLoad :
+                          (compileExpHOL compilerContext (.load32 address)).1 =
+                            [.load32 targetAddress] := by
+                        simp only [compileExpHOL, hcompiledAddressPair]
+                      have htargetLoad :
+                          evalCrepRuntimeExp target (.load32 targetAddress) =
+                            evalCrepRuntimeExp target (.load32 (.const addressWord)) := by
+                        simp [evalCrepRuntimeExp, htargetAddress]
+                      have hsourceTarget := evalPanSemStateExp_load32_const_riscvTarget
+                        source target addressWord hstate
+                      have hsourceTarget' :
+                          evalPanSemStateExp source
+                            (.load32 (.const addressWord)) =
+                            (evalCrepRuntimeExp target
+                              (.load32 (.const addressWord))).map PanValue.word := by
+                        simpa [hcanonical.symm] using hsourceTarget
+                      rw [hsourceConst, hsourceTarget'] at heval
+                      cases value with
+                      | word resultWord =>
+                          have htarget :
+                              evalCrepRuntimeExp target
+                                (.load32 (.const addressWord)) = some resultWord := by
+                            simpa using heval
+                          simp [compilerContext, hcompiledLoad,
+                            evalCrepRuntimeExps, htargetLoad, htarget,
+                            panValueFlatten]
+                      | rStruct fields => simp at heval
+                      | nStruct name fields => simp at heval
+                  | cons _ _ => simp [hcompiledAddress] at hcompiledAddressLength
+          | rStruct fields =>
+              have hsourceAddress :
+                  evalPanValueExp source.structs source.locals source.globals
+                    source.memory source.baseAddress source.topAddress
+                    panSemBitVec64BytesInWord address
+                    (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.rStruct fields) := by
+                simpa [evalPanSemStateExp] using haddress
+              simp [evalPanSemStateExp, evalPanValueExp, hsourceAddress] at heval
+          | nStruct name fields =>
+              have hsourceAddress :
+                  evalPanValueExp source.structs source.locals source.globals
+                    source.memory source.baseAddress source.topAddress
+                    panSemBitVec64BytesInWord address
+                    (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                      some (.nStruct name fields) := by
+                simpa [evalPanSemStateExp] using haddress
+              simp [evalPanSemStateExp, evalPanValueExp, hsourceAddress] at heval
   | panOpMul left right hleft hright ihLeft ihRight =>
       intro value heval
       have hevalSource : evalPanValueExp source.structs source.locals source.globals
@@ -4016,9 +4138,10 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
 
 /-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and
 PanOp multiplication over recursively supported operands, plus constant-address
-LoadByte, constant-address Load32, and one-word Local Load32 for the canonical
-RISC-V word target, through the HOL `compile_args` list evaluator. Other Load
-forms, operators, and the full expression induction remain open. -/
+LoadByte/Load32 and one-word Local LoadByte/Load32 for the canonical RISC-V word
+target. Also support Load32 over recursively supported addresses whose compiled
+shape is explicitly One. These cases lift through HOL `compile_args`; other
+Load forms, operators, and the full expression induction remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

@@ -576,4 +576,102 @@ theorem panValueFlatLoad_one_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
       | nStruct nm fs =>
           cases hd : state.memaddrs address <;> simp [hmem, panValueWordDefined]
 
+/-! ### Structured `.load` fuel/offset helpers (flapjack-pxn.18.3.6.9.2.2/.2.2.1)
+
+These untagged helpers connect the production fuel-indexed flattening load to the
+tagged exact `panMemLoadHOL`: the production context-size agrees with the exact
+`sizeOfShWithCtxt` over `StructContext.toHOL`, and the production offset
+`panValueFlatOffset` agrees with the exact `address + bytes_in_word * n` step.
+They are prerequisites for the remaining `Comb`/`Named` widening adapter
+(`flapjack-pxn.18.3.6.9.2.2.1`). -/
+
+theorem panValueFlatSizeFoldl_eq_sizeOfShWithCtxt (structs : StructContext) (shapes : List Shape)
+    (acc : Nat)
+    (h : ∀ shape ∈ shapes, shapeSizeWithContext structs shape = sizeOfShWithCtxt structs.toHOL shape) :
+    shapes.foldl (fun total shape => total + shapeSizeWithContext structs shape) acc =
+      shapes.foldl (fun total shape => total + sizeOfShWithCtxt structs.toHOL shape) acc := by
+  induction shapes generalizing acc with
+  | nil => rfl
+  | cons s ss ih =>
+      simp only [List.foldl_cons]
+      rw [h s List.mem_cons_self]
+      exact ih (acc + sizeOfShWithCtxt structs.toHOL s) (fun x hx => h x (List.mem_cons_of_mem s hx))
+
+theorem panValueFlatShapeSize_eq_sizeOfShWithCtxt (structs : StructContext) (shape : Shape) :
+    shapeSizeWithContext structs shape = sizeOfShWithCtxt structs.toHOL shape := by
+  induction shape using shapeSizeWithContext.induct with
+  | case1 => simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+  | case2 shapes ih =>
+      simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+      exact panValueFlatSizeFoldl_eq_sizeOfShWithCtxt structs shapes 0 ih
+  | case3 name =>
+      simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+      rw [lookupInfo_toHOL]
+      cases lookupInfo name structs <;> rfl
+
+theorem panValueFlatOffset_eq_widen (address : RiscV.Word 64) (n : Nat) :
+    panValueFlatOffset (8 : RiscV.Word 64) address n =
+      address + BitVec.ofNat 64 8 * BitVec.ofNat 64 n := by
+  induction n generalizing address with
+  | zero => simp [panValueFlatOffset]
+  | succ n ih =>
+      rw [panValueFlatOffset, ih]
+      simp only [BitVec.ofNat_add, BitVec.mul_add, BitVec.mul_one]
+      ac_rfl
+
+/-! ### Fuel sufficiency for the structured `.load` adapter (flapjack-pxn.18.3.6.9.2.2.1)
+
+The production flattening load passes the same fuel to each sub-shape; these
+untagged Nat bounds show the freezer's initial fuel
+`panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1` suffices for
+every nested `Comb`/`Named` field. They are the remaining prerequisites for the
+`Comb`/`Named` widening adapter to the tagged exact `panMemLoadHOL`. -/
+
+theorem panValueFlatShapeFuel_le_listFuel {shape : Shape} {shapes : List Shape}
+    (h : shape ∈ shapes) :
+    panValueFlatShapeFuel shape ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel shapes := by
+  induction shapes with
+  | nil => simp at h
+  | cons head tail ih =>
+      rcases List.mem_cons.mp h with hhead | htail
+      · subst hhead
+        simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel]
+        omega
+      · have hih := ih htail
+        simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel]
+        omega
+
+theorem panValueFlatFieldsFuel_shapeFuel_le {field : FieldName × Shape}
+    {fields : List (FieldName × Shape)} (h : field ∈ fields) :
+    panValueFlatShapeFuel field.2 ≤ panValueFlatFieldsFuel fields := by
+  induction fields with
+  | nil => simp at h
+  | cons head tail ih =>
+      rcases List.mem_cons.mp h with hhead | htail
+      · subst hhead
+        simp only [panValueFlatFieldsFuel]
+        omega
+      · have hih := ih htail
+        simp only [panValueFlatFieldsFuel]
+        omega
+
+theorem panValueFlatContextFuel_lookupInfoWithRest_le [BEq String] (name : String)
+    (structs : StructContext) (info : StructInfo) (rest : StructContext)
+    (h : lookupInfoWithRest name structs = some (info, rest)) :
+    panValueFlatFieldsFuel info.fields + panValueFlatContextFuel rest ≤
+      panValueFlatContextFuel structs := by
+  induction structs with
+  | nil => simp [lookupInfoWithRest] at h
+  | cons entry tail ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hc : candidate == name
+      · simp [lookupInfoWithRest, hc] at h
+        obtain ⟨hinfo, hrest⟩ := h
+        subst hinfo; subst hrest
+        simp [panValueFlatContextFuel]
+      · simp only [lookupInfoWithRest, hc] at h
+        have hih := ih h
+        simp only [panValueFlatContextFuel]
+        omega
+
 end Flapjack

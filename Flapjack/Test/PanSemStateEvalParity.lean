@@ -374,4 +374,43 @@ example :
       (some (panSemBitVec64MemoryAccess littleEndianState)))
     sourceMemoryWord
 
+/- The production context-size agrees with the exact HOL context-size. -/
+example : shapeSizeWithContext ([] : StructContext) Shape.one =
+    sizeOfShWithCtxt (StructContext.toHOL ([] : StructContext)) Shape.one :=
+  panValueFlatShapeSize_eq_sizeOfShWithCtxt ([] : StructContext) Shape.one
+
+/- The production offset agrees with the exact `address + bytes_in_word * n`. -/
+example : panValueFlatOffset (8 : RiscV.Word 64) (16 : RiscV.Word 64) 3 =
+    (16 : RiscV.Word 64) + BitVec.ofNat 64 8 * BitVec.ofNat 64 3 :=
+  panValueFlatOffset_eq_widen 16 3
+
+/- The nested `Comb` sub-shape fuel stays within the shape's list fuel. -/
+example :
+    panValueFlatShapeFuel Shape.one ≤
+      panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.named "S", Shape.one] :=
+  panValueFlatShapeFuel_le_listFuel (by simp)
+
+/- The `Named` field-shape fuel stays within the field-list fuel. -/
+example :
+    panValueFlatShapeFuel Shape.one ≤
+      panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)) :=
+  panValueFlatFieldsFuel_shapeFuel_le (field := ("f", Shape.one)) (by simp)
+
+/-- The `Named` lookup fuel bound: the matched struct's field fuel plus the
+    remaining context fuel stays below the whole-context fuel. -/
+example :
+    panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)) +
+        panValueFlatContextFuel ([] : StructContext) ≤
+      panValueFlatContextFuel
+        ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext) :=
+  panValueFlatContextFuel_lookupInfoWithRest_le "S"
+    ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)
+    { fields := [("f", Shape.one)], size := 1 } [] (by simp [lookupInfoWithRest])
+
+#guard decide (panValueFlatShapeFuel Shape.one ≤
+  panValueFlatShapeFuel.panValueFlatShapeListFuel [Shape.named "S", Shape.one])
+
+#guard decide (panValueFlatShapeFuel Shape.one ≤
+  panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)))
+
 end Flapjack.Test.PanSemStateEvalParity

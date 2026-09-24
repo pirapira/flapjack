@@ -2019,4 +2019,262 @@ theorem evalCrepRuntimeExpWordLab_crepOpMul_rv64_const
           | nil => simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, holCrepOpMul64]
           | cons extra more => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
 
+/- HOL-shaped total 64-bit reference evaluator over the production RV64 Crep
+runtime state.  It uses the reviewed `holMemLoad*`/`holWordShift64`/`wordOpHOL`
+primitives and HOL `crepSem$eval`'s recursive structure (children are re-evaluated
+by the reference itself).  It is Flapjack-only adapter infrastructure, not a HOL
+port: the production evaluator's `Op`/`Cmp`/`Shift`/byte-load arms still delegate
+to the arbitrary runtime `memoryModel` hooks rather than HOL fixed primitives, so
+no `@[hol]` tag is attached (tracked by bead flapjack-pxn.18.4.3.48.1). -/
+mutual
+  def holCrepEval64 (base : CrepRuntimeState (RiscV.Word 64) Unit) :
+      CrepExp (RiscV.Word 64) → Option (PanWordLab (RiscV.Word 64))
+    | .const value => some (.word value)
+    | .var name => base.locals name
+    | .loadGlob name => base.globals name
+    | .load address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoad64 base.memaddrs (crepRuntimeMemoryView base.memory) word).map
+          PanWordLab.word
+    | .load32 address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          word).map PanWordLab.word
+    | .loadByte address => do
+        let cell ← holCrepEval64 base address
+        let .word word := cell
+        (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+          word).map PanWordLab.word
+    | .op operator expressions => do
+        let cells ← holCrepEvals64 base expressions
+        let words ← cells.mapM (fun cell => (let .word word := cell; some word))
+        (wordOpHOL operator words).map PanWordLab.word
+    | .crepOp .mul [left, right] => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        pure (.word (leftWord * rightWord))
+    | .cmp operator left right => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        pure (.word (RiscV.panRiscVCmp operator leftWord rightWord))
+    | .shift operator left right => do
+        let leftCell ← holCrepEval64 base left
+        let rightCell ← holCrepEval64 base right
+        let .word leftWord := leftCell
+        let .word rightWord := rightCell
+        (holWordShift64 operator leftWord rightWord.toNat).map PanWordLab.word
+    | .baseAddr => some (.word base.baseAddress)
+    | .topAddr => some (.word base.topAddress)
+    | _ => none
+  def holCrepEvals64 (base : CrepRuntimeState (RiscV.Word 64) Unit) :
+      List (CrepExp (RiscV.Word 64)) → Option (List (PanWordLab (RiscV.Word 64)))
+    | [] => some []
+    | expression :: expressions => do
+        let cell ← holCrepEval64 base expression
+        let cells ← holCrepEvals64 base expressions
+        pure (cell :: cells)
+end
+
+/-- The reference list evaluator is the `mapM` of the reference expression evaluator. -/
+theorem holCrepEvals64_eq_mapM (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (expressions : List (CrepExp (RiscV.Word 64))) :
+    holCrepEvals64 base expressions = expressions.mapM (holCrepEval64 base) := by
+  induction expressions with
+  | nil => rfl
+  | cons expression expressions ih =>
+      simp only [holCrepEvals64, List.mapM_cons]
+      cases h : holCrepEval64 base expression <;> simp [ih]
+
+/-- Unwrapping a list of `word_lab` cells that were all built by `PanWordLab.word`
+recovers the original bare words. -/
+theorem mapM_unwrap_mapWord (values : List (RiscV.Word 64)) :
+    (values.map PanWordLab.word).mapM
+        (fun cell => (let .word word := cell; some word)) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.map_cons, List.mapM_cons, ih]
+
+/-- The first-field projection of a `word_lab` cell list built by `PanWordLab.word`
+recovers the original bare words. -/
+theorem mapM_some_fst_map_word (values : List (RiscV.Word 64)) :
+    (values.map PanWordLab.word).mapM (fun cell => some cell.1) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.map_cons, List.mapM_cons, ih]
+
+/-- `mapM` of `some` is `some` of the list. -/
+theorem list_mapM_some (values : List (RiscV.Word 64)) :
+    values.mapM (fun value => some value) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih => simp [List.mapM_cons, ih]
+
+/-- The production list evaluator is the `mapM` of the expression evaluator. -/
+theorem evalCrepRuntimeExps_eq_mapM_of
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (expressions : List (CrepExp α)) :
+    evalCrepRuntimeExps state expressions = expressions.mapM (evalCrepRuntimeExp state) := by
+  induction expressions with
+  | nil => simp [evalCrepRuntimeExps]
+  | cons expression expressions ih =>
+      simp only [evalCrepRuntimeExps, List.mapM_cons]
+      cases h : evalCrepRuntimeExp state expression <;> simp [ih]
+
+mutual
+  /-- Production/bare RV64 Crep evaluator correspondence with the HOL-shaped
+  reference evaluator, read back through `PanWordLab.word`.  Flapjack-only
+  adapter theorem (no `@[hol]` tag): the production `Op`/`Cmp`/`Shift`/byte-load
+  arms still go through the runtime `memoryModel` hooks, which the correspondence
+  identifies with the reviewed HOL-shaped primitives only at this RV64 target. -/
+  theorem evalCrepRuntimeExp_map_eq_holCrepEval64
+      (base : CrepRuntimeState (RiscV.Word 64) Unit)
+      (expression : CrepExp (RiscV.Word 64)) :
+      (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) expression).map PanWordLab.word =
+        holCrepEval64 base expression := by
+    cases expression with
+    | const value => simp [evalCrepRuntimeExp, holCrepEval64]
+    | var name =>
+        simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget,
+          Function.comp_def, optionMapWordPanTheWord]
+    | loadGlob name =>
+        simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget,
+          Function.comp_def, optionMapWordPanTheWord]
+    | baseAddr => simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget]
+    | topAddr => simp [evalCrepRuntimeExp, holCrepEval64, riscv64CrepRuntimeTarget]
+    | load address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoad_rv64_eq_holMemLoad64]
+    | load32 address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+    | loadByte address =>
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) address with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address]
+        | some addressWord =>
+            simp [evalCrepRuntimeExp, holCrepEval64, h,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base address,
+              crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+    | op operator expressions =>
+        simp only [evalCrepRuntimeExp, holCrepEval64]
+        rw [← evalCrepRuntimeExps_map_eq_holCrepEvals64 base expressions]
+        rw [← evalCrepRuntimeExps_eq_mapM_of (riscv64CrepRuntimeTarget base) expressions]
+        simp [Option.bind_map, Option.map_bind, Option.bind_some, Function.comp_def,
+          list_mapM_some, riscv64CrepRuntimeTarget_memoryModel,
+          RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp, wordOpHOL]
+    | crepOp operator expressions =>
+        cases operator
+        cases expressions with
+        | nil => simp [evalCrepRuntimeExp, holCrepEval64]
+        | cons left rest =>
+            cases rest with
+            | nil => simp [evalCrepRuntimeExp, holCrepEval64]
+            | cons right tail =>
+                cases tail with
+                | nil =>
+                    cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+                    | none =>
+                        have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                        rw [hl, Option.map_none] at ihl
+                        simp [evalCrepRuntimeExp, holCrepEval64, hl, ← ihl]
+                    | some leftWord =>
+                        cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+                        | none =>
+                            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                            rw [hl, Option.map_some] at ihl
+                            have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                            rw [hr, Option.map_none] at ihr
+                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                        | some rightWord =>
+                            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                            rw [hl, Option.map_some] at ihl
+                            have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                            rw [hr, Option.map_some] at ihr
+                            simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+                | cons extra more => simp [evalCrepRuntimeExp, holCrepEval64]
+    | cmp operator left right =>
+        cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+        | none =>
+            have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+            rw [hl, Option.map_none] at ihl
+            simp [evalCrepRuntimeExp, holCrepEval64, hl, ← ihl]
+        | some leftWord =>
+            cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+            | none =>
+                have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                rw [hl, Option.map_some] at ihl
+                have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                rw [hr, Option.map_none] at ihr
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr]
+            | some rightWord =>
+                have ihl := evalCrepRuntimeExp_map_eq_holCrepEval64 base left
+                rw [hl, Option.map_some] at ihl
+                have ihr := evalCrepRuntimeExp_map_eq_holCrepEval64 base right
+                rw [hr, Option.map_some] at ihr
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr, ← ihl, ← ihr,
+                  riscv64CrepRuntimeTarget_memoryModel, RiscV.panRiscVMemoryModel]
+    | shift operator left right =>
+        cases hl : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) left with
+        | none =>
+            simp [evalCrepRuntimeExp, holCrepEval64, hl,
+              ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left]
+        | some leftWord =>
+            cases hr : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) right with
+            | none =>
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base right]
+            | some rightWord =>
+                simp [evalCrepRuntimeExp, holCrepEval64, hl, hr,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base left,
+                  ← evalCrepRuntimeExp_map_eq_holCrepEval64 base right,
+                  crepRuntimeShift_rv64_eq_holWordShift64, Option.bind_some]
+
+  /-- Production/bare RV64 Crep list-evaluator correspondence with the
+  HOL-shaped reference list evaluator. -/
+  theorem evalCrepRuntimeExps_map_eq_holCrepEvals64
+      (base : CrepRuntimeState (RiscV.Word 64) Unit)
+      (expressions : List (CrepExp (RiscV.Word 64))) :
+      (evalCrepRuntimeExps (riscv64CrepRuntimeTarget base) expressions).map
+          (List.map PanWordLab.word) =
+        holCrepEvals64 base expressions := by
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExps, holCrepEvals64]
+    | cons expression expressions =>
+        simp only [evalCrepRuntimeExps, holCrepEvals64]
+        cases h : evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) expression with
+        | none =>
+            have he := evalCrepRuntimeExp_map_eq_holCrepEval64 base expression
+            rw [h, Option.map_none] at he
+            rw [← he]
+            rfl
+        | some value =>
+            have he := evalCrepRuntimeExp_map_eq_holCrepEval64 base expression
+            rw [h, Option.map_some] at he
+            have ht := evalCrepRuntimeExps_map_eq_holCrepEvals64 base expressions
+            rw [← he, ← ht]
+            simp [Option.map_bind, Option.bind_map, Function.comp_def]
+end
+
 end Flapjack

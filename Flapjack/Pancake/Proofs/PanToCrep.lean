@@ -3656,6 +3656,62 @@ theorem notMemContextAssignedMemGt
     (hx : x ≤ context.vmax) :
     x ∉ crepAssignedFreeVars (compileProgHOL context program) :=
   compileProgHOL_not_mem_assignedFreeVars program context x hfresh hx
+
+/-- `distinctLists` as a set-disjointness predicate: every element of the left
+    list is absent from the right list. -/
+theorem distinctLists_eq_true_iff {left right : List Nat} :
+    distinctLists left right = true ↔ ∀ x ∈ left, x ∉ right := by
+  simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]
+
+/-- Exact HOL port of Cake `rewritten_context_unassigned`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457`): extending the
+    context with the slot list `nvars` for variable `v` (whose previous slot
+    list is `ns`, with `distinct_lists nvars ns`) keeps every slot of `ns`
+    outside the assigned free variables of the compiled program. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "rewritten_context_unassigned"]
+theorem rewrittenContextUnassigned [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
+    (program : Prog α) (nctxt ctxt : PanToCrepHOLContext α) (v : VarName)
+    (ns nvars : List Nat) (sh sh' : Shape)
+    (hnctxt : nctxt =
+      { ctxt with
+        vars := FUPDATE ctxt.vars (v, (sh, nvars))
+        vmax := ctxt.vmax + Shape.shapeSize sh })
+    (hlookup : FLOOKUP ctxt.vars v = some (sh', ns))
+    (hnoOverlap : noOverlap ctxt.vars) (hctxtMax : ctxtMax ctxt.vmax ctxt.vars)
+    (_hnoOverlapN : noOverlap nctxt.vars)
+    (hctxtMaxN : ctxtMax nctxt.vmax nctxt.vars)
+    (hdistinct : distinctLists nvars ns = true) :
+    distinctLists ns (crepAssignedFreeVars (compileProgHOL nctxt program)) = true := by
+  rw [distinctLists_eq_true_iff] at hdistinct ⊢
+  intro x hxns hxafv
+  subst hnctxt
+  have hxle : x ≤ ctxt.vmax + Shape.shapeSize sh := by
+    have hle := hctxtMax.2 v sh' ns hlookup x hxns
+    omega
+  have hfreshN :
+      ∀ v' sh'' ns'', FLOOKUP (FUPDATE ctxt.vars (v, (sh, nvars))) v' =
+        some (sh'', ns'') → x ∉ ns'' := by
+    intro v' sh'' ns'' hlk
+    rw [FLOOKUP_update] at hlk
+    by_cases hv : (v == v') = true
+    · rw [if_pos hv] at hlk
+      have hpair : (sh, nvars) = (sh'', ns'') := Option.some.inj hlk
+      have hn : nvars = ns'' := congrArg Prod.snd hpair
+      intro hxns''
+      exact (hdistinct x (by rw [hn]; exact hxns'')) hxns
+    · rw [if_neg hv] at hlk
+      intro hxns''
+      have hveq : v = v' :=
+        hnoOverlap.2 v v' sh' sh'' ns ns'' hlookup hlk ⟨x, hxns, hxns''⟩
+      rw [beq_iff_eq] at hv
+      exact hv hveq
+  exact notMemContextAssignedMemGt
+    { ctxt with
+      vars := FUPDATE ctxt.vars (v, (sh, nvars))
+      vmax := ctxt.vmax + Shape.shapeSize sh }
+    program x hctxtMaxN hfreshN hxle hxafv
+
 /-- Flapjack-specific analogue of HOL `pan_to_crepProofScript.sml:3051`
 `evaluate_replicate_const`.  NOT a port: the production Crep evaluator
 `evalCrepRuntimeExp`/`evalCrepRuntimeExps` returns the bare `α` carried by a

@@ -137,6 +137,66 @@ def firstCompiledExpAnyShapeHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord 
 def maxCrepExpVarHOL (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 
+/-! Freshness bounds for the temporaries that `compileProgHOL` allocates from
+    the finite-map `PanToCrepHOLContext`. These are the exact-context
+    counterparts of `allocatedNames_gt`/`freshNames_gt`, used by Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`) to
+    rule out collisions between fresh temporaries and live variables. -/
+theorem allocatedNamesHOL_gt (context : PanToCrepHOLContext α) (shape : Shape)
+    {slot : Nat} (hmem : slot ∈ allocatedNamesHOL context shape) :
+    context.vmax < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
+theorem freshNamesHOL_gt (context : PanToCrepHOLContext α) (count start : Nat)
+    (hstart : 0 < start) {slot : Nat}
+    (hmem : slot ∈ freshNamesHOL context count start) :
+    context.vmax < slot := by
+  obtain ⟨offset, _hoffset, rfl⟩ := List.mem_map.mp hmem
+  omega
+
+theorem not_mem_allocatedNamesHOL (context : PanToCrepHOLContext α) (shape : Shape)
+    {x : Nat} (hx : x ≤ context.vmax) : x ∉ allocatedNamesHOL context shape := by
+  intro hmem
+  have := allocatedNamesHOL_gt context shape hmem
+  omega
+
+theorem not_mem_freshNamesHOL (context : PanToCrepHOLContext α) (count start : Nat)
+    (hstart : 0 < start) {x : Nat} (hx : x ≤ context.vmax) :
+    x ∉ freshNamesHOL context count start := by
+  intro hmem
+  have := freshNamesHOL_gt context count start hstart hmem
+  omega
+
+/-- HOL-context counterpart of `mem_crepExpVars_le_maxCrepExpVar`: every
+    variable of a compiled expression list is bounded by `maxCrepExpVarHOL`,
+    the `foldl max 0` used for Cake's `ExtCall`/`ShMemStore` temporaries. -/
+theorem mem_crepExpVars_le_maxCrepExpVarHOL
+    (expressions : List (CrepExp α)) {name : Nat}
+    (hmem : name ∈ expressions.flatMap crepExpVars) :
+    name ≤ maxCrepExpVarHOL expressions := by
+  have hacc : ∀ (xs : List Nat) (acc : Nat), acc ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => intro acc; exact Nat.le_refl acc
+    | cons x xs ih =>
+        intro acc
+        simp only [List.foldl_cons]
+        exact Nat.le_trans (Nat.le_max_left _ _) (ih (max acc x))
+  have hbound : ∀ (xs : List Nat) (acc : Nat), name ∈ xs →
+      name ≤ xs.foldl max acc := by
+    intro xs
+    induction xs with
+    | nil => simp
+    | cons x xs ih =>
+        intro acc h
+        simp only [List.mem_cons] at h
+        simp only [List.foldl_cons]
+        rcases h with rfl | h
+        · exact Nat.le_trans (Nat.le_max_right _ _) (hacc xs (max acc name))
+        · exact ih (max acc x) h
+  exact hbound (expressions.flatMap crepExpVars) 0 hmem
+
 def loadMemOpHOL : OpSize → CrepMemOp
   | .op8 => .load8
   | .opW => .load

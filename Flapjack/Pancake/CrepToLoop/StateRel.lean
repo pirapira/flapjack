@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.LoopStateResult
+import Flapjack.Compiler.Encoders.Asm
 
 /-!
 State relation of the Crepe-to-Loop lowering, ported from
@@ -302,7 +303,7 @@ structure CrepToLoopFiniteMapContext where
   vars : FiniteMap Nat Nat
   funcs : FiniteMap FunName (Nat × Nat)
   vmax : Nat
-  target : RiscV.Architecture
+  target : Compiler.Encoders.Asm.AsmArchitecture
 
 /-- Exact width-indexed port of HOL `locals_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) over the
@@ -366,7 +367,7 @@ HOL finite maps) they need no width parameter. -/
 /-- Exact port of HOL `mk_ctxt_def`
     (`cakeml/pancake/crep_to_loopScript.sml:221-228`). -/
 @[hol "cakeml/pancake/crep_to_loopScript.sml" "mk_ctxt_def"]
-def mkCtxtHOL (target : RiscV.Architecture) (vmap : FiniteMap Nat Nat)
+def mkCtxtHOL (target : Compiler.Encoders.Asm.AsmArchitecture) (vmap : FiniteMap Nat Nat)
     (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
     CrepToLoopFiniteMapContext :=
   { vars := vmap, funcs := functions, vmax := vmax, target := target }

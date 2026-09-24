@@ -523,6 +523,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1OpHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged support for the Op case shape, with IHs over the argument list and full Option word_lab result. It uses evalCrepHolFiniteWordSourceExpWordLab over an explicit HolFiniteDimension and CrepHolState. The word_op operation bridge is reviewed, but no proof identifies this evaluator/state encoding with native HOL crepSem eval_def for arbitrary dimensions and states; therefore it is not tagged as a HOL case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged TopAddr support case over the unverified source-model evaluator; exact HOL evaluator/state correspondence remains open."

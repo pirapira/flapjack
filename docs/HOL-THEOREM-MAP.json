@@ -8221,7 +8221,31 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "evalHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact width-indexed port of HOL panSem$eval_def expression clauses over the HOL-shaped PanSemHolState (locals/globals finite maps into the exact HolValue v carrier, StructContextHOL structs, total HolWordLab memory, Prop memaddrs word set with the classical [DecidablePred], be, base/top addr, bytes_in_word = panBytesInWord)); every clause reuses the tagged exact panMemLoadHOL/panMemLoad32HOL/panMemLoadByteHOL/wordOpHOL/wordShiftHOL/wordCmpHOL/isWfShapeHOL; direct HOL rows word_load_hit/byte_little_first/word32_little/op_add_fold_three/op_sub_wrong_arity match the Lean guards)"
+    "reviewer": "Codex (source comparison; width-indexed over BitVec width with [NeZero width] and [LawfulBEq String], HOL-shaped PanSemHolState, reuses tagged panMemLoadHOL/panMemLoad32HOL/panMemLoadByteHOL/wordOpHOL/wordShiftHOL/wordCmpHOL/isWfShapeHOL/panOpHOL/holShapeOf/holValueIsWord/panBytesInWord; NStruct field-name equality is propositional list equality and the field-shape check is panShapeMatches whose truth equals HOL shape equality by panShapeMatches_eq_true; direct HOL rows incl. nstruct_ok/shape_mismatch/name_mismatch/missing in scripts/hol-probes/pan_sem_state_eval_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "shape_of_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "holShapeOf",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "isValWord_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "holValueIsWord",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; isValWord over HolValue: ValWord -> true, all other constructors -> false, matching HOL isValWord_def)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-indexed pan_op over BitVec width: Mul on exactly two words returns their product, every other operator/arity returns none, matching HOL pan_op_def)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

@@ -579,4 +579,27 @@ def evalWordResult (result : Option (HolValue 64)) : Option Word64 :=
   some 6
 #guard evalWordResult (evalHOL holEvalState (.op .sub [.const 1])) == none
 
+/-- State with a single `Pair` struct (field `f : One`), matching the
+    `nstruct_*` rows of `scripts/hol-probes/pan_sem_state_eval_probe.out`. -/
+abbrev holEvalStateWithPair : PanSemHolState 64 Unit :=
+  { holEvalState with
+    structs := [("Pair", { fields := [("f", Shape.one)], size := 1 })] }
+
+/-- Projection of the field word from a `NStruct` result (single field). -/
+def nstructFieldWord (result : Option (HolValue 64)) : Option Word64 :=
+  match result with
+  | some (.nStruct _ [(_, .val (.word value))]) => some value
+  | _ => none
+
+def evalResultIsNone (result : Option (HolValue 64)) : Bool :=
+  match result with
+  | none => true
+  | some _ => false
+
+#guard nstructFieldWord
+    (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .const 7)])) == some 7
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("f", .rStruct [])]))
+#guard evalResultIsNone (evalHOL holEvalStateWithPair (.nStruct "Pair" [("g", .const 7)]))
+#guard evalResultIsNone (evalHOL holEvalState (.nStruct "Pair" [("f", .const 7)]))
+
 end Flapjack.Test.PanSemStateEvalParity

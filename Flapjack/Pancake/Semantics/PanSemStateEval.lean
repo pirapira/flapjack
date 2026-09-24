@@ -1055,32 +1055,57 @@ HOL's total `'a word -> 'a word_lab`, and `memaddrs` is the source word set
 (rendered as a `Prop` predicate, exactly as in the tagged `mem_load_*`
 definitions).  Every clause reuses the tagged exact helpers
 (`panMemLoadHOL`/`panMemLoad32HOL`/`panMemLoadByteHOL`/`wordOpHOL`/
-`wordShiftHOL`/`wordCmpHOL`/`isWfShapeHOL`/`panBytesInWord`).
+`wordShiftHOL`/`wordCmpHOL`/`isWfShapeHOL`/`panOpHOL`/`holShapeOf`/
+`holValueIsWord`/`panBytesInWord`).
+
+HOL's `NStruct` field-name equality `field_names' = field_names` is rendered as
+the propositional list equality `info.fields.map Prod.fst = fields.map Prod.fst`
+(decided by the lawful `String` equality instance), and the field-shape check
+`EVERY (\(s,v). s = shape_of v)` is rendered as `panShapeMatches s (holShapeOf v)`,
+whose truth is exactly `s = shape_of v` by `panShapeMatches_eq_true`; hence
+`[LawfulBEq String]` is required, tying the Boolean `ALOOKUP`/equality uses to
+HOL `=`.
 
 `bytes_in_word` is HOL's global `n2w (dimindex(:'a) DIV 8)`; the `word set`
 domain carries the classical `[DecidablePred]` instance that HOL membership
 has implicitly. -/
 
-/-- HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`) over the
-    exact `v` carrier `HolValue`. -/
+/-- Exact port of HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`)
+    over the width-indexed `v` carrier `HolValue`; clause-for-clause the same
+    as the tagged `panSemShapeOf` (which is stated over `PanValue`). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
 def holShapeOf {width : Nat} : HolValue width → Shape
   | .val _ => .one
   | .rStruct values => .comb (values.map holShapeOf)
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
-/-- HOL `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`) over
-    `HolValue`. -/
+/-- Exact port of HOL `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`)
+    over the width-indexed `v` carrier `HolValue`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "isValWord_def"]
 def holValueIsWord {width : Nat} : HolValue width → Bool
   | .val (.word _) => true
   | _ => false
 
-/-- HOL `theValWord` (`cakeml/pancake/semantics/panSemScript.sml:39`), totalized
-    with a default word; total because the `Op`/`Panop` clauses guard with
-    `EVERY isValWord` exactly as HOL does. -/
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL `theValWord`
+    (`cakeml/pancake/semantics/panSemScript.sml:39`) is a *partial* function
+    (`theValWord (ValWord w) = w`, undefined otherwise); this Lean helper is the
+    totalized version returning `0` on non-word values.  It is used only inside
+    the `Op`/`Panop` clauses *after* the `EVERY isValWord` guard, where HOL's
+    `case ... of ValWord n => n` is also total; it carries no `@[hol]` tag. -/
 def holValueWord {width : Nat} : HolValue width → RiscV.Word width
   | .val (.word value) => value
   | _ => 0
+
+/-- Exact width-indexed port of HOL `pan_op_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:191`): only `Mul` on exactly two
+    word operands is defined. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "pan_op_def"]
+def panOpHOL {width : Nat} (operator : PanOp) (values : List (RiscV.Word width)) :
+    Option (RiscV.Word width) :=
+  match operator, values with
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
 
 /-- HOL-shaped source state for `panSem$eval_def`
     (`cakeml/pancake/semantics/panSemScript.sml:44-62`).  The fields are the
@@ -1106,7 +1131,8 @@ structure PanSemHolState (width : Nat) (σ : Type) where
    (`RiscV.Word width`) with `[NeZero width]` (HOL `dimindex(:'a)` is nonzero). -/
 mutual
   @[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"]
-  def evalHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+  def evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+      (state : PanSemHolState width σ)
       [DecidablePred state.memaddrs] : Exp (BitVec width) → Option (HolValue width)
     | .const value => some (.val (.word value))
     | .var .local name => state.locals name
@@ -1120,7 +1146,7 @@ mutual
         match lookupInfo name state.structs with
         | none => none
         | some info =>
-            if info.fields.map Prod.fst == fields.map Prod.fst then
+            if info.fields.map Prod.fst = fields.map Prod.fst then
               match evalFieldsHOL state fields with
               | none => none
               | some fieldValues =>
@@ -1168,7 +1194,7 @@ mutual
         | none => none
         | some values =>
             if values.all holValueIsWord then
-              (evalPanOp operator (values.map holValueWord)).map
+              (panOpHOL operator (values.map holValueWord)).map
                 (fun word => .val (.word word))
             else none
     | .cmp operator left right =>
@@ -1189,7 +1215,8 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial | omega
 
-  def evalListHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+  def evalListHOL {width : Nat} [NeZero width] [LawfulBEq String]
+      (state : PanSemHolState width σ)
       [DecidablePred state.memaddrs] :
       List (Exp (BitVec width)) → Option (List (HolValue width))
     | [] => some []
@@ -1201,7 +1228,8 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial | omega
 
-  def evalFieldsHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+  def evalFieldsHOL {width : Nat} [NeZero width] [LawfulBEq String]
+      (state : PanSemHolState width σ)
       [DecidablePred state.memaddrs] :
       List (FieldName × Exp (BitVec width)) → Option (List (FieldName × HolValue width))
     | [] => some []

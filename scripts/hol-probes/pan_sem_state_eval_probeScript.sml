@@ -110,4 +110,17 @@ val _ = print_eval "mem_load_byte_def_w24_addr5"
 val _ = print_eval "mem_load_32_def_w24_addr4"
   ``mem_load_32 ^mem24 ^dm24 F (4w:24 word)``;
 
+(* NStruct rows: field-name equality and the shape_of field check. *)
+val stcs_pair = ``[(strlit "Pair", <| fields := [(strlit "f", One)]; size := 1 |>)]
+  : (mlstring # panLang$struct_info) list``;
+val with_pair = ``(^little with structs := ^stcs_pair)``;
+val _ = print_eval "nstruct_ok"
+  ``eval ^with_pair (panLang$NStruct (strlit "Pair") [(strlit "f", panLang$Const 7w)])``;
+val _ = print_eval "nstruct_shape_mismatch"
+  ``eval ^with_pair (panLang$NStruct (strlit "Pair") [(strlit "f", panLang$RStruct [])])``;
+val _ = print_eval "nstruct_name_mismatch"
+  ``eval ^with_pair (panLang$NStruct (strlit "Pair") [(strlit "g", panLang$Const 7w)])``;
+val _ = print_eval "nstruct_missing_struct"
+  ``eval ^little (panLang$NStruct (strlit "Pair") [(strlit "f", panLang$Const 7w)])``;
+
 val _ = print_eval "pan_sem_state_eval_done" ``0``;

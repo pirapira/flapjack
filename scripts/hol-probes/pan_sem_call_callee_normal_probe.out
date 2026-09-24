@@ -1,0 +1,4 @@
+call_normal_result=SOME Error
+call_normal_param_locals=SOME (ValWord 1w)
+call_normal_caller_locals=NONE
+call_normal_clock=4

@@ -240,4 +240,85 @@ theorem panSemTotalSeqStep_of_ne_normal
       (firstResult, panSemFixClock entryClock firstState) := by
   cases firstResult <;> simp_all [panSemTotalSeqStep]
 
+/-! ## Compositional Assign step
+
+HOL `Assign` (`panSemScript.sml:566-572`) evaluates the source, requires
+`is_valid_value`, writes through `set_kvar`, and returns `(SOME Error, s)`
+unchanged when the source fails or the destination is invalid.  This is
+modelled as an exact total composition over an already evaluated source value
+(`panSemTotalAssignStep`), plus the total function that evaluates the source
+first (`panSemTotalAssign`).  Neither is a whole-program evaluator, and no
+other `Prog` constructor is given a fallback here. -/
+
+def panSemTotalAssignStep
+    [BEq α] (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName)
+    (evaluated : PanValue α) : PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  if panValueAssignmentValid state.structs state.locals state.globals kind name evaluated then
+    match kind with
+    | .local =>
+        (.normal, { state with locals := updatePanValueMap state.locals name evaluated })
+    | .global =>
+        (.normal, { state with globals := updatePanValueMap state.globals name evaluated })
+  else (.error, state)
+
+theorem panSemTotalAssignStep_normal_local
+    [BEq α] (state : PanSemState α (FfiState σ)) (name : VarName) (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals .local name evaluated = true) :
+    panSemTotalAssignStep state .local name evaluated =
+      (.normal, { state with locals := updatePanValueMap state.locals name evaluated }) := by
+  simp [panSemTotalAssignStep, h]
+
+theorem panSemTotalAssignStep_normal_global
+    [BEq α] (state : PanSemState α (FfiState σ)) (name : VarName) (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals .global name evaluated = true) :
+    panSemTotalAssignStep state .global name evaluated =
+      (.normal, { state with globals := updatePanValueMap state.globals name evaluated }) := by
+  simp [panSemTotalAssignStep, h]
+
+theorem panSemTotalAssignStep_invalid
+    [BEq α] (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName)
+    (evaluated : PanValue α)
+    (h : panValueAssignmentValid state.structs state.locals state.globals kind name evaluated = false) :
+    panSemTotalAssignStep state kind name evaluated = (.error, state) := by
+  simp [panSemTotalAssignStep, h]
+
+def panSemTotalAssign
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (kind : VarKind) (name : VarName) (value : Exp α) :
+    PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  match evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value with
+  | some evaluated => panSemTotalAssignStep state kind name evaluated
+  | none => (.error, state)
+
+theorem panSemEvaluateCodeStateWithFuel_assign_total
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α) (fuel : Nat)
+    (state : PanSemState α (FfiState σ)) (kind : VarKind) (name : VarName)
+    (value : Exp α) :
+    (panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.assign kind name value : Prog α)).map
+        (fun result => panSemTotalOfExecuted (result, panSemCodeStateAfter state result)) =
+      some (panSemTotalAssign bytesInWord state kind name value) := by
+  rw [panSemEvaluateCodeStateWithFuel_assign]
+  cases hvalue : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord value with
+  | none =>
+      simp [panSemTotalAssign, panSemTotalOfExecuted, panSemProgResultOfClockResult,
+        panSemCodeStateAfter, hvalue]
+  | some evaluated =>
+      by_cases hvalid : panValueAssignmentValid state.structs state.locals state.globals
+          kind name evaluated = true
+      · cases kind <;>
+          simp [panSemTotalAssign, panSemTotalAssignStep, panSemTotalOfExecuted,
+            panSemProgResultOfClockResult, panSemCodeStateAfter, hvalue, hvalid]
+      · simp [panSemTotalAssign, panSemTotalAssignStep, panSemTotalOfExecuted,
+          panSemProgResultOfClockResult, panSemCodeStateAfter, hvalue, hvalid]
+
 end Flapjack

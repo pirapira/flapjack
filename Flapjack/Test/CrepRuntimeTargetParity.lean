@@ -377,6 +377,47 @@ example :
 
 #eval cmpEvalGuard
 
+/-- HOL `word_sh` over the constant-operand RV64 oracle rows: Lsl/Lsr/Asr/Ror,
+amount zero valid, width-sized amount invalid. -/
+def shiftEvalGuard : Bool :=
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .lsl (.const (1 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))) ==
+    some (8 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .lsr (.const (16 : RiscV.Word 64)) (.const (2 : RiscV.Word 64))) ==
+    some (4 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .asr (.const (0x8000000000000000 : RiscV.Word 64)) (.const (4 : RiscV.Word 64))) ==
+    some (0xF800000000000000 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .ror (.const (1 : RiscV.Word 64)) (.const (1 : RiscV.Word 64))) ==
+    some (0x8000000000000000 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .lsl (.const (7 : RiscV.Word 64)) (.const (0 : RiscV.Word 64))) ==
+    some (7 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .lsl (.const (7 : RiscV.Word 64)) (.const (64 : RiscV.Word 64)))).isNone &&
+  (holWordShift64 .lsl (1 : RiscV.Word 64) 3 == some (8 : RiscV.Word 64)) &&
+  (holWordShift64 .asr (0x8000000000000000 : RiscV.Word 64) 4 ==
+    some (0xF800000000000000 : RiscV.Word 64)) &&
+  (holWordShift64 .lsl (7 : RiscV.Word 64) 64).isNone &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.shift .lsl (.const (1 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))) ==
+    some (.word (8 : RiscV.Word 64)))
+
+/-- The genuine RV64 `Shift` evaluator-case bridge instantiated at the oracle fixture. -/
+example :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+        (.shift .lsl (.const (1 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))) =
+      (holWordShift64 .lsl (1 : RiscV.Word 64) 3).map
+        PanWordLab.word :=
+  evalCrepRuntimeExpWordLab_shift_rv64_const loadByteBaseState .lsl
+    (1 : RiscV.Word 64) (3 : RiscV.Word 64)
+
+#guard shiftEvalGuard
+
+#eval shiftEvalGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -402,7 +443,11 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Cmp evaluator case matches HOL word_cmp oracle"
   else
     IO.println "FAIL crep Cmp evaluator case matches HOL word_cmp oracle"
+  if shiftEvalGuard then
+    IO.println "PASS crep Shift evaluator case matches HOL word_sh oracle"
+  else
+    IO.println "FAIL crep Shift evaluator case matches HOL word_sh oracle"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
-    load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard)
+    load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

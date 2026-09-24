@@ -24,6 +24,14 @@ recognizes `theorem` and `lemma` declarations only; `#check` commands and
 comments do not count as theorem entries or tests. Correctness claims are described in
 [`SOUNDNESS.md`](SOUNDNESS.md).
 
+The qualifier covers only the named representation fields; evaluator,
+state-transition, error, hypothesis, and conclusion details must still match
+HOL. A bounded `CakeNodeMap`/HOL-list relation is illustrated by
+`RepresentsHOLNodeList`, `ofList_representsHOLNodeList`, and
+`set_representsHOLNodeList` in `Flapjack/RiscV/CakeRegAlloc.lean`. See
+[`AGENTS.md`](../AGENTS.md#qualify-only-named-list-to-array-state-fields) for
+the review rule and the `dec_deg` out-of-range mismatch example.
+
 | HOL script | Lean counterpart |
 | --- | --- |
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |

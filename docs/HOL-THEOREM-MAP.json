@@ -6304,6 +6304,46 @@
     "reviewer": "Codex (source comparison; clause-for-clause with matching hypotheses/order; direct Lean counterpart wrappers mem_lt_foldr_max_add/panMap3_eq_map2_zip)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "all_distinct_take",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "all_distinct_take",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; ALL_DISTINCT rendered as List.Nodup, exact hypothesis n <= length retained)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "all_distinct_drop",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "all_distinct_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; ALL_DISTINCT rendered as List.Nodup, exact hypothesis n <= length retained)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_append",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_cons",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_cons",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_simp_cons",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_simp_cons",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+  },
+  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_exp_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",

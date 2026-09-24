@@ -4538,6 +4538,9 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.load32 (.const address))
+  | loadOneConst (address : RiscV.Word 64) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.load .one (.const address))
   | loadTwoConstCanonicalTarget (address : RiscV.Word 64)
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
@@ -4891,6 +4894,28 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
               (.load32 (.const address)) = some word := by
             simpa using heval
           simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
+      | rStruct fields => simp at heval
+      | nStruct name fields => simp at heval
+  | loadOneConst address =>
+      intro value heval
+      have hsourceTarget := evalPanSemStateExp_loadOne_const_stateRel
+        source target address hstate
+      rw [hsourceTarget] at heval
+      cases value with
+      | word word =>
+          have htarget : evalCrepRuntimeExp target (.load (.const address)) =
+              some word := by
+            simpa using heval
+          let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+          have hcompiled : compileExpHOL compilerContext
+              (.load .one (.const address)) =
+              ([.load (.const address)], .one) := by
+            simp [compileExpHOL, compilerContext, loadShape,
+              CrepBytesInWord.bytesInWord]
+          simp [compilerContext, hcompiled, evalCrepRuntimeExps,
+            panValueFlatten, htarget]
       | rStruct fields => simp at heval
       | nStruct name fields => simp at heval
   | loadTwoConstCanonicalTarget address hcanonical =>

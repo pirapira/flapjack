@@ -285,7 +285,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (HOL dest_const_thm is quantified over word-valued CrepExp; this support theorem permits arbitrary alpha. Width-indexed faithful port remains open.)"
+    "reviewer": "Untagged Flapjack support over arbitrary alpha; HOL expression and value are both word-typed. The width-parametric RiscV.Word specialization is separately tagged as crepDestConstWord_eq_const."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConstWord_eq_const",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Width-parametric positive BitVec word instance of the HOL word-typed statement; no extra operation premises, successful dest_const premise and Const conclusion match source."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

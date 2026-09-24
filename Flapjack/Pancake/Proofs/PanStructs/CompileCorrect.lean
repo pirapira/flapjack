@@ -3355,6 +3355,99 @@ theorem panStructCompileExpCorrectLoadByteCase
       | rStruct fields => simp [evalPanValueExp, haddress] at heval
       | nStruct name fields => simp [evalPanValueExp, haddress] at heval
 
+/-- Load32 constructor specialization over the full source evaluator's
+    explicit memory-access interface. Passing `memoryAccess` through both
+    evaluations makes this case use its aligned, domain-checked, four-byte
+    `read32` operation; the default full-evaluator path is a whole-cell read
+    and is not used here. This remains untagged because HOL has only the
+    universal `compile_exp_correct` theorem and the context/FEVERY/FMAP_MAP2
+    premises below are translated through Lean views and total-function
+    adapters. -/
+theorem panStructCompileExpCorrectLoad32Case
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [OfNat α 2] [OfNat α 3] [Add α] [Mul α] [Sub α]
+    [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
+    (addressExpression : Exp α) (value : PanValue α)
+    (heval : evalPanValueExpFull state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.load32 addressExpression)
+      (memoryAccess := some memoryAccess) = some value)
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (_hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (_hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (_hstructInfos : structInfosOk state.structs)
+    (_hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (_hglobalsMap : panStructShapeMapEq context.globals state.globals)
+    (hinduction : ∀ addressValue,
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord addressExpression
+        (memoryAccess := some memoryAccess) = some addressValue →
+      structOldExpShape context addressExpression = panSemShapeOf addressValue ∧
+      panStructValueFieldsOkBool state.structs addressValue = true ∧
+      evalPanValueExpFull (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context addressExpression)
+        (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue addressValue)) :
+    structOldExpShape (α := α) context (.load32 addressExpression) =
+      panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExpFull (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context (.load32 addressExpression))
+      (memoryAccess := some memoryAccess) =
+        some (panStructConvertValue value) := by
+  cases haddress : evalPanValueExpFull state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord addressExpression
+      (memoryAccess := some memoryAccess) with
+  | none => simp [evalPanValueExpFull, haddress] at heval
+  | some addressValue =>
+      cases addressValue with
+      | word address =>
+          cases hread : memoryAccess.read32 memoryAccess.domain state.memory
+              bytesInWord address with
+          | none => simp [evalPanValueExpFull, haddress, hread] at heval
+          | some loadedWord =>
+              have hvalue : value = .word loadedWord := by
+                simpa [evalPanValueExpFull, haddress, hread] using heval.symm
+              subst value
+              have haddressFacts := hinduction (.word address) haddress
+              refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+              · simp [panStructValueFieldsOkBool]
+              · have hcompiledAddress :
+                    evalPanValueExpFull []
+                      (fun name => (state.locals name).map panStructConvertValue)
+                      (fun name => (state.globals name).map panStructConvertValue)
+                      state.memory state.baseAddress state.topAddress bytesInWord
+                      (structCompileExp context addressExpression)
+                      (memoryAccess := some memoryAccess) = some (.word address) := by
+                  simpa [panStructConvertState, panStructConvertValue] using
+                    haddressFacts.2.2
+                have hconvertedLoad :
+                    evalPanValueExpFull []
+                      (fun name => (state.locals name).map panStructConvertValue)
+                      (fun name => (state.globals name).map panStructConvertValue)
+                      state.memory state.baseAddress state.topAddress bytesInWord
+                      (.load32 (structCompileExp context addressExpression))
+                      (memoryAccess := some memoryAccess) = some (.word loadedWord) := by
+                  simp [evalPanValueExpFull, hcompiledAddress, hread]
+                simpa [structCompileExp, panStructConvertValue,
+                  panStructConvertState] using hconvertedLoad
+      | rStruct fields => simp [evalPanValueExpFull, haddress] at heval
+      | nStruct name fields => simp [evalPanValueExpFull, haddress] at heval
+
 /-- Derived BaseAddr-constructor specialization of HOL `compile_exp_correct`.
     HOL has only the universally quantified theorem, so this remains untagged.
     The translated context, FEVERY, FMAP_MAP2, and struct-info premises are

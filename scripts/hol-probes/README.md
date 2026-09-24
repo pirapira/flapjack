@@ -235,7 +235,8 @@ induction are unfinished. Lean regressions live in
 `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_compile_exp_correct_probe.out` records HOL evaluations of Local
 and Global variable-constructor instances and Const-, RStruct-, NStruct-,
-NField-, RField-, Op-, and Load-constructor instances of `compile_exp_correct`; each
+NField-, RField-, Op-, Load-, and faithful Load32-constructor instances of
+`compile_exp_correct`; each
 five-element tuple contains old shape, semantic value shape, field validity,
 source evaluation, and converted target evaluation. The production
 `structCompileExp`/`evalPanValueExp` cases for Var, Const, RStruct, NStruct,

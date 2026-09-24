@@ -10675,6 +10675,38 @@ handler. The source call and target callee both resolve through their
 state-owned code maps; the target handler reads the raised payload through
 `exp_hdl`/`globals_lookup` and returns its flattened word. This is untagged
 induction support for HOL `pc_compile_correct[Call_Ret_Exception]`. -/
+/-! Compiler-generated function return destinations are a mapped `List.range`,
+so the target runtime's duplicate-destination guard follows from the function
+metadata itself. This keeps `crepRuntimeCallInfoValid` derived from the same
+HOL context that supplies `functionReturnNamesHOL`, rather than a free Call
+well-formedness premise. -/
+private theorem allocatedNamesHOL_nodup
+    (context : PanToCrepHOLContext α) (shape : Shape) :
+    (allocatedNamesHOL context shape).Nodup := by
+  unfold allocatedNamesHOL
+  apply List.nodup_iff_pairwise_ne.mpr
+  exact (List.nodup_iff_pairwise_ne.mp
+      (List.nodup_range (n := Shape.shapeSize shape))).map
+    (fun offset => context.vmax + 1 + offset)
+    (by
+      intro left right hne heq
+      apply hne
+      omega)
+
+theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
+    (context : PanToCrepHOLContext α) (function : FunName)
+    (handler : Option (α × CrepProg α)) :
+    crepRuntimeCallInfoValid
+      (some (functionReturnNamesHOL context function, handler)) = true := by
+  cases hlookup : FLOOKUP context.funcs function with
+  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+  | some metadata =>
+      rcases metadata with ⟨_, shape⟩
+      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+      apply decide_eq_true
+      exact (eraseDups_length_eq_iff_nodup _).2
+        (allocatedNamesHOL_nodup context shape)
+
 theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     (context : PanToCrepProofContext (RiscV.Word 64))
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
@@ -10854,12 +10886,16 @@ theorem panToCrepPcCompileCorrectCallCatchRaiseOneWordCodeStateRiscV64
     · exact ⟨.word 0, by simp [targetCaller, updateCrepRuntimeLocal, heq]⟩
     · exact ⟨.word oldValue,
         by simp [targetCaller, updateCrepRuntimeLocal, heq, htargetSlot]⟩
-  have hcallNames : ([returnSlot].eraseDups).length = 1 := by
-    simp [List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
+  have hreturnNames :
+      functionReturnNamesHOL context.toHOLContext function = [returnSlot] := by
+    simp [functionReturnNamesHOL, returnSlot, allocatedNamesHOL, hfunction,
+      PanToCrepProofContext.toHOLContext]
   have hcallInfo : crepRuntimeCallInfoValid
       (some ([returnSlot], some (exceptionCode, continuation)) :
         Option (List Nat × Option ((RiscV.Word 64) × CrepProg (RiscV.Word 64)))) = true := by
-    simp [crepRuntimeCallInfoValid, hcallNames]
+    simpa [hreturnNames] using
+      crepRuntimeCallInfoValid_functionReturnNamesHOL context.toHOLContext function
+        (some (exceptionCode, continuation))
   have htargetCall := evalCrepRuntimeCall_catchesRaisedOneWordHandler context
     targetHandler targetPrimitive targetCaller [returnSlot] exceptionCode
     function handlerVariable slot [] [] targetBody (fun _ => none) calleeState

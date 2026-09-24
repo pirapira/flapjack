@@ -129,4 +129,25 @@ theorem evalPanSemStateExp_op
     panSemBitVec64MemoryAccess_wordOp]
   rfl
 
+/-- Exact port of HOL `mem_load_byte_def` (`panSemScript.sml:86`) over the
+faithful source memory shape: `m` is a total `'a word → 'a word_lab` map
+(here `HolWordLab`), `dm` is a word set rendered as a `Prop` predicate, and
+the result is the exact `word8` option.  The executed
+`PanValueMemoryAccess.readByte` widens the decoded byte to the word carrier;
+that widening is the separate production adapter, tracked by
+flapjack-pxn.18.3.6.9.2. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_byte_def"]
+def panMemLoadByteHOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) : Option UInt8 :=
+  let aligned := RiscV.panRiscVByteAlign (BitVec.ofNat width (width / 8)) address
+  match memory aligned with
+  | .word value =>
+      if domain aligned then
+        some (UInt8.ofNat
+          (RiscV.panRiscVGetByteEndian (BitVec.ofNat width (width / 8)) address
+            value bigEndian).toNat)
+      else none
+
 end Flapjack

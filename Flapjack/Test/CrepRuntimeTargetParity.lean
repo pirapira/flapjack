@@ -273,6 +273,40 @@ example :
 
 #eval load32EvalGuard
 
+/-- Oracle guard for the plain word-cell `Load` evaluator case against the direct
+HOL `mem_load` probe rows: the valid cell at address 8 returns the wrapped
+64-bit word, and an address outside `memaddrs` returns none. -/
+def loadEvalGuard : Bool :=
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.load (.const (8 : RiscV.Word 64))) ==
+    some (.word (0x1122334455667788 : RiscV.Word 64))) &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.load (.const (9 : RiscV.Word 64)))).isNone &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.load (.const (8 : RiscV.Word 64))) ==
+    some (0x1122334455667788 : RiscV.Word 64)) &&
+  (holMemLoad64 loadByteBaseState.memaddrs
+      (crepRuntimeMemoryView loadByteBaseState.memory) (8 : RiscV.Word 64) ==
+    some (0x1122334455667788 : RiscV.Word 64)) &&
+  (holMemLoad64 loadByteBaseState.memaddrs
+      (crepRuntimeMemoryView loadByteBaseState.memory) (9 : RiscV.Word 64)).isNone &&
+  (crepRuntimeLoad (riscv64CrepRuntimeTarget loadByteBaseState) (8 : RiscV.Word 64) ==
+    holMemLoad64 loadByteBaseState.memaddrs
+      (crepRuntimeMemoryView loadByteBaseState.memory) (8 : RiscV.Word 64))
+
+/-- The genuine word-cell evaluator-case bridge instantiated at the oracle fixture. -/
+example :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+        (.load (.const (8 : RiscV.Word 64))) =
+      (holMemLoad64 loadByteBaseState.memaddrs
+        (crepRuntimeMemoryView loadByteBaseState.memory) (8 : RiscV.Word 64)).map
+          PanWordLab.word :=
+  evalCrepRuntimeExpWordLab_load_rv64_const loadByteBaseState (8 : RiscV.Word 64)
+
+#guard loadEvalGuard
+
+#eval loadEvalGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -286,6 +320,11 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Load32 evaluator case matches HOL mem_load_32 oracle"
   else
     IO.println "FAIL crep Load32 evaluator case matches HOL mem_load_32 oracle"
-  pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard && load32EvalGuard)
+  if loadEvalGuard then
+    IO.println "PASS crep Load evaluator case matches HOL mem_load oracle"
+  else
+    IO.println "FAIL crep Load evaluator case matches HOL mem_load oracle"
+  pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
+    load32EvalGuard && loadEvalGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

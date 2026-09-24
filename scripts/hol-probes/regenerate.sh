@@ -630,6 +630,9 @@ run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
 run_probe crep_fix_clock_probeScript.sml crep_fix_clock_probe.out \
   fix_clock_clamps fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_local_updates_probeScript.sml crep_local_updates_probe.out \
+  set_var_hit empty_locals_fields_preserved \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_sh_mem_load_probeScript.sml crep_sh_mem_load_probe.out \
   sh_mem_load_zero_width_domain_error sh_mem_load_nonzero_domain_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

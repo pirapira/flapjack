@@ -58,8 +58,10 @@ theorem skipCodeMap_has_runtime_entry :
     lookupCrepRuntimeCode "id" [] skipCodeRuntime.code = some (.skip, fun _ => none) := by
   constructor
   · simp [skipCodeRuntime, skipCodeMap, FUPDATE_LIST, FUPDATE, FLOOKUP]
-  · simp [lookupCrepRuntimeCode, skipCodeRuntime, skipCodeMap,
-      FUPDATE_LIST, FUPDATE, FLOOKUP, assignCrepRuntimeLocals]
+  · simp [lookupCrepRuntimeCode, lookupCrepHolCode, skipCodeRuntime, skipCodeMap,
+      FUPDATE_LIST, FUPDATE, FLOOKUP]
+    funext name
+    rfl
 
 def skipCodeContext : PanToCrepProofContext Nat :=
   { vars := FEMPTY

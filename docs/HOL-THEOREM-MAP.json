@@ -284,8 +284,8 @@
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (fully polymorphic statement comparison with HOL dest_const_thm and direct HOL-EVAL constructor probe)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (HOL dest_const_thm is quantified over word-valued CrepExp; this support theorem permits arbitrary alpha. Width-indexed faithful port remains open.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -517,7 +517,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceWordLab",
     "statement_status": "documented_mismatch",
-    "reviewer": "This strengthens the source-evaluator theorem to equality of complete Option PanWordLab results with an implicit finite-dimension instance, unused v binder, success premise, and arbitrary code-map update. It remains untagged because the source evaluator, state adapter, and primitive word-operation dictionary are not yet proved identical to HOL crepSem eval and finite_index."
+    "reviewer": "This strengthens the source-evaluator theorem to equality of complete Option PanWordLab results with an implicit finite-dimension instance, unused v binder, success premise, and arbitrary code-map update. holFiniteIndex_bijective proves the dimension decoder's HOL unique-in-range property; this remains untagged because the chosen HOL finite_index instance, source evaluator/state encoding, and primitive word operations are not yet identified theoremically with crepSem eval."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -541,7 +541,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceFull",
     "statement_status": "documented_mismatch",
-    "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension source evaluator and CrepHolState adapter are not yet proved identical to HOL crepSem eval and its implicit finite_index operations."
+    "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. holFiniteIndex_bijective proves the explicit decoder has HOL's unique-in-range property; it remains untagged because the selected HOL finite_index instance, source evaluator/CrepHolState encoding, and word operations are not yet identified theoremically with crepSem eval."
   },
   {
     "hol_path": null,
@@ -7227,9 +7227,9 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "crep_op_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "crepOpCrep",
+    "lean_name": "crepOpCrepWord",
     "statement_status": "reviewed_exact",
-    "reviewer": "Clause-for-clause port of crepSem$crep_op_def (crep_op Mul [w1;w2]=SOME(w1*w2), otherwise NONE) over the HOL word carrier: width-polymorphic BitVec width with [NeZero width]; direct HOL-EVAL rows mirrored by Lean guards incl. an RV64 runtime instantiation."
+    "reviewer": "Width-indexed BitVec word port for every positive width: Mul on exactly two words returns their product and every other operator/arity returns none, matching crepSem$crep_op_def. The generic arbitrary-alpha production helper is untagged and definitionally equal on BitVec carriers."
   },
   {
     "hol_path": null,

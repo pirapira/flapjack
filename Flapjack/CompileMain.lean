@@ -102,7 +102,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
         IO.print (RiscV.pancakeRuntimeAssembly image.crepe image)
         return 0
     | .error error =>
-        IO.eprintln s!"flapjack-compile: {repr error}"
+        IO.eprintln s!"flapjack-compile: {sourceRiscVImageErrorDescription error}"
         return 1
   else if outputFormat == .sections then
     match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
@@ -114,7 +114,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
         printSections image.sections
         return 0
     | .error error =>
-        IO.eprintln s!"flapjack-compile: {repr error}"
+        IO.eprintln s!"flapjack-compile: {sourceRiscVImageErrorDescription error}"
         return 1
   else
     match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -126,7 +126,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
         IO.println (hexBytes artifact.bytes)
         return 0
     | .error error =>
-        IO.eprintln s!"flapjack-compile: {repr error}"
+        IO.eprintln s!"flapjack-compile: {sourceRiscVCompileErrorDescription error}"
         return 1
 
 end Flapjack

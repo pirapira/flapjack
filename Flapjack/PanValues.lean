@@ -507,6 +507,14 @@ termination_by _address values => values.length
 decreasing_by
   simp_wf
 
+/-- Flapjack's context-parameterized scalar-shape function. The
+    `StructContext` argument is unused, so this is the context-free tagged
+    exact `panSemShapeOf` port with an extra (vacuous) parameter; the equality
+    `panValueShape context value = panSemShapeOf value` is proved as
+    `panValueShape_eq_panSemShapeOf_tagged` in `Pancake/Semantics/PanSem.lean` (bead
+    `flapjack-pxn.18.3.6.4`). It stays untagged because HOL `shape_of` has no
+    context parameter, and production callers may eventually be routed through
+    `panSemShapeOf` directly. -/
 def panValueShape (context : StructContext) : PanValue α → Shape
   | .word _ => .one
   | .rStruct fields => .comb (fields.map (panValueShape context))
@@ -1055,6 +1063,14 @@ theorem panValueFlatLoadFields_shape [BEq α] [Add α] (structs : StructContext)
   · rw [if_neg hwf] at h
     simp at h
 
+/-- Flapjack's executable rendering of HOL structural equality on `Shape`
+    (`panSem$shape_of` results are compared with `=` in `evaluate_decls_def`).
+    It is a `Bool` function that recurses structurally and compares `Named`
+    tags with String `==`, so it agrees with HOL `=` only at lawful String
+    equality instances; it is therefore untagged (see bead
+    `flapjack-pxn.18.3.6.4`).  `evaluateDecls` uses it together with
+    `panValueShape`, which is proved equal to the tagged exact `panSemShapeOf`
+    (`panValueShape_eq_panSemShapeOf_tagged`). -/
 def panShapeMatches : Shape → Shape → Bool
   | .one, .one => true
   | .named left, .named right => left == right

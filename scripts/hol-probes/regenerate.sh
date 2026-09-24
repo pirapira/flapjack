@@ -481,9 +481,10 @@ run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If probe observes the then/else branches, non-word and failed conditions,
-# plus Const and Var Local branch selection in the restricted total evaluator.
+# plus Const, Var Local, and operator-expression branch selection in the
+# restricted total evaluators.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result if_local_zero_tick_clock \
+  if_true_result if_op_sub_zero_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If memory probe observes a memory-reading condition: a nonzero cell
 # selecting the then branch, a zero cell selecting the else branch, an address
@@ -579,6 +580,9 @@ run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
   if_true_eval if_false_eval if_error_eval if_nested_eval \
+  seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
+  seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
+  return_missing_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
@@ -1224,3 +1228,11 @@ run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_pr
   flatten_tick flatten_halt \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The RISC-V configuration probe observes the exact `riscv_config` field
+# values at 64-bit (register file, offsets, immediates) used by the stack
+# assembler checks.
+run_probe riscv_config_probeScript.sml riscv_config_probe.out \
+  cfg_isa valid_imm_add_max12p1 \
+  "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
+  "$cake_dir/compiler/encoders/riscv"

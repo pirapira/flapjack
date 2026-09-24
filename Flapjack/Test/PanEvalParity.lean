@@ -94,6 +94,22 @@ def observeValueBridge : Bool :=
 #guard observeWordLabBridge
 #guard observeValueBridge
 
+/-- Build-checked alignment of Flapjack's context-parameterized shape function
+    with the tagged exact HOL `shape_of` port (bead `flapjack-pxn.18.3.6.4`). -/
+theorem shapeAlignment (value : PanValue Nat) :
+    panValueShape ([] : StructContext) value = panSemShapeOf value :=
+  panValueShape_eq_panSemShapeOf_tagged ([] : StructContext) value
+
+def observeShapeAlignment : Bool :=
+  match panValueShape ([] : StructContext)
+          (PanValue.nStruct (α := Nat) "S" ([] : List (FieldName × PanValue Nat))),
+        panSemShapeOf
+          (PanValue.nStruct (α := Nat) "S" ([] : List (FieldName × PanValue Nat))) with
+  | .named left, .named right => left == right
+  | _, _ => false
+
+#guard observeShapeAlignment
+
 def runChecks : IO Bool := do
   if observeConst then IO.println "PASS eval constant" else IO.println "FAIL eval constant"
   if observeLocal then IO.println "PASS eval local" else IO.println "FAIL eval local"
@@ -111,8 +127,11 @@ def runChecks : IO Bool := do
     else IO.println "FAIL eval word_lab bridge"
   if observeValueBridge then IO.println "PASS eval v bridge"
     else IO.println "FAIL eval v bridge"
+  if observeShapeAlignment then IO.println "PASS eval shape_of alignment"
+    else IO.println "FAIL eval shape_of alignment"
   pure (observeConst && observeLocal && observeGlobal && observeField && observeMissing &&
     observeNStruct && observeNStructNameMismatch && observeNStructShapeMismatch &&
-    observeMissingStruct && observeWordLabBridge && observeValueBridge)
+    observeMissingStruct && observeWordLabBridge && observeValueBridge &&
+    observeShapeAlignment)
 
 end Flapjack.Test.PanEvalParity

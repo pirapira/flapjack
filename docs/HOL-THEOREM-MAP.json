@@ -5384,6 +5384,30 @@
     "reviewer": "Kernel-checked list induction support used by the One/Comb branches of HOL mem_load_conversion. It aligns the production recursive list loader after mapping shapes through structCompileShapeWF and converts each loaded value. It is intentionally untagged: the statement uses fuel-indexed readWord callbacks and a restricted no-named-shape premise rather than HOL's finite-domain memory state and full theorem conclusion."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadFuel_convert_all",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked One/Comb/Named production-loader conversion support for HOL mem_load_conversion, including structure-suffix lookup, flattened field loads, and target fuel bounds. It remains untagged: Lean's statement uses explicit natural fuel and a readWord callback with extra well-formedness/fuel premises, while HOL uses finite-address-domain word memory and concludes both converted load success and v_flds_ok."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatShapeFuel_pos",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arithmetic support lemma showing every production shape consumes positive fuel; no standalone HOL declaration is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatFieldsFuel_eq_shapeListFuel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only representation bridge equating named-field loader fuel to the corresponding shape-list fuel; support for the untagged mem_load_conversion loader correspondence, not a standalone HOL declaration."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

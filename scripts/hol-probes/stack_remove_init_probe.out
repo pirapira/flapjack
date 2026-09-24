@@ -1,0 +1,8 @@
+is_word_some=T
+is_word_loc=F
+is_word_none=F
+read_mem_len=3
+read_mem_val=Word 3w
+in_addr_self=T
+in_addr_step=T
+in_addr_out=F

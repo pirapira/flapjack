@@ -784,4 +784,13 @@ example :
       Prod.fst = [1, 2] :=
   mapMap2FstHOL (fun _ _ => true) [1, 2] [(0, [], ()), (1, [7, 8], ())] rfl
 
+/-- HOL `alookup_el_pair_eq_el` oracle rows (`ael_*` in
+    `scripts/hol-probes/crep_to_loop_alookup_el_probe.out`). -/
+def alookupElProg : List (String × List Nat × Nat) :=
+  [("a", ([], 7)), ("b", ([], 9))]
+
+example : alookupElProg[1]'(by decide) = ("b", [], 9) :=
+  alookupElPairEqEl alookupElProg "b" 9 1
+    (by decide) (by decide) (by decide) (by decide)
+
 end Flapjack.Test.CrepToLoopParity

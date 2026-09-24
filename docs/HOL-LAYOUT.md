@@ -32,17 +32,19 @@ for the review rule.
 | HOL script | Lean counterpart |
 | --- | --- |
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |
-| `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` |
+| `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` (`word_loc` width-indexed `WordLocW` (`[NeZero width]`) plus generic bridge; backend syntax) |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
-| `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` |
+| `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (`store_name`; generic `prog` syntax, `list_Seq`; exact width-indexed asm payload carriers `reg_imm`/`addr`/`inst` live in `Flapjack/Compiler/Encoders/Asm.lean`; shared-word `ProgW` carrier in `Flapjack/Compiler/Backend/StackCarrier.lean`; exact width-indexed `prog` open under `flapjack-pxn.18.5.15.3.11`) |
 | `compiler/backend/semantics/stackPropsScript.sml` | `Flapjack/Compiler/Backend/StackProps.lean` (recursive `stack_asm_ok` clauses and `addr_ok`, linked to the `asm_config` predicates) |
-| `compiler/encoders/asm/asmScript.sml` | `Flapjack/Compiler/Encoders/Asm.lean` (asm_config validity predicates: `reg_ok`, `fp_reg_ok`, `reg_imm_ok`, `offset_ok`, `arith_ok`, `fp_ok`, `cmp_ok`, `inst_ok`) |
+| `compiler/encoders/asm/asmScript.sml` | `Flapjack/Compiler/Encoders/Asm.lean` (asm_config validity predicates: `reg_ok`, `fp_reg_ok`, `reg_imm_ok`, `offset_ok`, `arith_ok`, `fp_ok`, `cmp_ok`, `inst_ok`; exact carriers `reg_imm`, `addr`, `inst`, `arith`, `fp`, `binop`, `cmp`, `memop`, `asm`; untagged width-indexed `prog` carrier `HolProg` pending a faithful `mlstring`) |
 | `compiler/backend/labLangScript.sml` | `Flapjack/Compiler/Backend/LabLang.lean` (generic HOL `lab`, `line`, and `sec` syntax) |
 | `compiler/backend/lab_to_targetScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`cbw_to_asm` carrier boundary only; target encoding remains open) |
 | `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
 | `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
 | `compiler/backend/semantics/labSemScript.sml` | `Flapjack/Compiler/Backend/LabSem.lean` (`is_Label`) |
 | `compiler/backend/stack_namesScript.sml` | `Flapjack/Compiler/Backend/StackNames.lean` |
+| `compiler/backend/stackLangScript.sml` (shared-word `prog`) | `Flapjack/Compiler/Backend/StackCarrier.lean` (canonical single-word-parameter `ProgW`; untagged carrier, no theorem) |
+| `compiler/backend/proofs/stack_removeProofScript.sml` | `Flapjack/Compiler/Backend/StackRemove.lean` (`is_SOME_Word`, `read_mem`/`LENGTH_read_mem`, `addresses`/`IN_addresses`; `names_ok` Prop-shaped tag) |
 | `compiler/backend/stack_allocScript.sml` | `Flapjack/Compiler/Backend/StackAlloc.lean` (`next_lab`; executable pass counterpart remains `Flapjack/StackAlloc.lean`) |
 | `compiler/backend/stack_to_labScript.sml` | `Flapjack/Compiler/Backend/StackToLab.lean` (`flatten` and `prog_to_section`; `compile` remains open) |
 | `compiler/backend/word_to_stackScript.sml` | `Flapjack/Compiler/Backend/WordToStack.lean` (`bits_to_word`, `word_list`, `chunk_to_bits`, `chunk_to_bitmap`, `const_words_to_bitmap`, `insert_bitmap`, `num_stack_ret`, `skip_free`, `stack_arg_count`, `stack_free`, `perf_rsp`, `perf_rbp`, `handler_slots`, `seq_stack_free`, `w_stack_load`, `w_stack_store`; `state_rel`/`compile_semantics` remain open) |

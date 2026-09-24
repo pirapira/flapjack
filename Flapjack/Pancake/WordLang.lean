@@ -350,4 +350,49 @@ def everyStackVar {width : Nat} (P : Nat -> Bool) :
   | .loop _ body _ => everyStackVar P body
   | _ => True
 
+/-! ## Word locations
+
+HOL `wordLang$word_loc = Word ('a word) | Loc num num`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Deliberately UNTAGGED:
+HOL's constructor payload is the fixed-width `'a word`, so only width-indexed
+uses such as `StackRemove.isSomeWord` over `WordLoc (BitVec width)` are
+HOL-shaped. -/
+inductive WordLoc (α : Type u) where
+  | word (value : α)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
+/-- Exact width-indexed port of HOL `wordLang$word_loc`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`
+`word_loc = Word ('a word) | Loc num num`).  The payload is the fixed-width
+`BitVec width`, matching HOL's `'a word`.  HOL word dimensions are nonzero
+(`dimindex(:'a) > 0`), so the exact carrier requires `[NeZero width]`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_loc"]
+inductive WordLocW (width : Nat) [NeZero width] where
+  | word (value : BitVec width)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
+/-- Untagged bridge: the exact width-indexed carrier maps onto the generic
+`WordLoc` instantiated at `BitVec width`. -/
+def wordLocWToGeneric {width : Nat} [NeZero width] : WordLocW width → WordLoc (BitVec width)
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge: the generic `WordLoc (BitVec width)` is the exact
+width-indexed carrier. -/
+def wordLocWOfGeneric {width : Nat} [NeZero width] : WordLoc (BitVec width) → WordLocW width
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWOfGeneric_toGeneric {width : Nat} [NeZero width] (location : WordLocW width) :
+    wordLocWOfGeneric (wordLocWToGeneric location) = location := by
+  cases location <;> rfl
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWToGeneric_ofGeneric {width : Nat} [NeZero width] (location : WordLoc (BitVec width)) :
+    wordLocWToGeneric (wordLocWOfGeneric location) = location := by
+  cases location <;> rfl
+
 end Flapjack

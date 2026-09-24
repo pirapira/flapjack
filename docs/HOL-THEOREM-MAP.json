@@ -379,6 +379,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This all-width production-evaluator support keeps HOL's unused result binder, successful-evaluation premise, arbitrary code-map update, simp_exp image, and Option PanWordLab.word result. It remains untagged because the explicit HolFiniteDimension/source-operation runtime has not been proved identical to HOL's implicit finite_index and crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEval",
     "statement_status": "documented_mismatch",
     "reviewer": "This source-evaluator corollary has HOL's success premise, code-map update, simplifier, and complete Option word_lab result, with production evaluation proved equal to its recursive source equations. It is not tagged because its explicit HolFiniteDimension encoding and CrepHolState adapter are not yet identified with HOL's implicit finite_index word type and crepSem state."
@@ -398,6 +406,14 @@
     "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",
     "statement_status": "documented_mismatch",
     "reviewer": "This all-finite-index source-evaluator result has the successful Option word_lab premise and conclusion, arbitrary code-map update, and simp_exp result of HOL simp_exp_correct. It remains untagged because the source evaluator/state/op dictionary is not yet identified theoremically with native HOL crepSem eval and word operations."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectHolFiniteWordSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This all-width successful-result corollary keeps the full Option PanWordLab.word output and arbitrary code-map update over the source-operation production runtime. It remains untagged because that runtime has not been proved equal to native HOL crepSem eval for the implicit finite_index word carrier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

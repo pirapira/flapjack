@@ -1935,10 +1935,85 @@ theorem crepArithHolFiniteDimensionSourceMapCode_runtime {ι : Type}
   cases state
   rfl
 
+/-- Full-result all-width support for HOL `simp_exp_correct1` over the
+    production evaluator configured with the source-shaped finite-word memory
+    model. This keeps the successful-evaluation premise and the entire
+    `Option (PanWordLab word)` result, including its HOL `word_lab` wrapper;
+    `f` changes only the code map. It remains untagged because the explicit
+    finite-index carrier and its primitive operations have not yet been proved
+    identical to HOL's implicit `finite_index`/`crepSem$eval` interpretation.
+    The unused result binder mirrors HOL's `!s exp v` shape. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceRuntime {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression).map PanWordLab.word := by
+  let runtime := state.toHolFiniteWordSourceRuntime dimension
+  have hsimp := crepSimpExpEvalPreservesHolFiniteWordSource
+    dimension state expression h
+  calc
+    (evalCrepRuntimeExp
+        ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+          dimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word =
+      (evalCrepRuntimeExp (crepArithMapCode f runtime)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word := by
+            rw [crepArithHolFiniteDimensionSourceMapCode_runtime]
+    _ = (evalCrepRuntimeExp runtime
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word := by
+            exact congrArg (Option.map PanWordLab.word)
+              (crepEvalCodeMapIrrel f runtime (crepSimpExp
+                (fun n => bitVecToHolWord dimension
+                  (BitVec.ofNat dimension.width n)) expression))
+    _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
+      congrArg (Option.map PanWordLab.word) hsimp
+
+/-- Successful-result form of the all-width source-runtime support, following
+    HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
+    result. This remains untagged for the evaluator-correspondence gap recorded
+    on `crepSimpExpCorrect1HolFiniteWordSourceRuntime`. -/
+theorem crepSimpExpCorrectHolFiniteWordSourceRuntime {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (value : ι → Bool)
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression = some value) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word = some (.word value) := by
+  have hSuccess : evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression ≠ none := by
+    simp [h]
+  rw [crepSimpExpCorrect1HolFiniteWordSourceRuntime
+    (_v := .word value) f state expression hSuccess]
+  simp [h]
+
 /-- All-dimension production-evaluator support for HOL
     `simp_exp_correct1`. The hypothesis states successful evaluation, `f`
     updates only the source state's code map, and the conclusion preserves the
-    full optional `word_lab` result. `HolFiniteDimension` is explicit Lean
+    successful word projection. `HolFiniteDimension` is explicit Lean
     evidence for a finite index carrier, with `decode` serving as its
     `finite_index` map. This remains untagged because no theorem yet identifies
     that adapter and its operation instances with HOL's native implicit

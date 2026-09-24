@@ -172,6 +172,14 @@ theorem crepInlineOptMmapAllEq :
       ([1, 2, 3] : List Nat).mapM (fun n => some (n + 0)) :=
   OPT_MMAP_ALL_EQ _ _ _ (fun _ _ => rfl)
 
+theorem crepInlineFdomsEqOptMmapLookupSome :
+    ∃ z : List Nat,
+      ([1, 2, 3] : List Nat).mapM
+        (FLOOKUP (fun n : Nat => some (n + 100))) = some z :=
+  fdoms_eq_opt_mmap_flookup_some [1, 2, 3]
+    (fun n : Nat => some (n + 100)) (fun n : Nat => some (n + 100))
+    [101, 102, 103] rfl (by decide)
+
 theorem crepInlineSubmapFupdate
     (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
     crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) :=

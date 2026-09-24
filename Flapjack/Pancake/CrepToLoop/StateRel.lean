@@ -162,4 +162,24 @@ theorem loopMemoryTotal_eq_some {W F : Type} (default : LoopValue W)
     (h : t.memory ad = some v) : loopMemoryTotal default t ad = v := by
   simp [loopMemoryTotal, h]
 
+/-- Exact port of HOL `crep_to_loop$distinct_funcs_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:60-65`): distinct
+    function-map keys are separated by their target labels, so two entries with
+    equal labels must share the key.  The map is over `FiniteMap FunName (Nat × Nat)`
+    (HOL `mlstring |-> num # num`); no word-typed field occurs, so the statement
+    is word-length independent. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "distinct_funcs_def"]
+def crepToLoopDistinctFuncs (functions : FiniteMap FunName (Nat × Nat)) : Prop :=
+  ∀ x y n m rm rm',
+    FLOOKUP functions x = some (n, rm) →
+    FLOOKUP functions y = some (m, rm') → n = m → x = y
+
+/-- Untagged iff form of `crepToLoopDistinctFuncs`, kept for rewriting. -/
+theorem crepToLoopDistinctFuncs_iff (functions : FiniteMap FunName (Nat × Nat)) :
+    crepToLoopDistinctFuncs functions ↔
+      ∀ x y n m rm rm',
+        FLOOKUP functions x = some (n, rm) →
+        FLOOKUP functions y = some (m, rm') → n = m → x = y :=
+  Iff.rfl
+
 end Flapjack

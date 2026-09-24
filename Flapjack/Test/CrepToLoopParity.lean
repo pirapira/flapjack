@@ -412,4 +412,32 @@ def memRelGuard : Bool :=
 
 #guard memRelGuard
 
+/-- Concrete function table used to reproduce the `distinct_funcs_*` oracle
+    rows: `«a» ↦ (1,10)`, `«b» ↦ (2,20)`, `«c» ↦ (1,30)`. -/
+def distinctFuncsFm : FiniteMap String (Nat × Nat) :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap String (Nat × Nat)) ("a", (1, 10)))
+      ("b", (2, 20)))
+    ("c", (1, 30))
+
+/-- `distinct_funcs_sep=T`: two entries with different labels satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctFuncs distinctFuncsFm) :
+    (1 : Nat) = 2 → (("a" : String) = "b") :=
+  h "a" "b" 1 2 10 20
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+    (by simp [distinctFuncsFm, FLOOKUP_update])
+
+/-- `distinct_funcs_collision=F`: two distinct keys with the same label violate
+    the relation, so it does not hold for a colliding table. -/
+example : ¬ crepToLoopDistinctFuncs distinctFuncsFm := by
+  intro h
+  have hkey : ("a" : String) = "c" :=
+    h "a" "c" 1 1 10 30
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      (by simp [distinctFuncsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
 end Flapjack.Test.CrepToLoopParity

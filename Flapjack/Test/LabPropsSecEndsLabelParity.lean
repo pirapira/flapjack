@@ -39,6 +39,20 @@ example : secEndsWithLabel secLabel = true := by decide
 example : secEndsWithLabel secAsm = false := by decide
 example : secEndsWithLabel secEmpty = false := by decide
 
+example : secEndsWithLabelHOL secLabel := by
+  apply (secEndsWithLabelHOL_iff_bool _).2
+  decide
+example : ¬secEndsWithLabelHOL secAsm := by
+  intro h
+  have hb := (secEndsWithLabelHOL_iff_bool _).1 h
+  have hfalse : secEndsWithLabel secAsm = false := by decide
+  simp [hfalse] at hb
+example : ¬secEndsWithLabelHOL secEmpty := by
+  intro h
+  have hb := (secEndsWithLabelHOL_iff_bool _).1 h
+  have hfalse : secEndsWithLabel secEmpty = false := by decide
+  simp [hfalse] at hb
+
 example : secEndsWithLabel
     ({ sectionId := 0, lines := [asmLine] ++ [.label 0 1 0] } : Section L) = true :=
   secEndsWithLabel_append_label _ 0 1 0

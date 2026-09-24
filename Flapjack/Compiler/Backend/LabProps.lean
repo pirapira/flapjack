@@ -62,16 +62,33 @@ def allEncOkPre {Asm Memop Addr Cmp RegImm MlString Word : Type}
       (AsmWithLab Cmp RegImm MlString) Word))) : Bool :=
   sections.all (secOkPre checks)
 
-/-- HOL `labProps$sec_ends_with_label_def` (`labPropsScript.sml:81`):
-`sec_ends_with_label (Section _ ls) ⇔ ¬NULL ls ∧ is_Label (LAST ls)`. Lean
-renders the nonempty/last test on `List.reverse` and classifies the head with
-`LabSem.isLabel`; an empty section yields `false`. -/
-@[hol "cakeml/compiler/backend/semantics/labPropsScript.sml" "sec_ends_with_label_def"]
+/-- Executable Boolean counterpart of HOL `sec_ends_with_label`. The tagged
+predicate below has HOL's proposition-valued statement shape. -/
 def secEndsWithLabel {AsmOrCbw AsmWithLab Word : Type}
     (sec : Section (Line AsmOrCbw AsmWithLab Word)) : Bool :=
   match sec.lines.reverse with
   | [] => false
   | line :: _ => LabSem.isLabel line
+
+/-- HOL `labProps$sec_ends_with_label_def` (`labPropsScript.sml:81`):
+`sec_ends_with_label (Section _ ls) ⇔ ¬NULL ls ∧ is_Label (LAST ls)`. The
+reverse-head rendering has the same nonempty/final-line cases and returns a
+proposition, as HOL's predicate does. -/
+@[hol "cakeml/compiler/backend/semantics/labPropsScript.sml" "sec_ends_with_label_def"]
+def secEndsWithLabelHOL {AsmOrCbw AsmWithLab Word : Type}
+    (sec : Section (Line AsmOrCbw AsmWithLab Word)) : Prop :=
+  match sec.lines.reverse with
+  | [] => False
+  | line :: _ => LabSem.isLabel line = true
+
+/-- The executable Boolean check and HOL-shaped predicate agree. -/
+theorem secEndsWithLabelHOL_iff_bool {AsmOrCbw AsmWithLab Word : Type}
+    (sec : Section (Line AsmOrCbw AsmWithLab Word)) :
+    secEndsWithLabelHOL sec ↔ secEndsWithLabel sec = true := by
+  unfold secEndsWithLabelHOL secEndsWithLabel
+  cases sec.lines.reverse with
+  | nil => simp
+  | cons line rest => simp
 
 /-! Structural lemmas about the section/encoding predicates (needed by
 `compile_all_enc_ok_pre`). -/

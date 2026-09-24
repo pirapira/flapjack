@@ -1,3 +1,5 @@
+import Flapjack.HolRef
+
 /-!
 # Faithful Cake StackLang syntax
 
@@ -7,6 +9,7 @@ This module records the generic `store_name` and `prog` datatype shapes from
 representations such as `Nat` registers, `FunName`, and RISC-V word
 instructions. The generic carriers below preserve the HOL datatype boundary
 without claiming that the existing executable AST is already related to it.
+The word-independent program combinator `list_Seq` is ported over this carrier.
 -/
 
 namespace Flapjack.Compiler.Backend.StackLang
@@ -78,5 +81,30 @@ inductive Prog (Inst Cmp RegImm Binop Memop Addr MlString : Type) where
   | bitmapLoad (destination address : Nat)
   | halt (register : Nat)
   deriving Repr
+
+/-- Exact port of HOL `list_Seq_def`
+    (`cakeml/compiler/backend/stackLangScript.sml:86`):
+
+```
+(list_Seq [] = Skip) /\
+(list_Seq [x] = x) /\
+(list_Seq (x::y::xs) = Seq x (list_Seq (y::xs)))
+```
+
+    `list_Seq` builds the right-associated `Seq` chain of a program list, the
+    canonical stackLang combinator used by the Word-to-Stack stubs and
+    `compile_prog`.  HOL `list_Seq` is polymorphic in the word type `'a` and
+    touches only the word-independent `Skip`/`Seq` constructors, whose fields are
+    the program itself; the Lean definition is correspondingly polymorphic in the
+    carrier's type parameters (`Inst`/`Cmp`/`RegImm`/`Binop`/`Memop`/`Addr`/
+    `MlString`) and uses none of them.  The word-indexed constructors
+    (`inst`/`ite`/`shMemOp`) are not involved. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "list_Seq_def"]
+def listSeq {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+    List (Prog Inst Cmp RegImm Binop Memop Addr MlString) →
+      Prog Inst Cmp RegImm Binop Memop Addr MlString
+  | [] => .skip
+  | [x] => x
+  | x :: y :: xs => .seq x (listSeq (y :: xs))
 
 end Flapjack.Compiler.Backend.StackLang

@@ -200,4 +200,17 @@ theorem crepToLoopDistinctVars_iff (vars : FiniteMap Nat Nat) :
         FLOOKUP vars x = some n → FLOOKUP vars y = some m → n = m → x = y :=
   Iff.rfl
 
+/-- Exact port of HOL `crep_to_loop$ctxt_max_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:90-93`): every value
+    stored in the `num |-> num` map is bounded by `n`.  No word-typed field
+    occurs, so the statement is word-length independent. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "ctxt_max_def"]
+def crepToLoopCtxtMax (n : Nat) (fm : FiniteMap Nat Nat) : Prop :=
+  ∀ v m, FLOOKUP fm v = some m → m ≤ n
+
+/-- Untagged iff form of `crepToLoopCtxtMax`, kept for rewriting. -/
+theorem crepToLoopCtxtMax_iff (n : Nat) (fm : FiniteMap Nat Nat) :
+    crepToLoopCtxtMax n fm ↔ ∀ v m, FLOOKUP fm v = some m → m ≤ n :=
+  Iff.rfl
+
 end Flapjack

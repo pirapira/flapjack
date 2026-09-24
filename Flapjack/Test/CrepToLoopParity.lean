@@ -468,6 +468,27 @@ example : ¬ crepToLoopDistinctVars distinctVarsFm := by
       rfl
   exact absurd hkey (by decide)
 
+/-- HOL `ctxt_max_def` (`crep_to_loopProofScript.sml:90-93`) on the concrete
+    table `1 ↦ 10`, matching oracle rows `ctxt_max_within=T` and
+    `ctxt_max_absent=T` (absent keys are vacuous). -/
+def ctxtMaxFm : FiniteMap Nat Nat :=
+  FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)
+
+example : crepToLoopCtxtMax 20 ctxtMaxFm := by
+  intro v m h
+  rw [ctxtMaxFm, FLOOKUP_update] at h
+  split at h
+  · simp_all
+    omega
+  · simp at h
+
+/-- Oracle row `ctxt_max_exceeds=F`: the bound `5` does not admit the stored
+    value `10`. -/
+example : ¬ crepToLoopCtxtMax 5 ctxtMaxFm := by
+  intro h
+  have hle := h 1 10 (by simp [ctxtMaxFm, FLOOKUP_update])
+  omega
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

@@ -1483,4 +1483,96 @@ theorem isRiscV64CrepRuntimeTarget_crepRuntimeExtCall
                     function (panTheWord c) (panTheWord cl) (panTheWord a)
                     (panTheWord al) h
 
+/-! ## HOL `get_byte`/`byte_align` bridge for the RV64 `LoadByte` evaluator case
+
+HOL `panSem$mem_load_byte_def` reads the aligned cell and extracts a byte with
+`byte$get_byte`/`byte$byte_align`, stated directly on the word type
+(`dimindex(:'a) DIV 8` bytes per word).  The RISC-V model's `panRiscVGetByte`
+uses base-256 arithmetic instead of HOL's shift, so the two only agree because
+`256 ^ k = 2 ^ (8 * k)`.  The definitions below render the HOL primitives at
+`Word 64` so the production evaluator's `LoadByte` case can be stated against
+them.  All declarations here are untagged while the statement shape is under
+review (bead `flapjack-pxn.18.4.3.48.1.2`). -/
+
+/-- HOL `byte$byte_align` at `Word 64`: clear the low three bits. -/
+def holByteAlign64 (address : RiscV.Word 64) : RiscV.Word 64 :=
+  BitVec.ofNat 64 ((address.toNat / 8) * 8)
+
+/-- HOL `byte$byte_index` at `Word 64` (little-endian when `bigEndian = false`). -/
+def holByteIndex64 (address : RiscV.Word 64) (bigEndian : Bool) : Nat :=
+  let d := 8
+  if bigEndian then 8 * ((d - 1) - address.toNat % d) else 8 * (address.toNat % d)
+
+/-- HOL `byte$get_byte` at `Word 64`, widened back to a word. -/
+def holGetByte64 (address value : RiscV.Word 64) (bigEndian : Bool) : RiscV.Word 64 :=
+  BitVec.ofNat 64 ((value.toNat >>> holByteIndex64 address bigEndian) % 256)
+
+/-- HOL `panSem$mem_load_byte` at `Word 64` over a total `word -> word_lab`
+memory viewed through `crepRuntimeMemoryView`. -/
+def holMemLoadByte64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (bigEndian : Bool)
+    (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  let aligned := holByteAlign64 address
+  match memory aligned with
+  | some value => if domain aligned then some (holGetByte64 address value bigEndian) else none
+  | none => none
+
+theorem panRiscVByteAlign_eight_eq_holByteAlign64 (address : RiscV.Word 64) :
+    RiscV.panRiscVByteAlign (8 : RiscV.Word 64) address = holByteAlign64 address := by
+  simp [RiscV.panRiscVByteAlign, holByteAlign64]
+
+theorem panRiscVByteIndex_eight (address : RiscV.Word 64) :
+    RiscV.panRiscVByteIndex (8 : RiscV.Word 64) address = address.toNat % 8 := by
+  simp [RiscV.panRiscVByteIndex]
+
+theorem panRiscVGetByte_eight_eq_holGetByte64 (address value : RiscV.Word 64) :
+    RiscV.panRiscVGetByte (8 : RiscV.Word 64) address value =
+      holGetByte64 address value false := by
+  rw [RiscV.panRiscVGetByte, panRiscVByteIndex_eight, holGetByte64, holByteIndex64]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  apply BitVec.eq_of_toNat_eq
+  have hpow : (256 : Nat) ^ (BitVec.toNat address % 8) =
+      2 ^ (8 * (BitVec.toNat address % 8)) := by
+    rw [show (256 : Nat) = 2 ^ 8 by decide, Nat.pow_mul]
+  rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, hpow, Nat.shiftRight_eq_div_pow]
+
+theorem panRiscVReadByte_eight_eq_holMemLoadByte64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVReadByte domain memory (8 : RiscV.Word 64) address =
+      holMemLoadByte64 domain memory false address := by
+  simp only [RiscV.panRiscVReadByte, panModelReadByte, RiscV.panRiscVMemoryModel,
+    panRiscVByteAlign_eight_eq_holByteAlign64, holMemLoadByte64,
+    panRiscVGetByte_eight_eq_holGetByte64]
+  by_cases hd : domain (holByteAlign64 address) = true <;>
+    cases hm : memory (holByteAlign64 address) <;>
+    simp_all
+
+/-- The production `LoadByte` at the RV64 target equals HOL `mem_load_byte` over
+the memory view.  This is the genuine evaluator-case bridge for the `LoadByte`
+constructor with a constant address. -/
+theorem crepRuntimeLoadByte_rv64_eq_holMemLoadByte64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoadByte (riscv64CrepRuntimeTarget base) address =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  rw [crepRuntimeLoadByte_target_eq_riscv, panRiscVReadByte_eight_eq_holMemLoadByte64]
+
+/-- Evaluator case: `evalCrepRuntimeExp` of `LoadByte (Const address)` at the
+RV64 target is exactly HOL `mem_load_byte`. -/
+theorem evalCrepRuntimeExp_loadByte_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.loadByte (.const address)) =
+      holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+
+/-- Word_lab evaluator case: the production word_lab core's `LoadByte (Const
+address)` at the RV64 target is HOL `mem_load_byte` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_loadByte_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.loadByte (.const address)) =
+      (holMemLoadByte64 base.memaddrs (crepRuntimeMemoryView base.memory) false address).map
+        PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
+
 end Flapjack

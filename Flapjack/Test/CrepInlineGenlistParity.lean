@@ -142,6 +142,24 @@ theorem crepInlineResVarFoldl (h : Nat) (vs : List Nat) (lc1 lc2 : FiniteMap Nat
       (vs.zip (vs.map (FLOOKUP lc2))).foldl resVar (resVar lc1 (h, FLOOKUP lc2 h)) :=
   res_var_foldl_commutes_strong h vs lc1 lc2
 
+def crepInlineResVarKeys : List Nat := [1, 2, 3]
+
+def crepInlineResVarLc1 : FiniteMap Nat Nat := fun _ => none
+
+def crepInlineResVarLc2 : FiniteMap Nat Nat := fun n => if n = 2 then some 20 else none
+
+theorem crepInlineFlookupResVarIsMemZip :
+    FLOOKUP ((crepInlineResVarKeys.zip (crepInlineResVarKeys.map (FLOOKUP crepInlineResVarLc2))).foldl
+        resVar crepInlineResVarLc1) 2 =
+      FLOOKUP crepInlineResVarLc2 2 :=
+  flookup_res_var_is_mem_zip_eq crepInlineResVarKeys 2 crepInlineResVarLc1 crepInlineResVarLc2
+    (by decide)
+
+theorem crepInlineFlookupResVarIsMemZipValue :
+    FLOOKUP ((crepInlineResVarKeys.zip (crepInlineResVarKeys.map (FLOOKUP crepInlineResVarLc2))).foldl
+        resVar crepInlineResVarLc1) 2 = some 20 :=
+  crepInlineFlookupResVarIsMemZip
+
 theorem crepInlineSubmapFupdate
     (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
     crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) :=
@@ -223,6 +241,17 @@ def runChecks : IO Bool := do
   let submapOk ← do
     IO.println "PASS crep_inline SUBMAP_IMP_FUPDATE_SUBMAP/DOMSUB_SUBMAP/DOMSUB_FUPDATE"
     pure true
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk && submapOk)
+  let flookupOk ←
+    if (match FLOOKUP ((crepInlineResVarKeys.zip
+        (crepInlineResVarKeys.map (FLOOKUP crepInlineResVarLc2))).foldl
+          resVar crepInlineResVarLc1) 2 with
+        | some 20 => true
+        | _ => false) then
+      IO.println "PASS crep_inline flookup_res_var_is_mem_zip_eq"
+      pure true
+    else
+      IO.println "FAIL crep_inline flookup_res_var_is_mem_zip_eq"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk && submapOk && flookupOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

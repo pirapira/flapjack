@@ -560,7 +560,7 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves struct_field loads_ops cmp_shift finite_map_shadow \
+  leaves struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
   missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
@@ -731,6 +731,18 @@ run_probe crep_eval_load_rv64_probeScript.sml crep_eval_load_rv64_probe.out \
 # RV64 target (Add/Sub/And, plus the empty-Add neutral and the Sub arity failure).
 run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \
   eval_op_add_const eval_op_sub_arity \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+# The eval Cmp probe observes HOL word_cmp over constant operands for the RV64
+# target (Equal/Lower/Test true and false).
+run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
+  eval_cmp_equal_true eval_cmp_test_disjoint \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+# The eval Shift probe observes HOL word_sh over constant operands for the RV64
+# target (Lsl/Lsr/Asr/Ror, amount zero, and the invalid width-sized amount).
+run_probe crep_eval_shift_rv64_probeScript.sml crep_eval_shift_rv64_probe.out \
+  eval_shift_lsl_const eval_shift_amount_width \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

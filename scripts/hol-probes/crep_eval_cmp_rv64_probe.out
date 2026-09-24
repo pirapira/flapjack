@@ -1,0 +1,5 @@
+eval_cmp_equal_true=SOME (Word (v2w [T]))
+eval_cmp_equal_false=SOME (Word (v2w [F]))
+eval_cmp_lower_true=SOME (Word (v2w [T]))
+eval_cmp_test_zero=SOME (Word (v2w [F]))
+eval_cmp_test_disjoint=SOME (Word (v2w [T]))

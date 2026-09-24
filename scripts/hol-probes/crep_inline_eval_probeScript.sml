@@ -68,3 +68,15 @@ val _ = print_eval "tgt_var"
   ``case eval ^t (Var (0:num)) of SOME (Word w) => (w = (7w:64 word)) | _ => F``;
 val _ = print_eval "src_var_eq_tgt_var"
   ``eval ^s (Var (0:num)) = eval ^t (Var (0:num))``;
+
+(* Nonempty heterogeneous expression list: a Const and a Var. *)
+val es = ``[(Const (5w:64 word)); (Var (0:num))] : 64 crepLang$exp list``;
+val _ = print_eval "src_mmap"
+  ``OPT_MMAP (eval ^s) ^es``;
+val _ = print_eval "tgt_mmap"
+  ``OPT_MMAP (eval ^t) ^es``;
+val _ = print_eval "mmap_hetero"
+  ``case OPT_MMAP (eval ^s) ^es of
+      SOME [Word (5w:64 word); Word (7w:64 word)] => T | _ => F``;
+val _ = print_eval "mmap_eq"
+  ``OPT_MMAP (eval ^s) ^es = OPT_MMAP (eval ^t) ^es``;

@@ -5195,6 +5195,14 @@
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectLoadByteCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked LoadByte-constructor specialization with successful evaluation, a recursive address IH, and all three parent conclusion roles. Intentionally untagged: HOL has only universal compile_exp_correct and its LoadByte evaluator calls mem_load_byte with finite memory-domain and endian state; the Lean production evaluator with default memoryAccess reads a total PanValue lookup and carries explicit bytesInWord. Lean's context/FEVERY/FMAP_MAP2 premises use projected views and pointwise adapters; local/global validity, maps, and structInfosOk are retained but unused in this constructor. Paired direct HOL/Lean oracle row uses a one-byte 8-bit memory cell."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectBaseAddrCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked BaseAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case."

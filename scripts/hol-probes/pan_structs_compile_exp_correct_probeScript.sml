@@ -312,6 +312,25 @@ val _ = print_eval "compile_exp_correct_load_byte"
        (pan_structs$compile_exp ^ctxt ^load_byte_expression) =
        SOME (pan_structsProof$convert_v ^load_byte_value))``;
 
+val load32_64_state =
+  ``(s:(64,'ffi) panSem$state) with <|
+      structs := []; locals := FEMPTY; globals := FEMPTY;
+      memory := (\a:64 word. if a = 8w then
+        Word (0x8877665544332211w:64 word) else ARB);
+      memaddrs := {8w}; sh_memaddrs := {}; be := F |>``;
+val load32_64_value = ``ValWord (0x44332211w:64 word)``;
+val load32_64_ctxt = ``<| structs := []; locals := []; globals := [] |>``;
+val load32_64_expression =
+  ``(panLang$Load32 (panLang$Const (8w:64 word)) : 64 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_load32_le_success"
+  ``(pan_structs$old_exp_shape ^load32_64_ctxt ^load32_64_expression,
+     panSem$shape_of ^load32_64_value,
+     pan_structsProof$v_flds_ok (^load32_64_state).structs ^load32_64_value,
+     panSem$eval ^load32_64_state ^load32_64_expression = SOME ^load32_64_value,
+     panSem$eval (pan_structsProof$convert_s ^load32_64_ctxt ^load32_64_state)
+       (pan_structs$compile_exp ^load32_64_ctxt ^load32_64_expression) =
+       SOME (pan_structsProof$convert_v ^load32_64_value))``;
+
 val panop_value = ``ValWord (15w:8 word)``;
 val panop_expression =
   ``(panLang$Panop Mul [panLang$Const (3w:8 word);

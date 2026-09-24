@@ -192,6 +192,128 @@ example :
     hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap haddressIH
   exact ⟨hcase.1, hcase.2.1, hload, hcase.2.2⟩
 
+/-! The direct HOL oracle row `compile_exp_correct_load32_le_success` uses an
+aligned 64-bit word cell and checks that `Load32` extracts the low four bytes.
+The same explicit RISC-V memory model is installed in the full evaluator on
+both sides of the compile case; its default whole-cell fallback is not used. -/
+def load32CompileCaseRuntime : PanSemState Word64 (FfiState Unit) :=
+  { finiteMapRuntime with
+    memory := fun address =>
+      if address == BitVec.ofNat 64 8 then
+        some (.word (BitVec.ofNat 64 0x8877665544332211))
+      else none
+    memaddrs := fun address => address == BitVec.ofNat 64 8 }
+
+def load32CompileCaseMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    load32CompileCaseRuntime.memaddrs
+    load32CompileCaseRuntime.sharedMemaddrs load32CompileCaseRuntime.be
+
+def load32CompileCaseExpression : Exp Word64 :=
+  .load32 (.const (BitVec.ofNat 64 8))
+
+def load32CompileCaseValue : PanValue Word64 :=
+  .word (BitVec.ofNat 64 0x44332211)
+
+private theorem load32CompileCaseRead32 :
+    load32CompileCaseMemoryAccess.read32
+      load32CompileCaseMemoryAccess.domain
+      (fun address => if address = BitVec.ofNat 64 8 then
+        some (.word (BitVec.ofNat 64 0x8877665544332211)) else none)
+      (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) =
+        some (BitVec.ofNat 64 0x44332211) := by
+  native_decide
+
+private theorem load32CompileCaseSourceEval :
+    evalPanValueExpFull load32CompileCaseRuntime.structs
+      load32CompileCaseRuntime.locals load32CompileCaseRuntime.globals
+      load32CompileCaseRuntime.memory load32CompileCaseRuntime.baseAddress
+      load32CompileCaseRuntime.topAddress (BitVec.ofNat 64 8)
+      load32CompileCaseExpression
+      (memoryAccess := some load32CompileCaseMemoryAccess) =
+        some load32CompileCaseValue := by
+  simp [evalPanValueExpFull, load32CompileCaseExpression,
+    load32CompileCaseRuntime, finiteMapRuntime, load32CompileCaseRead32,
+    load32CompileCaseValue]
+
+example :
+    structOldExpShape emptyStructCompileContext load32CompileCaseExpression = .one ∧
+    panStructValueFieldsOkBool load32CompileCaseRuntime.structs
+      load32CompileCaseValue = true ∧
+    evalPanValueExpFull
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).structs
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).locals
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).globals
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).memory
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).topAddress
+      (BitVec.ofNat 64 8)
+      (structCompileExp emptyStructCompileContext load32CompileCaseExpression)
+      (memoryAccess := some load32CompileCaseMemoryAccess) =
+        some (panStructConvertValue load32CompileCaseValue) := by
+  have hsource : evalPanValueExpFull load32CompileCaseRuntime.structs
+      load32CompileCaseRuntime.locals load32CompileCaseRuntime.globals
+      load32CompileCaseRuntime.memory load32CompileCaseRuntime.baseAddress
+      load32CompileCaseRuntime.topAddress (BitVec.ofNat 64 8)
+      load32CompileCaseExpression
+      (memoryAccess := some load32CompileCaseMemoryAccess) =
+        some load32CompileCaseValue := load32CompileCaseSourceEval
+  have hlocalsFields : panStructEveryValueFieldsOkBool
+      load32CompileCaseRuntime.structs load32CompileCaseRuntime.locals := by
+    intro name value hvalue
+    simp [load32CompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool
+      load32CompileCaseRuntime.structs load32CompileCaseRuntime.globals := by
+    intro name value hvalue
+    simp [load32CompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hstructInfos : structInfosOk load32CompileCaseRuntime.structs := by
+    simp [load32CompileCaseRuntime, finiteMapRuntime, structInfosOk]
+  have hlocalsMap : panStructShapeMapEq emptyStructCompileContext.locals
+      load32CompileCaseRuntime.locals := by
+    intro name
+    simp [emptyStructCompileContext, load32CompileCaseRuntime,
+      finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq emptyStructCompileContext.globals
+      load32CompileCaseRuntime.globals := by
+    intro name
+    simp [emptyStructCompileContext, load32CompileCaseRuntime,
+      finiteMapRuntime, lookupInfo]
+  have haddressIH : ∀ addressValue,
+      evalPanValueExpFull load32CompileCaseRuntime.structs
+        load32CompileCaseRuntime.locals load32CompileCaseRuntime.globals
+        load32CompileCaseRuntime.memory load32CompileCaseRuntime.baseAddress
+        load32CompileCaseRuntime.topAddress (BitVec.ofNat 64 8)
+        (.const (BitVec.ofNat 64 8))
+        (memoryAccess := some load32CompileCaseMemoryAccess) = some addressValue →
+      structOldExpShape emptyStructCompileContext (.const (BitVec.ofNat 64 8)) =
+          panSemShapeOf addressValue ∧
+      panStructValueFieldsOkBool load32CompileCaseRuntime.structs addressValue = true ∧
+      evalPanValueExpFull
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).structs
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).locals
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).globals
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).memory
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).baseAddress
+        (panStructConvertState emptyStructCompileContext load32CompileCaseRuntime).topAddress
+        (BitVec.ofNat 64 8)
+        (structCompileExp emptyStructCompileContext (.const (BitVec.ofNat 64 8)))
+        (memoryAccess := some load32CompileCaseMemoryAccess) =
+          some (panStructConvertValue addressValue) := by
+    intro addressValue haddress
+    have hword : addressValue = .word (BitVec.ofNat 64 8) := by
+      simpa [evalPanValueExpFull] using haddress.symm
+    subst addressValue
+    exact ⟨by simp [structOldExpShape, panSemShapeOf],
+      by simp [panStructValueFieldsOkBool],
+      by simp [evalPanValueExpFull, panStructConvertState, panStructConvertValue]⟩
+  have hcase := panStructCompileExpCorrectLoad32Case
+    emptyStructCompileContext load32CompileCaseRuntime (BitVec.ofNat 64 8)
+    load32CompileCaseMemoryAccess (.const (BitVec.ofNat 64 8))
+    load32CompileCaseValue hsource rfl hlocalsFields hglobalsFields hstructInfos
+    hlocalsMap hglobalsMap haddressIH
+  simpa [load32CompileCaseExpression, load32CompileCaseValue,
+    panSemShapeOf, panStructConvertValue] using hcase
+
 /-! Recursive Panop/Mul specialization paired with the direct HOL-EVAL row
 `compile_exp_correct_panop_mul`. -/
 def panOpCompileCaseArguments : List (Exp Word64) :=

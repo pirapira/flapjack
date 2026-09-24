@@ -113,6 +113,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "ShapeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "deepseek (constructor-by-constructor source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname with stcname = mlstring (panLangScript.sml:23-24) vs ShapeHOL.one/comb(List ShapeHOL)/named(MlS) where MlS = Flapjack.Basis.Pure.MlString.MlString is the exact mlstring carrier; arities 0/1/1 and field types match. Production Flapjack.Shape uses String names and its tag is withdrawn under flapjack-pxn.18.3.5.7; kernel codec shapeToHOL/shapeOfHOL with byte-ranged shapeOfHOL_shapeToHOL is in the same module; direct HOL oracle scripts/hol-probes/pan_lang_shape_probe.out reproduced by Flapjack/Test/PanLangShapeHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",

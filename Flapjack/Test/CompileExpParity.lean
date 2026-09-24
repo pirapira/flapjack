@@ -116,6 +116,15 @@ def holLoadOneOK : Bool :=
   oneResultOK [.load (.const 3)]
     (compileExpHOL finiteMapContext (.load .one (.const 3)))
 
+/-! Direct HOL `load_two` observation for a two-word flat Load in
+    `compile_exp_probe.out`. At RV64 its second compiled Load uses stride 8. -/
+def holLoadTwoOK : Bool :=
+  match compileExpHOL finiteMapContext
+      (.load (.comb [.one, .one]) (.const 3)) with
+  | ([.load (.const 3), .load (.op .add [.const 3, .const 8])],
+      .comb [.one, .one]) => true
+  | _ => false
+
 def holStructFieldOK : Bool :=
   combTwoResultOK [.const 1, .const 2]
       (compileExpHOL finiteMapContext (.rStruct [.const 1, .const 2])) &&
@@ -147,7 +156,8 @@ def holCmpShiftOK : Bool :=
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
   finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
-  holLeavesOK && holNamedFallbackOK && holLoadOneOK && holStructFieldOK && holLoadsOpsOK &&
+  holLeavesOK && holNamedFallbackOK && holLoadOneOK && holLoadTwoOK &&
+  holStructFieldOK && holLoadsOpsOK &&
   holNaryOpOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =

@@ -1072,18 +1072,20 @@ has implicitly. -/
 
 /-- Exact port of HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`)
     over the width-indexed `v` carrier `HolValue`; clause-for-clause the same
-    as the tagged `panSemShapeOf` (which is stated over `PanValue`). -/
+    as the tagged `panSemShapeOf` (which is stated over `PanValue`).  Carries
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
-def holShapeOf {width : Nat} : HolValue width → Shape
+def holShapeOf {width : Nat} [NeZero width] : HolValue width → Shape
   | .val _ => .one
   | .rStruct values => .comb (values.map holShapeOf)
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
 /-- Exact port of HOL `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`)
-    over the width-indexed `v` carrier `HolValue`. -/
+    over the width-indexed `v` carrier `HolValue`.  Carries `[NeZero width]`
+    because HOL word types have positive `dimindex`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "isValWord_def"]
-def holValueIsWord {width : Nat} : HolValue width → Bool
+def holValueIsWord {width : Nat} [NeZero width] : HolValue width → Bool
   | .val (.word _) => true
   | _ => false
 
@@ -1092,7 +1094,7 @@ def holValueIsWord {width : Nat} : HolValue width → Bool
     value equals the production `panValueShape` (whose `StructContext` argument
     is vacuous).  Untagged: this is a Flapjack-specific adapter, not a HOL
     statement. -/
-theorem holShapeOf_toHolValue {width : Nat} (context : StructContext)
+theorem holShapeOf_toHolValue {width : Nat} [NeZero width] (context : StructContext)
     (value : PanValue (BitVec width)) :
     holShapeOf value.toHolValue = panValueShape context value := by
   induction value using PanValue.toHolValue.induct with
@@ -1111,7 +1113,7 @@ theorem holShapeOf_toHolValue {width : Nat} (context : StructContext)
       rfl
 
 /-- List lift of `holShapeOf_toHolValue`. -/
-theorem holShapeOf_map_toHolValue {width : Nat} (context : StructContext)
+theorem holShapeOf_map_toHolValue {width : Nat} [NeZero width] (context : StructContext)
     (values : List (PanValue (BitVec width))) :
     (values.map PanValue.toHolValue).map holShapeOf = values.map (panValueShape context) := by
   rw [List.map_map]
@@ -1122,7 +1124,7 @@ theorem holShapeOf_map_toHolValue {width : Nat} (context : StructContext)
 /-- Pointwise corollary: matching a shape against the HOL shape of
     `value.toHolValue` agrees with matching it against the production
     `panValueShape`. -/
-theorem panShapeMatches_holShapeOf_toHolValue {width : Nat} (context : StructContext)
+theorem panShapeMatches_holShapeOf_toHolValue {width : Nat} [NeZero width] (context : StructContext)
     (shape : Shape) (value : PanValue (BitVec width)) :
     panShapeMatches shape (holShapeOf value.toHolValue) =
       panShapeMatches shape (panValueShape context value) := by
@@ -1140,9 +1142,10 @@ def holValueWord {width : Nat} : HolValue width → RiscV.Word width
 
 /-- Exact width-indexed port of HOL `pan_op_def`
     (`cakeml/pancake/semantics/panSemScript.sml:191`): only `Mul` on exactly two
-    word operands is defined. -/
+    word operands is defined.  Carries `[NeZero width]` because HOL word types
+    have positive `dimindex`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "pan_op_def"]
-def panOpHOL {width : Nat} (operator : PanOp) (values : List (RiscV.Word width)) :
+def panOpHOL {width : Nat} [NeZero width] (operator : PanOp) (values : List (RiscV.Word width)) :
     Option (RiscV.Word width) :=
   match operator, values with
   | .mul, [left, right] => some (left * right)

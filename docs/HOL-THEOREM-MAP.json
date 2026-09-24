@@ -8229,7 +8229,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "holShapeOf",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination)"
+    "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination; [NeZero width] matching HOL positive dimindex)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8237,7 +8237,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "holValueIsWord",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; isValWord over HolValue: ValWord -> true, all other constructors -> false, matching HOL isValWord_def)"
+    "reviewer": "Codex (source comparison; isValWord over HolValue: ValWord -> true, all other constructors -> false, matching HOL isValWord_def; [NeZero width] matching HOL positive dimindex)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8245,7 +8245,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panOpHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; width-indexed pan_op over BitVec width: Mul on exactly two words returns their product, every other operator/arity returns none, matching HOL pan_op_def)"
+    "reviewer": "Codex (source comparison; width-indexed pan_op over BitVec width: Mul on exactly two words returns their product, every other operator/arity returns none, matching HOL pan_op_def; [NeZero width] matching HOL positive dimindex)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

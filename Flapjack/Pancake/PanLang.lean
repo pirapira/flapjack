@@ -18,10 +18,13 @@ abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
 
-/-- Exact port of Cake's `shape` datatype (`cakeml/pancake/panLangScript.sml:35`):
-constructor arities `0/1/1` and field types `shape list` / `stcname` (modelled by `List Shape` /
-`StructName`) match, as does the HOL Bool-valued equality used on shapes. -/
-@[hol "cakeml/pancake/panLangScript.sml" "shape"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): the `Named` field carrier differs.
+HOL `panLangScript.sml:21` aliases `stcname = ``:mlstring``` and the datatype is
+`shape = One | Comb (shape list) | Named stcname`, whereas Lean aliases
+`StructName := String` (PanLang.lean:14). Constructor arities/order match, but
+`StructName = String` is not `mlstring`, so no `@[hol]` tag is attached until an
+MlString identifier carrier (or a reviewed production bridge) lands; tracked by
+bead `flapjack-pxn.18.3.5.8`. The datatype remains the production implementation. -/
 inductive Shape where
   | one
   | comb (fields : List Shape)
@@ -79,19 +82,19 @@ def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
   | (candidate, value) :: entries =>
       if candidate == key then some value else lookupInfo key entries
 
-/-
-Exact executable port of HOL `panLang$is_wf_shape`
-    (`cakeml/pancake/panLangScript.sml:139`). The HOL clauses are reproduced
-    literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
-    `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered
-    with the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart)
-    and `isSome` as the Bool rendering of `<> NONE`. The context is the
-    HOL-shaped `StructContextHOL`; the key type is fixed to `String` so the
-    concrete `BEq String` instance is used, matching HOL's `=`. The direct
-    original-HOL rows are pinned in
-    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+/- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of HOL
+`panLang$is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The clauses are
+reproduced literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
+`Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered with
+the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart) and
+`isSome` as the Bool rendering of `<> NONE`. The tag is WITHDRAWN because the
+context carrier does not match: HOL keys the association list by
+`stcname = ``:mlstring``` (`panLangScript.sml:21`) while Lean's
+`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14). Matching
+`ALOOKUP` at the concrete `BEq String` instance is not HOL `=`, so this needs an
+MlString key carrier (bead `flapjack-pxn.18.3.5.8`). The direct original-HOL
+rows are pinned in `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
 mutual
-  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_shape_def"]
   def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
     | .one => true
     | .comb shapes => isWfShapeListHOL context shapes
@@ -217,6 +220,52 @@ inductive Exp (α : Type u) where
   | bytesInWord
   deriving Repr
 
+/-! ## Width-indexed `Exp` / HOL `exp` constructor audit (option A)
+
+Full constructor/field audit of HOL `panLangScript.sml` `exp` (lines 49-68)
+against the production `Exp (α : Type u)` at `α := BitVec width`:
+
+| # | HOL `exp`                         | Lean `Exp (BitVec width)`                 |
+|---|-----------------------------------|-------------------------------------------|
+| 1 | `Const ('a word)`                 | `const (BitVec width)`                    |
+| 2 | `Var varkind varname`             | `var VarKind VarName`                     |
+| 3 | `RStruct (exp list)`              | `rStruct (List (Exp ·))`                  |
+| 4 | `RField index exp`                | `rField Nat (Exp ·)`                      |
+| 5 | `NStruct stcname ((fldname # exp) list)` | `nStruct StructName (List (FieldName × Exp ·))` |
+| 6 | `NField fldname exp`              | `nField FieldName (Exp ·)`                |
+| 7 | `Load shape exp`                  | `load Shape (Exp ·)`                      |
+| 8 | `Load32 exp`                      | `load32 (Exp ·)`                          |
+| 9 | `LoadByte exp`                    | `loadByte (Exp ·)`                        |
+|10 | `Op binop (exp list)`             | `op BinOp (List (Exp ·))`                 |
+|11 | `Panop panop (exp list)`          | `panOp PanOp (List (Exp ·))`              |
+|12 | `Cmp cmp exp exp`                 | `cmp Cmp (Exp ·) (Exp ·)`                 |
+|13 | `Shift shift exp exp`             | `shift Shift (Exp ·) (Exp ·)`             |
+|14 | `BaseAddr`                        | `baseAddr`                                |
+|15 | `TopAddr`                         | `topAddr`                                 |
+|16 | `BytesInWord`                     | `bytesInWord`                             |
+
+Constructor names, arities and order match, and the word field matches once the
+word length is fixed (`α := BitVec width` is exactly HOL `'a word` at
+`'a = width`); the executed compiler front already uses this instantiation.
+
+IMPORTANT GAP (review HOLD, 2026-09-24): the *identifier* fields do NOT match.
+HOL `panLangScript.sml:21-31` aliases `stcname`/`fldname`/`varname`/`funname`/
+`eid` to `mlstring`, while production `PanLang.lean:14-18` aliases
+`StructName`/`FieldName`/`VarName`/`FunName`/`ExceptionId` to Lean `String`.
+Row 2 (`Var varname`), row 5 (`NStruct stcname`/`fldname`) and row 6
+(`NField fldname`) therefore retain a string-carrier mismatch even at
+`Exp (BitVec width)`. A faithful `Exp` carrier must use `MlString`
+identifiers or a reviewed production bridge (bead `flapjack-pxn.18.3.5.8`).
+
+Consequence for option A (single production datatype): every "correspondence"
+statement is definitional reflexivity on the same Lean term, and constructor
+freeness/injectivity is generic `Exp` injection — i.e. tautological proof sites.
+This slice therefore records the audit as evidence and adds NO theorems and NO
+`@[hol]` tag. A substantive representation refinement requires distinct carriers
+(option B/C of bead flapjack-pxn.18.3.5.3.1.2), or an explicit reviewer decision
+that the audit itself establishes the width-specialized `Const` shape. -/
+
+
 /-- Exact port of Cake's `opsize` datatype (`cakeml/pancake/panLangScript.sml:49`):
 the four nullary constructors `Op8`/`OpW`/`Op32`/`Op16` match in order. -/
 @[hol "cakeml/pancake/panLangScript.sml" "opsize"]
@@ -318,10 +367,13 @@ def inlinable : Decl α → Bool
   | .function declaration => declaration.inline
   | _ => false
 
-/-! Direct source-shaped counterpart of `panLang$exceptions`
-    (`panLangScript.sml:328`): the exception table of a declaration list, in
-    declaration order, dropping every non-exception declaration. -/
-@[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
+    `panLang$exceptions` (`panLangScript.sml:328`), the exception table of a
+    declaration list in declaration order, dropping every non-exception
+    declaration. The tag is WITHDRAWN because the result keys are
+    `ExceptionId := String` (PanLang.lean:18) while HOL `eid = ``:mlstring```
+    (`panLangScript.sml:29`); an exact port needs the MlString carrier
+    (bead `flapjack-pxn.18.3.5.8`). -/
 def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | [] => []
   | .exnDecl exception shape :: declarations =>
@@ -329,11 +381,14 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
-/-! Direct source-shaped counterpart of `panLang$functions`
-    (`panLangScript.sml:319-328`): retain every function's metadata while
-    skipping value, exception, and struct declarations.  The tuple order
-    matches HOL exactly: name, params, body, return shape. -/
-@[hol "cakeml/pancake/panLangScript.sml" "functions_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
+    `panLang$functions` (`panLangScript.sml:319-328`), retaining every
+    function's metadata while skipping value, exception, and struct
+    declarations; the tuple order matches HOL (name, params, body, return
+    shape). The tag is WITHDRAWN because the result keys are
+    `FunName := String` / `VarName := String` (PanLang.lean:16-17) while HOL
+    `funname`/`varname` are `mlstring` (`panLangScript.sml:24,27`); an exact port
+    needs the MlString carrier (bead `flapjack-pxn.18.3.5.8`). -/
 def functionEntries : List (Decl α) →
     List (FunName × List (VarName × Shape) × Prog α × Shape)
   | [] => []
@@ -1306,9 +1361,12 @@ theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : N
   rw [hdrop]
   exact Nat.min_eq_left (shapeSize_drop_head_le shapes n hn)
 
-/-- HOL `panLang$var_exp`: collect exactly the local variable occurrences of
-    an expression, preserving their left-to-right order and duplicates. -/
-@[hol "cakeml/pancake/panLangScript.sml" "var_exp_def"]
+/-- Executable mirror of HOL `panLang$var_exp`: collect exactly the local
+    variable occurrences of an expression, preserving left-to-right order and
+    duplicates. FLAPJACK-SPECIFIC (not an exact HOL port): the result element
+    type is `VarName := String` (PanLang.lean:16) while HOL `varname` is
+    `mlstring` (`panLangScript.sml:27`); the `@[hol]` tag is WITHDRAWN pending
+    an MlString carrier (bead `flapjack-pxn.18.3.5.8`). -/
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]
@@ -1348,12 +1406,14 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-! Exact clause-structured port of HOL `panLang$free_var_ids`
-    (`panLangScript.sml:347`).  The expression helper is the tagged
-    `expLocalVars` port of HOL `var_exp`, preserving the source distinction
-    between local and global variables; the `Dec` filter uses `!=`, which
-    implements HOL `$≠` because String equality is lawful. -/
-@[hol "cakeml/pancake/panLangScript.sml" "free_var_ids_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): clause-structured mirror of HOL
+    `panLang$free_var_ids` (`panLangScript.sml:347`). The expression helper is
+    the mirror of HOL `var_exp` preserving the local/global distinction; the
+    `Dec` filter uses `!=` (lawful String equality). The `@[hol]` tag is
+    WITHDRAWN because the result element type is `VarName := String`
+    (PanLang.lean:16) while HOL `varname` is `mlstring`
+    (`panLangScript.sml:27`); pending an MlString carrier
+    (bead `flapjack-pxn.18.3.5.8`). -/
 def freeVarIds : Prog α → List VarName
   | .dec name _ value body =>
       expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)

@@ -2541,13 +2541,16 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
   exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     f state expression _v h
 
-/-- All-finite-dimension support for the Const case of HOL's local
-    simp_exp_correct1 (`crep_arithProofScript.sml:111`). It keeps the unused
-    result binder, successful-evaluation premise, arbitrary code-map update,
-    source simplifier, and complete Option word_lab equality. Both sides reduce
-    to the same word value. This remains untagged because the explicit source
-    evaluator is not yet proved identical to native HOL crepSem eval; the
-    theorem is a useful case of the all-width support, not a claimed HOL port. -/
+/-- Exact Const constructor case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). This is one case only, not the assembled
+    theorem. The explicit `HolFiniteDimension` dictionary represents HOL's
+    implicit finite-index word dimension; the state, unused result binder,
+    successful-evaluation premise, code-map update, simplifier image, and full
+    `Option word_lab` equality retain HOL's case statement shape. On this
+    constructor the source evaluator equation is exactly `eval_def`'s Const
+    clause, and no memory or target operation is involved. Other evaluator
+    cases and the full simp_exp_correct1 evaluator relation remain unported. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
 theorem crepSimpExpCorrect1ConstHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

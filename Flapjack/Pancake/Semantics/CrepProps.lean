@@ -324,4 +324,14 @@ theorem mem_crepAssignedFreeVars_call_some_none {α : Type u} (returns : List Na
       x ∈ returns := by
   simp [crepAssignedFreeVars]
 
+/-- Exact HOL `flookup_res_var_distinct_zip_eq` (`crepPropsScript.sml:777`):
+    folding `res_var` over the zip of a key list with its values leaves a key
+    that is not in the key list untouched. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "flookup_res_var_distinct_zip_eq"]
+theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (fm : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (hx : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar fm) x = FLOOKUP fm x :=
+  FLOOKUP_foldl_resVar_zip_not_mem xs ys fm x hlen hx
+
 end Flapjack

@@ -1081,6 +1081,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "flookup_res_var_distinct_zip_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "flookup_res_var_distinct_zip_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL FOLDL res_var over ZIP encoding, LENGTH hypothesis and ~MEM side condition preserved; wraps the reviewed FLOOKUP_foldl_resVar_zip_not_mem)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "cexp_heads_simp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "cexpHeadsSimp",

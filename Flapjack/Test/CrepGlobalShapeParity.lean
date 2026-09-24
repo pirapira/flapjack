@@ -412,6 +412,18 @@ example : ([1, 2, 1] : List Nat).eraseDups.length = ([1, 2, 1] : List Nat).lengt
     ([1, 2, 1] : List Nat).Nodup :=
   eraseDups_length_eq_iff_nodup [1, 2, 1]
 
+/-- HOL `crepPropsScript.sml:777` `flookup_res_var_distinct_zip_eq`: folding
+    `resVar` over the zip of a key list with its values leaves a key outside the
+    key list untouched. -/
+example :
+    FLOOKUP ((([1, 2, 3] : List Nat).zip
+        [(some 10 : Option Nat), some 20, some 30]).foldl resVar
+        (fun _ => (none : Option Nat))) 4 =
+      FLOOKUP (fun _ => (none : Option Nat)) 4 :=
+  flookup_res_var_distinct_zip_eq [1, 2, 3]
+    [(some 10 : Option Nat), some 20, some 30] (fun _ => none) 4 (by decide)
+    (by decide)
+
 /-- HOL `crepSem$mem_load_def` over the 11-field state: valid cell read and
     out-of-domain miss, matching `scripts/hol-probes/crep_mem_load_probe.out`
     (`mem_load_valid=SOME (Word 7w)`, `mem_load_invalid=NONE`). -/

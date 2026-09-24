@@ -542,6 +542,35 @@ theorem evalCrepRuntimeExpWordLab_op_rv64_const
     riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel, RiscV.panRiscVWordOp,
     wordOpHOL, Function.comp_def, hmapM]
 
+/-! ## The RV64 `Cmp` evaluator case
+
+HOL `crepSem$eval` evaluates `Cmp op e1 e2` by evaluating both operands and then
+applying `word_cmp` (`cakeml/pancake/semantics/crepSemScript.sml:90-137` and
+`cakeml/compiler/encoders/asm/asmScript.sml:83`).  For constant operands the
+production RV64 evaluator returns exactly the fixed target comparison
+`RiscV.panRiscVCmp`; the remaining link from that primitive to HOL `word_cmp` is
+the existing untagged `panRiscVCmp_eq_evalPanCmp` bridge, so no `@[hol]` tag is
+attached yet.  Direct oracle `scripts/hol-probes/crep_eval_cmp_rv64_probe.out`
+(`eval_cmp_equal_true=SOME (Word (v2w [T]))`, `eval_cmp_equal_false=SOME (Word (v2w [F]))`,
+`eval_cmp_lower_true=SOME (Word (v2w [T]))`, `eval_cmp_test_zero=SOME (Word (v2w [F]))`,
+`eval_cmp_test_disjoint=SOME (Word (v2w [T]))`). -/
+theorem evalCrepRuntimeExp_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (RiscV.panRiscVCmp operator left right) := by
+  simp [evalCrepRuntimeExp, riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
+theorem evalCrepRuntimeExpWordLab_cmp_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.cmp operator (.const left) (.const right)) =
+      some (.word (RiscV.panRiscVCmp operator left right)) := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    riscv64CrepRuntimeTarget, RiscV.panRiscVMemoryModel]
+
 /-! ## External-call byte-array reads
 
 HOL `crepSem$ExtCall` (and `panSem`) read the configuration and array arguments

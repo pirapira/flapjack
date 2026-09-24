@@ -236,4 +236,24 @@ example : panMemLoadByteHOL (width := 64) holMemory64 (fun a => a = 0) false 0 =
 example : panMemLoadByteHOL (width := 64) holMemory64 (fun _ => False) false 0 =
     none := by decide
 
+/- Exact `mem_load_32_def` port; expected values are the checked-in direct HOL
+   rows `mem_load_32_def_little/big/misaligned/missing`. -/
+#guard panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) false 0 ==
+  some (BitVec.ofNat 32 0x55667788)
+#guard panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) true 0 ==
+  some (BitVec.ofNat 32 0x11223344)
+#guard panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) false 1 ==
+  none
+#guard panMemLoad32HOL (width := 64) holMemory64 (fun _ => False) false 0 ==
+  none
+
+example : panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) false 0 =
+    some (BitVec.ofNat 32 0x55667788) := by decide
+example : panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) true 0 =
+    some (BitVec.ofNat 32 0x11223344) := by decide
+example : panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) false 1 =
+    none := by decide
+example : panMemLoad32HOL (width := 64) holMemory64 (fun _ => False) false 0 =
+    none := by decide
+
 end Flapjack.Test.PanSemStateEvalParity

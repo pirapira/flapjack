@@ -150,4 +150,33 @@ def panMemLoadByteHOL {width : Nat} [NeZero width]
             value bigEndian).toNat)
       else none
 
+/-- Exact port of HOL `mem_load_32_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:94-104`).  When `aligned 2` holds
+    at the address, the four consecutive bytes `w`, `w+1`, `w+2`, `w+3` of the
+    stored word are reassembled (in the requested byte order) into a `word32`;
+    out-of-domain or unaligned addresses yield `NONE`.  As in
+    `panMemLoadByteHOL`, HOL's total `word_lab` memory is rendered as a total
+    map into `HolWordLab` and the `word set` domain as a `Prop` predicate. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_32_def"]
+def panMemLoad32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) : Option (RiscV.Word 32) :=
+  if (address >>> 2) <<< 2 = address then
+    let aligned := RiscV.panRiscVByteAlign (BitVec.ofNat width (width / 8)) address
+    match memory aligned with
+    | .word value =>
+        if domain aligned then
+          let getByte := RiscV.panRiscVGetByteEndian
+            (BitVec.ofNat width (width / 8))
+          let bytes :=
+            [ getByte address value bigEndian,
+              getByte (address + 1) value bigEndian,
+              getByte (address + 2) value bigEndian,
+              getByte (address + 3) value bigEndian ]
+          some (RiscV.panRiscVWordOfBytes (width := 32) bigEndian
+            (bytes.map (fun byte => BitVec.ofNat 32 byte.toNat)))
+        else none
+  else none
+
 end Flapjack

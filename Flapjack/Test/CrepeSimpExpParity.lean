@@ -264,6 +264,38 @@ example :
   exact evalCrepRuntimeExp_finiteDimension_eq boolWordDimension
     boolDimensionHolState _
 
+/-! The Op case of `simp_exp_correct1` applies to every word operation and
+    obtains one induction hypothesis for each argument expression. Exercise
+    the exact HOL-word source evaluator with a successful two-argument Add;
+    the recursive children use the tagged Const case above. -/
+example :
+    evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+        (.op .add [.const boolDimensionWord, .const boolDimensionWord]) ≠ none := by
+  simp [evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMemoryModel,
+    wordOpHOL, wordOp]
+
+example :
+    evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+          boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.op .add [.const boolDimensionWord, .const boolDimensionWord])) =
+      evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        boolDimensionHolState
+        (.op .add [.const boolDimensionWord, .const boolDimensionWord]) := by
+  apply crepSimpExpCorrect1OpHolFiniteWordSourceCase
+  · exact .word boolDimensionWord
+  · simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMemoryModel,
+      wordOpHOL, wordOp]
+  · intro child hmem source result hsuccess
+    have hchild : child = .const boolDimensionWord := by
+      simpa using hmem
+    subst child
+    exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+      (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
+
 example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)

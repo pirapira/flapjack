@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.WordToStack
+import Flapjack.Compiler.Backend.WordToStackRegFormat
 import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.CakeAllocatorBitsBridge
 
@@ -265,6 +266,144 @@ example : perfRbp = 15 := rfl
 example : handlerSlots true = 5 := rfl
 example : handlerSlots false = 3 := rfl
 
+/-! ## register-format helper oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.13`):
+
+```
+rf_reg1_high=([(3,8)],3)   rf_reg1_low=([],1)
+rf_reg2_high=([(4,8)],4)   rf_reg2_low=([],2)
+rf_format_var_none=INL 6
+rf_format_var_some_reg=INL 2   rf_format_var_some_frame=INR 7
+```
+-/
+
+open Flapjack.Compiler.Backend.WordToStackRegFormat
+
+def regFormatParityGuard : Bool :=
+  (wReg1 8 (3, 10, 12) == ([(3, 8)], 3)) &&
+  (wReg1 2 (3, 10, 12) == ([], 1)) &&
+  (wReg2 8 (3, 10, 12) == ([(4, 8)], 4)) &&
+  (wReg2 4 (3, 10, 12) == ([], 2)) &&
+  (formatVar 5 none == Sum.inl 6) &&
+  (formatVar 5 (some 2) == Sum.inl 2) &&
+  (formatVar 5 (some 7) == Sum.inr 7)
+
+#eval regFormatParityGuard
+#guard regFormatParityGuard
+
+example : wReg1 8 (3, 10, 12) = ([(3, 8)], 3) := rfl
+example : wReg2 4 (3, 10, 12) = ([], 2) := rfl
+example : formatVar 5 none = Sum.inl 6 := rfl
+example : formatVar 5 (some 7) = Sum.inr 7 := rfl
+
+/-! ## stack_move / StackArgs oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.14`), for `stack_move` (`word_to_stackScript.sml:288`)
+and `StackArgs` (`:293`):
+
+```
+sm_zero=T   sm_one=T   sm_two=T   sa_inr=T   sa_inl=T
+```
+
+`ProgW` has no `BEq`/`DecidableEq`, so the rows are compared by pattern
+matching over the `Seq`/`StackLoad`/`StackStore`/`StackAlloc` fragment.
+-/
+
+abbrev StackMoveProg := Flapjack.Compiler.Backend.StackCarrier.ProgW (BitVec 64)
+
+/-- Structural equality for the `stack_move`/`StackArgs` fragment of `ProgW`. -/
+def stackMoveProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => stackMoveProgBEq a c && stackMoveProgBEq b d
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackAlloc n, .stackAlloc m => n == m
+  | _, _ => false
+
+def smSkip : StackMoveProg := .skip
+def smSeq (a b : StackMoveProg) : StackMoveProg := .seq a b
+def smLoad (r i : Nat) : StackMoveProg := .stackLoad r i
+def smStore (r i : Nat) : StackMoveProg := .stackStore r i
+def smAlloc (n : Nat) : StackMoveProg := .stackAlloc n
+
+def stackMoveParityGuard : Bool :=
+  stackMoveProgBEq (stackMove 0 0 5 3 smSkip) smSkip &&
+  stackMoveProgBEq (stackMove 1 0 5 3 smSkip)
+    (smSeq smSkip (smSeq (smLoad 3 5) (smStore 3 0))) &&
+  stackMoveProgBEq (stackMove 2 0 5 3 smSkip)
+    (smSeq (smSeq smSkip (smSeq (smLoad 3 6) (smStore 3 1)))
+      (smSeq (smLoad 3 5) (smStore 3 0))) &&
+  stackMoveProgBEq (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+      (Sum.inr 4) 3 (2, 7, 9)) (smAlloc 0) &&
+  stackMoveProgBEq (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+      (Sum.inl 4) 7 (2, 7, 9)) (stackMove 5 0 7 2 (smAlloc 5))
+
+#eval stackMoveParityGuard
+#guard stackMoveParityGuard
+
+example : stackMove (α := BitVec 64) 0 0 5 3 .skip = .skip := rfl
+example : stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+    (Sum.inr 4) 3 (2, 7, 9) = .stackAlloc 0 := rfl
+
+/-! ## wMoveSingle / wMoveAux oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.15`), for `wMoveSingle` (`word_to_stackScript.sml:62`)
+and `wMoveAux` (`:71`):
+
+```
+wms_reg_reg=T   wms_reg_frame=T   wms_frame_reg=T   wms_frame_frame=T
+wma_empty=T     wma_two=T
+```
+
+`ProgW` has no `BEq`/`DecidableEq`, so the rows are compared by pattern
+matching; the register-to-register move is the `Inst (Arith (Binop Or ...))`
+fragment.
+-/
+
+/-- Structural equality for the `wMoveSingle`/`wMoveAux` fragment of `ProgW`,
+including the register-to-register `Or` instruction. -/
+def wMoveProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => wMoveProgBEq a c && wMoveProgBEq b d
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .inst (.arith (.binop .or r1 r2 (.reg r3))),
+    .inst (.arith (.binop .or s1 s2 (.reg s3))) =>
+    r1 == s1 && r2 == s2 && r3 == s3
+  | _, _ => false
+
+def wmsOr (r1 r2 : Nat) : StackMoveProg :=
+  .inst (.arith (.binop .or r1 r2 (.reg r2)))
+
+def wMoveParityGuard : Bool :=
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inl 5) (2, 7, 9))
+    (wmsOr 3 5) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inr 5) (2, 7, 9))
+    (smLoad 3 3) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inr 3, Sum.inl 5) (2, 7, 9))
+    (smStore 5 5) &&
+  wMoveProgBEq (wMoveSingle (α := BitVec 64) (Sum.inr 3, Sum.inr 5) (2, 7, 9))
+    (smSeq (smLoad 2 3) (smStore 2 5)) &&
+  wMoveProgBEq (wMoveAux (α := BitVec 64) [] (2, 7, 9)) smSkip &&
+  wMoveProgBEq
+    (wMoveAux (α := BitVec 64)
+      [(Sum.inl 3, Sum.inl 5), (Sum.inr 4, Sum.inr 6)] (2, 7, 9))
+    (smSeq (wmsOr 3 5) (smSeq (smLoad 2 2) (smStore 2 4)))
+
+#eval wMoveParityGuard
+#guard wMoveParityGuard
+
+example : wMoveSingle (α := BitVec 64) (Sum.inl 3, Sum.inl 5) (2, 7, 9) =
+    .inst (.arith (.binop .or 3 5 (.reg 5))) := rfl
+example : wMoveAux (α := BitVec 64) [] (2, 7, 9) = .skip := rfl
+
 /-! ## Executable bitmap recursion ↔ tagged recursion
 
 Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
@@ -440,6 +579,7 @@ def runChecks : IO Bool := do
   pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
-    progCombinatorsParityGuard && storeNameParityGuard)
+    progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
+    stackMoveParityGuard && wMoveParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

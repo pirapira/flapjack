@@ -45,7 +45,7 @@ wordConvs predicates that mention `num_set`:
 Reproduce with
 
 ```
-HOL_PROBE_ONLY=num_set_audit_probeScript.sml rtk bash scripts/hol-probes/regenerate.sh
+HOL_PROBE_ONLY=num_set_audit_probeScript.sml bash scripts/hol-probes/regenerate.sh
 ```
 
 (runs from `cakeml/misc/.hol/objs`, which contains `miscTheory`).

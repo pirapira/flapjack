@@ -406,6 +406,9 @@ run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
 run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
   skip_result skip_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_break_continue_e2e_probeScript.sml pan_sem_break_continue_e2e_probe.out \
+  break_result continue_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Assign probe observes the accepted, fresh-destination, and
 # source-evaluation-failure branches, including the unchanged post-state on the
 # two Error branches.

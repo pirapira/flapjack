@@ -23,7 +23,8 @@ This module starts the genuinely HOL-shaped total interface:
   `result option`: `PanSemProgResult.normal` encodes HOL's `NONE`, so it is
   equivalent to `result option` but not literally that type;
 * `panSemProgResultOfClockResult` maps the executed clocked result onto it;
-* `panSemEvaluateSkip` and `panSemEvaluateTick` are base-case infrastructure
+* `panSemEvaluateSkip`, `panSemEvaluateBreak`, `panSemEvaluateContinue`, and
+  `panSemEvaluateTick` are base-case infrastructure
   for the eventual evaluator, not yet the single total recursive
   `panSemEvaluate`;
 * `panSemTotalSeqStep` is the HOL `Seq` composition (clamp the first result's
@@ -151,6 +152,18 @@ def panSemEvaluateSkip (state : PanSemState α (FfiState σ)) :
     PanSemProgResult α σ × PanSemState α (FfiState σ) :=
   (.normal, state)
 
+/-- HOL `Break` (`cakeml/pancake/semantics/panSemScript.sml:590`): return the
+    break result and carry the faithful source state verbatim. -/
+def panSemEvaluateBreak (state : PanSemState α (FfiState σ)) :
+    PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  (.broke, state)
+
+/-- HOL `Continue` (`cakeml/pancake/semantics/panSemScript.sml:591`): return the
+    continue result and carry the faithful source state verbatim. -/
+def panSemEvaluateContinue (state : PanSemState α (FfiState σ)) :
+    PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  (.continued, state)
+
 /-- HOL `Tick` (`cakeml/pancake/semantics/panSemScript.sml:653-655`): at clock
     zero a timeout with cleared locals, otherwise normal completion with the
     clock decremented and every other component preserved. -/
@@ -191,6 +204,41 @@ theorem panSemEvaluateCodeStateWithPostState_tick_total
   rw [panSemEvaluateCodeStateWithPostState_tick]
   by_cases hclock : state.clock = 0 <;>
     simp [panSemTotalOfExecuted, panSemEvaluateTick, panSemProgResultOfClockResult, hclock]
+
+/-- The executed source evaluator's `Break` projection is the total HOL-shaped
+    `Break` clause. -/
+theorem panSemEvaluateCodeStateWithPostState_break_total
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    (panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.break : Prog α)).map panSemTotalOfExecuted = some (panSemEvaluateBreak state) := by
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    panSemTotalOfExecuted, panSemEvaluateBreak, panSemProgResultOfClockResult,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
+
+/-- The executed source evaluator's `Continue` projection is the total
+    HOL-shaped `Continue` clause. -/
+theorem panSemEvaluateCodeStateWithPostState_continue_total
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ)) :
+    (panSemEvaluateCodeStateWithPostState context primitive handler bytesInWord state
+        (.continue : Prog α)).map panSemTotalOfExecuted =
+      some (panSemEvaluateContinue state) := by
+  simp [panSemEvaluateCodeStateWithPostState, panSemEvaluateCodeState,
+    panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel, panSemCodeStateAfter,
+    panSemTotalOfExecuted, panSemEvaluateContinue, panSemProgResultOfClockResult,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps]
 
 /-- HOL `fix_clock` (`cakeml/pancake/semantics/panSemScript.sml:446-449`): clamp
     a returned state's clock to the entry clock. -/

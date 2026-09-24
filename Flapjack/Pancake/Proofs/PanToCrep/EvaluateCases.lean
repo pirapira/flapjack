@@ -3590,6 +3590,11 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.load32 (.const address))
+  | load32LocalCanonicalTarget (name : String) (slot : Nat)
+      (hvariable : FLOOKUP context.vars name = some (.one, [slot]))
+      (hcanonical : target = riscvCrepWordTarget target) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.load32 (.var .local name))
   | panOpMul (left right : Exp (RiscV.Word 64))
       (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
       (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
@@ -3742,6 +3747,72 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
           simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
       | rStruct fields => simp at heval
       | nStruct name fields => simp at heval
+  | load32LocalCanonicalTarget name slot hvariable hcanonical =>
+      intro value heval
+      cases haddressValue : evalPanSemStateExp source (.var .local name) with
+      | none =>
+          have hlocal : source.locals name = none := by
+            simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+          simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+      | some addressValue =>
+          cases addressValue with
+          | word address =>
+              have hlocal : source.locals name = some (.word address) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              have hsourceConst :
+                  evalPanSemStateExp source (.load32 (.var .local name)) =
+                    evalPanSemStateExp source (.load32 (.const address)) := by
+                simp [evalPanSemStateExp, evalPanValueExp, hlocal]
+              have hsourceTarget := evalPanSemStateExp_load32_const_riscvTarget
+                source target address hstate
+              have hsourceTarget' : evalPanSemStateExp source
+                  (.load32 (.const address)) =
+                (evalCrepRuntimeExp target (.load32 (.const address))).map
+                  PanValue.word := by
+                simpa [hcanonical.symm] using hsourceTarget
+              have hcompiledLocal := compileExpHOL_local_eval_flatten context
+                source target name (.word address) hlocals haddressValue
+              have htargetVariable :
+                  evalCrepRuntimeExp target (.var slot) = some address := by
+                have hmap : evalCrepRuntimeExps target [.var slot] =
+                    some [address] := by
+                  simpa [compileExpHOL, hvariable, panValueFlatten] using
+                    hcompiledLocal
+                cases hvalue : evalCrepRuntimeExp target (.var slot) with
+                | none => simp [evalCrepRuntimeExps, hvalue] at hmap
+                | some word =>
+                    have hword : word = address := by
+                      simpa [evalCrepRuntimeExps, hvalue] using hmap
+                    simp [hword]
+              have htargetLoad :
+                  evalCrepRuntimeExp target (.load32 (.var slot)) =
+                    evalCrepRuntimeExp target (.load32 (.const address)) := by
+                simp [evalCrepRuntimeExp, htargetVariable]
+              have hcompiled :
+                  (compileExpHOL
+                    { vars := context.vars, funcs := context.funcs,
+                      eids := context.eids, vmax := context.vmax }
+                    (.load32 (.var .local name))).1 = [.load32 (.var slot)] := by
+                simp [compileExpHOL, hvariable]
+              rw [hsourceConst, hsourceTarget'] at heval
+              cases value with
+              | word word =>
+                  have htarget :
+                      evalCrepRuntimeExp target (.load32 (.const address)) =
+                        some word := by
+                    simpa using heval
+                  simp [hcompiled, evalCrepRuntimeExps,
+                    htargetLoad, htarget, panValueFlatten]
+              | rStruct fields => simp at heval
+              | nStruct name fields => simp at heval
+          | rStruct fields =>
+              have hlocal : source.locals name = some (.rStruct fields) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+          | nStruct structName fields =>
+              have hlocal : source.locals name = some (.nStruct structName fields) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
   | panOpMul left right hleft hright ihLeft ihRight =>
       intro value heval
       have hevalSource : evalPanValueExp source.structs source.locals source.globals
@@ -3874,9 +3945,9 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
 
 /-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and
 PanOp multiplication over recursively supported operands, plus constant-address
-LoadByte for the canonical RISC-V word target, through the HOL `compile_args`
-list evaluator. Other Load forms, operators, and the full expression induction
-remain open. -/
+LoadByte, constant-address Load32, and one-word Local Load32 for the canonical
+RISC-V word target, through the HOL `compile_args` list evaluator. Other Load
+forms, operators, and the full expression induction remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

@@ -42,6 +42,9 @@ val baseStateNonword = ``(^baseState with
   locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word))
             |+ (strlit "y", RStruct []))``;
 
+val baseStateZero = ``(^baseState with
+  locals := FEMPTY |+ (strlit "x", ValWord (0w:8 word)))``;
+
 val thenAssign = ``panLang$Assign Local (strlit "x") (panLang$Const (9w:8 word))``;
 
 val _ = print_eval "if_true_result"
@@ -92,3 +95,21 @@ val _ = print_eval "if_fail_locals"
       (panLang$If (panLang$Load panLang$One (panLang$Const (0w:8 word))) ^thenAssign panLang$Skip,
         ^baseState))).locals
       (strlit "x")``;
+
+(* Direct branch-selection rows for the total structural If fragment. *)
+val _ = print_eval "if_const_true_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) panLang$Tick panLang$Skip,
+        ^baseState))).clock``;
+val _ = print_eval "if_const_false_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) panLang$Tick panLang$Skip,
+        ^baseState))).clock``;
+val _ = print_eval "if_local_true_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "x")) panLang$Tick panLang$Skip,
+        ^baseState))).clock``;
+val _ = print_eval "if_local_zero_tick_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "x")) panLang$Tick panLang$Skip,
+        ^baseStateZero))).clock``;

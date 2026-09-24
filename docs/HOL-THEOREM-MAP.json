@@ -301,7 +301,7 @@
     "lean_path": "Flapjack/Pancake/CrepArith.lean",
     "lean_name": "crepDestConstHolWord",
     "statement_status": "reviewed_exact",
-    "reviewer": "The tagged definition is restricted to CrepExp (ι → Bool), the Lean encoding of HOL word-valued Const. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The generic-alpha production helper remains untagged and is definitionally equal on this word carrier."
+    "reviewer": "The tagged definition is restricted to CrepExp (Fin width → Bool) with NeZero width, so the payload is a positive-width finite word rather than an arbitrary carrier. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The arbitrary-alpha production helper remains untagged and is definitionally equal on this carrier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -317,7 +317,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Boolean-function word carrier ι → Bool with HolFiniteDimension, which encodes the finite, nonempty enumeration corresponding to HOL finite_index. Same polymorphic word-typed shape and no extra operation premises; successful dest_const premise and Const conclusion match source."
+    "reviewer": "Width-specialized positive finite word carrier Fin width → Bool with NeZero width. Successful dest_const premise and Const conclusion match the HOL theorem; arbitrary-alpha support remains untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

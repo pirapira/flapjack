@@ -1,0 +1,5 @@
+eval_crepop_mul_const=SOME (Word 42w)
+eval_crepop_mul_other=SOME (Word 30w)
+eval_crepop_mul_three=NONE
+eval_crepop_mul_one=NONE
+eval_crepop_mul_empty=NONE

@@ -467,6 +467,38 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1VarHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension Var case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension LoadGlob case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension BaseAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension TopAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Flapjack-specific Const case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
@@ -8702,5 +8734,13 @@
     "lean_name": "crepToLoopLocalsRelHOL_insert_gt_vmax",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against locals_rel_insert_gt_vmax at crep_to_loopProofScript.sml:228; conclusion adds a fresh num_map binding insert n w lcl' above ctxt.vmax to the tagged finite-map locals_rel carrier crepToLoopLocalsRelHOL, rendering sptree insert extensionally as fun m => if m = n then some w else tLocals m (same rendering as the tagged locals_rel_def). Direct HOL-EVAL rows insert_same/insert_other_unchanged/gt_vmax_bounded_survives/subset_preserved in scripts/hol-probes/crep_to_loop_locals_insert_probe.out reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean. Carrier is width-indexed over BitVec width with [NeZero width] because HOL word types have positive dimindex.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "locals_rel_cutset_prop",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopLocalsRelHOL_cutset_prop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against locals_rel_cutset_prop at crep_to_loopProofScript.sml:239-249; HOL subspt cset cset' rendered as the pointwise implication (forall n, live n = true -> live' n = true) and sptree locals/domain rendered extensionally as in crepToLoopLocalsRelHOL; the two source-local obligations are reconciled by FLOOKUP functionality on ctxt.vars; direct HOL-EVAL rows cutset_* in scripts/hol-probes/crep_to_loop_locals_cutset_probe.out reproduced by Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

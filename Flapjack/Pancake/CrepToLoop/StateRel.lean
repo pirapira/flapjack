@@ -372,6 +372,36 @@ theorem crepToLoopLocalsRelHOL_insert_gt_vmax {width : Nat} [NeZero width]
     have hmn : m ≠ n := by omega
     exact ⟨m, hvar, hlive, by simp [hmn, ht]⟩
 
+/-- Exact port of HOL `locals_rel_cutset_prop`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:239-249`): shrinking the
+    live `num_set` from `cset'` to `cset` (with `cset ⊆ cset'`) preserves the
+    relation against the same source locals, because `sptree$subspt` only
+    restricts the live domain. `subspt cset cset'` is rendered as the pointwise
+    implication `∀ n, live n = true → live' n = true`, and the two source-local
+    obligations are reconciled by `FLOOKUP` functionality on `ctxt.vars`. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_cutset_prop"]
+theorem crepToLoopLocalsRelHOL_cutset_prop {width : Nat} [NeZero width]
+    (ctxt : CrepToLoopFiniteMapContext)
+    (live live' : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals tLocals' : Nat → Option (LoopValue (BitVec width)))
+    (hrel : crepToLoopLocalsRelHOL ctxt live sLocals tLocals)
+    (hrel' : crepToLoopLocalsRelHOL ctxt live' sLocals tLocals')
+    (hsub : ∀ n, live n = true → live' n = true) :
+    crepToLoopLocalsRelHOL ctxt live sLocals tLocals' := by
+  rw [crepToLoopLocalsRelHOL] at hrel hrel' ⊢
+  obtain ⟨hd, hmax, _hdom, hmap⟩ := hrel
+  obtain ⟨_hd', _hmax', hdom', hmap'⟩ := hrel'
+  refine ⟨hd, hmax, ?_, ?_⟩
+  · intro n hn
+    exact hdom' n (hsub n hn)
+  · intro vname v hlk
+    obtain ⟨n, hvar, hlive, _ht⟩ := hmap vname v hlk
+    obtain ⟨m, hvar', _hlive', ht'⟩ := hmap' vname v hlk
+    have hnm : n = m := Option.some.inj (hvar.symm.trans hvar')
+    subst hnm
+    exact ⟨n, hvar, hlive, ht'⟩
+
 /-! ## Pure-num context lookups
 
 `crep_to_loopScript.sml`'s `find_var`/`find_lab` are plain finite-map lookups

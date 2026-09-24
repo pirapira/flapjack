@@ -979,4 +979,32 @@ example :
         (memoryAccess := some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState))))
   == some (BitVec.ofNat 64 136)
 
+/-- Exact source state matching the executed `littleEndianState` memory/domain
+    for the structured `.load` bridge: memory is the word view of the production
+    memory and `memaddrs` is the production machine domain. -/
+abbrev holLoadState : PanSemHolState 64 Unit :=
+  { holEvalState with
+    memory := panValueWordHOL littleEndianState.memory
+    memaddrs := panValueFlatMachineDomain littleEndianState littleEndianState.memory }
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
+        0 0 panSemBitVec64BytesInWord (.load Shape.one (.const 0))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holLoadState (.load Shape.one (.const 0))).map HolValue.toPanValue :=
+  evalPanValueExp_load_eq_evalHOL holLoadState littleEndianState littleEndianState.memory
+    ([] : StructContext) (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    Shape.one (.const 0)
+    (evalPanValueExp_const_eq_evalHOL holLoadState ([] : StructContext) (fun _ => none)
+      (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 0)
+    rfl rfl rfl rfl
+    (by simp [isWfShape, StructContext.toHOL])
+
+#guard evalPanValueWordResult
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
+        0 0 panSemBitVec64BytesInWord (.load Shape.one (.const 0))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState)))
+  == some sourceMemoryWord
+
 end Flapjack.Test.PanSemStateEvalParity

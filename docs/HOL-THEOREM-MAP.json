@@ -373,7 +373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSource",
     "statement_status": "documented_mismatch",
-    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension enumeration and CrepHolState adapter have not been identified with HOL's implicit finite_index word carrier and crepSem state."
+    "reviewer": "All-dimension production-evaluator support has HOL's successful-evaluation premise, arbitrary code-map update, simplifier, and full Option word_lab conclusion. It remains untagged because the explicit HolFiniteDimension operation dictionary and CrepHolState runtime adapter have not been identified with HOL's implicit dimindex/finite_index interpretation of crepSem$eval."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -717,7 +717,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, and a one-word Local Load32 under the explicit canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, one-word Local LoadByte/Load32, and Load32 of recursively supported addresses with an explicit One compile shape, all under the canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
   },
   {
     "hol_path": null,
@@ -5168,6 +5168,30 @@
     "reviewer": "Kernel-checked Const-constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp; intentionally untagged because HOL has only the universally quantified theorem, not a separately named Const-case theorem. The Lean statement re-encodes the struct premise as projected shape-view equality, FEVERY field validity as pointwise Bool predicates over total lookups, and FMAP_MAP2 as pointwise shape-map adapters. PanStructFiniteState carries nodup InfoMap lists and lookup equations, with lawful BEq String for HOL equality; structInfosOk is carried but unused. Other expression constructors remain open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoWithRest_context_shape_view",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private context-view transport helper used to compare named-structure lookup and suffix field views; no standalone HOL theorem is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structCompileShapeWF_context_shape_view",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private proof that production shape compilation is invariant under equal projected context views; no standalone HOL theorem is claimed."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectLoadCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Load-constructor specialization proving the old-shape, value-field-validity, and converted-evaluation conclusion roles from successful source evaluation, context-view equality, field-validity and shape-map adapters, structInfosOk, and a recursive address IH. Intentionally untagged: HOL has only the universally quantified compile_exp_correct theorem; Lean's context premise compares projected field views rather than exact StructInfo records, uses total lookup functions/Bool adapters and explicit bytesInWord with a fuel-indexed Option loader, while HOL uses finite-map predicates and mem_load_conversion_inst over fixed-width memory. The local/global validity and map premises are retained but unused for this constructor. Direct HOL EVAL and paired Lean regression cover a nested named Pair load."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct_mmap_helper",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
@@ -5699,6 +5723,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_local_case_of_relations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only HOL-shaped Local constructor case for compile_exp_val_rel. Under state_rel, code_rel, locals_rel, and localised_exp it proves all four conclusions for the compiler's actual output; the target evaluation follows from locals_rel, with no target-evaluation premise. It is not the complete expression induction or a tagged HOL port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_const_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Constant constructor case for HOL compile_exp_val_rel: the state-owned source evaluator and production Crep compiler/evaluator both flatten the word constant; general expression and Call argument theorem remain open."
@@ -5731,9 +5763,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "evalMapCompileArgsFlat_of_each",
+    "lean_name": "compileArgsHOL_eval_flatten_of_each",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only compile_args list induction: lifts a separately supplied per-expression flattening result over the production source and target list evaluators; per-expression correctness for all HOL-localised constructors is not yet proved."
+    "reviewer": "Flapjack-only generic HOL compile_args list induction over state-owned PanSem source evaluation and production Crep evaluation. Consumes the per-expression compiled-evaluation relation corresponding to compile_exp_val_rel as an explicit premise; it does not prove that relation for unsupported constructors or claim the enclosing Call theorem."
   },
   {
     "hol_path": null,
@@ -6182,5 +6214,77 @@
     "lean_name": "crepInlineRuntimeSkip",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Runtime Skip constructor case toward HOL inline_prog_correct (crep_inlineProofScript.sml:2301): from a source evalCrepRuntimeResult Skip run and the runtime relations, derives an existential target run on crepInlineProgFmap and preserves the postrelations. Untagged: Lean uses the fuel-bounded evalCrepRuntimeResult, not HOL's clock-based evaluate."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeMatches_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private reflexivity support for production panShapeMatches; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panShapeListMatches_self",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private reflexivity support for the production shape-list matcher; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_context_irrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private context-independence lemma for field shape comparisons; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfo_append_eq_of_some_context",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private lookup support showing a successful suffix lookup is preserved when a disjoint structure-context prefix is added; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructValueFieldsOkBool_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private production field-validity context-extension lemma under distinct structure names; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "lookupInfoWithRest_lookupInfo_for_load",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private adapter from production lookupInfoWithRest success to lookupInfo success, used by named Load; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFieldsHaveShapes_of_maps",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private implication from exact field-name and panSemShapeOf list equalities to production panValueFieldsHaveShapes; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructFieldValuesFieldsOkBool_append",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private field-list validity context-extension lemma under distinct structure names; no standalone HOL theorem declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadFuel_shape_fields",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked production prerequisite: successful panValueFlatLoadFuel yields the requested panSemShapeOf and production panStructValueFieldsOkBool predicates for well-formed shapes in structInfosOk contexts. It is intentionally untagged: this is support for HOL mem_load_conversion, not its complete converted-memory theorem; Lean uses explicit fuel and an arbitrary readWord callback, while HOL mem_load uses a finite-address-domain word-memory relation and the HOL v_flds_ok predicate. The nested named-load regression exercises this theorem."
   }
 ]

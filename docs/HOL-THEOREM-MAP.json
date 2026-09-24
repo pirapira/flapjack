@@ -483,6 +483,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadHolFiniteWordSourceCase",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact recursive Load constructor case of local simp_exp_correct1. Its sole IH is the same successful-address preservation result for arbitrary states and result binders. HOL eval_def then applies mem_load, corresponding to the source evaluator's memaddrs-gated memory lookup. No target-specific operation premise is present; byte/32-bit loads and the assembled theorem remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact LoadGlob constructor case of local simp_exp_correct1. HOL eval_def uses FLOOKUP s.globals gadr; Lean uses the same BitVec 5-keyed lookup and the code-only update preserves globals. The unused result binder, success premise, and full Option word_lab equality match this constructor case. Other cases and the assembled theorem remain open."

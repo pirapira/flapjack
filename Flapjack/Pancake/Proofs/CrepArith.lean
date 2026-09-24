@@ -2598,6 +2598,67 @@ theorem crepSimpExpCorrect1VarHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
+/-- Exact recursive Load case of HOL's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). The induction hypothesis is the same
+    preservation statement for the address expression at every state and
+    result binder. HOL `eval_def` evaluates the address then applies
+    `mem_load`; the source evaluator does the corresponding `memaddrs`/memory
+    lookup, with `PanWordLab.word` preserving the complete option result. No
+    target-specific operation premise is added. Other memory constructors
+    and the assembled theorem remain open. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
+theorem crepSimpExpCorrect1LoadHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (address : CrepExp (ι → Bool))
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.load address) ≠ none)
+    (ih : ∀ (source : CrepHolState (ι → Bool) σ)
+      (_value : PanWordLab (ι → Bool)),
+      evalCrepHolFiniteWordSourceExpWordLab dimension source address ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (crepArithHolFiniteDimensionMapCode f source)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          address) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension source address) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.load address)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.load address) := by
+  have hAddress : evalCrepHolFiniteWordSourceExp dimension state address ≠ none := by
+    intro hNone
+    apply _h
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, hNone]
+  have hAddressWordLab :
+      evalCrepHolFiniteWordSourceExpWordLab dimension state address ≠ none := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hAddress
+  have hInduction := ih state _result hAddressWordLab
+  have hWordInjective : Function.Injective
+      (PanWordLab.word : (ι → Bool) → PanWordLab (ι → Bool)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hAddressEval :
+      evalCrepHolFiniteWordSourceExp dimension
+          (crepArithHolFiniteDimensionMapCode f state)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension
+              (BitVec.ofNat dimension.width n)) address) =
+        evalCrepHolFiniteWordSourceExp dimension state address := by
+    apply Option.map_injective hWordInjective
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hInduction
+  simp only [crepSimpExp.eq_1,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+  rw [hAddressEval]
+  simp [crepArithHolFiniteDimensionMapCode]
+  rfl
+
 /-- Exact LoadGlob constructor case of HOL's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). HOL `eval_def` returns
     `FLOOKUP s.globals gadr`; the Lean source clause performs the same

@@ -2166,6 +2166,65 @@ theorem evalPanValueExp_load_eq_evalHOL {σ ffi : Type} [LawfulBEq String]
       | rStruct fs => simp only [Option.map_some]; rw [HolValue.toPanValue_rStruct]; simp
       | nStruct nm fs => simp only [Option.map_some]; rw [HolValue.toPanValue_nStruct]; simp
 
+/-- Full `.load` clause bridge for an arbitrary `Shape`: unlike
+`evalPanValueExp_load_eq_evalHOL`, this needs no `isWfShape structs shape = true`
+side condition.  Both the well-formed branch (via the capstone
+`panValueFlatLoad_eq_panMemLoadHOL`) and the ill-formed branch (where
+`panValueFlatLoad` and the tagged `isWfShapeHOL` guard both collapse to failure)
+are handled.  Untagged production-side adapter. -/
+theorem evalPanValueExp_load_eq_evalHOL_anyShape {σ ffi : Type} [LawfulBEq String]
+    (state : PanSemHolState 64 σ) [DecidablePred state.memaddrs]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress bytesInWord : RiscV.Word 64)
+    (shape : Shape) (address : Exp (RiscV.Word 64))
+    (haddress : evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        address (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL state address).map HolValue.toPanValue)
+    (hstructs : state.structs = structs.toHOL)
+    (hmem : state.memory = panValueWordHOL memory)
+    (hdom : state.memaddrs = panValueFlatMachineDomain execState memory)
+    (hbytes : bytesInWord = panSemBitVec64BytesInWord) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.load shape address) (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL state (.load shape address)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [haddress, hstructs, isWfShapeHOL_toHOL structs shape]
+  by_cases hwf : isWfShape structs shape = true
+  · rw [hwf]
+    cases ha : evalHOL state address with
+    | none => simp
+    | some hv =>
+        cases hv with
+        | val w =>
+            cases w with
+            | word bits =>
+                simp only [Option.map_some]
+                rw [HolValue.toPanValue_val bits]
+                simp only [hbytes]
+                simp
+                rw [panValueFlatLoad_eq_panMemLoadHOL execState memory structs shape bits hwf]
+                simp only [hmem, hdom]
+        | rStruct fs => simp only [Option.map_some]; rw [HolValue.toPanValue_rStruct]; simp
+        | nStruct nm fs => simp only [Option.map_some]; rw [HolValue.toPanValue_nStruct]; simp
+  · have hwf' : isWfShape structs shape = false := by
+      cases h : isWfShape structs shape <;> simp_all
+    rw [hwf']
+    cases ha : evalHOL state address with
+    | none => simp
+    | some hv =>
+        cases hv with
+        | val w =>
+            cases w with
+            | word bits =>
+                simp only [Option.map_some]
+                rw [HolValue.toPanValue_val bits]
+                simp [panValueFlatLoad, hwf']
+        | rStruct fs => simp only [Option.map_some]; rw [HolValue.toPanValue_rStruct]; simp
+        | nStruct nm fs => simp only [Option.map_some]; rw [HolValue.toPanValue_nStruct]; simp
+
 end
 
 end Flapjack

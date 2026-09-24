@@ -8267,48 +8267,48 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "nested_seq_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "crepNestedSeq",
+    "lean_name": "crepNestedSeqW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with nested_seq_def at crepLangScript.sml:89; word-length independent because prog's word parameter is never inspected; HOL-EVAL rows empty/one/two/assign_seq in scripts/hol-probes/crep_nested_seq_probe.out reproduced by Flapjack/Test/CrepeNestedSeqParity.lean)"
+    "reviewer": "Codex (statement compared against nested_seq_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "nested_decs_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "nestedDecs",
+    "lean_name": "nestedDecsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with nested_decs_def at crepLangScript.sml:102 incl. the [],[ ]->p and empty-mismatch->Skip cases; HOL-EVAL rows empty/paired/names_empty/values_empty in scripts/hol-probes/crep_nested_decs_probe.out reproduced by Flapjack/Test/CrepeNestedDecsParity.lean)"
+    "reviewer": "Codex (statement compared against nested_decs_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assigned_free_vars_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "crepAssignedFreeVars",
+    "lean_name": "crepAssignedFreeVarsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with assigned_free_vars_def at crepLangScript.sml:149 incl. Dec FILTER, Primitive lhss, Call SOME/NONE, ShMem and fallback; HOL-EVAL rows skip/assign/dec_filter/seq/if_while/shmem_fallback in scripts/hol-probes/crep_assigned_free_vars_probe.out reproduced by Flapjack/Test/CrepeNestedSeqParity.lean)"
+    "reviewer": "Codex (statement compared against assigned_free_vars_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assigned_vars_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "crepAssignedVars",
+    "lean_name": "crepAssignedVarsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with assigned_vars_def at crepLangScript.sml:164; HOL-EVAL rows afv_prog/av_prog/imp_mem/imp_mem_absent/nested_av/nested_afv in scripts/hol-probes/crep_assigned_vars_probe.out reproduced by Flapjack/Test/CrepAssignedVarsParity.lean)"
+    "reviewer": "Codex (statement compared against assigned_vars_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "var_cexp_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "crepExpVars",
+    "lean_name": "crepExpVarsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with var_cexp_def at crepLangScript.sml:128 incl. Op/Crepop FLAT(MAP) via crepExpVarsList and LoadGlob->[]; HOL-EVAL rows const/var/load_chain/glob/op_flat/cmp_concat/base_top in scripts/hol-probes/crep_var_cexp_probe.out reproduced by Flapjack/Test/CrepeVarCexpParity.lean)"
+    "reviewer": "Codex (statement compared against var_cexp_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "exps_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "crepExps",
+    "lean_name": "crepExpsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-by-clause match with exps_def at crepLangScript.sml:193 incl. Op/Crepop FLAT(MAP) via crepExpsList; HOL-EVAL rows leaves/loads/ops in scripts/hol-probes/crep_exps_probe.out reproduced by Flapjack/Test/CrepExpsParity.lean)"
+    "reviewer": "Codex (statement compared against exps_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
   }
 ]

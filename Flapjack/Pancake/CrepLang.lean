@@ -68,7 +68,10 @@ inductive CrepProg (α : Type u) where
 
 /-! Faithful port of `crepLang$assigned_free_vars` from
     `cakeml/pancake/crepLangScript.sml:149-162`. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "assigned_free_vars_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def crepAssignedFreeVars : CrepProg α → List Nat
   | .skip => []
   | .dec name _ body =>
@@ -90,7 +93,10 @@ decreasing_by
 
 /-! Faithful port of `crepLang$assigned_vars` from
     `cakeml/pancake/crepLangScript.sml:164-176`. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "assigned_vars_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def crepAssignedVars : CrepProg α → List Nat
   | .skip => []
   | .dec name _ body => name :: crepAssignedVars body
@@ -109,7 +115,10 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
-@[hol "cakeml/pancake/crepLangScript.sml" "var_cexp_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def crepExpVars : CrepExp α → List Nat
   | .const _ => []
   | .var name => [name]
@@ -132,7 +141,10 @@ where
 
     The result preserves expression nodes while recursively flattening the
     expression lists of `Op` and `Crepop`, matching HOL's `FLAT (MAP exps)`. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "exps_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def crepExps : CrepExp α → List (CrepExp α)
   | expression@(.const _) => [expression]
   | expression@(.var _) => [expression]
@@ -302,10 +314,14 @@ theorem crepExpVars_of_mem_loadShape [BEq α] [OfNat α 0] [Add α]
         · simp [hzero, crepExpVars, crepExpVars.crepExpVarsList]
       · exact ih (address + stride) h
 
-@[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)
+
 
 /-- Faithful port of Cake `crepProps$exps_of` from
     `cakeml/pancake/semantics/crepPropsScript.sml:1282`: collect the
@@ -364,11 +380,62 @@ def stores [BEq α] [OfNat α 0] [Add α]
       let destination := if offset == 0 then address else .op .add [address, .const offset]
       .store destination value :: stores address values (offset + stride) stride
 
-@[hol "cakeml/pancake/crepLangScript.sml" "nested_decs_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
+    `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
+    the word length (`'a word`). The exact width-indexed tag is on the
+    `...W` wrapper below (over `BitVec width`). -/
 def nestedDecs : List Nat → List (CrepExp α) → CrepProg α → CrepProg α
   | [], [], body => body
   | name :: names, value :: values, body => .dec name value (nestedDecs names values body)
   | _, _, _ => .skip
+
+/-! ## Width-indexed exact wrappers for the crepLang core definitions
+
+HOL `crepLangScript.sml` indexes `prog`/`exp` by the word length (`Const ('a
+word)`), so the exact tagged declarations are stated over `BitVec width`
+(`= RiscV.Word width`); the generic helpers above remain untagged Flapjack
+infrastructure.  None of these definitions inspects the word value, so no
+`[NeZero width]` side condition is needed. -/
+
+/-- Exact width-indexed port of HOL `crepLang$nested_seq_def`
+    (`cakeml/pancake/crepLangScript.sml:89`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]
+def crepNestedSeqW {width : Nat} (statements : List (CrepProg (BitVec width))) :
+    CrepProg (BitVec width) :=
+  crepNestedSeq statements
+
+/-- Exact width-indexed port of HOL `crepLang$nested_decs_def`
+    (`cakeml/pancake/crepLangScript.sml:102`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_decs_def"]
+def nestedDecsW {width : Nat} (names : List Nat)
+    (values : List (CrepExp (BitVec width))) (body : CrepProg (BitVec width)) :
+    CrepProg (BitVec width) :=
+  nestedDecs names values body
+
+/-- Exact width-indexed port of HOL `crepLang$assigned_free_vars_def`
+    (`cakeml/pancake/crepLangScript.sml:149`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "assigned_free_vars_def"]
+def crepAssignedFreeVarsW {width : Nat} (program : CrepProg (BitVec width)) : List Nat :=
+  crepAssignedFreeVars program
+
+/-- Exact width-indexed port of HOL `crepLang$assigned_vars_def`
+    (`cakeml/pancake/crepLangScript.sml:164`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "assigned_vars_def"]
+def crepAssignedVarsW {width : Nat} (program : CrepProg (BitVec width)) : List Nat :=
+  crepAssignedVars program
+
+/-- Exact width-indexed port of HOL `crepLang$var_cexp_def`
+    (`cakeml/pancake/crepLangScript.sml:128`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "var_cexp_def"]
+def crepExpVarsW {width : Nat} (expression : CrepExp (BitVec width)) : List Nat :=
+  crepExpVars expression
+
+/-- Exact width-indexed port of HOL `crepLang$exps_def`
+    (`cakeml/pancake/crepLangScript.sml:193`). -/
+@[hol "cakeml/pancake/crepLangScript.sml" "exps_def"]
+def crepExpsW {width : Nat} (expression : CrepExp (BitVec width)) :
+    List (CrepExp (BitVec width)) :=
+  crepExps expression
 
 theorem crepExpsOf_nestedDecs (names : List Nat) :
     ∀ (values : List (CrepExp α)) (body : CrepProg α) {e : CrepExp α},

@@ -240,7 +240,18 @@ example :
         some nestedLoadConvertedValue ∧
     panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true ∧
     shapeSizeWithContext [] (structCompileShapeWF nestedLoadStructContext (.named "Pair")) =
-      shapeSizeWithContext nestedLoadStructContext (.named "Pair") := by
+      shapeSizeWithContext nestedLoadStructContext (.named "Pair") ∧
+    structOldExpShape nestedLoadCompileContext nestedLoadExpression =
+      panSemShapeOf nestedLoadSourceValue ∧
+    evalPanValueExp (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
+      (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).locals
+      (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).globals
+      (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).memory
+      (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).baseAddress
+      (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).topAddress
+      (BitVec.ofNat 64 1)
+      (structCompileExp nestedLoadCompileContext nestedLoadExpression) =
+        some (panStructConvertValue nestedLoadSourceValue) := by
   have hok : structInfosOk nestedLoadStructContext := by
     let innerInfo : StructInfo := {
       fields := [("left", .one), ("right", .one)]
@@ -313,10 +324,70 @@ example :
       panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true :=
     hloadShapeFields.2
   have hsize := structCompileShapeWF_size nestedLoadStructContext (.named "Pair") hwf hok
-  refine ⟨hok, hwf, hsource, ?_, hfields, ?_⟩
+  have hloadEval :
+      evalPanValueExp nestedLoadRuntime.structs nestedLoadRuntime.locals
+        nestedLoadRuntime.globals nestedLoadRuntime.memory nestedLoadRuntime.baseAddress
+        nestedLoadRuntime.topAddress (BitVec.ofNat 64 1) nestedLoadExpression =
+          some nestedLoadSourceValue := by
+    simp [nestedLoadRuntime, nestedLoadStructContext, nestedLoadExpression,
+      nestedLoadSourceValue, finiteMapRuntime, evalPanValueExp,
+      panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadFieldsFuel,
+      panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
+      panValueFlatShapeFuel, panValueFlatFieldsFuel, shapeSizeWithContext,
+      isWfShape, lookupInfoWithRest, lookupInfo]
+  have hstructsView :
+      panStructContextShapeView nestedLoadCompileContext.structs =
+        panStructContextShapeView nestedLoadRuntime.structs := rfl
+  have hlocalsFields : panStructEveryValueFieldsOkBool
+      nestedLoadRuntime.structs nestedLoadRuntime.locals := by
+    intro name value hvalue
+    simp [nestedLoadRuntime, finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool
+      nestedLoadRuntime.structs nestedLoadRuntime.globals := by
+    intro name value hvalue
+    simp [nestedLoadRuntime, finiteMapRuntime] at hvalue
+  have hlocalsMap : panStructShapeMapEq
+      nestedLoadCompileContext.locals nestedLoadRuntime.locals := by
+    intro name
+    simp [nestedLoadCompileContext, nestedLoadRuntime, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq
+      nestedLoadCompileContext.globals nestedLoadRuntime.globals := by
+    intro name
+    simp [nestedLoadCompileContext, nestedLoadRuntime, finiteMapRuntime, lookupInfo]
+  have haddressIH : ∀ addressValue,
+      evalPanValueExp nestedLoadRuntime.structs nestedLoadRuntime.locals
+        nestedLoadRuntime.globals nestedLoadRuntime.memory
+        nestedLoadRuntime.baseAddress nestedLoadRuntime.topAddress
+        (BitVec.ofNat 64 1) (.const (BitVec.ofNat 64 0)) = some addressValue →
+      structOldExpShape nestedLoadCompileContext (.const (BitVec.ofNat 64 0)) =
+          panSemShapeOf addressValue ∧
+      panStructValueFieldsOkBool nestedLoadRuntime.structs addressValue = true ∧
+      evalPanValueExp (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
+        (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).locals
+        (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).globals
+        (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).memory
+        (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).baseAddress
+        (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).topAddress
+        (BitVec.ofNat 64 1)
+        (structCompileExp nestedLoadCompileContext (.const (BitVec.ofNat 64 0))) =
+          some (panStructConvertValue addressValue) := by
+    intro addressValue heval
+    have hword : addressValue = .word (BitVec.ofNat 64 0) := by
+      simpa [evalPanValueExp] using heval.symm
+    subst addressValue
+    refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+    · simp [panStructValueFieldsOkBool]
+    · simp [evalPanValueExp, panStructConvertState, panStructConvertValue]
+  have hloadCase := panStructCompileExpCorrectLoadCase
+    nestedLoadCompileContext nestedLoadRuntime (BitVec.ofNat 64 1) (.named "Pair")
+    (.const (BitVec.ofNat 64 0)) nestedLoadSourceValue hloadEval hstructsView
+    hlocalsFields hglobalsFields hok hlocalsMap hglobalsMap haddressIH
+  refine ⟨hok, hwf, hsource, ?_, hfields, ?_, ?_, ?_⟩
   · simpa [hcompiled, nestedLoadSourceValue, nestedLoadConvertedValue,
       panStructConvertValue, panStructConvertFieldValues, panStructConvertValues] using hconverted
   · simpa [hcompiled] using hsize
+  · exact hloadCase.1
+  · exact hloadCase.2.2
 
 example :
     structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =

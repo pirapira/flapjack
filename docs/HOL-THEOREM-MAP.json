@@ -8440,6 +8440,14 @@
     "reviewer": "flapjack-main (2026-09-24: Append/List/Nil conjunction and universal variables match miscScript.sml:218-224)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "bits_to_word_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "bitsToWordW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: the three HOL equations at word_to_stackScript.sml:225-229 — bits_to_word [] = 0w, true-cons = bits_to_word xs << 1 || 1w, false-cons = bits_to_word xs << 1 — are matched exactly by the BitVec width + [NeZero width] recursion; HOL is polymorphic over 'a word while the Lean faithful counterpart must fix the carrier width per the loadShapeBytes/loadShapeBytesW standard, with the untagged Flapjack.RiscV.CakeAlloc.bitsToWord kept as the executable Nat form; direct HOL-EVAL rows bits_empty=0w/bits_true=1w/bits_false=0w/bits_true_false_true=5w/bits_all_true_3=7w/bits_pattern=18w/bits_equation=T in scripts/hol-probes/word_to_stack_bits_to_word_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

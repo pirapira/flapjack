@@ -209,6 +209,7 @@ import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.WordConvsLabelsRelParity
+import Flapjack.Test.WordLangExtractLabelsParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
@@ -798,6 +799,7 @@ Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.WordConvsLabelsRelParity.runChecks,
+    Flapjack.Test.WordLangExtractLabelsParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,

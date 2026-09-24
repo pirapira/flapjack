@@ -800,52 +800,84 @@
     "reviewer": "Codex (source comparison; HOL FDOM f SUBSET FDOM g is rendered as the pointwise implication on the repo FDOM predicate, and the FLOOKUP support condition matches HOL exactly; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "fdoms_eq_flookup_some_none",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "fdoms_eq_flookup_some_none",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdoms_eq_opt_mmap_flookup_some",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdoms_eq_opt_mmap_flookup_some",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup_var",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup",
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL SUBMAP is rendered by the repo crepHolSubmap lookup-function predicate, |+ is FUPDATE; both sides updated at the same key; [LawfulBEq κ] ties the Boolean key equality to HOL =; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; crepHolSubmap for SUBMAP, FDOMSUB for HOL \\; same key removed from both sides; [LawfulBEq κ]; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; f \\ x SUBMAP g |+ (x,y); crepHolSubmap/FDOMSUB/FUPDATE; [LawfulBEq κ]; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_commutes_strong",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact statement over the reviewed resVar (res_var_def) with no n <> h side condition; Boolean key equality reflects HOL = under LawfulBEq alpha)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_foldl_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_foldl_commutes_strong",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL ZIP (vs, MAP f vs) is Lean vs.zip (vs.map f), FOLDL is List.foldl; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "flookup_res_var_is_mem_zip_eq",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "flookup_res_var_is_mem_zip_eq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -7430,5 +7462,13 @@
     "lean_name": "labelsRel_of_perm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "extract_labels_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "extractLabels",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

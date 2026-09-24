@@ -360,14 +360,16 @@ theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     produced by `compile_exp` is bounded by the source context's `vmax` whenever
     the context satisfies `ctxt_max`. Width-indexed (`BitVec width`,
     `[NeZero width]`) carrier matching HOL's `'a word`, mirroring the
-    `loadShapeBytesW` standard (`Flapjack/Pancake/CrepLang.lean:210-228`). -/
+    `loadShapeBytesW` standard (`Flapjack/Pancake/CrepLang.lean:210-228`).  The
+    conclusion is stated through the exact width-indexed tag `compileExpHOLW`, so
+    the recursive HOL `compile_exp` dependency is explicit. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MEM_compile_exp_vmax"]
 theorem memCompileExpVmaxW {width : Nat} [NeZero width]
     (context : PanToCrepHOLContext (BitVec width)) (expression : Exp (BitVec width))
     (name : Nat) (output : CrepExp (BitVec width))
     (hmax : ctxtMax context.vmax context.vars)
     (hvar : name ∈ crepExpVars output)
-    (houtput : output ∈ (compileExpHOL context expression).1) :
+    (houtput : output ∈ (compileExpHOLW context expression).1) :
     name ≤ context.vmax :=
   memCompileExpVmax context expression name output hmax hvar houtput
 
@@ -416,7 +418,9 @@ theorem genlistVmaxDistinctListsCompiledExps
     standard (`Flapjack/Pancake/CrepLang.lean:210-231`), the faithful statement
     fixes the carrier to `BitVec width` with `[NeZero width]`; the only side
     condition is HOL's `ctxt_max ctxt.vmax ctxt.vars`, rendered as `ctxtMax`.
-    The generic-`α` form above is retained as Flapjack support. -/
+    The generic-`α` form above is retained as Flapjack support.  The conclusion is
+    stated through the exact width-indexed tag `compileExpHOLW`, so the recursive
+    HOL `compile_exp` dependency is explicit. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
 theorem genlistVmaxDistinctListsCompiledExpsW {width : Nat} [NeZero width]
     (context : PanToCrepHOLContext (BitVec width)) (count : Nat)
@@ -424,7 +428,7 @@ theorem genlistVmaxDistinctListsCompiledExpsW {width : Nat} [NeZero width]
     (hmax : ctxtMax context.vmax context.vars) :
     distinctListsHol
       ((List.range count).map (fun i => i + 1 + context.vmax))
-      ((argExpressions.map (compileExpHOL context)).flatMap
+      ((argExpressions.map (compileExpHOLW context)).flatMap
         (fun compiled => compiled.1.flatMap crepExpVars)) = true :=
   genlistVmaxDistinctListsCompiledExps context count argExpressions hmax
 

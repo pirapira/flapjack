@@ -616,6 +616,26 @@ example : FLOOKUP (makeVmapHOL [5, 6]) 6 = some 1 := by
 
 example : FLOOKUP (makeVmapHOL []) 5 = none := rfl
 
+/-- HOL `make_funcs` oracle rows (`mkf_*` in
+    `scripts/hol-probes/crep_to_loop_make_funcs_probe.out`). -/
+example :
+    FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 2) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "g" = some (65, 0) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "h" = none := by decide
+
+/-- Duplicate names keep the first-inserted binding (`alist_to_fmap`). -/
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1], ()), ("f", [1, 2, 3], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 1) := by decide
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

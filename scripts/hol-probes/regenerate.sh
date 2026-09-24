@@ -268,6 +268,9 @@ run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_pr
 run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
   mk_ctxt_vars make_vmap_empty_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
+  mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
   gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake"

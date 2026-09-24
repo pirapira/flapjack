@@ -1609,4 +1609,168 @@ theorem evalCrepRuntimeResult_skip
       some (.normal, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
 
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_thm`
+(crepPropsScript.sml:257), not an exact HOL port: it is stated with the Boolean
+equality that `resVar` is implemented with. -/
+theorem FLOOKUP_resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : Option β) :
+    FLOOKUP (resVar f (m, v)) n = if n == m then v else FLOOKUP f n := by
+  cases v with
+  | none =>
+    simp only [resVar, FDOMSUB, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+  | some w =>
+    simp only [resVar, FUPDATE, FLOOKUP]
+    by_cases h : n == m
+    · have hm : (m == n) = true := by
+        rw [beq_iff_eq]
+        exact (beq_iff_eq.mp h).symm
+      simp only [hm, if_true, h]
+    · have hm : (m == n) = false := by
+        rw [beq_eq_false_iff_ne]
+        intro hc
+        exact h (beq_iff_eq.mpr hc.symm)
+      simp only [hm, Bool.false_eq_true, if_false, h]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_diff_eq`
+(crepPropsScript.sml:249); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem FLOOKUP_resVar_diff_eq [BEq α] [LawfulBEq α] (f : FiniteMap α β) (m n : α)
+    (v : β) (h : n ≠ m) : FLOOKUP (resVar f (m, some v)) n = FLOOKUP f n := by
+  rw [FLOOKUP_resVar]
+  have hb : (n == m) = false := by
+    rw [beq_eq_false_iff_ne]
+    exact h
+  simp only [hb, Bool.false_eq_true, if_false]
+
+/-- Flapjack-specific analogue of Cake's `res_var_commutes`
+(crepPropsScript.sml:234); not an exact HOL port, since it is stated over the
+Boolean-`BEq` `resVar`. -/
+theorem resVar_commutes [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β) (n h : α)
+    (hne : n ≠ h) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  cases hh : FLOOKUP lc' h with
+  | none =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_commutes lc n h hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc h n vn hne.symm]
+  | some vh =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVar]
+      rw [FDOMSUB_FUPDATE_neq lc n h vh hne]
+    | some vn =>
+      simp only [resVar]
+      rw [FUPDATE_comm lc h vh n vn hne.symm]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_eq`
+(crepPropsScript.sml:763); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over a list whose keys do not contain `x`
+leaves `x` untouched. -/
+theorem FLOOKUP_foldl_resVar_not_mem [BEq α] [LawfulBEq α]
+    (xs : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ xs.map Prod.fst) :
+    FLOOKUP (xs.foldl resVar f) x = FLOOKUP f x := by
+  induction xs generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVar f entry) hrest, FLOOKUP_resVar]
+    have hfalse : (x == entry.1) = false := beq_eq_false_iff_ne.mpr hne
+    simp [hfalse]
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct_zip_eq`
+(crepPropsScript.sml:777); not an exact HOL port: the zipped form of
+`FLOOKUP_foldl_resVar_not_mem`. -/
+theorem FLOOKUP_foldl_resVar_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVar f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVar_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
+/-- Flapjack-specific analogue of Cake's `flookup_res_var_distinct`
+(crepPropsScript.sml:796); not an exact HOL port: looking up a key list disjoint
+from the updated key list is unaffected by the fold. -/
+theorem map_FLOOKUP_foldl_resVar_zip [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (zs : List (Option β)) (f : FiniteMap α β)
+    (hdisj : ListDisjoint xs ys) (hlen : xs.length = zs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip zs).foldl resVar f) y) =
+      ys.map (fun y => FLOOKUP f y) := by
+  revert hdisj
+  induction ys with
+  | nil => intro _; rfl
+  | cons y rest ih =>
+    intro hdisj
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, ?_⟩
+    · exact FLOOKUP_foldl_resVar_zip_not_mem xs zs f y hlen
+        (fun hy => hdisj y hy (by simp))
+    · exact ih (fun v hv hmem => hdisj v hv (by simp [hmem]))
+
+theorem map_FLOOKUP_foldl_resVar_zip_fupdate [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List α) (as : List β) (cs : List (Option β))
+    (fm : FiniteMap α β) (hdisj : ListDisjoint xs ys)
+    (hlenAs : xs.length = as.length) (hlenCs : xs.length = cs.length) :
+    ys.map (fun y => FLOOKUP ((xs.zip cs).foldl resVar (FUPDATE_LIST fm (xs.zip as))) y) =
+      ys.map (fun y => FLOOKUP fm y) := by
+  rw [map_FLOOKUP_foldl_resVar_zip xs ys cs (FUPDATE_LIST fm (xs.zip as)) hdisj hlenCs]
+  exact map_FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys as fm hdisj hlenAs
+
+/-- Flapjack-specific analogue of Cake `res_var_lookup_original_eq`
+(crepPropsScript.sml:612); not an exact HOL port, since it is stated over this
+file's `resVar`: folding `res_var` over the `ZIP` of a distinct key list with its
+values, restoring each key's original binding, reproduces the original map. -/
+theorem foldl_resVar_zip_lookup_original [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (lc : FiniteMap α β)
+    (hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    ((xs.zip (xs.map (FLOOKUP lc))).foldl resVar
+        (FUPDATE_LIST lc (xs.zip ys))) = lc := by
+  induction xs generalizing ys lc with
+  | nil =>
+    cases ys with
+    | nil => simp [FUPDATE_LIST_nil]
+    | cons y ys => simp at hlen
+  | cons a xs ih =>
+    cases ys with
+    | nil => simp at hlen
+    | cons y ys =>
+      rw [List.nodup_cons] at hdistinct
+      obtain ⟨ha, hdistinctTail⟩ := hdistinct
+      have hlenTail : xs.length = ys.length := by simpa using hlen
+      have hnotmem : a ∉ (xs.zip ys).map Prod.fst := by
+        rw [List.map_fst_zip (by omega)]
+        exact ha
+      simp only [List.map_cons, List.zip_cons_cons, FUPDATE_LIST_cons, List.foldl_cons]
+      rw [← FUPDATE_FUPDATE_LIST_commutes lc a y (xs.zip ys) hnotmem]
+      cases hlookup : FLOOKUP lc a with
+      | none =>
+        simp only [resVar, FDOMSUB_FUPDATE_same]
+        rw [FDOMSUB_FUPDATE_LIST_commutes xs ys lc a ha hlenTail,
+            FDOMSUB_eq_self_of_lookup_none lc a hlookup]
+        exact ih ys lc hdistinctTail hlenTail
+      | some v =>
+        simp only [resVar]
+        rw [FUPDATE_FUPDATE_same]
+        rw [FUPDATE_eq_self_of_lookup_some (FUPDATE_LIST lc (xs.zip ys)) a v
+          (by rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys lc a hlenTail ha]; exact hlookup)]
+        exact ih ys lc hdistinctTail hlenTail
+
 end Flapjack

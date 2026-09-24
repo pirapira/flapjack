@@ -9004,40 +9004,40 @@
   "hol_name": "max_stack_alloc_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "maxStackAlloc",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: both are the constant 255)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
   "hol_name": "word_offset_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "wordOffset",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison; carries [NeZero width] matching HOL nonzero dimindex)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: n2w (dimindex(:'a) DIV 8 * n); Lean width-indexed BitVec.ofNat width (width/8 * n) with [NeZero width] matching HOL's nonzero dimension)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
   "hol_name": "store_list_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "storeList",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: same 16 base store names followed by Temp 00w..Temp 31w, 48 entries)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
   "hol_name": "store_length_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "storeLength",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: EVEN-rounded LENGTH store_list, even so equals 48)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
   "hol_name": "stack_err_lab_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "stackErrLab",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean source comparison: both are the constant 2)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stackLangScript.sml",

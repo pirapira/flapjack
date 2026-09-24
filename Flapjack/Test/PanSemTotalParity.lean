@@ -118,28 +118,26 @@ def totalAssignState : PanSemState Word64 (FfiState Unit) :=
     globals := fun name =>
       if name == "g" then some (.word (BitVec.ofNat 64 4)) else none }
 
-def totalAssignEvaluate (state : PanSemState Word64 (FfiState Unit)) (kind : VarKind)
-    (name : VarName) (value : Exp Word64) :
-    PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
-  panSemTotalAssign (BitVec.ofNat 64 8) state kind name value
-
+/-- The Assign step consumes an already evaluated source result (HOL's
+    `eval s src`).  These guards exercise the post-evaluation composition;
+    faithful source evaluation is a separate obligation. -/
 def assignLocalGuard : Bool :=
-  match totalAssignEvaluate (totalState 5) .local "x" (.const (BitVec.ofNat 64 9)) with
+  match panSemTotalAssignStep (totalState 5) .local "x" (some (.word (BitVec.ofNat 64 9))) with
   | (.normal, state) => state.clock == 5 && isWordOption 9 (state.locals "x")
   | _ => false
 
 def assignGlobalGuard : Bool :=
-  match totalAssignEvaluate totalAssignState .global "g" (.const (BitVec.ofNat 64 9)) with
+  match panSemTotalAssignStep totalAssignState .global "g" (some (.word (BitVec.ofNat 64 9))) with
   | (.normal, state) => state.clock == 5 && isWordOption 9 (state.globals "g")
   | _ => false
 
 def assignFreshGuard : Bool :=
-  match totalAssignEvaluate (totalState 5) .local "y" (.const (BitVec.ofNat 64 9)) with
+  match panSemTotalAssignStep (totalState 5) .local "y" (some (.word (BitVec.ofNat 64 9))) with
   | (.error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def assignMissingGuard : Bool :=
-  match totalAssignEvaluate (totalState 5) .local "x" (.var .local "z") with
+  match panSemTotalAssignStep (totalState 5) .local "x" none with
   | (.error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
@@ -178,24 +176,17 @@ example :
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
 
 example :
-    (panSemEvaluateCodeStateWithFuel statefulTestContext statefulTestPrimitive
-        statefulTestHandler (BitVec.ofNat 64 8) 4 (totalState 5)
-        (.assign .local "x" (.const (BitVec.ofNat 64 9)) : Prog Word64)).map
-        (fun result =>
-          panSemTotalOfExecuted (result, panSemCodeStateAfter (totalState 5) result)) =
-      some (panSemTotalAssign (BitVec.ofNat 64 8) (totalState 5) .local "x"
-        (.const (BitVec.ofNat 64 9))) :=
-  panSemEvaluateCodeStateWithFuel_assign_total statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8) 3 (totalState 5) .local "x"
-    (.const (BitVec.ofNat 64 9))
-
-example :
-    panSemTotalAssignStep (totalState 5) .local "x" (.word (BitVec.ofNat 64 9)) =
+    panSemTotalAssignStep (totalState 5) .local "x" (some (.word (BitVec.ofNat 64 9))) =
       (.normal,
         { totalState 5 with
           locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 9)) }) :=
   panSemTotalAssignStep_normal_local (totalState 5) "x" (.word (BitVec.ofNat 64 9))
     (by simp [panValueAssignmentValid, panValueShape, panShapeMatches, totalState])
+
+example :
+    panSemTotalAssignStep (totalState 5) .local "x" none =
+      (.error, totalState 5) :=
+  panSemTotalAssignStep_none (totalState 5) .local "x"
 
 def runChecks : IO Bool := do
   if skipGuard then

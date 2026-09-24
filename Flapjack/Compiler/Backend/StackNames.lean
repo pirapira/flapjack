@@ -21,10 +21,10 @@ polymorphic in the machine word (`'a` in HOL) and only inspect registers, so
 the Lean port keeps the word carrier as a parameter `α` (the register map is
 `Nat |-> Nat`).
 
-The imported carrier shapes are the faithful width-indexed
-`Flapjack.WordLangInst`/`WordRegImm`/`WordLangAddr` (`asm$inst` and friends)
-and `Flapjack.Compiler.Backend.StackLang.Prog`.  Every clause mirrors its HOL
-counterpart one-for-one, including the trailing catch-all arms.
+The imported `WordLangInst`/`WordRegImm`/`WordLangAddr` and `StackLang.Prog`
+carriers are currently broader than HOL's single shared word-type carrier.
+The structural clauses mirror HOL, but their tags are withheld until an exact
+width-indexed carrier exists; only the pure-num declarations below retain tags.
 -/
 
 namespace Flapjack.Compiler.Backend.StackNames
@@ -39,14 +39,16 @@ def findName (names : FiniteMap Nat Nat) (register : Nat) : Nat :=
   | some value => value
   | none => register
 
-/-- HOL `ri_find_name_def` (`stack_namesScript.sml:16-19`). -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "ri_find_name_def"]
+/-- Untagged structural analogue of HOL `ri_find_name_def`
+(`stack_namesScript.sml:16-19`). `WordRegImm α` admits non-word immediates,
+whereas HOL's immediate has the shared word type. -/
 def riFindName {α : Type} (names : FiniteMap Nat Nat) : WordRegImm α → WordRegImm α
   | .reg register => .reg (findName names register)
   | .imm value => .imm value
 
-/-- HOL `inst_find_name_def` (`stack_namesScript.sml:21-49`). -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "inst_find_name_def"]
+/-- Untagged structural analogue of HOL `inst_find_name_def`
+(`stack_namesScript.sml:21-49`). `WordLangInst α` admits non-word payloads;
+the exact tag awaits the shared word carrier. -/
 def instFindName {α : Type} (names : FiniteMap Nat Nat) : WordLangInst α → WordLangInst α
   | .skip => .skip
   | .const destination value => .const (findName names destination) value
@@ -81,9 +83,9 @@ def destFindName (names : FiniteMap Nat Nat) : Sum Nat Nat → Sum Nat Nat
   | .inr register => .inr (findName names register)
   | other => other
 
-/-- HOL `comp_def` (`stack_namesScript.sml:56-99`).  HOL names the declaration
-`comp`; the Lean name records the program-level role. -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "comp_def"]
+/-- Untagged structural analogue of HOL `comp_def` (`stack_namesScript.sml:56-99`).
+The Lean name records the program-level role, but its `Prog` permits seven
+independent carrier types rather than HOL's single shared word type. -/
 def progComp {α MlString : Type} (names : FiniteMap Nat Nat) :
     StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString →
     StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString
@@ -120,15 +122,15 @@ def progComp {α MlString : Type} (names : FiniteMap Nat Nat) :
   | .jumpLower r1 r2 target => .jumpLower (findName names r1) (findName names r2) target
   | program => program
 
-/-- HOL `prog_comp_def` (`stack_namesScript.sml:101-103`). -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "prog_comp_def"]
+/-- Untagged analogue of HOL `prog_comp_def` (`stack_namesScript.sml:101-103`)
+over the broader seven-parameter Lean `Prog`. -/
 def progCompEntry {α MlString : Type} (names : FiniteMap Nat Nat)
     (entry : Nat × StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString) :
     Nat × StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString :=
   (entry.1, progComp names entry.2)
 
-/-- HOL `compile_def` (`stack_namesScript.sml:105-107`). -/
-@[hol "cakeml/compiler/backend/stack_namesScript.sml" "compile_def"]
+/-- Untagged analogue of HOL `compile_def` (`stack_namesScript.sml:105-107`)
+over the broader seven-parameter Lean `Prog`. -/
 def compile {α MlString : Type} (names : FiniteMap Nat Nat)
     (program : List (Nat × StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString)) :
     List (Nat × StackLang.Prog (WordLangInst α) Cmp (WordRegImm α) BinOp WordMemOp (WordLangAddr α) MlString) :=

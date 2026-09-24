@@ -868,5 +868,27 @@ example :
     (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
       0 0 panSemBitVec64BytesInWord (.panOp .mul [.const 3, .const 4])
       (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))) == some 12
+def storeMem : RiscV.Word 8 → HolWordLab 8 :=
+  fun _ => .word (BitVec.ofNat 8 0x01)
+
+def storeDomain : RiscV.Word 8 → Prop :=
+  fun address => address = (1 : RiscV.Word 8) ∨ address = 2
+
+instance : DecidablePred storeDomain := fun x => by
+  unfold storeDomain
+  infer_instance
+
+#guard (panMemStoreByteHOL (width := 8) storeMem storeDomain false (1 : RiscV.Word 8)
+    0xAB).isSome
+#guard (panMemStoreByteHOL (width := 8) storeMem (fun _ => False) false
+    (1 : RiscV.Word 8) 0xAB).isNone
+#guard ((panMemStoreByteHOL (width := 8) storeMem storeDomain false
+      (1 : RiscV.Word 8) 0xAB).map (fun memory => memory 3)) == some (storeMem 3)
+#guard ((panWriteBytearrayHOL (width := 8) (1 : RiscV.Word 8) [0x11, 0x22] storeMem
+      storeDomain false) 3) == storeMem 3
+#guard ((panWriteBytearrayHOL (width := 8) (1 : RiscV.Word 8) [0x11, 0x22] storeMem
+      storeDomain false) 1) != storeMem 1
+#guard ((panWriteBytearrayHOL (width := 8) (5 : RiscV.Word 8) [0x11] storeMem
+      storeDomain false) 1) == storeMem 1
 
 end Flapjack.Test.PanSemStateEvalParity

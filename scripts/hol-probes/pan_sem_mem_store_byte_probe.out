@@ -1,0 +1,6 @@
+store_byte_hit_some=T
+store_byte_out=T
+store_byte_other_unchanged=T
+write_bytearray_changed=T
+write_bytearray_other_unchanged=T
+write_bytearray_out_of_domain=T

@@ -202,6 +202,67 @@ def panMemLoad32HOL {width : Nat} [NeZero width]
   else none
 
 
+/-- Flapjack-specific BitVec rendering of HOL4 standard-library
+`byte$set_byte_def` (`HOL/src/n-bit/byteScript.sml`), the inverse of
+`panGetByteHOL`: replace the byte at the endian-adjusted byte index by
+`byteValue`.  As with `panGetByteHOL` this dependency is outside the CakeML
+repository, so the helper intentionally has no repository `@[hol]` tag. -/
+def panSetByteHOL {width : Nat} (address byteValue cell : RiscV.Word width)
+    (bigEndian : Bool) : RiscV.Word width :=
+  let bytesPerWord := width / 8
+  let byteIndex := address.toNat % bytesPerWord
+  let byteIndex := if bigEndian then bytesPerWord - byteIndex - 1 else byteIndex
+  let offset := 256 ^ byteIndex
+  let block := offset * 256
+  let low := cell.toNat % offset
+  let high := cell.toNat / block
+  BitVec.ofNat width (low + (byteValue.toNat % 256) * offset + high * block)
+
+/-- Exact port of HOL `panSem$mem_store_byte`
+    (`cakeml/pancake/semantics/panSemScript.sml:300-307`):
+    `mem_store_byte m dm be w b = case m (byte_align w) of Word v =>
+    if byte_align w IN dm then SOME ((byte_align w =+ Word (set_byte w b v be)) m)
+    else NONE`.  As in `panMemLoadByteHOL`, HOL's total `word_lab` memory is a
+    total map into `HolWordLab` and the `word set` domain a `Prop` predicate. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_store_byte_def"]
+def panMemStoreByteHOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) (byte : UInt8) :
+    Option (RiscV.Word width → HolWordLab width) :=
+  let aligned := panByteAlignHOL (width := width) address
+  match memory aligned with
+  | .word cell =>
+      if domain aligned then
+        some (fun current =>
+          if current = aligned then
+            .word (panSetByteHOL address (BitVec.ofNat width byte.toNat) cell
+              bigEndian)
+          else memory current)
+      else none
+
+/-- Exact port of HOL `panSem$write_bytearray`
+    (`cakeml/pancake/semantics/panSemScript.sml:309-316`):
+    `write_bytearray a [] m dm be = m` and
+    `write_bytearray a (b::bs) m dm be = case mem_store_byte
+    (write_bytearray (a+1) bs m dm be) dm be a b of SOME m => m | NONE => m`
+    (a failed store keeps the original outer memory). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "write_bytearray_def" 309]
+def panWriteBytearrayHOL {width : Nat} [NeZero width]
+    (address : RiscV.Word width) (bytes : List UInt8)
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) : RiscV.Word width → HolWordLab width :=
+  match bytes with
+  | [] => memory
+  | byte :: rest =>
+      match panMemStoreByteHOL
+          (panWriteBytearrayHOL (address + 1) rest memory domain bigEndian)
+          domain bigEndian address byte with
+      | some updated => updated
+      | none => memory
+
+
 /-- HOL `size_of_sh_with_ctxt` (`cakeml/pancake/panLangScript.sml:164-171`), the
     context-sensitive shape size used by `mem_load` to advance the address. -/
 def sizeOfShWithCtxt (context : StructContextHOL) : Shape → Nat

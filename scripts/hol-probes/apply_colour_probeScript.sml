@@ -53,3 +53,7 @@ val _ = print_eval "apply_colour_loop_live"
       (wordLang$Loop (insert 1 () (insert 7 () LN))
         (wordLang$Assign 1 (wordLang$Var 3))
         (insert 3 () LN) : 64 wordLang$prog)``;
+
+val _ = print_eval "apply_colour_alias_const"
+  ``apply_colour ^alias_colour
+      (wordLang$Assign 2 (wordLang$Const 5w : 64 word wordLang$exp))``;

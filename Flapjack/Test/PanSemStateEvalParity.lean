@@ -449,4 +449,22 @@ example :
     (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
     (panValueWordHOL littleEndianState.memory) (by simp [lookupInfoWithRest])
 
+example :
+    panMemLoadHOL (width := 64) (.named "S")
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([("S", { fields := [("f", Shape.one)], size := 1 })] : StructContext)) =
+      (panMemLoadFldsHOL [("f", Shape.one)]
+        (0 : RiscV.Word 64)
+        (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+        (panValueWordHOL littleEndianState.memory)
+        (StructContext.toHOL ([] : StructContext))).map
+        (fun fields => HolValue.nStruct "S" fields) :=
+  panMemLoadHOL_named_some "S" [("S", { fields := [("f", Shape.one)], size := 1 })] 0
+    (fun a => littleEndianState.memaddrs a && panValueWordDefined littleEndianState.memory a = true)
+    (panValueWordHOL littleEndianState.memory)
+    { fields := [("f", Shape.one)], size := 1 } []
+    (by simp [lookupInfoWithRest])
+
 end Flapjack.Test.PanSemStateEvalParity

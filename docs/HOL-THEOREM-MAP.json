@@ -5816,14 +5816,6 @@
     "reviewer": "Constant constructor case for HOL compile_exp_val_rel: the state-owned source evaluator and production Crep compiler/evaluator both flatten the word constant; general expression and Call argument theorem remain open."
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "compileExpHOL_const_ofHOLIH",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only four-part Const constructor support for the HOL-shaped compile_exp_val_rel induction; the compiler output's target evaluation, length, source shape, and well-formedness conclusions are proved, but this is not a standalone HOL declaration or complete expression/Call theorem."
-  },
-  {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
@@ -6494,5 +6486,21 @@
     "lean_name": "compileExpHOL_const_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_rStruct_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RStruct constructor case supporting the HOL-shaped compile_exp_val_rel induction. It derives target evaluation, shape-size equality, source shape, and well-formedness from per-field induction hypotheses; it is not a standalone HOL declaration or complete expression theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_map_snd_eq_map_compileExp_shape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only list-shape projection helper for compileExpHOL results; it introduces no HOL theorem correspondence."
   }
 ]

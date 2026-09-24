@@ -3370,6 +3370,202 @@ private theorem compileExpListHOL_flatMap_eq_compileArgsHOL
   | cons field fields ih =>
       simp [compileExpHOL.compileExpListHOL, compileArgsHOL, ih]
 
+private theorem compileExpListHOL_map_snd_eq_map_compileExp_shape
+    (compilerContext : PanToCrepHOLContext (RiscV.Word 64))
+    (fields : List (Exp (RiscV.Word 64))) :
+    (compileExpHOL.compileExpListHOL compilerContext fields).map Prod.snd =
+      fields.map (fun expression => (compileExpHOL compilerContext expression).2) := by
+  induction fields with
+  | nil => simp [compileExpHOL.compileExpListHOL]
+  | cons field fields ih =>
+      simp [compileExpHOL.compileExpListHOL, ih]
+
+/-! Full four-conclusion RStruct constructor step for localized Call
+arguments. Each arbitrary field is discharged by its compile_exp_val_rel IH;
+the list IHs establish source/compiled shape agreement and well-formedness,
+while eval_map_comp_exp_flat_eq supplies production target evaluation. This is
+induction support and does not claim the complete expression or Call theorem. -/
+theorem compileExpHOL_rStruct_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (fields : List (Exp (RiscV.Word 64)))
+    (fieldValues : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : ∀ expression, expression ∈ fields →
+      expGlobalVars expression = [])
+    (hsource : evalPanSemStateExp source (.rStruct fields) =
+      some (.rStruct fieldValues))
+    (heach : ∀ expression, expression ∈ fields → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.rStruct fields)).1 =
+          some (panValueFlatten (.rStruct fieldValues)) ∧
+      (compileExpHOL compilerContext (.rStruct fields)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.rStruct fields)).2 ∧
+      panValueShape [] (.rStruct fieldValues) =
+        (compileExpHOL compilerContext (.rStruct fields)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.rStruct fields)).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hsourceFields : evalPanSemStateExps source fields = some fieldValues := by
+    simpa [evalPanSemStateExp, evalPanSemStateExps, evalPanValueExp,
+      evalPanValueExps] using hsource
+  clear hsource
+  have hfieldRel :
+      fieldValues.map (panValueShape []) =
+          fields.map (fun expression => (compileExpHOL compilerContext expression).2) ∧
+      (∀ expression, expression ∈ fields →
+        (compileExpHOL compilerContext expression).1.length =
+          Shape.shapeSize (compileExpHOL compilerContext expression).2) ∧
+      (∀ expression, expression ∈ fields →
+        isWfShape [] (compileExpHOL compilerContext expression).2 = true) := by
+    induction fields generalizing fieldValues with
+    | nil =>
+        cases fieldValues with
+        | nil => simp
+        | cons value values =>
+            simp [evalPanSemStateExps, evalPanValueExps,
+              evalPanValueExp.evalPanValueExps] at hsourceFields
+    | cons expression expressions ih =>
+        cases fieldValues with
+        | nil =>
+            have hsourceImpossible :
+                evalPanSemStateExps source (expression :: expressions) ≠ some [] := by
+              intro h
+              cases hhead : evalPanValueExp source.structs source.locals source.globals
+                  source.memory source.baseAddress source.topAddress
+                  panSemBitVec64BytesInWord expression
+                  (memoryAccess := some (panSemBitVec64MemoryAccess source)) <;>
+                cases htail : evalPanValueExp.evalPanValueExps source.structs source.locals
+                    source.globals source.memory source.baseAddress source.topAddress
+                    panSemBitVec64BytesInWord expressions
+                    (some (panSemBitVec64MemoryAccess source)) <;>
+                simp [evalPanSemStateExps, evalPanValueExps,
+                  evalPanValueExp.evalPanValueExps, hhead, htail] at h
+            exact False.elim (hsourceImpossible hsourceFields)
+        | cons value values =>
+            rcases (evalPanSemStateExps_cons source expression expressions value values).mp
+                hsourceFields with ⟨hvalue, hvalues⟩
+            have hvalueRel := heach expression (by simp) value hvalue hstate hcode
+              hlocals (hlocalized expression (by simp))
+            obtain ⟨_hvalueEval, hvalueLength, hvalueShape, hvalueWf⟩ := hvalueRel
+            obtain ⟨hshapeTail, hlengthTail, hwfTail⟩ := ih values
+              (fun item hmem => hlocalized item (by simp [hmem]))
+              (fun item hmem result heval hstate' hcode' hlocals' hlocal' =>
+                heach item (by simp [hmem]) result heval hstate' hcode' hlocals' hlocal')
+              hvalues
+            refine ⟨?_, ?_, ?_⟩
+            · simp only [List.map_cons]
+              rw [hvalueShape, hshapeTail]
+            · intro item hmem
+              rcases List.mem_cons.mp hmem with heq | htail
+              · subst item
+                exact hvalueLength
+              · exact hlengthTail item htail
+            · intro item hmem
+              rcases List.mem_cons.mp hmem with heq | htail
+              · subst item
+                exact hvalueWf
+              · exact hwfTail item htail
+  have hcompiledArgs := compileArgsHOL_eval_flatten_of_compileExpRel
+    context source target fields fieldValues hstate hcode hlocals hlocalized
+    hsourceFields heach
+  have hcompiledEval : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext (.rStruct fields)).1 =
+        some (panValueFlatten (.rStruct fieldValues)) := by
+    simpa [compilerContext, compileExpHOL,
+      compileExpListHOL_flatMap_eq_compileArgsHOL, panValueFlatten_rStruct,
+      panValueFlattenValues_eq_flatMap] using hcompiledArgs
+  have hmapShapes := compileExpListHOL_map_snd_eq_map_compileExp_shape
+    compilerContext fields
+  have hcompiledShape : panValueShape [] (.rStruct fieldValues) =
+      (compileExpHOL compilerContext (.rStruct fields)).2 := by
+    simp only [compileExpHOL, panValueShape]
+    rw [hmapShapes]
+    exact congrArg Shape.comb hfieldRel.1
+  have hcompiledWf : isWfShape []
+      (compileExpHOL compilerContext (.rStruct fields)).2 = true := by
+    simp only [compileExpHOL, isWfShape]
+    rw [hmapShapes]
+    apply isWfShapeList_of_all
+    intro shape hshape
+    obtain ⟨expression, hmem, hshape⟩ := List.mem_map.mp hshape
+    subst shape
+    exact hfieldRel.2.2 expression hmem
+  have hcompiledLength : (compileExpHOL compilerContext (.rStruct fields)).1.length =
+      Shape.shapeSize (compileExpHOL compilerContext (.rStruct fields)).2 := by
+    have hEvalLength : ∀ (expressions : List (CrepExp (RiscV.Word 64)))
+        (values : List (RiscV.Word 64)),
+        evalCrepRuntimeExps target expressions = some values →
+          values.length = expressions.length := by
+      intro expressions
+      induction expressions with
+      | nil =>
+          intro values heval
+          simp [evalCrepRuntimeExps] at heval
+          subst values
+          rfl
+      | cons expression expressions ih =>
+          intro values heval
+          cases hhead : evalCrepRuntimeExp target expression with
+          | none => simp [evalCrepRuntimeExps, hhead] at heval
+          | some head =>
+              cases htail : evalCrepRuntimeExps target expressions with
+              | none => simp [evalCrepRuntimeExps, hhead, htail] at heval
+              | some tail =>
+                  have hvalues : values = head :: tail := by
+                    simpa [evalCrepRuntimeExps, hhead, htail] using heval.symm
+                  subst values
+                  simp [ih tail htail]
+    have htargetLength := hEvalLength _ _ hcompiledEval
+    have hsourceWf : isWfShape [] (panValueShape [] (.rStruct fieldValues)) = true := by
+      rw [hcompiledShape]
+      exact hcompiledWf
+    have hflatLength := panValueFlatten_length_eq_shapeSize
+      (.rStruct fieldValues) hsourceWf
+    calc
+      (compileExpHOL compilerContext (.rStruct fields)).1.length =
+          (panValueFlatten (.rStruct fieldValues)).length := htargetLength.symm
+      _ = Shape.shapeSize (panValueShape [] (.rStruct fieldValues)) := hflatLength
+      _ = Shape.shapeSize (compileExpHOL compilerContext (.rStruct fields)).2 := by
+        rw [hcompiledShape]
+  exact ⟨by simpa [compilerContext] using hcompiledEval,
+    by simpa [compilerContext] using hcompiledLength,
+    by simpa [compilerContext] using hcompiledShape,
+    by simpa [compilerContext] using hcompiledWf⟩
+
 theorem compileExpHOL_rStruct_constOrLocal_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

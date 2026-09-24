@@ -1983,6 +1983,30 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       vmax := context.vmax }
     program
 
+/-- Bridge from the proof-side finite-map context to the HOL finite-map
+    compiler context; the two records have the same four fields. -/
+def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
+    PanToCrepHOLContext α :=
+  { vars := context.vars, funcs := context.funcs, eids := context.eids,
+    vmax := context.vmax }
+
+/-- `compileProgRiscV` is the tagged HOL `compile_def` compiler applied to a
+    `PanToCrepHOLContext`; it is definitionally the generic `compileProgHOL`
+    on the same context. -/
+theorem compileProgRiscV_eq_compileProgHOL
+    (context : PanToCrepHOLContext (BitVec width))
+    (program : Prog (BitVec width)) :
+    compileProgRiscV context program = compileProgHOL context program := rfl
+
+/-- The proof-side compiler expression `compileCodeRelProg` is exactly the
+    tagged HOL `compile_def` compiler (`compileProgRiscV`) on the bridged
+    context, for EVERY proof context, not only declaration-derived ones. -/
+theorem compileCodeRelProg_eq_compileProgRiscV
+    (context : PanToCrepProofContext (BitVec width))
+    (program : Prog (BitVec width)) :
+    compileCodeRelProg context program =
+      compileProgRiscV context.toHOLContext program := rfl
+
 /-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
     It quantifies over every source code entry, requires localisation and the
     exact parameter/return-shape lookup in `ctxt.funcs`, derives parameter
@@ -1991,7 +2015,11 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
     Its compiler conclusion routes to `compileProgHOL`, whose context is the
     original finite-map record. The `compile_def` tag is on the production
-    wrapper `compileProgRiscV`, not on this helper. -/
+    wrapper `compileProgRiscV`; `compileCodeRelProg_eq_compileProgRiscV` (with
+    `compileProgRiscV_eq_compileProgHOL`) proves that helper is definitionally
+    the tagged compiler on the bridged context for EVERY proof context, so the
+    relation holds for arbitrary `ctxt_fc` contexts, not only declaration-derived
+    ones. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]

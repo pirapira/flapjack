@@ -317,6 +317,128 @@ theorem evalWordProg_assignVar_applyColour_live
   exact ⟨_, _, hsourceEval, htargetEval, by
     simpa [execute, colourZero] using hstate⟩
 
+/-! The allocator's clash checker discharges the live-after no-alias premise
+    for a single assignment.  The edge list is exactly the one-write
+    interference relation generated from liveness; this remains untagged
+    because it is a local consequence over Flapjack's list graph/checker, not
+    HOL's full `colouring_ok` theorem over Word programs and live sets. -/
+theorem wordColouringRespectsClashes_edge
+    (colouring : NatInfoMap Nat) (left right : Nat)
+    (edges : List (Nat × Nat))
+    (hchecked : wordColouringRespectsClashes edges colouring = true)
+    (hedge : (left, right) ∈ edges) :
+    ∃ leftColour rightColour,
+      lookupNatInfo left colouring = some leftColour ∧
+      lookupNatInfo right colouring = some rightColour ∧
+      leftColour ≠ rightColour := by
+  induction edges with
+  | nil => simp at hedge
+  | cons edge rest ih =>
+      rcases edge with ⟨edgeLeft, edgeRight⟩
+      rcases List.mem_cons.mp hedge with hhead | htail
+      · have hpair : left = edgeLeft ∧ right = edgeRight := by
+          simpa [Prod.mk.injEq] using hhead
+        rcases hpair with ⟨rfl, rfl⟩
+        cases hleft : lookupNatInfo left colouring with
+        | none => simp [wordColouringRespectsClashes, hleft] at hchecked
+        | some leftColour =>
+          cases hright : lookupNatInfo right colouring with
+          | none => simp [wordColouringRespectsClashes, hleft, hright] at hchecked
+          | some rightColour =>
+            have hboth : (leftColour != rightColour) &&
+                wordColouringRespectsClashes rest colouring = true := by
+              simpa [wordColouringRespectsClashes, hleft, hright] using hchecked
+            have hparts : (leftColour != rightColour) = true ∧
+                decide (wordColouringRespectsClashes rest colouring = true) = true := by
+              simpa only [Bool.and_eq_true] using hboth
+            have hneq : leftColour ≠ rightColour := by
+              simpa using hparts.1
+            exact ⟨leftColour, rightColour, rfl, rfl, hneq⟩
+      · cases hleft : lookupNatInfo edgeLeft colouring with
+        | none => simp [wordColouringRespectsClashes, hleft] at hchecked
+        | some edgeLeftColour =>
+          cases hright : lookupNatInfo edgeRight colouring with
+          | none => simp [wordColouringRespectsClashes, hleft, hright] at hchecked
+          | some edgeRightColour =>
+            have hboth : (edgeLeftColour != edgeRightColour) &&
+                wordColouringRespectsClashes rest colouring = true := by
+              simpa [wordColouringRespectsClashes, hleft, hright] using hchecked
+            have hparts : (edgeLeftColour != edgeRightColour) = true ∧
+                decide (wordColouringRespectsClashes rest colouring = true) = true := by
+              simpa only [Bool.and_eq_true] using hboth
+            have htailChecked : wordColouringRespectsClashes rest colouring = true :=
+              of_decide_eq_true hparts.2
+            exact ih htailChecked htail
+
+theorem wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    (colouring : NatInfoMap Nat) (destination : Nat)
+    (liveAfter : List Nat) (edges : List (Nat × Nat)) (colour : Nat → Nat)
+    (hchecked : wordColouringRespectsClashes edges colouring = true)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ destination →
+      (destination, current) ∈ edges)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  have hedge : (destination, current) ∈ edges := hcontains current hcurrent hdifferent
+  obtain ⟨leftColour, rightColour, hleft, hright, hneq⟩ :=
+    wordColouringRespectsClashes_edge colouring destination current
+      edges hchecked hedge
+  have hleft' : leftColour = colour destination := by
+    rw [hlookup destination (Or.inl rfl)] at hleft
+    injection hleft with heq
+    exact heq.symm
+  have hright' : rightColour = colour current := by
+    rw [hlookup current (Or.inr hcurrent)] at hright
+    injection hright with heq
+    exact heq.symm
+  simpa [hleft', hright'] using hneq.symm
+
+theorem evalWordProg_assignVar_applyColour_liveClashes
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (liveAfter : List Nat)
+    (name sourceName : Nat) (hname : name < 32) (hsource : sourceName < 32)
+    (hrelation : WordColourStateRelationOn colour (sourceName :: liveAfter)
+      source target)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (edges : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hclashes : wordColouringRespectsClashes edges colouring = true)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ name →
+      (name, current) ∈ edges)
+    (hlookup : ∀ current, current = name ∨ current ∈ liveAfter →
+      lookupNatInfo current colouring = some (colour current)) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.var sourceName)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  apply evalWordProg_assignVar_applyColour_live colour valid colourZero
+    source target liveAfter name sourceName hname hsource hrelation hcolourNonzero
+  intro current hcurrent hcurrentNe
+  exact wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    colouring name liveAfter edges colour hclashes hcontains hlookup current hcurrent
+    hcurrentNe
+
+theorem wordAllocateVarsWithClashes_noAliasOnLiveAfter
+    (slots : List Nat) (edges : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hallocated : wordAllocateVarsWithClashes slots edges = some colouring)
+    (destination : Nat) (liveAfter : List Nat) (colour : Nat → Nat)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ destination →
+      (destination, current) ∈ edges)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  have hchecked := (wordAllocateVarsWithClashes_sound slots edges colouring hallocated).2
+  exact wordColouringRespectsClashes_singleWrite_liveAfter_noAlias colouring destination
+    liveAfter edges colour hchecked hcontains hlookup current hcurrent hdifferent
+
 theorem evalWordProg_assignConst_applyColour
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (injective : Function.Injective colour) (colourZero : colour 0 = 0)

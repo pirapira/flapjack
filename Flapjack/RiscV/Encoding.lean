@@ -208,6 +208,14 @@ def encodeLinkedSections [NeZero width] :
       { label, address, bytes := encodeInstructions instructions } ::
         encodeLinkedSections sections
 
+/-! The closest HOL result is `riscv_targetProof$length_riscv_encode[local]`
+    (`LENGTH (riscv_encode i) = 4`).  It quantifies over HOL's full
+    `riscv$instruction` type, which includes AMO, floating-point, FENCE,
+    system, and unknown-instruction constructors.  `Flapjack.RiscV.Instruction`
+    is a width-indexed, hand-ported subset of that datatype and has none of
+    those constructors, so this generic Lean length fact is untagged: its
+    quantified instruction domain is not the exact HOL domain.  For each
+    represented instruction, both encoders emit four bytes. -/
 @[simp] theorem encodeInstructionBytes_length [NeZero width]
     (instruction : Instruction width) :
     (encodeInstructionBytes instruction).length = 4 := by

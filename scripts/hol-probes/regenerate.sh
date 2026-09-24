@@ -101,6 +101,11 @@ run_probe riscv_word_extract_6_probeScript.sml riscv_word_extract_6_probe.out \
   word_extract_6_zero word_extract_6_63 word_extract_6_64_premise \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
+run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
+  riscv_encode_length_addi riscv_encode_length_add riscv_encode_length_branch \
+  riscv_encode_length_load \
+  "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
+  "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
   pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
@@ -295,6 +300,11 @@ run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   "$cake_dir/compiler/backend"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_alloc_live_colour_noalias_probeScript.sml \
+  word_alloc_live_colour_noalias_probe.out \
+  colour_ok_distinct_write_live colour_ok_alias_write_live \
+  "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
   total_colour_alloc apply_colour_alias_assign apply_colour_loop_live \

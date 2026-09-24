@@ -1,0 +1,4 @@
+riscv_encode_length_addi=T
+riscv_encode_length_add=T
+riscv_encode_length_branch=T
+riscv_encode_length_load=T

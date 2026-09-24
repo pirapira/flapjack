@@ -155,12 +155,46 @@ theorem rejectsUnlocalisedSource :
 #guard compiledReturnGuard
 #guard compiledGlobalDestinationMatchesHolOracle
 
+/-! Direct executable check for HOL `alookup_compile_prog_code`: a function
+    declaration with empty parameters is looked up in `compile_to_crep` by the
+    same name and yields the `crep_vars [] = []` slot list together with the
+    compiled body. -/
+def alookupDecls : List (Decl (BitVec 64)) :=
+  [Decl.function ⟨"f", false, false, [], Prog.skip, Shape.one⟩,
+   Decl.function ⟨"g", false, false, [("x", Shape.one)], Prog.skip, Shape.one⟩]
+
+def alookupGuard : Bool :=
+  match List.lookup "f" (compileToCrepHOL alookupDecls) with
+  | some ([], _) => true
+  | _ => false
+
+example : List.lookup "f" (compileToCrepHOL alookupDecls) =
+    some ([], panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL alookupDecls) 0
+        (panToCrepGetEidsFromDeclsHOL alookupDecls)) [] .skip) :=
+  alookupCompileToCrepCode alookupDecls "f" .skip .one
+    (by decide)
+    (by simp [alookupDecls, functionEntries])
+
+/-- Exact-body guard (not just shape): the compiled `f` body is the concrete
+    `comp_func ... [] Skip`, which further reduces to `Skip`, matching the HOL
+    probe row `alookup_empty_params` (`body = comp_func ... [] Skip`). -/
+example : List.lookup "f" (compileToCrepHOL alookupDecls) =
+    some ([], CrepProg.skip) := by
+  rw [alookupCompileToCrepCode alookupDecls "f" .skip .one
+    (by decide)
+    (by simp [alookupDecls, functionEntries])]
+  simp only [panToCrepCompFuncRiscV, compileProgRiscV, compileProgHOL]
+
+#guard alookupGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
     ("HOL code_rel wrong-body target fixture", wrongBodyTargetGuard),
     ("HOL code_rel compiled parameter return", compiledReturnGuard),
-    ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle)]
+    ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle),
+    ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

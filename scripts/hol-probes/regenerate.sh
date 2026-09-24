@@ -373,6 +373,12 @@ run_probe pan_sem_store_error_probeScript.sml pan_sem_store_error_probe.out \
 run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
   while_bad_result while_one_iter_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Seq probe observes the normal continuation, the `Break`/`Continue`
+# short-circuit (second command not run), the rejected first command, and the
+# `fix_clock` clamp after a `Tick`.
+run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
+  seq_normal_result seq_tick_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \

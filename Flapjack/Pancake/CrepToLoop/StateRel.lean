@@ -247,8 +247,10 @@ counterparts:
   `domain l ⊆ domain t_locals` becomes `live n = true → (tLocals n).isSome`
   and `lookup n t_locals = SOME w` becomes `tLocals n = some w`.
 
-The exact port is tracked by a dependency bead (finite-map `LoopContext.vars`
-plus `sptree$num_set`/`num_map` domain/lookup carriers). -/
+The exact tagged port is `crepToLoopLocalsRelHOL` below over the finite-map
+`CrepToLoopFiniteMapContext` carrier (`sptree$num_set`/`num_map` rendered
+extensionally); this untagged rendering over the production list-backed
+`LoopContext` is kept for production-side clients. -/
 
 /-- Untagged faithful-shape rendering of HOL `crep_to_loop$locals_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`); see the
@@ -278,8 +280,60 @@ theorem crepToLoopLocalsRel_iff {width : Nat} [NeZero width] {α : Type} (contex
         (∀ v m, lookupNatInfo v context.vars = some m → m ≤ context.maxVar) ∧
         (∀ n, live n = true → (tLocals n).isSome) ∧
         (∀ vname v, FLOOKUP sLocals vname = some v →
-          ∃ n, lookupNatInfo vname context.vars = some n ∧ live n = true ∧
-            tLocals n = some (wlabWloc v)) :=
+∃ n, lookupNatInfo vname context.vars = some n ∧ live n = true ∧
+        tLocals n = some (wlabWloc v)) :=
+  Iff.rfl
+
+/-! ## Exact carriers for `locals_rel_def`
+
+HOL `crep_to_loop$ctxt` carries `vars : num |-> num` (a finite map), whereas the
+production `LoopContext.vars` is a list-backed association list.  The
+proof-side carrier below uses the repo's `FiniteMap` (the same rendering of
+HOL's `|->` as `PanToCrepProofContext.vars`).  HOL's `sptree$num_set`
+(`domain l`, `n ∈ domain l`) is rendered as a Boolean membership map and
+`sptree$num_map` (`lookup n t_locals`) as its extensional Option-valued
+lookup — the same set-as-membership-map / finite-map-as-function renderings
+already accepted for the tagged `crepToLoopStateRel`, `crepToLoopMemRel` and
+`crepToLoopGlobalsRel`. -/
+
+/-- Proof-side carrier for Cake's `crep_to_loop` context, with HOL's finite-map
+    `vars : num |-> num`; field names mirror the HOL record. -/
+structure CrepToLoopFiniteMapContext where
+  vars : FiniteMap Nat Nat
+  funcs : FiniteMap FunName (Nat × Nat)
+  vmax : Nat
+  target : RiscV.Architecture
+
+/-- Exact width-indexed port of HOL `locals_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) over the
+    finite-map context carrier.  The `sptree$num_set`/`num_map` arguments are
+    rendered extensionally (Boolean membership map and Option-valued lookup). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_def"]
+def crepToLoopLocalsRelHOL {width : Nat} [NeZero width]
+    (ctxt : CrepToLoopFiniteMapContext)
+    (live : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals : Nat → Option (LoopValue (BitVec width))) : Prop :=
+  crepToLoopDistinctVars ctxt.vars ∧
+  crepToLoopCtxtMax ctxt.vmax ctxt.vars ∧
+  (∀ n, live n = true → (tLocals n).isSome) ∧
+  ∀ vname v, FLOOKUP sLocals vname = some v →
+    ∃ n, FLOOKUP ctxt.vars vname = some n ∧ live n = true ∧
+      tLocals n = some (wlabWloc v)
+
+/-- Untagged iff form of `crepToLoopLocalsRelHOL`, kept for rewriting. -/
+theorem crepToLoopLocalsRelHOL_iff {width : Nat} [NeZero width]
+    (ctxt : CrepToLoopFiniteMapContext)
+    (live : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals : Nat → Option (LoopValue (BitVec width))) :
+    crepToLoopLocalsRelHOL ctxt live sLocals tLocals ↔
+      crepToLoopDistinctVars ctxt.vars ∧
+      crepToLoopCtxtMax ctxt.vmax ctxt.vars ∧
+      (∀ n, live n = true → (tLocals n).isSome) ∧
+      ∀ vname v, FLOOKUP sLocals vname = some v →
+        ∃ n, FLOOKUP ctxt.vars vname = some n ∧ live n = true ∧
+          tLocals n = some (wlabWloc v) :=
   Iff.rfl
 
 end Flapjack

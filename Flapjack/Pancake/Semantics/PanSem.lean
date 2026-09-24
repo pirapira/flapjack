@@ -625,6 +625,37 @@ theorem panSemEvaluateCodeStateWithFuel_seq
   | none => simp
   | some firstStep => rfl
 
+/-- The production source evaluator exposes the `panSem` `If` equation: a
+    non-word (or missing) condition yields the explicit `Error` result with the
+    unchanged source state, while a word condition evaluates the selected
+    branch at the unchanged clock.  The result is the reduced structured pair,
+    not HOL's `(prog_result, state)`, so this stays an untagged boundary
+    equation.  Reference: `cakeml/pancake/semantics/panSemScript.sml:617-620`. -/
+theorem panSemEvaluateCodeStateWithFuel_ite
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (fuel : Nat) (state : PanSemState α (FfiState σ))
+    (condition : Exp α) (thenBranch elseBranch : Prog α) :
+    panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord (fuel + 1)
+        state (.ite condition thenBranch elseBranch : Prog α) =
+      match panValueIteConditionValue state.structs state.baseAddress state.topAddress
+          bytesInWord state.locals state.globals state.memory condition none with
+      | none =>
+          some ((.control (.error state.locals state.globals state.memory state.ffi),
+            state.clock))
+      | some conditionValue =>
+          panSemEvaluateCodeStateWithFuel context primitive handler bytesInWord fuel state
+            (if conditionValue != 0 then thenBranch else elseBranch) := by
+  simp only [panSemEvaluateCodeStateWithFuel, evalPanValueFfiClockCodeProg]
+  cases h : panValueIteConditionValue state.structs state.baseAddress state.topAddress
+      bytesInWord state.locals state.globals state.memory condition none with
+  | none => rfl
+  | some conditionValue => rfl
+
 /-!
   Exact source-memory entry point.
 

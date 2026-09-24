@@ -379,6 +379,11 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The If probe observes the then branch, the else branch, a non-word condition,
+# and a condition whose own evaluation fails (empty memory domain).
+run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
+  if_true_result if_fail_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \

@@ -312,6 +312,19 @@ val _ = print_eval "compile_exp_correct_load_byte"
        (pan_structs$compile_exp ^ctxt ^load_byte_expression) =
        SOME (pan_structsProof$convert_v ^load_byte_value))``;
 
+val panop_value = ``ValWord (15w:8 word)``;
+val panop_expression =
+  ``(panLang$Panop Mul [panLang$Const (3w:8 word);
+                        panLang$Const (5w:8 word)] : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_panop_mul"
+  ``(pan_structs$old_exp_shape ^ctxt ^panop_expression,
+     panSem$shape_of ^panop_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^panop_value,
+     panSem$eval ^local_state ^panop_expression = SOME ^panop_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^panop_expression) =
+       SOME (pan_structsProof$convert_v ^panop_value))``;
+
 val _ = print_eval "size_of_compile_shape_comb"
   ``(is_wf_shape [] (Comb [One; One]),
      struct_infos_ok [],

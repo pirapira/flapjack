@@ -6838,5 +6838,29 @@
     "lean_name": "panToCrepGetEidsFromDeclsHOL_lookup_mem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific inverse lookup fact for the get_eids_from_decls port. No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "drop_range_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific list support: dropping the first n entries of List.range m maps n+ over List.range (m-n). No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileParamVars_range_withShape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge for HOL mk_ctxt_code_imp_code_rel: compileParamVars's name/shape/slot table equals the ctxt_fc variable zip with with_shape slices over the shifted range. No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panToCrepMakeVmapHOL_eq_ctxtFcVars",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge for HOL mk_ctxt_code_imp_code_rel: panToCrepMakeVmapHOL equals the vars field of the ctxt_fc proof context. HOL discharges this inside gvs[ctxt_fc_def, make_vmap_def]; direct probe scripts/hol-probes/crep_vmap_ctxtfc_probe.out."
   }
 ]

@@ -1258,6 +1258,32 @@ def panValueWordProjection : PanValue α → Option α
     (fields : List (FieldName × PanValue α)) :
     panValueWordProjection (.nStruct name fields) = none := rfl
 
+/-- Executable Pancake source-expression evaluator.
+
+This is the source-shaped recursion used by the production semantics, but it is
+NOT a statement-exact port of HOL `panSemScript.sml:209 eval_def`
+(resp. the identical `pan_itreeSemScript.sml:79`).  Cluster-by-cluster:
+
+* `Const`, `Var Local`, `Var Global`, `RStruct`, `RField`, `BaseAddr`,
+  `TopAddr`, `BytesInWord` follow the HOL clauses; the bounded index lookup
+  `fields[index]?` matches HOL's `if index < LENGTH vs then EL index vs` and
+  the HOL rows in `scripts/hol-probes/pan_eval_probe.out` are checked in
+  `Flapjack/Test/PanEvalParity.lean`.
+* `NStruct` / `NField` use the production `lookupInfo` first-match and the
+  helper `panValueFieldsHaveShapes` rather than HOL's `ALOOKUP` with HOL `=`,
+  `UNZIP`, the `field_names' = field_names` test, and the
+  `EVERY (λ(s,v). s = shape_of v)` check.
+* `Load` / `Load32` / `LoadByte` / `Op` do not read memory through the HOL
+  state's `memaddrs`, endianness, and byte width; the default (`memoryAccess =
+  none`) reads `memory` directly, and the `.load` case uses `panValueFlatLoad`.
+  This is the gap also recorded in `Flapjack/Pancake/Semantics/PanSem/Total.lean`.
+* The Lean signature takes `structs locals globals memory baseAddress
+  topAddress bytesInWord` (a projection of the HOL state) and an extra
+  `memoryAccess` parameter, and `PanValue` stores the raw word in `.word` rather
+  than HOL's `Val (Word w)`.
+
+The faithful HOL-shaped expression evaluator, including the state projection and
+the memory-codec clauses, is tracked by bead `flapjack-pxn.18.3.6.9`. -/
 def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]

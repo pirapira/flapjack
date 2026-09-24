@@ -43,6 +43,7 @@ for the review rule.
 | `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
 | `compiler/backend/semantics/labSemScript.sml` | `Flapjack/Compiler/Backend/LabSem.lean` (`is_Label`) |
 | `compiler/backend/stack_namesScript.sml` | `Flapjack/Compiler/Backend/StackNames.lean` |
+| `compiler/backend/stackLangScript.sml` (shared-word `prog`) | `Flapjack/Compiler/Backend/StackCarrier.lean` (canonical single-word-parameter `ProgW`; untagged carrier, no theorem) |
 | `compiler/backend/proofs/stack_removeProofScript.sml` | `Flapjack/Compiler/Backend/StackRemove.lean` (`is_SOME_Word`, `read_mem`/`LENGTH_read_mem`, `addresses`/`IN_addresses`; `names_ok` Prop-shaped tag) |
 | `compiler/backend/stack_allocScript.sml` | `Flapjack/Compiler/Backend/StackAlloc.lean` (`next_lab`; executable pass counterpart remains `Flapjack/StackAlloc.lean`) |
 | `compiler/backend/stack_to_labScript.sml` | `Flapjack/Compiler/Backend/StackToLab.lean` (`flatten` and `prog_to_section`; `compile` remains open) |

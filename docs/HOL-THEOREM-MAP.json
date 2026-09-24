@@ -393,6 +393,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This all-finite-index source-evaluator result has the successful Option word_lab premise and conclusion, arbitrary code-map update, and simp_exp result of HOL simp_exp_correct. It remains untagged because the source evaluator/state/op dictionary is not yet identified theoremically with native HOL crepSem eval and word operations."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceFull",

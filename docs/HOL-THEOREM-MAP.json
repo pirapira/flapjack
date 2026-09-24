@@ -456,6 +456,14 @@
     "reviewer": "Flapjack-only all-constructor production evaluator preservation helper using an explicit finite-dimension RISC-V/BitVec interpretation"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_loadGlob_eq_finiteDimension",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter bridge for the LoadGlob evaluator case between the source-shaped finite-word equations and canonical finite-dimension evaluator"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

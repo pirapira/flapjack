@@ -1041,3 +1041,12 @@ run_probe word_convs_extract_labels_probeScript.sml word_convs_extract_labels_pr
   el_inst el_nested \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The instruction-predicate probe observes the `distinct_tar_reg` and
+# `two_reg_inst` arithmetic cases, and `every_inst` descending through the
+# program's structural positions (including the `Call` return-metadata
+# nesting).
+run_probe word_convs_inst_preds_probeScript.sml word_convs_inst_preds_probe.out \
+  dtr_binop_same ei_alloc \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

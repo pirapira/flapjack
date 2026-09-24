@@ -7446,5 +7446,29 @@
     "lean_name": "extractLabels",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "distinct_tar_reg_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "distinctTarReg",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "two_reg_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "twoRegInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "every_inst_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "everyInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

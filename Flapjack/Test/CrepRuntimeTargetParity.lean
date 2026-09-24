@@ -454,6 +454,43 @@ example :
 
 #eval crepOpEvalGuard
 
+/-! ## All-expression evaluator correspondence with the HOL-shaped reference -/
+
+/-- RV64 locals with two word variables, so correspondence can be checked on
+    non-constant operands. -/
+def corrLocals : Nat → Option (PanWordLab (RiscV.Word 64)) :=
+  fun name =>
+    if name == 1 then some (.word (5 : RiscV.Word 64))
+    else if name == 2 then some (.word (3 : RiscV.Word 64)) else none
+
+def corrState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with locals := corrLocals }
+
+/-- The production RV64 evaluator read through `PanWordLab.word` equals the
+    HOL-shaped reference evaluator on compound, non-constant expressions. -/
+def corrGuard : Bool :=
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget corrState)
+      (.op .add [.var 1, .var 2])).map PanWordLab.word ==
+      holCrepEval64 corrState (.op .add [.var 1, .var 2]) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget corrState)
+      (.cmp .lower (.var 1) (.var 2))).map PanWordLab.word ==
+      holCrepEval64 corrState (.cmp .lower (.var 1) (.var 2)) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget corrState)
+      (.shift .lsl (.var 2) (.var 2))).map PanWordLab.word ==
+      holCrepEval64 corrState (.shift .lsl (.var 2) (.var 2)) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget corrState)
+      (.crepOp .mul [.var 1, .var 2])).map PanWordLab.word ==
+      holCrepEval64 corrState (.crepOp .mul [.var 1, .var 2])
+
+example :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget corrState)
+        (.op .add [.var 1, .var 2])).map PanWordLab.word =
+      holCrepEval64 corrState (.op .add [.var 1, .var 2]) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 corrState _
+
+#guard corrGuard
+#eval corrGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -487,8 +524,12 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Crepop Mul evaluator case matches HOL crep_op oracle"
   else
     IO.println "FAIL crep Crepop Mul evaluator case matches HOL crep_op oracle"
+  if corrGuard then
+    IO.println "PASS crep RV64 evaluator correspondence holds on compound expressions"
+  else
+    IO.println "FAIL crep RV64 evaluator correspondence holds on compound expressions"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
-    crepOpEvalGuard)
+    crepOpEvalGuard && corrGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

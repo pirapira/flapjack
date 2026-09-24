@@ -31,7 +31,7 @@ for the review rule.
 
 | HOL script | Lean counterpart |
 | --- | --- |
-| `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` (exact `mlstring`-named syntax over the faithful carriers in `Flapjack/Pancake/PanLang/Shape.lean` and `Flapjack/Pancake/PanLang/Exp.lean` and follow-ups) |
+| `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` (exact `mlstring`-named syntax over the faithful carriers in `Flapjack/Pancake/PanLang/Shape.lean`, `Flapjack/Pancake/PanLang/Exp.lean` and `Flapjack/Pancake/PanLang/Prog.lean`, and follow-ups) |
 | `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` (`word_loc` width-indexed `WordLocW` (`[NeZero width]`) plus generic bridge; backend syntax) |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
 | `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (`store_name`; generic `prog` syntax, `list_Seq`); exact width-indexed asm payload carriers `reg_imm`/`addr`/`inst` live in `Flapjack/Compiler/Encoders/Asm.lean`; exact width-indexed `prog` carrier `HolProg` tagged in `Flapjack/Compiler/Backend/StackLang/Prog.lean` over the faithful `MlString` FFI field; production shared-word `ProgW` (`String` FFI) in `Flapjack/Compiler/Backend/StackCarrier.lean`, bridged by `Flapjack/Compiler/Backend/MlStringBridge.lean` |
@@ -62,6 +62,7 @@ for the review rule.
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
 | `crep_inlineScript.sml` | `Flapjack/Pancake/CrepInline.lean`, `CrepInline/Pass.lean` |
 | `crep_to_loopScript.sml` | `Flapjack/Pancake/CrepToLoop.lean`, `CrepToLoop/Optimise.lean` |
+| `misc/miscScript.sml` (`spt`/`num_set`) | `Flapjack/Misc/Sptree.lean` (exact `spt` inductive carrier + tagged `num_set` abbrev; `Spt` itself untagged because HOL/src is outside cakeml) |
 | `loopLangScript.sml` | `Flapjack/Pancake/LoopLang.lean` (exact exp/loop_arith carriers; prog as an UNTAGGED approximation pending an exact `unit spt` num_set carrier, bead .18.5.17.1.1.1) |
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |

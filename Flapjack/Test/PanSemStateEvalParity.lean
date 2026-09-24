@@ -930,4 +930,53 @@ example :
       (some (holCodecAccess littleEndianState)) 2)
     (by intro op l r; rfl)
 
+/-- Access whose `read32`/`readByte` are the exact tagged HOL load functions on
+    `holEvalState`, used by the production `load32`/`loadByte` clause bridges. -/
+def holLoadAccess (base : PanValueMemoryAccess (RiscV.Word 64)) :
+    PanValueMemoryAccess (RiscV.Word 64) :=
+  { base with
+    read32 := fun _ _ _ address =>
+      (panMemLoad32HOL (width := 64) holEvalState.memory holEvalState.memaddrs
+          holEvalState.be address).map (fun value => BitVec.ofNat 64 value.toNat),
+    readByte := fun _ _ _ address =>
+      (panMemLoadByteHOL (width := 64) holEvalState.memory holEvalState.memaddrs
+          holEvalState.be address).map (fun byte => BitVec.ofNat 64 byte.toNat) }
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.load32 (.const 0))
+        (memoryAccess := some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState)))
+      = (evalHOL holEvalState (.load32 (.const 0))).map HolValue.toPanValue :=
+  evalPanValueExp_load32_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState)) (.const 0)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState))) 0)
+    (by intro word; simp only [holLoadAccess]; rw [Option.map_map]; rfl)
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.loadByte (.const 0))
+        (memoryAccess := some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState)))
+      = (evalHOL holEvalState (.loadByte (.const 0))).map HolValue.toPanValue :=
+  evalPanValueExp_loadByte_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState)) (.const 0)
+    (evalPanValueExp_const_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+      (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+      (some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState))) 0)
+    (by intro word; simp only [holLoadAccess]; rw [Option.map_map]; rfl)
+
+#guard evalPanValueWordResult
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.load32 (.const 0))
+        (memoryAccess := some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState))))
+  == some (BitVec.ofNat 64 0x55667788)
+#guard evalPanValueWordResult
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.loadByte (.const 0))
+        (memoryAccess := some (holLoadAccess (panSemBitVec64MemoryAccess littleEndianState))))
+  == some (BitVec.ofNat 64 136)
+
 end Flapjack.Test.PanSemStateEvalParity

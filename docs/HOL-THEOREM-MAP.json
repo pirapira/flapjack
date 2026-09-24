@@ -8364,7 +8364,7 @@
   "hol_name": "distinct_lists_def",
   "lean_path": "Flapjack/Pancake/PanCommon.lean",
   "lean_name": "distinctListsHol",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison; DecidableEq membership interface)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
 }
 ]

@@ -66,7 +66,11 @@ def compilePanOp : PanOp → CrepOp
     A variable absent from the finite map produces no code; a present variable
     is initialized from the global return area, one word per flattened local,
     with the assignments nested in source order.  The second component of the
-    stored pair is the flattened word list; the shape is not consulted. -/
+    stored pair is the flattened word list; the shape is not consulted.
+
+    Calls the generic `crepNestedSeq`; the tagged width-indexed `crepNestedSeqW`
+    is a definitional delegation of it, so this executed use computes the
+    identical function (`flapjack-pxn.18.4.3.82`). -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
 def expHdlFiniteMap {α : Type u}
     (fm : FiniteMap VarName (Shape × List Nat)) (v : VarName) : CrepProg α :=

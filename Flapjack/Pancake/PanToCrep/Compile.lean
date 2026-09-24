@@ -134,6 +134,10 @@ def firstCompiledExpAnyShapeHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord 
   | (compiled :: _, _) => some compiled
   | _ => none
 
+/-- Maximum variable index mentioned by the given compiled expressions.  Calls
+    the generic `crepExpVars`; the tagged width-indexed `crepExpVarsW` is a
+    definitional delegation of it, so this executed use computes the identical
+    function (`flapjack-pxn.18.4.3.82`). -/
 def maxCrepExpVarHOL (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 

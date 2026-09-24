@@ -153,6 +153,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "ExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype exp = Const ('a word) | Var varkind varname | RStruct (exp list) | RField index exp | NStruct stcname ((fldname # exp) list) | NField fldname exp | Load shape exp | Load32 exp | LoadByte exp | Op binop (exp list) | Panop panop (exp list) | Cmp cmp exp exp | Shift shift exp exp | BaseAddr | TopAddr | BytesInWord (panLangScript.sml:53-69) vs ExpHOL {width} [NeZero width] with 16 constructors in the same order: const(BitVec width), var(VarKind)(MlS), rstruct(List ExpHOL), rfield(Nat)(ExpHOL), nstruct(MlS)(List (MlS x ExpHOL)), nfield(MlS)(ExpHOL), load(ShapeHOL)(ExpHOL), load32/loadByte(ExpHOL), op/panop(BinOp/PanOp)(List ExpHOL), cmp/shift(Cmp/Shift)(ExpHOL x ExpHOL), baseAddr/topAddr/bytesInWord; arities and field types match with varname/stcname/fldname = MlS (exact mlstring carrier) and Const over BitVec width. Production Flapjack.Exp is generic and untagged; kernel codec expToHOL/expOfHOL with total expToHOL_expOfHOL and byte-ranged ExpByteRanged side condition for expOfHOL_expToHOL; direct HOL oracle scripts/hol-probes/pan_lang_exp_probe.out reproduced by Flapjack/Test/PanLangExpHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",

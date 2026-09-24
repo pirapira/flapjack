@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi

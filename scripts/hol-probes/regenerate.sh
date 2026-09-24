@@ -1449,3 +1449,10 @@ run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
   exp_const arith_div \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
+
+# The panLang exp probe pins the `exp` word payload (`Const`), its `mlstring`
+# identifier fields, and representative constructor arities at word type 64.
+run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
+  ex_const ex_bytesinword \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"

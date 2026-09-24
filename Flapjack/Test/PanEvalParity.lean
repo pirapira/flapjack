@@ -34,11 +34,44 @@ def observeField : Bool :=
   | _ => false
 def observeMissing : Bool := (panEval context (.var .local "missing")).isNone
 
+def structContext : PanEvalContext Nat where
+  structs := [("Pair", { fields := [("left", Shape.one), ("right", Shape.one)],
+                          size := 2 })]
+  locals := fun _ => none
+  globals := fun _ => none
+  memory := fun _ => none
+  baseAddress := 0
+  topAddress := 0
+  bytesInWord := 8
+
+def isNamed (name : String) (arity : Nat) : Option (PanValue Nat) → Bool
+  | some (.nStruct actual fields) => actual == name && fields.length == arity
+  | _ => false
+
+def observeNStruct : Bool :=
+  isNamed "Pair" 2 (panEval structContext
+    (.nStruct "Pair" [("left", .const 3), ("right", .const 4)]))
+
+def observeNStructNameMismatch : Bool :=
+  (panEval structContext
+    (.nStruct "Pair" [("left", .const 3), ("bad", .const 4)])).isNone
+
+def observeNStructShapeMismatch : Bool :=
+  (panEval structContext
+    (.nStruct "Pair" [("left", .const 3), ("right", .rStruct [])])).isNone
+
+def observeMissingStruct : Bool :=
+  (panEval context (.nStruct "Pair" [])).isNone
+
 #guard observeConst
 #guard observeLocal
 #guard observeGlobal
 #guard observeField
 #guard observeMissing
+#guard observeNStruct
+#guard observeNStructNameMismatch
+#guard observeNStructShapeMismatch
+#guard observeMissingStruct
 
 def runChecks : IO Bool := do
   if observeConst then IO.println "PASS eval constant" else IO.println "FAIL eval constant"
@@ -46,6 +79,15 @@ def runChecks : IO Bool := do
   if observeGlobal then IO.println "PASS eval global" else IO.println "FAIL eval global"
   if observeField then IO.println "PASS eval structured field" else IO.println "FAIL eval structured field"
   if observeMissing then IO.println "PASS eval missing" else IO.println "FAIL eval missing"
-  pure (observeConst && observeLocal && observeGlobal && observeField && observeMissing)
+  if observeNStruct then IO.println "PASS eval NStruct" else IO.println "FAIL eval NStruct"
+  if observeNStructNameMismatch then IO.println "PASS eval NStruct name mismatch"
+    else IO.println "FAIL eval NStruct name mismatch"
+  if observeNStructShapeMismatch then IO.println "PASS eval NStruct shape mismatch"
+    else IO.println "FAIL eval NStruct shape mismatch"
+  if observeMissingStruct then IO.println "PASS eval NStruct missing struct"
+    else IO.println "FAIL eval NStruct missing struct"
+  pure (observeConst && observeLocal && observeGlobal && observeField && observeMissing &&
+    observeNStruct && observeNStructNameMismatch && observeNStructShapeMismatch &&
+    observeMissingStruct)
 
 end Flapjack.Test.PanEvalParity

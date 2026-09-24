@@ -652,7 +652,7 @@ run_probe pan_sh_mem_store_probeScript.sml pan_sh_mem_store_probe.out \
   zero_width_domain_error nonzero_width_domain_error \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_eval_probeScript.sml pan_eval_probe.out \
-  eval_const eval_missing \
+  eval_const eval_probe_done \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_mrec_probeScript.sml pan_mrec_probe.out \
   mrec_ret mrec_external \

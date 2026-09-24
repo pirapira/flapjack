@@ -2333,10 +2333,13 @@ theorem panStructCompileExpCorrectNStructCase
       | none =>
           simp [evalPanValueExpFull, hlookup, hfieldEval] at heval
       | some fieldValues =>
-          by_cases hshapes : panValueFieldsHaveShapes state.structs info.fields
+          by_cases hshapesExact : panValueFieldsExactHOL state.structs info.fields
               fieldValues = true
-          · have hvalue : value = .nStruct name fieldValues := by
-              simp [evalPanValueExpFull, hlookup, hfieldEval, hshapes] at heval
+          · have hshapes : panValueFieldsHaveShapes state.structs info.fields
+                fieldValues = true := by
+              simpa [panValueFieldsExactHOL_eq_haveShapes] using hshapesExact
+            have hvalue : value = .nStruct name fieldValues := by
+              simp [evalPanValueExpFull, hlookup, hfieldEval, hshapesExact] at heval
               exact heval.symm
             subst value
             have hlookupLocal : lookupInfo name state.structs = some info := by
@@ -2476,7 +2479,7 @@ theorem panStructCompileExpCorrectNStructCase
               simpa [panStructConvertState, panStructConvertValue,
                 panStructConvertFieldValues_eq_map, structCompileExp.structCompileExps]
                 using htargetListLocal
-          · simp [evalPanValueExpFull, hlookup, hfieldEval, hshapes] at heval
+          · simp [evalPanValueExpFull, hlookup, hfieldEval, hshapesExact] at heval
 
 /-- Derived NField-constructor case of HOL `compile_exp_correct`. The
     recursive hypothesis for the receiver carries the translated context,

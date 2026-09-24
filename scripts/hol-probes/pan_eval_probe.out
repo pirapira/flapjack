@@ -1,10 +1,10 @@
 eval_const=T
-
 eval_local=T
-
 eval_global=T
-
 eval_field=T
-
 eval_missing=T
-
+eval_nstruct_ok=T
+eval_nstruct_name_mismatch=T
+eval_nstruct_shape_mismatch=T
+eval_missing_struct=T
+eval_probe_done=0

@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Encoders.Asm
+import Flapjack.Compiler.Backend.RegAlloc
 
 /-!
 # CakeML backend `wordConvs` syntactic conventions
@@ -418,5 +419,24 @@ def goodHandlers {width : Nat} (n : Nat) : WordLangProg (BitVec width) -> Bool
       goodHandlers n thenBranch && goodHandlers n elseBranch
   | .mustTerminate body => goodHandlers n body
   | _ => true
+
+/-- HOL `wordConvsScript$pre_alloc_conventions_def` (`wordConvsScript.sml:425-429`).
+It asserts the pre-allocation convention on a backend program: every name in
+the program's cut sets is a stack variable (`is_stack_var`), and the call
+argument convention holds.  Untagged: it is built from the untagged
+`everyStackVar`/`callArgConvention` (the `num_set` sub-terms use the audited
+order-insensitive domain model of `docs/NUM-SET-AUDIT.md`). -/
+def preAllocConventions {width : Nat} (program : WordLangProg (BitVec width)) : Prop :=
+  everyStackVar isStackVar program ∧ callArgConvention program
+
+/-- HOL `wordConvsScript$post_alloc_conventions_def` (`wordConvsScript.sml:432-437`).
+It asserts the post-allocation convention on a backend program: every register
+is a physical register (`is_phy_var`), every name in the cut sets is at least
+`2 * k`, and the call argument convention holds.  Untagged for the same reason
+as `preAllocConventions`. -/
+def postAllocConventions {width : Nat} (k : Nat) (program : WordLangProg (BitVec width)) : Prop :=
+  everyVar isPhyVar program ∧
+    everyStackVar (fun name => decide (name ≥ 2 * k)) program ∧
+    callArgConvention program
 
 end Flapjack

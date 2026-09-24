@@ -232,6 +232,15 @@ run_probe crep_every_exp_probeScript.sml crep_every_exp_probe.out \
 run_probe crep_assigned_vars_probeScript.sml crep_assigned_vars_probe.out \
   afv_prog nested_afv "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe crep_dec_clock_simp_probeScript.sml crep_dec_clock_simp_probe.out \
+  dec_clock_clock empty_locals_memory "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+run_probe crep_to_loop_state_rel_probeScript.sml crep_to_loop_state_rel_probe.out \
+  memaddrs_mdomain_mem clock_mismatch "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_globals_rel_probeScript.sml crep_to_loop_globals_rel_probe.out \
+  wlab_wloc_word globals_lookup_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq zip_lookup_witness "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -1171,4 +1180,18 @@ run_probe num_set_audit_probeScript.sml num_set_audit_probe.out \
 run_probe word_lang_every_name_probeScript.sml word_lang_every_name_probe.out \
   en_empty esv_seq_bad \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# `pre_alloc_conventions` / `post_alloc_conventions`: stack/phy predicates,
+# the `2*k` bound, and the call-argument convention.
+run_probe word_convs_alloc_conventions_probeScript.sml word_convs_alloc_conventions_probe.out \
+  pre_ok_ffi post_ok_ret \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The labProps probe pins `line_ok_pre`/`all_enc_ok_pre` and the concrete
+# `cbw_to_asm` mapping at an 8-bit configuration.
+run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out \
+  line_ok_asm_skip cbw_to_asm_sharemem \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"

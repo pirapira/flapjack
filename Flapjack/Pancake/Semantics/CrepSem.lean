@@ -172,49 +172,123 @@ theorem crepHolEvalMemLoad32_eq_panModelRead32 [Add α]
     simp [hcell, panTheWord]
   · simp [haligned]
 
-/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
-    over the 11-field `CrepHolState`:
-    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
+/-- Generic production global update on the 11-field `CrepHolState`.
+    HOL `crepSem$set_globals_def` (`crepSemScript.sml:61`) is word-length
+    indexed (`'a crepSem$state`), so the generic-`α` form is deliberately
+    UNTAGGED (a generic parameter is not the fixed HOL word carrier); the
+    width-indexed exact counterpart is `setCrepHolGlobalsW` below.
     Production `setCrepRuntimeGlobals` routes its globals update through this
     definition while preserving its three extra configuration fields. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
 def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with globals := FUPDATE state.globals (key, value) }
 
-/-- HOL `crepSem$dec_clock_def` on the 11-field Crep state. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$set_globals_def`
+    (`crepSemScript.sml:61`): `set_globals gv w s = s with globals := s.globals |+ (gv,w)`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`, which
+    is HOL's `'a crepSem$state` at `'a := BitVec width`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+def setCrepHolGlobalsW {width : Nat} {σ : Type} (key : BitVec 5)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with globals := FUPDATE state.globals (key, value) }
+
+/-- Kernel-checked bridge: the width-indexed exact `set_globals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem setCrepHolGlobalsW_eq_setCrepHolGlobals {width : Nat} {σ : Type}
+    (key : BitVec 5) (value : PanWordLab (BitVec width))
+    (state : CrepHolState (BitVec width) σ) :
+    setCrepHolGlobalsW key value state = setCrepHolGlobals key value state := rfl
+
+/-- Generic production clock decrement on the 11-field `CrepHolState`. HOL
+    `crepSem$dec_clock_def` (`crepSemScript.sml:145-148`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `decCrepHolClockW` below. -/
 def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with clock := state.clock - 1 }
 
-/-- Exact HOL-shaped port of `crepSem$set_var_def` (crepSemScript.sml:55-57)
-    over the 11-field `CrepHolState`:
-    `set_var v w s = s with locals := s.locals |+ (v,w)`.
-    This is the local-binding step used by the `Assign` and `Primitive`
-    clauses of `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$dec_clock_def`
+    (`crepSemScript.sml:145-148`): `dec_clock s = s with clock := s.clock - 1`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+def decCrepHolClockW {width : Nat} {σ : Type} (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Kernel-checked bridge: the width-indexed exact `dec_clock` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem decCrepHolClockW_eq_decCrepHolClock {width : Nat} {σ : Type}
+    (state : CrepHolState (BitVec width) σ) :
+    decCrepHolClockW state = decCrepHolClock state := rfl
+
+/-- Generic production local-binding update on the 11-field `CrepHolState`.
+    HOL `crepSem$set_var_def` (`crepSemScript.sml:55-57`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `setCrepHolVarW` below. -/
 def setCrepHolVar (name : Nat) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE state.locals (name, value) }
 
-/-- Exact HOL-shaped port of `crepSem$upd_locals_def` (crepSemScript.sml:66-68)
-    over the 11-field `CrepHolState`, following HOL's `|++` (foldl `|+`) order:
-    `upd_locals varargs s = s with locals := FEMPTY |++ varargs`.
-    This is the callee-parameter step used by the `Call` clause of
-    `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$set_var_def`
+    (`crepSemScript.sml:55-57`): `set_var v w s = s with locals := s.locals |+ (v,w)`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+def setCrepHolVarW {width : Nat} {σ : Type} (name : Nat)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with locals := FUPDATE state.locals (name, value) }
+
+/-- Kernel-checked bridge: the width-indexed exact `set_var` counterpart agrees
+    with the generic production definition at `BitVec width`. -/
+theorem setCrepHolVarW_eq_setCrepHolVar {width : Nat} {σ : Type} (name : Nat)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    setCrepHolVarW name value state = setCrepHolVar name value state := rfl
+
+/-- Generic production callee-parameter update on the 11-field `CrepHolState`.
+    HOL `crepSem$upd_locals_def` (`crepSemScript.sml:66-68`) is word-length
+    indexed, so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `updCrepHolLocalsW` below. -/
 def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE_LIST FEMPTY varargs }
 
-/-- Exact HOL-shaped port of `crepSem$empty_locals_def` (crepSemScript.sml:71)
-    over the 11-field `CrepHolState`:
-    `empty_locals s = s with locals := FEMPTY`.
-    This is the state-clearing step at the terminal `While` timeout, `Raise`
-    and `Return` boundaries of `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$upd_locals_def`
+    (`crepSemScript.sml:66-68`) following HOL's `|++` (foldl `|+`) order:
+    `upd_locals varargs s = s with locals := FEMPTY |++ varargs` over
+    `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+def updCrepHolLocalsW {width : Nat} {σ : Type}
+    (varargs : List (Nat × PanWordLab (BitVec width)))
+    (state : CrepHolState (BitVec width) σ) : CrepHolState (BitVec width) σ :=
+  { state with locals := FUPDATE_LIST FEMPTY varargs }
+
+/-- Kernel-checked bridge: the width-indexed exact `upd_locals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem updCrepHolLocalsW_eq_updCrepHolLocals {width : Nat} {σ : Type}
+    (varargs : List (Nat × PanWordLab (BitVec width)))
+    (state : CrepHolState (BitVec width) σ) :
+    updCrepHolLocalsW varargs state = updCrepHolLocals varargs state := rfl
+
+/-- Generic production locals-clearing step on the 11-field `CrepHolState`.
+    HOL `crepSem$empty_locals_def` (`crepSemScript.sml:71`) is word-length
+    indexed, so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `emptyCrepHolLocalsW` below. -/
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$empty_locals_def`
+    (`crepSemScript.sml:71`): `empty_locals s = s with locals := FEMPTY` over
+    `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+def emptyCrepHolLocalsW {width : Nat} {σ : Type} (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with locals := FEMPTY }
+
+/-- Kernel-checked bridge: the width-indexed exact `empty_locals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem emptyCrepHolLocalsW_eq_emptyCrepHolLocals {width : Nat} {σ : Type}
+    (state : CrepHolState (BitVec width) σ) :
+    emptyCrepHolLocalsW state = emptyCrepHolLocals state := rfl
 
 /-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
     `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`
@@ -632,11 +706,10 @@ inductive CrepResultHOL (α ε : Type u) where
 abbrev CrepRuntimeStep (α σ ε : Type u) :=
   CrepRuntimeResult α ε × CrepRuntimeState α σ
 
-/-- HOL `crepSem$fix_clock_def` (crepSemScript.sml:150-152) on the 11-field
-    Crep state: keep the result and clamp the returned clock to the smaller of
-    the old and new clocks.  This is the clock-clamping component used by the
-    faithful `Seq`/`While`/`Call` clauses of `evaluate_def`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+/-- Generic production clock-clamping on the 11-field `CrepHolState`. HOL
+    `crepSem$fix_clock_def` (`crepSemScript.sml:150-152`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `fixCrepHolClockW` below. -/
 def fixCrepHolClock (oldState : CrepHolState α σ)
     (step : CrepRuntimeResult α ε × CrepHolState α σ) :
     CrepRuntimeResult α ε × CrepHolState α σ :=
@@ -644,6 +717,26 @@ def fixCrepHolClock (oldState : CrepHolState α σ)
     { step.2 with
       clock :=
         if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$fix_clock_def`
+    (`crepSemScript.sml:150-152`) over the word-length-indexed carrier
+    `CrepHolState (BitVec width) σ`: keep the result and clamp the returned
+    clock to the smaller of the old and new clocks. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+def fixCrepHolClockW {width : Nat} {σ ε : Type} (oldState : CrepHolState (BitVec width) σ)
+    (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :
+    CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ :=
+  (step.1,
+    { step.2 with
+      clock :=
+        if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- Kernel-checked bridge: the width-indexed exact `fix_clock` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem fixCrepHolClockW_eq_fixCrepHolClock {width : Nat} {σ ε : Type}
+    (oldState : CrepHolState (BitVec width) σ)
+    (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :
+    fixCrepHolClockW oldState step = fixCrepHolClock oldState step := rfl
 
 /-- The clock bound `fix_clock_IMP_LESS_EQ` (crepSemScript.sml:155-157): the
     clamped clock never exceeds the old state's clock.  Untagged here because

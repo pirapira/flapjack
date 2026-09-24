@@ -1,0 +1,7 @@
+memaddrs_mdomain_mem=T
+sh_memaddrs_sh_mdomain_mem=T
+clock_eq=T
+be_eq=T
+base_eq=T
+top_eq=T
+clock_mismatch=F

@@ -340,3 +340,90 @@ val _ = print_eval "recursive_deccall_timeout"
          code := FEMPTY |+
            («loop», ([], panLang$DecCall «nested» panLang$One «loop» []
              panLang$Skip, panLang$One)))))``
+
+(* Direct Return/Raise/Dec clause probes: success and failure.
+   Reference: panSemScript.sml:556-561 (Dec), :625-630 (Return/Raise). *)
+val _ = print_eval "return_clears_locals"
+  ``(FST (panSem$evaluate
+      (panLang$Return (panLang$Const (41w:8 word)),
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Return (panLang$Const (41w:8 word)),
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "x"))``
+
+val _ = print_eval "return_shape_too_big"
+  ``FST (panSem$evaluate
+      (panLang$Return
+         (panLang$RStruct
+            (GENLIST (K (panLang$Const (0w:8 word))) 33)),
+       (ARB:((8),unit) panSem$state)))``
+
+val _ = print_eval "raise_clears_locals"
+  ``(FST (panSem$evaluate
+      (panLang$Raise «E» (panLang$Const (5w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word));
+          eshapes := FEMPTY |+ («E», panLang$One) |>))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Raise «E» (panLang$Const (5w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word));
+          eshapes := FEMPTY |+ («E», panLang$One) |>)))).locals (strlit "x"))``
+
+val _ = print_eval "raise_missing_exception"
+  ``FST (panSem$evaluate
+      (panLang$Raise «E» (panLang$Const (5w:8 word)),
+       ((ARB:((8),unit) panSem$state) with eshapes := FEMPTY)))``
+
+val _ = print_eval "raise_shape_mismatch"
+  ``FST (panSem$evaluate
+      (panLang$Raise «E» (panLang$NStruct «big» []),
+       ((ARB:((8),unit) panSem$state) with <|
+          structs := [];
+          eshapes := FEMPTY |+ («E», panLang$One) |>)))``
+
+val _ = print_eval "dec_restores_locals"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         (panLang$Return (panLang$Var panLang$Local (strlit "x"))),
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         (panLang$Return (panLang$Var panLang$Local (strlit "x"))),
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_shape_mismatch"
+  ``FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$RStruct [])
+         panLang$Skip,
+       (ARB:((8),unit) panSem$state)))``
+
+val _ = print_eval "nb_op_op8" ``nb_op Op8``
+
+val _ = print_eval "nb_op_op16" ``nb_op Op16``
+
+val _ = print_eval "nb_op_opW" ``nb_op OpW``
+
+val _ = print_eval "nb_op_op32" ``nb_op Op32``
+
+val _ = print_eval "lookup_kvar_local"
+  ``lookup_kvar Local (strlit "x")
+      ((ARB:((8),unit) panSem$state) with
+         locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word)))``
+
+val _ = print_eval "lookup_kvar_global"
+  ``lookup_kvar Global (strlit "y")
+      ((ARB:((8),unit) panSem$state) with
+         globals := FEMPTY |+ (strlit "y", ValWord (4w:8 word)))``
+
+val _ = print_eval "lookup_kvar_missing"
+  ``lookup_kvar Local (strlit "z")
+      ((ARB:((8),unit) panSem$state) with locals := FEMPTY)``
+
+val _ = print_eval "pan_sem_e2e_done" ``0``

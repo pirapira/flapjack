@@ -4433,6 +4433,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "nb_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "nbOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",

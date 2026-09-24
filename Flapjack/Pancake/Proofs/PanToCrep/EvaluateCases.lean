@@ -875,9 +875,10 @@ theorem panToCrepPcCompileCorrectCallTimeoutCodeState
       htargetLookup
   have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
       some (.skip, fun _ => none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCodeLookup]
-    simp [assignCrepRuntimeLocals]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCodeLookup,
+      FUPDATE_LIST]
+    funext key
+    rfl
   have htargetCallRun : evalCrepRuntimeCall targetHandler targetPrimitive
       (fuel + 1) targetState none function [] =
       some (.timeout, clearCrepRuntimeLocals targetState) := by
@@ -963,9 +964,10 @@ theorem panToCrepPcCompileCorrectCallReturnConstCodeState
       compileExpHOL] using htargetLookup
   have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
       some (.return [.const value], fun _ => none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCodeLookup]
-    simp [assignCrepRuntimeLocals]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCodeLookup,
+      FUPDATE_LIST]
+    funext key
+    rfl
   have htargetNonzero : targetState.clock ≠ 0 := by omega
   have htargetRun : evalCrepRuntimeResult targetHandler targetPrimitive 3 targetState
       (compileCodeRelProg context (.call none function [])) =
@@ -1562,16 +1564,14 @@ theorem panToCrepPcCompileCorrectCallReturnParameterCodeStateRiscV64
       targetState.code =
         some (.return [.var 0], fun key =>
           if key == 0 then some (.word value) else none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCodeLookup]
-    simp [assignCrepRuntimeLocals]
-    constructor
-    · rfl
-    · funext key
-      by_cases hkey : key = 0
-      · simp [updateCrepRuntimeLocal, hkey]
-      · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
-        simp [updateCrepRuntimeLocal, hzero, hkey]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCodeLookup,
+      FUPDATE_LIST]
+    funext key
+    by_cases hkey : key = 0
+    · subst key
+      simp [FUPDATE]
+    · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
+      simp [FUPDATE, FEMPTY, hzero, hkey]
   have htargetClock : targetState.clock ≠ 0 := by omega
   have hcompiled : compileCodeRelProg context program =
       .call none function [.const value] := by
@@ -1679,16 +1679,14 @@ theorem panToCrepPcCompileCorrectCallAssignParameterCodeStateRiscV64
       targetState.code =
         some (.return [.var 0], fun key =>
           if key == 0 then some (.word value) else none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCodeLookup]
-    simp [assignCrepRuntimeLocals]
-    constructor
-    · rfl
-    · funext key
-      by_cases hkey : key = 0
-      · simp [updateCrepRuntimeLocal, hkey]
-      · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
-        simp [updateCrepRuntimeLocal, hzero, hkey]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCodeLookup,
+      FUPDATE_LIST]
+    funext key
+    by_cases hkey : key = 0
+    · subst key
+      simp [FUPDATE]
+    · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
+      simp [FUPDATE, FEMPTY, hzero, hkey]
   obtain ⟨slots, hsourceContextSlots, hslotLength, hsourceWords, _hwf⟩ :=
     localsRelLookupCtxt context sourceState.locals targetState.locals name
       (.word oldValue) hlocals (by simpa [FLOOKUP] using hdestination)
@@ -2154,17 +2152,14 @@ theorem panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64
   have htargetCallLookup : lookupCrepRuntimeCode function [value] targetState.code =
       some (.return [.var 0], fun key =>
         if key == 0 then some (.word value) else none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCodeLookup]
-    simp [assignCrepRuntimeLocals]
-    constructor
-    · rfl
-    · funext key
-      by_cases hkey : key = 0
-      · simp [updateCrepRuntimeLocal, hkey]
-      · have hzero : (0 == key) = false := by
-          simp [Ne.symm hkey]
-        simp [updateCrepRuntimeLocal, hzero, hkey]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCodeLookup,
+      FUPDATE_LIST]
+    funext key
+    by_cases hkey : key = 0
+    · subst key
+      simp [FUPDATE]
+    · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
+      simp [FUPDATE, FEMPTY, hzero, hkey]
   have htargetClock : targetState.clock ≠ 0 := by omega
   have hcompiled : compileCodeRelProg context program =
       .dec targetSlot (.const 0)
@@ -7980,6 +7975,32 @@ private theorem eraseDups_eq_self_of_nodup (values : List Nat)
         simp [hne]
       rw [hfilter, ih htail]
 
+private theorem crepRuntimeLocals_zip_eq_fupdateList
+    (slots : List Nat) (words : List (RiscV.Word 64))
+    (locals : Nat → Option (PanWordLab (RiscV.Word 64))) :
+    (slots.zip words).foldl
+        (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
+        locals =
+      FUPDATE_LIST locals (slots.zip (words.map PanWordLab.word)) := by
+  induction slots generalizing words locals with
+  | nil => cases words <;> simp [FUPDATE_LIST]
+  | cons slot slots ih =>
+      cases words with
+      | nil => rfl
+      | cons word words =>
+          simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons, FUPDATE_LIST]
+          have hfirst : updateCrepRuntimeLocal locals slot (.word word) =
+              FUPDATE locals (slot, .word word) := by
+            funext key
+            by_cases hkey : key = slot
+            · subst key
+              simp [updateCrepRuntimeLocal, FUPDATE]
+            · have hslotKey : (slot == key) = false := by
+                exact beq_eq_false_iff_ne.mpr (Ne.symm hkey)
+              simp [updateCrepRuntimeLocal, FUPDATE, hslotKey]
+          rw [hfirst, ih]
+          rfl
+
 theorem lookupCrepRuntimeCode_ofCodeRel
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -8015,41 +8036,23 @@ theorem lookupCrepRuntimeCode_ofCodeRel
     ⟨_, _, htargetEntry⟩
   have hnamesLength : names.length = argumentWords.length := by
     simpa [names] using hargumentLength
-  have hnamesEraseDups : names.eraseDups = names :=
-    eraseDups_eq_self_of_nodup names (by simp [names, List.nodup_range])
+  have hnamesNodup : names.Nodup := by simp [names, List.nodup_range]
   refine ⟨(names.zip argumentWords).foldl
       (fun locals (name, value) =>
         updateCrepRuntimeLocal locals name (.word value))
       (fun _ => none : Nat → Option (PanWordLab (RiscV.Word 64))), ?_, rfl⟩
-  unfold lookupCrepRuntimeCode
-  rw [htargetEntry]
-  simp [names, hnamesLength, hnamesEraseDups, assignCrepRuntimeLocals]
-
-private theorem crepRuntimeLocals_zip_eq_fupdateList
-    (slots : List Nat) (words : List (RiscV.Word 64))
-    (locals : Nat → Option (PanWordLab (RiscV.Word 64))) :
-    (slots.zip words).foldl
-        (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
-        locals =
-      FUPDATE_LIST locals (slots.zip (words.map PanWordLab.word)) := by
-  induction slots generalizing words locals with
-  | nil => cases words <;> simp [FUPDATE_LIST]
-  | cons slot slots ih =>
-      cases words with
-      | nil => rfl
-      | cons word words =>
-          simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons, FUPDATE_LIST]
-          have hfirst : updateCrepRuntimeLocal locals slot (.word word) =
-              FUPDATE locals (slot, .word word) := by
-            funext key
-            by_cases hkey : key = slot
-            · subst key
-              simp [updateCrepRuntimeLocal, FUPDATE]
-            · have hslotKey : (slot == key) = false := by
-                exact beq_eq_false_iff_ne.mpr (Ne.symm hkey)
-              simp [updateCrepRuntimeLocal, FUPDATE, hslotKey]
-          rw [hfirst, ih]
-          rfl
+  simp only [lookupCrepRuntimeCode, lookupCrepHolCode, htargetEntry]
+  have hvalid : names.length = (argumentWords.map PanWordLab.word).length ∧ names.Nodup := by
+    simp [names, hnamesLength, hnamesNodup]
+  rw [if_pos hvalid]
+  apply congrArg some
+  apply Prod.ext
+  · rfl
+  ·
+    change FUPDATE_LIST (fun _ : Nat => none)
+        (names.zip (argumentWords.map PanWordLab.word)) = _
+    exact (crepRuntimeLocals_zip_eq_fupdateList names argumentWords
+      (fun _ => none)).symm
 
 /-! Relate arbitrary-list target `exp_hdl` writes to the source handler-local
 assignment. This supplies the handler-body `locals_rel` premise for any
@@ -10622,9 +10625,10 @@ theorem panToCrepPcCompileCorrectCallRaiseOneWordExceptionCodeStateRiscV64
     simpa [Shape.shapeSize, functionContext, maxList, hcompiledBody] using htargetLookup
   have htargetCallLookup : lookupCrepRuntimeCode function [] targetState.code =
       some (targetBody, fun _ => none) := by
-    unfold lookupCrepRuntimeCode
-    rw [htargetCode]
-    simp [assignCrepRuntimeLocals]
+    simp [lookupCrepRuntimeCode, lookupCrepHolCode, htargetCode,
+      FUPDATE_LIST]
+    funext key
+    rfl
   have htargetClock : targetState.clock ≠ 0 := by omega
   have hcompiledCall : compileCodeRelProg context program =
       .call none function [] := by

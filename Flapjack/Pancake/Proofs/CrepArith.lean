@@ -170,9 +170,10 @@ private theorem crepMulConst_holFiniteDimension {ι : Type}
             (CrepExp.const word))
             (holWordToBitVec_bitVecToHolWord dimension _)
 
-/-- CakeML's `dest_const_thm`: a successful destination test identifies the
-    expression as exactly that constant. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+/-- Generic Flapjack support lemma: a successful destination test identifies
+    the expression as exactly that constant. This is not tagged as HOL's
+    `dest_const_thm`, whose expression and value are restricted to the HOL
+    word type; the faithful width-indexed word theorem remains open. -/
 theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     (value : α)
     (h : crepDestConst expression = some value) :

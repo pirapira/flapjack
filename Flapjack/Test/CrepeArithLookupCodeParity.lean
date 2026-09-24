@@ -18,6 +18,12 @@ private def arguments : List (PanWordLab Word8) := [.word 9]
 
 private def simpCode := crepArithSimpCodeMap (BitVec.ofNat 8) code
 
+private def wrongArityCode : FunName → Option (List Nat × CrepProg Word8) :=
+  FUPDATE FEMPTY ("f", ([1, 2], .skip))
+
+private def duplicateParameterCode : FunName → Option (List Nat × CrepProg Word8) :=
+  FUPDATE FEMPTY ("f", ([1, 1], .skip))
+
 example :
     lookupCrepHolCode simpCode "f" arguments 1 =
       (lookupCrepHolCode code "f" arguments 1).map
@@ -44,6 +50,22 @@ example :
        | _ => false) &&
       FLOOKUP locals 1 == some (.word (BitVec.ofNat 8 9))
   | none => false
+
+/- The production call lookup is definitionally routed through the same
+   HOL-shaped lookup helper; the checked oracle row above is the direct HOL
+   successful lookup observation. -/
+#guard match lookupCrepRuntimeCode "f" [BitVec.ofNat 8 9] simpCode with
+  | some (body, locals) =>
+      (match body with
+       | .assign 2 (.const value) => value == BitVec.ofNat 8 8
+       | _ => false) &&
+      FLOOKUP locals 1 == some (.word (BitVec.ofNat 8 9))
+  | none => false
+
+#guard (lookupCrepRuntimeCode "f" [BitVec.ofNat 8 9] wrongArityCode).isNone
+#guard (lookupCrepRuntimeCode "f"
+  [BitVec.ofNat 8 9, BitVec.ofNat 8 10] duplicateParameterCode).isNone
+#guard (lookupCrepRuntimeCode "missing" [] code).isNone
 
 #guard (lookupCrepHolCode simpCode "missing" [] 0).isNone
 

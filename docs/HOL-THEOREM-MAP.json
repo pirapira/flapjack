@@ -280,20 +280,12 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/crep_arithScript.sml",
-    "hol_name": "dest_const_def",
-    "lean_path": "Flapjack/Pancake/CrepArith.lean",
-    "lean_name": "crepDestConst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (Const payload and Option result match the imported CrepExp constructor shape; direct HOL-EVAL probe paired with production simplifier checks)"
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (fully polymorphic statement comparison with HOL dest_const_thm and direct HOL-EVAL constructor probe)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (HOL dest_const_thm is quantified over word-valued CrepExp; this support theorem permits arbitrary alpha. Width-indexed faithful port remains open.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

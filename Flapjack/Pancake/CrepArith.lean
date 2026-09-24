@@ -12,9 +12,11 @@ that inspect intermediate artifacts.
 
 namespace Flapjack
 
-/-- Exact executable counterpart of CakeML's `crep_arith$dest_const_def`
-    (`crep_arithScript.sml:10-12`): extract the word only from a Const node. -/
-@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+/-- Generic Flapjack helper for extracting a value from a Const node.
+    This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
+    stores an `'a word`, while this helper accepts arbitrary `α`. A
+    width-indexed word-shaped port and its connection to this production
+    helper remain open. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none

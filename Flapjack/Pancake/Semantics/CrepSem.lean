@@ -545,28 +545,14 @@ def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepP
       then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
       else none
 
-/-- Executed code lookup.  Kept in its original raw form; the kernel-checked
-    adapter `lookupCrepRuntimeCode_eq_lookupCrepHolCode` shows that under
-    `[LawfulBEq String]` it agrees with the tagged HOL-shaped
-    `lookupCrepHolCode` (`lookup_code_def`) applied to the arguments wrapped
-    with `PanWordLab.word`.  The HOL `ALL_DISTINCT` (`List.Nodup`) check of
-    `lookupCrepHolCode` agrees with the `parameters.eraseDups.length ==
-    parameters.length` check here (`eraseDups_length_eq_iff_nodup`), and the
-    locals agree (`zip_word_eq`).  Literal routing of the executed path through
-    `lookupCrepHolCode` (which requires migrating the `EvaluateCases.lean`
-    unfold sites) is tracked separately. -/
+/-- Executed code lookup routed through the exact HOL-shaped
+    `lookupCrepHolCode` definition. The runtime passes evaluated words as
+    `PanWordLab.word` cells; its local map is the same function representation
+    used by the HOL-shaped finite map. -/
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
     Option (CrepProg α × (Nat → Option (PanWordLab α))) :=
-  match FLOOKUP code name with
-  | none => none
-  | some (parameters, body) =>
-      if parameters.length == values.length &&
-          parameters.eraseDups.length == parameters.length then
-        match assignCrepRuntimeLocals (fun _ => none) parameters values with
-        | some locals => some (body, locals)
-        | none => none
-      else none
+  lookupCrepHolCode code name (values.map PanWordLab.word) 0
 
 theorem zip_word_eq {α : Type} (names : List Nat) (values : List α) :
     names.zip (values.map PanWordLab.word) =
@@ -581,31 +567,8 @@ theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq Strin
     (name : FunName) (values : List α) (len : Nat)
     (code : FunName → Option (List Nat × CrepProg α)) :
     lookupCrepRuntimeCode name values code =
-      lookupCrepHolCode code name (values.map PanWordLab.word) len := by
-  unfold lookupCrepRuntimeCode lookupCrepHolCode
-  cases hcode : FLOOKUP code name with
-  | none => rfl
-  | some pair =>
-    obtain ⟨parameters, body⟩ := pair
-    simp only []
-    by_cases hlen : parameters.length = values.length
-    · by_cases hnodup : parameters.Nodup
-      · have hlenb : (parameters.length == values.length) = true := beq_iff_eq.mpr hlen
-        have hnodupb : (parameters.eraseDups.length == parameters.length) = true :=
-          beq_iff_eq.mpr ((eraseDups_length_eq_iff_nodup parameters).mpr hnodup)
-        rw [hlenb, hnodupb, Bool.and_self, if_pos (show true = true from rfl)]
-        rw [assignCrepRuntimeLocals_empty_eq parameters values hlen]
-        rw [if_pos ⟨by rw [hlen, List.length_map], hnodup⟩]
-        rw [zip_word_eq]
-      · have hlenb : (parameters.length == values.length) = true := beq_iff_eq.mpr hlen
-        have hnodupb : (parameters.eraseDups.length == parameters.length) = false :=
-          beq_eq_false_iff_ne.mpr
-            (fun h => hnodup ((eraseDups_length_eq_iff_nodup parameters).mp h))
-        rw [hlenb, hnodupb, Bool.and_false, if_neg (by decide)]
-        rw [if_neg (fun h => hnodup h.2)]
-    · have hlenb : (parameters.length == values.length) = false := beq_eq_false_iff_ne.mpr hlen
-      rw [hlenb, Bool.false_and, if_neg (by decide)]
-      rw [if_neg (fun h => hlen (by rw [h.1, List.length_map]))]
+    lookupCrepHolCode code name (values.map PanWordLab.word) len := by
+  rfl
 
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)

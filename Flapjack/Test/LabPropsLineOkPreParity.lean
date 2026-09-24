@@ -113,6 +113,31 @@ example (h : Flapjack.Compiler.Backend.StackProps.stackAsmOk
     (2 < cfg8.regCount && !cfg8.avoidRegs.contains 2) = true :=
   stackAsmOk_asmChecksOfConfig_raise cfg8 2 h
 
+/-- The decomposition lemmas split a recursive `stack_asm_ok` obligation. -/
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8)
+      (.seq (.tick : P) (.skip : P) : P) = true) ↔
+    (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.tick : P) = true ∧
+      Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true) :=
+  stackAsmOk_asmChecksOfConfig_seq cfg8 _ _
+
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.loop (.skip : P) : P) = true) ↔
+    Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true :=
+  stackAsmOk_asmChecksOfConfig_loop cfg8 _
+
+example : (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+      (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8)
+      (.call (some ((.skip : P), 7, 1, 0)) (.inl 2) (some ((.tick : P), 3, 4)) : P) = true) ↔
+    (Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.skip : P) = true ∧
+      Flapjack.Compiler.Backend.StackProps.stackAsmOk
+        (Flapjack.Compiler.Backend.StackProps.asmChecksOfConfig cfg8) (.tick : P) = true) :=
+  stackAsmOk_asmChecksOfConfig_call_some_inl_some cfg8 _ 7 1 0 2 _ 3 4
+
 def runChecks : IO Bool := do
   let guards : List Bool :=
     [ decide (lineOkPreConfig cfg8 asmSkipLine = true)

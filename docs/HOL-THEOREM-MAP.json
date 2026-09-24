@@ -5181,7 +5181,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectConstCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Const-constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp; intentionally untagged because HOL has only the universally quantified theorem, not a separately named Const-case theorem. The Lean statement re-encodes the struct premise as projected shape-view equality, FEVERY field validity as pointwise Bool predicates over total lookups, and FMAP_MAP2 as pointwise shape-map adapters. PanStructFiniteState carries nodup InfoMap lists and lookup equations, with lawful BEq String for HOL equality; structInfosOk is carried but unused. Other expression constructors remain open."
+    "reviewer": "Kernel-checked Const-constructor specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExpFull; intentionally untagged because HOL has only the universally quantified theorem, not a separately named Const-case theorem. The Lean statement re-encodes the struct premise as projected shape-view equality, FEVERY field validity as pointwise Bool predicates over total lookups, and FMAP_MAP2 as pointwise shape-map adapters. PanStructFiniteState carries nodup InfoMap lists and lookup equations, with lawful BEq String for HOL equality; structInfosOk is carried but unused. The full evaluator exposes bytesInWord and optional PanValueMemoryAccess, which this constructor does not use. Other expression constructors remain open."
   },
   {
     "hol_path": null,
@@ -5214,6 +5214,14 @@
     "lean_name": "panStructCompileExpCorrectLoadByteCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked LoadByte-constructor specialization with successful evaluation, a recursive address IH, and all three parent conclusion roles. Intentionally untagged: HOL has only universal compile_exp_correct and its LoadByte evaluator calls mem_load_byte with finite memory-domain and endian state; the Lean production evaluator with default memoryAccess reads a total PanValue lookup and carries explicit bytesInWord. Lean's context/FEVERY/FMAP_MAP2 premises use projected views and pointwise adapters; local/global validity, maps, and structInfosOk are retained but unused in this constructor. Paired direct HOL/Lean oracle row uses a one-byte 8-bit memory cell."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectLoad32Case",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Load32-constructor specialization with a recursive address IH and all three parent conclusion roles, stated over evalPanValueExpFull with an explicit PanValueMemoryAccess. The test installs the RISC-V model-backed access, whose read32 performs alignment, byte-domain checking, four-byte extraction, and endian assembly; the paired original-HOL EVAL row checks an aligned 64-bit cell and little-endian result. Intentionally untagged: HOL has only universal compile_exp_correct; Lean exposes the memory access and bytesInWord explicitly and translates context equality and FEVERY/FMAP_MAP2 through projected views and total-function adapters. The default full-evaluator whole-cell Load32 branch is not used."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -5629,7 +5637,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectVarCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked derived Local/Global Var specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExp. It is intentionally untagged: HOL has one universally quantified theorem and no separately named Var-case declaration. This is not an exact statement port: source evaluation is retained, but direct HOL ctxt.structs equality is replaced by equality of projected shape views; finite-map FEVERY field validity is re-encoded as pointwise Bool predicates over total runtime lookups; and FMAP_MAP2 equations use pointwise adapters. PanStructFiniteState supplies nodup InfoMap lists and lookup equations, and lawful BEq String is needed to align production lookup with HOL equality. The theorem carries structInfosOk as a premise, but the Var proof does not use it. Lean also has a shapedFields cache absent from HOL (not inspected here) and an explicit bytesInWord evaluator parameter. The three conclusions are the Var instance of old_exp_shape/shape_of, v_flds_ok, and converted evaluation. Other expression constructors remain open."
+    "reviewer": "Kernel-checked derived Local/Global Var specialization of HOL compile_exp_correct over production structCompileExp/evalPanValueExpFull. It is intentionally untagged: HOL has one universally quantified theorem and no separately named Var-case declaration. This is not an exact statement port: source evaluation is retained, but direct HOL ctxt.structs equality is replaced by equality of projected shape views; finite-map FEVERY field validity is re-encoded as pointwise Bool predicates over total runtime lookups; and FMAP_MAP2 equations use pointwise adapters. PanStructFiniteState supplies nodup InfoMap lists and lookup equations, and lawful BEq String is needed to align production lookup with HOL equality. The theorem carries structInfosOk as a premise, but the Var proof does not use it. Lean also has a shapedFields cache absent from HOL (not inspected here). The full evaluator exposes bytesInWord and optional PanValueMemoryAccess, which Var does not use. The three conclusions are the Var instance of old_exp_shape/shape_of, v_flds_ok, and converted evaluation. Other expression constructors remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

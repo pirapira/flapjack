@@ -9024,7 +9024,7 @@ length. It derives compiled arguments and the state-owned target callee lookup,
 then composes the actual finite-map `exp_hdl` run and all four handler-entry
 relations with the handler-body IH. This remains untagged induction support;
 the enclosing HOL Call case remains open. -/
-theorem evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
+private theorem evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
     (primitive : CrepPrimitiveHandler (RiscV.Word 64))
@@ -9192,7 +9192,7 @@ theorem evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
 /-! Two-word-payload specialization of the arbitrary-length target dispatcher.
 This keeps the existing concrete Call slice while allowing its actual runtime
 composition to exercise the general `exp_hdl`/locals relation above. -/
-theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
+private theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
     (primitive : CrepPrimitiveHandler (RiscV.Word 64))
@@ -9220,7 +9220,6 @@ theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
     (hshape : panValueShape [] old = .comb [.one, .one])
     (hvariable : FLOOKUP context.vars handlerVariable =
       some (.comb [.one, .one], [slot0, slot1]))
-    (hslotsNe : slot0 ≠ slot1)
     (hslot0 : ∃ current, caller.locals slot0 = some current)
     (hslot1 : ∃ current, caller.locals slot1 = some current)
     (hglobal0 : calleeState.globals (0 : BitVec 5) = some (.word value0))
@@ -9337,7 +9336,6 @@ theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
             some (.word value1) by simpa [crepRuntimeCallerState] using hglobal1] at hmap
         simpa using hmap
       · trivial
-  have _ := hslotsNe
   exact evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH
     context handler primitive source sourceAfterCallee caller function handlerVariable
     (.comb [.one, .one]) [slot0, slot1] old payload destinations caught exceptionCode
@@ -9439,8 +9437,10 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
       some shape)
     (hcontextException : FLOOKUP context.eids sourceException = some exceptionCode)
+    (hcompiledHandlerBody : compileCodeRelProg context handlerProgram = handlerBody)
     (hinitialState : stateRel source caller)
     (hcallCode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hexcp : excpRel context.eids source.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hvariable : FLOOKUP context.vars handlerVariable = some (shape, slots))
     (hslots : ∀ slot, slot ∈ slots →
@@ -9501,6 +9501,20 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
             (parameters.map Prod.fst) (parameters.map Prod.snd)
             (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
           sourceBody, targetLocals) →
+      stateRel
+        ({ { source with locals := sourceCalleeLocals } with
+          clock := decPanClock source.clock })
+        (decCrepClock { caller with locals := targetLocals }) →
+      codeRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        (panSemCodeAsLookup source.code) caller.code →
+      excpRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))).eids
+        source.exceptionShapes →
       localsRel
         (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
           (parameters.map Prod.snd)
@@ -9549,7 +9563,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         function expressions) = some sourceResult ∧
     evalCrepRuntimeCall handler primitive (slots.length + 4) caller
       (some (destinations, some (caught,
-        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) function
+        .seq (expHdlFiniteMap context.vars handlerVariable)
+          (compileCodeRelProg context handlerProgram)))) function
       (compileArgsHOL
         { vars := context.vars, funcs := context.funcs,
           eids := context.eids, vmax := context.vmax }
@@ -9603,10 +9618,15 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH context source caller function
       parameters sourceBody returnShape expressions arguments sourceCalleeLocals
       hinitialState hcallCode hlocals hlocalized hsourceArgs hentry hsourceCall heach
+  obtain ⟨hcalleeEntryState, hcalleeEntryCode, hcalleeEntryExcp⟩ :=
+    panSemCallCalleeEntryStateCodeExcpRel context source caller parameters
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+      sourceCalleeLocals targetLocals hinitialState hcallCode hexcp
   obtain ⟨hcalleeRun, hcalleeStateRel, hcalleeCodeRel, hcalleeExcpRel,
       hcalleeGlobals⟩ :=
     hcalleeTargetIH hsourceExceptionShape hcontextException hsourceCalleeBody targetLocals
-      htargetLookup hcalleeEntryLocals
+      htargetLookup hcalleeEntryState (by simpa [decCrepClock] using hcalleeEntryCode)
+      (by simpa using hcalleeEntryExcp) hcalleeEntryLocals
   have hcalleeIH : ∀ targetLocals',
       lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
         some (compileCodeRelProg
@@ -9645,7 +9665,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     hargumentLength heach hinfoValid hclock hmatch hcalleeIH
     (fun targetPost' hrun hstate' hcode' hexcp' hlocals' =>
       (hhandlerIH targetPost' hrun hstate' hcode' hexcp' hlocals').1)
-  exact ⟨hsourceCallRun, htarget, hpostState, hpostCode, hpostExcp, hpostLocals⟩
+  exact ⟨hsourceCallRun, by simpa [hcompiledHandlerBody] using htarget,
+    hpostState, hpostCode, hpostExcp, hpostLocals⟩
 
 /-! Preserve the handler-body post-state IH through the production target Call
 dispatcher. `sourcePost` is the source state supplied by that IH (in a full

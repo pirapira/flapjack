@@ -308,6 +308,30 @@ def generalAlookupGuard : Bool :=
 
 #guard generalAlookupGuard
 
+/-- `mk_ctxt_code_imp_code_rel` on the two-function table: the compiled target
+    table is `code_rel` to the source table under the `mk_ctxt` context. -/
+example :
+    codeRel
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := functionInfosHOL alookupDecls
+        eids := panToCrepGetEidsFromDeclsHOL alookupDecls
+        vmax := 0 }
+      (FUPDATE_LIST FEMPTY (functionEntries alookupDecls).reverse)
+      (FUPDATE_LIST FEMPTY (compileToCrepHOL alookupDecls).reverse) :=
+  mkCtxtCodeImpCodeRel alookupDecls (by decide) (by
+    intro entry hmem
+    simp only [alookupDecls, functionEntries, List.mem_cons,
+      List.not_mem_nil, or_false] at hmem
+    rcases hmem with h | h <;> subst h <;> simp [localisedProg])
+
+def mkCtxtCodeRelGuard : Bool :=
+  match FLOOKUP (FUPDATE_LIST FEMPTY (compileToCrepHOL alookupDecls).reverse)
+      "g" with
+  | some ([0], _) => true
+  | _ => false
+
+#guard mkCtxtCodeRelGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -319,7 +343,8 @@ def runChecks : IO Bool := do
     ("HOL make_funcs_def parameter table", makeFuncsGuard),
     ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard),
     ("HOL mk_ctxt_code_imp_code_rel makeFuncsHOL/alookup link", generalAlookupGuard),
-    ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard)]
+    ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard),
+    ("HOL mk_ctxt_code_imp_code_rel compiled code_rel", mkCtxtCodeRelGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

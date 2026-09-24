@@ -14,20 +14,25 @@ Method (first slice; deliberately coarse, see limitations below):
 2. Theory closure: transitive ``Ancestors`` closure from the root theory.  This
    is the *source pool*: every script the HOL development needs to build the
    root theorem.
-3. Required closure: a lexical citation fixed point over that pool, starting at
-   the root theorem.  A declaration is "required" when its name occurs in the
-   source span of a required declaration.  This is an *upper bound* on the
-   genuinely needed HOL results.
-4. Lean coverage: which required declarations already carry a ``@[hol ...]``
+3. Lexically cited closure: a citation fixed point over that pool, starting at
+   the root theorem.  A declaration is "cited" when its name occurs as an
+   identifier token in the source span of a cited declaration.  This is a
+   *lexical reachability set*: it is not a HOL dependency set, and it is not a
+   bound in either direction (see limitations).
+4. Lean coverage: which cited declarations already carry a ``@[hol ...]``
    tag (matched by ``(theory, name)`` and by name alone).
 
 Limitations (explicit, do not overclaim):
 
 * Citation is lexical, not semantic: a name mentioned in a comment or shadowed
-  by a local identifier counts as a citation, and theory qualifiers are dropped,
-  so same-named declarations in different theories collapse into one node.
-* The required set is therefore an upper bound and the missing-port count a
-  lower bound.
+  by a local identifier counts as a citation (false positive), and theory
+  qualifiers are dropped, so same-named declarations in different theories
+  collapse into one node.
+* The lexical set also MISSES genuinely used results: HOL tactic scripts,
+  simplifier sets, and rewrite rules use lemmas without naming them in the
+  declaration's source span.  Lexical reachability is therefore neither an
+  upper bound on actual HOL dependencies nor a lower bound on genuinely
+  missing ports.
 * Definitions and datatypes are included; a Lean port may legitimately exist
   without a ``@[hol]`` tag, so "untagged" is not the same as "unported".
 * ``.hol-index/`` is a generated, git-ignored artifact.  Regenerate it with
@@ -336,6 +341,15 @@ def main() -> int:
         "underlying index first with `python3 scripts/index-hol.py`."
     )
     lines.append("")
+    lines.append(
+        "The cited-declaration counts below are a **lexical reachability set** "
+        "computed from identifier tokens in declaration spans.  They are neither "
+        "an upper bound on actual HOL dependencies (tactic/simpset uses are not "
+        "named) nor a lower bound on missing ports (comments, shadowing, and "
+        "name collisions are false positives).  Treat them as a reproducible "
+        "triage signal only."
+    )
+    lines.append("")
     if source_sha:
         lines.append(f"- CakeML revision indexed: `{source_sha}`")
     lines.append(f"- Root theorem: `{args.root_theorem}` (theory `{root_theory}`)")
@@ -350,8 +364,8 @@ def main() -> int:
         f"  - by area: {format_counts(pool_areas, AREA_ORDER)}"
     )
     lines.append(
-        f"- Required declarations (lexical citation closure of the root, "
-        f"upper bound): `{len(required)}`"
+        f"- Lexically cited declarations (citation closure of the root; "
+        f"not a dependency bound): `{len(required)}`"
     )
     lines.append(f"  - by kind: {format_counts(required_kinds, [])}")
     lines.append(
@@ -363,33 +377,34 @@ def main() -> int:
     if invariant_errors:
         lines.append(
             "**UNVALIDATED**: the following count invariants failed, so the "
-            "required-theorem estimate must not be trusted:"
+            "lexical counts must not be trusted:"
         )
         for err in invariant_errors:
             lines.append(f"- {err}")
     else:
         lines.append("All count invariants hold:")
         lines.append(
-            f"- required total (`{len(required)}`) equals the per-kind, per-area "
+            f"- cited total (`{len(required)}`) equals the per-kind, per-area "
             "and per-theory sums"
         )
         lines.append("- source-pool totals equal the per-kind and per-area sums")
-        lines.append("- every required name is a declaration in the theory closure")
+        lines.append("- every cited name is a declaration in the theory closure")
     lines.append("")
-    lines.append("## Lean coverage of the required set")
+    lines.append("## Lean coverage of the lexically cited set")
     lines.append("")
     lines.append(f"- `@[hol]` tags found under `Flapjack/`: `{len(tags)}`")
     lines.append(
-        f"- Required declarations tagged by `(theory, name)`: "
+        f"- Lexically cited declarations tagged by `(theory, name)`: "
         f"`{len(tagged_here)}`"
     )
     lines.append(
-        f"- Required declarations with no matching `(theory, name)` tag: "
+        f"- Lexically cited declarations with no matching `(theory, name)` tag: "
         f"`{len(untagged_here)}`"
     )
     lines.append(
         f"- ... of which also have no same-name tag anywhere: "
-        f"`{len(untagged_anywhere)}` (lower bound on genuinely missing ports)"
+        f"`{len(untagged_anywhere)}` (name heuristic: neither an over- nor an "
+        "under-approximation of genuinely missing ports)"
     )
     lines.append("")
     lines.append("## Direct citations of the root theorem")
@@ -404,7 +419,7 @@ def main() -> int:
     if len(direct) > 80:
         lines.append(f"- ... and {len(direct) - 80} more (see `--list`)")
     lines.append("")
-    lines.append("## Required declarations per theory (top 30)")
+    lines.append("## Lexically cited declarations per theory (top 30)")
     lines.append("")
     for theory, count in sorted(required_by_theory.items(), key=lambda kv: (-kv[1], kv[0]))[:30]:
         lines.append(f"- `{theory}`: {count}")
@@ -431,7 +446,7 @@ def main() -> int:
     lines.append("```sh")
     lines.append("python3 scripts/index-hol.py          # writes .hol-index/ (git-ignored)")
     lines.append("python3 scripts/hol-dependency-inventory.py")
-    lines.append("python3 scripts/hol-dependency-inventory.py --list   # full required list")
+    lines.append("python3 scripts/hol-dependency-inventory.py --list   # full cited list")
     lines.append("```")
     lines.append("")
     lines.append("## Known limitations")
@@ -442,8 +457,14 @@ def main() -> int:
         "collapse into one node."
     )
     lines.append(
-        "- The required count is therefore an upper bound; the missing-port "
-        "count is a lower bound."
+        "- Tactic scripts, simplifier sets, and rewrite rules use lemmas without "
+        "naming them in the declaration span, so the lexical set is NOT an upper "
+        "bound on actual HOL dependencies."
+    )
+    lines.append(
+        "- Comment and shadowed-identifier mentions are false positives, and "
+        "name collisions across theories are collapsed, so the count of cited "
+        "names with no tag is NOT a lower bound on genuinely missing ports."
     )
     lines.append(
         "- Definitions and datatypes are included, and an untagged declaration "
@@ -504,7 +525,7 @@ def main() -> int:
                 "required_declarations": len(required),
                 "tagged_required": len(tagged_here),
                 "untagged_required": len(untagged_here),
-                "missing_ports_lower_bound": len(untagged_anywhere),
+                "cited_without_any_tag": len(untagged_anywhere),
             },
             "required": [
                 {"theory": name_theory[name], "name": name}
@@ -520,7 +541,7 @@ def main() -> int:
     print(
         f"closure theories={len(closure)} pool={len(in_closure)} "
         f"required={len(required)} tagged={len(tagged_here)} "
-        f"untagged={len(untagged_here)} missing_lower_bound={len(untagged_anywhere)}"
+        f"untagged={len(untagged_here)} cited_without_any_tag={len(untagged_anywhere)}"
     )
     print(f"wrote {args.out.relative_to(ROOT) if args.out.is_absolute() else args.out}")
     return 0

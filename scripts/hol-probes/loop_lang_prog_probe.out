@@ -1,0 +1,8 @@
+prog_skip=Skip
+prog_assign=Assign 1 (Const 7w)
+prog_if=If Equal 0 (Reg 1) Skip Tick LN
+prog_loop=Loop LN Tick LN
+prog_return=Return [1; 2]
+prog_shmem=ShMem Load 1 (Const 0w)
+prog_call=Call (SOME ([1],LN)) NONE [] (SOME (2,Skip,Tick,LN))
+prog_ffi=FFI «f» 1 2 3 4 LN

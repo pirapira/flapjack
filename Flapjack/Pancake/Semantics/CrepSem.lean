@@ -235,7 +235,10 @@ def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option �
     (HOL's `:'a word` requires a nonempty index type) rather than an arbitrary
     `[Mul α]`. The wildcard clause
     covers `.mul` at every other arity, matching HOL's total-over-malformed-
-    operand-lists `crep_op _ _ = NONE`. -/
+    operand-lists `crep_op _ _ = NONE`. The generic production evaluator still
+    multiplies directly in its `.crepOp` clause; the RV64 executed-path
+    instantiation is tested, but routing execution through this tagged
+    definition remains open (bead flapjack-pxn.18.4.3.48.1.20). -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
 def crepOpCrep (width : Nat) [NeZero width] : CrepOp → List (BitVec width) → Option (BitVec width)
   | .mul, [left, right] => some (left * right)

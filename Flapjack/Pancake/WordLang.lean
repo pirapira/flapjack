@@ -70,7 +70,7 @@ inductive WordLangArith (α : Type u) where
   | div (destination dividend divisor : Nat)
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
-  | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
+  | addCarry (destination resultCarry sourceLeft sourceRight : Nat)
   | addOverflow (destination resultCarry sourceLeft sourceRight : Nat)
   | subOverflow (destination resultCarry sourceLeft sourceRight : Nat)
   deriving Repr

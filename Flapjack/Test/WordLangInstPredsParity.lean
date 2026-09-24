@@ -27,7 +27,7 @@ private def isSkip : WordLangInst W → Bool
 -- Instruction fixtures (oracle rows 1-7).
 private def binopSame : WordLangInst W := .arith (.binop .add 1 2 (.reg 1))
 private def binopDiff : WordLangInst W := .arith (.binop .add 1 2 (.reg 3))
-private def addCarrySame : WordLangInst W := .arith (.addCarry 1 2 1 3 4)
+private def addCarrySame : WordLangInst W := .arith (.addCarry 1 2 1 3)
 private def binopTwoSame : WordLangInst W := .arith (.binop .add 1 1 (.reg 0))
 private def binopTwoDiff : WordLangInst W := .arith (.binop .add 1 2 (.reg 0))
 private def instSkipInst : WordLangInst W := .skip

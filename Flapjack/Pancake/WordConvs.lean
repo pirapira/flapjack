@@ -109,7 +109,7 @@ def distinctTarReg {width : Nat} : WordLangInst (BitVec width) → Bool
   | .arith (.shift _ r1 _ ri) => match ri with
       | .reg r => decide (r ≠ r1)
       | .imm _ => true
-  | .arith (.addCarry r1 _ r3 r4 _) => decide (r1 ≠ r3 ∧ r1 ≠ r4)
+  | .arith (.addCarry r1 _ r3 r4) => decide (r1 ≠ r3 ∧ r1 ≠ r4)
   | .arith (.addOverflow r1 _ r3 _) => decide (r1 ≠ r3)
   | .arith (.subOverflow r1 _ r3 _) => decide (r1 ≠ r3)
   | _ => true
@@ -122,7 +122,7 @@ arithmetic forms that require it.  Every other instruction is accepted. -/
 def twoRegInst {width : Nat} : WordLangInst (BitVec width) → Bool
   | .arith (.binop _ r1 r2 _) => r1 == r2
   | .arith (.shift _ r1 r2 _) => r1 == r2
-  | .arith (.addCarry r1 r2 _ _ _) => r1 == r2
+  | .arith (.addCarry r1 r2 _ _) => r1 == r2
   | .arith (.addOverflow r1 r2 _ _) => r1 == r2
   | .arith (.subOverflow r1 r2 _ _) => r1 == r2
   | _ => true

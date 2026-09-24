@@ -8806,5 +8806,13 @@
     "lean_name": "mapMap2FstHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against map_map2_fst at crep_to_loopProofScript.sml:3799; HOL MAP2/GENLIST I (LENGTH p) rendered over panMap2 with the program-triple shape; delegates to the untagged panMap2_fst_eq; direct HOL-EVAL rows mm2_pair_eq/mm2_empty=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "alookup_el_pair_eq_el",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "alookupElPairEqEl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against alookup_el_pair_eq_el at crep_to_loopProofScript.sml:3921; HOL EL n prog = (start,[],SND(SND(EL n prog))) rendered literally as prog[n]'hn = (start,[],(prog[n]'hn).2.2) over the right-associated triple, ALOOKUP as List.lookup, ALL_DISTINCT (MAP FST prog) as (prog.map Prod.fst).Nodup; the proof delegates to the untagged PanLang counterpart getElem_eq_of_lookup_eq; direct HOL-EVAL rows ael_shape_0/ael_shape_1/ael_distinct/ael_lookup/ael_result=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

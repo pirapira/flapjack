@@ -11,6 +11,15 @@ and invariant postconditions are not yet proved here.
 
 namespace Flapjack
 
+/-- Private lookup bridge from the production string lookup to the
+    HOL-style association-list lookup. -/
+private theorem lookupInfoStringDefault_eq_panPropsALookupEq
+    {β : Type} (key : String) (entries : List (String × β)) :
+    @lookupInfo String β instBEqOfDecidableEq key entries =
+      panPropsALookupEq key entries := by
+  letI : LawfulBEq String := instLawfulBEqString
+  exact lookupInfo_eq_panPropsALookupEq key entries
+
 mutual
   /-- Exact executable counterpart of HOL `convert_v_def`. The HOL datatype
       cases are `Val (Word w)`, `RStruct xs`, and `NStruct nm flds`; these
@@ -2997,21 +3006,12 @@ theorem panStructCompileCorrectContinueCase
   exact ⟨htarget, hlocalsFields, hglobalsFields, hglobalsMap, hlocalsMap,
     by simp [panStructValuesFieldsOkBool], by simp [panIsWfShapeValuesBool]⟩
 
-/-- Private lookup bridge from the production string lookup to the
-    HOL-style association-list lookup. -/
-private theorem lookupInfoStringDefault_eq_panPropsALookupEq
-    {β : Type} (key : String) (entries : List (String × β)) :
-    @lookupInfo String β instBEqOfDecidableEq key entries =
-      panPropsALookupEq key entries := by
-  letI : LawfulBEq String := instLawfulBEqString
-  exact lookupInfo_eq_panPropsALookupEq key entries
-
 /-- Untagged derived Local/Global Var-constructor specialization of HOL
     `compile_exp_correct`; this note documents only the following declaration.
     HOL has only the universally quantified theorem, not a separately named
     Var-case declaration, and this Lean statement is not an exact statement
-    port. It
-    keeps successful source evaluation but re-encodes the HOL premises: the
+    port. Successful source evaluation is kept, but the HOL premises are
+    re-encoded: the
     direct `ctxt.structs = MAP ... s.structs` equality is replaced by equality
     of shape views (which observes names and fields, not the full Lean struct
     info records); finite-map `FEVERY` field-validity is expressed as
@@ -3024,8 +3024,7 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     not inspect, and its evaluator takes an explicit `bytesInWord` parameter.
     Its three conclusions are the Var instance of HOL's old-shape,
     `v_flds_ok`, and converted-evaluation conclusions. Other expression
-    constructors remain open. This mismatch note belongs to this Var theorem;
-    the private lookup bridge above has its own separate documentation. -/
+    constructors remain open. -/
 theorem panStructCompileExpCorrectVarCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -650,6 +650,34 @@ def cmpMatchesGuard : Bool :=
 #guard cmpMatchesGuard
 #eval cmpMatchesGuard
 
+/-- The executed RISC-V compare codec is exactly the HOL `word_cmp` word-valued
+    encoding, at every operator and pair. -/
+example (operator : Cmp) (left right : RiscV.Word 64) :
+    RiscV.panRiscVCmp operator left right
+      = Compiler.Encoders.Asm.wordCmpResultHOL operator left right :=
+  panRiscVCmp_eq_wordCmpResultHOL operator left right
+
+/-- The executed RISC-V shift codec is exactly the HOL `word_sh` codec (including
+    shift amount `0`), at every operator and amount. -/
+example (operator : Shift) (left right : RiscV.Word 64) :
+    RiscV.panRiscVShift operator left right = wordShiftHOL operator left right.toNat :=
+  panRiscVShift_eq_wordShiftHOL operator left right
+
+/-- Direct values across the codec boundary: signed/unsigned compares and a
+    shift by `0` and by an in-range amount. -/
+def codecBoundaryGuard : Bool :=
+  (RiscV.panRiscVCmp .less (0xFFFFFFFFFFFFFFFF : RiscV.Word 64) 1 ==
+      Compiler.Encoders.Asm.wordCmpResultHOL .less 0xFFFFFFFFFFFFFFFF 1) &&
+    (RiscV.panRiscVCmp .notLower (1 : RiscV.Word 64) 2 ==
+      Compiler.Encoders.Asm.wordCmpResultHOL .notLower 1 2) &&
+    (RiscV.panRiscVShift .lsl (1 : RiscV.Word 64) 0 == wordShiftHOL .lsl 1 0) &&
+    (RiscV.panRiscVShift .lsl (1 : RiscV.Word 64) 3 == wordShiftHOL .lsl 1 3) &&
+    (RiscV.panRiscVShift .asr (0x8000000000000000 : RiscV.Word 64) 1 ==
+      wordShiftHOL .asr 0x8000000000000000 1)
+
+#guard codecBoundaryGuard
+#eval codecBoundaryGuard
+
 /-- A memory model whose `byteAlign`/`getByte` hooks are literally the HOL
     functions at 64 bits, but which is otherwise not the RISC-V target model. -/
 def holLoadByteModel : PanMemoryModel (RiscV.Word 64) :=
@@ -965,6 +993,10 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Cmp hook matches HOL word_cmp over arbitrary model and nested operands"
   else
     IO.println "FAIL crep Cmp hook matches HOL word_cmp over arbitrary model and nested operands"
+  if codecBoundaryGuard then
+    IO.println "PASS executed Cmp/Shift codecs equal HOL word_cmp/word_sh at the boundary"
+  else
+    IO.println "FAIL executed Cmp/Shift codecs equal HOL word_cmp/word_sh at the boundary"
   if loadByteMatchesGuard then
     IO.println "PASS crep LoadByte hook matches HOL mem_load_byte over arbitrary model and nested operands"
   else
@@ -989,6 +1021,6 @@ def runChecks : IO Bool := do
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
     crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard && cmpMatchesGuard &&
     loadByteMatchesGuard && load32MatchesGuard && storeByteMatchesGuard && store32MatchesGuard &&
-    storeProgGuard)
+    storeProgGuard && codecBoundaryGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

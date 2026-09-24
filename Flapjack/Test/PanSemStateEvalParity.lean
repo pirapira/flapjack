@@ -1037,8 +1037,32 @@ example : riscvByteAlignHOL (9 : RiscV.Word 64) = panByteAlignHOL (9 : RiscV.Wor
 example : riscvByteAlignHOL (17 : RiscV.Word 64) = panByteAlignHOL (17 : RiscV.Word 64) :=
   riscvByteAlignHOL_eq_panByteAlignHOL 17
 
+/-- The source and target byte-read renderings agree, and both reproduce the
+    direct HOL `get_byte` oracle rows `get_byte_0=8w`, `get_byte_1=7w`,
+    `get_byte_7=1w` of `scripts/hol-probes/crep_runtime_ffi_boundary_probe.out`
+    on the word `0x0102030405060708`. -/
+example :
+    panGetByteHOL (0 : RiscV.Word 64) (BitVec.ofNat 64 0x0102030405060708) false =
+      (8 : UInt8) := by decide
+
+example :
+    panGetByteHOL (1 : RiscV.Word 64) (BitVec.ofNat 64 0x0102030405060708) false =
+      (7 : UInt8) := by decide
+
+example :
+    panGetByteHOL (7 : RiscV.Word 64) (BitVec.ofNat 64 0x0102030405060708) false =
+      (1 : UInt8) := by decide
+
+example :
+    riscvGetByteHOL false (1 : RiscV.Word 64) (BitVec.ofNat 64 0x0102030405060708) =
+      (7 : UInt8) := by decide
+
+example (address value : RiscV.Word 64) (bigEndian : Bool) :
+    panGetByteHOL address value bigEndian = riscvGetByteHOL bigEndian address value :=
+  panGetByteHOL_eq_riscvGetByteHOL address value bigEndian
+
 /-- The whole-expression capstone type-checks for the bundled relation; the codec
-fields are the remaining executable-path obligations. -/
+    fields are the remaining executable-path obligations. -/
 example
     (rel : PanValueEvalRel holLoadState littleEndianState ([] : StructContext)
       (fun _ => none) (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord) :

@@ -9078,5 +9078,13 @@
     "lean_name": "LoopArith",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean source comparison: 3 arith ctors and field shapes match LLongMul/LLongDiv/LDiv)"
-  }
+  },
+{
+  "hol_path": "cakeml/misc/miscScript.sml",
+  "hol_name": "num_set",
+  "lean_path": "Flapjack/Misc/Sptree.lean",
+  "lean_name": "NumSet",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

@@ -1456,3 +1456,10 @@ run_probe loop_lang_prog_probeScript.sml loop_lang_prog_probe.out \
   prog_skip prog_ffi \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
+
+# The num_set/spt probe observes the exact HOL sptree lookup/insert/wf/isEmpty
+# behaviour for the unit-spt carrier used as num_set.
+run_probe num_set_spt_probeScript.sml num_set_spt_probe.out \
+  lookup_ln insert_ovw \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"

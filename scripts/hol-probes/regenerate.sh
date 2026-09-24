@@ -293,7 +293,7 @@ run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
-  total_colour_alloc apply_colour_loop_live \
+  total_colour_alloc apply_colour_alias_assign apply_colour_loop_live \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 # The legacy allocator-map probe checks the existing WordBijection path too.
@@ -597,7 +597,7 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
+  leaves bytes_in_word struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
   finite_map_load_byte_local loadbyte_recursive_address \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
@@ -622,6 +622,8 @@ run_probe crep_alookup_compile_probeScript.sml crep_alookup_compile_probe.out \
   source_names_distinct alookup_param_entry "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_el_compile_probeScript.sml crep_el_compile_probe.out \
   source_el_f compiled_el_f "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_make_funcs_probeScript.sml crep_make_funcs_probe.out \
+  make_funcs_empty_params make_funcs_duplicate_first_wins "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

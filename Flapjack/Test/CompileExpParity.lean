@@ -89,11 +89,16 @@ def loadByteRecursiveAddressOK : Bool :=
 /-! The remaining probe rows are reproduced through the tagged finite-map
     `compileExpHOL`. These mirror the `compileExp` rows above but exercise the
     HOL-shaped path used by `compileProgHOL`/`compileProgRiscV`. -/
+/-! Includes the direct HOL `bytes_in_word` constructor row in
+    `compile_exp_probe.out`; the 64-bit value is separately pinned to `8w` by
+    the original HOL word-boundary probe and `CrepRuntimeTargetParity`. -/
 def holLeavesOK : Bool :=
   oneResultOK [.const 7] (compileExpHOL finiteMapContext (.const 7)) &&
   oneResultOK [.const 0] (compileExpHOL finiteMapContext (.var .global "g")) &&
   oneResultOK [.baseAddr] (compileExpHOL finiteMapContext (.baseAddr)) &&
-  oneResultOK [.topAddr] (compileExpHOL finiteMapContext (.topAddr))
+  oneResultOK [.topAddr] (compileExpHOL finiteMapContext (.topAddr)) &&
+  oneResultOK [.const CrepBytesInWord.bytesInWord]
+    (compileExpHOL finiteMapContext .bytesInWord)
 
 def holStructFieldOK : Bool :=
   combTwoResultOK [.const 1, .const 2]

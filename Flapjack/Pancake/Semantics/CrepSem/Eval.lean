@@ -921,16 +921,15 @@ def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
 
 /-! Source-shaped finite-word memory adapter. Its byteAlign, getByte, and
     aligned fields encode the imported HOL formulas through the finite-word /
-    BitVec equivalence. `setByte` encodes the byte-slot arithmetic update, but
-    its equivalence to HOL's bit-slice `set_byte` formula has not been proved.
-    The four-byte wordOfBytes formula accounts for byte-slot wrap, but is not
-    yet proved equal to HOL's recursive `word_of_bytes`/`set_byte` definition.
-    Word operators, comparisons, and shifts use generic source-level
-    definitions (their finite-word/BitVec transport is proved above). This
-    runtime supports the untagged recursive preservation theorem, but its
-    memory-operation correspondence and unrestricted HOL finite-word carrier
-    correspondence must still be proved before that theorem can carry a HOL
-    tag. -/
+    BitVec equivalence. `setByte` implements the pointwise bit-slice cases in
+    HOL's `set_byte_def`, and `wordOfBytes` follows the recursive
+    `word_of_bytes_def`. Their correspondence to HOL's word operators under
+    the explicit dimension enumeration has not yet been proved. Word operators,
+    comparisons, and shifts use generic source-level definitions (their
+    finite-word/BitVec transport is proved above). This runtime supports the
+    untagged recursive preservation theorem, but its memory-operation and
+    unrestricted HOL finite-word carrier correspondences must still be proved
+    before that theorem can carry a HOL tag. -/
 def holFiniteWordSourceByteAlign {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool) : ι → Bool := by
   letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
@@ -954,15 +953,28 @@ def holFiniteWordSourceGetByte {ι : Type u}
 
 def holFiniteWordSourceSetByte {ι : Type u}
     (dimension : HolFiniteDimension ι) (address byte value : ι → Bool)
-    (bigEndian : Bool) : ι → Bool := by
-  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+    (bigEndian : Bool) : ι → Bool :=
   let byteIndex := holFiniteWordSourceByteIndex dimension address bigEndian
-  let offset := 256 ^ byteIndex
-  let block := 256 * offset
-  let value := (holWordToBitVec dimension value).toNat
-  let byte := (holWordToBitVec dimension byte).toNat % 256
-  exact bitVecToHolWord dimension (BitVec.ofNat dimension.width
-    (value % offset + byte * offset + (value / block) * block))
+  let bitOffset := 8 * byteIndex
+  let byteBits := holWordToBitVec dimension byte
+  fun index =>
+    let bit := (dimension.encode index).val
+    let keepHigh := decide (bitOffset + 8 ≤ bit ∧ bit < dimension.width) && value index
+    let insertByte := decide (bitOffset ≤ bit ∧ bit < bitOffset + 8) &&
+      byteBits.getLsbD (bit - bitOffset)
+    let keepLow := decide (bit < bitOffset) && value index
+    keepHigh || insertByte || keepLow
+
+private def holFiniteWordSourceWordOfBytesAt {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (address : ι → Bool) : List (ι → Bool) → ι → Bool
+  | [] => bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)
+  | byte :: rest =>
+      holFiniteWordSourceSetByte dimension address byte
+        (holFiniteWordSourceWordOfBytesAt dimension bigEndian
+          (bitVecToHolWord dimension
+            (holWordToBitVec dimension address + 1)) rest)
+        bigEndian
 
 def holFiniteWordSourceAligned {ι : Type u}
     (dimension : HolFiniteDimension ι) (alignment : Nat) (address : ι → Bool) :
@@ -970,36 +982,11 @@ def holFiniteWordSourceAligned {ι : Type u}
   let exponent := Nat.log2 alignment
   decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
 
-/-- Arithmetic expansion used for the four-byte `mem_load_32` result. Its
-equivalence to HOL's recursive `word_of_bytes` over `set_byte` is still open. -/
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
-    (bytes : List (ι → Bool)) : ι → Bool := by
-  let byte0 := bytes[0]?.getD
-    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
-  let byte1 := bytes[1]?.getD
-    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
-  let byte2 := bytes[2]?.getD
-    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
-  let byte3 := bytes[3]?.getD
-    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
-  let b0 := (holWordToBitVec dimension byte0).toNat % 256
-  let b1 := (holWordToBitVec dimension byte1).toNat % 256
-  let b2 := (holWordToBitVec dimension byte2).toNat % 256
-  let b3 := (holWordToBitVec dimension byte3).toNat % 256
-  let bytesPerWord := dimension.width / 8
-  let little :=
-    if bytesPerWord ≤ 1 then b0
-    else if bytesPerWord = 2 then b0 + 256 * b1
-    else if bytesPerWord = 3 then b0 + 256 * b1 + 256 ^ 2 * b2
-    else b0 + 256 * b1 + 256 ^ 2 * b2 + 256 ^ 3 * b3
-  let big :=
-    if bytesPerWord ≤ 1 then b0
-    else if bytesPerWord = 2 then b1 + 256 * b0
-    else if bytesPerWord = 3 then b2 + 256 * b1 + 256 ^ 2 * b0
-    else b3 + 256 * b2 + 256 ^ 2 * b1 + 256 ^ 3 * b0
-  exact bitVecToHolWord dimension (BitVec.ofNat dimension.width
-    (if bigEndian then big else little))
+    (bytes : List (ι → Bool)) : ι → Bool :=
+  holFiniteWordSourceWordOfBytesAt dimension bigEndian
+    (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)) bytes
 
 def holFiniteWordSourceMemoryModel {ι : Type u}
     (dimension : HolFiniteDimension ι) (_bigEndian : Bool) :

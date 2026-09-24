@@ -154,14 +154,13 @@ explicit. Focused checks for the source overlay and production mismatch are in
 `holFiniteWordSourceMemoryModel` adapter uses the same alignment formula and
 direct HOL `get_byte` index arithmetic; tests cover both endiannesses at width
 24, plus a 24-bit 32-bit-load fixture. Its `aligned` operation is now expressed
-as divisibility by the requested byte alignment. The `word_of_bytes` operation
-uses a four-byte arithmetic expansion with the source byte-slot wrap for
-`dimindex DIV 8`; `word_byte_memory_probe.out` records the imported recursive
-`word_of_bytes`/`set_byte` definitions and HOL's width-17 four-write expansion.
-The equality between the arithmetic expansion and HOL's recursive definition
-is not yet proved for arbitrary dimensions. `setByte` now uses the
-byte-slot arithmetic update in the source adapter, but its equality with HOL's
-bit-slice `set_byte` formula is also unproved. The generic
+as divisibility by the requested byte alignment. The `setByte` operation
+implements the pointwise bit-slice cases from HOL `set_byte_def`, and
+`wordOfBytes` follows the recursive shape from HOL `word_of_bytes_def`.
+`word_byte_memory_probe.out` records those source definitions, the width-17
+four-write expansion, and direct HOL EVAL for little- and big-endian width-17
+fixtures. A generic theorem relating the explicit dimension enumeration to
+HOL's native finite-index word operations remains open. The generic
 Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
 their equations to `panModelReadByte`/`panModelRead32`, are in
 `Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit

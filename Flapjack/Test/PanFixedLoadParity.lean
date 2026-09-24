@@ -136,6 +136,9 @@ def finiteWord17 (value : Nat) : Fin 17 → Bool :=
 def finiteWord17WordOfBytes : Fin 17 → Bool :=
   (holFiniteWordSourceMemoryModel dimension17 false).wordOfBytes false
     [finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32]
+def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
+  (holFiniteWordSourceMemoryModel dimension17 true).wordOfBytes true
+    [finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11]
 
 #guard originalProbeSource ==
   "cakeml/pancake/semantics/panSemScript.sml:86-109 (mem_load_byte_def/mem_load_32_def)"
@@ -161,6 +164,8 @@ def finiteWord17WordOfBytes : Fin 17 → Bool :=
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
 #guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
+  BitVec.ofNat 17 0x3211
+#guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==
   BitVec.ofNat 17 0x3211
 
 end Flapjack.Test.PanFixedLoadParity

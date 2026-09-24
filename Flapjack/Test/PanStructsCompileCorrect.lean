@@ -1612,10 +1612,11 @@ example :
           [("left", .word (BitVec.ofNat 64 3)), ("right", .word (BitVec.ofNat 64 5))] := by
       simp [evalPanValueFieldsFull, evalPanValueExpFull,
         nstructCompileCaseFields, namedStructRuntime, finiteMapRuntime]
-    have hshapes : panValueFieldsHaveShapes
+    have hshapes : panValueFieldsExactHOL
         [("Pair", pairCompileInfo)] pairCompileInfo.fields
         [("left", .word (BitVec.ofNat 64 3)), ("right", .word (BitVec.ofNat 64 5))] = true := by
-      simp [panValueFieldsHaveShapes, panShapeMatches, panValueShape, pairCompileInfo]
+      simp [panValueFieldsExactHOL, panShapeMatches, panValueShape, pairCompileInfo,
+        List.all_cons]
     simp [evalPanValueExpFull, evalPanValueFieldsFull,
       nstructCompileCaseFields, nstructCompileCaseValue, namedStructRuntime,
       lookupInfo, hshapes]

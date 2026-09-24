@@ -3676,32 +3676,32 @@
     "hol_name": "compile_shapes_eq_map",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structCompileShapes_eq_map",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; no-fuel production recursion)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "old_exp_shapes_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structOldExpShapes_eq_map",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "is_wf_shape_compile_shape",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structCompileShapeWF_isWfShape",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (mutual source comparison with direct HOL-EVAL and Lean nested-shape fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "is_wf_shape_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "isWfShape_drop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -3897,51 +3897,43 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "struct_infos_ok_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
-    "lean_name": "structInfosOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (compared all four clauses with HOL struct_infos_ok_def at pan_structsProofScript.sml:68-76)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "struct_infos_ok_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_drop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source definition clauses and DROP conclusion matched by a concrete HOL theorem instance)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "struct_infos_ok_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_append",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source implication and appended-context premise/conclusion shape comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "struct_infos_ok_cons",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_cons",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (ALL_DISTINCT/EVERY premises and prepended-context conclusion matched)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "alookup_map_structs_ok",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookupInfo_fields_nodup",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (ALOOKUP translated by lawful List.lookup; HOL local helper proof reproduced in direct oracle)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "size_of_sh_with_ctxt_drop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source premise/conclusion comparison with direct HOL-EVAL and Lean nested-shape fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4036,8 +4028,8 @@
     "hol_name": "map_fst_eq_alookup",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "map_fst_eq_lookup",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (MAP FST/ALOOKUP existence and index bounds match; Lean totalizes EL with getElem? and direct HOL-EVAL fixture agrees with the Lean regression)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -5228,8 +5220,8 @@
     "hol_name": "compile_exps_eq_map",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structCompileExps_eq_map",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison with direct HOL-EVAL list fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": null,
@@ -5348,8 +5340,8 @@
     "hol_name": "fields_in_order_reorder_noop",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "fieldsInOrderReorderNoop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source MAP/FST, ALL_DISTINCT, FLAT/ALOOKUP statement matched to production structCompileFields/structSelectFields; direct HOL oracle and Lean fixture)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": null,
@@ -6820,8 +6812,8 @@
     "hol_name": "size_of_compile_shape",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structCompileShapeWF_size",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source premises and size equality compared field-by-field; direct HOL EVAL row size_of_compile_shape_comb and Lean fixture in PanStructsCompileShapeParity)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
     "hol_path": null,
@@ -9127,20 +9119,20 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against all_distinct_ctxt_lookup_all_distinct at crep_to_loopProofScript.sml:3345; HOL ALL_DISTINCT rendered as List.Nodup, distinct_vars as crepToLoopDistinctVars (distinct_vars_def) and rt_vars as rtVars (rt_vars_def) over the finite-map context carrier CrepToLoopFiniteMapContext.vars; direct HOL-EVAL rows acd_distinct/acd_single/acd_missing=T in scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
-{
-  "hol_path": "cakeml/misc/miscScript.sml",
-  "hol_name": "num_set",
-  "lean_path": "Flapjack/Misc/Sptree.lean",
-  "lean_name": "NumSet",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/loopLangScript.sml",
-  "hol_name": "prog",
-  "lean_path": "Flapjack/Pancake/LoopLang.lean",
-  "lean_name": "HolLoopProg",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "num_set",
+    "lean_path": "Flapjack/Misc/Sptree.lean",
+    "lean_name": "NumSet",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/loopLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/LoopLang.lean",
+    "lean_name": "HolLoopProg",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  }
 ]

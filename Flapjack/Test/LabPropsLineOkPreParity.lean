@@ -69,6 +69,34 @@ private def cbwRowOk (instruction : AsmOrCbw (AsmData 8) WordMemOp (WordLangAddr
   | .inst (.mem .load 4 (.addr 5 0)) => true
   | _ => false
 
+/-- The emitted base-line reductions of `line_ok_pre` at the concrete config,
+mirroring the direct HOL oracle rows. -/
+example : lineOkPreConfig cfg8 (.asm (.asmi (.inst .skip)) [] 0 : L) = true := by
+  simp [lineOkPreConfig_asm_asmi, Flapjack.Compiler.Encoders.Asm.asmOk,
+    Flapjack.Compiler.Encoders.Asm.asmInstOk]
+
+example : lineOkPreConfig cfg8 (.asm (.asmi (.inst (.const 9 0))) [] 0 : L) = false := by
+  simp [lineOkPreConfig_asm_asmi, Flapjack.Compiler.Encoders.Asm.asmOk,
+    Flapjack.Compiler.Encoders.Asm.asmInstOk, Flapjack.Compiler.Encoders.Asm.asmRegOk, cfg8]
+
+example : lineOkPreConfig cfg8 (.label 0 1 0 : L) = true := by
+  simp [lineOkPreConfig_label]
+
+example : lineOkPreConfig cfg8 ((.asm (.asmi flattenOps.skip) [] 0) :
+    Line (AsmOrCbw (AsmData 8) WordMemOp (WordLangAddr W)) (AsmWithLab Cmp Nat String) W) = true :=
+  lineOkPreConfig_flattenOps_skip cfg8 [] 0
+
+example : lineOkPreConfig cfg8 ((.asm (.asmi (flattenOps.embedInst (.skip : WordLangInst W))) [] 0) :
+    Line (AsmOrCbw (AsmData 8) WordMemOp (WordLangAddr W)) (AsmWithLab Cmp Nat String) W) = true := by
+  rw [lineOkPreConfig_flattenOps_embedInst]
+  simp [Flapjack.Compiler.Encoders.Asm.asmInstOk]
+
+example : lineOkPreConfig cfg8 ((.asm (.asmi (flattenOps.jumpReg 3)) [] 0) :
+    Line (AsmOrCbw (AsmData 8) WordMemOp (WordLangAddr W)) (AsmWithLab Cmp Nat String) W) =
+      Flapjack.Compiler.Encoders.Asm.asmRegOk cfg8 3 :=
+  lineOkPreConfig_flattenOps_jumpReg cfg8 3 [] 0
+
+
 def runChecks : IO Bool := do
   let guards : List Bool :=
     [ decide (lineOkPreConfig cfg8 asmSkipLine = true)

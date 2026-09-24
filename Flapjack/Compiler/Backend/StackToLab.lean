@@ -124,6 +124,87 @@ def flatten {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
 termination_by _tail program _section _next _conts _breaks => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+
+/-! Base cases of `flatten`: the non-recursive constructors emit exactly their
+HOL source lines. These are the leaf cases used by the `flatten_line_ok_pre`
+induction. -/
+section FlattenBase
+
+variable {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+variable (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+
+theorem flatten_tick (tail : Bool) (sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.tick : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.asmi ops.skip) [] 0], false, next) := by
+  rw [flatten]
+
+theorem flatten_inst (tail : Bool) (instruction : Inst) (sectionId next : Nat)
+    (conts breaks : List Nat) :
+    flatten ops zero tail (.inst instruction : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.asmi (ops.embedInst instruction)) [] 0], false, next) := by
+  rw [flatten]
+
+theorem flatten_halt (tail : Bool) (label sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.halt label : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.labAsm .halt zero [] 0], true, next) := by
+  rw [flatten]
+
+theorem flatten_raise (tail : Bool) (register sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.raise register : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.asmi (ops.jumpReg register)) [] 0], true, next) := by
+  rw [flatten]
+
+theorem flatten_ret (tail : Bool) (register sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.ret register : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.asmi (ops.jumpReg register)) [] 0], true, next) := by
+  rw [flatten]
+
+theorem flatten_rawCall (tail : Bool) (target sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.rawCall target : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.labAsm (.jump (.lab target 1)) zero [] 0], true, next) := by
+  rw [flatten]
+
+theorem flatten_locValue (tail : Bool) (register label entry sectionId next : Nat)
+    (conts breaks : List Nat) :
+    flatten ops zero tail (.locValue register label entry : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.labAsm (.locValue register (.lab label entry)) zero [] 0], false, next) := by
+  rw [flatten]
+
+theorem flatten_shMemOp (tail : Bool) (operator : Memop) (register : Nat) (address : Addr)
+    (sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.shMemOp operator register address : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.shareMem operator register address) [] 0], false, next) := by
+  rw [flatten]
+
+theorem flatten_codeBufferWrite (tail : Bool) (left right sectionId next : Nat)
+    (conts breaks : List Nat) :
+    flatten ops zero tail (.codeBufferWrite left right : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.asm (.cbw left right) [] 0], false, next) := by
+  rw [flatten]
+
+theorem flatten_break (tail : Bool) (index sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.break index : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.labAsm (.jump (.lab sectionId (findLab index breaks))) zero [] 0], true, next) := by
+  rw [flatten]
+
+theorem flatten_continue (tail : Bool) (index sectionId next : Nat) (conts breaks : List Nat) :
+    flatten ops zero tail (.continue index : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks =
+      ([.labAsm (.jump (.lab sectionId (findLab index conts))) zero [] 0], true, next) := by
+  rw [flatten]
+
+end FlattenBase
+
 private def isSeq {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
   | .seq _ _ => true

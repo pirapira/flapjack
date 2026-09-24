@@ -1,0 +1,3 @@
+flatten_tick=(List [Asm (Asmi (Inst Skip)) [] 0],F,0)
+flatten_inst_skip=(List [Asm (Asmi (Inst Skip)) [] 0],F,0)
+flatten_halt=(List [LabAsm Halt 0w [] 0],T,0)

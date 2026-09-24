@@ -257,10 +257,10 @@ run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overla
   slot_nodup_x nested_zip_lookup "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
-  alist_a_nodup alist_disjoint "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_props_alist_ctxt_max_probeScript.sml pan_props_alist_ctxt_max_probe.out \
-  ctxt_a_bound ctxt_max_value "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  ctxt_a_bound ctxt_duplicate_first_bound "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
   len0 flookup0 "$cake_dir/pancake/semantics/panPropsScript.sml" \
@@ -1129,7 +1129,7 @@ run_probe asm_config_checks_probeScript.sml asm_config_checks_probe.out \
 # Direct HOL fixture for wordConvs$inst_ok_less, the weaker per-instruction
 # well-formedness predicate consumed by compile_to_word_conventions2.
 run_probe word_convs_inst_ok_less_probeScript.sml word_convs_inst_ok_less_probe.out \
-  iol_binop_imm iol_movtoreg_ok \
+  iol_binop_imm iol_movfromreg_fp_out_of_range \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
 
@@ -1204,3 +1204,17 @@ run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out 
   line_ok_asm_skip cbw_to_asm_sharemem \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The stack_to_lab flatten-ops probe observes the config-independent embedded
+# constructors (negate table and compile_jump).
+run_probe stack_to_lab_flatten_ops_probeScript.sml stack_to_lab_flatten_ops_probe.out \
+  negate_less compile_jump_reg \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The flatten base probe observes the non-recursive flatten constructors.
+run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_probe.out \
+  flatten_tick flatten_halt \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+

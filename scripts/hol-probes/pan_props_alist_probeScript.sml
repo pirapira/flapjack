@@ -23,8 +23,11 @@ fun print_eval label q =
 val sh = ``[panLang$One; panLang$One] : panLang$shape list``;
 val ns = ``[0;1] : num list``;
 val vs = ``[«a»; «b»] : mlstring list``;
-val fm = ``((FEMPTY |++ ZIP (^vs, ZIP (^sh, with_shape ^sh ^ns))) :
+val fm = ``(alist_to_fmap (ZIP (^vs, ZIP (^sh, with_shape ^sh ^ns))) :
              (mlstring, panLang$shape # num list) fmap)``;
+val vs_dup = ``[«a»; «a»] : mlstring list``;
+val fm_dup = ``(alist_to_fmap (ZIP (^vs_dup, ZIP (^sh, with_shape ^sh ^ns))) :
+                 (mlstring, panLang$shape # num list) fmap)``;
 
 val _ = print_eval "alist_a_nodup"
   (``case FLOOKUP ^fm «a» of SOME (s, xs) => ALL_DISTINCT xs | NONE => F``);
@@ -36,3 +39,5 @@ val _ = print_eval "alist_b_slots"
   (``case FLOOKUP ^fm «b» of SOME (s, xs) => (xs = [1]) | NONE => F``);
 val _ = print_eval "alist_disjoint"
   (``~(MEM (0:num) [1]) /\ ALL_DISTINCT ([0;1] : num list)``);
+val _ = print_eval "alist_duplicate_first"
+  (``case FLOOKUP ^fm_dup «a» of SOME (s, xs) => (xs = [0]) | NONE => F``);

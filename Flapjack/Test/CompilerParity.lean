@@ -206,6 +206,7 @@ import Flapjack.Test.PanSemReturnRaiseErrorParity
 import Flapjack.Test.PanSemExtCallErrorParity
 import Flapjack.Test.PanSemSeqParity
 import Flapjack.Test.PanSemTotalParity
+import Flapjack.Test.PanSemTotalStepsParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
@@ -831,6 +832,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSemExtCallErrorParity.runChecks,
     Flapjack.Test.PanSemSeqParity.runChecks,
     Flapjack.Test.PanSemTotalParity.runChecks,
+    Flapjack.Test.PanSemTotalStepsParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,

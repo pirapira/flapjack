@@ -134,6 +134,11 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+run_probe semantics_props_implements_probeScript.sml semantics_props_implements_probe.out \
+  implements_prime_trans \
+  "$cake_dir/semantics/proofs/semanticsPropsScript.sml" \
+  "$cake_dir/semantics/proofs"
 run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_conversion_probe.out \
   mem_load_conversion_one mem_load_conversion_comb_multiword \
   mem_load_conversion_named_nested_struct_infos_ok \

@@ -71,3 +71,23 @@ val _ =
     print (term_to_string (rconc th));
     print "\n"
   end;
+
+val _ =
+  let
+    val th = riscv_bytes_conv
+      ``riscv_encode (Branch (BEQ (1w, 2w, 2w)))``
+  in
+    print "riscv_encode_bytes_beq=";
+    print (term_to_string (rconc th));
+    print "\n"
+  end;
+
+val _ =
+  let
+    val th = riscv_bytes_conv
+      ``riscv_encode (Load (LD (1w, 2w, 0w)))``
+  in
+    print "riscv_encode_bytes_ld=";
+    print (term_to_string (rconc th));
+    print "\n"
+  end;

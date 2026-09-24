@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Encoders.Asm
 
 /-!
 # StackLang validity predicate port boundary
@@ -15,6 +16,7 @@ definitions. That configuration bridge remains open.
 namespace Flapjack.Compiler.Backend.StackProps
 
 open StackLang
+open Flapjack.Compiler.Encoders.Asm
 
 /-- The projections consumed by the HOL `stack_asm_ok` clauses. -/
 structure AsmChecks (Inst Memop Addr : Type) where
@@ -29,8 +31,9 @@ structure AsmChecks (Inst Memop Addr : Type) where
 `inl` call targets are labels and are unrestricted; `inr` targets are
 registers checked against `reg_count` and `avoid_regs`. A handler without a
 return continuation is ignored, matching the source clause. -/
-def stackAsmOk (checks : AsmChecks Inst Memop Addr) :
-    Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
+def stackAsmOk {Inst Cmp RegImm Binop Memop Addr MlString : Type}
+    (checks : AsmChecks Inst Memop Addr) :
+    StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
   | .inst instruction => checks.instOk instruction
   | .shMemOp operator register address =>
       checks.regOk register && checks.addrOk operator address
@@ -59,5 +62,33 @@ def stackAsmOk (checks : AsmChecks Inst Memop Addr) :
   | _ => true
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+/-- HOL `stackProps$addr_ok_def` (`stackPropsScript.sml:801-810`), over the
+faithful `asm` address carrier.  `Load`/`Store`/`Load32`/`Store32` use the
+word address offset; `Load16`/`Store16` use the halfword offset and are
+unavailable on `Ag32`; every other memory operation uses the byte offset. -/
+@[hol "cakeml/compiler/backend/semantics/stackPropsScript.sml" "addr_ok_def"]
+def asmAddrOk {width : Nat} (config : AsmConfig width) :
+    WordMemOp → WordLangAddr (BitVec width) → Bool
+  | operator, .addr base offset =>
+      asmRegOk config base &&
+        (if operator == .load || operator == .store || operator == .load32 ||
+            operator == .store32 then
+          asmAddrOffsetOk config offset
+         else if operator == .load16 || operator == .store16 then
+          asmHwOffsetOk config offset && !(config.isa == .ag32)
+         else
+          asmByteOffsetOk config offset)
+
+/-- The HOL `stack_asm_ok` callback record instantiated with the real
+`asm_config` validity predicates instead of opaque callbacks. -/
+def asmChecksOfConfig {width : Nat} (config : AsmConfig width) :
+    AsmChecks (WordLangInst (BitVec width)) WordMemOp (WordLangAddr (BitVec width)) :=
+  { regCount := config.regCount
+    avoidRegs := config.avoidRegs
+    instOk := asmInstOk config
+    regOk := asmRegOk config
+    addrOk := asmAddrOk config }
+
 
 end Flapjack.Compiler.Backend.StackProps

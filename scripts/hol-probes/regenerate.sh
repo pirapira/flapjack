@@ -1061,3 +1061,10 @@ run_probe word_convs_flat_exp_probeScript.sml word_convs_flat_exp_probe.out \
   fl_assign fl_inst \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The asm_config probe observes each HOL assembler validity predicate and
+# configuration projection used by `stackProps$stack_asm_ok`.
+run_probe asm_config_checks_probeScript.sml asm_config_checks_probe.out \
+  aligned0 stackAddrByte \
+  "$cake_dir/compiler/backend/semantics/stackPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

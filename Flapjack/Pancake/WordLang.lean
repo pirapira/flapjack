@@ -87,10 +87,10 @@ inductive WordLangFp where
   | fpSub (destination left right : Nat)
   | fpMul (destination left right : Nat)
   | fpDiv (destination left right : Nat)
-  | fpFma (destination left right addend : Nat)
+  | fpFma (destination left right : Nat)
   | fpMov (destination source : Nat)
-  | fpMovToReg (destinationInteger destinationFloat sourceFloat : Nat)
-  | fpMovFromReg (destinationFloat sourceInteger sourceFloat : Nat)
+  | fpMovToReg (destinationInteger second sourceFloat : Nat)
+  | fpMovFromReg (destinationFloat sourceInteger second : Nat)
   | fpToInt (destination source : Nat)
   | fpFromInt (destination source : Nat)
   deriving DecidableEq, Repr

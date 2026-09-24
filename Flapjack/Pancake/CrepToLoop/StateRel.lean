@@ -336,6 +336,42 @@ theorem crepToLoopLocalsRelHOL_iff {width : Nat} [NeZero width]
           tLocals n = some (wlabWloc v) :=
   Iff.rfl
 
+/-! ## `locals_rel` preservation
+
+HOL `locals_rel_insert_gt_vmax` (`crep_to_loopProofScript.sml:228-238`) adds a
+fresh `num_map` binding `insert n w lcl'` with `ctxt.vmax < n`; since every
+`ctxt.vars` index is `<= ctxt.vmax` (the `ctxt_max` conjunct), the new binding
+can never be the target of a source-local obligation, so the relation is
+preserved. The `sptree` `insert` is rendered as the function update
+`fun m => if m = n then some w else tLocals m`, matching the extensional
+`num_map` rendering used by `crepToLoopLocalsRelHOL`. -/
+
+/-- Exact port of HOL `locals_rel_insert_gt_vmax`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:228-238`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_insert_gt_vmax"]
+theorem crepToLoopLocalsRelHOL_insert_gt_vmax {width : Nat} [NeZero width]
+    (ctxt : CrepToLoopFiniteMapContext)
+    (live : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals : Nat → Option (LoopValue (BitVec width)))
+    (n : Nat) (w : LoopValue (BitVec width))
+    (hrel : crepToLoopLocalsRelHOL ctxt live sLocals tLocals)
+    (hn : ctxt.vmax < n) :
+    crepToLoopLocalsRelHOL ctxt live sLocals
+      (fun m => if m = n then some w else tLocals m) := by
+  rw [crepToLoopLocalsRelHOL] at hrel ⊢
+  obtain ⟨hd, hmax, hdom, hmap⟩ := hrel
+  refine ⟨hd, hmax, ?_, ?_⟩
+  · intro m hm
+    by_cases hmn : m = n
+    · simp [hmn]
+    · simpa [hmn] using hdom m hm
+  · intro vname v hlk
+    obtain ⟨m, hvar, hlive, ht⟩ := hmap vname v hlk
+    have hle : m ≤ ctxt.vmax := hmax vname m hvar
+    have hmn : m ≠ n := by omega
+    exact ⟨m, hvar, hlive, by simp [hmn, ht]⟩
+
 /-! ## Pure-num context lookups
 
 `crep_to_loopScript.sml`'s `find_var`/`find_lab` are plain finite-map lookups

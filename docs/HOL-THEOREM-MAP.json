@@ -8574,5 +8574,13 @@
     "lean_name": "progIfW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared clause-by-clause against prog_if_def at crep_to_loopScript.sml:34; width-indexed over List (LoopProg (BitVec width))/LoopExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex and Const 1w/Const 0w are 'a word; generic progIf stays untagged. Direct HOL-EVAL row prog_if_basic=T reproduced by the width-indexed example in Flapjack/Test/CrepProgIfParity.lean. Production-path note in the docstring: loopCompileExp's .cmp case inlines the identical statement list and is generic over the word element type, pending the deferred width-indexing migration.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "locals_rel_insert_gt_vmax",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopLocalsRelHOL_insert_gt_vmax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against locals_rel_insert_gt_vmax at crep_to_loopProofScript.sml:228; conclusion adds a fresh num_map binding insert n w lcl' above ctxt.vmax to the tagged finite-map locals_rel carrier crepToLoopLocalsRelHOL, rendering sptree insert extensionally as fun m => if m = n then some w else tLocals m (same rendering as the tagged locals_rel_def). Direct HOL-EVAL rows insert_same/insert_other_unchanged/gt_vmax_bounded_survives/subset_preserved in scripts/hol-probes/crep_to_loop_locals_insert_probe.out reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean. Carrier is width-indexed over BitVec width with [NeZero width] because HOL word types have positive dimindex.)"
   }
 ]

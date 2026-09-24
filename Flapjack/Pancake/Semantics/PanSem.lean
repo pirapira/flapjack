@@ -1402,8 +1402,7 @@ theorem panSemEvaluateExactState_call_error_of_returned_invalid
         some (.control (.returned bodyLocals returnGlobals returnMemory returnFfi values),
           finalClock))
     (hret :
-      (panValueReturnValid state.legacy.structs state.legacy.contracts function values &&
-          panValueValuesWithinLimit state.legacy.structs values) = false) :
+      panValueReturnValid state.legacy.structs state.legacy.contracts function values = false) :
     panSemEvaluateExactState context primitive handler state (.call info function arguments) =
       some (.control (.error (fun _ => none) returnGlobals returnMemory returnFfi),
         finalClock) := by

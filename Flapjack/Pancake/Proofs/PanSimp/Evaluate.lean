@@ -2283,7 +2283,7 @@ theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
     (hclock : clock ≠ 0)
     (hparams : panValueParametersValid structs c function values = true)
     (hreturn : panValueReturnValid structs c function values = true)
-    (hwithin : panValueValuesWithinLimit structs values = true) :
+    (_hwithin : panValueValuesWithinLimit structs values = true) :
     ∃ (finalGlobals : VarName → Option (PanValue α))
       (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
       (finalClock : Nat),
@@ -2299,7 +2299,7 @@ theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
   exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
     by
       simp [evalPanValueFfiClockCall, panValueCallTarget, panValueCallArgumentsValue, hargs, hlookup, hbind, hclock, hbody, hparams,
-        hreturn, hwithin]⟩
+        hreturn]⟩
 
 /-- Program-level form of general call adequacy: the `Call` node itself costs
     one structural step, so the destination-free call succeeds at

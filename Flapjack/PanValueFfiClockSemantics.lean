@@ -144,8 +144,12 @@ mutual
                         pure (.control (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
                           calleeClock)
                     | .returned _ calleeGlobals calleeMemory calleeFfi values =>
-                        if panValueReturnValid structs contracts function values &&
-                            panValueValuesWithinLimit structs values then
+                        -- HOL `Call` checks only `shape_of retv <> return_sh`; the
+                        -- payload-size limit is enforced by the callee's `Return`
+                        -- equation (`panValueReturnResult`), so a callee `.returned`
+                        -- always carries a within-limit payload and the check here is
+                        -- shape-only, exactly as in `panSemScript.sml`.
+                        if panValueReturnValid structs contracts function values then
                           match info with
                           | none => pure (.control
                               (.returned (fun _ => none) calleeGlobals calleeMemory
@@ -386,8 +390,10 @@ mutual
                           | [value] => panShapeMatches (panValueShape structs value) returnShape
                           | _ => false
                         if sourceReturnValid &&
-                            panValueReturnValid structs contracts function values &&
-                            panValueValuesWithinLimit structs values then
+                            -- HOL `Call` checks only `shape_of retv <> return_sh`; the
+                            -- payload-size limit is enforced by the callee's `Return`
+                            -- equation, so no separate size test is needed here.
+                            panValueReturnValid structs contracts function values then
                           match info with
                           | none => pure (.control
                               (.returned (fun _ => none) calleeGlobals calleeMemory
@@ -856,10 +862,12 @@ theorem evalPanValueFfiClockCall_callee_error_error
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
     Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
 
-/-! A callee that returns a value whose shape or size fails the call contract is
-    a call failure: Cake's `evaluate (Call ...)` maps a mismatched `Return` to
+/-! A callee that returns a value whose shape fails the call contract is a call
+    failure: Cake's `evaluate (Call ...)` maps a mismatched `Return` to
     `(SOME Error,st)`, preserving the callee's post-call globals, memory, FFI
-    state and clock (its locals were already emptied by the return). -/
+    state and clock (its locals were already emptied by the return).  Only the
+    shape is tested here, as in `panSemScript.sml`; the payload-size limit is
+    enforced by the callee's own `Return` equation. -/
 theorem evalPanValueFfiClockCall_returned_invalid_error
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -898,8 +906,7 @@ theorem evalPanValueFfiClockCall_returned_invalid_error
       (memoryHandler := memoryHandler) =
       some (.control (.returned bodyLocals returnGlobals returnMemory returnFfi values),
         finalClock))
-    (hret : (panValueReturnValid structs contracts function values &&
-        panValueValuesWithinLimit structs values) = false) :
+    (hret : panValueReturnValid structs contracts function values = false) :
     evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
       info function arguments (memoryAccess := memoryAccess) (contracts := contracts)
@@ -907,8 +914,6 @@ theorem evalPanValueFfiClockCall_returned_invalid_error
       some (.control (.error (fun _ => none) returnGlobals returnMemory returnFfi),
         finalClock) := by
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
-    Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
-  intro hvalidReturn hvalidValues
-  simp [hvalidReturn, hvalidValues] at hret
+    Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody, hret]
 
 end Flapjack

@@ -1,0 +1,11 @@
+if_true_result=NONE
+if_true_clock=5
+if_true_locals=SOME (ValWord 9w)
+if_false_result=NONE
+if_false_clock=5
+if_false_locals=SOME (ValWord 3w)
+if_nonword_result=SOME Error
+if_nonword_locals=SOME (ValWord 3w)
+if_fail_result=SOME Error
+if_fail_clock=5
+if_fail_locals=SOME (ValWord 3w)

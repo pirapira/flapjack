@@ -1389,3 +1389,11 @@ run_probe stack_lang_inst_overloads_probeScript.sml stack_lang_inst_overloads_pr
   left_shift_inst_2_3 halt_inst_0 \
   "$cake_dir/compiler/backend/stack_removeScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The mlstring carrier probe pins the exact HOL `mlstring = implode string`
+# datatype (string = char list, char the 256-element type) needed by the
+# stackLang/stack_names program FFI field.
+run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
+  ml_strlen ml_concat_len \
+  "$cake_dir/basis/pure/mlstringScript.sml" \
+  "$cake_dir/basis/pure"

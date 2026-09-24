@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Compiler.Backend.StackLang
 
 /-!
 Kernel-checked parity guards for the assembler configuration validity
@@ -175,5 +176,158 @@ def runChecks : IO Bool := do
   else
     IO.println "FAIL asm validity over the full carrier"
   pure asmConfigGuard
+
+/-! ## Exact asm payload carriers (`reg_imm`/`addr`/`inst`)
+
+Parity for the width-indexed exact carriers in
+`Flapjack/Compiler/Encoders/Asm.lean` against the direct HOL oracle
+`scripts/hol-probes/asm_inst_fragment_probe.out` (bead
+`flapjack-pxn.18.5.15.3.11.1`).  The oracle reads the HOL `reg_imm`/`addr`/
+`inst` constructors at the numeral word type `64`; the guards below read the
+Lean mirror at `width = 64`. -/
+
+private def w64 (n : Nat) : BitVec 64 := BitVec.ofNat 64 n
+
+private def regImmTag {width : Nat} [NeZero width] : HolRegImm width → Nat
+  | .reg name => name
+  | .imm value => value.toNat
+
+private def addrBase {width : Nat} [NeZero width] : HolAddr width → Nat
+  | .addr base _ => base
+
+private def addrOff {width : Nat} [NeZero width] : HolAddr width → Nat
+  | .addr _ offset => offset.toNat
+
+private def instSkip {width : Nat} [NeZero width] : HolInst width → Nat
+  | .skip => 1
+  | _ => 0
+
+private def instConstReg {width : Nat} [NeZero width] : HolInst width → Nat
+  | .const register _ => register
+  | _ => 0
+
+private def instConstVal {width : Nat} [NeZero width] : HolInst width → Nat
+  | .const _ value => value.toNat
+  | _ => 0
+
+private def instMemReg {width : Nat} [NeZero width] : HolInst width → Nat
+  | .mem _ register _ => register
+  | _ => 0
+
+private def instMemBase {width : Nat} [NeZero width] : HolInst width → Nat
+  | .mem _ _ address => addrBase address
+  | _ => 0
+
+private def asmFragmentGuard : Bool :=
+  regImmTag (.reg 3 : HolRegImm 64) == 3 &&
+  regImmTag (.imm (w64 5) : HolRegImm 64) == 5 &&
+  addrBase (.addr 3 (w64 5) : HolAddr 64) == 3 &&
+  addrOff (.addr 3 (w64 5) : HolAddr 64) == 5 &&
+  instSkip (.skip : HolInst 64) == 1 &&
+  instConstReg (.const 2 (w64 7) : HolInst 64) == 2 &&
+  instConstVal (.const 2 (w64 7) : HolInst 64) == 7 &&
+  instMemReg (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64) == 2 &&
+  instMemBase (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64) == 3
+
+#guard asmFragmentGuard
+
+example :
+    HolRegImm.ofWordRegImm (HolRegImm.toWordRegImm (.reg 3 : HolRegImm 64)) =
+      .reg 3 := rfl
+
+example :
+    HolAddr.ofWordLangAddr (HolAddr.toWordLangAddr (.addr 3 (w64 5))) =
+      .addr 3 (w64 5) := rfl
+
+example :
+    HolInst.ofWordLangInst
+        (HolInst.toWordLangInst (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64)) =
+      .mem .load 2 (.addr 3 (w64 5)) := rfl
+
+/-! ## Monomorphic enums and the full `asm` carrier (bead `.18.5.15.3.10.1`)
+
+The oracle rows `ab_*`/`ac_*`/`am_*`/`aa_*`/`af_*`/`as_*` read the HOL
+`binop`/`cmp`/`memop`/`arith`/`fp`/`asm` constructors.  The guards below read
+the Lean mirrors: the monomorphic aliases `HolBinop`/`HolCmp`/`HolMemop`/
+`HolFp` and the width-indexed `HolArith 64`/`HolAsm 64`. -/
+
+private def binopTag : HolBinop → Nat
+  | .add => 1
+  | .sub => 2
+  | .and => 3
+  | .or => 4
+  | .xor => 5
+
+private def cmpTag : HolCmp → Nat
+  | .equal => 0
+  | .lower => 1
+  | .less => 2
+  | .test => 3
+  | .notEqual => 4
+  | .notLower => 5
+  | .notLess => 6
+  | .notTest => 7
+
+private def memopTag : HolMemop → Nat
+  | .load => 0
+  | .load8 => 1
+  | .load16 => 2
+  | .load32 => 3
+  | .store => 4
+  | .store8 => 5
+  | .store16 => 6
+  | .store32 => 7
+
+private def arithDivSum {width : Nat} [NeZero width] : HolArith width → Nat
+  | .div a b c => a + b + c
+  | _ => 0
+
+private def arithLongDivSum {width : Nat} [NeZero width] : HolArith width → Nat
+  | .longDiv a b c d e => a + b + c + d + e
+  | _ => 0
+
+private def fpMovToRegSum : HolFp → Nat
+  | .fpMovToReg a b c => a + b + c
+  | _ => 0
+
+private def fpFromIntSum : HolFp → Nat
+  | .fpFromInt a b => a + b
+  | _ => 0
+
+private def asmJumpTarget {width : Nat} [NeZero width] : HolAsm width → Nat
+  | .jump target => target.toNat
+  | _ => 0
+
+private def asmJumpCmpReg {width : Nat} [NeZero width] : HolAsm width → Nat
+  | .jumpCmp _ register _ _ => register
+  | _ => 0
+
+private def asmJumpRegTarget {width : Nat} [NeZero width] : HolAsm width → Nat
+  | .jumpReg register => register
+  | _ => 0
+
+private def asmLocSum {width : Nat} [NeZero width] : HolAsm width → Nat
+  | .loc register offset => register + offset.toNat
+  | _ => 0
+
+private def asmSyntaxGuard : Bool :=
+  binopTag .add == 1 &&
+  cmpTag .notTest == 7 &&
+  memopTag .store32 == 7 &&
+  arithDivSum (.div 1 2 3 : HolArith 64) == 6 &&
+  arithLongDivSum (.longDiv 1 2 3 4 5 : HolArith 64) == 15 &&
+  fpMovToRegSum (.fpMovToReg 1 2 3 : HolFp) == 6 &&
+  fpFromIntSum (.fpFromInt 4 5 : HolFp) == 9 &&
+  asmJumpTarget (.jump (w64 9) : HolAsm 64) == 9 &&
+  asmJumpCmpReg (.jumpCmp .equal 1 (.reg 2) (w64 3) : HolAsm 64) == 1 &&
+  asmJumpRegTarget (.jumpReg 7 : HolAsm 64) == 7 &&
+  asmLocSum (.loc 6 (w64 8) : HolAsm 64) == 14
+
+#guard asmSyntaxGuard
+
+example : (Flapjack.BinOp.add : HolBinop) = Flapjack.BinOp.add := rfl
+example : (Flapjack.WordMemOp.store32 : HolMemop) = Flapjack.WordMemOp.store32 := rfl
+example : (HolProg 64) = Flapjack.Compiler.Backend.StackLang.Prog (HolInst 64)
+    HolCmp (HolRegImm 64) HolBinop HolMemop (HolAddr 64) String := rfl
 
 end Flapjack.Test.AsmConfigChecksParity

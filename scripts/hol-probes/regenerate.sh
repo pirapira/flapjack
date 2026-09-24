@@ -1397,3 +1397,10 @@ run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
   ml_strlen ml_concat_len \
   "$cake_dir/basis/pure/mlstringScript.sml" \
   "$cake_dir/basis/pure"
+
+# The stackLang prog-carrier probe pins the exact `prog` datatype FFI field
+# (mlstring) and representative constructor shapes at word type 64.
+run_probe stack_lang_prog_carrier_probeScript.sml stack_lang_prog_carrier_probe.out \
+  pg_skip pg_ffi_eq \
+  "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"

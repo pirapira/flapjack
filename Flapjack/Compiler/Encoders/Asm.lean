@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.MlString
 
 /-!
 # Faithful assembler configuration validity predicates
@@ -256,22 +257,22 @@ inductive HolAsm (width : Nat) [NeZero width] where
   | loc (register : Nat) (offset : BitVec width)
   deriving Repr
 
-/-- Width-indexed `stackLang$prog` (`cakeml/compiler/backend/stackLangScript.sml:27-66`)
+/-- Exact width-indexed `stackLang$prog` (`cakeml/compiler/backend/stackLangScript.sml:27-66`)
 over the exact asm payload carriers.  This instantiates the seven-parameter
 `Flapjack.Compiler.Backend.StackLang.Prog` with the exact `HolInst`/`HolCmp`/
-`HolRegImm`/`HolBinop`/`HolMemop`/`HolAddr` carriers so the program type has a
-single shared word dimension like HOL.
-
-NOT TAGGED: the sole residual difference from HOL is the `FFI` field, whose HOL
-type is the opaque `mlstring = implode string`
-(`cakeml/basis/pure/mlstringScript.sml:20`) over HOL's built-in `char`/`string`;
-here it is carried as Lean `String` (a `List Char` over Unicode scalars).  A
-faithful `mlstring`/`char` carrier is required before `prog` can carry an exact
-`@[hol ... "prog"]` tag; recorded on `flapjack-pxn.18.5.15.3.11`.  The
-width-indexed `HolInst`/`HolAsm` payloads above are exact and tagged. -/
+`HolRegImm`/`HolBinop`/`HolMemop`/`HolAddr` carriers plus the faithful `MlString`
+FFI carrier, so the program type has a single shared word dimension like HOL and
+the `FFI` field matches HOL's opaque `mlstring = implode string`
+(`cakeml/basis/pure/mlstringScript.sml:19-21`).  All 34 constructor arities and
+field types match `stackLangScript.sml:27-66`; the only `@[hol]`-tagged
+program-level declaration is this instantiation.  The production
+`StackCarrier.ProgW` (`String` FFI) and this exact carrier are related by the
+kernel-checked `String`<->`MlString` bridge recorded on
+`flapjack-pxn.18.5.15.3.11.2.3`. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "prog"]
 abbrev HolProg (width : Nat) [NeZero width] :=
   Flapjack.Compiler.Backend.StackLang.Prog (HolInst width) HolCmp (HolRegImm width)
-    HolBinop HolMemop (HolAddr width) String
+    HolBinop HolMemop (HolAddr width) Flapjack.Compiler.Backend.MlString.MlString
 
 /-- HOL `asmScript.sml:139-146`:
 `asm = Inst ('a inst) | Jump ('a word) | JumpCmp cmp reg ('a reg_imm) ('a word)

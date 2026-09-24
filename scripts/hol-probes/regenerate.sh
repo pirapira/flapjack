@@ -1434,3 +1434,10 @@ run_probe stack_lang_prog_carrier_probeScript.sml stack_lang_prog_carrier_probe.
   pg_skip pg_ffi_eq \
   "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The loopLang exp/loop_arith probe pins the exact constructor and field shapes
+# of the faithful width-indexed carriers HolLoopExp/LoopArith.
+run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
+  exp_const arith_div \
+  "$cake_dir/pancake/loopLangScript.sml" \
+  "$cake_dir/pancake"

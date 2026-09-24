@@ -9054,5 +9054,21 @@
   "lean_name": "stackErrLab",
   "statement_status": "reviewed_exact",
   "reviewer": "flapjack-main (HOL/Lean source comparison: both are the constant 2)"
+},
+{
+  "hol_path": "cakeml/pancake/loopLangScript.sml",
+  "hol_name": "exp",
+  "lean_path": "Flapjack/Pancake/LoopLang.lean",
+  "lean_name": "HolLoopExp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/loopLangScript.sml",
+  "hol_name": "loop_arith",
+  "lean_path": "Flapjack/Pancake/LoopLang.lean",
+  "lean_name": "LoopArith",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

@@ -3482,6 +3482,9 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
   | nField (name : FieldName) (expression : Exp (RiscV.Word 64)) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.nField name expression)
+  | panOpMulConst (left right : RiscV.Word 64) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.panOp .mul [.const left, .const right])
 
 private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
@@ -3575,11 +3578,22 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       simp only [Option.bind_eq_some_iff] at heval
       rcases heval with ⟨innerValue, _, hresult⟩
       cases innerValue <;> simp at hresult
+  | panOpMulConst left right =>
+      intro value heval
+      have hcomputed : evalPanSemStateExp source
+          (.panOp .mul [.const left, .const right]) = some (.word (left * right)) := by
+        simp [evalPanSemStateExp, evalPanValueExp, evalPanValueExp.evalPanValueExps,
+          evalPanOp]
+      have hvalue : value = .word (left * right) := by
+        exact Option.some.inj (heval.symm.trans hcomputed)
+      subst value
+      simp [evalCrepRuntimeExps, compileExpHOL, compileExpHOL.compileExpListHOL,
+        evalCrepRuntimeExp, cexpHeads, compilePanOp, panValueFlatten]
 
-/-! Lift mixed Const/Local/RStruct/address/RField-supported arguments through
-the HOL `compile_args` list evaluator. This is a larger subset of the argument
-relation, while arbitrary Load/operator cases and the full expression induction
-remain open. -/
+/-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and the
+constant-operand PanOp multiplication case through the HOL `compile_args` list
+evaluator. Load expressions, operators with variable operands, and the full
+expression induction remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

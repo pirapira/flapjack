@@ -2547,6 +2547,27 @@ theorem evalCrepRuntimeExp_sourceWord_eq {ι : Type} {σ : Type}
     · intro sourceState
       simp [evalCrepRuntimeExps, ihHead sourceState, ihTail.2 sourceState]
 
+/-- Complete `word_lab` result bridge for the all-constructor source/runtime
+    evaluator theorem above. Since `word_lab` has only the `Word` constructor,
+    mapping the raw runtime result through `PanWordLab.word` gives the source
+    evaluator's full `Option (word_lab word)` shape. This remains untagged:
+    the explicit `HolFiniteDimension` witness and its word-operation adapters
+    have not been identified with HOL's implicit `finite_index` instance. -/
+theorem evalCrepRuntimeExp_sourceWordLab_eq {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool)) :
+    (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression).map
+        PanWordLab.word =
+      evalCrepHolFiniteWordSourceExpWordLab dimension state expression := by
+  change (evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression).map
+        PanWordLab.word =
+      (evalCrepHolFiniteWordSourceExp dimension state expression).map
+        PanWordLab.word
+  rw [evalCrepRuntimeExp_sourceWord_eq]
+
 theorem evalCrepRuntimeExp_finiteDimension_const {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) (value : ι → Bool) :

@@ -61,7 +61,14 @@ def loadCompileCaseRuntime : PanSemState Word64 (FfiState Unit) :=
     memory := fun address =>
       if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 3))
       else if address == BitVec.ofNat 64 1 then some (.word (BitVec.ofNat 64 5))
-      else none }
+      else none
+    memaddrs := fun address =>
+      address == BitVec.ofNat 64 0 || address == BitVec.ofNat 64 1 }
+
+def loadCompileCaseMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    loadCompileCaseRuntime.memaddrs loadCompileCaseRuntime.sharedMemaddrs
+    loadCompileCaseRuntime.be
 
 def loadCompileCaseValue : PanValue Word64 :=
   .rStruct [.word (BitVec.ofNat 64 3), .word (BitVec.ofNat 64 5)]
@@ -74,11 +81,12 @@ example :
         .comb [.one, .one] ∧
     panSemShapeOf loadCompileCaseValue = .comb [.one, .one] ∧
     panStructValueFieldsOkBool loadCompileCaseRuntime.structs loadCompileCaseValue = true ∧
-    evalPanValueExp loadCompileCaseRuntime.structs loadCompileCaseRuntime.locals
+    evalPanValueExpFull loadCompileCaseRuntime.structs loadCompileCaseRuntime.locals
       loadCompileCaseRuntime.globals loadCompileCaseRuntime.memory
       loadCompileCaseRuntime.baseAddress loadCompileCaseRuntime.topAddress
-      (BitVec.ofNat 64 1) loadCompileCaseExpression = some loadCompileCaseValue ∧
-    evalPanValueExp
+      (BitVec.ofNat 64 1) loadCompileCaseExpression
+      (memoryAccess := some loadCompileCaseMemoryAccess) = some loadCompileCaseValue ∧
+    evalPanValueExpFull
       (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).structs
       (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).locals
       (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).globals
@@ -86,19 +94,137 @@ example :
       (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).baseAddress
       (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).topAddress
       (BitVec.ofNat 64 1)
-        (structCompileExp emptyStructCompileContext loadCompileCaseExpression) =
+        (structCompileExp emptyStructCompileContext loadCompileCaseExpression)
+        (memoryAccess := some loadCompileCaseMemoryAccess) =
         some (panStructConvertValue loadCompileCaseValue) := by
-  simp [structOldExpShape, emptyStructCompileContext, loadCompileCaseExpression,
-    loadCompileCaseValue, loadCompileCaseRuntime, finiteMapRuntime,
-    panSemShapeOf, panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
-    evalPanValueExp,
+  have hsource : evalPanValueExpFull loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.locals loadCompileCaseRuntime.globals
+      loadCompileCaseRuntime.memory loadCompileCaseRuntime.baseAddress
+      loadCompileCaseRuntime.topAddress (BitVec.ofNat 64 1)
+      loadCompileCaseExpression (memoryAccess := some loadCompileCaseMemoryAccess) =
+        some loadCompileCaseValue := by
+    simp [evalPanValueExpFull, loadCompileCaseExpression, loadCompileCaseValue,
+      loadCompileCaseRuntime, finiteMapRuntime, loadCompileCaseMemoryAccess,
+      panValueMemoryAccessOfModel, RiscV.panRiscVMemoryModel,
+      panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadListFuel,
+      panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
+      panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+      shapeSizeWithContext, isWfShape, isWfShape.isWfShapeList]
+  have hstructs : panStructContextShapeView emptyStructCompileContext.structs =
+      panStructContextShapeView loadCompileCaseRuntime.structs := rfl
+  have hlocalsFields : panStructEveryValueFieldsOkBool loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.locals := by
+    intro name value hvalue
+    simp [loadCompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.globals := by
+    intro name value hvalue
+    simp [loadCompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hstructInfos : structInfosOk loadCompileCaseRuntime.structs := by
+    simp [structInfosOk, loadCompileCaseRuntime, finiteMapRuntime]
+  have hlocalsMap : panStructShapeMapEq emptyStructCompileContext.locals
+      loadCompileCaseRuntime.locals := by
+    intro name
+    simp [emptyStructCompileContext, loadCompileCaseRuntime, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq emptyStructCompileContext.globals
+      loadCompileCaseRuntime.globals := by
+    intro name
+    simp [emptyStructCompileContext, loadCompileCaseRuntime, finiteMapRuntime, lookupInfo]
+  have haddressIH : ∀ addressValue,
+      evalPanValueExpFull loadCompileCaseRuntime.structs loadCompileCaseRuntime.locals
+        loadCompileCaseRuntime.globals loadCompileCaseRuntime.memory
+        loadCompileCaseRuntime.baseAddress loadCompileCaseRuntime.topAddress
+        (BitVec.ofNat 64 1) (.const (BitVec.ofNat 64 0))
+        (memoryAccess := some loadCompileCaseMemoryAccess) = some addressValue →
+      structOldExpShape emptyStructCompileContext (.const (BitVec.ofNat 64 0)) =
+        panSemShapeOf addressValue ∧
+      panStructValueFieldsOkBool loadCompileCaseRuntime.structs addressValue = true ∧
+      evalPanValueExpFull
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).structs
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).locals
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).globals
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).memory
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).baseAddress
+        (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).topAddress
+        (BitVec.ofNat 64 1)
+        (structCompileExp emptyStructCompileContext (.const (BitVec.ofNat 64 0)))
+        (memoryAccess := some loadCompileCaseMemoryAccess) =
+          some (panStructConvertValue addressValue) := by
+    intro addressValue haddress
+    have hvalue : addressValue = .word (BitVec.ofNat 64 0) := by
+      have h := haddress
+      simp [evalPanValueExpFull] at h
+      exact h.symm
+    subst addressValue
+    exact ⟨by simp [structOldExpShape, panSemShapeOf],
+      by simp [panStructValueFieldsOkBool],
+      by simp [evalPanValueExpFull, panStructConvertState,
+        panStructConvertValue]⟩
+  have hcase := panStructCompileExpCorrectLoadCase emptyStructCompileContext
+    loadCompileCaseRuntime (BitVec.ofNat 64 1) loadCompileCaseMemoryAccess
+    (.comb [.one, .one]) (.const (BitVec.ofNat 64 0)) loadCompileCaseValue
+    hsource hstructs hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap
+    haddressIH
+  rcases hcase with ⟨hshape, hfields, htarget⟩
+  refine ⟨?_, ?_, hfields, hsource, ?_⟩
+  · simpa [loadCompileCaseExpression, loadCompileCaseValue, panSemShapeOf] using hshape
+  · simp [loadCompileCaseValue, panSemShapeOf]
+  · simpa [loadCompileCaseExpression, loadCompileCaseValue,
+      panStructConvertValue] using htarget
+
+def loadCompileCaseOutOfDomainRuntime : PanSemState Word64 (FfiState Unit) :=
+  { loadCompileCaseRuntime with
+    memaddrs := fun address => address == BitVec.ofNat 64 1 }
+
+def loadCompileCaseOutOfDomainMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    loadCompileCaseOutOfDomainRuntime.memaddrs
+    loadCompileCaseOutOfDomainRuntime.sharedMemaddrs
+    loadCompileCaseOutOfDomainRuntime.be
+
+/-! The paired HOL row
+    `compile_exp_correct_load_out_of_domain=(Comb [One; One],Comb [One; One],T,F,F)`
+    checks that excluding the base address makes both source and converted
+    loads fail, while shape and field-validity checks remain true. -/
+example :
+    structOldExpShape emptyStructCompileContext loadCompileCaseExpression =
+        .comb [.one, .one] ∧
+    panSemShapeOf loadCompileCaseValue = .comb [.one, .one] ∧
+    panStructValueFieldsOkBool loadCompileCaseOutOfDomainRuntime.structs
+      loadCompileCaseValue = true ∧
+    evalPanValueExpFull loadCompileCaseOutOfDomainRuntime.structs
+      loadCompileCaseOutOfDomainRuntime.locals loadCompileCaseOutOfDomainRuntime.globals
+      loadCompileCaseOutOfDomainRuntime.memory loadCompileCaseOutOfDomainRuntime.baseAddress
+      loadCompileCaseOutOfDomainRuntime.topAddress (BitVec.ofNat 64 1)
+      loadCompileCaseExpression
+      (memoryAccess := some loadCompileCaseOutOfDomainMemoryAccess) = none ∧
+    evalPanValueExpFull
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).structs
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).locals
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).globals
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).memory
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext
+        loadCompileCaseOutOfDomainRuntime).topAddress (BitVec.ofNat 64 1)
+      (structCompileExp emptyStructCompileContext loadCompileCaseExpression)
+      (memoryAccess := some loadCompileCaseOutOfDomainMemoryAccess) = none := by
+  simp [loadCompileCaseOutOfDomainRuntime, loadCompileCaseOutOfDomainMemoryAccess,
+    loadCompileCaseRuntime, loadCompileCaseExpression, loadCompileCaseValue,
+    emptyStructCompileContext, finiteMapRuntime, evalPanValueExpFull,
+    structOldExpShape, panSemShapeOf, panStructValueFieldsOkBool,
+    panStructValuesFieldsOkBool,
+    panValueMemoryAccessOfModel, RiscV.panRiscVMemoryModel,
     panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadListFuel,
     panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
     panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
-    shapeSizeWithContext, isWfShape, isWfShape.isWfShapeList, panStructConvertState,
-    panStructConvertValue, panStructConvertValues,
-    structCompileExp, structCompileShape, structCompileShapeWF,
-    structCompileShapeWF.structCompileShapesWF]
+    shapeSizeWithContext, isWfShape, isWfShape.isWfShapeList,
+    structCompileShapeWF, structCompileShapeWF.structCompileShapesWF,
+    panStructConvertState, structCompileExp, structCompileShape]
 
 /-! Paired LoadByte constructor regressions for the direct HOL-EVAL success
 row `compile_exp_correct_load_byte` and the out-of-domain failure row in
@@ -827,7 +953,13 @@ def nestedLoadRuntime : PanSemState Word64 (FfiState Unit) :=
       if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 7))
       else if address == BitVec.ofNat 64 1 then some (.word (BitVec.ofNat 64 11))
       else if address == BitVec.ofNat 64 2 then some (.word (BitVec.ofNat 64 13))
-      else none }
+      else none
+    memaddrs := fun address => address == BitVec.ofNat 64 0 ||
+      address == BitVec.ofNat 64 1 || address == BitVec.ofNat 64 2 }
+
+def nestedLoadMemoryAccess : PanValueMemoryAccess Word64 :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel
+    nestedLoadRuntime.memaddrs nestedLoadRuntime.sharedMemaddrs nestedLoadRuntime.be
 
 def nestedLoadExpression : Exp Word64 :=
   .load (.named "Pair") (.const (BitVec.ofNat 64 0))
@@ -910,14 +1042,15 @@ example :
       shapeSizeWithContext nestedLoadStructContext (.named "Pair") ∧
     structOldExpShape nestedLoadCompileContext nestedLoadExpression =
       panSemShapeOf nestedLoadSourceValue ∧
-    evalPanValueExp (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
+    evalPanValueExpFull (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
       (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).locals
       (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).globals
       (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).memory
       (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).baseAddress
       (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).topAddress
       (BitVec.ofNat 64 1)
-      (structCompileExp nestedLoadCompileContext nestedLoadExpression) =
+      (structCompileExp nestedLoadCompileContext nestedLoadExpression)
+      (memoryAccess := some nestedLoadMemoryAccess) =
         some (panStructConvertValue nestedLoadSourceValue) := by
   have hok : structInfosOk nestedLoadStructContext := by
     let innerInfo : StructInfo := {
@@ -992,12 +1125,14 @@ example :
     hloadShapeFields.2
   have hsize := structCompileShapeWF_size nestedLoadStructContext (.named "Pair") hwf hok
   have hloadEval :
-      evalPanValueExp nestedLoadRuntime.structs nestedLoadRuntime.locals
+      evalPanValueExpFull nestedLoadRuntime.structs nestedLoadRuntime.locals
         nestedLoadRuntime.globals nestedLoadRuntime.memory nestedLoadRuntime.baseAddress
-        nestedLoadRuntime.topAddress (BitVec.ofNat 64 1) nestedLoadExpression =
+        nestedLoadRuntime.topAddress (BitVec.ofNat 64 1) nestedLoadExpression
+        (memoryAccess := some nestedLoadMemoryAccess) =
           some nestedLoadSourceValue := by
     simp [nestedLoadRuntime, nestedLoadStructContext, nestedLoadExpression,
-      nestedLoadSourceValue, finiteMapRuntime, evalPanValueExp,
+      nestedLoadSourceValue, finiteMapRuntime, evalPanValueExpFull,
+      nestedLoadMemoryAccess, panValueMemoryAccessOfModel, RiscV.panRiscVMemoryModel,
       panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadFieldsFuel,
       panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
       panValueFlatShapeFuel, panValueFlatFieldsFuel, shapeSizeWithContext,
@@ -1022,31 +1157,33 @@ example :
     intro name
     simp [nestedLoadCompileContext, nestedLoadRuntime, finiteMapRuntime, lookupInfo]
   have haddressIH : ∀ addressValue,
-      evalPanValueExp nestedLoadRuntime.structs nestedLoadRuntime.locals
+      evalPanValueExpFull nestedLoadRuntime.structs nestedLoadRuntime.locals
         nestedLoadRuntime.globals nestedLoadRuntime.memory
         nestedLoadRuntime.baseAddress nestedLoadRuntime.topAddress
-        (BitVec.ofNat 64 1) (.const (BitVec.ofNat 64 0)) = some addressValue →
+        (BitVec.ofNat 64 1) (.const (BitVec.ofNat 64 0))
+        (memoryAccess := some nestedLoadMemoryAccess) = some addressValue →
       structOldExpShape nestedLoadCompileContext (.const (BitVec.ofNat 64 0)) =
           panSemShapeOf addressValue ∧
       panStructValueFieldsOkBool nestedLoadRuntime.structs addressValue = true ∧
-      evalPanValueExp (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
+      evalPanValueExpFull (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).structs
         (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).locals
         (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).globals
         (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).memory
         (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).baseAddress
         (panStructConvertState nestedLoadCompileContext nestedLoadRuntime).topAddress
         (BitVec.ofNat 64 1)
-        (structCompileExp nestedLoadCompileContext (.const (BitVec.ofNat 64 0))) =
+        (structCompileExp nestedLoadCompileContext (.const (BitVec.ofNat 64 0)))
+        (memoryAccess := some nestedLoadMemoryAccess) =
           some (panStructConvertValue addressValue) := by
     intro addressValue heval
     have hword : addressValue = .word (BitVec.ofNat 64 0) := by
-      simpa [evalPanValueExp] using heval.symm
+      simpa [evalPanValueExpFull] using heval.symm
     subst addressValue
     refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
     · simp [panStructValueFieldsOkBool]
-    · simp [evalPanValueExp, panStructConvertState, panStructConvertValue]
+    · simp [evalPanValueExpFull, panStructConvertState, panStructConvertValue]
   have hloadCase := panStructCompileExpCorrectLoadCase
-    nestedLoadCompileContext nestedLoadRuntime (BitVec.ofNat 64 1) (.named "Pair")
+    nestedLoadCompileContext nestedLoadRuntime (BitVec.ofNat 64 1) nestedLoadMemoryAccess (.named "Pair")
     (.const (BitVec.ofNat 64 0)) nestedLoadSourceValue hloadEval hstructsView
     hlocalsFields hglobalsFields hok hlocalsMap hglobalsMap haddressIH
   refine ⟨hok, hwf, hsource, ?_, hfields, ?_, ?_, ?_⟩

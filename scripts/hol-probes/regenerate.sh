@@ -114,6 +114,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
   compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
+  compile_exp_correct_load_out_of_domain \
   compile_exp_correct_load_nested_named \
   compile_exp_correct_load32_le_success \
   compile_exp_correct_load_byte_out_of_domain \

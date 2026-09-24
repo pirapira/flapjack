@@ -3246,20 +3246,23 @@ theorem panStructCompileExpCorrectConstCase
     translates the struct-context premise through `panStructContextShapeView`
     and retains all three HOL conclusion roles plus the recursive address IH.
     The local/global `FEVERY` and `FMAP_MAP2` premises are retained but unused
-    by this constructor. Production evaluation takes explicit `bytesInWord`,
-    uses a fuel-indexed Option loader/readWord callback, and represents
-    `v_flds_ok` with `panStructValueFieldsOkBool`; these are statement
-    differences from HOL's `mem_load_conversion_inst` over finite-domain memory. -/
+    by this constructor. Source, address IH, and converted evaluation share an
+    explicit state-derived `PanValueMemoryAccess`, preserving its domain and
+    endian behavior for the load. Lean still exposes `bytesInWord`, the memory
+    adapter, and a pointwise Bool validity predicate instead of HOL's fixed
+    word stride, finite-map memory, and `v_flds_ok`. -/
 theorem panStructCompileExpCorrectLoadCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext) (state : PanSemState α ffi)
-    (bytesInWord : α) (shape : Shape) (addressExpression : Exp α)
+    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
+    (shape : Shape) (addressExpression : Exp α)
     (value : PanValue α)
-    (heval : evalPanValueExp state.structs state.locals state.globals
+    (heval : evalPanValueExpFull state.structs state.locals state.globals
       state.memory state.baseAddress state.topAddress bytesInWord
-      (.load shape addressExpression) = some value)
+      (.load shape addressExpression) (memoryAccess := some memoryAccess) = some value)
     (hstructs : panStructContextShapeView context.structs =
       panStructContextShapeView state.structs)
     (_hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
@@ -3268,45 +3271,49 @@ theorem panStructCompileExpCorrectLoadCase
     (_hlocalsMap : panStructShapeMapEq context.locals state.locals)
     (_hglobalsMap : panStructShapeMapEq context.globals state.globals)
     (hinduction : ∀ addressValue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
-        state.baseAddress state.topAddress bytesInWord addressExpression =
-          some addressValue →
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord addressExpression
+        (memoryAccess := some memoryAccess) = some addressValue →
       structOldExpShape context addressExpression = panSemShapeOf addressValue ∧
       panStructValueFieldsOkBool state.structs addressValue = true ∧
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
         (panStructConvertState context state).baseAddress
         (panStructConvertState context state).topAddress bytesInWord
-        (structCompileExp context addressExpression) = some (panStructConvertValue addressValue)) :
+        (structCompileExp context addressExpression) (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue addressValue)) :
     structOldExpShape context (.load shape addressExpression) = panSemShapeOf value ∧
     panStructValueFieldsOkBool state.structs value = true ∧
-    evalPanValueExp (panStructConvertState context state).structs
+    evalPanValueExpFull (panStructConvertState context state).structs
       (panStructConvertState context state).locals
       (panStructConvertState context state).globals
       (panStructConvertState context state).memory
       (panStructConvertState context state).baseAddress
       (panStructConvertState context state).topAddress bytesInWord
-      (structCompileExp context (.load shape addressExpression)) =
+      (structCompileExp context (.load shape addressExpression))
+      (memoryAccess := some memoryAccess) =
         some (panStructConvertValue value) := by
-  cases haddress : evalPanValueExp state.structs state.locals state.globals
-      state.memory state.baseAddress state.topAddress bytesInWord addressExpression with
-  | none => simp [evalPanValueExp, haddress] at heval
+  cases haddress : evalPanValueExpFull state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress bytesInWord addressExpression
+      (memoryAccess := some memoryAccess) with
+  | none => simp [evalPanValueExpFull, haddress] at heval
   | some addressValue =>
       cases addressValue with
       | word address =>
           have hsourceLoad :
-              panValueFlatLoad state.structs state.memory bytesInWord address shape =
+              panValueFlatLoad state.structs state.memory bytesInWord address shape
+                (some memoryAccess) =
                 some value := by
-            simpa [evalPanValueExp, haddress] using heval
+            simpa [evalPanValueExpFull, haddress] using heval
           have hwf : isWfShape state.structs shape = true := by
             cases hshapeWf : isWfShape state.structs shape with
             | false => simp [panValueFlatLoad, hshapeWf] at hsourceLoad
             | true => rfl
           have hsourceFuel :
               panValueFlatLoadFuel state.structs
-                (panValueFlatReadWord state.memory bytesInWord) bytesInWord
+                (panValueFlatReadWord state.memory bytesInWord (some memoryAccess)) bytesInWord
                 (panValueFlatContextFuel state.structs +
                   panValueFlatShapeFuel shape + 1) shape address = some value := by
             simpa [panValueFlatLoad, hwf] using hsourceLoad
@@ -3317,7 +3324,7 @@ theorem panStructCompileExpCorrectLoadCase
               (structCompileShapeWF_context_shape_view context.structs state.structs
                 hstructs).1 shape
           have hloadFacts := panValueFlatLoadFuel_shape_fields bytesInWord
-            (panValueFlatReadWord state.memory bytesInWord) state.structs
+            (panValueFlatReadWord state.memory bytesInWord (some memoryAccess)) state.structs
             (panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1)
             shape address value hstructInfos hwf hsourceFuel
           have hsourceFuelEnough :
@@ -3331,7 +3338,7 @@ theorem panStructCompileExpCorrectLoadCase
             exact Nat.le_refl _
           have hconvertedLoad := panValueFlatLoadFuel_convert_all
             (bytesInWord := bytesInWord)
-            (readWord := panValueFlatReadWord state.memory bytesInWord)
+            (readWord := panValueFlatReadWord state.memory bytesInWord (some memoryAccess))
             state.structs
             (panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1)
             shape address
@@ -3339,7 +3346,7 @@ theorem panStructCompileExpCorrectLoadCase
             value hstructInfos hwf hsourceFuelEnough htargetFuelEnough hsourceFuel
           have hcompiledLoadFuel :
               panValueFlatLoadFuel []
-                (panValueFlatReadWord state.memory bytesInWord) bytesInWord
+                (panValueFlatReadWord state.memory bytesInWord (some memoryAccess)) bytesInWord
                 (panValueFlatShapeFuel (structCompileShape context.structs shape) + 1)
                 (structCompileShape context.structs shape) address =
                 some (panStructConvertValue value) := by
@@ -3350,7 +3357,7 @@ theorem panStructCompileExpCorrectLoadCase
             (structCompileShapeWF_isWfShape []).1 context.structs shape
           have htargetLoad :
               panValueFlatLoad [] state.memory bytesInWord address
-                (structCompileShape context.structs shape) =
+                (structCompileShape context.structs shape) (some memoryAccess) =
                   some (panStructConvertValue value) := by
             simpa [panValueFlatLoad, panValueFlatContextFuel, hcompiledWf] using
               hcompiledLoadFuel
@@ -3363,11 +3370,11 @@ theorem panStructCompileExpCorrectLoadCase
                     (structCompileExp context addressExpression) := by
               simp [structCompileExp]
             rw [hcompiledExp]
-            simp only [evalPanValueExp, haddressFacts.2.2]
+            simp only [evalPanValueExpFull, haddressFacts.2.2]
             simp only [panStructConvertValue]
             simpa [panStructConvertState] using htargetLoad
-      | rStruct fields => simp [evalPanValueExp, haddress] at heval
-      | nStruct name fields => simp [evalPanValueExp, haddress] at heval
+      | rStruct fields => simp [evalPanValueExpFull, haddress] at heval
+      | nStruct name fields => simp [evalPanValueExpFull, haddress] at heval
 
 /-- Derived LoadByte-constructor specialization of HOL `compile_exp_correct`.
     It keeps the three parent conclusion roles and translated induction

@@ -298,6 +298,74 @@ theorem panToCrepPcCompileCorrectSkipCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
+/-- Width-indexed full Skip specialization of HOL
+    `pc_compile_correct[Skip]` (`pan_to_crepProofScript.sml:493`). It carries
+    the complete source and target runs, `state_rel`, width-indexed `code_rel`,
+    `excp_rel`, the normal result, and the result-dependent `locals_rel`
+    obligation. Unlike the generic support theorem above, both code-relation
+    boundaries use `codeRelW`, whose compiler expression is the tagged
+    word-indexed HOL `compile_def`. The source Skip run is derived, and the
+    target fuel is existential; neither run is a premise. This remains
+    untagged because HOL proves this branch inside the single quantified
+    `pc_compile_correct` theorem rather than exporting a named Skip theorem. -/
+theorem panToCrepPcCompileCorrectSkipCaseW
+    (width : Nat)
+    [BEq String]
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceModel : PanMemoryModel (BitVec width)) (sourceBytesInWord : BitVec width)
+    (sourceContext : PanValueFfiContext (BitVec width))
+    (sourcePrimitive : PanPrimitiveHandler (BitVec width))
+    (sourceHandler : PanValueStatefulFfiHandler (BitVec width) σ)
+    (targetHandler : CrepRuntimeFfiHandler (BitVec width) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (BitVec width))
+    (sourceState : PanSemState (BitVec width) (FfiState σ))
+    (targetState : CrepRuntimeState (BitVec width) σ)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRelW width context
+      (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals) :
+    panSemEvaluateCodeStateWithMemoryModel sourceContext sourcePrimitive sourceHandler
+      sourceModel sourceBytesInWord sourceState .skip =
+        some (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock) ∧
+    ∃ targetFuel targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive targetFuel targetState
+        (compileCodeRelProg context .skip) = some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceState
+        (.control (.normal sourceState.locals sourceState.globals
+          sourceState.memory sourceState.ffi), sourceState.clock)) targetPost ∧
+      codeRelW width context
+        (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).code)
+        targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).exceptionShapes ∧
+      targetResult = .normal ∧
+      localsRel context
+        (panSemCodeStateAfter sourceState
+          (.control (.normal sourceState.locals sourceState.globals
+            sourceState.memory sourceState.ffi), sourceState.clock)).locals
+        targetPost.locals := by
+  have hcodeGeneric :=
+    (codeRelW_iff_codeRel width context
+      (panSemCodeAsLookup sourceState.code) targetState.code).mp hcode
+  rcases panToCrepPcCompileCorrectSkipCodeState context sourceModel sourceBytesInWord
+      sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive
+      sourceState targetState hstate hcodeGeneric hexcp hlocals with
+    ⟨hsource, targetFuel, targetResult, targetPost, hrun, hstatePost,
+      hcodePost, hexcpPost, hresult, hlocalsPost⟩
+  refine ⟨hsource, targetFuel, targetResult, targetPost, hrun, hstatePost, ?_,
+    hexcpPost, hresult, hlocalsPost⟩
+  exact (codeRelW_iff_codeRel width context
+    (panSemCodeAsLookup (panSemCodeStateAfter sourceState
+      (.control (.normal sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi), sourceState.clock)).code)
+    targetPost.code).mpr hcodePost
+
 /-- The state-owned source evaluator's Break equation. -/
 theorem panSemEvaluateCodeState_break
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

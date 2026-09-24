@@ -4677,7 +4677,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panToCrepPcCompileCorrectSkipCodeState",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
+    "reviewer": "Generic evaluator-level support for the HOL pan_to_crepProofScript.sml:493 pc_compile_correct[Skip] branch. It proves source/target runs, post-state_rel, generic codeRel, excp_rel, normal result, and locals_rel, but its generic alpha code relation is not the word-indexed HOL boundary; see panToCrepPcCompileCorrectSkipCaseW for the width-indexed specialization."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepPcCompileCorrectSkipCaseW",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Full BitVec-width specialization of the HOL proof branch pc_compile_correct[Skip] (pan_to_crepProofScript.sml:493), not a standalone HOL declaration. Retains the derived source run and existential target run, state_rel, width-indexed code_rel via codeRelW before and after, excp_rel, the normal target result corresponding to HOL NONE, and the result-dependent locals_rel clause. It assumes only the incoming HOL relations; no target-run premise. Kept untagged because HOL exposes one quantified parent theorem and represents its source/target NONE outcomes differently from the Lean clock-based runtime result."
   },
   {
     "hol_path": null,

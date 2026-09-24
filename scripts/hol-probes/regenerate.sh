@@ -238,6 +238,9 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
 run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overlap_probe.out \
   slot_nodup_x nested_zip_lookup "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
+  alist_a_nodup alist_disjoint "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
   len0 flookup0 "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanProps
 
 /-!
 Parity checks for the exact ports of HOL `fm_empty_zip_alist` and
@@ -114,6 +115,15 @@ def maxListGuard : Bool :=
   (!(xs.contains (maxList xs + 1))) && (maxList (List.range 5) == 4)
 
 #guard maxListGuard
+
+/-- HOL `all_distinct_alist_no_overlap` oracle rows (`alist_*` in
+    `scripts/hol-probes/pan_props_alist_probe.out`). -/
+theorem alistNoOverlapExample :
+    noOverlap (FUPDATE_LIST FEMPTY
+      (["a", "b"].zip ([Shape.one, Shape.one].zip
+        (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "b"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
 
 def runChecks : IO Bool := do
   let ok := parityGuard && zipFlookupGuard && maxListGuard

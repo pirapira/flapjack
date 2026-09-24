@@ -2069,6 +2069,37 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
       PanWordLab.word := by
   exact crepSimpExpCorrect1HolFiniteWordSourceEval dimension f state expression h
 
+/-- Successful-result form of the all-finite-index source-evaluator theorem.
+    This follows HOL `simp_exp_correct`'s premise and conclusion, with the
+    same arbitrary code-map update and full `word_lab` value. It remains
+    untagged for the same explicit source-evaluator/native HOL correspondence
+    gap recorded on `crepSimpExpCorrect1HolFiniteWordSourceEvalClass`. -/
+theorem crepSimpExpCorrectHolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (value : PanWordLab (ι → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word = some value) :
+    (evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word = some value := by
+  have hSuccess : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none := by simp [h]
+  calc
+    (evalCrepHolFiniteWordSourceExp dimension
+        (crepArithHolFiniteDimensionMapCode f state)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word =
+        (evalCrepHolFiniteWordSourceExp dimension state expression).map
+          PanWordLab.word :=
+            crepSimpExpCorrect1HolFiniteWordSourceEvalClass f state expression hSuccess
+    _ = some value := h
+
 /-- Full `word_lab` result form of the source-evaluator preservation theorem.
     The raw source evaluator returns `Option word`; mapping the `word`
     constructor gives HOL's complete `Option word_lab` result. This form keeps

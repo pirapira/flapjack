@@ -7083,25 +7083,25 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "lookup_code_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "lookupCrepHolCode",
+    "lean_name": "lookupCrepHolCodeW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-for-clause against lookup_code_def: FLOOKUP code fname, LENGTH ns = LENGTH args, ALL_DISTINCT ns -> Nodup, result FEMPTY |++ ZIP(ns,args) -> FUPDATE_LIST FEMPTY (ns.zip args); direct HOL oracle scripts/hol-probes/crep_lookup_code_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+    "reviewer": "Codex (width-indexed exact port of lookup_code_def crepSemScript.sml:76-84 at 'a := BitVec width: same-length ALL_DISTINCT parameter list, body with locals FEMPTY |++ ZIP (parameters,args); the width-indexed def is the width-specialized production lookupCrepHolCode, so bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is definitional. Generic-alpha lookupCrepHolCode stays untagged as production's form; executed lookupCrepRuntimeCode adapter unchanged)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "res_var_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "resVar",
+    "lean_name": "resVarW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-for-clause against res_var_def: res_var lc (n,NONE) = lc \\\\ n -> FDOMSUB, res_var lc (n,SOME v) = lc |+ (n,v) -> FUPDATE, with [BEq]/[LawfulBEq]; production Dec restore routed through resVar; oracle scripts/hol-probes/crep_res_var_probe.out reproduced by Lean guards in Flapjack/Test/FiniteMapParity.lean)"
+    "reviewer": "Codex (width-indexed exact port of res_var_def crepSemScript.sml:163 at HOL's carrier: num keys, 'a word_lab values with 'a := BitVec width; res_var lc (n,NONE) = lc \\\\ n and res_var lc (n,SOME v) = lc |+ (n,v) with FDOMSUB/FUPDATE. The width-indexed def is the width-specialized production resVar, so bridge resVarW_eq_resVar is definitional. Generic-alpha resVar stays untagged as production's form)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "mem_load_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "memLoadCrepHol",
+    "lean_name": "memLoadCrepHolW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-for-clause port of crepSem$mem_load_def over CrepHolState; if addr IN state.memaddrs then SOME (state.memory addr) else NONE; direct HOL oracle crep_mem_load_probe.out rows reproduced by Lean guards; bridge crepRuntimeLoad_eq_memLoadCrepHol to the executed load)."
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of mem_load_def crepSemScript.sml:48-52 at 'a := BitVec width: mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE, with membership rendered as the memaddrs Bool map. Generic-alpha memLoadCrepHol stays untagged as production's form; kernel bridge memLoadCrepHolW_eq_memLoadCrepHol; direct HOL oracle and Lean guards unchanged)"
   },
   {
     "hol_path": null,

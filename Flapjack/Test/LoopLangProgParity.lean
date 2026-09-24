@@ -5,7 +5,7 @@ import Flapjack.Test.PanValueFfiSemantics
 Parity checks for the exact `loopLang$prog` carrier `HolLoopProg`, compared
 against the direct HOL EVAL oracle in
 `scripts/hol-probes/loop_lang_prog_probe.out` (word width fixed at 8,
-`num_set` = `sptree$LN` modelled as the empty `FiniteMap Nat Unit`).
+`num_set` = `sptree$LN` modelled by the exact `NumSet` carrier (`Spt Unit`)).
 -/
 
 namespace Flapjack.Test.LoopLangProgParity
@@ -17,7 +17,7 @@ private abbrev W := BitVec 8
 
 private def w8 (n : Nat) : BitVec 8 := BitVec.ofNat 8 n
 
-private def emptySet : FiniteMap Nat Unit := FEMPTY
+private def emptySet : NumSet := .ln
 
 /-- `«f»` in the HOL oracle, encoded as the byte codec would. -/
 private def fName : MlString := .implode [w8 102]

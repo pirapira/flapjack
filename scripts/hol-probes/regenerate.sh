@@ -646,6 +646,9 @@ run_probe crep_sh_mem_store_probeScript.sml crep_sh_mem_store_probe.out \
 run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
   mem_load_hit mem_load_miss \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_op_probeScript.sml crep_op_probe.out \
+  op_mul_two op_mul_empty \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

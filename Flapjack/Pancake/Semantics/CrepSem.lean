@@ -228,6 +228,15 @@ def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option �
   | none => FDOMSUB f entry.1
   | some v => FUPDATE f (entry.1, v)
 
+/-- Exact HOL-shaped port of `crepSem$crep_op_def` (crepSemScript.sml:85-88):
+    `crep_op crepLang$Mul [w1;w2] = SOME (w1 * w2)` and `crep_op _ _ = NONE`.
+    The wildcard clause covers `.mul` at every other arity, matching HOL's
+    total-over-malformed-operand-lists `crep_op _ _ = NONE`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
+def crepOpCrep [Mul α] : CrepOp → List α → Option α
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
 /-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
     over the 11-field `CrepHolState`:
     `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.
@@ -1075,6 +1084,39 @@ theorem evalCrepRuntimeExp_crepOp_mul_wordLab
         cases rest with
         | nil => simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
         | cons extra tail => simp [evalCrepRuntimeExp]
+
+/-- Production bridge for `crep_op_def`: the executed `.crepOp .mul` clause is
+    `case OPT_MMAP (eval s) args of SOME args' => crep_op op args' | _ => NONE`
+    at the only CrepOp constructor `.mul`, i.e. evaluate the two operands and
+    apply the tagged `crepOpCrep`. Malformed arities return `none` on both sides.
+    Flapjack-only because the evaluator's state is target-extended. -/
+theorem evalCrepRuntimeExp_crepOp_eq
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (operator : CrepOp)
+    (arguments : List (CrepExp α)) :
+    evalCrepRuntimeExp state (.crepOp operator arguments) =
+      (match arguments with
+       | [left, right] =>
+           (match evalCrepRuntimeExp state left, evalCrepRuntimeExp state right with
+            | some leftValue, some rightValue => crepOpCrep operator [leftValue, rightValue]
+            | _, _ => none)
+       | _ => none) := by
+  cases operator
+  cases arguments with
+  | nil => simp [evalCrepRuntimeExp]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp]
+      | cons right rest =>
+          cases rest with
+          | nil =>
+              cases h1 : evalCrepRuntimeExp state left <;>
+                cases h2 : evalCrepRuntimeExp state right <;>
+                  simp [evalCrepRuntimeExp, crepOpCrep, h1, h2]
+          | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Projection equation for `BaseAddr`; Flapjack-only because its state is
 target-extended. -/

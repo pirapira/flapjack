@@ -6494,5 +6494,13 @@
     "lean_name": "compileExpHOL_const_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "crepOpCrep",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (clause-for-clause against crep_op_def crepSemScript.sml:85-88: crep_op Mul [w1;w2]=SOME(w1*w2) -> .mul,[left,right] => some (left*right); crep_op _ _=NONE -> wildcard; [Mul a] supplies HOL word multiplication; direct HOL oracle scripts/hol-probes/crep_op_probe.out rows op_mul_two=SOME 21w and op_mul_one/op_mul_three/op_mul_empty=NONE reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean; production bridge evalCrepRuntimeExp_crepOp_eq shows the executed .crepOp clause is the HOL OPT_MMAP-then-crep_op shape)"
   }
 ]

@@ -225,13 +225,13 @@ example :
 example :
     ∃ v', FLOOKUP (fun n : Nat => if n = 2 then some 20 else none) 2 = some v' :=
   fdoms_eq_flookup_some_none (fun n : Nat => if n = 2 then some 20 else none)
-    (fun n : Nat => if n = 2 then some 20 else none) 2 20 rfl rfl
+    (fun n : Nat => if n = 2 then some 20 else none) 2 20 0 rfl rfl
 
 /-- A map with the same domain but a different value still defines the lookup. -/
 example :
     ∃ v', FLOOKUP (fun n : Nat => if n = 2 then some 99 else none) 2 = some v' :=
   fdoms_eq_flookup_some_none (fun n : Nat => if n = 2 then some 20 else none)
-    (fun n : Nat => if n = 2 then some 99 else none) 2 20 (by
+    (fun n : Nat => if n = 2 then some 99 else none) 2 20 0 (by
       funext k
       by_cases hk : k = 2 <;> simp [FDOM, hk]) rfl
 

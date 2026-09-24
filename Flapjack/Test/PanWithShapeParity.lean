@@ -1,6 +1,7 @@
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.Pancake.Proofs.PanGlobals
+import Flapjack.Pancake.Semantics.PanProps
 
 /-!
 # Original-domain parity for `panLang$with_shape`
@@ -487,6 +488,26 @@ def genlistAllDistinctGuard : Bool :=
 #eval genlistAllDistinctGuard
 #guard genlistAllDistinctGuard
 
+/-- Regression for Cake `list_rel_flatten_with_shape_length`
+    (`cakeml/pancake/semantics/panPropsScript.sml:549`). -/
+example : ((withShape [Shape.one, Shape.one] [0, 1])[0]'(by rw [withShape_length]; decide)).length
+    = (panValueFlatten (PanValue.word (3 : Nat))).length :=
+  listRelFlattenWithShapeLength [Shape.one, Shape.one] [0, 1]
+    [PanValue.word (3 : Nat), PanValue.word (5 : Nat)] (PanValue.word (3 : Nat)) 0
+    (by simp [panValueFlatten]) (by simp [Shape.shapeSize, panValueFlatten]) (by decide) rfl (by decide)
+    (by
+      intro i hsi hai
+      have hsi' : i < 2 := by simpa using hsi
+      have hi : i = 0 ∨ i = 1 := by omega
+      rcases hi with rfl | rfl <;> simp [List.get_eq_getElem, panValueShape])
+    (by simp [List.all, panValueIsWf])
+
+def listRelFlattenGuard : Bool :=
+  (((withShape [Shape.one, Shape.one] [0, 1])[0]'(by rw [withShape_length]; decide)).length ==
+    (panValueFlatten (PanValue.word (3 : Nat))).length)
+
+#guard listRelFlattenGuard
+
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
     IO.println s!"PASS {name}"
@@ -529,9 +550,12 @@ def runChecks : IO Bool := do
     checkDisjoint "pan map_map2_fst_lemma" zipWithPairFstGuard
   let genlistAllDistinctOk ←
     checkDisjoint "pan genlist_all_distinct" genlistAllDistinctGuard
+  let listRelFlattenOk ←
+    checkDisjoint "pan list_rel_flatten_with_shape_length" listRelFlattenGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
-    rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk)
+    rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
+    listRelFlattenOk)
 
 end Flapjack.Test.PanWithShapeParity

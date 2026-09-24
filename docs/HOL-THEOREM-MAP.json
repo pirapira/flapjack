@@ -5061,7 +5061,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "localsRelUpdateExistingValue",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; one-word exp_hdl execution and its relation-aware handler prestate are composed in EvaluateCases, while other payload widths and the source/target Call theorem remain open"
+    "reviewer": "Flapjack-only local-map lemma deriving the flattened target-slot update from locals_rel lookup and shape preservation; arbitrary-width finite-map exp_hdl execution, its locals_rel update, and actual-state matching-handler prestate composition are available as untagged induction support in EvaluateCases; the recursive callee/handler induction hypotheses are not yet composed into the source/target Call theorem"
   },
   {
     "hol_path": null,
@@ -5238,6 +5238,22 @@
     "lean_name": "panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition deriving an actual state-owned source Call run from source callee/handler body premises, then carrying its projected result through production target Call dispatch. The premise hcalleeTargetBodyIH assumes the target callee-body evaluator run plus callee state_rel/code_rel/excp_rel and the word payload in target global cell zero needed by exp_hdl; this helper consumes that target-body induction premise and does not prove the callee simulation. The handler relation IH also remains a premise. This is not the full compiled-program Call_Ret_Exception case"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeMatches_self_forSourceCall",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only structural reflexivity helper for the executable shape matcher; used to derive the source exception handler shape premise from state_rel's empty struct context"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panShapeListMatches_self_forSourceCall",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only list-recursive reflexivity helper for the executable shape matcher; no standalone HOL theorem port"
   },
   {
     "hol_path": null,

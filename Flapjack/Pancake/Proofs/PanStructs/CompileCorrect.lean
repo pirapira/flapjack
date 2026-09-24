@@ -3266,6 +3266,125 @@ theorem panStructCompileExpCorrectLoadCase
       | rStruct fields => simp [evalPanValueExp, haddress] at heval
       | nStruct name fields => simp [evalPanValueExp, haddress] at heval
 
+/-- Derived BaseAddr-constructor specialization of HOL `compile_exp_correct`.
+    HOL has only the universally quantified theorem, so this remains untagged.
+    The translated context, FEVERY, FMAP_MAP2, and struct-info premises are
+    retained; the literal case does not use them. Lean's context view and
+    total-function Bool/map adapters differ from HOL's finite-map statements. -/
+theorem panStructCompileExpCorrectBaseAddrCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord .baseAddr = some value)
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (_hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (_hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (_hstructInfos : structInfosOk state.structs)
+    (_hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (_hglobalsMap : panStructShapeMapEq context.globals state.globals) :
+    structOldExpShape (α := α) context .baseAddr = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context .baseAddr) = some (panStructConvertValue value) := by
+  cases value with
+  | word wordValue =>
+      have hword : wordValue = state.baseAddress := by
+        simpa [evalPanValueExp] using heval.symm
+      subst wordValue
+      refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+      · simp [panStructValueFieldsOkBool]
+      · simp [evalPanValueExp, structCompileExp, panStructConvertState,
+          panStructConvertValue]
+  | rStruct values => simp [evalPanValueExp] at heval
+  | nStruct name fields => simp [evalPanValueExp] at heval
+
+/-- Derived TopAddr-constructor specialization of HOL `compile_exp_correct`.
+    It carries the same translated finite-map premise adapters as the sibling
+    BaseAddr case; HOL has no separately named TopAddr theorem. -/
+theorem panStructCompileExpCorrectTopAddrCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord .topAddr = some value)
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (_hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (_hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (_hstructInfos : structInfosOk state.structs)
+    (_hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (_hglobalsMap : panStructShapeMapEq context.globals state.globals) :
+    structOldExpShape (α := α) context .topAddr = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context .topAddr) = some (panStructConvertValue value) := by
+  cases value with
+  | word wordValue =>
+      have hword : wordValue = state.topAddress := by
+        simpa [evalPanValueExp] using heval.symm
+      subst wordValue
+      refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+      · simp [panStructValueFieldsOkBool]
+      · simp [evalPanValueExp, structCompileExp, panStructConvertState,
+          panStructConvertValue]
+  | rStruct values => simp [evalPanValueExp] at heval
+  | nStruct name fields => simp [evalPanValueExp] at heval
+
+/-- Derived BytesInWord-constructor specialization of HOL `compile_exp_correct`.
+    The HOL evaluator uses its fixed `bytes_in_word`; production Lean exposes
+    the value as the explicit `bytesInWord` evaluator argument. -/
+theorem panStructCompileExpCorrectBytesInWordCase
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (value : PanValue α)
+    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord .bytesInWord = some value)
+    (_hstructs : panStructContextShapeView context.structs =
+      panStructContextShapeView state.structs)
+    (_hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
+    (_hglobalsFields : panStructEveryValueFieldsOkBool state.structs state.globals)
+    (_hstructInfos : structInfosOk state.structs)
+    (_hlocalsMap : panStructShapeMapEq context.locals state.locals)
+    (_hglobalsMap : panStructShapeMapEq context.globals state.globals) :
+    structOldExpShape (α := α) context .bytesInWord = panSemShapeOf value ∧
+    panStructValueFieldsOkBool state.structs value = true ∧
+    evalPanValueExp (panStructConvertState context state).structs
+      (panStructConvertState context state).locals
+      (panStructConvertState context state).globals
+      (panStructConvertState context state).memory
+      (panStructConvertState context state).baseAddress
+      (panStructConvertState context state).topAddress bytesInWord
+      (structCompileExp context .bytesInWord) = some (panStructConvertValue value) := by
+  cases value with
+  | word wordValue =>
+      have hword : wordValue = bytesInWord := by
+        simpa [evalPanValueExp] using heval.symm
+      subst wordValue
+      refine ⟨by simp [structOldExpShape, panSemShapeOf], ?_, ?_⟩
+      · simp [panStructValueFieldsOkBool]
+      · simp [evalPanValueExp, structCompileExp, panStructConvertState,
+          panStructConvertValue]
+  | rStruct values => simp [evalPanValueExp] at heval
+  | nStruct name fields => simp [evalPanValueExp] at heval
+
 /-- Evaluator-equation support for a future HOL `compile_correct` Skip case:
     this proves only the two source/converted outcomes and omits the HOL
     theorem's premises and value/shape-map postconditions, so it is not an

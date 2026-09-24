@@ -211,7 +211,7 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
     (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hreturn : panValueReturnValid structs contracts function values = true)
-    (hwithin : panValueValuesWithinLimit structs values = true)
+    (_hwithin : panValueValuesWithinLimit structs values = true)
     (hclockBody : evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
       body (memoryAccess := memoryAccess) (contracts := contracts) =
@@ -232,9 +232,9 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
         argumentSteps + bodySteps) := by
   constructor
   · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
-      hwithin, hclockBody]
+      hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
-      hwithin, hstepBody]
+      hstepBody]
 
 /-! The uncaught-exception call branch projects in the same way: the callee
 state and clock are preserved, and the source-step count includes argument
@@ -395,7 +395,7 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
     (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hreturn : panValueReturnValid structs contracts function values = true)
-    (hwithin : panValueValuesWithinLimit structs values = true)
+    (_hwithin : panValueValuesWithinLimit structs values = true)
     (hassign : assignPanValueCallResult locals finalGlobals destination values
       (structs := structs) = some (assignedLocals, assignedGlobals))
     (hclockBody : evalPanValueFfiClockProg context primitive handler structs functions
@@ -419,9 +419,9 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
         argumentSteps + bodySteps) := by
   constructor
   · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
-      hwithin, hassign, hclockBody]
+      hassign, hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
-      hwithin, hassign, hstepBody]
+      hassign, hstepBody]
 
 /-! A caught exception projects through the handler continuation.  The
 handler's clock and step result are both threaded after the callee's state has

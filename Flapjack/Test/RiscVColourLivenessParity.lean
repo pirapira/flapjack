@@ -77,4 +77,40 @@ example :
   · simp
   · simp
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 64) (.assign 2 (.const (BitVec.ofNat 64 5))) =
+        some source' ∧
+      evalWordProg (zeroState 64)
+        (wordApplyColour liveAliasColour
+          (.assign 2 (.const (BitVec.ofNat 64 5)))) = some target' ∧
+      WordColourStateRelationOn liveAliasColour [3] source' target' := by
+  have hvalid : wordColourValid liveAliasColour := by
+    intro name hname
+    by_cases hzero : name = 0
+    · simp [liveAliasColour, hzero]
+    · by_cases hlive : name = 3
+      · simp [liveAliasColour, hlive]
+      · simp [liveAliasColour, hzero, hlive]
+  have hrelation : WordColourStateRelationOn liveAliasColour [3]
+      (zeroState 64) (zeroState 64) := by
+    refine ⟨rfl, rfl, rfl, rfl, ?_⟩
+    intro name hmem hname hcolour
+    rfl
+  exact evalWordProg_assignConst_applyColour_live liveAliasColour hvalid
+    (by simp [liveAliasColour]) (zeroState 64) (zeroState 64) [3] hrelation rfl
+    2 (BitVec.ofNat 64 5) (by omega)
+    (by intro hzero; simp [liveAliasColour, hzero])
+    (by
+      intro current hcurrent hdifferent
+      have : current = 3 := by simpa using hcurrent
+      subst current
+      simp [liveAliasColour])
+
+example :
+    wordApplyColour liveAliasColour
+      (.assign 2 (.const (BitVec.ofNat 64 5))) =
+      .assign 1 (.const (BitVec.ofNat 64 5)) := by
+  simp [wordApplyColour, wordApplyColourExp, liveAliasColour]
+
 end Flapjack.Test.RiscVColourLivenessParity

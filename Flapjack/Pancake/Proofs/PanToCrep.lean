@@ -1829,16 +1829,17 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-Target runtime `exp_hdl` is already proved for one-word payloads by
-`EvaluateCases.crepRuntimeExpHdlOneWord`, together with the resulting
-`locals_rel` in `crepRuntimeExpHdlOneWord_localsRel`; the corresponding
-two-word execution and relation are `crepRuntimeExpHdlTwoWords` and
-`crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the
-source-to-target map-update relation used by those results. The one-word
-actual-state matching-handler case is also available as untagged induction
-support. What remains open is the general HOL `Call_Ret_Exception`
-simulation: composing callee and handler induction hypotheses for arbitrary
-payload arities and their post-state relations. -/
+The target runtime `exp_hdl` writes are proved for one-word payloads by
+`EvaluateCases.crepRuntimeExpHdlOneWord` and
+`crepRuntimeExpHdlOneWord_localsRel`, and for two-word payloads by
+`crepRuntimeExpHdlTwoWords` and `crepRuntimeExpHdlTwoWords_localsRel`.
+Those concrete runtime steps are therefore discharged for these payload
+arities; this lemma supplies the source-to-target map-update relation they
+use. Actual-state matching-handler compositions for one- and two-word
+payloads are available as untagged induction support. The general HOL
+`Call_Ret_Exception` simulation remains open: it must compose the callee and
+handler induction hypotheses and establish their post-state relations for
+arbitrary payload arities. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

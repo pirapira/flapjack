@@ -400,6 +400,18 @@ example : lookupCrepHolCode lookupCodeMap "missing" [] = none := by
         (lookupCrepHolCode lookupCodeMap "missing" []).isNone &&
         (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8]).isNone
 
+/-- Kernel-checked adapter: the executed raw `lookupCrepRuntimeCode` agrees with
+    the tagged HOL-shaped `lookupCrepHolCode` on the wrapped arguments, and the
+    raw `eraseDups`-length distinctness check agrees with HOL `ALL_DISTINCT`. -/
+example :
+    lookupCrepRuntimeCode "id" [(7 : Nat)] lookupCodeMap =
+      lookupCrepHolCode lookupCodeMap "id" [(PanWordLab.word 7 : PanWordLab Nat)] :=
+  lookupCrepRuntimeCode_eq_lookupCrepHolCode "id" [(7 : Nat)] lookupCodeMap
+
+example : ([1, 2, 1] : List Nat).eraseDups.length = ([1, 2, 1] : List Nat).length ↔
+    ([1, 2, 1] : List Nat).Nodup :=
+  eraseDups_length_eq_iff_nodup [1, 2, 1]
+
 /-- HOL `crepSem$mem_load_def` over the 11-field state: valid cell read and
     out-of-domain miss, matching `scripts/hol-probes/crep_mem_load_probe.out`
     (`mem_load_valid=SOME (Word 7w)`, `mem_load_invalid=NONE`). -/

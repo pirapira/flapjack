@@ -103,7 +103,8 @@ run_probe riscv_word_extract_6_probeScript.sml riscv_word_extract_6_probe.out \
   "$cake_dir/compiler/encoders/riscv"
 run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
   riscv_encode_length_addi riscv_encode_length_add riscv_encode_length_branch \
-  riscv_encode_length_load \
+  riscv_encode_bytes_addi riscv_encode_bytes_add riscv_encode_bytes_beq \
+  riscv_encode_bytes_ld \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
@@ -235,6 +236,9 @@ run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
+run_probe crep_inline_cont_res_probeScript.sml crep_inline_cont_res_probe.out \
+  cont_res_none cont_res_done "$cake_dir/pancake/proofs/crep_inlineProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_inline_eval_probeScript.sml crep_inline_eval_probe.out \
   src_main_is_call continue_eval "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -308,7 +312,7 @@ run_probe word_alloc_live_colour_noalias_probeScript.sml \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
-  total_colour_alloc apply_colour_alias_assign apply_colour_loop_live \
+  total_colour_alloc apply_colour_alias_assign apply_colour_alias_const \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 # The legacy allocator-map probe checks the existing WordBijection path too.
@@ -324,6 +328,10 @@ run_probe cake_ssa_temp_probeScript.sml cake_ssa_temp_probe.out \
 # index.
 run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
   ra_delta_pair moves_to_sp_resort ra_spill_cost \
+  node_list_empty_length node_list_first node_list_last \
+  node_list_last_in_range node_list_out_of_range \
+  node_list_lupdate_same node_list_lupdate_other node_list_lupdate_length \
+  node_list_lupdate_outside \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe sort_moves_probeScript.sml sort_moves_probe.out \
@@ -456,6 +464,12 @@ run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_termi
 # clearing the caller-visible locals while keeping the decremented clock.
 run_probe pan_sem_call_callee_error_probeScript.sml pan_sem_call_callee_error_probe.out \
   call_error_result call_error_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call return-invalid probe observes that a callee returning a value whose
+# shape does not match the declared return shape rejects the call with
+# `SOME Error` at the decremented callee clock.
+run_probe pan_sem_call_return_invalid_probeScript.sml pan_sem_call_return_invalid_probe.out \
+  call_retinvalid_result call_retinvalid_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with

@@ -3072,8 +3072,8 @@ private theorem compileExpHOL_rField_eval_flatten_ofHOLIH
         { vars := context.vars, funcs := context.funcs,
           eids := context.eids, vmax := context.vmax }
         expression = (compiledExpressions, .comb fieldShapes) →
-      evalCrepRuntimeExps target compiledExpressions =
-          some (fields.flatMap panValueFlatten) ∧
+        evalCrepRuntimeExps target compiledExpressions =
+            some (fields.flatMap panValueFlatten) ∧
         panValueShape [] (.rStruct fields) = .comb fieldShapes ∧
         isWfShape [] (.comb fieldShapes) = true) :
     evalCrepRuntimeExps target
@@ -4033,6 +4033,144 @@ private theorem evalCrepRuntimeExps_length_of_some
                 simpa [evalCrepRuntimeExps, hhead, htail] using heval.symm
               subst values
               simp [ih tail htail]
+
+private theorem compileField_shape_eq_panValueField
+    (fields : List (PanValue (RiscV.Word 64))) (index : Nat)
+    (expressions : List (CrepExp (RiscV.Word 64)))
+    (hindex : index < fields.length) :
+    (compileField index (fields.map (panValueShape [])) expressions).2 =
+      panValueShape [] fields[index] := by
+  induction fields generalizing index expressions with
+  | nil => simp at hindex
+  | cons field fields ih =>
+      cases index with
+      | zero => simp [compileField]
+      | succ index =>
+          have hindex' : index < fields.length := by simpa using hindex
+          simpa [compileField, List.getElem_cons_succ] using
+            ih index (expressions.drop (Shape.shapeSize (panValueShape [] field))) hindex'
+
+/-! The complete four-conclusion RField step for HOL-shaped expression
+induction. It projects the source field from the `RStruct` result and uses the
+inner full IH's compiled tuple, source shape, target evaluation, and Wf facts
+to establish the actual `compileField` output relation. -/
+theorem compileExpHOL_rField_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expression : Exp (RiscV.Word 64)) (index : Nat)
+    (fields : List (PanValue (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (compiledExpressions : List (CrepExp (RiscV.Word 64)))
+    (fieldShapes : List Shape)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceInner : evalPanSemStateExp source expression = some (.rStruct fields))
+    (hsourceField : evalPanSemStateExp source (.rField index expression) = some value)
+    (hindex : index < fields.length)
+    (hlocalized : expGlobalVars expression = [])
+    (hcompileInner : compileExpHOL
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+      expression = (compiledExpressions, .comb fieldShapes))
+    (hinnerIH : evalPanSemStateExp source expression = some (.rStruct fields) →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expression = (compiledExpressions, .comb fieldShapes) →
+      evalCrepRuntimeExps target compiledExpressions =
+          some (fields.flatMap panValueFlatten) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length = Shape.shapeSize
+            (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] (.rStruct fields) = .comb fieldShapes ∧
+        isWfShape [] (.comb fieldShapes) = true) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.rField index expression)).1 = some (panValueFlatten value) ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField index expression)).1.length =
+          Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.rField index expression)).2 ∧
+      panValueShape [] value = (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField index expression)).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.rField index expression)).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hshapeIH := hinnerIH hsourceInner hstate hcode hlocals hlocalized hcompileInner
+  rcases hshapeIH with ⟨hinnerEval, _hinnerLength, hshapeValue, hshapeWf⟩
+  have hfieldShapes : fieldShapes = fields.map (panValueShape []) := by
+    have hcomb : Shape.comb (fields.map (panValueShape [])) = Shape.comb fieldShapes := by
+      simpa [panValueShape] using hshapeValue
+    have heq : fields.map (panValueShape []) = fieldShapes := by injection hcomb
+    exact heq.symm
+  have hsourceField' : evalPanSemStateExp source (.rField index expression) =
+      some fields[index] := by
+    have hinner : evalPanValueExp source.structs source.locals source.globals
+        source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+        expression (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+        some (.rStruct fields) := by simpa [evalPanSemStateExp] using hsourceInner
+    simp [evalPanSemStateExp, evalPanValueExp, hinner, hindex]
+  have hvalue : value = fields[index] :=
+    Option.some.inj (hsourceField.symm.trans hsourceField')
+  have hfieldsWf : ∀ field, field ∈ fields →
+      isWfShape [] (panValueShape [] field) = true := by
+    intro field hmem
+    have hshapeMem : panValueShape [] field ∈ fieldShapes := by
+      rw [hfieldShapes]
+      exact List.mem_map.mpr ⟨field, hmem, rfl⟩
+    exact isWfShape_of_mem (by simpa [isWfShape] using hshapeWf) hshapeMem
+  have heval := compileExpHOL_rField_eval_flatten_ofInnerIH
+    context source target expression index fields value compiledExpressions fieldShapes
+    hsourceInner hsourceField hcompileInner hfieldShapes hfieldsWf hindex hinnerEval
+  have hcompileOut : compileExpHOL compilerContext (.rField index expression) =
+      compileField index fieldShapes compiledExpressions := by
+    simp only [compileExpHOL]
+    rw [hcompileInner]
+  have houtShape : (compileExpHOL compilerContext (.rField index expression)).2 =
+      panValueShape [] value := by
+    rw [hcompileOut, hfieldShapes]
+    rw [hvalue]
+    exact compileField_shape_eq_panValueField fields index compiledExpressions hindex
+  have hlength := evalCrepRuntimeExps_length_of_some target
+    (compileExpHOL compilerContext (.rField index expression)).1
+    (panValueFlatten value) heval
+  have hvalueWf : isWfShape [] (panValueShape [] value) = true := by
+    rw [hvalue]
+    exact hfieldsWf fields[index] (List.getElem_mem hindex)
+  have hflatLength := panValueFlatten_length_eq_shapeSize value hvalueWf
+  refine ⟨heval, ?_, ?_, ?_⟩
+  · calc
+      (compileExpHOL compilerContext (.rField index expression)).1.length =
+          (panValueFlatten value).length := hlength.symm
+      _ = Shape.shapeSize (panValueShape [] value) := hflatLength
+      _ = Shape.shapeSize (compileExpHOL compilerContext (.rField index expression)).2 := by
+        rw [← houtShape]
+  · exact houtShape.symm
+  · rw [houtShape]
+    exact hvalueWf
 
 private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))

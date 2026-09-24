@@ -9,6 +9,9 @@
   handler, `MustTerminate`, `Seq`, `Loop`, and `If` bodies are descended into,
   while every other constructor contributes no label.  With no `Call` return
   metadata the result is empty even when a handler is present.
+
+  The programs are built at the HOL width `8 word` (`BitVec 8`), matching the
+  direct oracle probe.
 -/
 import Flapjack.Pancake.WordConvs
 
@@ -20,19 +23,19 @@ private def emptySet : WordLangNumSet := fun _ => none
 
 private def cutsets : WordLangCutsets := (emptySet, emptySet)
 
-private def skipProg : WordLangProg Nat := .skip
+private def skipProg : WordLangProg (BitVec 8) := .skip
 
-private def callNone : WordLangProg Nat := .call none none [] none
+private def callNone : WordLangProg (BitVec 8) := .call none none [] none
 
-private def callRet : WordLangProg Nat :=
+private def callRet : WordLangProg (BitVec 8) :=
   .call (some ([1], cutsets, skipProg, 10, 11)) none [] none
 
-private def callBoth : WordLangProg Nat :=
+private def callBoth : WordLangProg (BitVec 8) :=
   .call (some ([1], cutsets, skipProg, 10, 11)) none []
     (some (2, skipProg, 20, 21))
 
 /-- `Inst Skip` carries no labels. -/
-example : extractLabels (WordLangProg.inst (WordLangInst.skip : WordLangInst Nat)) = [] := rfl
+example : extractLabels (WordLangProg.inst (WordLangInst.skip : WordLangInst (BitVec 8))) = [] := rfl
 
 /-- A `Call` with no return metadata contributes no labels. -/
 example : extractLabels callNone = [] := rfl

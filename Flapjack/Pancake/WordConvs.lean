@@ -75,9 +75,13 @@ bodies, `MustTerminate`, `Seq`, `Loop`, and `If`, and returning no labels for
 every other constructor.  The `Call` case keeps HOL's nesting: with no return
 metadata there are no labels; otherwise the return-handler labels come first
 (followed by the handler-body pair when a handler exists, and the
-return-handler's own labels last). -/
+return-handler's own labels last).
+
+HOL's `wordLang$prog` is indexed by the word width `'a` and carries `'a word`
+values, so the faithful statement fixes the value carrier to `BitVec width`
+(the width is implicit, matching HOL's universally quantified `'a`). -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "extract_labels_def"]
-def extractLabels : WordLangProg α → List (Nat × Nat)
+def extractLabels {width : Nat} : WordLangProg (BitVec width) → List (Nat × Nat)
   | .call returns _ _ handler =>
       match returns, handler with
       | none, _ => []

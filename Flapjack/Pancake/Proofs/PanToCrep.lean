@@ -1829,11 +1829,11 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For a one-word exception payload, the target runtime `exp_hdl` execution is
-proved by `EvaluateCases.crepRuntimeExpHdlOneWord`, and
-`crepRuntimeExpHdlOneWord_localsRel` proves its `locals_rel` postcondition.
-The corresponding arbitrary-width flattened execution and local relation are
-`EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
+The target runtime `exp_hdl` evaluator is already proved for one-word payloads
+by `EvaluateCases.crepRuntimeExpHdlOneWord`; its
+`crepRuntimeExpHdlOneWord_localsRel` companion proves the `locals_rel`
+postcondition. The corresponding arbitrary-width flattened execution and
+local relation are `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
 `crepRuntimeExpHdlFiniteMapWords_localsRel`. The actual state and relation
 setup for a matching handler is available as untagged induction support in
 `crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations`. This lemma supplies
@@ -2042,6 +2042,39 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       let nextContext := ctxtFc context.funcs context.eids variables shapes names
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
+
+/-- Width-indexed proof-side `code_rel` interface: the HOL reference is
+    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
+    so this width-indexed form makes the compiler expression the tagged
+    `compileProgRiscV` (`compile_def`) boundary. The generic `codeRel` is its
+    `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+def codeRelW (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) : Prop :=
+  ∀ function variableShapes program returnShape,
+    FLOOKUP sourceCode function = some (variableShapes, program, returnShape) →
+      localisedProg program ∧
+      FLOOKUP context.funcs function = some (variableShapes, returnShape) ∧
+      let variables := variableShapes.map Prod.fst
+      let shapes := variableShapes.map Prod.snd
+      let names := List.range (Shape.shapeSize (.comb shapes))
+      let nextContext := ctxtFc context.funcs context.eids variables shapes names
+      FLOOKUP targetCode function = some
+        (names, compileProgRiscV nextContext.toHOLContext program)
+
+/-- The width-indexed relation is the generic `codeRel` instantiated at
+    `BitVec width`, definitionally via the rfl compiler bridges. -/
+theorem codeRelW_iff_codeRel (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) :
+    codeRelW width context sourceCode targetCode ↔
+      codeRel context sourceCode targetCode :=
+  Iff.rfl
 
 /-- Exact port of HOL `compile_exp_not_mem_load_glob`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013`). The finite-map

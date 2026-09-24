@@ -1,4 +1,5 @@
 import Flapjack.FiniteMap
+import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
 Regressions for the faithful finite-map layer used by

@@ -2533,4 +2533,46 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
 
+/-!
+## Clocked crepSem evaluator over `CrepHolState`
+
+HOL `crepSem$evaluate` is a clock-based program evaluator over the 11-field
+crepSem state (`crepSemScript.sml:240-448`).  The Lean counterpart here bridges
+to the fuel-bounded runtime evaluator `evalCrepRuntimeResult` (which already
+implements the clock checks `state.clock = 0` and `dec_clock`): the fuel budget
+`state.clock + sizeOf program + 1` bounds the structural recursion.
+
+Declaration-local mismatch notes: (a) the evaluator takes an explicit fuel
+budget (the runtime evaluator is fuel-bounded); the `Skip` equation uses the
+clock-derived budget `state.clock + 1`, not HOL's literal clock recursion;
+(b) the evaluator is fixed-width `[NeZero width]` over `RiscV.Word width`, not
+HOL's arbitrary word carrier; (c) only per-constructor equations are proved,
+not general agreement with HOL `evaluate`.  Hence the declaration is untagged.
+-/
+
+/-- Clocked program evaluator over the 11-field `CrepHolState`, bridging the
+    fuel-bounded runtime evaluator.  The `Skip` case below instantiates the
+    budget with the clock-derived `state.clock + 1`. -/
+def evalCrepHolProg [NeZero width] (fuel : Nat)
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ)
+    (program : CrepProg (RiscV.Word width)) :
+    Option (CrepRuntimeResult (RiscV.Word width) ε × CrepHolState (RiscV.Word width) σ) :=
+  (evalCrepRuntimeResult handler primitive fuel state.toRuntime program).map
+    (fun pair => (pair.1, pair.2.toHolState))
+
+/-- Exact `Skip` constructor equation of HOL `evaluate_def`: `evaluate (Skip,s)`
+    returns `(NONE, s)`.  The target state is derived from the source run (the
+    runtime evaluator is invoked, not assumed), with clock-derived budget. -/
+theorem evalCrepHolProg_skip [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) :
+    evalCrepHolProg (state.clock + 1) handler primitive state .skip =
+      some (.normal, state) := by
+  unfold evalCrepHolProg
+  rw [evalCrepRuntimeResult_skip handler primitive state.clock]
+  simp only [Option.map_some, CrepHolState.toHolState_toRuntime]
+
 end Flapjack

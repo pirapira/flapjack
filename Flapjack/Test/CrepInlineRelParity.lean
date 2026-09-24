@@ -413,6 +413,26 @@ def inlineSkipGuard : Bool :=
 
 #guard inlineSkipGuard
 
+/-- Handler and primitive used by the clocked `CrepHolState` evaluator. -/
+def evalHandler64 : CrepRuntimeFfiHandler (RiscV.Word 64) Unit Unit :=
+  fun _ state => CrepRuntimeFfiResponse.returned state []
+
+def evalPrimitive64 : CrepPrimitiveHandler (RiscV.Word 64) := fun _ _ => none
+
+/-- Clocked evaluator `Skip` equation over the 11-field `CrepHolState`,
+    matching HOL `crepSem$evaluate (Skip,s) = (NONE,s)`. -/
+example :
+    evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+        CrepProg.skip =
+      some (CrepRuntimeResult.normal, evalBase) :=
+  evalCrepHolProg_skip evalHandler64 evalPrimitive64 evalBase
+
+def holSkipEvalGuard : Bool :=
+  (evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+    CrepProg.skip).isSome
+
+#guard holSkipEvalGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -458,6 +478,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline inline_prog_correct Skip case"
       pure false
-  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk)
+  let holSkipEvalOk ←
+    if holSkipEvalGuard then
+      IO.println "PASS crepSem clocked evaluate Skip constructor over CrepHolState"
+      pure true
+    else
+      IO.println "FAIL crepSem clocked evaluate Skip constructor over CrepHolState"
+      pure false
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk && holSkipEvalOk)
 
 end Flapjack.Test.CrepInlineRelParity

@@ -40,3 +40,32 @@ val _ = print_eval "eval_field"
 val _ = print_eval "eval_missing"
   ``eval (^s with locals := FEMPTY)
       (panLang$Var panLang$Local (strlit "missing")) = NONE``;
+
+val pairStructs = ``[(strlit "Pair",
+  <| fields := [(strlit "left", One); (strlit "right", One)]; size := 2 |>)]``;
+
+val _ = print_eval "eval_nstruct_ok"
+  ``eval (^s with structs := ^pairStructs)
+      (panLang$NStruct (strlit "Pair")
+        [(strlit "left", panLang$Const (3w:8 word));
+         (strlit "right", panLang$Const (4w:8 word))]) =
+      SOME (NStruct (strlit "Pair")
+        [(strlit "left", ValWord 3w); (strlit "right", ValWord 4w)])``;
+
+val _ = print_eval "eval_nstruct_name_mismatch"
+  ``eval (^s with structs := ^pairStructs)
+      (panLang$NStruct (strlit "Pair")
+        [(strlit "left", panLang$Const (3w:8 word));
+         (strlit "bad", panLang$Const (4w:8 word))]) = NONE``;
+
+val _ = print_eval "eval_nstruct_shape_mismatch"
+  ``eval (^s with structs := ^pairStructs)
+      (panLang$NStruct (strlit "Pair")
+        [(strlit "left", panLang$Const (3w:8 word));
+         (strlit "right", panLang$RStruct [])]) = NONE``;
+
+val _ = print_eval "eval_missing_struct"
+  ``eval (^s with structs := [])
+      (panLang$NStruct (strlit "Pair") []) = NONE``;
+
+val _ = print_eval "eval_probe_done" ``0``;

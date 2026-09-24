@@ -4313,6 +4313,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "word_lab",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "HolWordLab",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "empty_locals_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panEmptyLocals",

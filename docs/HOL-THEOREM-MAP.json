@@ -5552,6 +5552,14 @@
     "reviewer": "Kernel-checked One/Comb/Named production-loader conversion support for HOL mem_load_conversion, including structure-suffix lookup, flattened field loads, and target fuel bounds. It remains untagged: Lean's statement uses explicit natural fuel and a readWord callback with extra well-formedness/fuel premises, while HOL uses finite-address-domain word memory and concludes both converted load success and v_flds_ok."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "mem_load_conversion",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panValueFlatLoadFuel_convert_all_context_shape_view",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Two-context specialization of production load conversion. Source loading uses one StructContext while the target shape is compiled against another whose projected name/field views agree; source structInfosOk, Wf, explicit fuel bounds and successful source load derive target conversion. It remains untagged because Lean uses fuel-indexed readWord callbacks and a Bool shape premise rather than HOL's finite-domain word memory and complete v_flds_ok conclusion. The nested Named Pair Load regression exercises this context-view route."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",

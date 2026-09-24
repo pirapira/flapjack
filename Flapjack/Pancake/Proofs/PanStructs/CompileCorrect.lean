@@ -1186,6 +1186,42 @@ theorem panValueFlatLoadFuel_convert_all [BEq α] [Add α]
                 rw [hheadConverted, hoffset, htailConverted]
                 simp
 
+/-! Two-context form used by the HOL `compile_exp_correct` Load case. The
+    source loader uses the runtime struct context, while production compiles
+    the requested shape against the context view. Projected name/field-view
+    equality suffices; full `StructInfo` and cached-size equality are not
+    assumed. The helper is untagged because its explicit fuel, readWord
+    callback, and Bool shape premise differ from HOL `mem_load_conversion`. -/
+theorem panValueFlatLoadFuel_convert_all_context_shape_view [BEq α] [Add α]
+    (bytesInWord : α) (readWord : α → Option α)
+    (sourceContext compileContext : StructContext)
+    (hview : panStructContextShapeView compileContext =
+      panStructContextShapeView sourceContext)
+    (fuelSource : Nat) (shape : Shape) (address : α)
+    (fuelTarget : Nat) (value : PanValue α)
+    (hstructInfos : structInfosOk sourceContext)
+    (hwf : isWfShape sourceContext shape = true)
+    (hsourceFuel : panValueFlatContextFuel sourceContext +
+      panValueFlatShapeFuel shape + 1 ≤ fuelSource)
+    (htargetFuel : panValueFlatShapeFuel
+      (structCompileShapeWF compileContext shape) + 1 ≤ fuelTarget)
+    (hload : panValueFlatLoadFuel sourceContext readWord bytesInWord fuelSource
+      shape address = some value) :
+    panValueFlatLoadFuel [] readWord bytesInWord fuelTarget
+      (structCompileShapeWF compileContext shape) address =
+        some (panStructConvertValue value) := by
+  have hcompiledShape : structCompileShapeWF compileContext shape =
+      structCompileShapeWF sourceContext shape :=
+    (structCompileShapeWF_context_shape_view compileContext sourceContext hview).1 shape
+  have htargetFuelSource : panValueFlatShapeFuel
+      (structCompileShapeWF sourceContext shape) + 1 ≤ fuelTarget := by
+    rw [← hcompiledShape]
+    exact htargetFuel
+  rw [hcompiledShape]
+  exact panValueFlatLoadFuel_convert_all bytesInWord readWord sourceContext
+    fuelSource shape address fuelTarget value hstructInfos hwf hsourceFuel
+    htargetFuelSource hload
+
 private theorem panValueFieldsHaveShapesNames [BEq String] [LawfulBEq String]
     (context : StructContext) (expected : List (FieldName × Shape))
     (actual : List (FieldName × PanValue α))
@@ -3317,12 +3353,6 @@ theorem panStructCompileExpCorrectLoadCase
                 (panValueFlatContextFuel state.structs +
                   panValueFlatShapeFuel shape + 1) shape address = some value := by
             simpa [panValueFlatLoad, hwf] using hsourceLoad
-          have hshapeCompile :
-              structCompileShape context.structs shape =
-                structCompileShapeWF state.structs shape := by
-            simpa [structCompileShape] using
-              (structCompileShapeWF_context_shape_view context.structs state.structs
-                hstructs).1 shape
           have hloadFacts := panValueFlatLoadFuel_shape_fields bytesInWord
             (panValueFlatReadWord state.memory bytesInWord (some memoryAccess)) state.structs
             (panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1)
@@ -3331,27 +3361,21 @@ theorem panStructCompileExpCorrectLoadCase
               panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1 ≤
                 panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1 :=
             Nat.le_refl _
-          have htargetFuelEnough :
-              panValueFlatShapeFuel (structCompileShapeWF state.structs shape) + 1 ≤
-                panValueFlatShapeFuel (structCompileShape context.structs shape) + 1 := by
-            rw [← hshapeCompile]
-            exact Nat.le_refl _
-          have hconvertedLoad := panValueFlatLoadFuel_convert_all
+          have hconvertedLoad := panValueFlatLoadFuel_convert_all_context_shape_view
             (bytesInWord := bytesInWord)
             (readWord := panValueFlatReadWord state.memory bytesInWord (some memoryAccess))
-            state.structs
+            state.structs context.structs hstructs
             (panValueFlatContextFuel state.structs + panValueFlatShapeFuel shape + 1)
             shape address
             (panValueFlatShapeFuel (structCompileShape context.structs shape) + 1)
-            value hstructInfos hwf hsourceFuelEnough htargetFuelEnough hsourceFuel
+            value hstructInfos hwf hsourceFuelEnough (Nat.le_refl _) hsourceFuel
           have hcompiledLoadFuel :
               panValueFlatLoadFuel []
                 (panValueFlatReadWord state.memory bytesInWord (some memoryAccess)) bytesInWord
                 (panValueFlatShapeFuel (structCompileShape context.structs shape) + 1)
                 (structCompileShape context.structs shape) address =
                 some (panStructConvertValue value) := by
-            rw [← hshapeCompile] at hconvertedLoad
-            exact hconvertedLoad
+            simpa [structCompileShape] using hconvertedLoad
           have hcompiledWf :
               isWfShape [] (structCompileShape context.structs shape) = true :=
             (structCompileShapeWF_isWfShape []).1 context.structs shape

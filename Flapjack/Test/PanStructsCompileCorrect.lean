@@ -944,7 +944,14 @@ def nestedLoadStructContext : StructContext :=
     }) ]
 
 def nestedLoadCompileContext : StructPassContext :=
-  { structs := nestedLoadStructContext, locals := [], globals := [] }
+  -- Production's HOL context relation observes names and field shapes here,
+  -- while the source runtime's structInfosOk supplies the authoritative sizes.
+  -- Deliberately skew cached sizes to guard against accidentally requiring
+  -- full StructInfo equality in the compiled-load conversion.
+  { structs :=
+      [("Pair", { fields := [("inner", .named "Inner"), ("last", .one)], size := 99 }),
+       ("Inner", { fields := [("left", .one), ("right", .one)], size := 98 })]
+    locals := [], globals := [] }
 
 def nestedLoadRuntime : PanSemState Word64 (FfiState Unit) :=
   { finiteMapRuntime with
@@ -1013,10 +1020,11 @@ example :
       panValueFlatFieldsFuel,
       shapeSizeWithContext, isWfShape, lookupInfoWithRest, lookupInfo]
   · have hcompiledExpression :
-        structCompileExp nestedLoadCompileContext nestedLoadExpression =
+      structCompileExp nestedLoadCompileContext nestedLoadExpression =
           .load (.comb [.comb [.one, .one], .one]) (.const (BitVec.ofNat 64 0)) := by
       simp [structCompileExp, structCompileShape, nestedLoadCompileContext,
-        nestedLoadExpression, hcompiled]
+        nestedLoadExpression, structCompileShapeWF,
+        structCompileShapeWF.structCompileShapesWF, lookupInfoWithRest]
     rw [hcompiledExpression]
     simp [nestedLoadRuntime, nestedLoadStructContext, nestedLoadConvertedValue,
       finiteMapRuntime, evalPanValueExp, panValueFlatLoad, panValueFlatLoadFuel,

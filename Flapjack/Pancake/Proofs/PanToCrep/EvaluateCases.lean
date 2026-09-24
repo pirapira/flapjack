@@ -5383,6 +5383,144 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relati
     hlocals hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
     hcalleeIH (by simpa [crepRuntimeCallerState] using hpayload) hhandlerBody
 
+/-! Full-expression-IH variant of the actual target Call_Ret_Exception
+dispatcher for a one-word payload. `compile_args` evaluation and the target
+callee lookup are both derived from the four-conclusion expression IH, after
+which the real `exp_hdl` state relation feeds the handler-body IH. The source
+Call result and complete `pc_compile_correct` case remain open. -/
+theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
+    (caller : CrepRuntimeState (RiscV.Word 64) σ)
+    (function handlerVariable : String) (slot : Nat)
+    (old : PanValue (RiscV.Word 64))
+    (destinations : List Nat) (caught exceptionCode value : RiscV.Word 64)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (handlerBody : CrepProg (RiscV.Word 64))
+    (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
+    (hinitialState : stateRel source caller)
+    (hcallCode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hcalleeState : stateRel sourceAfterCallee calleeState)
+    (hcalleeCode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
+      calleeState.code)
+    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
+    (hlocals : localsRel context source.locals caller.locals)
+    (hsource : FLOOKUP source.locals handlerVariable = some old)
+    (hvariable : FLOOKUP context.vars handlerVariable =
+      some (Shape.one, [slot]))
+    (hslot : ∃ current, caller.locals slot = some current)
+    (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (arguments.flatMap panValueFlatten).length)
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exceptionCode) = true)
+    (hcalleeIH : ∀ targetLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) →
+      evalCrepRuntimeProg handler primitive 4
+        (decCrepClock { caller with locals := targetLocals })
+        (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody) = some (.raised exceptionCode, calleeState))
+    (hhandlerIH : ∀ targetPost,
+      evalCrepRuntimeProg handler primitive 3
+        (crepRuntimeCallerState caller calleeState)
+        (expHdlFiniteMap context.vars handlerVariable) = some (.normal, targetPost) →
+      stateRel
+        { sourceAfterCallee with
+          locals := updatePanValueMap source.locals handlerVariable (.word value) }
+        targetPost →
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) targetPost.code →
+      excpRel context.eids sourceAfterCallee.exceptionShapes →
+      localsRel context
+        (updatePanValueMap source.locals handlerVariable (.word value)) targetPost.locals →
+      evalCrepRuntimeProg handler primitive 3
+        (fixCrepRuntimeClock (ε := FfiFinalEvent)
+          (crepRuntimeCallerState caller calleeState) (.normal, targetPost)).2
+        handlerBody = some handlerResult)
+    (heach : ∀ expression, expression ∈ expressions → ∀ expressionValue,
+      evalPanSemStateExp source expression = some expressionValue →
+      stateRel source caller →
+      codeRel context (panSemCodeAsLookup source.code) caller.code →
+      localsRel context source.locals caller.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps caller
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten expressionValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] expressionValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    evalCrepRuntimeCall handler primitive 5 caller
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) function
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some handlerResult := by
+  obtain ⟨targetPost, hpayload, hpayloadState, hpayloadCode,
+      hpayloadExcp, hpayloadLocals⟩ :=
+    crepRuntimeExpHdlOneWord_handlerPrestateRelations context handler primitive
+      sourceAfterCallee source.locals caller calleeState handlerVariable slot
+      old value hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
+  have hhandlerBody := hhandlerIH targetPost hpayload hpayloadState hpayloadCode
+    hpayloadExcp hpayloadLocals
+  obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source caller
+      function parameters sourceBody returnShape expressions arguments hinitialState
+      hcallCode hlocals hlocalized hsourceArgs hentry hargumentLength heach
+  exact evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody context handler
+      primitive caller destinations caught exceptionCode function handlerVariable
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions)
+      (arguments.flatMap panValueFlatten)
+      (compileCodeRelProg
+        (ctxtFc context.funcs context.eids
+          (parameters.map Prod.fst) (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceBody)
+      handlerBody targetLocals calleeState targetPost handlerResult 3 harguments hlookup
+      hinfoValid hclock hmatch (hcalleeIH targetLocals hlookup)
+      (by simpa [crepRuntimeCallerState] using hpayload) hhandlerBody
+
 /-! Preserve the handler-body post-state IH through the production target Call
 dispatcher. `sourcePost` is the source state supplied by that IH (in a full
 Call proof, the projection of the actual source Call result); this helper does

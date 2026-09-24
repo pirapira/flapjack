@@ -4955,6 +4955,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual target Call_Ret_Exception dispatcher using a full compile_exp_val_rel-shaped expression IH to derive compile_args evaluation and state-owned code lookup, then composing the one-word exp_hdl relation and handler-body IH. The parameter-length premise and target callee-body IH remain explicit; source Call/post-state composition and the full pc_compile_correct theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRelations",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only fixed-fuel target Call composition carrying a related handler-body post-state through production dispatch; its source post-state is supplied by the caller and is not itself connected to source evaluation, so this is not pc_compile_correct[Call_Ret_Exception]"

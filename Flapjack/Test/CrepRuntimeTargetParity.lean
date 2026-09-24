@@ -307,6 +307,41 @@ example :
 
 #eval loadEvalGuard
 
+/-- The RV64 `Op` evaluator case over constant operands.  Oracle rows
+`scripts/hol-probes/crep_eval_op_rv64_probe.out`: Add 3+4=7, Sub 7-2=5,
+And 0xF0&0x3C=0x30, empty Add=0, Sub with one operand fails. -/
+def opEvalGuard : Bool :=
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .add [.const (3 : RiscV.Word 64), .const (4 : RiscV.Word 64)]) ==
+    some (7 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .sub [.const (7 : RiscV.Word 64), .const (2 : RiscV.Word 64)]) ==
+    some (5 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .and [.const (0xF0 : RiscV.Word 64), .const (0x3C : RiscV.Word 64)]) ==
+    some (0x30 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .add ([] : List (CrepExp (RiscV.Word 64)))) ==
+    some (0 : RiscV.Word 64)) &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .sub [.const (7 : RiscV.Word 64)])).isNone &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.op .add [.const (3 : RiscV.Word 64), .const (4 : RiscV.Word 64)]) ==
+    some (.word (7 : RiscV.Word 64)))
+
+/-- The genuine RV64 `Op` evaluator-case bridge instantiated at the oracle fixture. -/
+example :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+        (.op .add [.const (3 : RiscV.Word 64), .const (4 : RiscV.Word 64)]) =
+      (wordOpHOL .add [(3 : RiscV.Word 64), (4 : RiscV.Word 64)]).map
+        PanWordLab.word :=
+  evalCrepRuntimeExpWordLab_op_rv64_const loadByteBaseState .add
+    [(3 : RiscV.Word 64), (4 : RiscV.Word 64)]
+
+#guard opEvalGuard
+
+#eval opEvalGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -324,7 +359,11 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Load evaluator case matches HOL mem_load oracle"
   else
     IO.println "FAIL crep Load evaluator case matches HOL mem_load oracle"
+  if opEvalGuard then
+    IO.println "PASS crep Op evaluator case matches HOL word_op oracle"
+  else
+    IO.println "FAIL crep Op evaluator case matches HOL word_op oracle"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
-    load32EvalGuard && loadEvalGuard)
+    load32EvalGuard && loadEvalGuard && opEvalGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

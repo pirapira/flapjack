@@ -296,6 +296,13 @@ example :
   fixCrepHolClockW_eq_fixCrepHolClock localBase
     ((CrepRuntimeResult.normal : CrepRuntimeResult (BitVec 64) Unit), localBase)
 
+/-- HOL `fix_clock` leaves the result component unconstrained, so the tagged
+    width-indexed counterpart is result-polymorphic: here the result carrier is
+    a plain `Bool`, and it is threaded through unchanged. -/
+example :
+    (fixCrepHolClockW { localBase with clock := 5 } ((true, localBase))).1 = true := by
+  simp [fixCrepHolClockW]
+
 example :
     memLoadCrepHolW (0 : BitVec 64) localBase = memLoadCrepHol (0 : BitVec 64) localBase :=
   memLoadCrepHolW_eq_memLoadCrepHol (0 : BitVec 64) localBase

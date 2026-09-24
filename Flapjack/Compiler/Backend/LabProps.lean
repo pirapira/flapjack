@@ -647,6 +647,3 @@ theorem stackAsmOk_asmChecksOfConfig_call_some_inl_some
 end StackAsmOkBridge
 
 end Flapjack.Compiler.Backend.LabProps
-
-
-

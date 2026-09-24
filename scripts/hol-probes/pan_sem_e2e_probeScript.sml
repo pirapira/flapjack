@@ -186,6 +186,40 @@ val _ = print_eval "deccall_code_map_clock_9"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))).clock)``
 
+val _ = print_eval "nested_deccall_code_map_7"
+  ``FST (panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «f» []
+        (panLang$Return (panLang$Var panLang$Local «answer»)),
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([],
+             panLang$DecCall «nested» panLang$One «g» []
+               (panLang$Return (panLang$Var panLang$Local «nested»)),
+             panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))``
+
+val _ = print_eval "nested_deccall_code_map_clock_8"
+  ``(FST (panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «f» []
+        (panLang$Return (panLang$Var panLang$Local «answer»)),
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([],
+             panLang$DecCall «nested» panLang$One «g» []
+               (panLang$Return (panLang$Var panLang$Local «nested»)),
+             panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One))))),
+     (SND (panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «f» []
+        (panLang$Return (panLang$Var panLang$Local «answer»)),
+       (((ARB:((8),unit) panSem$state) with clock := 10) with
+         code := FEMPTY |+
+           («f», ([],
+             panLang$DecCall «nested» panLang$One «g» []
+               (panLang$Return (panLang$Var panLang$Local «nested»)),
+             panLang$One)) |+
+           («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))).clock)``
+
 val _ = print_eval "nested_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],

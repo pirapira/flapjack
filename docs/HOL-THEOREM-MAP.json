@@ -6102,5 +6102,37 @@
     "lean_name": "crepInlineOptMmapEvalCodeInl",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only untagged list-level opt-mmap correspondence (opt_mmap_eval_code_inl, cakeml/pancake/proofs/crep_inlineProofScript.sml:1530); untagged because the Lean evaluator is the fixed-width evalCrepHolExp and the carrier is List.mapM rather than HOL OPT_MMAP. HOL oracle: scripts/hol-probes/crep_inline_eval_probe.{sml,out}."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineRuntimeStateRelCode",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Runtime state_rel_code projected through CrepRuntimeState.toHolState; Flapjack-only runtime view of the HOL state_rel_code relation over the 11-field CrepHolState."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineRuntimeLocalsStrongRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Runtime locals_strong_rel: source and target locals functions are equal; Flapjack-only runtime view."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineRuntimeCodeInlRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Runtime code_inl_rel over CrepInlineFmap projected through toHolState; Flapjack-only runtime view of code_inl_rel_def (crep_inlineProofScript.sml:1504)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineRuntimeSkip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Runtime Skip constructor case toward HOL inline_prog_correct (crep_inlineProofScript.sml:2301): from a source evalCrepRuntimeResult Skip run and the runtime relations, derives an existential target run on crepInlineProgFmap and preserves the postrelations. Untagged: Lean uses the fuel-bounded evalCrepRuntimeResult, not HOL's clock-based evaluate."
   }
 ]

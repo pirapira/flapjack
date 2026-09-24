@@ -8726,5 +8726,61 @@
   "lean_name": "secEndsWithLabel",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "ri_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "riFindName",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "inst_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "instFindName",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "dest_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "destFindName",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progComp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "prog_comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progCompEntry",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "compile_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "compile",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "names_ok_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "namesOk",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

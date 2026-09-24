@@ -1316,3 +1316,11 @@ run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_prob
   is_label_label sec_empty \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The stack_names probe observes the pure register-renaming transformation
+# (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
+# compile / names_ok) against a small renaming map.
+run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
+  ri_reg names_ok_dup \
+  "$cake_dir/compiler/backend/stack_namesScript.sml" \
+  "$cake_dir/compiler/backend"

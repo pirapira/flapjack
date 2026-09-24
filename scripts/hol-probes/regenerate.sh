@@ -393,6 +393,12 @@ run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
 run_probe pan_sem_ite_memory_probeScript.sml pan_sem_ite_memory_probe.out \
   if_mem_nonzero_result if_mem_byte_be_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Assign memory probe observes a memory-reading source: a present word cell
+# written to the destination local, an address outside `memaddrs` rejected with
+# Error and the locals/clock unchanged, and `be` driving the byte read.
+run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out \
+  assign_mem_load_result assign_mem_byte_be_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \

@@ -1,0 +1,7 @@
+assign_mem_load_result=NONE
+assign_mem_load_locals=SOME (ValWord 0x1122334455667788w)
+assign_mem_domain_result=SOME Error
+assign_mem_domain_locals=SOME (ValWord 3w)
+assign_mem_domain_clock=5
+assign_mem_byte_le_locals=SOME (ValWord 0w)
+assign_mem_byte_be_locals=SOME (ValWord 136w)

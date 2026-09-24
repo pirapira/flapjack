@@ -536,7 +536,7 @@ inductive CrepResultHOL (α ε : Type u) where
   | timeOut
   | break (label : Nat)
   | continue (label : Nat)
-  | return (values : List α)
+  | return (values : List (PanWordLab α))
   | exception (value : α)
   | finalFfi (event : ε)
   deriving DecidableEq, Repr

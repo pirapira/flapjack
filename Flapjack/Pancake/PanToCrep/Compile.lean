@@ -829,13 +829,11 @@ def compileToCrepHOL
     (declarations : List (Decl (BitVec width))) :
     List (FunName × List Nat × CrepProg (BitVec width)) :=
   let functions := functionEntries declarations
-  let functionMap := functionInfosHOL declarations
+  let functionMap := makeFuncsHOL functions
   let exceptionMap := panToCrepGetEidsFromDeclsHOL declarations
-  let context : PanToCrepHOLContext (BitVec width) :=
-    panToCrepMkCtxtHOL FEMPTY functionMap 0 exceptionMap
   functions.map fun (name, parameters, body, _returnShape) =>
     (name, panToCrepVars parameters,
-      panToCrepCompFuncRiscV context parameters body)
+      compFuncHOL functionMap exceptionMap parameters body)
 
 /-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
 Cake's following Crep passes operate on triples; Flapjack retains the source

@@ -5315,14 +5315,6 @@
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panStructCompileExpCorrectOpCaseCompactSupport",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Retained compact-evaluator support specialization for existing proof consumers. It uses evalPanValueExp without PanValueMemoryAccess, so it is not the faithful source-memory Op case and is not tagged. The full-evaluator Op specialization is panStructCompileExpCorrectOpCase."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "compile_exp_correct",
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectPanOpCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Intentionally untagged because HOL has only universal compile_exp_correct, and production Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord, and the evalPanOp interface."

@@ -815,9 +815,11 @@ theorem fixCrepHolClock_clock_le (oldState : CrepHolState α σ)
   · simp only [fixCrepHolClock, hlt, if_false]
     exact Nat.le_of_not_lt hlt
 
-/-- HOL `fix_clock_IMP_LESS_EQ`: if `fix_clock` returns a result and state,
-    the returned clock does not exceed the original state's clock. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+/-- Generic production clock bound for the generic (untagged)
+    `fixCrepHolClock`. HOL `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-157`)
+    is word-length indexed (`'a crepSem$state`) and result-polymorphic, so this
+    generic-`α` form is deliberately UNTAGGED; the width-indexed exact
+    counterpart is `fixCrepHolClock_IMP_LESS_EQW` below. -/
 theorem fixCrepHolClock_IMP_LESS_EQ (oldState : CrepHolState α σ)
     (step : CrepRuntimeResult α ε × CrepHolState α σ)
     (result : CrepRuntimeResult α ε) (newState : CrepHolState α σ)
@@ -825,6 +827,29 @@ theorem fixCrepHolClock_IMP_LESS_EQ (oldState : CrepHolState α σ)
     newState.clock ≤ oldState.clock := by
   obtain ⟨stepResult, stepState⟩ := step
   have hbound := fixCrepHolClock_clock_le oldState stepResult stepState
+  rw [hfixed] at hbound
+  exact hbound
+
+/-- Width-indexed exact HOL-shaped `fix_clock_IMP_LESS_EQ`
+    (`crepSemScript.sml:155-157`) over the word-length-indexed carrier: the
+    clock clamped by the tagged `fixCrepHolClockW` never exceeds the original
+    state's clock, for an arbitrary result component `β` exactly as HOL leaves
+    the returned `res` unconstrained. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+theorem fixCrepHolClock_IMP_LESS_EQW {width : Nat} {σ : Type} {β : Type}
+    (oldState : CrepHolState (BitVec width) σ)
+    (step : β × CrepHolState (BitVec width) σ)
+    (result : β) (newState : CrepHolState (BitVec width) σ)
+    (hfixed : fixCrepHolClockW oldState step = (result, newState)) :
+    newState.clock ≤ oldState.clock := by
+  obtain ⟨stepResult, stepState⟩ := step
+  have hbound :
+      (fixCrepHolClockW oldState (stepResult, stepState)).2.clock ≤
+        oldState.clock := by
+    by_cases hlt : oldState.clock < stepState.clock
+    · simp [fixCrepHolClockW, hlt]
+    · simp only [fixCrepHolClockW, hlt, if_false]
+      exact Nat.le_of_not_lt hlt
   rw [hfixed] at hbound
   exact hbound
 

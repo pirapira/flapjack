@@ -303,6 +303,14 @@ example :
     (fixCrepHolClockW { localBase with clock := 5 } ((true, localBase))).1 = true := by
   simp [fixCrepHolClockW]
 
+/-- HOL `fix_clock_IMP_LESS_EQ` oracle: the clock clamped by the tagged
+    width-indexed result-polymorphic `fixCrepHolClockW` never exceeds the old
+    state's clock. -/
+example : (fixCrepHolClockW localBase ((true, localBase))).2.clock ≤ localBase.clock := by
+  apply fixCrepHolClock_IMP_LESS_EQW (β := Bool) localBase (true, localBase)
+    true localBase
+  simp [fixCrepHolClockW, localBase]
+
 example :
     memLoadCrepHolW (0 : BitVec 64) localBase = memLoadCrepHol (0 : BitVec 64) localBase :=
   memLoadCrepHolW_eq_memLoadCrepHol (0 : BitVec 64) localBase

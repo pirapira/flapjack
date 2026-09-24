@@ -26,7 +26,7 @@ structure FlattenOps (Inst Cmp RegImm AsmInst : Type) where
   lower : Cmp
   negate : Cmp → Cmp
 
-private abbrev FlatLine (Memop Addr Cmp RegImm MlString AsmInst Word : Type) :=
+abbrev FlatLine (Memop Addr Cmp RegImm MlString AsmInst Word : Type) :=
   Line (AsmOrCbw AsmInst Memop Addr) (AsmWithLab Cmp RegImm MlString) Word
 
 private def findLab (index : Nat) (labs : List Nat) : Nat :=

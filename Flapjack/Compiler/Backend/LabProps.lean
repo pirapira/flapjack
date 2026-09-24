@@ -351,6 +351,37 @@ theorem flatten_codeBufferWrite_lines_all (config : Flapjack.Compiler.Encoders.A
   rw [StackToLab.flatten_codeBufferWrite]
   simp [lineOkPreConfig_asm_cbw]
 
+
+/-- Generic composition step for the `flatten` line-ok induction: the `Seq`
+case appends the two recursive outputs (with an optional `Label` when `tail`).
+The hypotheses are universally quantified over the updated label counter, as in
+HOL's `flatten_ind`. -/
+theorem flatten_seq_lines_all {Asm Memop Addr Cmp RegImm MlString Word : Type}
+    (_checks : AsmChecks Asm Memop Addr Word)
+    {Inst Binop AsmInst : Type} (ops : StackToLab.FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (tail : Bool) (first second : Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (P : StackToLab.FlatLine Memop Addr Cmp RegImm MlString AsmInst Word → Bool)
+    (ih1 : ∀ n, (StackToLab.flatten ops zero false first sectionId n conts breaks).1.all P = true)
+    (ih2 : ∀ n, (StackToLab.flatten ops zero false second sectionId n conts breaks).1.all P = true)
+    (hlabel : P (.label sectionId 1 0) = true) :
+    (StackToLab.flatten ops zero tail (.seq first second) sectionId next conts breaks).1.all P = true := by
+  simp only [StackToLab.flatten]
+  cases h1 : StackToLab.flatten ops zero false first sectionId next conts breaks with
+  | mk xs r1 =>
+    cases r1 with
+    | mk r1x nx =>
+      cases h2 : StackToLab.flatten ops zero false second sectionId nx conts breaks with
+      | mk ys r2 =>
+        cases r2 with
+        | mk r2x ny =>
+          have ih1' : xs.all P = true := by simpa [h1] using ih1 next
+          have ih2' : ys.all P = true := by simpa [h2] using ih2 nx
+          by_cases ht : tail
+          · simp only [ht, if_true, List.all_append, List.all_cons, List.all_nil, ih1', ih2', hlabel]
+            decide
+          · simp only [ht, Bool.false_eq_true, if_false, List.all_append, ih1', ih2']
+            decide
 end FlattenBaseLinesAll
 
 end Flapjack.Compiler.Backend.LabProps

@@ -1353,7 +1353,9 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                           simp only [hassign, Option.bind_eq_bind, Option.bind_some] at hrun
                           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                           obtain ⟨_, hc⟩ := hrun; omega
-                    · simp only [hret, if_false, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                    · simp only [hret, if_false, Option.pure_def, Option.some.injEq,
+                        Prod.mk.injEq] at hrun
+                      obtain ⟨_, hc⟩ := hrun; omega
                   | raised l g m f ex v =>
                     by_cases hexc : (panValueExceptionValid structs contracts ex v && panValuePayloadWithinLimit structs v) = true
                     · simp only [hexc, if_true, Option.bind_eq_bind, Option.bind_some] at hrun

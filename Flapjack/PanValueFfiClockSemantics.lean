@@ -156,7 +156,9 @@ mutual
                                   (structs := structs)
                               pure (.control (.normal callerLocals callerGlobals
                                 calleeMemory calleeFfi), calleeClock)
-                        else none
+                        else pure (.control
+                          (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                          calleeClock)
                     | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
                         if panValueExceptionValid structs contracts exception value &&
                             panValuePayloadWithinLimit structs value then
@@ -849,5 +851,60 @@ theorem evalPanValueFfiClockCall_callee_error_error
       some (.control (.error (fun _ => none) finalGlobals finalMemory finalFfi), finalClock) := by
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
     Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
+
+/-! A callee that returns a value whose shape or size fails the call contract is
+    a call failure: Cake's `evaluate (Call ...)` maps a mismatched `Return` to
+    `(SOME Error,st)`, preserving the callee's post-call globals, memory, FFI
+    state and clock (its locals were already emptied by the return). -/
+theorem evalPanValueFfiClockCall_returned_invalid_error
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (clock : Nat)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals : VarName → Option (PanValue α))
+    (returnGlobals : VarName → Option (PanValue α))
+    (returnMemory : α → Option (PanValue α)) (returnFfi : FfiState σ)
+    (body : Prog α) (finalClock : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.returned bodyLocals returnGlobals returnMemory returnFfi values),
+        finalClock))
+    (hret : (panValueReturnValid structs contracts function values &&
+        panValueValuesWithinLimit structs values) = false) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      info function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.error (fun _ => none) returnGlobals returnMemory returnFfi),
+        finalClock) := by
+  simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget,
+    Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hbody]
+  intro hvalidReturn hvalidValues
+  simp [hvalidReturn, hvalidValues] at hret
 
 end Flapjack

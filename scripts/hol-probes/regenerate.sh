@@ -456,6 +456,12 @@ run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_termi
 run_probe pan_sem_call_callee_error_probeScript.sml pan_sem_call_callee_error_probe.out \
   call_error_result call_error_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call return-invalid probe observes that a callee returning a value whose
+# shape does not match the declared return shape rejects the call with
+# `SOME Error` at the decremented callee clock.
+run_probe pan_sem_call_return_invalid_probeScript.sml pan_sem_call_return_invalid_probe.out \
+  call_retinvalid_result call_retinvalid_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.

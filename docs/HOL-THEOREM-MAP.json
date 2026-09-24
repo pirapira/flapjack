@@ -523,6 +523,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1OpHolFiniteWordSourceCase",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact recursive Op constructor case of local simp_exp_correct1. The induction hypotheses range over precisely the argument expressions; source word_op is routed through the width-indexed HOL word_op_def port. The unused result binder, success premise, code-map update, and complete Option word_lab result match this case. Crepop arithmetic, memory cases, and theorem assembly remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact TopAddr constructor case of local simp_exp_correct1. Both HOL eval_def and the Lean source evaluator return the top address field; the unused result binder, success premise, code-only update, and full Option word_lab equality match this case. Other cases and the assembled theorem remain open."

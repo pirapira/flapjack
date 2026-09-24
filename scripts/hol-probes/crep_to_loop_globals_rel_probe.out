@@ -1,0 +1,4 @@
+wlab_wloc_word=T
+globals_lookup_match=T
+globals_lookup_wrong=F
+globals_lookup_absent=T

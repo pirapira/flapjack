@@ -1079,6 +1079,11 @@ run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
 run_probe loop_sem_get_var_imm_probeScript.sml \
   loop_sem_get_var_imm_probe.out \
   reg_hit reg_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_props_get_vars_probeScript.sml \
+  loop_props_get_vars_probe.out \
+  get_vars_two get_var_imm_add_clk_eq \
+  "$cake_dir/pancake/semantics/loopPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe loop_sem_call_env_probeScript.sml \
   loop_sem_call_env_probe.out \
   arg_zero arg_missing "$cake_dir/pancake/semantics/loopSemScript.sml"
@@ -1389,3 +1394,18 @@ run_probe stack_lang_inst_overloads_probeScript.sml stack_lang_inst_overloads_pr
   left_shift_inst_2_3 halt_inst_0 \
   "$cake_dir/compiler/backend/stack_removeScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The mlstring carrier probe pins the exact HOL `mlstring = implode string`
+# datatype (string = char list, char the 256-element type) needed by the
+# stackLang/stack_names program FFI field.
+run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
+  ml_strlen ml_concat_len \
+  "$cake_dir/basis/pure/mlstringScript.sml" \
+  "$cake_dir/basis/pure"
+
+# The loopSem state-carrier probe pins the exact field shapes of a concrete
+# (8,'ffi) loopSem$state: num_map locals/code, total memory, set domain, clock, be.
+run_probe loop_sem_state_carrier_probeScript.sml loop_sem_state_carrier_probe.out \
+  locals_0 base_self \
+  "$cake_dir/pancake/semantics/loopSemScript.sml" \
+  "$cake_dir/pancake/semantics"

@@ -1,0 +1,8 @@
+pre_ok_ffi=T
+pre_bad_scalar=F
+pre_bad_cutset=F
+pre_bad_argconv=F
+post_ok_move=T
+post_bad_move=F
+post_bad_bound=F
+post_ok_ret=T

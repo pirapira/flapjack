@@ -19,14 +19,16 @@ returns an `Option` of a structured control result whose outcome embeds the
 state components, so its statements cannot carry an exact HOL `evaluate` tag.
 This module starts the genuinely HOL-shaped total interface:
 
-* `PanSemProgResult` is an isomorphic in-Lean encoding of HOL's
-  `result option`: `PanSemProgResult.normal` encodes HOL's `NONE`, so it is
-  equivalent to `result option` but not literally that type;
+* `PanSemProgResult` is an existing helper carrier whose `normal` constructor
+  represents HOL `NONE`; its return payload is list-shaped, so it is not an
+  exact encoding of HOL `result option`;
+* `PanSemHOLResult` mirrors the constructors and payloads of HOL `result`;
 * `panSemProgResultOfClockResult` maps the executed clocked result onto it;
-* `panSemEvaluateSkip`, `panSemEvaluateBreak`, `panSemEvaluateContinue`, and
-  `panSemEvaluateTick` are base-case infrastructure
-  for the eventual evaluator, not yet the single total recursive
-  `panSemEvaluate`;
+* `panSemEvaluateClockLeaf` is a total evaluator on exactly the four
+  nonrecursive constructors `Skip`, `Break`, `Continue`, and `Tick`. Its state
+  is the complete production `PanSemState`; there is no evaluator `Option` or
+  fuel layer. The remaining constructors are outside this restricted domain,
+  so this is not the whole-program `panSemEvaluate`;
 * `panSemTotalSeqStep` is the HOL `Seq` composition (clamp the first result's
   clock with `fix_clock`, continue only on a normal completion) as a helper over
   an already evaluated first pair and a continuation, not a whole-program
@@ -43,9 +45,10 @@ its exact HOL statement are established.
 
 namespace Flapjack
 
-/-- Isomorphic in-Lean encoding of HOL `panSemScript.sml:68-75` `result option`:
-    `normal` encodes HOL `NONE` (normal completion); the other constructors
-    encode the corresponding `SOME` payloads. -/
+/-- Existing helper encoding of the outcomes projected from the executed
+    clocked evaluator. `.normal` represents HOL `NONE`; this is not an exact
+    HOL result carrier because `.returned` holds a list, while HOL `Return`
+    carries one value. -/
 inductive PanSemProgResult (α : Type u) (σ : Type v) where
   | normal
   | error
@@ -128,23 +131,49 @@ def panSemProgResultOfClockResult (result : PanValueFfiClockResult α σ) :
         ((.control (.finalFfi locals globals memory ffi event), clock) :
           PanValueFfiClockResult α σ) = .finalFfi event := rfl
 
-/-- Turn an executed `(clocked result, state)` pair into the HOL-shaped
-    `(result, state)` pair.  This is a proved relation between the executed
-    evaluator and the total interface only; it is not part of the definition of
-    total evaluation. -/
+/-- Project an executed `(clocked result, state)` pair into the legacy helper
+    outcome/state carrier. This is a proved relation about the executed
+    evaluator; it is not part of `panSemEvaluateClockLeaf` and is not the exact
+    HOL `result option` carrier. -/
 def panSemTotalOfExecuted
     (pair : PanValueFfiClockResult α σ × PanSemState α (FfiState σ)) :
     PanSemProgResult α σ × PanSemState α (FfiState σ) :=
   (panSemProgResultOfClockResult pair.1, pair.2)
 
-/-! ## Base-case total equations
+/-! ## Total evaluator for the clock leaves
 
-    Base-case infrastructure for the eventual single total recursive
-    `panSemEvaluate`; these functions are not that evaluator yet.  They return
-    the HOL `(result option # state)` shape directly (no `Option`/fuel
-    wrapper), and the theorems below relate them to the executed source
-    evaluator's `(result, state)` projection via the proved relation
-    `panSemTotalOfExecuted`. -/
+    This evaluator is total on its explicitly restricted four-constructor
+    domain, preserving the full source state. It is not the recursive evaluator
+    for all `Prog` forms. The leaf evaluator below returns `Option
+    PanSemHOLResult`, where the option is HOL's result option and is not a
+    fuel/partial-evaluation wrapper. -/
+
+/-- Lean counterpart of the constructors and payloads of
+    `panSem$result` (`panSemScript.sml:68-75`). Names are made Lean-safe; this
+    carrier does not by itself port the whole `evaluate` function. -/
+inductive PanSemHOLResult (α : Type u) where
+  | error
+  | timeOut
+  | break
+  | continue
+  | returned (value : PanValue α)
+  | exception (exception : ExceptionId) (value : PanValue α)
+  | finalFfi (event : FfiFinalEvent)
+
+/-- Domain of the four nonrecursive `panSem$evaluate` clock leaves. -/
+inductive PanSemClockLeaf where
+  | skip
+  | break
+  | continue
+  | tick
+  deriving DecidableEq, Repr
+
+/-- Embed a clock leaf into the matching production Pancake syntax. -/
+def PanSemClockLeaf.toProg {α : Type u} : PanSemClockLeaf → Prog α
+  | .skip => .skip
+  | .break => .break
+  | .continue => .continue
+  | .tick => .tick
 
 /-- HOL `Skip` (`cakeml/pancake/semantics/panSemScript.sml:557`):
     normal completion with the state carried verbatim. -/
@@ -173,6 +202,48 @@ def panSemEvaluateTick (state : PanSemState α (FfiState σ)) :
     (.timeout, { state with locals := fun _ => none })
   else
     (.normal, { state with clock := state.clock - 1 })
+
+/-- Total `panSem$evaluate` equations for the restricted clock-leaf domain
+    (`panSemScript.sml:557, 623-624, 653-655`). The result/state pair uses HOL's
+    `result option` shape over the complete source state. This restricted
+    declaration is not the full `Prog` evaluator and is not tagged as HOL's
+    `evaluate_def`. -/
+def panSemEvaluateClockLeaf (leaf : PanSemClockLeaf)
+    (state : PanSemState α (FfiState σ)) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match leaf with
+  | .skip => (none, state)
+  | .break => (some .break, state)
+  | .continue => (some .continue, state)
+  | .tick =>
+      if state.clock = 0 then
+        (some .timeOut, { state with locals := fun _ => none })
+      else
+        (none, { state with clock := state.clock - 1 })
+
+@[simp] theorem panSemEvaluateClockLeaf_skip
+    (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateClockLeaf .skip state = (none, state) := rfl
+
+@[simp] theorem panSemEvaluateClockLeaf_break
+    (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateClockLeaf .break state = (some .break, state) := rfl
+
+@[simp] theorem panSemEvaluateClockLeaf_continue
+    (state : PanSemState α (FfiState σ)) :
+    panSemEvaluateClockLeaf .continue state = (some .continue, state) := rfl
+
+theorem panSemEvaluateClockLeaf_tick_zero
+    (state : PanSemState α (FfiState σ)) (hclock : state.clock = 0) :
+    panSemEvaluateClockLeaf .tick state =
+      (some .timeOut, { state with locals := fun _ => none }) := by
+  simp [panSemEvaluateClockLeaf, hclock]
+
+theorem panSemEvaluateClockLeaf_tick_positive
+    (state : PanSemState α (FfiState σ)) (hclock : state.clock ≠ 0) :
+    panSemEvaluateClockLeaf .tick state =
+      (none, { state with clock := state.clock - 1 }) := by
+  simp [panSemEvaluateClockLeaf, hclock]
 
 /-- The executed source evaluator's `Skip` projection is exactly the total
     `Skip` equation. -/

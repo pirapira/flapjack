@@ -1184,3 +1184,17 @@ run_probe word_lang_every_name_probeScript.sml word_lang_every_name_probe.out \
   en_empty esv_seq_bad \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# `pre_alloc_conventions` / `post_alloc_conventions`: stack/phy predicates,
+# the `2*k` bound, and the call-argument convention.
+run_probe word_convs_alloc_conventions_probeScript.sml word_convs_alloc_conventions_probe.out \
+  pre_ok_ffi post_ok_ret \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The labProps probe pins `line_ok_pre`/`all_enc_ok_pre` and the concrete
+# `cbw_to_asm` mapping at an 8-bit configuration.
+run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out \
+  line_ok_asm_skip cbw_to_asm_sharemem \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

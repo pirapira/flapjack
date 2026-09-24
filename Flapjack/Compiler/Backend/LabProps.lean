@@ -1,6 +1,7 @@
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
+import Flapjack.Compiler.Backend.StackToLab
 
 /-!
 # Cake labProps pre-encoding predicates
@@ -112,4 +113,31 @@ def allEncOkPreConfig {width : Nat}
       (AsmWithLab Cmp Nat MlString) (BitVec width)))) : Bool :=
   allEncOkPre (asmConfigChecks config) sections
 
+
+/-- Concrete `FlattenOps` for the pipeline's assembler carrier: the embedded
+constructors are `asm$Skip`, `asm$Inst`, `asm$JumpReg`, `asm$Reg`, `asm$Lower`
+and the `negate` table from `cakeml/compiler/backend/stack_to_labScript.sml:24-32`,
+all over the faithful `AsmData`/`WordLangInst`/`WordRegImm` carriers. These
+constructors are independent of the `asm_config` record, so no configuration
+argument is required. -/
+def flattenOps {width : Nat} :
+    StackToLab.FlattenOps (WordLangInst (BitVec width)) Flapjack.Cmp
+      (WordRegImm (BitVec width)) (Encoders.Asm.AsmData width) where
+  skip := .inst .skip
+  embedInst := fun instruction => .inst instruction
+  jumpReg := fun register => .jumpReg register
+  reg := fun register => .reg register
+  lower := .lower
+  negate := fun operator =>
+    match operator with
+    | .less => .notLess
+    | .equal => .notEqual
+    | .lower => .notLower
+    | .test => .notTest
+    | .notLess => .less
+    | .notEqual => .equal
+    | .notLower => .lower
+    | .notTest => .test
+
 end Flapjack.Compiler.Backend.LabProps
+

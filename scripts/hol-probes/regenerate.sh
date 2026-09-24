@@ -1186,3 +1186,10 @@ run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out 
   line_ok_asm_skip cbw_to_asm_sharemem \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The stack_to_lab flatten-ops probe observes the config-independent embedded
+# constructors (negate table and compile_jump).
+run_probe stack_to_lab_flatten_ops_probeScript.sml stack_to_lab_flatten_ops_probe.out \
+  negate_less compile_jump_reg \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"

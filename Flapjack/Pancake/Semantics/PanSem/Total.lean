@@ -452,6 +452,43 @@ def panSemFixClock (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
     PanSemState α (FfiState σ) :=
   { state with clock := min entryClock state.clock }
 
+/-! A small source-program fragment gives the clock leaves and `Seq` a real
+    recursive evaluator over the complete production state.  This is a total
+    interpreter for the declared fragment only; it does not stand in for the
+    full HOL `evaluate_def`, whose expression-bearing and recursive constructors
+    still need their faithful evaluator and clock/termination proofs. -/
+
+/-- Source programs in the restricted fragment covered by the total
+    clock-leaf/sequence evaluator.  `toProg` embeds the fragment in the
+    production syntax without changing its constructors. -/
+inductive PanSemSeqFragment (α : Type u) where
+  | leaf (leaf : PanSemClockLeaf)
+  | seq (first second : PanSemSeqFragment α)
+
+/-- Embed a sequence/clock-leaf fragment into the production Pancake syntax. -/
+def PanSemSeqFragment.toProg : PanSemSeqFragment α → Prog α
+  | PanSemSeqFragment.leaf clockCtor => PanSemClockLeaf.toProg clockCtor
+  | PanSemSeqFragment.seq prog1 prog2 => .seq prog1.toProg prog2.toProg
+
+/-- Total recursive HOL-result evaluator for the sequence/clock-leaf fragment.
+    Its result is HOL's `result option × state`; the `Option` is the semantic
+    result option from `evaluate_def`, not evaluator failure or fuel exhaustion.
+    The recursive calls are on the source subprograms, and `Seq` clamps the
+    first post-state clock before evaluating its second subprogram.  This
+    restricted interpreter is untagged and does not claim the whole-program
+    `evaluate_def` port. -/
+def panSemEvaluateSeqFragment (program : PanSemSeqFragment α)
+    (state : PanSemState α (FfiState σ)) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match program with
+  | .leaf leaf => panSemEvaluateClockLeaf leaf state
+  | .seq first second =>
+      let (result, firstState) := panSemEvaluateSeqFragment first state
+      let fixedState := panSemFixClock state.clock firstState
+      match result with
+      | none => panSemEvaluateSeqFragment second fixedState
+      | some result => (some result, fixedState)
+
 /-! ## Compositional `Seq` step
 
     HOL `Seq` (`cakeml/pancake/semantics/panSemScript.sml:615-618`) fixes the

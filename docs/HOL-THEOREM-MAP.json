@@ -309,7 +309,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Generic Boolean-function word carrier ι → Bool; the arbitrary index type keeps HOL's polymorphic word-typed shape and generalizes its finite-index side condition. No extra operation premises; successful dest_const premise and Const conclusion match source."
+    "reviewer": "Boolean-function word carrier ι → Bool with HolFiniteDimension, which encodes the finite, nonempty enumeration corresponding to HOL finite_index. Same polymorphic word-typed shape and no extra operation premises; successful dest_const premise and Const conclusion match source."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

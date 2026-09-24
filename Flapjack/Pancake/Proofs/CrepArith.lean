@@ -185,10 +185,10 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     index type. This is the polymorphic word-typed statement of CakeML's
     `dest_const_thm` (`crep_arithProofScript.sml:64`): unlike the arbitrary-
     carrier helper above, the expression and result are both HOL words. The
-    proof does not require finite-index operations, so it generalizes the HOL
-    theorem to every index type. -/
+    `HolFiniteDimension` instance records the finite, nonempty enumeration
+    corresponding to HOL's `finite_index` constraint. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
-theorem crepDestConstHolWord_eq_const {ι : Type}
+theorem crepDestConstHolWord_eq_const {ι : Type} [HolFiniteDimension ι]
     (expression : CrepExp (ι → Bool))
     (value : ι → Bool)
     (h : crepDestConst expression = some value) :

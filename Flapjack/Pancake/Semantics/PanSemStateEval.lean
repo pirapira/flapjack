@@ -139,13 +139,12 @@ def panByteAlignHOL {width : Nat} (address : RiscV.Word width) : RiscV.Word widt
   let alignment := 2 ^ Nat.log2 (width / 8)
   BitVec.ofNat width ((address.toNat / alignment) * alignment)
 
-/-- Exact port of HOL `mem_load_byte_def` (`panSemScript.sml:86`) over the
-faithful source memory shape: `m` is a total `'a word → 'a word_lab` map
-(here `HolWordLab`), `dm` is a word set rendered as a `Prop` predicate, and
-the result is the exact `word8` option.  The executed
-`PanValueMemoryAccess.readByte` widens the decoded byte to the word carrier;
-that widening is the separate production adapter, tracked by
-flapjack-pxn.18.3.6.9.2. -/
+/-- Flapjack-specific BitVec rendering of HOL4 standard-library
+`byte$get_byte_def` and `byte_index_def` from
+`HOL/src/n-bit/byteScript.sml:15-23`. This dependency is outside the CakeML
+repository, so this helper intentionally has no repository `@[hol]` tag. The
+formula preserves HOL natural `MOD 0` and subtraction behavior for sub-byte
+dimensions. -/
 def panGetByteHOL {width : Nat} (address value : RiscV.Word width)
     (bigEndian : Bool) : UInt8 :=
   let bytesPerWord := width / 8
@@ -155,9 +154,11 @@ def panGetByteHOL {width : Nat} (address value : RiscV.Word width)
   UInt8.ofNat ((value.toNat / 256 ^ byteIndex) % 256)
 
 /-- HOL `byte$get_byte_def`/`byte_index_def` specialized to the source word
-    width. In particular, the little-endian `w2n address MOD 0` case keeps the
-    address as the shift index for dimensions below one byte. The RISC-V
-    memory helper returns index zero when `bytesInWord = 0`, which differs. -/
+    width. In particular, little endian `w2n address MOD 0` keeps the address
+    as the shift index below one byte. The RISC-V memory helper returns index
+    zero when `bytesInWord = 0`, which differs. The executed
+    `PanValueMemoryAccess.readByte` widening adapter remains tracked by
+    flapjack-pxn.18.3.6.9.2. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_byte_def"]
 def panMemLoadByteHOL {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)

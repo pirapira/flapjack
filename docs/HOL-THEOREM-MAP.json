@@ -121,6 +121,46 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Shape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname vs Lean Shape.one/comb(List Shape)/named(StructName): constructor arities 0/1/1 and field types match; identifiers modelled by String)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "panop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PanOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype panop = Mul vs Lean PanOp.mul: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "varkind",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "VarKind",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype varkind = Local | Global vs Lean VarKind.local/global: two nullary constructors match)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "opsize",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "OpSize",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype opsize = Op8 | OpW | Op32 | Op16 vs Lean OpSize.op8/opW/op32/op16: four nullary constructors match in order)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "primop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PrimOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype primop = AddCarry vs Lean PrimOp.addCarry: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "functions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "functionEntries",

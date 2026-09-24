@@ -153,6 +153,18 @@ example : boolDimensionWord = ShiftLeft.shiftLeft (1 : Bool → Bool)
   crepDest2ExpHolFiniteDimension_eq_shift boolWordDimension
     boolDimensionWord 1 (by decide +kernel)
 
+example : boolDimensionWord = bitVecToHolWord boolWordDimension
+    (BitVec.shiftLeft (holWordToBitVec boolWordDimension (1 : Bool → Bool)) 1) :=
+  crepDest2ExpHolFiniteDimension_eq_lsl boolWordDimension
+    boolDimensionWord 1 (by decide +kernel)
+
+example (word : Bool → Bool) (exponent : Nat) (hbound : exponent < 2) :
+    holWordToBitVec boolWordDimension
+        (ShiftLeft.shiftLeft word
+          (bitVecToHolWord boolWordDimension (BitVec.ofNat 2 exponent))) =
+      BitVec.shiftLeft (holWordToBitVec boolWordDimension word) exponent :=
+  holFiniteDimension_wordLsl_toBitVec boolWordDimension word exponent hbound
+
 #guard wordOp .add [] == some (0 : Bool → Bool)
 #guard wordOp .and [] == some (Complement.complement (0 : Bool → Bool))
 #guard wordOp .or [] == some (0 : Bool → Bool)
@@ -514,6 +526,18 @@ def holWordBitsCmpResult (operator : Cmp) (left right : Nat) :
 #guard holWordBitsCmpResult .test 0xF0 0x10 == some (.word (holWordBits64 0))
 #guard holWordBitsCmpResult .test 0xF0 0x0F == some (.word (holWordBits64 1))
 #guard holWordBitsCmpResult .notTest 0xF0 0x10 == some (.word (holWordBits64 1))
+
+/-! Direct `word_sh_def` parity against the HOL observations in
+`crep_eval_shift_rv64_probe.out`, including the zero-amount and width-bound
+cases. -/
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 1) 3 == some (BitVec.ofNat 64 8)
+#guard wordShiftHOL .lsr (BitVec.ofNat 64 16) 2 == some (BitVec.ofNat 64 4)
+#guard wordShiftHOL .asr (BitVec.ofNat 64 0x8000000000000000) 4 ==
+  some (BitVec.ofNat 64 0xF800000000000000)
+#guard wordShiftHOL .ror (BitVec.ofNat 64 1) 1 ==
+  some (BitVec.ofNat 64 0x8000000000000000)
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 7) 0 == some (BitVec.ofNat 64 7)
+#guard wordShiftHOL .lsl (BitVec.ofNat 64 7) 64 == none
 
 def holWordBitsMulEight : CrepExp (Fin 64 → Bool) :=
   .crepOp .mul [.var 2, .const (holWordBits64 8)]

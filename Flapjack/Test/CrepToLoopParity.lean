@@ -511,6 +511,34 @@ example : crepToLoopCtxtMax (κ := String) 5
   change (fun _ : String => none) v = some m at hv
   simp at hv
 
+/-- Untagged `locals_rel` rendering (bead `flapjack-pxn.18.5.6.9`): the empty
+    context/source/target tuple satisfies every side condition vacuously. -/
+def localsRelContext : LoopContext Unit :=
+  { vars := [], functions := [], maxVar := 0, target := .rv64i }
+
+example : crepToLoopLocalsRel localsRelContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => none) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y n m hx
+    simp [localsRelContext, lookupNatInfo] at hx
+  · intro v m hv
+    simp [localsRelContext, lookupNatInfo] at hv
+  · intro n hn
+    simp at hn
+  · intro vname v hv
+    simp [FLOOKUP, FEMPTY] at hv
+
+/-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
+    local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
+    locals hold `wlab 9` at `5`. -/
+def localsRelLive : Nat → Bool := fun n => n == 5
+
+example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true ∧
+    (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
+      some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
+  ⟨5, rfl, by decide, by simp [wlabWloc]⟩
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel
@@ -534,5 +562,38 @@ example : crepToLoopMemRel
     (fun _ => false) := by
   intro _ h
   cases h
+
+/-! Pure-num `crep_to_loopScript.sml` helper definitions (`gen_temps_def`,
+    `rt_var_def`, `rt_vars_def`, `first_name_def`), matching oracle rows
+    `gen_temps_3`, `first_name`, `rt_var_some/none/absent`,
+    `rt_vars_some/absent` in `scripts/hol-probes/crep_to_loop_helpers_probe.out`. -/
+example : genTemps 5 3 = [5, 6, 7] := by decide
+
+example : firstLoopName = 64 := rfl
+
+def rtVarFm : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)) (2, 7)
+
+example : rtVar rtVarFm (some 2) 9 99 = 7 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVar rtVarFm none 9 99 = 9 := rfl
+
+example : rtVar rtVarFm (some 4) 9 99 = 100 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 2] 99 = [10, 7] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 4] 99 = [100] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+/-- Polymorphism witness: `rtVar`/`rtVars` accept any finite-map key, exactly the
+    inferred HOL type `'a |-> num`. -/
+example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 := by
+  simp [rtVar, FLOOKUP]
+
+example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
+  simp [rtVars, FLOOKUP]
 
 end Flapjack.Test.CrepToLoopParity

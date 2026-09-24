@@ -382,6 +382,11 @@ theorem crepRuntimeWordTarget_shift [NeZero width]
 /-! `evalPanShiftFull` is the width-parametric Lean counterpart of HOL's
 `word_sh_def`. The canonical production target uses `panRiscVShift`; this
 lemma proves those two interfaces agree for every positive word width. -/
+theorem wordShiftHOL_eq_evalPanShiftFull [NeZero width]
+    (operator : Shift) (left right : RiscV.Word width) :
+    wordShiftHOL operator left right.toNat = evalPanShiftFull operator left right := by
+  cases operator <;> rfl
+
 theorem panRiscVShift_eq_evalPanShiftFull [NeZero width]
     (operator : Shift) (left right : RiscV.Word width) :
     RiscV.panRiscVShift operator left right = evalPanShiftFull operator left right := by

@@ -72,6 +72,14 @@
     "reviewer": "Codex (compared source word_op cases, fold identities, and binary Sub arity)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "word_sh_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "wordShiftHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared nonzero width-bound guard and all Lsl/Lsr/Asr/Ror cases against source)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "flatten_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
@@ -317,7 +325,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProg",
     "statement_status": "documented_mismatch",
-    "reviewer": "Flapjack helper is generic over arbitrary alpha; HOL local lookup_code at line 162 is word-valued. Exact width-indexed port remains open in bead flapjack-pxn.18.5.4.4. The generic lemma is intentionally untagged."
+    "reviewer": "Flapjack helper is generic over arbitrary alpha; HOL local lookup_code at line 162 is word-valued. The exact word-width specialization is separately tagged as crepArithLookupCodeSimpProgW. This generic support lemma is intentionally untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "lookup_code",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithLookupCodeSimpProgW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact width-indexed statement port of crep_arithProofScript.sml:162-168: both sides use the production HOL-shaped lookupCrepHolCodeW; the code carrier stores word-valued crepLang programs, and the equation is the source FMAP_MAP2/OPTION_MAP (simp_prog ## I) commute law. Verified the Lean declaration has no extra algebraic typeclass premise (only the implicit NeZero width needed to model HOL's nonempty word index); proof specializes the separately untagged generic helper. Direct HOL probe and paired Lean fixture cover successful lookup and failure cases."
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
@@ -590,6 +606,22 @@
     "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "holFiniteDimension_wordLsl_toBitVec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter from word-valued ShiftLeft amounts to natural-exponent BitVec.shiftLeft; finite_index representation relation remains open, so this is untagged support."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_eq_lsl",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged all-dimension transported dest_2exp support with HOL's natural-exponent lsl shape encoded by BitVec; no @[hol] claim pending exact finite_index representation review."
   },
   {
     "hol_path": null,
@@ -5331,6 +5363,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "list_mapM_some_lookup_of_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-list utility: a successful mapM lookup implies that every member key has a successful lookup. Used to derive handler target-slot presence from locals_rel; no standalone HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panShapeMatches_self_forSourceCall",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only structural reflexivity helper for the executable shape matcher; used to derive the source exception handler shape premise from state_rel's empty struct context"
@@ -8214,5 +8254,37 @@
     "lean_name": "crepToLoopCtxtMax",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against ctxt_max_def at crep_to_loopProofScript.sml:90; HOL's un-annotated Definition infers 'a |-> num because m <= n, so the port is polymorphic in the key and fixed at Nat for values; direct HOL-EVAL rows ctxt_max_within/exceeds/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "gen_temps_def",
+    "lean_name": "genTemps",
+    "reviewer": "Codex (statement compared against gen_temps_def at crep_to_loopScript.sml:101; HOL GENLIST (\\x. n + x) l rendered as (List.range l).map (fun x => n + x); direct HOL-EVAL row gen_temps_3=[5;6;7] reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "first_name_def",
+    "lean_name": "firstLoopName",
+    "reviewer": "Codex (statement compared against first_name_def at crep_to_loopScript.sml:243; HOL first_name = 64 rendered as the Nat definition 64; direct HOL-EVAL row first_name=64 reproduced by a Lean guard)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "rt_var_def",
+    "lean_name": "rtVar",
+    "reviewer": "Codex (statement compared against rt_var_def at crep_to_loopScript.sml:105; HOL 'a |-> num FLOOKUP resolver with mx+1 sentinel; key polymorphic exactly as HOL infers; direct HOL-EVAL rows rt_var_some=7/none=9/absent=100 reproduced by Lean guards)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "rt_vars_def",
+    "lean_name": "rtVars",
+    "reviewer": "Codex (statement compared against rt_vars_def at crep_to_loopScript.sml:113; HOL OPT_MMAP (FLOOKUP fm) vs with [mx+1] sentinel rendered as vs.mapM (FLOOKUP fm); key polymorphic exactly as HOL infers; direct HOL-EVAL rows rt_vars_some=[10;7]/absent=[100] reproduced by Lean guards)"
   }
 ]

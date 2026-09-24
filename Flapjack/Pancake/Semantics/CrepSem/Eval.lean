@@ -1510,9 +1510,46 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
       holFiniteWordSourceWordOfBytes dimension be bytes
     wordOfBytes32 := fun be bytes =>
       holFiniteWordSourceWordOfBytes32 dimension be bytes
-    wordOp := wordOp
+    /- Route the finite-word source evaluator through the reviewed HOL
+       `word_op_def` port. `holFiniteWord_wordOp_toBitVec` proves this is the
+       same operation as the generic carrier helper under the dimension
+       representation. -/
+    wordOp := fun operator values =>
+      (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension)
     compare := evalPanCmp
-    shift := evalPanShiftFull }
+    shift := fun operator left right =>
+      (wordShiftHOL operator (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right).toNat).map
+          (bitVecToHolWord dimension) }
+
+/-- The source model routes list-valued word operations through the tagged
+    HOL `word_op_def` port. This transport equation proves that changing the
+    route preserves the arbitrary finite-word helper result. -/
+theorem holFiniteWordSourceMemoryModel_wordOp_eq_wordOp {ι : Type u}
+    [dimension : HolFiniteDimension ι] (bigEndian : Bool)
+    (operator : BinOp) (values : List (ι → Bool)) :
+    (holFiniteWordSourceMemoryModel dimension bigEndian).wordOp operator values =
+      wordOp operator values := by
+  change (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+      (bitVecToHolWord dimension) = wordOp operator values
+  exact (holFiniteWord_wordOp_toBitVec dimension operator values).symm
+
+/-- The finite-word source model's shift field is the tagged HOL `word_sh`
+    definition transported through the selected finite-index/BitVec
+    representation. The existing evaluator shift transport proves it agrees
+    with the prior generic full-width adapter. -/
+theorem holFiniteWordSourceMemoryModel_shift_eq_evalPanShiftFull {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool) (operator : Shift)
+    (left right : ι → Bool) :
+    (holFiniteWordSourceMemoryModel dimension bigEndian).shift operator left right =
+      evalPanShiftFull operator left right := by
+  change (wordShiftHOL operator (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right).toNat).map (bitVecToHolWord dimension) = _
+  rw [holFiniteWord_evalPanShift_toBitVec dimension operator left right]
+  exact congrArg (Option.map (bitVecToHolWord dimension))
+    (wordShiftHOL_eq_evalPanShiftFull operator
+      (holWordToBitVec dimension left) (holWordToBitVec dimension right))
 
 /-- BitVec-carrier view of the HOL source memory model. Every field is
     transported from the arbitrary finite-word source operations; this does

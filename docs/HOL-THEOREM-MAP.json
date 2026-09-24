@@ -5349,7 +5349,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectPanOpCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Intentionally untagged because HOL has only universal compile_exp_correct, and production Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord, and the evalPanOp interface."
+    "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Source, every recursive argument IH, and converted execution use evalPanValueExpFull with one explicit state-derived PanValueMemoryAccess. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Paired direct HOL EVAL and Lean exact-intermediate fixtures cover nonempty Mul arguments. Intentionally untagged because HOL has only universal compile_exp_correct, while Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord/memory access, and full-evaluator operation dictionaries."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

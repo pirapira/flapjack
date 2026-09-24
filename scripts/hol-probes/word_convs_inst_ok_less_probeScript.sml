@@ -63,6 +63,8 @@ val iol_fpless_ok = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPLess 0 1 2))``;
 val iol_fpless_bad = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPLess 0 1 5))``;
 val iol_fma_bad = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPFma 0 1 2))``;
 val iol_movtoreg_ok = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPMovToReg 1 1 0))``;
+val iol_movtoreg_fp_out_of_range = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPMovToReg 1 2 9))``;
+val iol_movfromreg_fp_out_of_range = ``wordConvs$inst_ok_less ^cfg (asm$FP (asm$FPMovFromReg 9 1 2))``;
 
 val _ = print_eval "iol_binop_imm" iol_binop_imm;
 val _ = print_eval "iol_binop_imm_bad" iol_binop_imm_bad;
@@ -86,3 +88,5 @@ val _ = print_eval "iol_fpless_ok" iol_fpless_ok;
 val _ = print_eval "iol_fpless_bad" iol_fpless_bad;
 val _ = print_eval "iol_fma_bad" iol_fma_bad;
 val _ = print_eval "iol_movtoreg_ok" iol_movtoreg_ok;
+val _ = print_eval "iol_movtoreg_fp_out_of_range" iol_movtoreg_fp_out_of_range;
+val _ = print_eval "iol_movfromreg_fp_out_of_range" iol_movfromreg_fp_out_of_range;

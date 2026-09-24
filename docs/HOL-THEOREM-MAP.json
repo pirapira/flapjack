@@ -121,6 +121,46 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Shape",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname vs Lean Shape.one/comb(List Shape)/named(StructName): constructor arities 0/1/1 and field types match; identifiers modelled by String)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "panop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PanOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype panop = Mul vs Lean PanOp.mul: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "varkind",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "VarKind",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype varkind = Local | Global vs Lean VarKind.local/global: two nullary constructors match)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "opsize",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "OpSize",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype opsize = Op8 | OpW | Op32 | Op16 vs Lean OpSize.op8/opW/op32/op16: four nullary constructors match in order)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "primop",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PrimOp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype primop = AddCarry vs Lean PrimOp.addCarry: single nullary constructor matches)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "functions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "functionEntries",
@@ -4337,14 +4377,6 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "code_rel_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "codeRel",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "codeRelImp",
@@ -7766,14 +7798,6 @@
     "lean_name": "allDistinctAlistCtxtMax",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against all_distinct_alist_ctxt_max at panPropsScript.sml:517; HOL ctxt_max/MAX_LIST rendered as Lean ctxtMax/maxList over the alist_to_fmap -> FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns))) encoding with vs : List String; direct HOL-EVAL rows ctxt_a_bound/ctxt_b_bound/ctxt_max_value=T reproduced by Lean guard alistCtxtMaxExample in Flapjack/Test/FmEmptyZipAlistParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "shape",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "Shape",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against the panLang shape Datatype block at cakeml/pancake/panLangScript.sml:33-38: shape = One | Comb (shape list) | Named stcname with stcname = mlstring; Lean Shape has the same three constructors in order one/comb (List Shape)/named (StructName), StructName = String representing mlstring, and no type parameter, unlike exp whose Const ('a word) vs generic alpha mismatch is tracked in flapjack-pxn.18.3.5.3.1)"
   },
   {
     "hol_path": null,

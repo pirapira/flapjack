@@ -1983,6 +1983,7 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       vmax := context.vmax }
     program
 
+
 /-- Bridge from the proof-side finite-map context to the HOL finite-map
     compiler context; the two records have the same four fields. -/
 def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
@@ -2007,20 +2008,24 @@ theorem compileCodeRelProg_eq_compileProgRiscV
     compileCodeRelProg context program =
       compileProgRiscV context.toHOLContext program := rfl
 
-/-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
-    It quantifies over every source code entry, requires localisation and the
-    exact parameter/return-shape lookup in `ctxt.funcs`, derives parameter
-    slots from `GENLIST I (size_of_shape (Comb shs))`, constructs the target
-    context with `ctxt_fc`, and relates that entry to its compiled body.
+/-! Flapjack's code relation, shaped after HOL `code_rel_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`). It quantifies over
+    every source code entry, requires localisation and the exact
+    parameter/return-shape lookup in `ctxt.funcs`, derives parameter slots
+    from `GENLIST I (size_of_shape (Comb shs))`, and constructs the target
+    context with `ctxt_fc`.
 
-    Its compiler conclusion routes to `compileProgHOL`, whose context is the
-    original finite-map record. The `compile_def` tag is on the production
-    wrapper `compileProgRiscV`; `compileCodeRelProg_eq_compileProgRiscV` (with
-    `compileProgRiscV_eq_compileProgHOL`) proves that helper is definitionally
-    the tagged compiler on the bridged context for EVERY proof context, so the
-    relation holds for arbitrary `ctxt_fc` contexts, not only declaration-derived
-    ones. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+    This declaration is intentionally untagged: it is generic in the word
+    element type `α`, while the tagged `compile_def` port is the RISC-V
+    specialization `compileProgRiscV`. The bridge
+    `compileCodeRelProg_eq_compileProgRiscV` (with
+    `compileProgRiscV_eq_compileProgHOL`) proves that `compileCodeRelProg` is
+    definitionally the tagged compiler for EVERY proof context at `BitVec
+    width`, not only declaration-derived ones, so the only remaining gap to an
+    exact HOL `code_rel_def` tag is the width-indexing of this relation
+    (tracked in the Exp/word-indexing migration beads) - not the compiler
+    expression. -/
+
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)

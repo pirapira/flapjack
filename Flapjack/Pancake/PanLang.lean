@@ -18,6 +18,9 @@ abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
 
+/-- Exact port of Cake's `shape` datatype (`cakeml/pancake/panLangScript.sml:35`):
+constructor arities `0/1/1` and field types `shape list` / `stcname` (modelled by `List Shape` /
+`StructName`) match, as does the HOL Bool-valued equality used on shapes. -/
 @[hol "cakeml/pancake/panLangScript.sml" "shape"]
 inductive Shape where
   | one
@@ -65,6 +68,9 @@ def binopToString : BinOp → String
   | .or => "Or"
   | .xor => "Xor"
 
+/-- Exact port of Cake's `panop` datatype (`cakeml/pancake/panLangScript.sml:41`):
+the single nullary constructor `Mul` matches. -/
+@[hol "cakeml/pancake/panLangScript.sml" "panop"]
 inductive PanOp where
   | mul
   deriving DecidableEq, Repr
@@ -122,6 +128,9 @@ class ArithmeticShiftRight (α : Type u) where
 class RotateRightOp (α : Type u) where
   rotateRight : α → α → α
 
+/-- Exact port of Cake's `varkind` datatype (`cakeml/pancake/panLangScript.sml:45`):
+the two nullary constructors `Local`/`Global` match. -/
+@[hol "cakeml/pancake/panLangScript.sml" "varkind"]
 inductive VarKind where
   | local
   | global
@@ -178,9 +187,7 @@ inductive ExpW (width : Nat) where
   | topAddr
   | bytesInWord
   deriving Repr
-
 namespace ExpW
-
 mutual
   /-- Executable view of the width-indexed expression as the generic production
       `Exp` at `BitVec width`. -/
@@ -209,9 +216,10 @@ mutual
     | [] => []
     | field :: fields => (field.1, toExp field.2) :: toExpFields fields
 end
-
 end ExpW
-
+/-- Exact port of Cake's `opsize` datatype (`cakeml/pancake/panLangScript.sml:49`):
+the four nullary constructors `Op8`/`OpW`/`Op32`/`Op16` match in order. -/
+@[hol "cakeml/pancake/panLangScript.sml" "opsize"]
 inductive OpSize where
   | op8
   | opW
@@ -219,6 +227,9 @@ inductive OpSize where
   | op16
   deriving DecidableEq, Repr
 
+/-- Exact port of Cake's `primop` datatype (`cakeml/pancake/panLangScript.sml:72`):
+the single nullary constructor `AddCarry` matches. -/
+@[hol "cakeml/pancake/panLangScript.sml" "primop"]
 inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr

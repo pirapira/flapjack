@@ -924,11 +924,12 @@ def holByteAlignBitVec [NeZero width] (address : BitVec width) : BitVec width :=
     the finite-word/BitVec equivalence. Its four-byte wordOfBytes formula is
     the corresponding integer expansion, but is not yet proved equal to HOL's
     recursive `word_of_bytes`/`set_byte` definition; setByte itself is still
-    transported from RISC-V. Word operators, comparisons, and shifts also come
-    from the transported RISC-V model. This runtime supports the untagged
-    recursive preservation theorem, but these remaining operation bridges and
-    the unrestricted HOL finite-word carrier correspondence must be proved
-    before that theorem can carry a HOL tag. -/
+    transported from RISC-V. Word operators, comparisons, and shifts use the
+    generic source-level definitions (their finite-word/BitVec transport is
+    proved above). This runtime supports the untagged recursive preservation
+    theorem, but the memory-operation bridge and unrestricted HOL finite-word
+    carrier correspondence must still be proved before that theorem can carry
+    a HOL tag. -/
 def holFiniteWordSourceByteAlign {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool) : ι → Bool := by
   letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
@@ -976,6 +977,8 @@ def holFiniteWordSourceWordOfBytes {ι : Type u}
 def holFiniteWordSourceMemoryModel {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool) :
     PanMemoryModel (ι → Bool) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
   let model := holFiniteWordRiscVMemoryModel dimension bigEndian
   exact { model with
     byteAlign := fun _ address => holFiniteWordSourceByteAlign dimension address
@@ -984,7 +987,10 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
     aligned := fun alignment address =>
       holFiniteWordSourceAligned dimension alignment address
     wordOfBytes := fun be bytes =>
-      holFiniteWordSourceWordOfBytes dimension be bytes }
+      holFiniteWordSourceWordOfBytes dimension be bytes
+    wordOp := wordOp
+    compare := evalPanCmp
+    shift := evalPanShiftFull }
 
 /-- A load model with HOL's dimension-derived byte alignment and the existing
     RISC-V byte extraction, alignment, and word-of-bytes operations. This is

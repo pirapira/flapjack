@@ -5523,6 +5523,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_rFieldInnerIH_eval_flatten",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only compile_args list lifting for RField arguments with arbitrary inner expressions, using the source result and explicit compile_exp_val_rel-shaped inner IH; only RField arguments are covered, not the full expression theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_rField_eval_flatten_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only case composition with the inner compile_exp_val_rel IH, carrying state_rel/code_rel/locals_rel, source evaluation, a localised-expression condition, compiled tuple, and IH shape facts; the enclosing expression induction and full theorem remain open."

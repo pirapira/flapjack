@@ -2950,6 +2950,93 @@ private theorem compileExpHOL_rField_eval_flatten_ofHOLIH
     expression index fields value compiledExpressions fieldShapes hsourceInner
     hsourceField hcompileInner hfieldShapes hfieldsWf hindex hinnerEval
 
+/-! Evidence for an arbitrary-expression RField Call argument whose inner
+expression is discharged by the HOL-shaped induction hypothesis. -/
+inductive compileArgRFieldInnerIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ) :
+    Exp (RiscV.Word 64) → Prop where
+  | rField (expression : Exp (RiscV.Word 64)) (index : Nat)
+      (fields : List (PanValue (RiscV.Word 64)))
+      (compiledExpressions : List (CrepExp (RiscV.Word 64)))
+      (fieldShapes : List Shape)
+      (hsourceInner : evalPanSemStateExp source expression =
+        some (.rStruct fields))
+      (hindex : index < fields.length)
+      (hlocalized : expGlobalVars expression = [])
+      (hcompileInner : compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expression = (compiledExpressions, .comb fieldShapes))
+      (hinnerIH : evalPanSemStateExp source expression = some (.rStruct fields) →
+        stateRel source target →
+        codeRel context (panSemCodeAsLookup source.code) target.code →
+        localsRel context source.locals target.locals →
+        expGlobalVars expression = [] →
+        compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression = (compiledExpressions, .comb fieldShapes) →
+        evalCrepRuntimeExps target compiledExpressions =
+            some (fields.flatMap panValueFlatten) ∧
+          panValueShape [] (.rStruct fields) = .comb fieldShapes ∧
+          isWfShape [] (.comb fieldShapes) = true) :
+      compileArgRFieldInnerIH context source target
+        (.rField index expression)
+
+/-! RField Call arguments with arbitrary inner expressions are lifted through
+HOL `compile_args` using the exact inner-expression IH case above. This
+list-level support theorem deliberately accepts only RField arguments; the
+general mixed-constructor `compile_exp_val_rel` induction remains open. -/
+theorem compileArgsHOL_rFieldInnerIH_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgRFieldInnerIH context source target expression)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value) := by
+    intro expression hmem value heval
+    cases hsupported expression hmem with
+    | rField inner index fields compiledExpressions fieldShapes hsourceInner
+        hindex hlocalized hcompileInner hinnerIH =>
+        have hsourceField : evalPanSemStateExp source
+            (.rField index inner) = some fields[index] := by
+          have hsourceInner' : evalPanValueExp source.structs source.locals
+              source.globals source.memory source.baseAddress source.topAddress
+              panSemBitVec64BytesInWord inner
+              (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+            some (.rStruct fields) := by
+            simpa [evalPanSemStateExp] using hsourceInner
+          simp [evalPanSemStateExp, evalPanValueExp, hsourceInner', hindex]
+        have hvalue : value = fields[index] := by
+          exact Option.some.inj (heval.symm.trans hsourceField)
+        subst value
+        exact compileExpHOL_rField_eval_flatten_ofHOLIH context source target
+          inner index fields fields[index] compiledExpressions fieldShapes
+          hstate hcode hlocals hsourceInner hsourceField hindex hlocalized
+          hcompileInner hinnerIH
+  simpa [compilerContext] using
+    evalMapCompileArgsFlat_of_each compilerContext source target expressions values
+      hsource heach
+
 /-! State-owned local specialization of the generic RField case above. It
 handles any valid field index and any well-formed field shapes, deriving the
 inner compiled evaluation from `locals_rel` rather than assuming a target run. -/

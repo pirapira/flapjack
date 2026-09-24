@@ -201,6 +201,7 @@ import Flapjack.Test.PanSemWhileErrorParity
 import Flapjack.Test.PanSemReturnRaiseErrorParity
 import Flapjack.Test.PanSemExtCallErrorParity
 import Flapjack.Test.PanSemSeqParity
+import Flapjack.Test.PanSemTotalParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.PanSemDecCallErrorParity
@@ -782,6 +783,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSemReturnRaiseErrorParity.runChecks,
     Flapjack.Test.PanSemExtCallErrorParity.runChecks,
     Flapjack.Test.PanSemSeqParity.runChecks,
+    Flapjack.Test.PanSemTotalParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,

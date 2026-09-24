@@ -40,6 +40,22 @@ def panSemShapeOf : PanValue α → Shape
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
+/-- Flapjack's context-parameterized scalar-shape function `panValueShape`
+    (`Flapjack/PanValues.lean`) ignores its `StructContext` argument and is
+    computed by exactly the same three clauses as the tagged exact
+    `panSemShapeOf`.  This proves the two functions agree for every context,
+    which is the alignment used by `evaluateDecls` (bead
+    `flapjack-pxn.18.3.6.4`).  `panValueShape` itself stays untagged because
+    HOL `shape_of` has no context parameter. -/
+theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value : PanValue α) :
+    panValueShape context value = panSemShapeOf value := by
+  induction value using panValueShape.induct with
+  | case1 value => simp only [panValueShape, panSemShapeOf]
+  | case2 fields ih =>
+      simp only [panValueShape, panSemShapeOf]
+      exact congrArg Shape.comb (List.map_congr_left ih)
+  | case3 name fields => simp only [panValueShape, panSemShapeOf]
+
 /-- Statement-exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`,
     `word_lab = Word ('a word) End`): a single `word` constructor carrying the
     word payload.  HOL's `'a word` is width-indexed, so the port is indexed by

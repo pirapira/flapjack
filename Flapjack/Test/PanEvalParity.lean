@@ -1,4 +1,5 @@
 import Flapjack.PanEval
+import Flapjack.Pancake.Semantics.PanSem
 
 /-!
 # Parity checks for Pancake `eval_def`
@@ -63,6 +64,14 @@ def observeNStructShapeMismatch : Bool :=
 def observeMissingStruct : Bool :=
   (panEval context (.nStruct "Pair" [])).isNone
 
+/-- The exact `word_lab` port and production `PanWordLab` are isomorphic. -/
+theorem wordLabBridge (value : Nat) :
+    (HolWordLab.word value).toPanWordLab.toHolWordLab = HolWordLab.word value :=
+  HolWordLab.toPanWordLab_toHolWordLab _
+
+def observeWordLabBridge : Bool :=
+  (HolWordLab.word (3 : Nat)).toPanWordLab == PanWordLab.word 3
+
 #guard observeConst
 #guard observeLocal
 #guard observeGlobal
@@ -72,6 +81,7 @@ def observeMissingStruct : Bool :=
 #guard observeNStructNameMismatch
 #guard observeNStructShapeMismatch
 #guard observeMissingStruct
+#guard observeWordLabBridge
 
 def runChecks : IO Bool := do
   if observeConst then IO.println "PASS eval constant" else IO.println "FAIL eval constant"
@@ -86,8 +96,10 @@ def runChecks : IO Bool := do
     else IO.println "FAIL eval NStruct shape mismatch"
   if observeMissingStruct then IO.println "PASS eval NStruct missing struct"
     else IO.println "FAIL eval NStruct missing struct"
+  if observeWordLabBridge then IO.println "PASS eval word_lab bridge"
+    else IO.println "FAIL eval word_lab bridge"
   pure (observeConst && observeLocal && observeGlobal && observeField && observeMissing &&
     observeNStruct && observeNStructNameMismatch && observeNStructShapeMismatch &&
-    observeMissingStruct)
+    observeMissingStruct && observeWordLabBridge)
 
 end Flapjack.Test.PanEvalParity

@@ -4313,6 +4313,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "word_lab",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "HolWordLab",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) declared in the panSemScript.sml counterpart; production PanWordLab related by checked round-trip isomorphism theorems)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "empty_locals_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panEmptyLocals",
@@ -7838,8 +7846,7 @@
     "lean_name": "codeRelW_iff_codeRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only bridge: the width-indexed codeRelW is definitionally the generic codeRel at BitVec width)"
-  }
-,
+  },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "reg_ok_def",
@@ -7912,12 +7919,12 @@
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
-{
-  "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-  "hol_name": "asm_ok_def",
-  "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-  "lean_name": "asmOk",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "asm_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  }
 ]

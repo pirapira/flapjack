@@ -40,6 +40,36 @@ def panSemShapeOf : PanValue α → Shape
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
+/-- Statement-exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`,
+    `word_lab = Word ('a word) End`): a single `word` constructor carrying the
+    word payload.  This is declared here, in the `panSemScript.sml` counterpart
+    file, so the Datatype tag is a source-shaped port; the executable code uses
+    the definitionally identical `PanWordLab` (`Flapjack/PanValues.lean`), and
+    the two are related by the checked isomorphism below. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
+inductive HolWordLab (α : Type u) where
+  | word (value : α)
+  deriving BEq, DecidableEq, Repr
+
+/-- The isomorphism from the exact port to production `PanWordLab`. -/
+def HolWordLab.toPanWordLab : HolWordLab α → PanWordLab α
+  | .word value => .word value
+
+/-- The isomorphism from production `PanWordLab` to the exact port. -/
+def PanWordLab.toHolWordLab : PanWordLab α → HolWordLab α
+  | .word value => .word value
+
+@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab (value : HolWordLab α) :
+    value.toPanWordLab.toHolWordLab = value := by
+  cases value <;> rfl
+
+@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab (value : PanWordLab α) :
+    value.toHolWordLab.toPanWordLab = value := by
+  cases value <;> rfl
+
+@[simp] theorem HolWordLab.toPanWordLab_word (value : α) :
+    (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
+
 structure PanSemEvaluateState (α : Type u) (σ : Type v) where
   structs : StructContext
   /-- Compatibility function table. This list cannot stand in for the

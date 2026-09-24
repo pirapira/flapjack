@@ -20,3 +20,5 @@ iol_fpless_ok=T
 iol_fpless_bad=F
 iol_fma_bad=F
 iol_movtoreg_ok=T
+iol_movtoreg_fp_out_of_range=F
+iol_movfromreg_fp_out_of_range=F

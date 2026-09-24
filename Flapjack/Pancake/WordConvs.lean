@@ -250,10 +250,10 @@ def instOkLess {width : Nat} (config : AsmConfig width) :
         asmFpRegOk config left && asmFpRegOk config right
   | .fp (.fpMov destination source) =>
       asmFpRegOk config destination && asmFpRegOk config source
-  | .fp (.fpMovToReg destinationInteger second _) =>
-      (!(width == 32) || !(destinationInteger == second))
-  | .fp (.fpMovFromReg _ destinationInteger second) =>
-      (!(width == 32) || !(destinationInteger == second))
+  | .fp (.fpMovToReg destinationInteger second fpRegister) =>
+      (!(width == 32) || !(destinationInteger == second)) && asmFpRegOk config fpRegister
+  | .fp (.fpMovFromReg fpRegister destinationInteger second) =>
+      (!(width == 32) || !(destinationInteger == second)) && asmFpRegOk config fpRegister
   | .fp (.fpToInt destination source) =>
       asmFpRegOk config destination && asmFpRegOk config source
   | .fp (.fpFromInt destination source) =>

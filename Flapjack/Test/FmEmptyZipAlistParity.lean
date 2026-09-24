@@ -119,7 +119,7 @@ def maxListGuard : Bool :=
 /-- HOL `all_distinct_alist_no_overlap` oracle rows (`alist_*` in
     `scripts/hol-probes/pan_props_alist_probe.out`). -/
 theorem alistNoOverlapExample :
-    noOverlap (FUPDATE_LIST FEMPTY
+    noOverlap (alistToFmap
       (["a", "b"].zip ([Shape.one, Shape.one].zip
         (withShape [Shape.one, Shape.one] [0, 1])))) :=
   allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "b"]
@@ -128,11 +128,29 @@ theorem alistNoOverlapExample :
 /-- HOL `all_distinct_alist_ctxt_max` oracle rows (`ctxt_*` in
     `scripts/hol-probes/pan_props_alist_ctxt_max_probe.out`). -/
 theorem alistCtxtMaxExample :
-    ctxtMax (maxList [0, 1]) (FUPDATE_LIST FEMPTY
+    ctxtMax (maxList [0, 1]) (alistToFmap
       (["a", "b"].zip ([Shape.one, Shape.one].zip
         (withShape [Shape.one, Shape.one] [0, 1])))) :=
   allDistinctAlistCtxtMax [Shape.one, Shape.one] [0, 1] ["a", "b"]
     (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+/-- Duplicate keys distinguish HOL's first-binding-wins `alist_to_fmap` from
+    the last-binding-wins `FUPDATE_LIST`; the HOL-shaped theorems need no
+    `Nodup` assumption on the key list. -/
+example : noOverlap (alistToFmap
+    (["a", "a"].zip ([Shape.one, Shape.one].zip
+      (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "a"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+example : ctxtMax (maxList [0, 1]) (alistToFmap
+    (["a", "a"].zip ([Shape.one, Shape.one].zip
+      (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistCtxtMax [Shape.one, Shape.one] [0, 1] ["a", "a"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+#guard ((alistToFmap [("a", 1), ("a", 2)] : FiniteMap String Nat) "a" == some 1)
+#guard ((FUPDATE_LIST FEMPTY [("a", 1), ("a", 2)] : FiniteMap String Nat) "a" == some 2)
 
 def runChecks : IO Bool := do
   let ok := parityGuard && zipFlookupGuard && maxListGuard

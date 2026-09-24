@@ -1,0 +1,10 @@
+negate_less=NotLess
+negate_equal=NotEqual
+negate_lower=NotLower
+negate_test=NotTest
+negate_notless=Less
+negate_notequal=Equal
+negate_notlower=Lower
+negate_nottest=Test
+compile_jump_lab=LabAsm (Jump (Lab 7 0)) 0w [] 0
+compile_jump_reg=Asm (Asmi (JumpReg 3)) [] 0

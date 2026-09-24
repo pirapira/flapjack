@@ -2468,7 +2468,127 @@ theorem evalCrepRuntimeExpWordLab_load32_const_of_matches
   rw [evalCrepRuntimeExpWordLab_load32_of_matches base hmodel hbytes hbig (.const address)]
   simp [evalCrepRuntimeExp]
 
-/-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
+/-! ### Store family hook relations
+
+HOL `panSemScript.sml` `mem_store_def` inserts a word directly, while
+`mem_store_byte_def`/`mem_store_32_def` read the cell, replace a byte with
+`set_byte`, and write the cell back.  The production store hooks are
+`PanMemoryModel.byteAlign`/`setByte`; the predicates below name exactly when an
+arbitrary runtime model coincides with the HOL fixed primitives. -/
+
+/-- HOL `set_byte_def` at the fixed 8-byte width, with the byte index measured
+in bytes (HOL reverses it for big endian). -/
+def holSetByte64 (address byteValue cell : RiscV.Word 64) (bigEndian : Bool) : RiscV.Word 64 :=
+  let byteCount := 8
+  let byteIndex := if bigEndian then byteCount - 1 - address.toNat % byteCount
+    else address.toNat % byteCount
+  let offset := 256 ^ byteIndex
+  let block := offset * 256
+  let low := cell.toNat % offset
+  let high := cell.toNat / block
+  BitVec.ofNat 64 (low + (byteValue.toNat % 256) * offset + high * block)
+
+theorem panRiscVSetByte_eight_eq_holSetByte64 (address byteValue cell : RiscV.Word 64) :
+    RiscV.panRiscVSetByte (8 : RiscV.Word 64) address byteValue cell =
+      holSetByte64 address byteValue cell false := by
+  simp only [RiscV.panRiscVSetByte, panRiscVByteIndex_eight, holSetByte64, Bool.false_eq_true,
+    if_false]
+
+/-- HOL `panSemScript.sml` `mem_store_def`: guarded insertion of a word-labelled
+value into the total memory function. -/
+def holMemStore64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (address value : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  if domain address then some (updateCrepRuntimeMemory memory address (.word value)) else none
+
+/-- HOL `panSemScript.sml` `mem_store_byte_def`: guarded byte replacement in the
+aligned cell of the total memory function. -/
+def holMemStoreByte64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (bigEndian : Bool) (address byteValue : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  let alignedAddress := holByteAlign64 address
+  if domain alignedAddress then
+    some (updateCrepRuntimeMemory memory alignedAddress
+      (.word (holSetByte64 address byteValue (panTheWord (memory alignedAddress)) bigEndian)))
+  else none
+
+def CrepMemoryModelStoreByteMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address byteValue cell : RiscV.Word 64),
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    model.setByte (8 : RiscV.Word 64) address byteValue cell false =
+      holSetByte64 address byteValue cell false
+
+theorem crepMemoryModelStoreByte_align_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 model)
+    (address byteValue cell : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address byteValue cell).1
+
+theorem crepMemoryModelStoreByte_setByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 model)
+    (address byteValue cell : RiscV.Word 64) :
+    model.setByte (8 : RiscV.Word 64) address byteValue cell false =
+      holSetByte64 address byteValue cell false :=
+  (hmodel address byteValue cell).2
+
+theorem riscv64CrepRuntimeTarget_storeByte_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelStoreByteMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address byteValue cell =>
+    ⟨panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      panRiscVSetByte_eight_eq_holSetByte64 address byteValue cell⟩
+
+/-- The production word store at the RV64 target is HOL `mem_store`: the memory
+function is updated at the guarded address.  No memory-model hook is involved. -/
+theorem crepRuntimeStore_rv64_eq_holMemStore64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address value : RiscV.Word 64) :
+    crepRuntimeStore (riscv64CrepRuntimeTarget base) address value =
+      (holMemStore64 base.memaddrs base.memory address value).map
+        (fun memory => { riscv64CrepRuntimeTarget base with memory := memory }) := by
+  simp only [crepRuntimeStore, holMemStore64, riscv64CrepRuntimeTarget]
+  by_cases h : base.memaddrs address = true
+  · simp only [h, if_true, Option.map_some]
+  · simp [h]
+
+/-- The production byte store is HOL `mem_store_byte` under the `setByte`
+matching predicate. -/
+theorem crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStoreByteMatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address byteValue : RiscV.Word 64) :
+    crepRuntimeStoreByte base address byteValue =
+      (holMemStoreByte64 base.memaddrs base.memory false address byteValue).map
+        (fun memory => { base with memory := memory }) := by
+  have halign := crepMemoryModelStoreByte_align_of_matches hmodel address byteValue
+    (panTheWord (base.memory (holByteAlign64 address)))
+  have hset := crepMemoryModelStoreByte_setByte_of_matches hmodel address byteValue
+    (panTheWord (base.memory (holByteAlign64 address)))
+  simp only [crepRuntimeStoreByte, holMemStoreByte64, hbytes, hbig]
+  rw [halign]
+  by_cases hd : base.memaddrs (holByteAlign64 address) = true
+  · simp only [hd, if_true]
+    rw [hset]
+    simp only [Option.pure_def, Option.map_some]
+  · simp [hd]
+
+/-- The production word store is HOL `mem_store` for any model: no memory-model
+hook is involved. -/
+theorem crepRuntimeStore_eq_holMemStore64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address value : RiscV.Word 64) :
+    crepRuntimeStore base address value =
+      (holMemStore64 base.memaddrs base.memory address value).map
+        (fun memory => { base with memory := memory }) := by
+  simp only [crepRuntimeStore, holMemStore64]
+  by_cases h : base.memaddrs address = true
+  · simp only [h, if_true, Option.map_some]
+  · simp [h]
+
+/-! HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
 two word operands yields their product, any other arity is a failure. -/
 def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
   match values with

@@ -1575,4 +1575,113 @@ theorem evalCrepRuntimeExpWordLab_loadByte_rv64_const
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeLoadByte_rv64_eq_holMemLoadByte64]
 
+/-- HOL-shaped 4-byte alignment predicate at RV64: HOL `aligned 2 w`, i.e.
+`w2n w MOD 2^2 = 0`. -/
+def holAligned32_64 (address : RiscV.Word 64) : Bool :=
+  address.toNat % 4 = 0
+
+/-- HOL-shaped little/big-endian byte combination corresponding to
+`word_of_bytes` over the four bytes of a 32-bit read, widened back to the word
+carrier. -/
+def holWordOfBytes64 (bigEndian : Bool) (bytes : List (RiscV.Word 64)) :
+    RiscV.Word 64 :=
+  let byte0 := bytes[0]?.getD 0
+  let byte1 := bytes[1]?.getD 0
+  let byte2 := bytes[2]?.getD 0
+  let byte3 := bytes[3]?.getD 0
+  if bigEndian then
+    BitVec.ofNat 64
+      (byte3.toNat + 256 * byte2.toNat + 256 ^ 2 * byte1.toNat +
+        256 ^ 3 * byte0.toNat)
+  else
+    BitVec.ofNat 64
+      (byte0.toNat + 256 * byte1.toNat + 256 ^ 2 * byte2.toNat +
+        256 ^ 3 * byte3.toNat)
+
+/-- HOL-shaped `mem_load_32` at RV64: alignment guard, aligned cell lookup,
+domain guard, four byte reads and the endian word combination. -/
+def holMemLoad32_64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (bigEndian : Bool)
+    (address : RiscV.Word 64) : Option (RiscV.Word 64) :=
+  if holAligned32_64 address then
+    let aligned := holByteAlign64 address
+    match memory aligned with
+    | some value =>
+        if domain aligned then
+          some (holWordOfBytes64 bigEndian
+            [holGetByte64 address value bigEndian,
+             holGetByte64 (address + 1) value bigEndian,
+             holGetByte64 (address + 2) value bigEndian,
+             holGetByte64 (address + 3) value bigEndian])
+        else none
+    | none => none
+  else none
+
+theorem panRiscVAligned32_eq_holAligned32 (address : RiscV.Word 64) :
+    RiscV.aligned address 4 = holAligned32_64 address := by
+  simp [RiscV.aligned, holAligned32_64]
+
+theorem holWordOfBytes64_eq_panRiscVWordOfBytes (bigEndian : Bool)
+    (bytes : List (RiscV.Word 64)) :
+    holWordOfBytes64 bigEndian bytes =
+      RiscV.panRiscVWordOfBytes bigEndian bytes := by
+  unfold holWordOfBytes64 RiscV.panRiscVWordOfBytes
+  cases bytes with
+  | nil => rfl
+  | cons b0 rest =>
+      cases rest with
+      | nil => rfl
+      | cons b1 rest =>
+          cases rest with
+          | nil => rfl
+          | cons b2 rest =>
+              cases rest with
+              | nil => rfl
+              | cons b3 rest => rfl
+
+/-- The RISC-V model `panRiscVRead32` at the fixed 8-byte width equals the
+HOL-shaped `mem_load_32` primitive over the memory view. -/
+theorem panRiscVRead32_eight_eq_holMemLoad32_64
+    (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : PanFlatMemory (RiscV.Word 64)) (address : RiscV.Word 64) :
+    RiscV.panRiscVRead32 domain memory (8 : RiscV.Word 64) address =
+      holMemLoad32_64 domain memory false address := by
+  simp only [RiscV.panRiscVRead32, panModelRead32, RiscV.panRiscVMemoryModel,
+    panRiscVAligned32_eq_holAligned32, panRiscVByteAlign_eight_eq_holByteAlign64,
+    holMemLoad32_64, holWordOfBytes64_eq_panRiscVWordOfBytes,
+    panRiscVGetByte_eight_eq_holGetByte64]
+  by_cases ha : holAligned32_64 address = true <;>
+    cases hm : memory (holByteAlign64 address) <;>
+    by_cases hd : domain (holByteAlign64 address) = true <;>
+    simp_all
+
+/-- The production `Load32` at the RV64 target equals HOL `mem_load_32` over
+the memory view.  This is the genuine evaluator-case bridge for the `Load32`
+constructor with a constant address. -/
+theorem crepRuntimeLoad32_rv64_eq_holMemLoad32_64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    crepRuntimeLoad32 (riscv64CrepRuntimeTarget base) address =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address := by
+  rw [crepRuntimeLoad32_target_eq_riscv, panRiscVRead32_eight_eq_holMemLoad32_64]
+
+/-- Evaluator case: `evalCrepRuntimeExp` of `Load32 (Const address)` at the
+RV64 target is exactly HOL `mem_load_32`. -/
+theorem evalCrepRuntimeExp_load32_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base) (.load32 (.const address)) =
+      holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address := by
+  simp [evalCrepRuntimeExp, crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Load32 (Const
+address)` at the RV64 target is HOL `mem_load_32` wrapped in `PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_load32_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ) (address : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base) (.load32 (.const address)) =
+      (holMemLoad32_64 base.memaddrs (crepRuntimeMemoryView base.memory) false
+        address).map PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
+    crepRuntimeLoad32_rv64_eq_holMemLoad32_64]
+
 end Flapjack

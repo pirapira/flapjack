@@ -8908,7 +8908,7 @@
   "hol_name": "word_loc",
   "lean_path": "Flapjack/Pancake/WordLang.lean",
   "lean_name": "WordLocW",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (exact HOL wordLangScript.sml:331-333 word_loc = Word ('a word) | Loc num num; Lean width-indexed WordLocW (width) [NeZero width] | word (value : BitVec width) | loc (block offset : Nat): same constructor arity/field types, payload fixed-width BitVec width, and the instance binder enforces HOL's nonzero dimindex(:'a) so width=0 is not admitted. Untagged wordLocWToGeneric/wordLocWOfGeneric plus round-trip theorems bridge the generic WordLoc (BitVec width).)"
 }
 ]

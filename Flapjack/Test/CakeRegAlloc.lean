@@ -585,12 +585,20 @@ def decDegreeNeighboursGuard : Bool :=
 def decDegBoundaryGuard : Bool :=
   let represented : CakeRaState :=
     { CakeRaState.empty 1 with degrees := CakeNodeMap.ofList [3] }
+  let monadicDecrement := cakeDecDegMonadic 0 represented
+  let monadicOutside := cakeDecDegMonadic 1 represented
   let decremented := cakeDecDegStep 0 represented
   let outside := cakeDecDegStep 1 represented
   let sparse : CakeRaState :=
     { represented with degrees := { slots := #[none], outside := [] } }
   let hole := cakeDecDegStep 0 sparse
   let latched := cakeDecDeg 1 represented
+  (match monadicDecrement with
+    | .success () state => state.degrees.get 0 == some 2 && state.failure.isNone
+    | _ => false) &&
+  (match monadicOutside with
+    | .failure .subscript state => state.degrees.get 0 == some 3
+    | _ => false) &&
   (match decremented with
     | .ok state => state.degrees.get 0 == some 2 && state.failure.isNone
     | .error _ => false) &&
@@ -629,6 +637,33 @@ theorem cakeDecDegStep_matchesHolLupdate (state : CakeRaState)
     simpa [CakeNodeMap.get, hi', houtside] using hlookup
   constructor
   · unfold cakeDecDegStep
+    unfold cakeDecDegMonadic
+    rw [hstate]
+    simp only [if_pos hi']
+    rw [hslot]
+  · exact CakeNodeMap.set_representsHOLNodeList m values
+      ⟨houtside, hsize, hget⟩ i (values[i] - 1) hi
+
+/-- The executable core exposes a result/state pair: under the checked array
+    representation, successful `dec_deg` returns unit and the LUPDATE state. -/
+theorem cakeDecDegMonadic_matchesHolLupdate (state : CakeRaState)
+    (m : CakeNodeMap Nat) (values : List Nat) (i : Nat)
+    (hstate : state.degrees = m)
+    (hrep : CakeNodeMap.RepresentsHOLNodeList m values)
+    (hi : i < values.length) :
+    cakeDecDegMonadic i state =
+        .success () { state with degrees := CakeNodeMap.set m i (values[i] - 1) } ∧
+      CakeNodeMap.RepresentsHOLNodeList
+        (CakeNodeMap.set m i (values[i] - 1))
+        (values.set i (values[i] - 1)) := by
+  rcases hrep with ⟨houtside, hsize, hget⟩
+  have hi' : i < m.slots.size := by simpa [hsize] using hi
+  have hlookup : m.get i = some values[i] := by
+    simpa using hget i hi
+  have hslot : m.slots[i]? = some (some values[i]) := by
+    simpa [CakeNodeMap.get, hi', houtside] using hlookup
+  constructor
+  · unfold cakeDecDegMonadic
     rw [hstate]
     simp only [if_pos hi']
     rw [hslot]
@@ -650,6 +685,15 @@ example :
     (m := CakeNodeMap.ofList [3]) (values := [3]) (i := 0) rfl
     (CakeNodeMap.ofList_representsHOLNodeList [3]) (by decide)
   simpa using h.1
+
+example :
+    cakeDecDegMonadic 1 { CakeRaState.empty 1 with
+        degrees := CakeNodeMap.ofList [3] } =
+      .failure .subscript { CakeRaState.empty 1 with
+        degrees := CakeNodeMap.ofList [3] } := by
+  apply cakeDecDegMonadic_subscript
+  change (CakeNodeMap.ofList [3]).slots.size ≤ 1
+  simp [CakeNodeMap.ofList]
 
 def decDegFailureReachesAllocatorGuard : Bool :=
   let bijection : CakeNodeBijection :=

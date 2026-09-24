@@ -1,0 +1,15 @@
+dtr_binop_same=F
+dtr_binop_diff=T
+dtr_addcarry_same=F
+dtr_skip=T
+tri_binop_same=T
+tri_binop_diff=F
+tri_skip=T
+ei_inst_ok=T
+ei_inst_bad=F
+ei_opcurrheap=F
+ei_call_none=T
+ei_call_ret_bad=F
+ei_call_ret_ok=T
+ei_loop_ok=T
+ei_alloc=T

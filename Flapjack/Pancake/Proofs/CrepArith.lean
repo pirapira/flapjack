@@ -181,12 +181,23 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Width-parametric word port of CakeML's `dest_const_thm`
-    (`crep_arithProofScript.sml:64`). The positive-width `BitVec` carrier
-    represents HOL's nonempty finite-index word type; unlike the generic
-    support lemma above, both the expression constant and extracted value are
-    word-typed as in HOL. -/
+/-- Lean's generic HOL word carrier is a Boolean function over the word's
+    index type. This is the polymorphic word-typed statement of CakeML's
+    `dest_const_thm` (`crep_arithProofScript.sml:64`): unlike the arbitrary-
+    carrier helper above, the expression and result are both HOL words. The
+    `HolFiniteDimension` instance records the finite, nonempty enumeration
+    corresponding to HOL's `finite_index` constraint. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+theorem crepDestConstHolWord_eq_const {ι : Type} [HolFiniteDimension ι]
+    (expression : CrepExp (ι → Bool))
+    (value : ι → Bool)
+    (h : crepDestConst expression = some value) :
+    expression = .const value := by
+  cases expression <;> simp_all [crepDestConst]
+
+/-- Canonical width-indexed BitVec support specialization of the generic
+    HOL-word `dest_const_thm` port above. Kept untagged because the theorem
+    itself is already stated over HOL's polymorphic word carrier. -/
 theorem crepDestConstWord_eq_const {width : Nat} [NeZero width]
     (expression : CrepExp (RiscV.Word width))
     (value : RiscV.Word width)

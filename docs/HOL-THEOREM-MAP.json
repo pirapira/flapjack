@@ -832,6 +832,22 @@
     "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "OPT_MMAP_SOME_ALL",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "OPT_MMAP_SOME_ALL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; List.mapM is the repo's OPT_MMAP carrier, cf. tagged optMmapEqSome; exists/exists-forall clauses over membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "OPT_MMAP_ALL_EQ",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "OPT_MMAP_ALL_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; List.mapM carrier; pointwise function agreement on members implies mapM equality)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",

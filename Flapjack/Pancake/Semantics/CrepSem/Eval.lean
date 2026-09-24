@@ -41,6 +41,15 @@ theorem bitVecToHolWordBits_holWordBitsToBitVec {width : Nat}
   rw [BitVec.getLsbD_ofBoolListLE]
   simp [List.getD_eq_getElem?_getD]
 
+theorem holWordBitsToBitVec_injective {width : Nat} :
+    Function.Injective (@holWordBitsToBitVec width) := by
+  intro left right h
+  calc
+    left = bitVecToHolWordBits (holWordBitsToBitVec left) :=
+      (bitVecToHolWordBits_holWordBitsToBitVec left).symm
+    _ = bitVecToHolWordBits (holWordBitsToBitVec right) := congrArg bitVecToHolWordBits h
+    _ = right := bitVecToHolWordBits_holWordBitsToBitVec right
+
 theorem bitVecToHolWordBits_ofNat {width : Nat} (value : Nat) :
     bitVecToHolWordBits (BitVec.ofNat width value) =
       fun index => Nat.testBit value index.val := by
@@ -78,9 +87,10 @@ theorem holWordBitsToBitVec_n2w {width : Nat} (value : Nat) :
     the numeric-index-to-carrier map (the role of HOL `finite_index`) and
     `encode` is its inverse. Lean core/Std in this project does not provide
     Fintype/equivFin, so the enumeration data is represented explicitly here.
-    The arbitrary-index `n2w` adapter below is pointwise `BIT` at `encode i`;
-    the evaluator and remaining `w2n`/operation transport are proved
-    separately. -/
+    `holFiniteIndex_bijective` below proves that `decode` satisfies the exact
+    unique-in-range property from HOL's `fcp$finite_index` definition. The
+    arbitrary-index `n2w` adapter below is pointwise `BIT` at `encode i`; the
+    remaining word-operation and evaluator comparisons are proved separately. -/
 class HolFiniteDimension (ι : Type u) where
   width : Nat
   width_pos : 0 < width
@@ -97,6 +107,39 @@ instance instFinHolFiniteDimension {width : Nat} [NeZero width] :
   decode := id
   encode_decode := by intro index; rfl
   decode_encode := by intro index; rfl
+
+/-- HOL's `fcp$finite_index` (`HOL/src/n-bit/fcpScript.sml:118`)
+    restricted to its valid range. The dimension's `decode` is the chosen
+    finite-index map `Fin width → ι`; values outside the HOL bound are
+    immaterial to the defining bijection property, so this total Lean function
+    extends them with the first valid index. -/
+def holFiniteIndex {ι : Type u} (dimension : HolFiniteDimension ι)
+    (index : Nat) : ι :=
+  if h : index < dimension.width then dimension.decode ⟨index, h⟩
+  else dimension.decode ⟨0, dimension.width_pos⟩
+
+/-- The explicit `HolFiniteDimension` dictionary satisfies HOL's defining
+    finite-index property: every carrier index has a unique natural number
+    below the dimension that maps to it. This connects `decode` to HOL's
+    `finite_index`; it does not identify the separate source word-operation
+    adapters or evaluator equations with the corresponding HOL definitions. -/
+theorem holFiniteIndex_bijective {ι : Type u}
+    (dimension : HolFiniteDimension ι) (value : ι) :
+    ∃ index, index < dimension.width ∧ holFiniteIndex dimension index = value ∧
+      ∀ other, other < dimension.width →
+        holFiniteIndex dimension other = value → other = index := by
+  refine ⟨(dimension.encode value).val, (dimension.encode value).isLt, ?_, ?_⟩
+  · simp [holFiniteIndex, (dimension.encode value).isLt, dimension.decode_encode]
+  · intro index hindex hindexValue
+    have hdecoded : dimension.decode ⟨index, hindex⟩ = value := by
+      simpa [holFiniteIndex, hindex] using hindexValue
+    have hencoded : (⟨index, hindex⟩ : Fin dimension.width) =
+        dimension.encode value := by
+      calc
+        ⟨index, hindex⟩ = dimension.encode (dimension.decode ⟨index, hindex⟩) :=
+          (dimension.encode_decode _).symm
+        _ = dimension.encode value := congrArg dimension.encode hdecoded
+    exact congrArg Fin.val hencoded
 
 def holWordToFinBits {ι : Type u} (dimension : HolFiniteDimension ι)
     (word : ι → Bool) : Fin dimension.width → Bool :=
@@ -133,6 +176,17 @@ theorem bitVecToHolWord_holWordToBitVec {ι : Type u}
       (bitVecToHolWordBits (holWordBitsToBitVec (holWordToFinBits dimension word))) = word
   rw [bitVecToHolWordBits_holWordBitsToBitVec]
   exact finBitsToHolWord_holWordToFinBits dimension word
+
+theorem holWordToBitVec_injective {ι : Type u}
+    (dimension : HolFiniteDimension ι) :
+    Function.Injective (holWordToBitVec dimension) := by
+  intro left right h
+  calc
+    left = bitVecToHolWord dimension (holWordToBitVec dimension left) :=
+      (bitVecToHolWord_holWordToBitVec dimension left).symm
+    _ = bitVecToHolWord dimension (holWordToBitVec dimension right) :=
+      congrArg (bitVecToHolWord dimension) h
+    _ = right := bitVecToHolWord_holWordToBitVec dimension right
 
 theorem holWordToBitVec_bitVecToHolWord {ι : Type u}
     (dimension : HolFiniteDimension ι) (word : BitVec dimension.width) :
@@ -291,10 +345,11 @@ theorem holFiniteWordToBitVec_mul {ι : Type u}
     its operands with `w2n`, doing natural arithmetic, and converting back
     with `n2w`. These adapters use BitVec `toNat`/`ofNat` for those conversions.
     The pointwise `n2w`/FCP `BIT` equation and the HOL `w2n` weighted `SBIT`
-    sum to BitVec `toNat` correspondence are proved below, and source-shaped
-    add/mul/sub equations expose those conversions. They remain untagged
-    because the chosen `HolFiniteDimension` witness has not yet been identified
-        with HOL's implicit `finite_index` dictionary. -/
+    sum are stated through the explicit finite_index decoder and proved below;
+    source-shaped add/mul/sub equations expose those conversions. They remain
+    untagged because the chosen dictionary has not been identified as the
+    concrete HOL instance for each index type, and the evaluator operations
+    still need exact source correspondence. -/
 def holFiniteWordN2W {ι : Type u} (dimension : HolFiniteDimension ι)
     (value : Nat) : ι → Bool :=
   bitVecToHolWord dimension (BitVec.ofNat dimension.width value)
@@ -305,6 +360,17 @@ theorem holFiniteWordN2W_at_index {ι : Type u}
       Nat.testBit value (dimension.encode index).val := by
   simp [holFiniteWordN2W, bitVecToHolWord, finBitsToHolWord,
     bitVecToHolWordBits_ofNat]
+
+/-- HOL `words$n2w_def` is `FCP i. BIT i n`. This equation states it at the
+    `holFiniteIndex` decoder: for every valid natural index, the explicit word
+    adapter reads precisely that bit. -/
+theorem holFiniteWordN2W_at_finiteIndex {ι : Type u}
+    (dimension : HolFiniteDimension ι) (value index : Nat)
+    (hindex : index < dimension.width) :
+    holFiniteWordN2W dimension value (holFiniteIndex dimension index) =
+      Nat.testBit value index := by
+  rw [holFiniteWordN2W_at_index]
+  simp [holFiniteIndex, hindex, dimension.encode_decode]
 
 def holFiniteWordW2N {ι : Type u} (dimension : HolFiniteDimension ι)
     (word : ι → Bool) : Nat :=
@@ -352,6 +418,20 @@ theorem holFiniteWordW2N_eq_SBitSum {ι : Type u}
     finWordSBitSum dimension.width (holWordToFinBits dimension word)
   rw [holWordBitsToBitVec_toNat_eq_ofBoolListLE]
   exact (finWordSBitSum_eq_holWordBitsToBitVec_toNat _ _).symm
+
+/-- HOL `words$w2n_def` is `SUM dimindex (\i. SBIT (w ' i) i)`. This
+    companion equation writes the same sum using the supplied `finite_index`
+    decoder, so `holFiniteWordW2N`'s bit positions are explicit. -/
+theorem holFiniteWordW2N_eq_finiteIndexSBitSum {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool) :
+    holFiniteWordW2N dimension word =
+      finWordSBitSum dimension.width
+        (fun index => word (holFiniteIndex dimension index.val)) := by
+  rw [holFiniteWordW2N_eq_SBitSum]
+  change finWordSBitSum dimension.width (holWordToFinBits dimension word) = _
+  congr 1
+  funext index
+  simp [holWordToFinBits, holFiniteIndex, index.isLt]
 
 def holFiniteWordSourceAdd {ι : Type u} (dimension : HolFiniteDimension ι)
     (left right : ι → Bool) : ι → Bool :=
@@ -2110,9 +2190,10 @@ def evalCrepHolFiniteDimensionExpWordLab {ι : Type}
     (evalCrepHolFiniteDimensionExp dimension state expression).map PanWordLab.word
 
 /-! Source equations for the HOL evaluator on an explicitly enumerated finite
-    word carrier. This helper follows crepSem$eval_def and the source memory
-    helpers. It is not tagged: the explicit finite-index encoding still needs
-    a theorem identifying it with HOL's implicit finite_index representation. -/
+    word carrier. `holFiniteIndex_bijective` proves that the supplied
+    `HolFiniteDimension` dictionary has the defining finite_index property;
+    this evaluator remains untagged until its word-operation and evaluation
+    equations are reviewed against the corresponding HOL definitions. -/
 def evalCrepHolFiniteWordSourceExp {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) :
@@ -2540,9 +2621,10 @@ theorem evalCrepRuntimeExp_finiteDimension_crepOpMul {ι : Type}
                 some (bitVecToHolWord dimension rightValue) := by
             simpa [hRight] using ihRight
           rw [hLeftSource, hRightSource]
-          simp [evalCrepHolExp, hLeft, hRight]
-          apply congrArg (bitVecToHolWord dimension)
-          simp [holWordToBitVec_bitVecToHolWord dimension]
+          simp [evalCrepHolExp, hLeft, hRight, crepOpCrep]
+          apply holWordToBitVec_injective dimension
+          rw [holFiniteWordToBitVec_mul]
+          simp [holWordToBitVec_bitVecToHolWord]
 
 private theorem evalCrepRuntimeExps_toMapM_wordBits [NeZero width]
     (state : CrepRuntimeState (Fin width → Bool) σ)
@@ -2737,11 +2819,9 @@ theorem evalCrepRuntimeExp_crepOpMul_toHolWordBits [NeZero width]
               some (bitVecToHolWordBits rightValue) := by
             simpa [hRight] using ihRight
           rw [hLeftFin, hRightFin]
-          simp [evalCrepHolExp, hLeft, hRight]
-          change bitVecToHolWordBits
-              (holWordBitsToBitVec (bitVecToHolWordBits leftValue) *
-                holWordBitsToBitVec (bitVecToHolWordBits rightValue)) =
-            bitVecToHolWordBits (leftValue * rightValue)
+          simp [evalCrepHolExp, hLeft, hRight, crepOpCrep]
+          apply holWordBitsToBitVec_injective
+          rw [holWordBitsToBitVec_mul]
           simp [holWordBitsToBitVec_bitVecToHolWordBits]
 
 /-! Target helpers for the production evaluator relation, retaining the
@@ -2987,7 +3067,7 @@ theorem evalCrepRuntimeExp_toRuntime_eq [NeZero width]
         | nil =>
           simp only [evalCrepRuntimeExp, evalCrepHolExp]
           rw [ih.1 head (by simp) state, ih.1 second (by simp) state]
-          simp
+          simp [crepOpCrep]
         | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolExp]
   case cmp operator left right ihl ihr =>
     simp only [evalCrepRuntimeExp, evalCrepHolExp]
@@ -3171,31 +3251,5 @@ theorem evalCrepRuntimeExp_toHolWordBits_eq [NeZero width]
       · exact ihTail.1 e he state
     · intro state
       simp [evalCrepRuntimeExps, ihHead state, ihTail.2 state]
-
-/-! ## BitVec 64 `crepOp` branch computes the tagged definition
-
-The executed Crep expression evaluator `evalCrepRuntimeExp` is carrier-generic:
-its `.crepOp` clause routes through the generic helper `crepOpValue`, because a
-generic `α` cannot syntactically call the width-polymorphic tagged `crepOpCrep`.
-On the canonical RISC-V 64 target the two agree; the theorem below records that
-the executed branch at `BitVec 64` computes exactly the reviewed tagged
-definition. This keeps the compiler/semantics distinction explicit: the tagged
-`crepOpCrep` is the HOL semantics of `crep_op`, the generic `crepOpValue` is what
-the Lean evaluator executes, and this theorem is the bridge between them (it does
-not introduce a second evaluator). -/
-
-/-- On the `BitVec 64` carrier the executed `.crepOp .mul [left, right]` branch
-    of `evalCrepRuntimeExp` computes the reviewed tagged `crepOpCrep 64`. -/
-theorem evalCrepRuntimeExp_crepOp_bitVec64 (state : CrepRuntimeState (BitVec 64) σ)
-    (left right : CrepExp (BitVec 64)) :
-    evalCrepRuntimeExp state (.crepOp CrepOp.mul [left, right]) =
-      (do
-        let leftValue ← evalCrepRuntimeExp state left
-        let rightValue ← evalCrepRuntimeExp state right
-        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) := by
-  rw [evalCrepRuntimeExp_crepOp_eq]
-  cases hleft : evalCrepRuntimeExp state left <;>
-    cases hright : evalCrepRuntimeExp state right <;>
-      simp [hleft, hright, crepOpCrep]
 
 end Flapjack

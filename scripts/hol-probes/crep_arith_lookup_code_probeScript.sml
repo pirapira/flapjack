@@ -25,3 +25,17 @@ val code =
 val _ = print_eval "simp_prog_after_lookup"
   ``OPTION_MAP (crep_arith$simp_prog ## I)
       (crepSem$lookup_code ^code (strlit "f") [Word (9w : 8 word)] 1)``;
+
+val wrong_arity_code =
+  ``FEMPTY |+ (strlit "f", ([1;2], crepLang$Skip))``;
+val _ = print_eval "wrong_arity"
+  ``crepSem$lookup_code ^wrong_arity_code (strlit "f") [Word (9w : 8 word)] 2``;
+
+val duplicate_parameter_code =
+  ``FEMPTY |+ (strlit "f", ([1;1], crepLang$Skip))``;
+val _ = print_eval "duplicate_parameters"
+  ``crepSem$lookup_code ^duplicate_parameter_code (strlit "f")
+      [Word (9w : 8 word); Word (10w : 8 word)] 2``;
+
+val _ = print_eval "missing_function"
+  ``crepSem$lookup_code ^code (strlit "missing") [] 0``;

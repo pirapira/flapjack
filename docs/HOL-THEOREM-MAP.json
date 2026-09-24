@@ -6694,5 +6694,13 @@
     "lean_name": "compileExpHOL_op_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only arbitrary-arity Op induction case for compile_exp_val_rel. It consumes full operand IHs and state-owned source evaluation to prove target RISC-V Op evaluation and shape conclusions; the assumptions and conclusion are not the standalone HOL theorem statement."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "el_compile_prog_el_prog_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "elCompileToCrepElProgEq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem."
   }
 ]

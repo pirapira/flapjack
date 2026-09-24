@@ -2439,20 +2439,27 @@ private theorem panStructValuesFieldsOkBool_getElem?
     finite-map, field-validity, and struct-info premises and all three
     conclusions. Successful source evaluation provides the index lookup needed
     both for the result shape and validity; no separate in-bounds premise is
-    added. This specialization is intentionally untagged: HOL has only the
-    universal theorem, while Lean uses projected struct-shape equality, Bool
-    validity over total lookups, and an explicit `bytesInWord` parameter. The
+    added. Source and converted evaluation use `evalPanValueExpFull` with the
+    same explicit memory-access model. This specialization is intentionally
+    untagged: HOL has only the universal theorem, while Lean uses projected
+    struct-shape equality, Bool validity over total lookups, and explicit
+    `bytesInWord` and optional `PanValueMemoryAccess` parameters. The full
+    evaluator also requires shift-semantics dictionaries as Lean runtime
+    parameters rather than logical HOL premises. The
     `structInfosOk` premise is retained but unused in this case. -/
 theorem panStructCompileExpCorrectRFieldCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
+    [ShiftLeft α] [ShiftRight α] [PanShiftWidth α]
+    [ArithmeticShiftRight α] [RotateRightOp α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : StructPassContext) (state : PanSemState α ffi)
-    (bytesInWord : α) (index : Nat) (expression : Exp α)
+    (bytesInWord : α) (memoryAccess : Option (PanValueMemoryAccess α))
+    (index : Nat) (expression : Exp α)
     (value : PanValue α)
-    (heval : evalPanValueExp state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord (.rField index expression) = some value)
+    (heval : evalPanValueExpFull state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord (.rField index expression)
+      (memoryAccess := memoryAccess) = some value)
     (hstructs : panStructContextShapeView context.structs =
       panStructContextShapeView state.structs)
     (hlocalsFields : panStructEveryValueFieldsOkBool state.structs state.locals)
@@ -2461,8 +2468,9 @@ theorem panStructCompileExpCorrectRFieldCase
     (hlocalsMap : panStructShapeMapEq context.locals state.locals)
     (hglobalsMap : panStructShapeMapEq context.globals state.globals)
     (hinduction : ∀ subvalue,
-      evalPanValueExp state.structs state.locals state.globals state.memory
-        state.baseAddress state.topAddress bytesInWord expression = some subvalue →
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression
+        (memoryAccess := memoryAccess) = some subvalue →
       panStructContextShapeView context.structs = panStructContextShapeView state.structs →
       panStructEveryValueFieldsOkBool state.structs state.locals →
       panStructEveryValueFieldsOkBool state.structs state.globals →
@@ -2471,37 +2479,40 @@ theorem panStructCompileExpCorrectRFieldCase
       panStructShapeMapEq context.globals state.globals →
       structOldExpShape context expression = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool state.structs subvalue = true ∧
-      evalPanValueExp (panStructConvertState context state).structs
+      evalPanValueExpFull (panStructConvertState context state).structs
         (panStructConvertState context state).locals
         (panStructConvertState context state).globals
         (panStructConvertState context state).memory
         (panStructConvertState context state).baseAddress
         (panStructConvertState context state).topAddress bytesInWord
-        (structCompileExp context expression) = some (panStructConvertValue subvalue)) :
+        (structCompileExp context expression) (memoryAccess := memoryAccess) =
+          some (panStructConvertValue subvalue)) :
     structOldExpShape context (.rField index expression) = panSemShapeOf value ∧
     panStructValueFieldsOkBool state.structs value = true ∧
-    evalPanValueExp (panStructConvertState context state).structs
+    evalPanValueExpFull (panStructConvertState context state).structs
       (panStructConvertState context state).locals
       (panStructConvertState context state).globals
       (panStructConvertState context state).memory
       (panStructConvertState context state).baseAddress
       (panStructConvertState context state).topAddress bytesInWord
-      (structCompileExp context (.rField index expression)) =
+      (structCompileExp context (.rField index expression))
+      (memoryAccess := memoryAccess) =
         some (panStructConvertValue value) := by
-  cases hchild : evalPanValueExp state.structs state.locals state.globals state.memory
-      state.baseAddress state.topAddress bytesInWord expression with
-  | none => simp [evalPanValueExp, hchild] at heval
+  cases hchild : evalPanValueExpFull state.structs state.locals state.globals state.memory
+      state.baseAddress state.topAddress bytesInWord expression
+      (memoryAccess := memoryAccess) with
+  | none => simp [evalPanValueExpFull, hchild] at heval
   | some childValue =>
       cases childValue with
-      | word word => simp [evalPanValueExp, hchild] at heval
-      | nStruct name fields => simp [evalPanValueExp, hchild] at heval
+      | word word => simp [evalPanValueExpFull, hchild] at heval
+      | nStruct name fields => simp [evalPanValueExpFull, hchild] at heval
       | rStruct values =>
           cases hselected : values[index]? with
-          | none => simp [evalPanValueExp, hchild, hselected] at heval
+          | none => simp [evalPanValueExpFull, hchild, hselected] at heval
           | some selected =>
               have hvalue : value = selected := by
                 have hval : selected = value := by
-                  simp [evalPanValueExp, hchild, hselected] at heval
+                  simp [evalPanValueExpFull, hchild, hselected] at heval
                   exact heval
                 exact hval.symm
               subst value
@@ -2526,27 +2537,29 @@ theorem panStructCompileExpCorrectRFieldCase
                 simpa [List.getElem?_map] using
                   congrArg (Option.map panStructConvertValue) hselected
               have hcompiledChild :
-                  evalPanValueExp (panStructConvertState context state).structs
+                  evalPanValueExpFull (panStructConvertState context state).structs
                     (panStructConvertState context state).locals
                     (panStructConvertState context state).globals
                     (panStructConvertState context state).memory
                     (panStructConvertState context state).baseAddress
                     (panStructConvertState context state).topAddress bytesInWord
-                    (structCompileExp context expression) =
+                    (structCompileExp context expression)
+                    (memoryAccess := memoryAccess) =
                     some (.rStruct (values.map panStructConvertValue)) := by
                 simpa [panStructConvertValue, panStructConvertValues_eq_map] using
                   hchildIH.2.2
               have htarget :
-                  evalPanValueExp (panStructConvertState context state).structs
+                  evalPanValueExpFull (panStructConvertState context state).structs
                     (panStructConvertState context state).locals
                     (panStructConvertState context state).globals
                     (panStructConvertState context state).memory
                     (panStructConvertState context state).baseAddress
                     (panStructConvertState context state).topAddress bytesInWord
-                    (structCompileExp context (.rField index expression)) =
+                    (structCompileExp context (.rField index expression))
+                    (memoryAccess := memoryAccess) =
                     some (panStructConvertValue selected) := by
                 simp only [structCompileExp]
-                simp only [evalPanValueExp, hcompiledChild]
+                simp only [evalPanValueExpFull, hcompiledChild]
                 exact hselectedConverted
               exact ⟨hshape, hselectedValid, htarget⟩
 

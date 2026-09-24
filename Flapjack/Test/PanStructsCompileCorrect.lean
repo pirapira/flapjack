@@ -3,7 +3,8 @@ import Flapjack.RiscV.Model
 import Flapjack.Test.PanValueFfiSemantics
 
 /-! Regression cases paired with
-`scripts/hol-probes/pan_structs_compile_correct_probe.out`. -/
+`scripts/hol-probes/pan_structs_compile_correct_probe.out` and
+`scripts/hol-probes/pan_structs_compile_exp_correct_probe.out`. -/
 
 namespace Flapjack.Test
 
@@ -1509,11 +1510,16 @@ def rfieldCompileContext : StructPassContext :=
 def rfieldCompileExpression : Exp Word64 :=
   .rField 1 (.var .local "tuple")
 
+/-! Paired guard for the direct HOL-EVAL row
+`compile_exp_correct_rfield=(One,One,T,T,T)` in
+`scripts/hol-probes/pan_structs_compile_exp_correct_probe.out`. The Lean case
+uses the full evaluator on source and converted states with no extra memory
+model. -/
 example :
     structOldExpShape rfieldCompileContext rfieldCompileExpression = .one ∧
     panStructValueFieldsOkBool rfieldCompileRuntime.structs
       (.word (BitVec.ofNat 64 5)) = true ∧
-    evalPanValueExp
+    evalPanValueExpFull
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).structs
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).locals
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).globals
@@ -1521,15 +1527,17 @@ example :
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).baseAddress
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).topAddress
         (BitVec.ofNat 64 8)
-        (structCompileExp rfieldCompileContext rfieldCompileExpression) =
+        (structCompileExp rfieldCompileContext rfieldCompileExpression)
+        (memoryAccess := none) =
       some (.word (BitVec.ofNat 64 5)) := by
-  have hsource : evalPanValueExp rfieldCompileRuntime.structs
+  have hsource : evalPanValueExpFull rfieldCompileRuntime.structs
       rfieldCompileRuntime.locals rfieldCompileRuntime.globals
       rfieldCompileRuntime.memory rfieldCompileRuntime.baseAddress
       rfieldCompileRuntime.topAddress (BitVec.ofNat 64 8)
-      rfieldCompileExpression = some (.word (BitVec.ofNat 64 5)) := by
+      rfieldCompileExpression (memoryAccess := none) =
+        some (.word (BitVec.ofNat 64 5)) := by
     simp [rfieldCompileExpression, rfieldCompileRuntime,
-      rfieldCompileCaseValue, finiteMapRuntime, evalPanValueExp]
+      rfieldCompileCaseValue, finiteMapRuntime, evalPanValueExpFull]
   have hstructs : panStructContextShapeView rfieldCompileContext.structs =
       panStructContextShapeView rfieldCompileRuntime.structs := by
     rfl
@@ -1573,10 +1581,11 @@ example :
     simp [rfieldCompileContext, emptyStructCompileContext,
       rfieldCompileRuntime, finiteMapRuntime, lookupInfo]
   have hchildIH : ∀ subvalue,
-      evalPanValueExp rfieldCompileRuntime.structs rfieldCompileRuntime.locals
+      evalPanValueExpFull rfieldCompileRuntime.structs rfieldCompileRuntime.locals
         rfieldCompileRuntime.globals rfieldCompileRuntime.memory
         rfieldCompileRuntime.baseAddress rfieldCompileRuntime.topAddress
-        (BitVec.ofNat 64 8) (.var .local "tuple") = some subvalue →
+        (BitVec.ofNat 64 8) (.var .local "tuple")
+        (memoryAccess := none) = some subvalue →
       panStructContextShapeView rfieldCompileContext.structs =
         panStructContextShapeView rfieldCompileRuntime.structs →
       panStructEveryValueFieldsOkBool rfieldCompileRuntime.structs
@@ -1589,7 +1598,7 @@ example :
       structOldExpShape rfieldCompileContext
         (.var .local "tuple" : Exp Word64) = panSemShapeOf subvalue ∧
       panStructValueFieldsOkBool rfieldCompileRuntime.structs subvalue = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).structs
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).locals
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).globals
@@ -1597,12 +1606,13 @@ example :
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).baseAddress
         (panStructConvertState rfieldCompileContext rfieldCompileRuntime).topAddress
         (BitVec.ofNat 64 8)
-        (structCompileExp rfieldCompileContext (.var .local "tuple" : Exp Word64)) =
+        (structCompileExp rfieldCompileContext (.var .local "tuple" : Exp Word64))
+        (memoryAccess := none) =
           some (panStructConvertValue subvalue) := by
     intro subvalue hchild _ _ _ _ _ _
     have hvalueEq : subvalue = rfieldCompileCaseValue := by
       have hsome : some rfieldCompileCaseValue = some subvalue := by
-        simpa [evalPanValueExp, rfieldCompileRuntime] using hchild
+        simpa [evalPanValueExpFull, rfieldCompileRuntime] using hchild
       exact (Option.some.inj hsome).symm
     subst subvalue
     refine ⟨?_, ?_, ?_⟩
@@ -1610,19 +1620,46 @@ example :
         emptyStructCompileContext, rfieldCompileCaseValue, panSemShapeOf, lookupInfo]
     · simp [panStructValueFieldsOkBool, panStructValuesFieldsOkBool,
         rfieldCompileRuntime, finiteMapRuntime, rfieldCompileCaseValue]
-    · simp [evalPanValueExp, structCompileExp, panStructConvertState,
+    · simp [evalPanValueExpFull, structCompileExp, panStructConvertState,
         rfieldCompileRuntime, finiteMapRuntime, rfieldCompileContext,
         emptyStructCompileContext, rfieldCompileCaseValue, panStructConvertValue,
         panStructConvertValues]
   have hcase := panStructCompileExpCorrectRFieldCase rfieldCompileContext
-    rfieldCompileRuntime (BitVec.ofNat 64 8) 1 (.var .local "tuple")
+    rfieldCompileRuntime (BitVec.ofNat 64 8) none 1 (.var .local "tuple")
     (.word (BitVec.ofNat 64 5)) hsource hstructs hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap hchildIH
   simpa [rfieldCompileExpression, rfieldCompileContext,
     emptyStructCompileContext, rfieldCompileRuntime, finiteMapRuntime,
     rfieldCompileCaseValue, panSemShapeOf, panStructValueFieldsOkBool,
     panStructValuesFieldsOkBool, panStructConvertState, panStructConvertValue,
-    panStructConvertValues, evalPanValueExp, structCompileExp, lookupInfo] using hcase
+    panStructConvertValues, evalPanValueExpFull, structCompileExp, lookupInfo] using hcase
+
+#guard
+  let source := evalPanValueExpFull
+    rfieldCompileRuntime.structs rfieldCompileRuntime.locals
+    rfieldCompileRuntime.globals rfieldCompileRuntime.memory
+    rfieldCompileRuntime.baseAddress rfieldCompileRuntime.topAddress
+    (BitVec.ofNat 64 8) rfieldCompileExpression (memoryAccess := none)
+  let target := evalPanValueExpFull
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).structs
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).locals
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).globals
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).memory
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).baseAddress
+    (panStructConvertState rfieldCompileContext rfieldCompileRuntime).topAddress
+    (BitVec.ofNat 64 8)
+    (structCompileExp rfieldCompileContext rfieldCompileExpression)
+    (memoryAccess := none)
+  panStructShapeEqBool
+    (structOldExpShape rfieldCompileContext rfieldCompileExpression) .one &&
+  panStructValueFieldsOkBool rfieldCompileRuntime.structs
+    (.word (BitVec.ofNat 64 5)) &&
+  (match source with
+   | some (.word result) => result == BitVec.ofNat 64 5
+   | _ => false) &&
+  (match target with
+   | some (.word result) => result == BitVec.ofNat 64 5
+   | _ => false)
 
 def finiteMapState : PanStructFiniteState Word64 (FfiState Unit) :=
   panStructFiniteStateFromMaps finiteMapRuntime

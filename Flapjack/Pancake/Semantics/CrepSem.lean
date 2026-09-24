@@ -677,6 +677,10 @@ theorem crepRuntimeMemoryOfView_updateMemory_word [BEq α]
   · simp [crepRuntimeMemoryOfView, updateMemory, updateCrepRuntimeMemory,
       crepRuntimeMemoryView, hsame, panWordLab_word_panTheWord]
 
+/-- Locals-level reference fold for assigning call return values onto existing
+    word variables (HOL `upd_locals`/`FUPDATE_LIST` over existing names). Kept
+    as the proof-side counterpart of `setCrepRuntimeLocalsExisting`, which is
+    what the executed `crepRuntimeCall` paths use. -/
 def crepRuntimeAssignExisting
     (locals : Nat → Option (PanWordLab α)) (names : List Nat) (values : List α) :
     Option (Nat → Option (PanWordLab α)) :=
@@ -689,7 +693,8 @@ def crepRuntimeAssignExisting
       locals)
 
 /-- State-level `crepRuntimeAssignExisting` whose fold routes through the tagged
-    HOL `set_var` definition via `setCrepRuntimeLocal`. -/
+    HOL `set_var` definition via `setCrepRuntimeLocal`. This is the helper used
+    by the executed `crepRuntimeCall` returned-with-destinations path. -/
 def setCrepRuntimeLocalsExisting (names : List Nat) (values : List α)
     (state : CrepRuntimeState α σ) : Option (CrepRuntimeState α σ) :=
   if names.length != values.length then none
@@ -714,7 +719,7 @@ theorem foldl_setCrepRuntimeLocal_eq (entries : List (Nat × α))
       simp only [List.foldl_cons]
       rw [setCrepRuntimeLocal_eq_update, ih]
 
-theorem setCrepRuntimeLocalsExisting_eq (names : List Nat) (values : List α)
+@[simp] theorem setCrepRuntimeLocalsExisting_eq (names : List Nat) (values : List α)
     (state : CrepRuntimeState α σ) :
     setCrepRuntimeLocalsExisting names values state =
       (crepRuntimeAssignExisting state.locals names values).map
@@ -1293,10 +1298,10 @@ mutual
                           | none =>
                               some (.returned values, clearCrepRuntimeLocals callerState)
                           | some (destinations, _) =>
-                              match crepRuntimeAssignExisting
-                                  caller.locals destinations values with
-                              | some locals =>
-                                  some (.normal, { callerState with locals := locals })
+                              match setCrepRuntimeLocalsExisting
+                                  destinations values callerState with
+                              | some state' =>
+                                  some (.normal, state')
                               | none => some (.error, callee)
                       | .raised exception =>
                           match info with

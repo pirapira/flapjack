@@ -5304,6 +5304,14 @@
     "reviewer": "Kernel-checked Cmp constructor specialization with distinct recursive left/right induction hypotheses, successful-evaluation premises, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three conclusions of HOL compile_exp_correct. Successful source evaluation forces two word operands; conversion preserves each word so both evaluators compute the same evalPanCmp result. Intentionally untagged because HOL has only the universal theorem and Lean uses projected context views, total lookup/Bool adapters, and explicit bytesInWord."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectShiftCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Shift constructor specialization over evalPanValueExpFull, with distinct recursive left/right IHs, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three compile_exp_correct conclusions. The full evaluator uses evalPanShiftFull to implement LSL/LSR/ASR/ROR and HOL's nonzero amount < word-width cutoff; direct HOL and Lean fixtures cover LSL, ASR, ROR, and the cutoff. It remains untagged because the public Lean statement translates finite-map context/FEVERY/FMAP_MAP2 premises through projected views and total lookup/Bool adapters and takes bytesInWord explicitly; HOL has one universal theorem."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
@@ -6422,5 +6430,21 @@
     "lean_name": "emptyCrepHolLocals",
     "statement_status": "reviewed_exact",
     "reviewer": "Ports empty_locals s = s with locals := FEMPTY (crepSemScript.sml:71) over CrepHolState. Direct oracle rows empty_locals_none/empty_locals_fields_preserved; Lean guards."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_cmp_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RISC-V-specialized Cmp constructor case for the full compile_exp_val_rel induction hypotheses. It consumes full left/right relation hypotheses and proves evaluation, length, shape, and well-formedness, but has a canonical-target premise and is not a standalone HOL declaration or complete expression induction; no @[hol] tag claimed. The matching direct compile_exp Cmp output is covered by the cmp_shift row in scripts/hol-probes/compile_exp_probe.out and CompileExpParity.holCmpShiftOK."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_shift_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RISC-V-specialized Shift constructor case for the full compile_exp_val_rel induction hypotheses. It consumes full left/right relation hypotheses and proves evaluation, length, shape, and well-formedness using the source and canonical-target RISC-V shift bridges, but it is not a standalone HOL declaration or complete expression induction; no @[hol] tag claimed. The matching direct compile_exp Shift output is covered by the cmp_shift row in scripts/hol-probes/compile_exp_probe.out and CompileExpParity.holCmpShiftOK."
   }
 ]

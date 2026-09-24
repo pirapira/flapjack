@@ -417,6 +417,13 @@ run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.ou
 run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_probe.out \
   ret_eval_fail_result raise_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Return/Raise memory probe observes a memory-reading payload: a domain
+# miss rejected with Error and unchanged state for both `Return` and `Raise`, a
+# shape mismatch rejected with unchanged state, and the successful
+# memory-reading results with cleared locals.
+run_probe pan_sem_return_raise_memory_probeScript.sml pan_sem_return_raise_memory_probe.out \
+  ret_mem_fail_result raise_mem_ok_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The ExtCall error probe observes the non-word argument and failing
 # byte-read rejections, each returning `SOME Error` with unchanged state.
 run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \

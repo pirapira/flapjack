@@ -639,6 +639,89 @@ theorem holFiniteWord_evalPanShift_toBitVec {ι : Type u}
         rw [← bitVecToHolWord_holWordToBitVec dimension
           (RotateRightOp.rotateRight left right), holFiniteWordToBitVec_ror]
 
+/-! The generic `Cmp` operation used by the source-shaped finite-word
+    evaluator is transported through the same finite-index/BitVec equivalence
+    as its operands. -/
+theorem holFiniteWord_evalPanCmp_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (operator : Cmp)
+    (left right : ι → Bool) :
+    holWordToBitVec dimension (evalPanCmp operator left right) =
+      evalPanCmp operator (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hOneZero (condition : Bool) :
+      holWordToBitVec dimension (if condition then (1 : ι → Bool) else 0) =
+        (if condition then (1 : BitVec dimension.width) else 0) := by
+    cases condition <;> simp [holFiniteWordToBitVec_zero,
+      holFiniteWordToBitVec_one]
+  have hZeroOne (condition : Bool) :
+      holWordToBitVec dimension (if condition then (0 : ι → Bool) else 1) =
+        (if condition then (0 : BitVec dimension.width) else 1) := by
+    cases condition <;> simp [holFiniteWordToBitVec_zero,
+      holFiniteWordToBitVec_one]
+  cases operator with
+  | equal =>
+      have hcondition : (left == right) =
+          (holWordToBitVec dimension left == holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hOneZero _
+  | notEqual =>
+      have hcondition : (left == right) =
+          (holWordToBitVec dimension left == holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hZeroOne _
+  | lower =>
+      have hcondition : PanCmp.lower left right =
+          PanCmp.lower (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hOneZero _
+  | notLower =>
+      have hcondition : PanCmp.lower left right =
+          PanCmp.lower (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hZeroOne _
+  | less =>
+      have hcondition : PanCmp.less left right =
+          PanCmp.less (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hOneZero _
+  | notLess =>
+      have hcondition : PanCmp.less left right =
+          PanCmp.less (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) := rfl
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hZeroOne _
+  | test =>
+      have hcondition : (AndOp.and left right == (0 : ι → Bool)) =
+          (AndOp.and (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) == (0 : BitVec dimension.width)) := by
+        change (holWordToBitVec dimension (AndOp.and left right) ==
+          holWordToBitVec dimension (0 : ι → Bool)) = _
+        rw [holFiniteWordToBitVec_and, holFiniteWordToBitVec_zero]
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hOneZero _
+  | notTest =>
+      have hcondition : (AndOp.and left right == (0 : ι → Bool)) =
+          (AndOp.and (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right) == (0 : BitVec dimension.width)) := by
+        change (holWordToBitVec dimension (AndOp.and left right) ==
+          holWordToBitVec dimension (0 : ι → Bool)) = _
+        rw [holFiniteWordToBitVec_and, holFiniteWordToBitVec_zero]
+      simp only [evalPanCmp]
+      rw [hcondition]
+      exact hZeroOne _
+
 /-! Operations on finite-index HOL word bits are transported through the
     equivalence above. This gives the production Crep evaluator and arithmetic
     simplifier their standard word interfaces on the function-valued carrier,
@@ -1039,6 +1122,21 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
     wordOp := wordOp
     compare := evalPanCmp
     shift := evalPanShiftFull }
+
+/-- The source-shaped finite-word model comparison agrees with the generic
+    BitVec/HOL comparison after transporting the operands. -/
+theorem holFiniteWordSourceMemoryModel_compare_toBitVec {ι : Type u}
+    [dimension : HolFiniteDimension ι] (bigEndian : Bool)
+    (operator : Cmp) (left right : ι → Bool) :
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension bigEndian).compare
+          operator left right) =
+      RiscV.panRiscVCmp operator (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  change holWordToBitVec dimension (evalPanCmp operator left right) = _
+  rw [holFiniteWord_evalPanCmp_toBitVec]
+  exact (panRiscVCmp_eq_evalPanCmp operator _ _).symm
 
 /-- A load model with HOL's dimension-derived byte alignment and the existing
     RISC-V byte extraction, alignment, and word-of-bytes operations. This is

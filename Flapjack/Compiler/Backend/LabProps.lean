@@ -551,6 +551,3 @@ theorem flatten_install_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmCo
 end FlattenBaseLinesAll
 
 end Flapjack.Compiler.Backend.LabProps
-
-
-

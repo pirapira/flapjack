@@ -67,33 +67,49 @@ def tickZeroGuard : Bool :=
   | some (.timeout, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
-/-- The genuine total recursive evaluator (not the executed-evaluator
-    projection): `Seq` support is exercised directly here. -/
-def totalSeqEvaluate (state : PanSemState Word64 (FfiState Unit)) (program : Prog Word64) :
-    PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
-  panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
-    (BitVec.ofNat 64 8) state program
+/-- The compositional HOL `Seq` step applied to base-case first-command results
+    (this is not a whole-program evaluator): compile `Skip ; Skip` by pairing the
+    `Skip` base case with a `Skip` continuation. -/
+def seqStepSkipSkip : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  let first := panSemEvaluateSkip (totalState 5)
+  panSemTotalSeqStep 5 first.1 first.2 panSemEvaluateSkip
 
 def seqNormalGuard : Bool :=
-  match totalSeqEvaluate (totalState 5) (.seq .skip .skip) with
+  match seqStepSkipSkip with
   | (.normal, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
+/-- `Tick ; Skip`: the first base case decrements the clock to 4, and the `Seq`
+    step clamps the entry clock to it before running the continuation. -/
+def seqStepTickSkip : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  let first := panSemEvaluateTick (totalState 5)
+  panSemTotalSeqStep 5 first.1 first.2 panSemEvaluateSkip
+
+def seqTickGuard : Bool :=
+  match seqStepTickSkip with
+  | (.normal, state) => state.clock == 4 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+/-- A continuation that would be observable if it were (wrongly) run. -/
+def seqObservableContinuation
+    (_ : PanSemState Word64 (FfiState Unit)) :
+    PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  (.error, totalState 5)
+
+def seqStepBreak : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  panSemTotalSeqStep 5 .broke (totalState 5) seqObservableContinuation
+
 def seqBreakGuard : Bool :=
-  match totalSeqEvaluate (totalState 5)
-      (.seq .break (.assign .local "x" (.const (BitVec.ofNat 64 9)))) with
+  match seqStepBreak with
   | (.broke, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
-def seqContinueGuard : Bool :=
-  match totalSeqEvaluate (totalState 5)
-      (.seq .continue (.assign .local "x" (.const (BitVec.ofNat 64 9)))) with
-  | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
-  | _ => false
+def seqStepContinue : PanSemProgResult Word64 Unit × PanSemState Word64 (FfiState Unit) :=
+  panSemTotalSeqStep 5 .continued (totalState 5) seqObservableContinuation
 
-def seqTickGuard : Bool :=
-  match totalSeqEvaluate (totalState 5) (.seq .tick .skip) with
-  | (.normal, state) => state.clock == 4
+def seqContinueGuard : Bool :=
+  match seqStepContinue with
+  | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
 def totalGuard : Bool :=
@@ -110,16 +126,17 @@ example :
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
 
 example :
-    panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
-        (BitVec.ofNat 64 8) (totalState 5) (.seq (.skip : Prog Word64) .skip) =
-      (match panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
-          (BitVec.ofNat 64 8) (totalState 5) (.skip : Prog Word64) with
-       | (.normal, firstState) =>
-           panSemTotalEvaluate statefulTestContext statefulTestPrimitive statefulTestHandler
-             (BitVec.ofNat 64 8) (panSemFixClock (totalState 5).clock firstState) .skip
-       | (other, firstState) => (other, panSemFixClock (totalState 5).clock firstState)) :=
-  panSemTotalEvaluate_seq statefulTestContext statefulTestPrimitive statefulTestHandler
-    (BitVec.ofNat 64 8) (totalState 5) .skip .skip
+    panSemTotalSeqStep 5 (.normal : PanSemProgResult Word64 Unit) (totalState 5)
+        panSemEvaluateSkip =
+      panSemEvaluateSkip (panSemFixClock 5 (totalState 5)) :=
+  panSemTotalSeqStep_normal 5 (totalState 5) panSemEvaluateSkip
+
+example :
+    panSemTotalSeqStep 5 (.broke : PanSemProgResult Word64 Unit) (totalState 5)
+        seqObservableContinuation =
+      (.broke, panSemFixClock 5 (totalState 5)) :=
+  panSemTotalSeqStep_of_ne_normal 5 .broke (totalState 5) seqObservableContinuation
+    (by intro h; cases h)
 
 example :
     (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive

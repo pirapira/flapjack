@@ -305,11 +305,13 @@ example :
     (bytesInWord := BitVec.ofNat 64 1) (readWord := nestedLoadReadWord)
     nestedLoadStructContext 20 (.named "Pair") (BitVec.ofNat 64 0) 20
     nestedLoadSourceValue hok hwf hsourceFuel htargetFuel hsource
+  have hloadShapeFields := panValueFlatLoadFuel_shape_fields
+    (bytesInWord := BitVec.ofNat 64 1) (readWord := nestedLoadReadWord)
+    nestedLoadStructContext 20 (.named "Pair") (BitVec.ofNat 64 0)
+    nestedLoadSourceValue hok hwf hsource
   have hfields :
-      panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true := by
-    simp [panStructValueFieldsOkBool, panStructFieldValuesFieldsOkBool,
-      nestedLoadStructContext, nestedLoadSourceValue, panValueFieldsHaveShapes,
-      panValueShape, panShapeMatches, lookupInfo]
+      panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true :=
+    hloadShapeFields.2
   have hsize := structCompileShapeWF_size nestedLoadStructContext (.named "Pair") hwf hok
   refine ⟨hok, hwf, hsource, ?_, hfields, ?_⟩
   · simpa [hcompiled, nestedLoadSourceValue, nestedLoadConvertedValue,

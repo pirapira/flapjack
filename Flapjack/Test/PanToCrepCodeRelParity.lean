@@ -281,6 +281,33 @@ def vmapCtxtFCGuard : Bool :=
 
 #eval vmapCtxtFCGuard
 
+/-- makeFuncsHOL lookup link: the `g` entry of the function table is visible
+    with its parameter list and return shape. -/
+example :
+    FLOOKUP (makeFuncsHOL (functionEntries makeFuncsDecls)) "g" =
+      some ([("x", Shape.one)], Shape.one) :=
+  makeFuncsHOL_lookup_of_lookup (functionEntries makeFuncsDecls) "g"
+    [("x", Shape.one)] Prog.skip Shape.one
+    (by simp [makeFuncsDecls, functionEntries, List.lookup_cons])
+
+/-- General compiled-entry lookup: `g` compiles with its `crep_vars` slot list
+    (`panToCrepVars [("x", one)] = [0]`) and the compiled body. -/
+example : List.lookup "g" (compileToCrepHOL alookupDecls) =
+    some (panToCrepVars [("x", Shape.one)], panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL alookupDecls) 0
+        (panToCrepGetEidsFromDeclsHOL alookupDecls)) [("x", Shape.one)]
+      Prog.skip) :=
+  alookupCompileToCrepCodeGeneral alookupDecls "g" [("x", Shape.one)]
+    Prog.skip Shape.one
+    (by simp [alookupDecls, functionEntries, List.lookup_cons])
+
+def generalAlookupGuard : Bool :=
+  match List.lookup "g" (compileToCrepHOL alookupDecls) with
+  | some ([0], _) => true
+  | _ => false
+
+#guard generalAlookupGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -291,6 +318,7 @@ def runChecks : IO Bool := do
     ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard),
     ("HOL make_funcs_def parameter table", makeFuncsGuard),
     ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard),
+    ("HOL mk_ctxt_code_imp_code_rel makeFuncsHOL/alookup link", generalAlookupGuard),
     ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"

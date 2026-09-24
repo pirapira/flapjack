@@ -2173,6 +2173,103 @@ theorem alookupCompileToCrepCode
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq
 
+/-! Flapjack-specific finite-map support: reversing an association list before
+    `FUPDATE_LIST` makes the first source occurrence win, exactly like
+    `List.lookup` (HOL `ALOOKUP`). This is list infrastructure, not a standalone
+    HOL theorem port. -/
+theorem FLOOKUP_FUPDATE_LIST_reverse_eq_lookup [BEq α] [LawfulBEq α]
+    (entries : List (α × β)) (key : α) :
+    FLOOKUP (FUPDATE_LIST FEMPTY entries.reverse) key = List.lookup key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.reverse_cons, FUPDATE_LIST_append, FUPDATE_LIST_cons,
+        FUPDATE_LIST_nil, FLOOKUP_update, List.lookup_cons]
+      by_cases h : entryKey = key
+      · subst h
+        simp
+      · have h1 : (entryKey == key) = false := beq_eq_false_iff_ne.mpr h
+        have h2 : (key == entryKey) = false :=
+          beq_eq_false_iff_ne.mpr (fun he => h he.symm)
+        simp [h1, h2, ih]
+
+/-- Flapjack-specific list fact: mapping a key-preserving projection through an
+    association list commutes with `List.lookup` (the list-level `ALOOKUP_MAP`
+    step used by HOL inside `mk_ctxt_code_imp_code_rel`). -/
+theorem lookup_map_preserveFst [BEq α] [LawfulBEq α] (functions : List (α × β))
+    (project : β → γ) (key : α) :
+    List.lookup key (functions.map (fun entry => (entry.1, project entry.2))) =
+      (List.lookup key functions).map project := by
+  induction functions with
+  | nil => rfl
+  | cons entry functions ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.map_cons, List.lookup_cons, List.lookup_cons]
+      by_cases h : (key == entryKey) = true
+      · simp [h]
+      · simp [h, ih]
+
+/-- Flapjack-specific lookup link for HOL `make_funcs`: a source function entry
+    (name, params, body, return) is visible in the `make_funcs` finite map with
+    the parameter list and return shape (the body is dropped). -/
+theorem makeFuncsHOL_lookup_of_lookup
+    (functions : List (FunName × List (VarName × Shape) × Prog α × Shape))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog α) (rshape : Shape)
+    (h : List.lookup start functions = some (vshs, (prog, rshape))) :
+    FLOOKUP (makeFuncsHOL functions) start = some (vshs, rshape) := by
+  have hrewrite : FLOOKUP (makeFuncsHOL functions) start =
+      List.lookup start
+        (functions.map (fun entry => (entry.1, (entry.2.1, entry.2.2.2)))) := by
+    rw [makeFuncsHOL]
+    exact FLOOKUP_FUPDATE_LIST_reverse_eq_lookup _ _
+  rw [hrewrite, lookup_map_preserveFst
+    (project := fun value : List (VarName × Shape) × Prog α × Shape =>
+      (value.1, value.2.2))]
+  rw [h]
+  rfl
+
+/-- General form of the compiled-function lookup: a source entry with
+    parameters `vshs` and body `prog` is compiled to the entry whose argument
+    slots are `crep_vars vshs` and whose body is `comp_func ... vshs prog`.
+    This is the parameter-general companion of the tagged
+    `alookupCompileToCrepCode`; HOL discharges it inside
+    `mk_ctxt_code_imp_code_rel` rather than as a separate theorem, so it
+    deliberately carries no `@[hol]` tag. -/
+theorem alookupCompileToCrepCodeGeneral
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog (BitVec width))
+    (rshape : Shape)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some (vshs, (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some (panToCrepVars vshs, panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := (panToCrepVars vshs, panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
+
 /-- Exact port of HOL `el_compile_prog_el_prog_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
     entry at index `n` comes from the source table at the same index, with

@@ -655,8 +655,10 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
     with `PanWordLab.word`. Its `len` argument is retained from the HOL
     `lookup_code` signature, where the definition does not inspect it.
     The generic-`α` form is deliberately UNTAGGED (HOL is word-length indexed);
-    the width-indexed exact counterpart is `lookupCrepHolCodeW` below. -/
-def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    the width-indexed exact counterpart is `lookupCrepHolCodeW` below.  No key
+    equality assumption is needed: the lookup is plain function application and
+    the duplicate check uses `List.Nodup`. -/
+def lookupCrepHolCode (code : FunName → Option (List Nat × CrepProg α))
     (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
     Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
   match FLOOKUP code fname with
@@ -673,7 +675,7 @@ def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepP
     as the width-specialized production `lookupCrepHolCode`, so the bridge below
     is definitional. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
-def lookupCrepHolCodeW [BEq String] {width : Nat}
+def lookupCrepHolCodeW {width : Nat}
     (code : FunName → Option (List Nat × CrepProg (BitVec width)))
     (fname : FunName) (args : List (PanWordLab (BitVec width))) (len : Nat) :
     Option (CrepProg (BitVec width) × FiniteMap Nat (PanWordLab (BitVec width))) :=
@@ -681,7 +683,7 @@ def lookupCrepHolCodeW [BEq String] {width : Nat}
 
 /-- Kernel-checked bridge: the width-indexed exact `lookup_code` counterpart
     agrees with the generic production definition at `BitVec width`. -/
-theorem lookupCrepHolCodeW_eq_lookupCrepHolCode [BEq String] {width : Nat}
+theorem lookupCrepHolCodeW_eq_lookupCrepHolCode {width : Nat}
     (code : FunName → Option (List Nat × CrepProg (BitVec width)))
     (fname : FunName) (args : List (PanWordLab (BitVec width))) (len : Nat) :
     lookupCrepHolCodeW code fname args len = lookupCrepHolCode code fname args len :=

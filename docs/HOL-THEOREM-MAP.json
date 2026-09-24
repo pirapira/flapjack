@@ -7085,7 +7085,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "lookupCrepHolCodeW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact port of lookup_code_def crepSemScript.sml:76-84 at 'a := BitVec width: same-length ALL_DISTINCT parameter list, body with locals FEMPTY |++ ZIP (parameters,args); the width-indexed def is the width-specialized production lookupCrepHolCode, so bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is definitional. Generic-alpha lookupCrepHolCode stays untagged as production's form; executed lookupCrepRuntimeCode adapter unchanged)"
+    "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",

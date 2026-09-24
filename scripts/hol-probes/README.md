@@ -185,11 +185,17 @@ The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
 `crep_simp_exp_probe.out` records direct HOL EVAL of
-`crep_arith$simp_exp_def` (`crep_arithScript.sml:59`) for constant folding,
+`crep_arith$simp_exp_def` (`crep_arithScript.sml:59-64`) for constant folding,
 left/right constant multiplication, nested multiplication, and recursive
-load/word-operation children. Its Lean syntax checks live in
-`Flapjack.Test.CrepeSimpExpParity`; these cases do not establish the
-polymorphic evaluator-preservation theorem `simp_exp_correct1`.
+load/word-operation children. It also evaluates the original
+`crepSem$eval` before and after simplifying `Crepop Mul [Var 2; Const 8w]`
+with local 2 set to `Word 5w`; the simplifier yields `Shift Lsl (Var 2)
+(Const 3w)` and both evaluations return `SOME (Word 40w)`. The matching
+production source-runtime observation and all-width theorem application are
+in `Flapjack.Test.CrepeSimpExpParity`. These checks exercise the result shape,
+but do not close the polymorphic evaluator-preservation theorem
+`simp_exp_correct1`; the explicit finite-index adapter's relation to HOL's
+implicit word carrier remains open.
 `crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
 `LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
 `cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production

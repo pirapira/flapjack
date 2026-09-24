@@ -192,6 +192,7 @@ import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.StackAlloc
+import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.StackAlloc.Machine

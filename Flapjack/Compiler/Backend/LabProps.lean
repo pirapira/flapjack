@@ -459,6 +459,29 @@ theorem flatten_ite_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig
                       lineOkPreConfig_labAsm, lineOkPreConfig_label]
                     rfl
 
+private abbrev FlatLineC (width : Nat) : Type :=
+  StackToLab.FlatLine WordMemOp (WordLangAddr (BitVec width)) Flapjack.Cmp
+    (WordRegImm (BitVec width)) String (Flapjack.Compiler.Encoders.Asm.AsmData width) (BitVec width)
+
+theorem flatten_call_none_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (target : Sum Nat Nat) (handler : Option (FlattenProg width × Nat × Nat))
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (hjump : lineOkPreConfig config
+      (StackToLab.compileJump (flattenOps (width := width)) 0 target : FlatLineC width) = true) :
+    ((StackToLab.flatten (flattenOps (width := width)) 0 tail
+        (.call none target handler : FlattenProg width) sectionId next conts breaks).1.all
+        (lineOkPreConfig config)) = true := by
+  rw [StackToLab.flatten]
+  simp only [List.all_cons, List.all_nil]
+  rw [hjump]
+  rfl
+
+theorem lineOkPreConfig_compileJump_inl (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (sectionId : Nat) :
+    lineOkPreConfig config
+      (StackToLab.compileJump (flattenOps (width := width)) 0 (.inl sectionId) : FlatLineC width) = true := by
+  simp [StackToLab.compileJump, lineOkPreConfig_labAsm]
+
 theorem flatten_jumpLower_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (tail : Bool) (left right target sectionId next : Nat) (conts breaks : List Nat) :
     ((StackToLab.flatten (flattenOps (width := width)) 0 tail

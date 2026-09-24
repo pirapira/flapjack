@@ -37,7 +37,7 @@ def stackIsSkip {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
   | .skip => true
   | _ => false
 
-private def compileJump (ops : FlattenOps Inst Cmp RegImm AsmInst)
+def compileJump (ops : FlattenOps Inst Cmp RegImm AsmInst)
     (zero : Word) (target : Sum Nat Nat) : FlatLine Memop Addr Cmp RegImm MlString AsmInst Word :=
   match target with
   | .inl sectionId => .labAsm (.jump (.lab sectionId 0)) zero [] 0

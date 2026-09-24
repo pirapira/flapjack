@@ -197,4 +197,9 @@ def runChecks : IO Bool := do
     IO.println "FAIL compile_exp parity"
   pure parityGuard
 
+/-- The exact width-indexed tag `compileExpHOLW` is definitionally the generic
+    `compileExpHOL` instantiated at the `BitVec` carrier. -/
+example (context : PanToCrepHOLContext (BitVec 64)) (expression : Exp (BitVec 64)) :
+    compileExpHOLW context expression = compileExpHOL context expression := rfl
+
 end Flapjack.Test.CompileExpParity

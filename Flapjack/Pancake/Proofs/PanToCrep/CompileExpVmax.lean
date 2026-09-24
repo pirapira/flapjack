@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.PanCommon
 import Flapjack.Pancake.Semantics.PanCommonProps
 
 /-!
@@ -331,10 +332,20 @@ private theorem compileExpHOL_outputs_vars_bounded
     subst output
     simp at hname
 
-/-- Exact port of HOL `MEM_compile_exp_vmax`: a Crepe variable produced by
-    `compile_exp` is bounded by the source context's `vmax` whenever the
-    context satisfies `ctxt_max`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MEM_compile_exp_vmax"]
+/-- Flapjack statement of HOL `MEM_compile_exp_vmax`: a Crepe variable produced
+    by `compile_exp` is bounded by the source context's `vmax` whenever the
+    context satisfies `ctxt_max`.
+
+    NOT TAGGED `@[hol]`. The declaration is generic in the element type `α`
+    carrying `[BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]` and calls the
+    generic-`α` tag `compileExpHOL`. HOL's `compile_exp`/`context` are indexed by
+    the word type `'a word` (`pan_to_crepScript.sml:10-16,39-101`) with HOL
+    equality and no typeclass side conditions. As with the generic
+    `loadShapeBytes` versus the exact width-indexed `loadShapeBytesW`
+    (`Flapjack/Pancake/CrepLang.lean:210-228`), the exact Lean statement needs a
+    width-indexed (`BitVec width`, `[NeZero width]`) carrier; that is
+    `memCompileExpVmaxW` below. This generic-`α` form is retained as Flapjack
+    support. -/
 theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (expression : Exp α) (name : Nat)
     (output : CrepExp α)
@@ -344,22 +355,50 @@ theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     name ≤ context.vmax := by
   exact compileExpHOL_outputs_vars_bounded context hmax expression output houtput name hvar
 
-/-- Exact port of HOL `genlist_vmax_distinct_lists_compiled_exps`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`). HOL's
-    `GENLIST (λx. SUC x + ctxt.vmax) count` is `List.range count` mapped to
-    `i + 1 + context.vmax`; `var_cexp` is represented by `crepExpVars`, and
-    HOL `distinct_lists` is the proposition `ListDisjoint`. The only premise
-    is the original `ctxt_max` bound on the context variables. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
+/-- Exact port of HOL `MEM_compile_exp_vmax`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:410`): a Crepe variable
+    produced by `compile_exp` is bounded by the source context's `vmax` whenever
+    the context satisfies `ctxt_max`. Width-indexed (`BitVec width`,
+    `[NeZero width]`) carrier matching HOL's `'a word`, mirroring the
+    `loadShapeBytesW` standard (`Flapjack/Pancake/CrepLang.lean:210-228`).  The
+    conclusion is stated through the exact width-indexed tag `compileExpHOLW`, so
+    the recursive HOL `compile_exp` dependency is explicit. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "MEM_compile_exp_vmax"]
+theorem memCompileExpVmaxW {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (expression : Exp (BitVec width))
+    (name : Nat) (output : CrepExp (BitVec width))
+    (hmax : ctxtMax context.vmax context.vars)
+    (hvar : name ∈ crepExpVars output)
+    (houtput : output ∈ (compileExpHOLW context expression).1) :
+    name ≤ context.vmax :=
+  memCompileExpVmax context expression name output hmax hvar houtput
+
+/-- Flapjack statement of HOL `genlist_vmax_distinct_lists_compiled_exps`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`).
+
+    NOT TAGGED `@[hol]`. The conclusion is the exact Boolean `distinctListsHol`
+    and `List.range count` is HOL's `GENLIST (λx. SUC x + ctxt.vmax) count`, but
+    the declaration is generic in the element type `α` carrying
+    `[DecidableEq α] [BEq α]` and calls the generic-`α` tag `compileExpHOL`. HOL's
+    `compile_exp`/`context` are indexed by the word type `'a word`
+    (`pan_to_crepScript.sml:10-16,39-101`) with HOL equality and no typeclass
+    side conditions. As with the generic `loadShapeBytes` versus the exact
+    width-indexed `loadShapeBytesW` (`Flapjack/Pancake/CrepLang.lean:210-228`),
+    the exact Lean statement needs a width-indexed (`BitVec width`, `[NeZero
+    width]`) carrier. The generic-`α` form is retained as Flapjack support; the
+    faithful width-indexed port is `genlistVmaxDistinctListsCompiledExpsW`
+    below. Direct HOL/Lean oracle rows live in
+    `scripts/hol-probes/pan_common_distinct_lists_probe.out`. -/
 theorem genlistVmaxDistinctListsCompiledExps
-    [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
+    [DecidableEq α] [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (count : Nat)
     (argExpressions : List (Exp α))
     (hmax : ctxtMax context.vmax context.vars) :
-    ListDisjoint
+    distinctListsHol
       ((List.range count).map (fun i => i + 1 + context.vmax))
       ((argExpressions.map (compileExpHOL context)).flatMap
-        (fun compiled => compiled.1.flatMap crepExpVars)) := by
+        (fun compiled => compiled.1.flatMap crepExpVars)) = true := by
+  rw [distinctListsHol_eq_true_iff_listDisjoint]
   apply listDisjoint_range_add count context.vmax _
   intro name hname
   simp only [List.mem_flatMap] at hname
@@ -369,5 +408,28 @@ theorem genlistVmaxDistinctListsCompiledExps
   rcases hvars with ⟨output, houtput, hvar⟩
   exact compileExpHOL_outputs_vars_bounded context hmax expression output
     houtput name hvar
+
+/-- Exact width-indexed port of HOL `genlist_vmax_distinct_lists_compiled_exps`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`).
+
+    HOL's `compile_exp` and `context` are indexed by the word type `'a word`
+    (`pan_to_crepScript.sml:10-16,39-101`) with HOL equality and no typeclass
+    side conditions.  Following the `loadShapeBytes` versus `loadShapeBytesW`
+    standard (`Flapjack/Pancake/CrepLang.lean:210-231`), the faithful statement
+    fixes the carrier to `BitVec width` with `[NeZero width]`; the only side
+    condition is HOL's `ctxt_max ctxt.vmax ctxt.vars`, rendered as `ctxtMax`.
+    The generic-`α` form above is retained as Flapjack support.  The conclusion is
+    stated through the exact width-indexed tag `compileExpHOLW`, so the recursive
+    HOL `compile_exp` dependency is explicit. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
+theorem genlistVmaxDistinctListsCompiledExpsW {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (count : Nat)
+    (argExpressions : List (Exp (BitVec width)))
+    (hmax : ctxtMax context.vmax context.vars) :
+    distinctListsHol
+      ((List.range count).map (fun i => i + 1 + context.vmax))
+      ((argExpressions.map (compileExpHOLW context)).flatMap
+        (fun compiled => compiled.1.flatMap crepExpVars)) = true :=
+  genlistVmaxDistinctListsCompiledExps context count argExpressions hmax
 
 end Flapjack

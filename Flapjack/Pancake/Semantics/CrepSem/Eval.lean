@@ -375,6 +375,28 @@ theorem holFiniteWordSourceMul_toBitVec {ι : Type u}
     holWordToBitVec_bitVecToHolWord]
   simp [holFiniteWordW2N, BitVec.ofNat_mul]
 
+/-- HOL `word_mul_def` and the production `Mul` instance on an explicitly
+    finite Boolean-index carrier compute the same word.  HOL's source-shaped
+    side is `n2w (w2n left * w2n right)`; production transports `BitVec` mul
+    through the finite-index equivalence.  This all-dimension operation bridge
+    is Flapjack support: the `HolFiniteDimension` witness has not been shown to
+    be HOL's implicit `finite_index` dictionary, and this fact alone does not
+    establish the `crepSem$eval` state/evaluator correspondence. -/
+theorem holFiniteWordSourceMul_eq_mul {ι : Type u}
+    (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
+    holFiniteWordSourceMul dimension left right = left * right := by
+  letI : HolFiniteDimension ι := dimension
+  have hInjective : Function.Injective (holWordToBitVec dimension) := by
+    intro x y h
+    calc
+      x = bitVecToHolWord dimension (holWordToBitVec dimension x) := by
+        rw [bitVecToHolWord_holWordToBitVec]
+      _ = bitVecToHolWord dimension (holWordToBitVec dimension y) :=
+        congrArg (bitVecToHolWord dimension) h
+      _ = y := bitVecToHolWord_holWordToBitVec dimension y
+  apply hInjective
+  rw [holFiniteWordSourceMul_toBitVec, holFiniteWordToBitVec_mul]
+
 theorem holFiniteWordSourceSub_toBitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
     holWordToBitVec dimension (holFiniteWordSourceSub dimension left right) =

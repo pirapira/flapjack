@@ -22,6 +22,13 @@ def holWordBitsToBitVec {width : Nat} (word : Fin width → Bool) :
     BitVec width :=
   (BitVec.ofBoolListLE (List.ofFn word)).cast (by simp)
 
+theorem holWordBitsToBitVec_getLsbD {width : Nat}
+    (word : Fin width → Bool) (index : Fin width) :
+    (holWordBitsToBitVec word).getLsbD index.val = word index := by
+  change (BitVec.ofBoolListLE (List.ofFn word)).getLsbD index.val = word index
+  rw [BitVec.getLsbD_ofBoolListLE]
+  simp [List.getD_eq_getElem?_getD]
+
 def bitVecToHolWordBits {width : Nat} (word : BitVec width) :
     Fin width → Bool :=
   fun index => word.getLsb index
@@ -135,6 +142,16 @@ theorem holWordToBitVec_bitVecToHolWord {ι : Type u}
         (finBitsToHolWord dimension (bitVecToHolWordBits word))) = word
   rw [holWordToFinBits_finBitsToHolWord]
   exact holWordBitsToBitVec_bitVecToHolWordBits word
+
+theorem holWordToBitVec_getLsbD {ι : Type u}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool)
+    (index : Fin dimension.width) :
+    (holWordToBitVec dimension word).getLsbD index.val =
+      word (dimension.decode index) := by
+  change (holWordBitsToBitVec (holWordToFinBits dimension word)).getLsbD
+      index.val = _
+  rw [holWordBitsToBitVec_getLsbD]
+  rfl
 
 /-! Generic finite-index word operations are transported by the explicit
     dimension enumeration. They are kept in their own namespace so existing

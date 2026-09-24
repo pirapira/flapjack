@@ -100,6 +100,10 @@ uses the exact `lookupCrepHolCode` path in
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean
 destination, shift, and width checks live in `Flapjack.Test.CrepeDest2ExpParity`.
+The fixture also evaluates representative instances of the proof helper
+`dest_2exp_bound` at `cakeml/pancake/proofs/crep_arithProofScript.sml:10`;
+the Lean all-dimension support theorem remains untagged until its explicit
+finite-index and `word_log2` encodings are reviewed against HOL.
 `hol_fcp_index_n2w_probe.out` records direct HOL EVAL of `n2w` plus concrete
 instances of `word_index_n2w` and the underlying `BIT` values for zero, one,
 and the highest bit of an 8-bit word; it also records `dimindex (:8) = 8` to

@@ -337,6 +337,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_2exp_bound",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimensionBoundSupport",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All explicit HolFiniteDimension word carriers with the w2n(word_log2 word) quantity encoded via holWordToBitVec, Nat.log2, and bitVecToHolWord. Kept untagged until these explicit enumeration and word_log2 interpretations are proved identical to HOL's implicit finite_index carrier."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "lookup_code",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProg",

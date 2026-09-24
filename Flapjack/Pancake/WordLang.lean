@@ -2,6 +2,7 @@ import Flapjack.Pancake.PanLang
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Word
+import Flapjack.RiscV.Model
 
 /-!
 # Pancake wordLang word operations
@@ -50,6 +51,29 @@ def wordShiftHOL [NeZero width] (operator : Shift)
     | .lsr => some (value >>> amount)
     | .asr => some (BitVec.sshiftRight value amount)
     | .ror => some (BitVec.rotateRight value amount)
+
+/-! Exact width-indexed source counterpart of CakeML
+`asm$word_cmp_def` (`cakeml/compiler/encoders/asm/asmScript.sml:313-321`).
+The result is Boolean as in HOL; the Crep evaluator separately embeds it as
+a one-bit word. -/
+@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "word_cmp_def"]
+def wordCmpHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : Bool :=
+  match operator with
+  | .equal => left == right
+  | .less => RiscV.signedLess left right
+  | .lower => decide (left < right)
+  | .test => AndOp.and left right == 0
+  | .notEqual => !(left == right)
+  | .notLess => !(RiscV.signedLess left right)
+  | .notLower => !(decide (left < right))
+  | .notTest => AndOp.and left right != 0
+
+/-! Flapjack's word-valued encoding of the Boolean result used by
+`crepSem$eval`'s `bitstring$v2w [word_cmp ...]` clause. -/
+def wordCmpResultHOL [NeZero width] (operator : Cmp)
+    (left right : BitVec width) : BitVec width :=
+  if wordCmpHOL operator left right then 1 else 0
 
 /-! ## Faithful backend WordLang syntax
 

@@ -192,6 +192,48 @@ def clauseGuard : Bool :=
   | .call (some ([1], some (_, _))) "f" [] => true
   | _ => false
 
+/-- Cross-system helper observations against
+    `scripts/hol-probes/crep_inline_helper_probe.out` (rows `eoc_p`,
+    `branch_p`, `tail_p`, `argload_p`, `nontail_p`, `unreach_p`), evaluated on
+    the same inputs by the original HOL definitions in
+    `cakeml/pancake/crep_inlineScript.sml`. -/
+def helperBody : CrepProg Nat := .dec 1 (.const 1) .skip
+
+def helperP : CrepProg Nat :=
+  .seq (.dec 1 (.const 1) (.return [.var 2])) .skip
+
+theorem helperEocP :
+    crepTransformEoc [10] helperP =
+      .seq (.dec 1 (.const 1) (.seq (.assign 10 (.var 2)) .skip)) .skip := by
+  simp [helperP, crepTransformEoc, crepNestedSeq]
+
+theorem helperBranchP :
+    crepTransformBranch 0 [10] helperP =
+      .seq (.dec 1 (.const 1)
+        (.seq (.seq (.assign 10 (.var 2)) .skip) (.break 0))) .skip := by
+  simp [helperP, crepTransformBranch, crepNestedSeq]
+
+theorem helperTailP :
+    crepInlineTail helperP =
+      .seq .tick (.seq (.dec 1 (.const 1) (.return [.var 2])) .skip) := by
+  simp [helperP, crepInlineTail]
+
+theorem helperArgLoadP :
+    crepArgLoad [20] [.const 5] [7] helperBody =
+      .dec 20 (.const 5) (.dec 7 (.var 20) (.dec 1 (.const 1) .skip)) := by
+  simp [helperBody, crepArgLoad, nestedDecs]
+
+theorem helperNontailP :
+    crepInlineNontail helperBody [10] [11] [20] [.const 5] [7] =
+      .dec 11 (.const 0)
+        (.seq (.dec 20 (.const 5) (.dec 7 (.var 20) (.dec 1 (.const 1) .skip)))
+          (.seq (.assign 10 (.var 11)) .skip)) := by
+  simp [helperBody, crepInlineNontail, crepArgLoad, nestedDecs, crepNestedSeq]
+
+theorem helperUnreachP :
+    (crepUnreachElim helperP).1 = .dec 1 (.const 1) (.return [.var 2]) := by
+  simp [helperP, crepUnreachElim]
+
 /-- Matching HOL `FLOOKUP` on the finite map. -/
 def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&

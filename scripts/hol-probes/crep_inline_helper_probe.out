@@ -1,0 +1,6 @@
+eoc_p=T
+branch_p=T
+tail_p=T
+argload_p=T
+nontail_p=T
+unreach_p=T

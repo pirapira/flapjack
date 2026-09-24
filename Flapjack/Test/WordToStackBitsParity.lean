@@ -572,6 +572,58 @@ example : storeNameTag (StoreName.temp (3 : BitVec 5)) = 20 := rfl
 example : storeNameTag StoreName.allocSize = 8 := rfl
 example : storeNameTag (StoreName.temp (31 : BitVec 5)) = 48 := rfl
 
+/-! ## copy_ret_aux / copy_ret oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_copy_ret_probe.out` (bead
+`flapjack-pxn.18.5.15.3.16`), for `copy_ret_aux` (`word_to_stackScript.sml:429`)
+and `copy_ret` (`:443`):
+
+```
+cra_zero=T  cra_one=T  cra_two=T  cr_zero=T  cr_plain=T  cr_handle=T
+```
+
+`ProgM α` has no `BEq`/`DecidableEq`, so the rows are compared by pattern
+matching; the fragments use only `Skip`/`Seq`/`StackLoad`/`StackStore` and the
+`StackFree` of `SeqStackFree`.
+-/
+
+/-- Structural equality for the `copy_ret_aux`/`copy_ret` fragment of `ProgM`. -/
+def copyRetProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => copyRetProgBEq a c && copyRetProgBEq b d
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackFree n, .stackFree m => n == m
+  | _, _ => false
+
+def smFree (n : Nat) : StackMoveProg := .stackFree n
+
+def copyRetParityGuard : Bool :=
+  copyRetProgBEq (copyRetAux (α := BitVec 64) 3 2 0) smSkip &&
+  copyRetProgBEq (copyRetAux (α := BitVec 64) 3 2 1)
+    (smSeq (smLoad 3 0) (smSeq (smStore 3 2) smSkip)) &&
+  copyRetProgBEq (copyRetAux (α := BitVec 64) 3 2 2)
+    (smSeq (smLoad 3 1) (smSeq (smStore 3 3)
+      (smSeq (smLoad 3 0) (smSeq (smStore 3 2) smSkip)))) &&
+  copyRetProgBEq (copyRet (α := BitVec 64) false false (2, 7, 9) [] smSkip) smSkip &&
+  copyRetProgBEq (copyRet (α := BitVec 64) false false (2, 7, 9) [10, 20, 30] smSkip)
+    (smSeq
+      (smSeq (smLoad 2 1) (smSeq (smStore 2 8)
+        (smSeq (smLoad 2 0) (smSeq (smStore 2 7) smSkip))))
+      (smSeq (smFree 2) smSkip)) &&
+  copyRetProgBEq (copyRet (α := BitVec 64) false true (2, 7, 9) [10, 20, 30] smSkip)
+    (smSeq
+      (smSeq (smLoad 2 1) (smSeq (smStore 2 11)
+        (smSeq (smLoad 2 0) (smSeq (smStore 2 10) smSkip))))
+      (smSeq (smFree 2) smSkip))
+
+#eval copyRetParityGuard
+#guard copyRetParityGuard
+
+example : copyRetAux (α := BitVec 64) 3 2 0 = .skip := rfl
+example : copyRet (α := BitVec 64) false false (2, 7, 9) [] .skip = .skip := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -580,6 +632,6 @@ def runChecks : IO Bool := do
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
-    stackMoveParityGuard && wMoveParityGuard)
+    stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

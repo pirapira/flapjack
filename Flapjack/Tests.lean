@@ -153,6 +153,7 @@ import Flapjack.Test.MlStringBridgeParity
 import Flapjack.Test.PanLangShapeHOLParity
 import Flapjack.Test.PanLangExpHOLParity
 import Flapjack.Test.PanLangProgHOLParity
+import Flapjack.Test.PanLangDeclHOLParity
 
 /-!
 # Flapjack regression tests

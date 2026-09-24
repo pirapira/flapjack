@@ -192,4 +192,50 @@ def wMoveAux {α : Type} : List (Sum Nat Nat × Sum Nat Nat) → Nat × Nat × N
   | [xy], kf => wMoveSingle xy kf
   | xy :: xys, kf => .seq (wMoveSingle xy kf) (wMoveAux xys kf)
 
+/-- Exact port of HOL `copy_ret_aux_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:429-441`):
+
+```
+(copy_ret_aux k f n =
+   if n = 0 then Skip
+   else let n' = n-1 in
+     list_Seq [StackLoad k n'; StackStore k (n'+f); copy_ret_aux k f n'])
+```
+
+    Copies `n` return slots from slot `k` down to slot `k+f`, as a
+    `list_Seq` of load/store fragments over the exact shared-word carrier
+    `ProgM α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "copy_ret_aux_def"]
+def copyRetAux {α : Type} (k f : Nat) : Nat → ProgM α
+  | 0 => .skip
+  | n + 1 =>
+    Flapjack.Compiler.Backend.StackLang.listSeq
+      [ .stackLoad k n, .stackStore k (n + f), copyRetAux k f n ]
+
+/-- Exact port of HOL `copy_ret_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:443-451`):
+
+```
+copy_ret perf is_handle (k,f,f') vs kont =
+  let n = num_stack_ret k vs in
+  if n = 0 then kont
+  else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n)
+           (SeqStackFree n kont)
+```
+
+    over the exact shared-word carrier `ProgM α`; `num_stack_ret`,
+    `handler_slots` and `seq_stack_free` are the already-ported helpers. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "copy_ret_def"]
+def copyRet {α : Type} (perf isHandle : Bool) (kf : Nat × Nat × Nat)
+    (vs : List α) (kont : ProgM α) : ProgM α :=
+  let n := Flapjack.Compiler.Backend.WordToStack.numStackRet kf.1 vs
+  if n = 0 then kont
+  else
+    .seq
+      (copyRetAux kf.1
+        (if isHandle then kf.2.1 + Flapjack.Compiler.Backend.WordToStack.handlerSlots perf
+         else kf.2.1)
+        n)
+      (Flapjack.Compiler.Backend.WordToStack.seqStackFree n kont)
+
 end Flapjack.Compiler.Backend.WordToStackRegFormat

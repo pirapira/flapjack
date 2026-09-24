@@ -855,7 +855,7 @@ def panSemTotalShMemStoreClause [NeZero 64] [BEq (RiscV.Word 64)]
 /-- Partial assembly of the total HOL `panSem$evaluate` (`panSemScript.sml:557-655`)
     over the complete source state: dispatches the statement clauses that have
     already been assembled in this module (clock leaves `Skip`/`Break`/`Continue`/
-    `    Tick`, `Assign`, `Dec` with its continuation, `Primitive`, `Store`,
+    `Tick`, `Assign`, `Dec` with its continuation, `Primitive`, `Store`,
     `Store32`, `StoreByte`, `Raise`, `Return`, `Annot`, `ShMemLoad`,
     `ShMemStore`).
 

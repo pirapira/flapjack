@@ -1,16 +1,20 @@
 import Flapjack.HolRef
+import Flapjack.Pancake.WordLang
 
 /-!
 # CakeML backend `wordConvs` syntactic conventions
 
 Counterpart of `cakeml/compiler/backend/semantics/wordConvsScript.sml`.  This
-module ports the label-preservation relation first; the remaining conventions
-and `extract_labels` need the backend `wordLang$prog` model and land in
-follow-up slices.
+module ports the label-preservation relation and `extract_labels` over the
+faithful backend `wordLang$prog` model of `Flapjack.Pancake.WordLang`; the
+remaining conventions land in follow-up slices.
 
 HOL's `set new_labs SUBSET set old_labs` is represented pointwise as
 `∀ label, label ∈ newLabels → label ∈ oldLabels`, which is exactly set
 inclusion and needs no `DecidableEq` instance; `ALL_DISTINCT` is `List.Nodup`.
+The `num_set` cut-set carriers of `WordLangProg` are modelled by
+`FiniteMap Nat Unit`, which fixes `num_set` lookup behaviour;
+`extract_labels` never inspects them.
 -/
 
 namespace Flapjack
@@ -63,5 +67,30 @@ theorem labelsRel_trans {xs ys zs : List β}
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "PERM_IMP_labels_rel"]
 theorem labelsRel_of_perm {xs ys : List β} (hperm : xs.Perm ys) : labelsRel ys xs :=
   ⟨fun distinct => hperm.symm.nodup distinct, fun _ member => hperm.subset member⟩
+
+/-- Exact source counterpart of CakeML `wordConvs$extract_labels_def`
+(`cakeml/compiler/backend/semantics/wordConvsScript.sml:440-459`): collect the
+handler label pairs a program mentions, descending into `Call` return/handler
+bodies, `MustTerminate`, `Seq`, `Loop`, and `If`, and returning no labels for
+every other constructor.  The `Call` case keeps HOL's nesting: with no return
+metadata there are no labels; otherwise the return-handler labels come first
+(followed by the handler-body pair when a handler exists, and the
+return-handler's own labels last). -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "extract_labels_def"]
+def extractLabels : WordLangProg α → List (Nat × Nat)
+  | .call returns _ _ handler =>
+      match returns, handler with
+      | none, _ => []
+      | some (_, _, returnHandler, l1, l2), none =>
+          [(l1, l2)] ++ extractLabels returnHandler
+      | some (_, _, returnHandler, l1, l2), some (_, handlerProg, l1', l2') =>
+          [(l1, l2), (l1', l2')] ++ extractLabels returnHandler ++
+            extractLabels handlerProg
+  | .mustTerminate body => extractLabels body
+  | .seq first second => extractLabels first ++ extractLabels second
+  | .loop _ body _ => extractLabels body
+  | .ite _ _ _ thenBranch elseBranch =>
+      extractLabels thenBranch ++ extractLabels elseBranch
+  | _ => []
 
 end Flapjack

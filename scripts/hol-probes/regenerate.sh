@@ -1030,3 +1030,10 @@ run_probe word_convs_labels_rel_probeScript.sml word_convs_labels_rel_probe.out 
   labels_rel_refl_ok labels_rel_pair_ok \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+# `extract_labels` collects the Call handler label pairs (and descends into
+# return/handler/Seq/Loop/If bodies); with no Call return metadata it is empty
+# even when a handler is present.
+run_probe word_convs_extract_labels_probeScript.sml word_convs_extract_labels_probe.out \
+  el_inst el_nested \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

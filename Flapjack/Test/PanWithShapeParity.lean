@@ -543,6 +543,30 @@ theorem setEqMembership_tagged_fixture :
     (3 : Nat) ∈ ([1, 2, 3] : List Nat) :=
   set_eq_membership (a := [1, 2, 3]) (b := [1, 2, 3]) (x := 3) ⟨rfl, by decide⟩
 
+theorem elReducTl_tagged_fixture :
+    ([1, 2, 3] : List Nat)[2]'(by decide) =
+      ([1, 2, 3] : List Nat).tail[1]'(by decide) :=
+  el_reduc_tl [1, 2, 3] 2 (by decide) (by decide)
+
+theorem elPairMapFstEl_tagged_fixture :
+    (1 : Nat) =
+      (([(1, 2, 3), (4, 5, 6)] : List (Nat × Nat × Nat)).map Prod.fst)[0]'(by decide) :=
+  el_pair_map_fst_el [(1, 2, 3), (4, 5, 6)] 0 (by decide)
+    (x := 1) (y := 2) (z := 3) (by decide)
+
+theorem allDistinctElFstSameEq_tagged_fixture :
+    (0 : Nat) = 0 :=
+  all_distinct_el_fst_same_eq [(1, 2), (3, 4)] 0 0 (by decide) (by decide)
+    (by decide) (x := 1) (y := 2) (y' := 2)
+    (by decide) (by decide)
+
+def elIndexedTaggedGuard : Bool :=
+  ((([1, 2, 3] : List Nat)[2]!) == ((1 : Nat) + 2)) &&
+    ((([1, 2, 3] : List Nat).map (fun n => n * 1)) == [1, 2, 3])
+
+#eval elIndexedTaggedGuard
+#guard elIndexedTaggedGuard
+
 def optMmapTaggedGuard : Bool :=
   (([1, 2, 3] : List Nat).mapM (fun n => some (n * 10)) == some [10, 20, 30]) &&
     (([1, 2, 3] : List Nat).length == ([10, 20, 30] : List Nat).length)
@@ -733,11 +757,13 @@ def runChecks : IO Bool := do
     checkDisjoint "pan all_distinct_take/drop tagged" distinctListsTaggedGuard
   let optMmapTaggedOk ←
     checkDisjoint "pan opt_mmap/list tagged cluster" optMmapTaggedGuard
+  let elIndexedTaggedOk ←
+    checkDisjoint "pan indexed-list tagged cluster" elIndexedTaggedGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
     listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk && distinctListsTaggedOk &&
-    optMmapTaggedOk)
+    optMmapTaggedOk && elIndexedTaggedOk)
 
 end Flapjack.Test.PanWithShapeParity

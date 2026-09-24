@@ -780,19 +780,23 @@ def fixCrepHolClock (oldState : CrepHolState α σ)
 
 /-- Width-indexed exact HOL-shaped port of `crepSem$fix_clock_def`
     (`crepSemScript.sml:150-152`) over the word-length-indexed carrier
-    `CrepHolState (BitVec width) σ`: keep the result and clamp the returned
-    clock to the smaller of the old and new clocks. -/
+    `CrepHolState (BitVec width) σ`: the result component is threaded through
+    unchanged, so the port is RESULT-POLYMORPHIC in `β`, exactly as HOL's
+    `fix_clock` is (HOL leaves `res` unconstrained); the returned clock is
+    clamped to the smaller of the old and new clocks. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
-def fixCrepHolClockW {width : Nat} {σ ε : Type} (oldState : CrepHolState (BitVec width) σ)
-    (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :
-    CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ :=
+def fixCrepHolClockW {width : Nat} {σ : Type} {β : Type}
+    (oldState : CrepHolState (BitVec width) σ)
+    (step : β × CrepHolState (BitVec width) σ) :
+    β × CrepHolState (BitVec width) σ :=
   (step.1,
     { step.2 with
       clock :=
         if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
 /-- Kernel-checked bridge: the width-indexed exact `fix_clock` counterpart
-    agrees with the generic production definition at `BitVec width`. -/
+    agrees with the generic production definition at `BitVec width` for the
+    production `CrepRuntimeResult` carrier. -/
 theorem fixCrepHolClockW_eq_fixCrepHolClock {width : Nat} {σ ε : Type}
     (oldState : CrepHolState (BitVec width) σ)
     (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :

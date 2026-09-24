@@ -6981,7 +6981,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "fixCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width: keep the result and clamp the returned clock to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation; kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width; the result component is RESULT-POLYMORPHIC in beta exactly as HOL leaves `res` unconstrained, and the returned clock is clamped to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation (result fixed to CrepRuntimeResult); kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock at beta := CrepRuntimeResult; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",

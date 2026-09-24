@@ -173,17 +173,74 @@ example : isRiscV64CrepRuntimeTarget
       CrepRuntimeFfiHandler (RiscV.Word 64) Unit FfiFinalEvent)
     "f" 0 1 2 3 (riscv64CrepRuntimeTarget_isTarget probeBaseState)
 
+/-! ## HOL `LoadByte` evaluator-case bridge oracle
+
+Direct oracle: `scripts/hol-probes/crep_eval_load_byte_probe.out`
+  eval_loadbyte_addr8=SOME (Word 136w); eval_loadbyte_addr9=SOME (Word 119w);
+  eval_loadbyte_addr10=SOME (Word 102w); eval_loadbyte_outside_domain=NONE;
+  mem_load_byte_addr9=SOME 119w
+-/
+
+def loadByteMemory : RiscV.Word 64 → PanWordLab (RiscV.Word 64) :=
+  fun address =>
+    if address == (8 : RiscV.Word 64) then
+      .word (0x1122334455667788 : RiscV.Word 64)
+    else .word 0
+
+def loadByteBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memory := loadByteMemory }
+
+/-- The production `LoadByte` and word_lab evaluator cases at the RV64 target
+match the direct HOL `mem_load_byte` oracle rows (little-endian byte extraction
+plus the memaddrs guard). -/
+def loadByteEvalGuard : Bool :=
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.loadByte (.const (8 : RiscV.Word 64))) ==
+    some (.word (136 : RiscV.Word 64))) &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.loadByte (.const (9 : RiscV.Word 64))) ==
+    some (.word (119 : RiscV.Word 64))) &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.loadByte (.const (10 : RiscV.Word 64))) ==
+    some (.word (102 : RiscV.Word 64))) &&
+  (evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.loadByte (.const (16 : RiscV.Word 64)))).isNone &&
+  (evalCrepRuntimeExp (riscv64CrepRuntimeTarget loadByteBaseState)
+      (.loadByte (.const (8 : RiscV.Word 64))) ==
+    some (136 : RiscV.Word 64)) &&
+  (holMemLoadByte64 loadByteBaseState.memaddrs
+      (crepRuntimeMemoryView loadByteBaseState.memory) false (9 : RiscV.Word 64) ==
+    some (119 : RiscV.Word 64)) &&
+  (crepRuntimeLoadByte (riscv64CrepRuntimeTarget loadByteBaseState) (8 : RiscV.Word 64) ==
+    holMemLoadByte64 loadByteBaseState.memaddrs
+      (crepRuntimeMemoryView loadByteBaseState.memory) false (8 : RiscV.Word 64))
+
+/-- The genuine evaluator-case bridge instantiated at the oracle fixture. -/
+example :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget loadByteBaseState)
+        (.loadByte (.const (9 : RiscV.Word 64))) =
+      (holMemLoadByte64 loadByteBaseState.memaddrs
+        (crepRuntimeMemoryView loadByteBaseState.memory) false (9 : RiscV.Word 64)).map
+          PanWordLab.word :=
+  evalCrepRuntimeExpWordLab_loadByte_rv64_const loadByteBaseState (9 : RiscV.Word 64)
+
 #guard wordBoundaryGuard
 #guard storeRoundTripGuard
+#guard loadByteEvalGuard
 
 #eval wordBoundaryGuard
 #eval storeRoundTripGuard
+#eval loadByteEvalGuard
 
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
   else
     IO.println "FAIL crep runtime RISC-V 64 target word/byte boundary parity"
-  pure (wordBoundaryGuard && storeRoundTripGuard)
+  if loadByteEvalGuard then
+    IO.println "PASS crep LoadByte evaluator case matches HOL mem_load_byte oracle"
+  else
+    IO.println "FAIL crep LoadByte evaluator case matches HOL mem_load_byte oracle"
+  pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

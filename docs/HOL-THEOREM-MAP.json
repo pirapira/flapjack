@@ -6102,5 +6102,29 @@
     "lean_name": "crepInlineEvalCodeInl",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex: untagged counterpart of eval_code_inl (crep_inlineProofScript.sml:1513); statement follows the family but the Lean evaluator and FDOM rendering are not definitionally HOL's, so no @[hol] tag."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepOptMmapEvalCongr",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only untagged list-level opt-mmap correspondence (OPT_MMAP_CONG (l1=l2 pointwise case), cakeml/misc/miscScript.sml:2481); untagged because the Lean evaluator is the fixed-width evalCrepHolExp and the carrier is List.mapM rather than HOL OPT_MMAP. HOL oracle: scripts/hol-probes/crep_inline_eval_probe.{sml,out}."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepOptMmapMemFunc",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only untagged list-level opt-mmap correspondence (opt_mmap_mem_func, cakeml/pancake/semantics/pan_commonPropsScript.sml:49); untagged because the Lean evaluator is the fixed-width evalCrepHolExp and the carrier is List.mapM rather than HOL OPT_MMAP. HOL oracle: scripts/hol-probes/crep_inline_eval_probe.{sml,out}."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineOptMmapEvalCodeInl",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only untagged list-level opt-mmap correspondence (opt_mmap_eval_code_inl, cakeml/pancake/proofs/crep_inlineProofScript.sml:1530); untagged because the Lean evaluator is the fixed-width evalCrepHolExp and the carrier is List.mapM rather than HOL OPT_MMAP. HOL oracle: scripts/hol-probes/crep_inline_eval_probe.{sml,out}."
   }
 ]

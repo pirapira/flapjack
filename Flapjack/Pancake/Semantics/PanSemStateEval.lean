@@ -1438,4 +1438,73 @@ theorem evalPanValueExp_const_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq
       = (evalHOL state (.const value)).map HolValue.toPanValue := by
   simp [evalPanValueExp, evalHOL, HolValue.toPanValue_val]
 
+/-- `.var .local` clause bridge: under a pointwise local-environment agreement, the
+production lookup agrees with tagged `evalHOL` on the `HolValue` image. -/
+theorem evalPanValueExp_var_local_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width))) (name : VarName)
+    (hlocals : ∀ name, locals name = (state.locals name).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.var .local name) (memoryAccess := access)
+      = (evalHOL state (.var .local name)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  exact hlocals name
+
+/-- `.var .global` clause bridge (counterpart of `evalPanValueExp_var_local_eq_evalHOL`). -/
+theorem evalPanValueExp_var_global_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width))) (name : VarName)
+    (hglobals : ∀ name, globals name = (state.globals name).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.var .global name) (memoryAccess := access)
+      = (evalHOL state (.var .global name)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  exact hglobals name
+
+/-- `.baseAddr` clause bridge: production `baseAddress` agrees with `state.baseAddr`. -/
+theorem evalPanValueExp_baseAddr_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (hbase : baseAddress = state.baseAddr) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        .baseAddr (memoryAccess := access)
+      = (evalHOL state .baseAddr).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL, hbase, Option.map_some, HolValue.toPanValue_val]
+
+/-- `.topAddr` clause bridge: production `topAddress` agrees with `state.topAddr`. -/
+theorem evalPanValueExp_topAddr_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (htop : topAddress = state.topAddr) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        .topAddr (memoryAccess := access)
+      = (evalHOL state .topAddr).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL, htop, Option.map_some, HolValue.toPanValue_val]
+
+/-- `.bytesInWord` clause bridge: production `bytesInWord` agrees with the canonical
+`panBytesInWord width`. -/
+theorem evalPanValueExp_bytesInWord_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (RiscV.Word width)))
+    (memory : RiscV.Word width → Option (PanValue (RiscV.Word width)))
+    (baseAddress topAddress bytesInWord : RiscV.Word width)
+    (access : Option (PanValueMemoryAccess (RiscV.Word width)))
+    (hbytes : bytesInWord = panBytesInWord width) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        .bytesInWord (memoryAccess := access)
+      = (evalHOL state .bytesInWord).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL, hbytes, Option.map_some, HolValue.toPanValue_val]
+
 end Flapjack

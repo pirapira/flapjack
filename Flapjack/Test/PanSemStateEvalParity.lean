@@ -691,4 +691,52 @@ example (value : BitVec 64) :
         (fun _ => none) (fun _ => none) (fun _ => none) 0 0
         panSemBitVec64BytesInWord (some (panSemBitVec64MemoryAccess littleEndianState)) value)
 
+
+/- State-projection clause bridges (bead flapjack-pxn.18.3.6.9.2.6): the leaf
+   clauses agree given the environment/state agreement hypotheses. -/
+example (name : VarName) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.var .local name)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.var .local name)).map HolValue.toPanValue :=
+  evalPanValueExp_var_local_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) name (fun _ => rfl)
+
+example (name : VarName) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord (.var .global name)
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState (.var .global name)).map HolValue.toPanValue :=
+  evalPanValueExp_var_global_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) name (fun _ => rfl)
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .baseAddr
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .baseAddr).map HolValue.toPanValue :=
+  evalPanValueExp_baseAddr_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .topAddr
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .topAddr).map HolValue.toPanValue :=
+  evalPanValueExp_topAddr_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) (fun _ => none)
+        0 0 panSemBitVec64BytesInWord .bytesInWord
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holEvalState .bytesInWord).map HolValue.toPanValue :=
+  evalPanValueExp_bytesInWord_eq_evalHOL holEvalState ([] : StructContext) (fun _ => none)
+    (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (some (panSemBitVec64MemoryAccess littleEndianState)) rfl
+
 end Flapjack.Test.PanSemStateEvalParity

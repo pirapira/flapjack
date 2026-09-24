@@ -404,6 +404,61 @@ theorem flatten_loop_lines_all {Asm Memop Addr Cmp RegImm MlString Word : Type}
       simp only [List.all_cons, List.all_nil, List.all_append, ih', hlabel, hjump]
       decide
 
+/-- Generic composition step for the `flatten` line-ok induction: the `Ite`
+case selects one of six label/`jumpCmp` sequences. Every line it emits is a
+`Label` or a `LabAsm`, so no instruction-validity obligation arises; the two
+recursive outputs are discharged by the universally quantified hypotheses. -/
+theorem flatten_ite_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (condition : Flapjack.Cmp) (register : Nat)
+    (right : Flapjack.WordRegImm (BitVec width))
+    (thenBranch elseBranch : FlattenProg width) (sectionId next : Nat)
+    (conts breaks : List Nat)
+    (ihThen : ∀ n, (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false thenBranch
+        sectionId n conts breaks).1.all (lineOkPreConfig config) = true)
+    (ihElse : ∀ n, (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false elseBranch
+        sectionId n conts breaks).1.all (lineOkPreConfig config) = true) :
+    ((StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) tail
+        (.ite condition register right thenBranch elseBranch : FlattenProg width)
+        sectionId next conts breaks).1.all (lineOkPreConfig config)) = true := by
+  simp only [StackToLab.flatten]
+  cases h1 : StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false thenBranch
+      sectionId next conts breaks with
+  | mk xs r1 =>
+    cases r1 with
+    | mk nr1 nx =>
+      cases h2 : StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false elseBranch
+          sectionId nx conts breaks with
+      | mk ys r2 =>
+        cases r2 with
+        | mk nr2 ny =>
+          have ihT : xs.all (lineOkPreConfig config) = true := by simpa only [h1] using ihThen next
+          have ihE : ys.all (lineOkPreConfig config) = true := by simpa only [h2] using ihElse nx
+          by_cases hc1 : (StackToLab.stackIsSkip thenBranch && StackToLab.stackIsSkip elseBranch) = true
+          · simp only [if_pos hc1]
+            rfl
+          · by_cases hc2 : StackToLab.stackIsSkip thenBranch = true
+            · simp only [if_neg hc1, if_pos hc2, List.all_append, List.all_cons, List.all_nil,
+                ihE, lineOkPreConfig_labAsm, lineOkPreConfig_label]
+              rfl
+            · by_cases hc3 : StackToLab.stackIsSkip elseBranch = true
+              · simp only [if_neg hc1, if_neg hc2, if_pos hc3, List.all_append, List.all_cons,
+                  List.all_nil, ihT, lineOkPreConfig_labAsm, lineOkPreConfig_label]
+                rfl
+              · by_cases hc4 : nr1 = true
+                · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_pos hc4, List.all_append,
+                    List.all_cons, List.all_nil, ihT, ihE, lineOkPreConfig_labAsm,
+                    lineOkPreConfig_label]
+                  rfl
+                · by_cases hc5 : nr2 = true
+                  · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_neg hc4, if_pos hc5,
+                      List.all_append, List.all_cons, List.all_nil, ihT, ihE,
+                      lineOkPreConfig_labAsm, lineOkPreConfig_label]
+                    rfl
+                  · simp only [if_neg hc1, if_neg hc2, if_neg hc3, if_neg hc4, if_neg hc5,
+                      List.all_append, List.all_cons, List.all_nil, ihT, ihE,
+                      lineOkPreConfig_labAsm, lineOkPreConfig_label]
+                    rfl
+
 theorem flatten_jumpLower_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (tail : Bool) (left right target sectionId next : Nat) (conts breaks : List Nat) :
     ((StackToLab.flatten (flattenOps (width := width)) 0 tail

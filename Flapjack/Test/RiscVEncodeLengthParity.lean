@@ -23,12 +23,30 @@ def parityGuard : Bool :=
 
 #guard parityGuard
 
+/-! The matching direct HOL EVAL row `riscv_encode_bytes_addi` checks the
+    production encoder's little-endian word-to-byte decomposition. -/
+example :
+    encodeInstructionBytes
+      (.addi 5 3 (BitVec.ofNat 64 2047) : Instruction 64) =
+      [0x93, 0x82, 0xf1, 0x7f] := by
+  decide
+
+example :
+    encodeWordBytes (encodeInstruction (.addi 5 3 (BitVec.ofNat 64 2047) :
+      Instruction 64)) =
+      [0x93, 0x82, 0xf1, 0x7f] := by
+  decide
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("RISC-V ADDI encoding has four bytes", decide ((encodeInstructionBytes addi).length = 4)),
       ("RISC-V ADD encoding has four bytes", decide ((encodeInstructionBytes add).length = 4)),
       ("RISC-V branch encoding has four bytes", decide ((encodeInstructionBytes branch).length = 4)),
-      ("RISC-V load encoding has four bytes", decide ((encodeInstructionBytes load).length = 4)) ]
+      ("RISC-V load encoding has four bytes", decide ((encodeInstructionBytes load).length = 4)),
+      ("RISC-V ADDI emits HOL-matched little-endian bytes",
+        decide (encodeInstructionBytes
+          (.addi 5 3 (BitVec.ofNat 64 2047) : Instruction 64) =
+            [0x93, 0x82, 0xf1, 0x7f])) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

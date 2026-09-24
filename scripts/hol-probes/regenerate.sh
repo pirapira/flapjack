@@ -324,7 +324,7 @@ run_probe stack_to_lab_flatten_probeScript.sml stack_to_lab_flatten_probe.out \
   flat_loop_if flat_raise flat_return flat_break flat_continue flat_raw_call \
   flat_call_none_label flat_call_none_reg flat_call_return flat_call_handler \
   flat_jump_lower flat_ffi flat_loc_value flat_install flat_shared_memory \
-  flat_code_buffer_write flat_default \
+  flat_code_buffer_write flat_default section_skip section_seq section_if \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \

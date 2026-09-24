@@ -85,4 +85,21 @@ example : flattenAt false (.call none (.inl 11) none) ==
 example : flattenAt false (.break 1) 2 [] [4, 9] ==
   ([.labAsm (.jump (.lab 3 9)) (BitVec.ofNat 64 0) [] 0], true, 2) := by native_decide
 
+-- `prog_to_section` chooses label 1 for a non-Seq root and the final `next`
+-- label for a Seq root, after `next_lab` seeds flattening.
+example : progToSection probeOps (BitVec.ofNat 64 0) 3 (.skip : ProbeProg) ==
+    { sectionId := 3, lines := [.label 3 1 0] } := by native_decide
+
+example : progToSection probeOps (BitVec.ofNat 64 0) 3
+    (.seq .tick (.inst 4) : ProbeProg) ==
+    { sectionId := 3, lines := [.asm (.asmi 90) [] 0, .label 3 1 0,
+      .asm (.asmi 4) [] 0, .label 3 2 0] } := by native_decide
+
+example : progToSection probeOps (BitVec.ofNat 64 0) 3
+    (.ite 1 1 2 .tick .tick : ProbeProg) ==
+    { sectionId := 3, lines :=
+      [.labAsm (.jumpCmp 1 1 2 (.lab 3 2)) (BitVec.ofNat 64 0) [] 0,
+       .asm (.asmi 90) [] 0, .labAsm (.jump (.lab 3 3)) (BitVec.ofNat 64 0) [] 0,
+       .label 3 2 0, .asm (.asmi 90) [] 0, .label 3 3 0, .label 3 1 0] } := by native_decide
+
 end Flapjack.Test.StackToLab

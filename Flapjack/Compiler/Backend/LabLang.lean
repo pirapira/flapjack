@@ -46,6 +46,6 @@ inductive Line (AsmOrCbw AsmWithLab Word : Type) where
 structure Section (Line : Type) where
   sectionId : Nat
   lines : List Line
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 end Flapjack.Compiler.Backend.LabLang

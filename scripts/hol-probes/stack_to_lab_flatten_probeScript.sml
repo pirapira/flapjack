@@ -61,3 +61,8 @@ val _ = print_eval "flat_install" ``let (xs, done, next) = flatten F (stackLang$
 val _ = print_eval "flat_shared_memory" ``let (xs, done, next) = flatten F (stackLang$ShMemOp Load 2 (Addr 3 0w)) 3 2 [] [] in (LENGTH (misc$append xs), done, next)``;
 val _ = print_eval "flat_code_buffer_write" ``let (xs, done, next) = flatten F (stackLang$CodeBufferWrite 1 2) 3 2 [] [] in (LENGTH (misc$append xs), done, next)``;
 val _ = print_eval "flat_default" ``let (xs, done, next) = flatten F (stackLang$DataBufferWrite 1 2) 3 2 [] [] in (LENGTH (misc$append xs), done, next)``;
+val _ = print_eval "section_skip" ``stack_to_lab$prog_to_section (3, stackLang$Skip)``;
+val _ = print_eval "section_seq" ``stack_to_lab$prog_to_section
+  (3, stackLang$Seq stackLang$Tick (stackLang$Inst (asm$Skip)))``;
+val _ = print_eval "section_if" ``stack_to_lab$prog_to_section
+  (3, stackLang$If Equal 1 (Reg 2) stackLang$Tick stackLang$Tick)``;

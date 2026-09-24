@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.LabLang
+import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.Compiler.Backend.StackLang
 
 /-!
@@ -122,5 +123,23 @@ def flatten {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
     | _ => ([], false, next)
 termination_by _tail program _section _next _conts _breaks => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+private def isSeq {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+    Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
+  | .seq _ _ => true
+  | _ => false
+
+/-- HOL `stack_to_lab$prog_to_section`, using `next_lab` and the flattened
+lines. The outer label is `m` only when the source program itself is `Seq`;
+all other roots receive label `1`. -/
+def progToSection {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+    (sectionId : Nat) (program : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    Section (FlatLine Memop Addr Cmp RegImm MlString AsmInst Word) :=
+  let (lines, _, next) :=
+    flatten ops zero true program sectionId
+      (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] []
+  { sectionId := sectionId
+    lines := lines ++ [.label sectionId (if isSeq program then next else 1) 0] }
 
 end Flapjack.Compiler.Backend.StackToLab

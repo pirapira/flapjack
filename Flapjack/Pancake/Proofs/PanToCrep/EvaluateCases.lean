@@ -3449,6 +3449,56 @@ private theorem compileExpHOL_rStruct_constOrRFieldInnerIH_eval_flatten
 
 /-! Mixed Call-argument evidence combines the already-proved constructors
 with arbitrary-inner RField evidence. -/
+private theorem evalPanSemStateExp_loadByte_const_riscvTarget
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64)
+    (hstate : stateRel source target) :
+    evalPanSemStateExp source (.loadByte (.const address)) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget target)
+        (.loadByte (.const address))).map PanValue.word := by
+  rcases hstate with ⟨hmemory, hdomain, _, _, _, _, hbe, _, _, _⟩
+  have hmemoryView : panValueWordMemory source.memory =
+      crepRuntimeMemoryView target.memory := by
+    funext query
+    simp [panValueWordMemory, crepRuntimeMemoryView, hmemory]
+  have hread :
+      panModelReadByte panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be =
+        panModelReadByte (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian := by
+    rw [← hdomain, ← hmemoryView, ← hbe]
+    cases source.be with
+    | false =>
+        simp [panModelReadByte, panSemBitVec64WordModel,
+          RiscV.panRiscVMemoryModelForEndian, RiscV.panRiscVMemoryModel,
+          RiscV.panRiscVGetByteEndian, RiscV.panRiscVGetByte,
+          panSemBitVec64BytesInWord]
+    | true =>
+        have hindex : ∀ index : Nat, 8 - index - 1 = 7 - index := by
+          intro index
+          omega
+        simp [panModelReadByte, panSemBitVec64WordModel,
+          RiscV.panRiscVMemoryModelForEndian, RiscV.panRiscVMemoryModel,
+          RiscV.panRiscVGetByteEndian, RiscV.panRiscVGetByte,
+          panSemBitVec64BytesInWord, hindex]
+  calc
+    evalPanSemStateExp source (.loadByte (.const address)) =
+        (panModelReadByte panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be).map
+            PanValue.word := by
+      simp [evalPanSemStateExp, evalPanValueExp,
+        panSemBitVec64MemoryAccess,
+        panValueMemoryAccessOfModel, panSemBitVec64BytesInWord]
+    _ = (panModelReadByte (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian).map PanValue.word := by
+      rw [hread]
+    _ = (evalCrepRuntimeExp (riscvCrepWordTarget target)
+          (.loadByte (.const address))).map PanValue.word := by
+      simp [evalCrepRuntimeExp, crepRuntimeLoadByte_wordTarget_eq_riscv]
+
 inductive compileArgConstLocalStructAddressOrRFieldInnerIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -3482,6 +3532,10 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
   | nField (name : FieldName) (expression : Exp (RiscV.Word 64)) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.nField name expression)
+  | loadByteConstCanonicalTarget (address : RiscV.Word 64)
+      (hcanonical : target = riscvCrepWordTarget target) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.loadByte (.const address))
   | panOpMul (left right : Exp (RiscV.Word 64))
       (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
       (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
@@ -3600,6 +3654,23 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       simp only [Option.bind_eq_some_iff] at heval
       rcases heval with ⟨innerValue, _, hresult⟩
       cases innerValue <;> simp at hresult
+  | loadByteConstCanonicalTarget address hcanonical =>
+      intro value heval
+      have hsourceTarget := evalPanSemStateExp_loadByte_const_riscvTarget
+        source target address hstate
+      have hsourceTarget' : evalPanSemStateExp source
+          (.loadByte (.const address)) =
+        (evalCrepRuntimeExp target (.loadByte (.const address))).map PanValue.word := by
+        simpa [hcanonical.symm] using hsourceTarget
+      rw [hsourceTarget'] at heval
+      cases value with
+      | word word =>
+          have htarget : evalCrepRuntimeExp target
+              (.loadByte (.const address)) = some word := by
+            simpa using heval
+          simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
+      | rStruct fields => simp at heval
+      | nStruct name fields => simp at heval
   | panOpMul left right hleft hright ihLeft ihRight =>
       intro value heval
       have hevalSource : evalPanValueExp source.structs source.locals source.globals
@@ -3731,9 +3802,10 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
                     hleftValue', hrightValue', evalPanOp] at hevalSource
 
 /-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and
-PanOp multiplication over recursively supported operands through the HOL
-`compile_args` list evaluator. Load expressions, other operators, and the full
-expression induction remain open. -/
+PanOp multiplication over recursively supported operands, plus constant-address
+LoadByte for the canonical RISC-V word target, through the HOL `compile_args`
+list evaluator. Other Load forms, operators, and the full expression induction
+remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

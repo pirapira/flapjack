@@ -9078,5 +9078,13 @@
     "lean_name": "LoopArith",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/TotalEvaluateCases.lean",
+    "lean_name": "panToCrepTotalSkipStateCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only total Skip induction-case support: uses the total measured PanSem Skip clause and total Crep HOL-state Skip clause, then carries state_rel, state-owned code_rel, excp_rel, and locals_rel to the unchanged runtime post-state. This is not a standalone HOL declaration or the full pc_compile_correct theorem."
   }
 ]

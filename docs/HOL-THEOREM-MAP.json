@@ -4564,8 +4564,8 @@
     "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "genlistVmaxDistinctListsCompiledExps",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (independent source comparison vs pan_to_crepProofScript.sml:3094; HOL distinct_lists rendered as exact Boolean distinctListsHol with DecidableEq, same quantifiers and ctxt_max premise; direct HOL probe scripts/hol-probes/pan_common_distinct_lists_probeScript.sml; type lock updated)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-three (coordinator review HOLD on 8556c6d1f): the conclusion is the exact Boolean distinctListsHol and the ctxt_max premise is exact, but the declaration is generic in the element type a with [DecidableEq a][BEq a] and calls the generic-alpha compileExpHOL, while HOL compile_exp/context are word-indexed ('a word; pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions; per the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) an exact statement needs a BitVec width + [NeZero width] carrier. Untagged; faithful port tracked by bead flapjack-pxn.18.4.3.78.3. Direct HOL/Lean oracle rows remain in scripts/hol-probes/pan_common_distinct_lists_probe.out."
   },
   {
     "hol_path": null,
@@ -6453,7 +6453,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6461,7 +6461,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_cons",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6469,7 +6469,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_simp_cons",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol, i.e. distinctListsHol ... = true over [DecidableEq a]; ListDisjoint appears only inside the untagged bridge proof, not in the statement."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6477,7 +6477,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_commutes",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Boolean equality of distinct_lists rendered as a biconditional on ListDisjoint, consistent with the Prop rendering of distinct_lists)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL Boolean equality of distinct_lists rendered as the exact Boolean distinctListsHol ... = distinctListsHol ..., stated as Bool equality over [DecidableEq a]; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6485,7 +6485,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append_intro",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol ... = true over [DecidableEq a], ALL_DISTINCT as List.Nodup; exact implication shape; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6493,7 +6493,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "distinct_lists_append_right_elim",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+    "reviewer": "flapjack-deepseek-three (manifest correction): HOL distinct_lists rendered as the exact Boolean distinctListsHol ... = true over [DecidableEq a], ALL_DISTINCT as List.Nodup; exact implication shape; ListDisjoint appears only in the untagged bridge proof."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -7829,7 +7829,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
     "lean_name": "noOverlapFlookupDistinct",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519; HOL distinct_lists xs ys rendered as Lean distinctLists xs ys; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+    "reviewer": "flapjack-deepseek-three (manifest correction, statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519): HOL distinct_lists xs ys is rendered as the exact Boolean distinctListsHol xs ys = true over [DecidableEq Nat], not the BEq distinctLists; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean"
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",

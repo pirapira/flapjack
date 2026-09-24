@@ -502,11 +502,54 @@ example : ((withShape [Shape.one, Shape.one] [0, 1])[0]'(by rw [withShape_length
       rcases hi with rfl | rfl <;> simp [List.get_eq_getElem, panValueShape])
     (by simp [List.all, panValueIsWf])
 
+/-- Regression for Cake `list_rel_flatten_with_shape_flookup`
+    (`cakeml/pancake/semantics/panPropsScript.sml:585`). -/
+example :
+    FLOOKUP (FUPDATE_LIST FEMPTY
+      ([0, 1].zip ((List.map panValueFlatten
+        [PanValue.word (3 : Nat), PanValue.word (5 : Nat)]).flatten)))
+      (((withShape [Shape.one, Shape.one] [0, 1])[0]'(by rw [withShape_length]; decide))[0]'(by
+        rw [withShape_getElem_length [Shape.one, Shape.one] [0, 1] 0
+          (by simp [Shape.shapeSize]) (by decide)]; simp)) =
+      some ((panValueFlatten (PanValue.word (3 : Nat)))[0]'(by simp [panValueFlatten])) :=
+  listRelFlattenWithShapeFlookup [Shape.one, Shape.one] [0, 1]
+    [PanValue.word (3 : Nat), PanValue.word (5 : Nat)] (PanValue.word (3 : Nat)) 0 0
+    (by decide) (by simp [panValueFlatten]) (by simp [Shape.shapeSize, panValueFlatten])
+    (by decide) rfl (by decide)
+    (by
+      intro i hsi hai
+      have hsi' : i < 2 := by simpa using hsi
+      have hi : i = 0 ∨ i = 1 := by omega
+      rcases hi with rfl | rfl <;> simp [List.get_eq_getElem, panValueShape])
+    (by simp [List.all, panValueIsWf])
+    (by
+      exact listRelFlattenWithShapeLength [Shape.one, Shape.one] [0, 1]
+        [PanValue.word (3 : Nat), PanValue.word (5 : Nat)] (PanValue.word (3 : Nat)) 0
+        (by simp [panValueFlatten]) (by simp [Shape.shapeSize, panValueFlatten])
+        (by decide) rfl (by decide)
+        (by
+          intro i hsi hai
+          have hsi' : i < 2 := by simpa using hsi
+          have hi : i = 0 ∨ i = 1 := by omega
+          rcases hi with rfl | rfl <;> simp [List.get_eq_getElem, panValueShape])
+        (by simp [List.all, panValueIsWf]))
+    (by
+      rw [withShape_getElem_length [Shape.one, Shape.one] [0, 1] 0
+        (by simp [Shape.shapeSize]) (by decide)]; simp)
+
 def listRelFlattenGuard : Bool :=
   (((withShape [Shape.one, Shape.one] [0, 1])[0]'(by rw [withShape_length]; decide)).length ==
     (panValueFlatten (PanValue.word (3 : Nat))).length)
 
 #guard listRelFlattenGuard
+
+/-- Direct guard for the `list_rel_flatten_with_shape_flookup` zip lookup. -/
+def listRelFlattenFlookupGuard : Bool :=
+  (FLOOKUP (FUPDATE_LIST FEMPTY
+      ([0, 1].zip ((List.map panValueFlatten
+        [PanValue.word (3 : Nat), PanValue.word (5 : Nat)]).flatten))) 0).isSome
+
+#guard listRelFlattenFlookupGuard
 
 def checkDisjoint (name : String) (actual : Bool) : IO Bool := do
   if actual then
@@ -552,10 +595,12 @@ def runChecks : IO Bool := do
     checkDisjoint "pan genlist_all_distinct" genlistAllDistinctGuard
   let listRelFlattenOk ←
     checkDisjoint "pan list_rel_flatten_with_shape_length" listRelFlattenGuard
+  let listRelFlattenFlookupOk ←
+    checkDisjoint "pan list_rel_flatten_with_shape_flookup" listRelFlattenFlookupGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
-    listRelFlattenOk)
+    listRelFlattenOk && listRelFlattenFlookupOk)
 
 end Flapjack.Test.PanWithShapeParity

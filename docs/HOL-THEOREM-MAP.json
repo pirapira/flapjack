@@ -704,6 +704,14 @@
     "reviewer": "Codex (source comparison; all five HOL equations over the exact crepSem$result carrier CrepResultHOL, which has no Flapjack-only normal constructor; direct HOL EVAL rows in crep_inline_cont_res_probe.out)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "MEM_MAP2_IMP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "panMap2_mem",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; MEM x (MAP2 f l1 l2) => exists y1 y2, x = f y1 y2 /\\ MEM y1 l1 /\\ MEM y2 l2; panMap2 is the exact MAP2 port; no extra hypotheses)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",

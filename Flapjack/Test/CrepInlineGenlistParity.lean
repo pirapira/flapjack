@@ -91,6 +91,25 @@ def crepInlineContResGuard : Bool :=
 
 #guard crepInlineContResGuard
 
+/-! Regression for the exact `MEM_MAP2_IMP` port. -/
+
+def crepInlineMap2Values : List Nat := panMap2 (fun a b => a + b) [1, 2] [10, 20]
+
+#guard crepInlineMap2Values = [11, 22]
+
+theorem crepInlineMap2Mem (x : Nat) (hmem : x ∈ crepInlineMap2Values) :
+    ∃ y1 y2, x = y1 + y2 ∧ y1 ∈ [1, 2] ∧ y2 ∈ [10, 20] :=
+  panMap2_mem hmem
+
+def crepInlineMap2Guard : Bool :=
+  crepInlineMap2Values.all (fun v =>
+    match v with
+    | 11 => true
+    | 22 => true
+    | _ => false)
+
+#guard crepInlineMap2Guard
+
 def runChecks : IO Bool := do
   let genlistOk ←
     if crepInlineGenlistIntervalGuard then
@@ -120,6 +139,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline cont_res"
       pure false
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk)
+  let map2Ok ←
+    if crepInlineMap2Guard then
+      IO.println "PASS crep_inline MEM_MAP2_IMP"
+      pure true
+    else
+      IO.println "FAIL crep_inline MEM_MAP2_IMP"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok)
 
 end Flapjack.Test.CrepInlineGenlistParity

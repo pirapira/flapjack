@@ -432,6 +432,12 @@ run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.ou
 run_probe pan_sem_call_error_state_probeScript.sml pan_sem_call_error_state_probe.out \
   call_error_load_result call_error_missing_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call arity probe observes that a parameter-shape/arity mismatch rejects the
+# call with `SOME Error` and the unchanged caller state, while a matching
+# argument yields the callee's `Return` result.
+run_probe pan_sem_call_arity_probeScript.sml pan_sem_call_arity_probe.out \
+  call_arity_miss_result call_arity_shape_miss_result \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.
@@ -647,6 +653,8 @@ run_probe crep_make_funcs_probeScript.sml crep_make_funcs_probe.out \
   make_funcs_empty_params make_funcs_duplicate_first_wins "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_get_eids_probeScript.sml crep_get_eids_probe.out \
   eids_present eids_codes_distinct "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_vmap_ctxtfc_probeScript.sml crep_vmap_ctxtfc_probe.out \
+  vmap_x vmap_eq_ctxt "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

@@ -628,6 +628,77 @@ def ctxtFc
     eids := exceptionCodes
     vmax := maxList names }
 
+/-- Flapjack-specific support for the HOL `MAX_LIST_i_genlist` step: dropping
+    the first `n` entries of `List.range m` is the same as mapping `n + ·` over
+    `List.range (m - n)` (used to line up `ctxt_fc`'s `with_shape` slices with
+    `compileParamVars`'s per-parameter slot ranges). -/
+theorem drop_range_map (m n : Nat) (h : n ≤ m) :
+    (List.range m).drop n = (List.range (m - n)).map (fun index => n + index) := by
+  rw [show m = n + (m - n) from (Nat.add_sub_cancel' h).symm]
+  rw [List.range_add, List.drop_append_of_le_length (by simp [List.length_range])]
+  simp
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map built by `compileParamVars` and the proof-side
+    `ctxt_fc` variable map agree after shifting the slot ranges by `offset`.
+    This is the correspondence the HOL proof discharges with
+    `gvs[ctxt_fc_def, make_vmap_def]`; HOL `make_vmap` is `panToCrepMakeVmapHOL`. -/
+theorem compileParamVars_range_withShape (params : List (VarName × Shape)) (offset : Nat) :
+    (compileParamVars params offset).1 =
+      (params.map Prod.fst).zip
+        ((params.map Prod.snd).zip
+          (withShape (params.map Prod.snd)
+            ((List.range (Shape.shapeSize (.comb (params.map Prod.snd)))).map
+              (fun index => offset + index)))) := by
+  induction params generalizing offset with
+  | nil => simp [compileParamVars, withShape]
+  | cons param params ih =>
+      obtain ⟨name, shape⟩ := param
+      simp only [compileParamVars, List.map_cons]
+      rw [shapeSize_comb_cons]
+      have htake :
+          List.take (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => offset + index)
+              (List.range (Shape.shapeSize shape)) := by
+        rw [← List.map_take, List.take_range]
+        simp
+      have hdrop :
+          List.drop (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => (offset + Shape.shapeSize shape) + index)
+              (List.range (Shape.shapeSize (.comb (params.map Prod.snd)))) := by
+        rw [← List.map_drop]
+        rw [drop_range_map
+          (Shape.shapeSize shape + Shape.shapeSize (.comb (params.map Prod.snd)))
+          (Shape.shapeSize shape) (Nat.le_add_right _ _)]
+        rw [Nat.add_sub_cancel_left]
+        rw [List.map_map]
+        congr 1
+        funext index
+        simp [Nat.add_assoc]
+      simp only [withShape]
+      rw [htake, hdrop, ih (offset + Shape.shapeSize shape)]
+      simp only [List.zip_cons_cons]
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map `panToCrepMakeVmapHOL` equals the `vars` field of
+    the proof-side `ctxt_fc` context at the standard slot window. -/
+theorem panToCrepMakeVmapHOL_eq_ctxtFcVars
+    (params : List (VarName × Shape))
+    (functions : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (exceptionCodes : FiniteMap ExceptionId α) :
+    panToCrepMakeVmapHOL params =
+      (ctxtFc functions exceptionCodes (params.map Prod.fst) (params.map Prod.snd)
+        (panToCrepVars params)).vars := by
+  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars]
+  rw [compileParamVars_range_withShape params 0]
+  simp
+
 /-! Indexed projection of the parameter variable map constructed by HOL
 `ctxtFc`. This support lemma exposes the corresponding `withShape` slot window
 without claiming the complete Call `locals_rel` theorem. -/
@@ -2097,6 +2168,103 @@ theorem alookupCompileToCrepCode
           entry.2.1 entry.2.2.1))), ?_, ?_⟩
   · rw [hdecomp, List.map_append, List.map_cons]
     simp [panToCrepVars, Shape.shapeSize]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
+
+/-! Flapjack-specific finite-map support: reversing an association list before
+    `FUPDATE_LIST` makes the first source occurrence win, exactly like
+    `List.lookup` (HOL `ALOOKUP`). This is list infrastructure, not a standalone
+    HOL theorem port. -/
+theorem FLOOKUP_FUPDATE_LIST_reverse_eq_lookup [BEq α] [LawfulBEq α]
+    (entries : List (α × β)) (key : α) :
+    FLOOKUP (FUPDATE_LIST FEMPTY entries.reverse) key = List.lookup key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.reverse_cons, FUPDATE_LIST_append, FUPDATE_LIST_cons,
+        FUPDATE_LIST_nil, FLOOKUP_update, List.lookup_cons]
+      by_cases h : entryKey = key
+      · subst h
+        simp
+      · have h1 : (entryKey == key) = false := beq_eq_false_iff_ne.mpr h
+        have h2 : (key == entryKey) = false :=
+          beq_eq_false_iff_ne.mpr (fun he => h he.symm)
+        simp [h1, h2, ih]
+
+/-- Flapjack-specific list fact: mapping a key-preserving projection through an
+    association list commutes with `List.lookup` (the list-level `ALOOKUP_MAP`
+    step used by HOL inside `mk_ctxt_code_imp_code_rel`). -/
+theorem lookup_map_preserveFst [BEq α] [LawfulBEq α] (functions : List (α × β))
+    (project : β → γ) (key : α) :
+    List.lookup key (functions.map (fun entry => (entry.1, project entry.2))) =
+      (List.lookup key functions).map project := by
+  induction functions with
+  | nil => rfl
+  | cons entry functions ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.map_cons, List.lookup_cons, List.lookup_cons]
+      by_cases h : (key == entryKey) = true
+      · simp [h]
+      · simp [h, ih]
+
+/-- Flapjack-specific lookup link for HOL `make_funcs`: a source function entry
+    (name, params, body, return) is visible in the `make_funcs` finite map with
+    the parameter list and return shape (the body is dropped). -/
+theorem makeFuncsHOL_lookup_of_lookup
+    (functions : List (FunName × List (VarName × Shape) × Prog α × Shape))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog α) (rshape : Shape)
+    (h : List.lookup start functions = some (vshs, (prog, rshape))) :
+    FLOOKUP (makeFuncsHOL functions) start = some (vshs, rshape) := by
+  have hrewrite : FLOOKUP (makeFuncsHOL functions) start =
+      List.lookup start
+        (functions.map (fun entry => (entry.1, (entry.2.1, entry.2.2.2)))) := by
+    rw [makeFuncsHOL]
+    exact FLOOKUP_FUPDATE_LIST_reverse_eq_lookup _ _
+  rw [hrewrite, lookup_map_preserveFst
+    (project := fun value : List (VarName × Shape) × Prog α × Shape =>
+      (value.1, value.2.2))]
+  rw [h]
+  rfl
+
+/-- General form of the compiled-function lookup: a source entry with
+    parameters `vshs` and body `prog` is compiled to the entry whose argument
+    slots are `crep_vars vshs` and whose body is `comp_func ... vshs prog`.
+    This is the parameter-general companion of the tagged
+    `alookupCompileToCrepCode`; HOL discharges it inside
+    `mk_ctxt_code_imp_code_rel` rather than as a separate theorem, so it
+    deliberately carries no `@[hol]` tag. -/
+theorem alookupCompileToCrepCodeGeneral
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog (BitVec width))
+    (rshape : Shape)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some (vshs, (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some (panToCrepVars vshs, panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := (panToCrepVars vshs, panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
   · intro p hp
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq

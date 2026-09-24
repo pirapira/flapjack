@@ -1101,6 +1101,40 @@ theorem panSemEvaluateExactState_call_error_of_target_none
   rw [hk]
   simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, harguments, htarget]
 
+/-- HOL `lookup_code` (`panSemScript.sml:458-467`) rejects a callee whose
+    argument shapes or parameter-name distinctness fail, and the `Call` case
+    (`:657-662`) then returns `(SOME Error, s)` with the caller state unchanged.
+    This is the parameter-validity failure branch, stated over the exact source
+    state with the caller's full-state memory access. Untagged: the executed
+    result is the reduced structured pair, not HOL's literal `result option`
+    pairing. -/
+theorem panSemEvaluateExactState_call_error_of_parameters_invalid
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α))
+    (harguments :
+      evalPanValueExps state.legacy.structs state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.baseAddress state.legacy.topAddress
+        state.legacy.bytesInWord arguments (memoryAccess := some state.memoryAccess) =
+        some values)
+    (hlookup : lookupPanFunction function state.legacy.functions = some (parameters, body))
+    (hinvalid :
+      panValueParametersValid state.legacy.structs state.legacy.contracts function values =
+        false) :
+    panSemEvaluateExactState context primitive handler state (.call info function arguments) =
+      some (.control (.error state.legacy.locals state.legacy.globals state.legacy.memory
+        state.legacy.ffi), state.legacy.clock) := by
+  refine panSemEvaluateExactState_call_error_of_target_none context primitive handler state
+    info function arguments (values := values) harguments ?_
+  simp [panValueCallTarget, hlookup, hinvalid]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

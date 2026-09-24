@@ -379,6 +379,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This all-width production-evaluator support keeps HOL's unused result binder, successful-evaluation premise, arbitrary code-map update, simp_exp image, and Option PanWordLab.word result. It remains untagged because the explicit HolFiniteDimension/source-operation runtime has not been proved identical to HOL's implicit finite_index and crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEval",
     "statement_status": "documented_mismatch",
     "reviewer": "This source-evaluator corollary has HOL's success premise, code-map update, simplifier, and complete Option word_lab result, with production evaluation proved equal to its recursive source equations. It is not tagged because its explicit HolFiniteDimension encoding and CrepHolState adapter are not yet identified with HOL's implicit finite_index word type and crepSem state."
@@ -398,6 +406,14 @@
     "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",
     "statement_status": "documented_mismatch",
     "reviewer": "This all-finite-index source-evaluator result has the successful Option word_lab premise and conclusion, arbitrary code-map update, and simp_exp result of HOL simp_exp_correct. It remains untagged because the source evaluator/state/op dictionary is not yet identified theoremically with native HOL crepSem eval and word operations."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrectHolFiniteWordSourceRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This all-width successful-result corollary keeps the full Option PanWordLab.word output and arbitrary code-map update over the source-operation production runtime. It remains untagged because that runtime has not been proved equal to native HOL crepSem eval for the implicit finite_index word carrier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -6838,5 +6854,61 @@
     "lean_name": "panToCrepGetEidsFromDeclsHOL_lookup_mem",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific inverse lookup fact for the get_eids_from_decls port (ALOOKUP_MEM analogue). No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "drop_range_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific list support. No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileParamVars_range_withShape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge for HOL mk_ctxt_code_imp_code_rel. No HOL original declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panToCrepMakeVmapHOL_eq_ctxtFcVars",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge for HOL mk_ctxt_code_imp_code_rel (HOL discharges inside gvs[ctxt_fc_def, make_vmap_def]); direct probe scripts/hol-probes/crep_vmap_ctxtfc_probe.out."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "FLOOKUP_FUPDATE_LIST_reverse_eq_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific finite-map support: FLOOKUP after FUPDATE_LIST of a reversed association list equals List.lookup on the original list (first occurrence wins), matching HOL alist_to_fmap/ALOOKUP. Not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "lookup_map_preserveFst",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific list fact: a key-preserving projection commutes with List.lookup (HOL ALOOKUP_MAP analogue used inside mk_ctxt_code_imp_code_rel). Not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "makeFuncsHOL_lookup_of_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific lookup link for HOL make_funcs: a source function entry is visible in the make_funcs finite map with its parameter list and return shape. HOL discharges this inside mk_ctxt_code_imp_code_rel; not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "alookupCompileToCrepCodeGeneral",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Parameter-general companion of the tagged alookupCompileToCrepCode: a source entry with arbitrary parameters compiles to the entry with crep_vars slots and comp_func body. HOL discharges it inside mk_ctxt_code_imp_code_rel; not a standalone HOL declaration."
   }
 ]

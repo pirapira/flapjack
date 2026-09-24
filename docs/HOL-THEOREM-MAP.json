@@ -8397,7 +8397,7 @@
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
     "lean_name": "compileExpHOLW",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (exact width-indexed port): carrier BitVec width with [NeZero width] matching HOL 'a word; body delegates to the generic compileExpHOL; mirrors the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228). Recursive compile_exp dependency of memCompileExpVmaxW and genlistVmaxDistinctListsCompiledExpsW is stated through this tag."
+    "reviewer": "flapjack-deepseek-three (exact width-indexed port): carrier BitVec width with [NeZero width] matching HOL 'a word; body delegates to the generic compileExpHOL; mirrors the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228). Recursive compile_exp dependency of memCompileExpVmaxW and genlistVmaxDistinctListsCompiledExpsW is stated through this tag. BRIDGE ONLY, NOT TEXTUAL ROUTING (flapjack-pxn.18.3.1.3.2): the shipped compileProgRiscV/compileProgHOL path still calls the generic compileExpHOL; the kernel-checked bridge compileExpHOLW_eq_compileExpHOL shows production is definitionally equal to this tag, but production has NOT been textually routed to it, so the AGENTS.md production-path rule is NOT met by this bridge alone. Full routing is tracked by flapjack-pxn.18.3.5.3.1.2. Oracle-backed parity rows for the tag live in Flapjack/Test/CompileExpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8446,5 +8446,21 @@
     "lean_name": "appListAppend_thm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (2026-09-24: Append/List/Nil conjunction and universal variables match miscScript.sml:218-224)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "find_var_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "findVarHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "find_lab_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "findLabHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
   }
 ]

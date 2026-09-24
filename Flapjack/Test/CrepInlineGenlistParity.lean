@@ -124,8 +124,23 @@ theorem crepInlineFdomEq_self (f : FiniteMap Nat Nat) :
       (∀ x, FLOOKUP f x = none → FLOOKUP f x = none) :=
   fdom_eq_flookup_thm f f
 
+theorem crepInlineFdomSubset_self (f : FiniteMap Nat Nat) :
+    (∀ x, FDOM f x → FDOM f x) ↔
+      (∀ x p, FLOOKUP f x = some p → ∃ q, FLOOKUP f x = some q) :=
+  fdom_subset_flookup_thm f f
+
 def crepInlineFdomMap : FiniteMap Nat Nat :=
   fun k => if k = 1 then some 10 else none
+
+theorem crepInlineResVarCommutesStrong (lc lc' : FiniteMap Nat Nat) (n h : Nat) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+      resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) :=
+  res_var_commutes_strong lc lc' n h
+
+theorem crepInlineResVarFoldl (h : Nat) (vs : List Nat) (lc1 lc2 : FiniteMap Nat Nat) :
+    resVar ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVar lc1) (h, FLOOKUP lc2 h) =
+      (vs.zip (vs.map (FLOOKUP lc2))).foldl resVar (resVar lc1 (h, FLOOKUP lc2 h)) :=
+  res_var_foldl_commutes_strong h vs lc1 lc2
 
 def crepInlineFdomGuard : Bool :=
   (match FLOOKUP crepInlineFdomMap 1 with
@@ -180,6 +195,16 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline not_some_is_none and fdom_eq_flookup_thm"
       pure false
-  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk)
+  let fdomSubsetOk ←
+    if (match FLOOKUP crepInlineFdomMap 1 with | some _ => true | none => false) then
+      IO.println "PASS crep_inline fdom_subset_flookup_thm"
+      pure true
+    else
+      IO.println "FAIL crep_inline fdom_subset_flookup_thm"
+      pure false
+  let resVarOk ← do
+    IO.println "PASS crep_inline res_var_commutes_strong and res_var_foldl_commutes_strong"
+    pure true
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk && map2Ok && fdomOk && fdomSubsetOk && resVarOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

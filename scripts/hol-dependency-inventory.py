@@ -18,7 +18,10 @@ Method (first slice; deliberately coarse, see limitations below):
    the root theorem.  A declaration is "cited" when its name occurs as an
    identifier token in the source span of a cited declaration.  This is a
    *lexical reachability set*: it is not a HOL dependency set, and it is not a
-   bound in either direction (see limitations).
+   bound in either direction (see limitations).  The count is of unique
+   declaration NAMES, not of declaration identities; the per-kind, per-area
+   and per-theory breakdowns attribute each cited name to one representative
+   declaration (the first with that name in index order).
 4. Lean coverage: which cited declarations already carry a ``@[hol ...]``
    tag (matched by ``(theory, name)`` and by name alone).
 
@@ -42,6 +45,7 @@ Limitations (explicit, do not overclaim):
 from __future__ import annotations
 
 import argparse
+import sys
 import json
 import re
 from collections import defaultdict, deque
@@ -343,7 +347,10 @@ def main() -> int:
     lines.append("")
     lines.append(
         "The cited-declaration counts below are a **lexical reachability set** "
-        "computed from identifier tokens in declaration spans.  They are neither "
+        "computed from identifier tokens in declaration spans, counting unique "
+        "declaration NAMES rather than declaration identities (per-kind, "
+        "per-area and per-theory breakdowns attribute each name to one "
+        "representative declaration).  They are neither "
         "an upper bound on actual HOL dependencies (tactic/simpset uses are not "
         "named) nor a lower bound on missing ports (comments, shadowing, and "
         "name collisions are false positives).  Treat them as a reproducible "
@@ -365,11 +372,17 @@ def main() -> int:
     )
     lines.append(
         f"- Lexically cited declarations (citation closure of the root; "
-        f"not a dependency bound): `{len(required)}`"
+        f"not a dependency bound): `{len(required)}` unique declaration names "
+        "(not declaration identities)"
     )
     lines.append(f"  - by kind: {format_counts(required_kinds, [])}")
     lines.append(
         f"  - by area: {format_counts(required_areas, AREA_ORDER)}"
+    )
+    lines.append(
+        "  - each cited name is attributed to one representative declaration "
+        "(first with that name in index order) for the per-kind, per-area and "
+        "per-theory breakdowns"
     )
     lines.append("")
     lines.append("## Validation")
@@ -384,8 +397,9 @@ def main() -> int:
     else:
         lines.append("All count invariants hold:")
         lines.append(
-            f"- cited total (`{len(required)}`) equals the per-kind, per-area "
-            "and per-theory sums"
+            f"- cited total (`{len(required)}` unique names) equals the "
+            "per-kind, per-area and per-theory sums; each name is attributed "
+            "to one representative declaration"
         )
         lines.append("- source-pool totals equal the per-kind and per-area sums")
         lines.append("- every cited name is a declaration in the theory closure")

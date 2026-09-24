@@ -21,6 +21,34 @@ def sampleState (clock : Nat) : CrepHolState (BitVec 64) Unit :=
     baseAddress := 0
     topAddress := 100 }
 
+def ifOracleRowsMatch : Bool :=
+  let state := sampleState 5
+  let trueBranch : CrepClockProg 64 :=
+    .ite (.const 5) (.leaf (.breakAt 3)) (.leaf .skip)
+  let falseBranch : CrepClockProg 64 :=
+    .ite (.const 0) (.leaf (.breakAt 3)) (.leaf (.continueAt 4))
+  let errorBranch : CrepClockProg 64 :=
+    .ite (.var 9) (.leaf .skip) (.leaf (.breakAt 5))
+  let nestedBranch : CrepClockProg 64 :=
+    .ite (.const 1)
+      (.ite (.const 0) (.leaf .skip) (.leaf (.breakAt 6)))
+      (.leaf (.continueAt 4))
+  let trueOk := match evalCrepClockProg trueBranch state with
+    | (some (.break 3), post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  let falseOk := match evalCrepClockProg falseBranch state with
+    | (some (.continue 4), post) => post.clock == 5
+    | _ => false
+  let errorOk := match evalCrepClockProg errorBranch state with
+    | (some .error, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  let nestedOk := match evalCrepClockProg nestedBranch state with
+    | (some (.break 6), post) => post.clock == 5
+    | _ => false
+  trueOk && falseOk && errorOk && nestedOk
+
+#guard ifOracleRowsMatch
+
 theorem skipFullState (state : CrepHolState (BitVec 64) Unit) :
     evalCrepClockLeaf .skip state = (none, state) :=
   evalCrepClockLeaf_skip state
@@ -73,6 +101,10 @@ def runChecks : IO Bool := do
     IO.println "PASS total Crep HOL clock leaves match direct Skip/Break/Continue/Tick oracle"
   else
     IO.println "FAIL total Crep HOL clock leaves match direct Skip/Break/Continue/Tick oracle"
-  pure holOracleRowsMatch
+  if ifOracleRowsMatch then
+    IO.println "PASS total Crep HOL If true/false/error/nested clauses match direct oracle"
+  else
+    IO.println "FAIL total Crep HOL If true/false/error/nested clauses match direct oracle"
+  pure (holOracleRowsMatch && ifOracleRowsMatch)
 
 end Flapjack.Test.CrepSemTotalClockLeavesParity

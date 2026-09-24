@@ -1,0 +1,6 @@
+wl_empty_d3=[0w]
+wl_empty_d0=[0w]
+wl_d0=[5w]
+wl_short=[5w]
+wl_split=[5w; 3w]
+wl_twostep=[7w; 7w; 1w]

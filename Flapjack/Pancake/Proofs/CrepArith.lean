@@ -183,19 +183,17 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Lean's generic HOL word carrier is a Boolean function over the word's
-    index type. This is the polymorphic word-typed statement of CakeML's
-    `dest_const_thm` (`crep_arithProofScript.sml:64`): unlike the arbitrary-
-    carrier helper above, the expression and result are both HOL words. The
-    `HolFiniteDimension` instance records the finite, nonempty enumeration
-    corresponding to HOL's `finite_index` constraint. -/
+/-- Width-specialized word form of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
+    `NeZero width` supplies HOL's nonempty finite-index condition. The
+    arbitrary-carrier production helper remains untagged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
-theorem crepDestConstHolWord_eq_const {ι : Type} [HolFiniteDimension ι]
-    (expression : CrepExp (ι → Bool))
-    (value : ι → Bool)
-    (h : crepDestConst expression = some value) :
+theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool))
+    (value : Fin width → Bool)
+    (h : crepDestConstHolWord expression = some value) :
     expression = .const value := by
-  cases expression <;> simp_all [crepDestConst]
+  cases expression <;> simp_all [crepDestConstHolWord]
 
 /-- Canonical width-indexed BitVec support specialization of the generic
     HOL-word `dest_const_thm` port above. Kept untagged because the theorem
@@ -715,6 +713,32 @@ theorem crepDest2ExpBound {n : Nat} [NeZero n]
     exact Nat.lt_trans hdiff (Nat.lt_two_pow_self (n := n))
   rw [hlogWrap]
   omega
+
+/-- Flapjack support for CakeML's `dest_2exp_bound`
+    (`crep_arithProofScript.sml:10`) over every explicit finite word
+    dimension. The right side encodes `w2n (word_log2 word)` by transporting
+    through `BitVec` and computing `Nat.log2`. It remains untagged: the
+    equality of this explicit `HolFiniteDimension`/`Nat.log2` encoding with
+    HOL's implicit `finite_index`/`word_log2` interpretation has not been
+    separately established. This recognizer bound does not assume either
+    `eval_mul_const` or `simp_exp_correct1`. -/
+theorem crepDest2ExpHolFiniteDimensionBoundSupport {ι : Type}
+    (dimension : HolFiniteDimension ι)
+    (start : Nat) (word : ι → Bool) (result : Nat)
+    (h : crepDest2Exp start word = some result) :
+    result ≤ start +
+      (holWordToBitVec dimension
+        (bitVecToHolWord dimension (BitVec.ofNat dimension.width
+          (Nat.log2 (holWordToBitVec dimension word).toNat)))).toNat := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hBits : crepDest2Exp start (holWordToBitVec dimension word) =
+      some result := by
+    rw [← crepDest2Exp_holFiniteDimension start word]
+    exact h
+  have hBound := crepDest2ExpBound start
+    (holWordToBitVec dimension word) result hBits
+  simpa only [holWordToBitVec_bitVecToHolWord] using hBound
 
 /-- Fixed-width support instance of HOL `dest_2exp_thm`. The HOL theorem is
     polymorphic in `'a word`; this declaration proves only the `RiscV.Word n`

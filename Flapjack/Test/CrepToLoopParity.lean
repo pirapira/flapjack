@@ -590,6 +590,52 @@ example : findLabHOL contextDefsContext "f" = 3 := by
 example : findLabHOL contextDefsContext "g" = 0 := by
   simp [findLabHOL, contextDefsContext, FLOOKUP_update]
 
+/-! `mk_ctxt`/`make_vmap` over the finite-map carrier, mirroring
+    `scripts/hol-probes/crep_to_loop_mk_ctxt_probe.out`. -/
+example :
+    (mkCtxtHOL .rv64i (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
+      (FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2))) 9).vars =
+      FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7) := rfl
+
+example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).vmax = 9 := rfl
+
+example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .rv64i := rfl
+
+example : FLOOKUP (makeVmapHOL [5]) 5 = some 0 := by
+  simp [makeVmapHOL, FUPDATE_LIST, FUPDATE, FLOOKUP]
+
+example : makeVmapHOL [5, 6] =
+    FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (5, 0)) (6, 1) := rfl
+
+example : FLOOKUP (makeVmapHOL [5, 6]) 6 = some 1 := by
+  rw [show makeVmapHOL [5, 6] =
+    FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (5, 0)) (6, 1) from rfl]
+  simp [FLOOKUP_update]
+
+example : FLOOKUP (makeVmapHOL []) 5 = none := rfl
+
+/-- HOL `make_funcs` oracle rows (`mkf_*` in
+    `scripts/hol-probes/crep_to_loop_make_funcs_probe.out`). -/
+example :
+    FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 2) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "g" = some (65, 0) := by decide
+
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1, 2], ()), ("g", [], ())] : List (String × List Nat × Unit)))
+      "h" = none := by decide
+
+/-- Duplicate names keep the first-inserted binding (`alist_to_fmap`). -/
+example : FLOOKUP (crepToLoopMakeFuncsHOL
+      ([("f", [1], ()), ("f", [1, 2, 3], ())] : List (String × List Nat × Unit)))
+      "f" = some (64, 1) := by decide
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

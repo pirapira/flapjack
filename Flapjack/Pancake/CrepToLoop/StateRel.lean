@@ -17,6 +17,8 @@ Only the fields the relation constrains are compared; HOL's `memaddrs`/
 Tagged declarations that compare word-typed state fields are width-specialized
 to `BitVec width`, because HOL `crepSem$state`/`loopSem$state` are word-length
 indexed (`'a word` fields) and a generic-`α` carrier would not be an exact
+counterpart; those declarations carry `[NeZero width]`, because HOL word types
+have positive `dimindex` while `BitVec 0` is inhabited and has no HOL
 counterpart.  The relations over pure `num`/`num` finite maps (`distinct_funcs`,
 `distinct_vars`, `ctxt_max`) are polymorphic exactly as the un-annotated HOL
 `Definition`s infer them (key, and value where no arithmetic constrains it).
@@ -31,7 +33,7 @@ namespace Flapjack
     The remaining `CrepHolState` fields (`locals`, `globals`, `code`, `memory`)
     are related separately by `locals_rel`/`code_rel`/`mem_rel`/`globals_rel`. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_def"]
-def crepToLoopStateRel {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ)
+def crepToLoopStateRel {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) : Prop :=
   s.memaddrs = t.mdomain ∧
     s.shMemaddrs = t.shMdomain ∧
@@ -45,7 +47,7 @@ def crepToLoopStateRel {width : Nat} {σ : Type} (s : CrepHolState (BitVec width
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`): the relation
     unfolds to the same seven-field conjunction. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_intro"]
-theorem crepToLoopStateRel_intro {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ)
+theorem crepToLoopStateRel_intro {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) :
     crepToLoopStateRel s t ↔
       s.memaddrs = t.mdomain ∧
@@ -63,7 +65,7 @@ theorem crepToLoopStateRel_intro {width : Nat} {σ : Type} (s : CrepHolState (Bi
     both have a single `word` constructor for word payloads, so the map is the
     identity on the word. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "wlab_wloc_def"]
-def wlabWloc {width : Nat} : PanWordLab (BitVec width) → LoopValue (BitVec width)
+def wlabWloc {width : Nat} [NeZero width] : PanWordLab (BitVec width) → LoopValue (BitVec width)
   | .word value => .word value
 
 /-- Exact port of HOL `globals_rel_def`
@@ -72,7 +74,7 @@ def wlabWloc {width : Nat} : PanWordLab (BitVec width) → LoopValue (BitVec wid
     `FLOOKUP` on `5 word |-> 'a word_loc` is the target field application;
     the source `globals` is the same `BitVec 5`-indexed option finite map. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "globals_rel_def"]
-def crepToLoopGlobalsRel {width : Nat}
+def crepToLoopGlobalsRel {width : Nat} [NeZero width]
     (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
     (tglobals : BitVec 5 → Option (LoopValue (BitVec width))) : Prop :=
   ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value)
@@ -82,7 +84,7 @@ def crepToLoopGlobalsRel {width : Nat}
     implication: assuming the relation, unpack the universally quantified
     lookup agreement. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "globals_rel_intro"]
-theorem crepToLoopGlobalsRel_intro {width : Nat}
+theorem crepToLoopGlobalsRel_intro {width : Nat} [NeZero width]
     (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
     (tglobals : BitVec 5 → Option (LoopValue (BitVec width)))
     (h : crepToLoopGlobalsRel sglobals tglobals) :
@@ -91,7 +93,7 @@ theorem crepToLoopGlobalsRel_intro {width : Nat}
 
 /-- Untagged iff form of `crepToLoopGlobalsRel`, kept for rewriting/rewriting
     the relation to its unfolded implication. -/
-theorem crepToLoopGlobalsRel_iff {width : Nat}
+theorem crepToLoopGlobalsRel_iff {width : Nat} [NeZero width]
     (sglobals : BitVec 5 → Option (PanWordLab (BitVec width)))
     (tglobals : BitVec 5 → Option (LoopValue (BitVec width))) :
     crepToLoopGlobalsRel sglobals tglobals ↔
@@ -102,7 +104,7 @@ theorem crepToLoopGlobalsRel_iff {width : Nat}
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`): a state
     relation is preserved when the target clock is advanced by zero. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_clock_add_zero"]
-theorem crepToLoopStateRel_clock_add_zero {width : Nat} {σ : Type}
+theorem crepToLoopStateRel_clock_add_zero {width : Nat} [NeZero width] {σ : Type}
     (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) (h : crepToLoopStateRel s t) :
     ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
@@ -123,7 +125,7 @@ theorem crepToLoopStateRel_clock_add_zero {width : Nat} {σ : Type}
     HOL's `ad IN dom` is the set-as-predicate rendering `dom ad = true`, matching
     the `mdomain`/`shMdomain` fields. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_rel_def"]
-def crepToLoopMemRel {width : Nat}
+def crepToLoopMemRel {width : Nat} [NeZero width]
     (smem : BitVec width → PanWordLab (BitVec width))
     (tmem : BitVec width → LoopValue (BitVec width))
     (dom : BitVec width → Bool) : Prop :=
@@ -133,7 +135,7 @@ def crepToLoopMemRel {width : Nat}
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:203-209`), which is an
     implication: assuming `mem_rel`, unpack the pointwise lookup equation. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_rel_intro"]
-theorem crepToLoopMemRel_intro {width : Nat}
+theorem crepToLoopMemRel_intro {width : Nat} [NeZero width]
     (smem : BitVec width → PanWordLab (BitVec width))
     (tmem : BitVec width → LoopValue (BitVec width))
     (dom : BitVec width → Bool)
@@ -142,7 +144,7 @@ theorem crepToLoopMemRel_intro {width : Nat}
   fun ad hd => h ad hd
 
 /-- Untagged iff form of `crepToLoopMemRel`, kept for rewriting. -/
-theorem crepToLoopMemRel_iff {width : Nat}
+theorem crepToLoopMemRel_iff {width : Nat} [NeZero width]
     (smem : BitVec width → PanWordLab (BitVec width))
     (tmem : BitVec width → LoopValue (BitVec width))
     (dom : BitVec width → Bool) :
@@ -251,7 +253,7 @@ plus `sptree$num_set`/`num_map` domain/lookup carriers). -/
 /-- Untagged faithful-shape rendering of HOL `crep_to_loop$locals_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`); see the
     section note above for the three carrier gaps that withhold the HOL tag. -/
-def crepToLoopLocalsRel {width : Nat} {α : Type} (context : LoopContext α)
+def crepToLoopLocalsRel {width : Nat} [NeZero width] {α : Type} (context : LoopContext α)
     (live : Nat → Bool)
     (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
     (tLocals : Nat → Option (LoopValue (BitVec width))) : Prop :=
@@ -265,7 +267,7 @@ def crepToLoopLocalsRel {width : Nat} {α : Type} (context : LoopContext α)
         tLocals n = some (wlabWloc v)
 
 /-- Untagged iff form of `crepToLoopLocalsRel`, kept for rewriting. -/
-theorem crepToLoopLocalsRel_iff {width : Nat} {α : Type} (context : LoopContext α)
+theorem crepToLoopLocalsRel_iff {width : Nat} [NeZero width] {α : Type} (context : LoopContext α)
     (live : Nat → Bool)
     (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
     (tLocals : Nat → Option (LoopValue (BitVec width))) :

@@ -420,6 +420,13 @@ run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out 
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
   call_arg_fail_result call_arg_fail_missing_result \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call error-state probe observes that a memory-reading argument is gated by
+# the source `memaddrs` (an address outside the domain rejects the call even
+# when the raw memory function holds a cell), and that an unknown callee is
+# rejected, both with `SOME Error` and the unchanged state.
+run_probe pan_sem_call_error_state_probeScript.sml pan_sem_call_error_state_probe.out \
+  call_error_load_result call_error_missing_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with
 # cleared locals.
@@ -606,7 +613,7 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
-  leaves bytes_in_word nstruct nfield struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
+  leaves bytes_in_word nstruct nfield load_one struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
   finite_map_load_byte_local loadbyte_recursive_address \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
@@ -633,6 +640,8 @@ run_probe crep_el_compile_probeScript.sml crep_el_compile_probe.out \
   source_el_f compiled_el_f "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_make_funcs_probeScript.sml crep_make_funcs_probe.out \
   make_funcs_empty_params make_funcs_duplicate_first_wins "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe crep_get_eids_probeScript.sml crep_get_eids_probe.out \
+  eids_present eids_codes_distinct "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe dup_exn_eids_probeScript.sml dup_exn_eids_probe.out \
   dup_eids_lookup mixed_eids_lookup_a mixed_eids_lookup_e dup_compile done \
   "$cake_dir/pancake/pan_to_crepScript.sml"

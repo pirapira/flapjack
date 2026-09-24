@@ -4927,7 +4927,9 @@ theorem compileExpHOL_loadByte_ofHOLIH
 
 /-! The Load32 constructor of HOL `compile_exp_val_rel`, specialized to the
 fixed RISC-V target, consumes the complete relation for its localized address
-expression. This remains induction support rather than a standalone HOL port. -/
+expression. Its explicit canonical-target hypothesis is not a premise of the
+general HOL theorem; discharging it from the eventual state relation remains
+open. This remains induction support rather than a standalone HOL port. -/
 theorem compileExpHOL_load32_ofHOLIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

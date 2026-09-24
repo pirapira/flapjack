@@ -124,6 +124,28 @@ private def parameterState : PanSemExactState Word64 Unit :=
   exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 7)) (fun _ => none)
       parameterContracts) with functions := [("f", ["p"], .skip)] }
 
+/-- Result matcher for the callee-fallthrough rejection: an `Error` at the
+    decremented callee clock whose `p` local still holds the bound argument. -/
+private def isFallThroughError (clock value : Nat)
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control control, n) =>
+      match control with
+      | .error locals _ _ _ =>
+          n == clock && (match locals "p" with
+            | some (.word w) => w == BitVec.ofNat 64 value
+            | _ => false)
+      | _ => false
+  | _ => false
+
+/-- State whose callee `f` has body `Skip` and therefore falls through. -/
+private def fallThroughState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none)
+      parameterContracts) with functions := [("f", ["p"], .skip)] }
+
+private def callFallThroughGuard : Bool :=
+  isFallThroughError 4 1 (evaluate fallThroughState (.call none "f" [.const 1]))
+
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
 
@@ -141,7 +163,7 @@ private def callDomainGuard : Bool :=
 
 private def callGuard : Bool :=
   callLoadMissGuard && callMissingGuard && callDomainGuard &&
-    callParamArityGuard && callParamShapeGuard
+    callParamArityGuard && callParamShapeGuard && callFallThroughGuard
 
 #guard callGuard
 
@@ -200,6 +222,9 @@ def runChecks : IO Bool := do
   if callParamShapeGuard then
     IO.println "PASS exact-state Call parameter shape mismatch keeps state and clock"
   else IO.println "FAIL exact-state Call parameter shape mismatch keeps state and clock"
+  if callFallThroughGuard then
+    IO.println "PASS exact-state Call callee fallthrough rejects with Error and callee locals"
+  else IO.println "FAIL exact-state Call callee fallthrough rejects with Error and callee locals"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

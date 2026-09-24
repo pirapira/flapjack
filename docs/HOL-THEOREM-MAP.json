@@ -6739,6 +6739,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadTwo_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH case for a two-word flat Load at fixed RV64 width. It consumes the address full IH and stateRel to relate both source word-cell loads to production Crep Loads at offsets 0 and 8; arbitrary shape lists remain unproved. The matching compile_exp output is pinned by direct HOL-EVAL row load_two and CompileExpParity.holLoadTwoOK; this is induction support, not a standalone HOL theorem or a complete expression induction."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_loadTwo_const_stateRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned two-word flat Load at a constant address with the two production target Crep Loads at offsets 0 and 8 under stateRel. It is a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalPanSemStateExp_loadOne_const_stateRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned Load One at a constant address with production target Crep Load under stateRel; a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."
@@ -6910,5 +6926,21 @@
     "lean_name": "alookupCompileToCrepCodeGeneral",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Parameter-general companion of the tagged alookupCompileToCrepCode: a source entry with arbitrary parameters compiles to the entry with crep_vars slots and comp_func body. HOL discharges it inside mk_ctxt_code_imp_code_rel; not a standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mk_ctxt_code_imp_code_rel",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mkCtxtCodeImpCodeRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port of HOL mk_ctxt_code_imp_code_rel. Source map is FUPDATE_LIST FEMPTY (functionEntries declarations).reverse, the Lean encoding of HOL alist_to_fmap (functions pan_code) (cf. tagged functions_def/makeFuncsHOL); target is FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse (tagged compile_to_crep_def). Hypothesis EVERY (localised_prog o FST o SND o SND) becomes forall entry in functionEntries, localisedProg entry.2.2.1; ALL_DISTINCT (MAP FST ...) becomes Nodup. Lean splits HOL's single ctxt record, so the relation uses the proof-context literal (as accepted for mk_ctxt_imp_locals_rel). Uses makeFuncsHOL_lookup_of_lookup, alookupCompileToCrepCodeGeneral and panToCrepCompFuncRiscV_eq_compileCodeRelProg. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panToCrepCompFuncRiscV_eq_compileCodeRelProg",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge: the production per-function compiler panToCrepCompFuncRiscV equals the codeRel proof-context compilation compileCodeRelProg at the ctxtFc context. Vars agree by panToCrepMakeVmapHOL_eq_ctxtFcVars, vmax by maxList_range; funcs/eids are the same finite maps. No separate HOL declaration."
   }
 ]

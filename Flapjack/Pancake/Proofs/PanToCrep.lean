@@ -1835,10 +1835,11 @@ proves target runtime `exp_hdl` execution, while
 `locals_rel`. The corresponding two-word execution and post-state relation
 are proved by `crepRuntimeExpHdlTwoWords` and
 `crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the
-source-to-target map-update relation used by those results. The remaining
-gap is actual-state `Call_Ret_Exception` branch matching/composition and
-arbitrary payload arities; the full HOL
-`pc_compile_correct[Call_Ret_Exception]` simulation remains open. -/
+source-to-target map-update relation used by those results. The one-word
+actual-state matching-handler case is also available as untagged induction
+support. The general HOL `Call_Ret_Exception` simulation remains open: its
+callee and handler induction hypotheses still need to be composed for
+arbitrary payload arities and post-state relations. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -2268,6 +2269,73 @@ theorem alookupCompileToCrepCodeGeneral
   · intro p hp
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq
+
+/-- Production/proof-context bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    checked compiler's per-function body (`panToCrepCompFuncRiscV`) is the
+    `codeRel` proof-context compilation (`compileCodeRelProg`) at the `ctxt_fc`
+    context. The variable map agrees by `panToCrepMakeVmapHOL_eq_ctxtFcVars`
+    and `vmax` by `maxList_range`. -/
+theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
+    (declarations : List (Decl (BitVec width)))
+    (vshs : List (VarName × Shape)) (prog : Prog (BitVec width)) :
+    panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog =
+      compileCodeRelProg
+        (ctxtFc (functionInfosHOL declarations)
+          (panToCrepGetEidsFromDeclsHOL declarations)
+          (vshs.map Prod.fst) (vshs.map Prod.snd) (panToCrepVars vshs)) prog := by
+  simp only [panToCrepCompFuncRiscV, compileProgRiscV, compileCodeRelProg,
+    panToCrepMkCtxtHOL, ctxtFc]
+  rw [panToCrepMakeVmapHOL_eq_ctxtFcVars vshs (functionInfosHOL declarations)
+    (panToCrepGetEidsFromDeclsHOL declarations)]
+  simp only [panToCrepVars, maxList_range, ctxtFc]
+
+/-- Exact port-shaped HOL `mk_ctxt_code_imp_code_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4604`): with distinct
+    function names and localised bodies, the checked compiler's code table is
+    `code_rel` to the source function table under the `mk_ctxt`/`make_funcs`/
+    `get_eids_from_decls` context. The source map is the finite-map list form
+    (`FUPDATE_LIST … .reverse`), the `make_funcs` lookup drops the body
+    (`makeFuncsHOL_lookup_of_lookup`), the target entry comes from
+    `alookupCompileToCrepCodeGeneral`, and the compiled body is rewritten to
+    `compileCodeRelProg` by `panToCrepCompFuncRiscV_eq_compileCodeRelProg`. Lean
+    splits HOL's single `ctxt` record into `PanToCrepHOLContext`/
+    `PanToCrepProofContext`, so the relation is stated with the proof-context
+    literal (as for `mk_ctxt_imp_locals_rel`). The HOL-vs-Lean equivalence of
+    the statement is reviewed by comparing the definitions (per SOUNDNESS). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_code_imp_code_rel"]
+theorem mkCtxtCodeImpCodeRel
+    (declarations : List (Decl (BitVec width)))
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlocalised : ∀ entry ∈ functionEntries declarations,
+      localisedProg entry.2.2.1) :
+    codeRel
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := functionInfosHOL declarations
+        eids := panToCrepGetEidsFromDeclsHOL declarations
+        vmax := 0 }
+      (FUPDATE_LIST FEMPTY (functionEntries declarations).reverse)
+      (FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse) := by
+  intro function vshs prog rshape hsource
+  rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup] at hsource
+  refine ⟨?_, ?_, ?_⟩
+  · obtain ⟨l₁, l₂, hdecomp, _hnotin⟩ := List.lookup_eq_some_iff.mp hsource
+    have hmem : (function, vshs, prog, rshape) ∈ functionEntries declarations := by
+      rw [hdecomp]
+      simp
+    have hloc := hlocalised (function, vshs, prog, rshape) hmem
+    simpa using hloc
+  · simp only []
+    rw [functionInfosHOL_eq_makeFuncsHOL]
+    exact makeFuncsHOL_lookup_of_lookup (functionEntries declarations)
+      function vshs prog rshape hsource
+  · simp only []
+    rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup]
+    rw [alookupCompileToCrepCodeGeneral declarations function vshs prog rshape
+      hsource]
+    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
+    rfl
 
 /-- Exact port of HOL `el_compile_prog_el_prog_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled

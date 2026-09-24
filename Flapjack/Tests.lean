@@ -151,6 +151,7 @@ import Flapjack.Test.WordToStackBitsParity
 import Flapjack.Test.MlStringParity
 import Flapjack.Test.MlStringBridgeParity
 import Flapjack.Test.PanLangShapeHOLParity
+import Flapjack.Test.PanLangExpHOLParity
 
 /-!
 # Flapjack regression tests

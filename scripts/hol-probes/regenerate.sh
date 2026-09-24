@@ -1450,9 +1450,16 @@ run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
 
-# The loopLang prog probe observes the exact HOL program constructor shapes
-# (word width fixed at 8) over the accepted `unit spt` num_set model.
+# The loopLang prog probe records HOL constructor outputs for comparison with
+# the untagged finite-map approximation (which is not an exact num_set port).
 run_probe loop_lang_prog_probeScript.sml loop_lang_prog_probe.out \
   prog_skip prog_ffi \
   "$cake_dir/pancake/loopLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The panLang exp probe pins the `exp` word payload (`Const`), its `mlstring`
+# identifier fields, and representative constructor arities at word type 64.
+run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
+  ex_const ex_bytesinword \
+  "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"

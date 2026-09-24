@@ -166,11 +166,11 @@ theorem panSemTotalAssignClause_invalid [NeZero 64] [BEq (RiscV.Word 64)]
     panSemTotalAssignClause state kind name expression = (some .error, state) := by
   simp [panSemTotalAssignClause, panSemTotalExprStep, heval, hvalid]
 
-/-- HOL `Return` (`panSemScript.sml:625-627`): evaluate the source; on a value
-    whose shape size is at most 32 return `SOME (Return v)` with the locals
-    cleared, and otherwise `SOME Error` with the state unchanged. -/
-def panSemTotalReturnClause
-    [NeZero 64]
+/-- HOL `Return` (`panSemScript.sml:638-644`): evaluate the source, accept it
+    only when `size_of_sh_with_ctxt structs (shape_of value) ≤ 32`, and clear
+    locals on success. Failed evaluation or an oversized value returns
+    `SOME Error` with the state unchanged. -/
+def panSemTotalReturnClause [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -185,12 +185,12 @@ def panSemTotalReturnClause
     Option (PanSemHOLResult (RiscV.Word 64)) ×
       PanSemState (RiscV.Word 64) (FfiState σ) :=
   panSemTotalExprStep state expression (fun value =>
-    if shapeSizeWithContext state.structs (panSemShapeOf value) <= 32 then
+    if sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
       (some (.returned value), panEmptyLocals state)
-    else (some .error, state))
+    else
+      (some .error, state))
 
-theorem panSemTotalReturnClause_some
-    [NeZero 64]
+theorem panSemTotalReturnClause_some [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -202,31 +202,14 @@ theorem panSemTotalReturnClause_some
     [PanCmp (RiscV.Word 64)]
     (state : PanSemState (RiscV.Word 64) (FfiState σ))
     (expression : Exp (RiscV.Word 64)) (value : PanValue (RiscV.Word 64))
-    (heval : evalPanSemStateExp state expression = some value)
-    (hsize : shapeSizeWithContext state.structs (panSemShapeOf value) <= 32) :
-    panSemTotalReturnClause state expression = (some (.returned value), panEmptyLocals state) := by
+    (heval : evalPanSemStateExp state expression = some value) :
+    sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 →
+    panSemTotalReturnClause state expression =
+      (some (.returned value), panEmptyLocals state) := by
+  intro hsize
   simp [panSemTotalReturnClause, panSemTotalExprStep, heval, hsize]
 
-theorem panSemTotalReturnClause_sizeError
-    [NeZero 64]
-    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
-    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
-    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
-    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
-    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
-    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
-    [LT (RiscV.Word 64)]
-    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
-    [PanCmp (RiscV.Word 64)]
-    (state : PanSemState (RiscV.Word 64) (FfiState σ))
-    (expression : Exp (RiscV.Word 64)) (value : PanValue (RiscV.Word 64))
-    (heval : evalPanSemStateExp state expression = some value)
-    (hsize : ¬ shapeSizeWithContext state.structs (panSemShapeOf value) <= 32) :
-    panSemTotalReturnClause state expression = (some .error, state) := by
-  simp [panSemTotalReturnClause, panSemTotalExprStep, heval, hsize]
-
-theorem panSemTotalReturnClause_none
-    [NeZero 64]
+theorem panSemTotalReturnClause_none [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -242,12 +225,11 @@ theorem panSemTotalReturnClause_none
     panSemTotalReturnClause state expression = (some .error, state) := by
   simp [panSemTotalReturnClause, panSemTotalExprStep, heval]
 
-/-- HOL `Raise` (`panSemScript.sml:628-630`): require a declared exception shape
-    `eshapes eid`; on a value whose shape equals it and whose shape size is at
-    most 32 return `SOME (Exception eid v)` with the locals cleared, else
+/-- HOL `Raise` (`panSemScript.sml:645-653`): require an exception shape for
+    `eid`, evaluate the source, and accept only a value with that shape and at
+    most 32 words. Success clears locals; every failed check returns
     `SOME Error` with the state unchanged. -/
-def panSemTotalRaiseClause
-    [NeZero 64]
+def panSemTotalRaiseClause [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -261,18 +243,17 @@ def panSemTotalRaiseClause
     (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64)) :
     Option (PanSemHOLResult (RiscV.Word 64)) ×
       PanSemState (RiscV.Word 64) (FfiState σ) :=
-  match state.exceptionShapes exceptionId with
-  | some exceptionShape =>
-      panSemTotalExprStep state expression (fun value =>
-        if panShapeMatches (panSemShapeOf value) exceptionShape then
-          if shapeSizeWithContext state.structs (panSemShapeOf value) <= 32 then
-            (some (.exception exceptionId value), panEmptyLocals state)
-          else (some .error, state)
-        else (some .error, state))
-  | none => (some .error, state)
+  panSemTotalExprStep state expression (fun value =>
+    match state.exceptionShapes exceptionId with
+    | some shape =>
+        if panShapeMatches shape (panSemShapeOf value) &&
+            sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
+          (some (.exception exceptionId value), panEmptyLocals state)
+        else
+          (some .error, state)
+    | none => (some .error, state))
 
-theorem panSemTotalRaiseClause_some
-    [NeZero 64]
+theorem panSemTotalRaiseClause_some [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -284,82 +265,17 @@ theorem panSemTotalRaiseClause_some
     [PanCmp (RiscV.Word 64)]
     (state : PanSemState (RiscV.Word 64) (FfiState σ))
     (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
-    (value : PanValue (RiscV.Word 64)) (exceptionShape : Shape)
+    (value : PanValue (RiscV.Word 64))
+    (shape : Shape)
     (heval : evalPanSemStateExp state expression = some value)
-    (hshapes : state.exceptionShapes exceptionId = some exceptionShape)
-    (hshape : panShapeMatches (panSemShapeOf value) exceptionShape = true)
-    (hsize : shapeSizeWithContext state.structs (panSemShapeOf value) <= 32) :
+    (hshape : state.exceptionShapes exceptionId = some shape)
+    (hvalue : panShapeMatches shape (panSemShapeOf value) = true)
+    (hsize : sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32) :
     panSemTotalRaiseClause state exceptionId expression =
       (some (.exception exceptionId value), panEmptyLocals state) := by
-  unfold panSemTotalRaiseClause
-  rw [hshapes]
-  simp [panSemTotalExprStep, heval, hshape, hsize]
+  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval, hshape, hvalue, hsize]
 
-theorem panSemTotalRaiseClause_shapeError
-    [NeZero 64]
-    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
-    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
-    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
-    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
-    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
-    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
-    [LT (RiscV.Word 64)]
-    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
-    [PanCmp (RiscV.Word 64)]
-    (state : PanSemState (RiscV.Word 64) (FfiState σ))
-    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
-    (value : PanValue (RiscV.Word 64)) (exceptionShape : Shape)
-    (heval : evalPanSemStateExp state expression = some value)
-    (hshapes : state.exceptionShapes exceptionId = some exceptionShape)
-    (hshape : panShapeMatches (panSemShapeOf value) exceptionShape = false) :
-    panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
-  unfold panSemTotalRaiseClause
-  rw [hshapes]
-  simp [panSemTotalExprStep, heval, hshape]
-
-theorem panSemTotalRaiseClause_sizeError
-    [NeZero 64]
-    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
-    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
-    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
-    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
-    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
-    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
-    [LT (RiscV.Word 64)]
-    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
-    [PanCmp (RiscV.Word 64)]
-    (state : PanSemState (RiscV.Word 64) (FfiState σ))
-    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
-    (value : PanValue (RiscV.Word 64)) (exceptionShape : Shape)
-    (heval : evalPanSemStateExp state expression = some value)
-    (hshapes : state.exceptionShapes exceptionId = some exceptionShape)
-    (hshape : panShapeMatches (panSemShapeOf value) exceptionShape = true)
-    (hsize : ¬ shapeSizeWithContext state.structs (panSemShapeOf value) <= 32) :
-    panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
-  unfold panSemTotalRaiseClause
-  rw [hshapes]
-  simp [panSemTotalExprStep, heval, hshape, hsize]
-
-theorem panSemTotalRaiseClause_missing
-    [NeZero 64]
-    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
-    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
-    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
-    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
-    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
-    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
-    [LT (RiscV.Word 64)]
-    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
-    [PanCmp (RiscV.Word 64)]
-    (state : PanSemState (RiscV.Word 64) (FfiState σ))
-    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
-    (hshapes : state.exceptionShapes exceptionId = none) :
-    panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
-  unfold panSemTotalRaiseClause
-  rw [hshapes]
-
-theorem panSemTotalRaiseClause_none
-    [NeZero 64]
+theorem panSemTotalRaiseClause_none [NeZero 64]
     [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
     [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
     [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
@@ -373,11 +289,7 @@ theorem panSemTotalRaiseClause_none
     (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
     (heval : evalPanSemStateExp state expression = none) :
     panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
-  unfold panSemTotalRaiseClause
-  cases hshapes : state.exceptionShapes exceptionId with
-  | none => rfl
-  | some exceptionShape => simp [panSemTotalExprStep, heval]
-
+  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval]
 
 /-- Shared list-expression glue: evaluate a list of source expressions from the
     complete state; on produced values hand them to the continuation, and on a
@@ -777,7 +689,8 @@ theorem panSemTotalStoreByteClause_ok [NeZero 64] [BEq (RiscV.Word 64)]
     panSemTotalStoreByteClause state address value = (none, { state with memory := memory }) := by
   simp [panSemTotalStoreByteClause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
 
-/-- HOL `Dec` helper: bind `name` in the chosen variable map (HOL `set_kvar`). -/
+
+-- HOL `Dec` statement clause (panSemScript.sml:556-561).
 def panSemTotalDecBind [BEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
     (kind : VarKind) (name : VarName) (value : PanValue (RiscV.Word 64)) :
     PanSemState (RiscV.Word 64) (FfiState σ) :=
@@ -832,5 +745,6 @@ theorem panSemTotalDecClause_shapeError [BEq String] [LawfulBEq String] (state :
     (hshape : panShapeMatches shape (panSemShapeOf value) = false) :
     panSemTotalDecClause state kind name shape expression body = (some .error, state) := by
   simp [panSemTotalDecClause, panSemTotalExprStep, heval, hshape]
+
 
 end Flapjack

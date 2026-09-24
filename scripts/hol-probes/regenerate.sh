@@ -565,6 +565,24 @@ run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
   if_true_result if_op_sub_zero_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The measure-driven total fragment probe observes Assign/Return/Raise result
+# and state branches, plus their interaction with If selection and Seq stopping.
+run_probe pan_sem_total_fragment_stmt_probeScript.sml pan_sem_total_fragment_stmt_probe.out \
+  total_assign_ok_result total_assign_ok_local \
+  total_assign_bad_result total_assign_bad_local \
+  total_return_ok_result total_return_ok_local \
+  total_return_bad_result total_return_bad_local \
+  total_return_oversize_result total_return_oversize_local \
+  total_raise_ok_result total_raise_ok_local \
+  total_raise_bad_result total_raise_bad_local \
+  total_raise_shape_mismatch_result total_raise_shape_mismatch_local \
+  total_raise_missing_shape_result total_raise_oversize_result \
+  total_raise_oversize_local total_if_assign_true_result \
+  total_if_assign_true_local total_if_assign_false_result \
+  total_if_assign_false_local total_seq_assign_return_result \
+  total_seq_assign_return_local total_seq_raise_stop_result \
+  total_seq_raise_stop_local \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If memory probe observes a memory-reading condition: a nonzero cell
 # selecting the then branch, a zero cell selecting the else branch, an address
 # outside `memaddrs` rejected with Error, and the same cell selecting different

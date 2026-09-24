@@ -1,0 +1,7 @@
+shp_one_str=«1»
+shp_named_str=«Foo»
+shp_comb_str=«{1,Bar}»
+shp_named_explode="Foo"
+shp_named_eq=T
+shp_named_ne=F
+shp_comb_len=2

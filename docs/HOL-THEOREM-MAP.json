@@ -113,35 +113,11 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "var_exp_def",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "expLocalVars",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "free_var_ids_def",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "freeVarIds",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause free_var_ids_def over the tagged expLocalVars port of var_exp, collecting local variables only and preserving order/duplicates; the Dec filter uses lawful != implementing HOL $≠; direct #guard parity in PanLangFreeVarIdsParity)."
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "exceptions_def",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "exceptionEntries",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "shape",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "Shape",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "ShapeHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname vs Lean Shape.one/comb(List Shape)/named(StructName): constructor arities 0/1/1 and field types match; identifiers modelled by String)"
+    "reviewer": "deepseek (constructor-by-constructor source comparison; HOL Datatype shape = One | Comb (shape list) | Named stcname with stcname = mlstring (panLangScript.sml:23-24) vs ShapeHOL.one/comb(List ShapeHOL)/named(MlS) where MlS = Flapjack.Basis.Pure.MlString.MlString is the exact mlstring carrier; arities 0/1/1 and field types match. Production Flapjack.Shape uses String names and its tag is withdrawn under flapjack-pxn.18.3.5.7; kernel codec shapeToHOL/shapeOfHOL with byte-ranged shapeOfHOL_shapeToHOL is in the same module; direct HOL oracle scripts/hol-probes/pan_lang_shape_probe.out reproduced by Flapjack/Test/PanLangShapeHOLParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -174,22 +150,6 @@
     "lean_name": "PrimOp",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL Datatype primop = AddCarry vs Lean PrimOp.addCarry: single nullary constructor matches)"
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "is_wf_shape_def",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "isWfShapeHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL is_wf_shape One/Comb/Named clauses match, ALOOKUP rendered as first-match lookupInfo at the concrete String BEq instance (String is the key type, so no extra LawfulBEq parameter is quantified) and isSome as <> NONE; context is HOL-shaped StructContextHOL over struct_info fields/size; production isWfShape related by isWfShapeHOL_toHOL; direct HOL rows in scripts/hol-probes/pan_lang_wf_shape_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "functions_def",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "functionEntries",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",

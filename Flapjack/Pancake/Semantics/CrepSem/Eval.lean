@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 
 /-!
@@ -11,6 +12,8 @@ type, and the source-shaped evaluator follows `crepSem$eval_def`.
 -/
 
 namespace Flapjack
+
+open Compiler.Encoders.Asm
 
 /-! HOL's polymorphic `'a word` carrier is a Boolean function indexed by the
     finite dimension type `'a`. This canonical `Fin width` representation
@@ -1570,15 +1573,16 @@ theorem wordCmpResultHOL_eq_evalPanCmp [NeZero width]
   cases operator with
   | equal => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
   | less =>
-      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less]
-      rfl
+      simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less,
+        holAsmSignedLess, RiscV.signedLess]
   | lower =>
       simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.lower]
       rfl
   | test => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
   | notEqual => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
   | notLess =>
-      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less]
+      have hless : holAsmSignedLess left right = RiscV.signedLess left right := rfl
+      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less, hless]
       by_cases h : RiscV.signedLess left right = true <;> simp [h]
   | notLower =>
       simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.lower]

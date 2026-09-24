@@ -5331,6 +5331,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "list_mapM_some_lookup_of_mem",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-list utility: a successful mapM lookup implies that every member key has a successful lookup. Used to derive handler target-slot presence from locals_rel; no standalone HOL theorem port."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panShapeMatches_self_forSourceCall",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only structural reflexivity helper for the executable shape matcher; used to derive the source exception handler shape premise from state_rel's empty struct context"

@@ -296,6 +296,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_const_def",
+    "lean_path": "Flapjack/Pancake/CrepArith.lean",
+    "lean_name": "crepDestConstHolWord",
+    "statement_status": "reviewed_exact",
+    "reviewer": "The tagged definition is restricted to CrepExp (ι → Bool), the Lean encoding of HOL word-valued Const. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The generic-alpha production helper remains untagged and is definitionally equal on this word carrier."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

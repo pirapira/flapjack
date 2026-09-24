@@ -1933,12 +1933,25 @@ theorem compileToCrepHOL_eq_map
     function entry with empty parameters and body `prog` is compiled to the
     Crepe entry whose argument slots are `crep_vars []` and whose body is
     `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)
-    [] prog`.  Here `compileToCrepHOL`, `functionInfosHOL`,
-    `panToCrepGetEidsFromDeclsHOL`, `panToCrepVars` and
-    `panToCrepCompFuncRiscV` are the tagged HOL counterparts of
-    `compile_to_crep`, `make_funcs`, `get_eids_from_decls`, `crep_vars` and
-    `comp_func`; `List.lookup` on the nested-pair triple list is HOL's
-    `ALOOKUP`. -/
+    [] prog`.  `List.lookup` on the nested-pair triple list is HOL's `ALOOKUP`.
+
+    Tagged counterparts used here: `compileToCrepHOL` (`compile_to_crep_def`),
+    `panToCrepVars` (`crep_vars_def`), `panToCrepGetEidsFromDeclsHOL`
+    (`get_eids_from_decls_def`), `panToCrepMkCtxtHOL` (`mk_ctxt_def`),
+    `panToCrepMakeVmapHOL` (`make_vmap_def`) and `compileProgRiscV`
+    (`compile_def`).  Two helpers are deliberate untagged adapters and are NOT
+    tagged counterparts:
+    * `functionInfosHOL` computes the HOL finite-map value
+      `alist_to_fmap (make_funcs (functions pan_code))`: `panToCrepMakeFuncs`
+      produces the same source-order `(name, (params, return))` list as HOL
+      `make_funcs`, and `FUPDATE_LIST FEMPTY ·.reverse` is `alist_to_fmap`
+      (`FOLDR FUPDATE FEMPTY`, first duplicate wins);
+    * `panToCrepCompFuncRiscV` is `comp_func` after threading the context as a
+      record: it reads `context.funcs`/`context.eids` instead of HOL's separate
+      `fs`/`eids` arguments and applies the tagged `compile_def` to the tagged
+      `mk_ctxt_def`/`make_vmap_def`. No HOL side condition or body step is
+      dropped; the correspondence is established by this theorem rather than
+      by definitional identity of the adapter's own binder shape. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
 theorem alookupCompileToCrepCode
     (declarations : List (Decl (BitVec width)))

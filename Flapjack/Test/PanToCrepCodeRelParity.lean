@@ -160,7 +160,8 @@ theorem rejectsUnlocalisedSource :
     same name and yields the `crep_vars [] = []` slot list together with the
     compiled body. -/
 def alookupDecls : List (Decl (BitVec 64)) :=
-  [Decl.function ⟨"f", false, false, [], Prog.skip, Shape.one⟩]
+  [Decl.function ⟨"f", false, false, [], Prog.skip, Shape.one⟩,
+   Decl.function ⟨"g", false, false, [("x", Shape.one)], Prog.skip, Shape.one⟩]
 
 def alookupGuard : Bool :=
   match List.lookup "f" (compileToCrepHOL alookupDecls) with
@@ -174,6 +175,16 @@ example : List.lookup "f" (compileToCrepHOL alookupDecls) =
   alookupCompileToCrepCode alookupDecls "f" .skip .one
     (by decide)
     (by simp [alookupDecls, functionEntries])
+
+/-- Exact-body guard (not just shape): the compiled `f` body is the concrete
+    `comp_func ... [] Skip`, which further reduces to `Skip`, matching the HOL
+    probe row `alookup_empty_params` (`body = comp_func ... [] Skip`). -/
+example : List.lookup "f" (compileToCrepHOL alookupDecls) =
+    some ([], CrepProg.skip) := by
+  rw [alookupCompileToCrepCode alookupDecls "f" .skip .one
+    (by decide)
+    (by simp [alookupDecls, functionEntries])]
+  simp only [panToCrepCompFuncRiscV, compileProgRiscV, compileProgHOL]
 
 #guard alookupGuard
 

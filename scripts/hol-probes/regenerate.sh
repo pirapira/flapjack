@@ -270,6 +270,10 @@ run_probe crep_to_loop_locals_cutset_probeScript.sml crep_to_loop_locals_cutset_
   cutset_sub_0 cutset_domain_trans \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_mem_lookup_probeScript.sml crep_to_loop_mem_lookup_probe.out \
+  ml_hit ml_distinct \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -293,7 +297,7 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
   genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
   "$cake_dir/pancake"
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
-  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  bits_empty wordlist_chunk "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
   wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
@@ -315,6 +319,9 @@ run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_pr
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_probe.out \
   ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinators_probe.out \
+  lc_empty wss_two "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
@@ -715,6 +722,9 @@ run_probe pan_sem_is_valid_value_probeScript.sml pan_sem_is_valid_value_probe.ou
 run_probe pan_sem_write_bytearray_probeScript.sml pan_sem_write_bytearray_probe.out \
   write_empty write_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_mem_store_byte_probeScript.sml pan_sem_mem_store_byte_probe.out \
+  store_byte_hit_some write_bytearray_out_of_domain \
+  "$cake_dir/pancake/semantics/panSemScript.sml" "$cake_dir/pancake/semantics"
 run_probe pan_sem_evaluate_fixed_load_probeScript.sml \
   pan_sem_evaluate_fixed_load_probe.out \
   eval_byte_hit eval_load32_alignment_failure \
@@ -1311,4 +1321,20 @@ run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
 run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app_list_probe.out \
   flatten_app_tick flatten_app_ite_tick \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The labProps sec_ends_with_label probe observes the `is_Label` classifier and
+# the `¬NULL ls ∧ is_Label (LAST ls)` section test used by
+# `EVERY_sec_ends_with_label_MAP_prog_to_section`.
+run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_probe.out \
+  is_label_label sec_empty \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The stack_names probe observes the pure register-renaming transformation
+# (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
+# compile / names_ok) against a small renaming map.
+run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
+  ri_reg names_ok_dup \
+  "$cake_dir/compiler/backend/stack_namesScript.sml" \
   "$cake_dir/compiler/backend"

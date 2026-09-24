@@ -34,16 +34,18 @@ for the review rule.
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |
 | `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
-| `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (generic HOL `store_name` and `prog` syntax) |
+| `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (generic HOL `store_name` and `prog` syntax, `list_Seq`) |
 | `compiler/backend/semantics/stackPropsScript.sml` | `Flapjack/Compiler/Backend/StackProps.lean` (recursive `stack_asm_ok` clauses and `addr_ok`, linked to the `asm_config` predicates) |
 | `compiler/encoders/asm/asmScript.sml` | `Flapjack/Compiler/Encoders/Asm.lean` (asm_config validity predicates: `reg_ok`, `fp_reg_ok`, `reg_imm_ok`, `offset_ok`, `arith_ok`, `fp_ok`, `cmp_ok`, `inst_ok`) |
 | `compiler/backend/labLangScript.sml` | `Flapjack/Compiler/Backend/LabLang.lean` (generic HOL `lab`, `line`, and `sec` syntax) |
 | `compiler/backend/lab_to_targetScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`cbw_to_asm` carrier boundary only; target encoding remains open) |
 | `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
 | `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
+| `compiler/backend/semantics/labSemScript.sml` | `Flapjack/Compiler/Backend/LabSem.lean` (`is_Label`) |
+| `compiler/backend/stack_namesScript.sml` | `Flapjack/Compiler/Backend/StackNames.lean` (`ri_find_name`, `inst_find_name`, `dest_find_name`, `comp`, `prog_comp`, `compile`, `names_ok`) |
 | `compiler/backend/stack_allocScript.sml` | `Flapjack/Compiler/Backend/StackAlloc.lean` (`next_lab`; executable pass counterpart remains `Flapjack/StackAlloc.lean`) |
 | `compiler/backend/stack_to_labScript.sml` | `Flapjack/Compiler/Backend/StackToLab.lean` (`flatten` and `prog_to_section`; `compile` remains open) |
-| `compiler/backend/word_to_stackScript.sml` | `Flapjack/Compiler/Backend/WordToStack.lean` (`bits_to_word`, `word_list`, `chunk_to_bits`, `chunk_to_bitmap`, `const_words_to_bitmap`, `insert_bitmap`, `num_stack_ret`, `skip_free`, `stack_arg_count`, `stack_free`, `perf_rsp`, `perf_rbp`, `handler_slots`; `state_rel`/`compile_semantics` remain open) |
+| `compiler/backend/word_to_stackScript.sml` | `Flapjack/Compiler/Backend/WordToStack.lean` (`bits_to_word`, `word_list`, `chunk_to_bits`, `chunk_to_bitmap`, `const_words_to_bitmap`, `insert_bitmap`, `num_stack_ret`, `skip_free`, `stack_arg_count`, `stack_free`, `perf_rsp`, `perf_rbp`, `handler_slots`, `seq_stack_free`, `w_stack_load`, `w_stack_store`; `state_rel`/`compile_semantics` remain open) |
 | `panStaticScript.sml` | `Flapjack/Pancake/PanStatic.lean` |
 | `pan_simpScript.sml` | `Flapjack/Pancake/PanSimp.lean` |
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |

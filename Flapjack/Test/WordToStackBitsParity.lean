@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.RiscV.CakeAllocatorCore
+import Flapjack.RiscV.CakeAllocatorBitsBridge
 
 /-!
 # Word-to-Stack `bits_to_word` parity
@@ -263,5 +264,119 @@ example : perfRsp = 14 := rfl
 example : perfRbp = 15 := rfl
 example : handlerSlots true = 5 := rfl
 example : handlerSlots false = 3 := rfl
+
+/-! ## Executable bitmap recursion ↔ tagged recursion
+
+Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
+`Flapjack.RiscV.CakeAlloc` bitmap recursion maps onto the tagged
+`bitsToWordW`/`wordListW` for every input, including the out-of-range
+`LENGTH > width` boundary (both sides truncate). -/
+
+def bridgeParityGuard : Bool :=
+  (BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord (List.replicate 65 true)) ==
+    bitsToWordW (width := 64) (List.replicate 65 true)) &&
+  (BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord [true, false, true]) ==
+    bitsToWordW (width := 64) [true, false, true]) &&
+  ((Flapjack.RiscV.CakeAlloc.frameBitmapWords 4 [true, false]).map (BitVec.ofNat 64) ==
+    wordListW (width := 64) [true, false] 4) &&
+  ((Flapjack.RiscV.CakeAlloc.frameBitmapWords 2
+      [true, true, true, true, true]).map (BitVec.ofNat 64) ==
+    wordListW (width := 64) [true, true, true, true, true] 2)
+
+#eval bridgeParityGuard
+#guard bridgeParityGuard
+
+/-- Arbitrary-input executable/tagged `bitsToWord` equivalence (stronger than
+in-range). -/
+example : BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord [false, true, true, false]) =
+    bitsToWordW (width := 64) [false, true, true, false] :=
+  Flapjack.RiscV.CakeAlloc.bitsToWord_ofNat_eq _
+
+/-- The executable chunking maps onto the tagged `wordListW`. -/
+example : (Flapjack.RiscV.CakeAlloc.frameBitmapWords 2
+      [true, true, true, true, true]).map (BitVec.ofNat 64) =
+    wordListW (width := 64) [true, true, true, true, true] 2 :=
+  Flapjack.RiscV.CakeAlloc.frameBitmapWords_map 2 _
+
+/-- Kernel-checked equality of the executed bitmap recursion with the tagged
+`wordListW`, for the prose-level `dimindex = width` identification. -/
+example : (Flapjack.RiscV.CakeAlloc.frameBitmapWords 3 [true, false, true]).map
+      (BitVec.ofNat 64) =
+    wordListW (width := 64) [true, false, true] 3 :=
+  Flapjack.RiscV.CakeAlloc.frameBitmapWords_map 3 _
+
+/-! ## stackLang program-combinator oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/stack_lang_prog_combinators_probe.out` (bead
+`flapjack-pxn.18.5.15.3.9`), for the word-independent `prog` combinators
+`list_Seq` (`stackLangScript.sml:86`), `SeqStackFree` (`word_to_stackScript.sml:260`),
+`wStackLoad` (`:52`) and `wStackStore` (`:57`):
+
+```
+lc_empty=Skip                 lc_one=Skip
+lc_two=Seq Skip (StackFree 1)
+lc_three=Seq Skip (Seq (StackFree 1) Skip)
+ssf_zero=Skip                 ssf_two=Seq (StackFree 2) Skip
+wsl_empty=Skip
+wsl_two=Seq (StackLoad 1 2) (Seq (StackLoad 3 4) Skip)
+wss_two=Seq (Seq Skip (StackStore 3 4)) (StackStore 1 2)
+```
+
+`Prog` has no `BEq`/`DecidableEq`, so the rows are compared by pattern matching.
+-/
+
+open Flapjack.Compiler.Backend.StackLang (listSeq)
+
+abbrev ParityProg := Flapjack.Compiler.Backend.StackLang.Prog Unit Unit Unit Unit Unit Unit Unit
+
+/-- Structural equality for the word-independent `ParityProg` fragment
+    (`Prog` has no derived `BEq`/`DecidableEq`). -/
+def parityProgBEq : ParityProg → ParityProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => parityProgBEq a c && parityProgBEq b d
+  | .stackFree n, .stackFree m => n == m
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | _, _ => false
+
+def vSkip : ParityProg := .skip
+def vSeq (a b : ParityProg) : ParityProg := .seq a b
+def vStackFree (n : Nat) : ParityProg := .stackFree n
+def vStackLoad (r i : Nat) : ParityProg := .stackLoad r i
+def vStackStore (r i : Nat) : ParityProg := .stackStore r i
+
+def progCombinatorsParityGuard : Bool :=
+  parityProgBEq (listSeq ([] : List ParityProg)) vSkip &&
+  parityProgBEq (listSeq ([.skip] : List ParityProg)) vSkip &&
+  parityProgBEq (listSeq ([.skip, .stackFree 1] : List ParityProg))
+    (vSeq vSkip (vStackFree 1)) &&
+  parityProgBEq (listSeq ([.skip, .stackFree 1, .skip] : List ParityProg))
+    (vSeq vSkip (vSeq (vStackFree 1) vSkip)) &&
+  parityProgBEq (seqStackFree 0 vSkip) vSkip &&
+  parityProgBEq (seqStackFree 2 vSkip) (vSeq (vStackFree 2) vSkip) &&
+  parityProgBEq (wStackLoad ([] : List (Nat × Nat)) vSkip) vSkip &&
+  parityProgBEq (wStackLoad [(1, 2), (3, 4)] vSkip)
+    (vSeq (vStackLoad 1 2) (vSeq (vStackLoad 3 4) vSkip)) &&
+  parityProgBEq (wStackStore [(1, 2), (3, 4)] vSkip)
+    (vSeq (vSeq vSkip (vStackStore 3 4)) (vStackStore 1 2))
+
+#eval progCombinatorsParityGuard
+#guard progCombinatorsParityGuard
+
+example : parityProgBEq (listSeq ([] : List ParityProg)) vSkip = true := rfl
+example : parityProgBEq (seqStackFree 2 vSkip) (vSeq (vStackFree 2) vSkip) = true := rfl
+example : parityProgBEq (wStackLoad [(1, 2), (3, 4)] vSkip)
+    (vSeq (vStackLoad 1 2) (vSeq (vStackLoad 3 4) vSkip)) = true := rfl
+example : parityProgBEq (wStackStore [(1, 2), (3, 4)] vSkip)
+    (vSeq (vSeq vSkip (vStackStore 3 4)) (vStackStore 1 2)) = true := rfl
+
+def runChecks : IO Bool := do
+  IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
+  IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
+  pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
+    chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
+    stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
+    progCombinatorsParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

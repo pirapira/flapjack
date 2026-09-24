@@ -535,7 +535,7 @@ example : crepToLoopLocalsRel localsRelContext (fun _ => false)
 def localsRelHOLContext : CrepToLoopFiniteMapContext :=
   { vars := (FEMPTY : FiniteMap Nat Nat),
     funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
-    vmax := 5, target := .rv64i }
+    vmax := 5, target := .riscv }
 
 /-- The tagged exact `locals_rel_def` port satisfies every clause vacuously for
     an empty context and empty source locals. -/
@@ -638,7 +638,7 @@ example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true �
 def contextDefsContext : CrepToLoopFiniteMapContext :=
   { vars := FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7),
     funcs := FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2)),
-    vmax := 9, target := .rv64i }
+    vmax := 9, target := .riscv }
 
 example : findVarHOL contextDefsContext 1 = 7 := by
   simp [findVarHOL, contextDefsContext, FLOOKUP_update]
@@ -655,15 +655,18 @@ example : findLabHOL contextDefsContext "g" = 0 := by
 /-! `mk_ctxt`/`make_vmap` over the finite-map carrier, mirroring
     `scripts/hol-probes/crep_to_loop_mk_ctxt_probe.out`. -/
 example :
-    (mkCtxtHOL .rv64i (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
+    (mkCtxtHOL .riscv (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7))
       (FUPDATE (FEMPTY : FiniteMap FunName (Nat × Nat)) ("f", (3, 2))) 9).vars =
       FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 7) := rfl
 
-example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
       (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).vmax = 9 := rfl
 
-example : (mkCtxtHOL .rv64i (FEMPTY : FiniteMap Nat Nat)
-      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .rv64i := rfl
+example : (mkCtxtHOL .riscv (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .riscv := rfl
+
+example : (mkCtxtHOL .armv7 (FEMPTY : FiniteMap Nat Nat)
+      (FEMPTY : FiniteMap FunName (Nat × Nat)) 9).target = .armv7 := rfl
 
 example : FLOOKUP (makeVmapHOL [5]) 5 = some 0 := by
   simp [makeVmapHOL, FUPDATE_LIST, FUPDATE, FLOOKUP]
@@ -754,5 +757,10 @@ example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 
 
 example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
   simp [rtVars, FLOOKUP]
+
+/-- HOL `mem_lookup_fromalist_some` oracle rows (`ml_*` in
+    `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`). -/
+example : ([(1, 7), (2, 9)] : List (Nat × Nat)).lookup 2 = some 9 :=
+  memLookupFromAListSome (n := 2) (x := 9) (by decide) (by decide)
 
 end Flapjack.Test.CrepToLoopParity

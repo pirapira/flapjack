@@ -2655,6 +2655,28 @@ theorem crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
+/-! The source evaluator and the canonical finite-dimension evaluator both
+    read LoadGlob directly from the represented HOL globals field. This bridge
+    closes this evaluator constructor without assumptions about the memory
+    model; it is Flapjack adapter support, not a standalone HOL declaration. -/
+theorem evalCrepHolFiniteWordSourceExp_loadGlob_eq_finiteDimension
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (address : BitVec 5) :
+    evalCrepHolFiniteWordSourceExp dimension state (.loadGlob address) =
+      evalCrepHolFiniteDimensionExp dimension state (.loadGlob address) := by
+  letI : HolFiniteDimension ι := dimension
+  cases hglobal : state.globals address with
+  | none => simp [evalCrepHolFiniteWordSourceExp,
+      evalCrepHolFiniteDimensionExp, evalCrepHolExp,
+      CrepHolState.toHolFiniteBitVecState, mapCrepExpWord, hglobal]
+  | some wordLab =>
+    cases wordLab with
+    | word value =>
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolFiniteDimensionExp,
+        evalCrepHolExp, CrepHolState.toHolFiniteBitVecState, mapCrepExpWord,
+        mapCrepHolWordLab, panTheWord, hglobal,
+        bitVecToHolWord_holWordToBitVec]
+
 /-- Successful-result form of the all-finite-index source-evaluator theorem.
     This follows HOL `simp_exp_correct`'s premise and conclusion, with the
     same arbitrary code-map update and full `word_lab` value. It remains

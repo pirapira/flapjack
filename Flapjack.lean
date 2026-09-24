@@ -192,8 +192,12 @@ import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList
 import Flapjack.Compiler.Backend.LabLang
+import Flapjack.Compiler.Backend.LabSem
+import Flapjack.Compiler.Backend.LabProps
+import Flapjack.Compiler.Backend.StackNames
 import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.Compiler.Backend.WordToStack
+import Flapjack.RiscV.CakeAllocatorBitsBridge
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.StackAlloc.Machine

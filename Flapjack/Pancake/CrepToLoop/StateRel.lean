@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.LoopStateResult
+import Flapjack.Compiler.Encoders.Asm
 
 /-!
 State relation of the Crepe-to-Loop lowering, ported from
@@ -302,7 +303,7 @@ structure CrepToLoopFiniteMapContext where
   vars : FiniteMap Nat Nat
   funcs : FiniteMap FunName (Nat × Nat)
   vmax : Nat
-  target : RiscV.Architecture
+  target : Compiler.Encoders.Asm.AsmArchitecture
 
 /-- Exact width-indexed port of HOL `locals_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) over the
@@ -432,7 +433,7 @@ HOL finite maps) they need no width parameter. -/
 /-- Exact port of HOL `mk_ctxt_def`
     (`cakeml/pancake/crep_to_loopScript.sml:221-228`). -/
 @[hol "cakeml/pancake/crep_to_loopScript.sml" "mk_ctxt_def"]
-def mkCtxtHOL (target : RiscV.Architecture) (vmap : FiniteMap Nat Nat)
+def mkCtxtHOL (target : Compiler.Encoders.Asm.AsmArchitecture) (vmap : FiniteMap Nat Nat)
     (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
     CrepToLoopFiniteMapContext :=
   { vars := vmap, funcs := functions, vmax := vmax, target := target }
@@ -459,5 +460,23 @@ def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
     ((prog.zip (List.range prog.length)).map
       (fun entry =>
         (entry.1.1, (firstLoopName + entry.2, entry.1.2.1.length)))).reverse
+
+/-! ## Association-list lookup
+
+`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`): a member
+of a duplicate-free association list is returned by looking up its key in the
+`fromAList` tree.  HOL `sptree$fromAList`/`lookup` on a duplicate-free list is
+rendered as `List.lookup` on that list (equivalently `FLOOKUP` of the standard
+alist→finite-map encoding), and `ALL_DISTINCT (MAP FST xs)` as
+`(entries.map Prod.fst).Nodup`; the key type is fixed to `num` as in HOL. -/
+
+/-- Exact port of HOL `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_lookup_fromalist_some"]
+theorem memLookupFromAListSome {β : Type} [BEq Nat] [LawfulBEq Nat]
+    {entries : List (Nat × β)} {n : Nat} {x : β}
+    (hnodup : (entries.map Prod.fst).Nodup) (hmem : (n, x) ∈ entries) :
+    entries.lookup n = some x :=
+  list_lookup_of_mem_of_nodup hnodup hmem
 
 end Flapjack

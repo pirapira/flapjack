@@ -173,7 +173,8 @@ private theorem crepMulConst_holFiniteDimension {ι : Type}
 /-- Generic Flapjack support lemma: a successful destination test identifies
     the expression as exactly that constant. This is not tagged as HOL's
     `dest_const_thm`, whose expression and value are restricted to the HOL
-    word type; the faithful width-indexed word theorem remains open. -/
+    word type. The faithful positive-width word specialization is tagged below;
+    this arbitrary-carrier helper remains untagged for the local simp proof. -/
 theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     (value : α)
     (h : crepDestConst expression = some value) :

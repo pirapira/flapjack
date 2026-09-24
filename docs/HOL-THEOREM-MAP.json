@@ -6768,6 +6768,14 @@
     "reviewer": "Flapjack-only actual Call-entry locals_rel composition for arbitrary full expression IHs: uses source lookup/bindPanValueParameters, production target code lookup, and code_rel to derive callee locals_rel. It derives the flattened argument-length equality internally from the successful source parameter match and source-value well-formedness; the expression induction and recursive body/handler Call_Ret_Exception composition remain open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constOrLocalOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local argument lists. It derives the full per-expression IH from the dedicated four-conclusion argument-list proof, then uses production source/target code maps to derive target lookup and callee locals_rel. Other expression constructors and recursive body/handler Call composition remain open; no @[hol] tag claimed."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "set_var_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",

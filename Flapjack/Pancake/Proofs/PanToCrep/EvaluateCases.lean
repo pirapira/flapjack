@@ -8194,6 +8194,71 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
   refine ⟨targetCalleeLocals, htargetLookup, ?_⟩
   simpa [htargetMap] using hlocalsRel
 
+/-! Const/Local specialization of the state-owned Call-entry boundary. It
+derives the full expression IH required for target lookup and parameter
+locals from the preceding four-conclusion argument-list proof. -/
+theorem lookupCrepRuntimeCode_callEntryLocalsRel_constOrLocalOfHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstOrLocal expression)
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals)) :
+    ∃ targetCalleeLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+            (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetCalleeLocals) ∧
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceCalleeLocals targetCalleeLocals := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [] := by
+    intro expression hmem
+    cases hsupported expression hmem <;> simp [expGlobalVars]
+  obtain ⟨_hcompiledArgs, hperExpression⟩ :=
+    compileArgsHOL_constOrLocal_ofHOLIH context source target expressions arguments
+      hstate hcode hlocals hsupported hsourceArgs
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL compilerContext expression).1 =
+            some (panValueFlatten value) ∧
+        (compileExpHOL compilerContext expression).1.length =
+          Shape.shapeSize (compileExpHOL compilerContext expression).2 ∧
+        panValueShape [] value = (compileExpHOL compilerContext expression).2 ∧
+        isWfShape [] (compileExpHOL compilerContext expression).2 = true := by
+    intro expression hmem value heval _hstate _hcode _hlocals hlocalized'
+    simpa [compilerContext] using
+      hperExpression expression hmem value heval hlocalized'
+  exact lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH context source target
+    function parameters sourceBody returnShape expressions arguments sourceCalleeLocals
+    hstate hcode hlocals hlocalized hsourceArgs hentry hsourceCall heach
+
 /-! The caller's state, code, and exception relations survive Call's callee
 entry setup: the two evaluators replace only locals and decrement the related
 clocks, while both state-owned code maps and the source exception-shape map

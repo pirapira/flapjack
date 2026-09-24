@@ -1,2 +1,4 @@
 colour_ok_distinct_write_live=T
 colour_ok_alias_write_live=F
+colour_ok_distinct_write_live_after=T
+colour_ok_alias_write_live_after=F

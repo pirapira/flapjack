@@ -304,6 +304,7 @@ run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.
 run_probe word_alloc_live_colour_noalias_probeScript.sml \
   word_alloc_live_colour_noalias_probe.out \
   colour_ok_distinct_write_live colour_ok_alias_write_live \
+  colour_ok_distinct_write_live_after colour_ok_alias_write_live_after \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
@@ -449,6 +450,12 @@ run_probe pan_sem_call_callee_normal_probeScript.sml pan_sem_call_callee_normal_
 # callee's bound parameter locals and the decremented clock.
 run_probe pan_sem_call_callee_terminal_probeScript.sml pan_sem_call_callee_terminal_probe.out \
   call_break_result call_continue_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The Call callee-error probe observes that a callee whose body finishes with
+# `SOME Error` propagates `SOME Error` through the catch-all `empty_locals st`,
+# clearing the caller-visible locals while keeping the decremented clock.
+run_probe pan_sem_call_callee_error_probeScript.sml pan_sem_call_callee_error_probe.out \
+  call_error_result call_error_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Return/Raise probe observes evaluation failure and shape/size rejection
 # with `SOME Error` and the unchanged state, plus the successful results with

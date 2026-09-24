@@ -524,8 +524,8 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1OpHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact recursive Op constructor case of local simp_exp_correct1. The induction hypotheses range over precisely the argument expressions; source word_op is routed through the width-indexed HOL word_op_def port. The unused result binder, success premise, code-map update, and complete Option word_lab result match this case. Crepop arithmetic, memory cases, and theorem assembly remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged support for the Op case shape, with IHs over the argument list and full Option word_lab result. It uses evalCrepHolFiniteWordSourceExpWordLab over an explicit HolFiniteDimension and CrepHolState. The word_op operation bridge is reviewed, but no proof identifies this evaluator/state encoding with native HOL crepSem eval_def for arbitrary dimensions and states; therefore it is not tagged as a HOL case."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

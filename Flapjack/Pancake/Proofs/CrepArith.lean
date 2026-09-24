@@ -2847,15 +2847,18 @@ theorem crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase
     evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
     crepSimpExp]
 
-/-- Exact recursive `Op` case of HOL's local `simp_exp_correct1`
-    (`crep_arithProofScript.sml:111`). Its child induction hypotheses range
-    over precisely the expressions in the argument list, and retain the
-    original successful-evaluation premise, arbitrary code-map update, and
-    complete `Option word_lab` result. The source evaluator routes `word_op`
-    through the width-indexed HOL `word_op_def` port; this case does not use
-    target-specific arithmetic, memory operations, or `eval_mul_const`. Other
-    recursive cases and the assembled theorem remain open. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1"]
+/-- Flapjack support for the recursive `Op` case shape of HOL's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). Its child induction
+    hypotheses range over precisely the expressions in the argument list, and
+    it retains the successful-evaluation premise, arbitrary code-map update,
+    and complete `Option word_lab` result. This remains untagged: the premise
+    and conclusion use `evalCrepHolFiniteWordSourceExpWordLab`, whose
+    `HolFiniteDimension` and `CrepHolState` encoding has not been proved equal
+    to HOL `crepSem$eval`/`eval_def` for arbitrary HOL word dimensions and
+    states. Routing `word_op` through the HOL `word_op_def` port proves only
+    the operation clause, not the evaluator correspondence needed to claim the
+    theorem case. The exact HOL evaluator bridge, other recursive cases, and
+    assembled theorem remain open. -/
 theorem crepSimpExpCorrect1OpHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

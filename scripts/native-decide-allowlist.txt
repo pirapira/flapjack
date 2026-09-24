@@ -95,11 +95,3 @@
 # `crepDest2Exp_eq_shift` / `crepDest2Exp_lt_width` theorems, so `#guard`
 # cannot stand in; the surrounding execution check is already a `#guard`.
 4 Flapjack/Test/CrepeDest2ExpParity.lean
-
-# --- Word-to-stack bitmap word-list oracle equalities -------------------------
-# The three `native_decide` calls discharge `example` equalities over the
-# word-indexed `wordListW`/`chunkToBitsW`/`constWordsToBitmapW` helpers, whose
-# `BitVec` recursion blocks the elaborator's `Decidable` reduction; the same
-# fixtures carry adjacent `#guard` execution checks (wordListParityGuard /
-# chunkToBitsParityGuard) that already exercise the values.
-3 Flapjack/Test/WordToStackBitsParity.lean

@@ -2699,6 +2699,58 @@ theorem compileExpHOL_local_eval_flatten
   rw [evalCrepRuntimeExps_vars_eq]
   exact htargetValues
 
+/-! Exact HOL-shaped `compile_exp_val_rel` Local constructor case.  Unlike a
+standalone evaluator lemma, this has the relation and localization premises
+from the HOL theorem and proves all four of its conclusions for the compiler's
+own output.  The target evaluation is derived from `locals_rel`; it is not an
+additional induction hypothesis or premise.  This remains one constructor
+case, not a port of the complete HOL induction. -/
+theorem compileExpHOL_local_case_of_relations
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (value : PanValue (RiscV.Word 64))
+    (_hstate : stateRel source target)
+    (_hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (_hlocalized : expGlobalVars (.var .local name : Exp (RiscV.Word 64)) = [])
+    (hsourceEval : evalPanSemStateExp source (.var .local name) = some value) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.var .local name)).1 =
+          some (panValueFlatten value) ∧
+      (compileExpHOL compilerContext (.var .local name)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.var .local name)).2 ∧
+      panValueShape [] value =
+        (compileExpHOL compilerContext (.var .local name)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.var .local name)).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hsource : FLOOKUP source.locals name = some value := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceEval
+  obtain ⟨slots, hcontext, hslotsLength, htargetWords, hwf⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name value hlocals hsource
+  have hcompiled : compileExpHOL compilerContext (.var .local name) =
+      (slots.map CrepExp.var, panValueShape [] value) := by
+    simp [compileExpHOL, compilerContext, hcontext]
+  have htargetEval : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext (.var .local name)).1 =
+        some (panValueFlatten value) := by
+    exact compileExpHOL_local_eval_flatten context source target name value
+      hlocals hsourceEval
+  have hlength : (compileExpHOL compilerContext (.var .local name)).1.length =
+      Shape.shapeSize (compileExpHOL compilerContext (.var .local name)).2 := by
+    rw [hcompiled, List.length_map, hslotsLength]
+    exact panValueFlatten_length_eq_shapeSize value hwf
+  have hwfCompiled : isWfShape []
+      (compileExpHOL compilerContext (.var .local name)).2 = true := by
+    rw [hcompiled]
+    exact hwf
+  exact ⟨htargetEval, hlength, by rw [hcompiled], hwfCompiled⟩
+
 /-! `mapM` success is preserved by truncating both its input and output at the
 same position. This supports `comp_field` projections of flattened locals. -/
 private theorem mapM_take_of_success {α β : Type} (f : α → Option β)

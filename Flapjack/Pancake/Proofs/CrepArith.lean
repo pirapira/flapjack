@@ -180,6 +180,19 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+/-- Width-parametric word port of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`). The positive-width `BitVec` carrier
+    represents HOL's nonempty finite-index word type; unlike the generic
+    support lemma above, both the expression constant and extracted value are
+    word-typed as in HOL. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+theorem crepDestConstWord_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExp (RiscV.Word width))
+    (value : RiscV.Word width)
+    (h : crepDestConst expression = some value) :
+    expression = .const value := by
+  cases expression <;> simp_all [crepDestConst]
+
 /-- Exact generic list-success monotonicity helper from HOL's local
     `OPT_MMAP_EQ_SOME_MONO` (`crep_arithProofScript.sml:93`).  `List.mapM` with
     the `Option` monad is the Lean encoding of HOL's `OPT_MMAP`; this lemma is
@@ -1586,8 +1599,9 @@ theorem crepSimpExpEvalPreservesHolFiniteDimension {ι : Type} {σ : Type}
 
 /-! This target-specific helper proves the hard `CrepOp.mul` case of the
     recursive `simp_exp` preservation argument. It uses the generated
-    `crepSimpExp` equations and the untagged RISC-V multiplication support;
-    the HOL evaluator correspondence gap documented above remains open. -/
+    `crepSimpExp` equations, the width-parametric word port of HOL
+    `dest_const_thm`, and the untagged RISC-V multiplication support; the HOL
+    evaluator correspondence gap documented above remains open. -/
 theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
     (state : CrepRuntimeState (RiscV.Word n) σ)
     (left right : CrepExp (RiscV.Word n)) (leftValue rightValue : RiscV.Word n)
@@ -1600,11 +1614,11 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
         some (leftValue * rightValue) := by
   cases hL : crepDestConst (crepSimpExp (BitVec.ofNat n) left) with
   | some leftConstant =>
-      have hLshape := crepDestConst_eq_const
+      have hLshape := crepDestConstWord_eq_const
         (crepSimpExp (BitVec.ofNat n) left) leftConstant hL
       cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
       | some rightConstant =>
-          have hRshape := crepDestConst_eq_const
+          have hRshape := crepDestConstWord_eq_const
             (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
           have hmulShape := crepSimpExp.eq_5 (BitVec.ofNat n) [left, right]
             leftConstant rightConstant (by simp [hLshape, hRshape])
@@ -1631,7 +1645,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
   | none =>
       cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
       | some rightConstant =>
-          have hRshape := crepDestConst_eq_const
+          have hRshape := crepDestConstWord_eq_const
             (crepSimpExp (BitVec.ofNat n) right) rightConstant hR
           have hLnotConst : ∀ value,
               crepSimpExp (BitVec.ofNat n) left = .const value → False := by

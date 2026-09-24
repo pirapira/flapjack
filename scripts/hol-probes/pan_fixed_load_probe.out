@@ -40,4 +40,16 @@ load32_hit_width8=SOME 0xA5A5A5A5w
 byte_align_width24_address5=4w
 byte_load_width24_address5=SOME 51w
 byte_load_width24_address5_big_endian=SOME 17w
+byte_load_width4_address1=SOME (w2w (1w ⋙ (8 * (1 MOD 0))))
+byte_load_width4_address0_nonzero_little_endian=SOME (w2w (11w ⋙ (8 * (0 MOD 0))))
+byte_load_width4_address1_nonzero_little_endian=SOME (w2w (11w ⋙ (8 * (1 MOD 0))))
+byte_load_width4_address0_nonzero_big_endian=SOME 11w
+byte_load_width4_address1_nonzero_big_endian=SOME 11w
+byte_align_width4_address1=n2w
+  (if numeral_bit$iMOD_2EXP (LOG2 0) <..num comp'n..> < <..num comp'n..> then
+     <..num comp'n..>
+   else 0)
+byte_index_width4_address1=8 * (1 MOD 0)
+get_byte_width4_address1=w2w (1w ⋙ (8 * (1 MOD 0)))
+get_byte_width4_zero_equation=w2w (1w ⋙ (8 * (1 MOD 0))) = 0w
 load32_width24_address4=SOME 0x22113322w

@@ -32,7 +32,7 @@ for the review rule.
 | HOL script | Lean counterpart |
 | --- | --- |
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |
-| `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` |
+| `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` (`word_loc` width-indexed `WordLocW` (`[NeZero width]`) plus generic bridge; backend syntax) |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
 | `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (`store_name`; generic `prog` syntax, `list_Seq`; exact width-indexed asm payload carriers `reg_imm`/`addr`/`inst` live in `Flapjack/Compiler/Encoders/Asm.lean`; shared-word `ProgW` carrier in `Flapjack/Compiler/Backend/StackCarrier.lean`; exact width-indexed `prog` open under `flapjack-pxn.18.5.15.3.11`) |
 | `compiler/backend/semantics/stackPropsScript.sml` | `Flapjack/Compiler/Backend/StackProps.lean` (recursive `stack_asm_ok` clauses and `addr_ok`, linked to the `asm_config` predicates) |

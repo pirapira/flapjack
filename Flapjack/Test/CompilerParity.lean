@@ -220,6 +220,7 @@ import Flapjack.Test.WordLangExtractLabelsParity
 import Flapjack.Test.WordLangInstPredsParity
 import Flapjack.Test.WordLangFlatExpParity
 import Flapjack.Test.WordLangInstOkLessParity
+import Flapjack.Test.WordLangFullInstOkLessParity
 import Flapjack.Test.AsmConfigChecksParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
@@ -822,6 +823,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.WordLangInstPredsParity.runChecks,
     Flapjack.Test.WordLangFlatExpParity.runChecks,
     Flapjack.Test.WordLangInstOkLessParity.runChecks,
+    Flapjack.Test.WordLangFullInstOkLessParity.runChecks,
     Flapjack.Test.AsmConfigChecksParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,

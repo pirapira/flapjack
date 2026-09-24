@@ -259,4 +259,36 @@ def instOkLess {width : Nat} (config : AsmConfig width) :
       asmFpRegOk config destination && asmFpRegOk config source
   | _ => true
 
+/-- HOL `wordConvs$full_inst_ok_less_def` (`wordConvsScript.sml:318-345`): the
+weaker per-instruction validity predicate lifted over the program, with the
+`ShareInst` address-expression restriction via `expToAddr`. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "full_inst_ok_less_def"]
+def fullInstOkLess {width : Nat} (config : AsmConfig width) :
+    WordLangProg (BitVec width) -> Bool
+  | .inst value => instOkLess config value
+  | .seq first second =>
+      fullInstOkLess config first && fullInstOkLess config second
+  | .loop _ body _ => fullInstOkLess config body
+  | .ite _ _ _ thenBranch elseBranch =>
+      fullInstOkLess config thenBranch && fullInstOkLess config elseBranch
+  | .mustTerminate body => fullInstOkLess config body
+  | .call returns _ _ handler =>
+      (match returns with
+        | none => true
+        | some (_, _, returnHandler, _, _) => fullInstOkLess config returnHandler) &&
+      (match handler with
+        | none => true
+        | some (_, handlerProg, _, _) => fullInstOkLess config handlerProg)
+  | .shareInst operator _ address =>
+      match expToAddr address with
+      | some (.addr _ offset) =>
+          if operator == .load || operator == .store ||
+              operator == .load32 || operator == .store32 then
+            asmAddrOffsetOk config offset
+          else if operator == .load16 || operator == .store16 then
+            asmHwOffsetOk config offset
+          else asmByteOffsetOk config offset
+      | none => false
+  | _ => true
+
 end Flapjack

@@ -1108,3 +1108,10 @@ run_probe word_convs_inst_ok_less_probeScript.sml word_convs_inst_ok_less_probe.
   iol_binop_imm iol_movtoreg_ok \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The full_inst_ok_less probe observes `exp_to_addr` and the lifted
+# `wordConvs$full_inst_ok_less` predicate over the backend wordLang syntax.
+run_probe word_convs_full_inst_ok_less_probeScript.sml word_convs_full_inst_ok_less_probe.out \
+  eta_var fiol_alloc \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

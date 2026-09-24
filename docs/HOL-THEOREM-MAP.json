@@ -7903,5 +7903,21 @@
   "lean_name": "instOkLess",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "exp_to_addr_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "expToAddr",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "full_inst_ok_less_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "fullInstOkLess",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

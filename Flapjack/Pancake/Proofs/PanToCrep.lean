@@ -1832,9 +1832,10 @@ shape-preserving source update, using the slots recorded in `context.vars`.
 The target runtime `exp_hdl` writes and their `locals_rel` updates are proved
 for arbitrary flattened payload widths by
 `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
-`crepRuntimeExpHdlFiniteMapWords_localsRel`; the one- and two-word lemmas are
-specialized versions. The corresponding actual-state matching-handler
-prestate composition is available in
+`crepRuntimeExpHdlFiniteMapWords_localsRel`. The one-word execution is also
+stated directly as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
+`crepRuntimeExpHdlOneWord_localsRel` giving its local-map result. The
+corresponding actual-state matching-handler prestate composition is available in
 `crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations` as untagged
 induction support. This lemma supplies the source-to-target map-update
 relation used by those proofs. The general HOL `Call_Ret_Exception`

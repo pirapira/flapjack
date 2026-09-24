@@ -800,52 +800,92 @@
     "reviewer": "Codex (source comparison; HOL FDOM f SUBSET FDOM g is rendered as the pointwise implication on the repo FDOM predicate, and the FLOOKUP support condition matches HOL exactly; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "fdoms_eq_flookup_some_none",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "fdoms_eq_flookup_some_none",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "OPT_MMAP_MEM_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "OPT_MMAP_MEM_IMP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; pure option/list lemma over List.mapM as the OPT_MMAP carrier, no key-equality side condition)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdoms_eq_opt_mmap_flookup_some",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdoms_eq_opt_mmap_flookup_some",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup_var",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup",
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL SUBMAP is rendered by the repo crepHolSubmap lookup-function predicate, |+ is FUPDATE; both sides updated at the same key; [LawfulBEq κ] ties the Boolean key equality to HOL =; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; crepHolSubmap for SUBMAP, FDOMSUB for HOL \\; same key removed from both sides; [LawfulBEq κ]; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; f \\ x SUBMAP g |+ (x,y); crepHolSubmap/FDOMSUB/FUPDATE; [LawfulBEq κ]; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_commutes_strong",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact statement over the reviewed resVar (res_var_def) with no n <> h side condition; Boolean key equality reflects HOL = under LawfulBEq alpha)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_foldl_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_foldl_commutes_strong",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL ZIP (vs, MAP f vs) is Lean vs.zip (vs.map f), FOLDL is List.foldl; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "flookup_res_var_is_mem_zip_eq",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "flookup_res_var_is_mem_zip_eq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -6155,6 +6195,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constOrLocal_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Const/Local list step toward HOL eval_map_comp_exp_flat_eq. Composes four-part per-expression evaluation, length, shape, and well-formedness facts from state_rel/code_rel/locals_rel; other constructors and the full Call case remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized Call-argument IH for Const, Local, baseAddr, topAddr, and bytesInWord. It derives production target argument evaluation plus expression length, shape, and well-formedness; other constructors and the complete HOL expression theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
@@ -6760,6 +6816,22 @@
     "reviewer": "Flapjack-only actual Call-entry locals_rel composition for arbitrary full expression IHs: uses source lookup/bindPanValueParameters, production target code lookup, and code_rel to derive callee locals_rel. It derives the flattened argument-length equality internally from the successful source parameter match and source-value well-formedness; the expression induction and recursive body/handler Call_Ret_Exception composition remain open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constOrLocalOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local argument lists. It derives the full per-expression IH from the dedicated four-conclusion argument-list proof, then uses production source/target code maps to derive target lookup and callee locals_rel. Other expression constructors and recursive body/handler Call composition remain open; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local and the three fixed RISC-V address leaves. It derives the expression IHs from state_rel and proves production target code lookup plus callee locals_rel; other argument constructors and recursive Call body/handler composition remain open."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "set_var_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
@@ -6830,6 +6902,14 @@
     "lean_name": "compileExpHOL_const_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_local_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Local base case for the localized four-part expression relation used toward Call argument induction. It derives target evaluation, length, source shape, and shape well-formedness from locals_rel; the full HOL expression and Call theorems remain open, with no @[hol] tag claimed."
   },
   {
     "hol_path": null,
@@ -7390,5 +7470,13 @@
     "lean_name": "labelsRel_of_perm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "extract_labels_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "extractLabels",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
   }
 ]

@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 
@@ -183,6 +184,55 @@ mutual
         rw [panIsWfShapeValueHOL_toHOL context value,
           panIsWfShapeValuesHOL_mapSnd_toHOL context fields]
 end
+
+/-- HOL `fdoms_eq_flookup_some_none` (`panPropsScript.sml:276`): if two finite
+    maps have the same domain, every defined lookup in the first is also defined
+    in the second. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "fdoms_eq_flookup_some_none"]
+theorem fdoms_eq_flookup_some_none {α : Type} {β : Type} (fm fm' : FiniteMap α β) (n : α)
+    (v : β) (_vPrime : β) (hdom : FDOM fm = FDOM fm') (hv : FLOOKUP fm n = some v) :
+    ∃ v', FLOOKUP fm' n = some v' := by
+  have hmem : FDOM fm' n := by
+    rw [← hdom]
+    change fm n ≠ none
+    change fm n = some v at hv
+    rw [hv]
+    exact Option.some_ne_none v
+  change fm' n ≠ none at hmem
+  cases h' : fm' n with
+  | none => rw [h'] at hmem; exact absurd rfl hmem
+  | some v' => exact ⟨v', by change fm' n = some v'; rw [h']⟩
+
+/-- HOL `OPT_MMAP_MEM_IMP` (`panPropsScript.sml:115`): if `OPT_MMAP f xs` succeeds
+    with `ys`, every element of `ys` is the image under `f` of an element of `xs`.
+    Pure option/list lemma (no Boolean key-equality carrier); `List.mapM` is the
+    repository's documented `OPT_MMAP` carrier. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "OPT_MMAP_MEM_IMP"]
+theorem OPT_MMAP_MEM_IMP {α : Type} {β : Type} (f : α → Option β) (xs : List α)
+    (ys : List β) (y : β) (h : xs.mapM f = some ys) (hy : y ∈ ys) :
+    ∃ x, x ∈ xs ∧ f x = some y := by
+  induction xs generalizing ys with
+  | nil =>
+      simp only [List.mapM_nil] at h
+      change some [] = some ys at h
+      rw [Option.some.injEq] at h
+      subst h
+      simp at hy
+  | cons a as ih =>
+      rw [List.mapM_cons] at h
+      change (Option.bind (f a) (fun b => Option.bind (as.mapM f) (fun rest => some (b :: rest)))) = some ys at h
+      rw [Option.bind_eq_some_iff] at h
+      obtain ⟨b, hfa, h⟩ := h
+      rw [Option.bind_eq_some_iff] at h
+      obtain ⟨rest, hta, h⟩ := h
+      change some (b :: rest) = some ys at h
+      rw [Option.some.injEq] at h
+      subst h
+      rcases List.mem_cons.mp hy with hyb | hyr
+      · subst hyb
+        exact ⟨a, List.mem_cons_self, hfa⟩
+      · obtain ⟨x, hx, hfx⟩ := ih rest hta hyr
+        exact ⟨x, List.mem_cons_of_mem a hx, hfx⟩
 
 /-- Cake `list_rel_flatten_with_shape_length`
     (`cakeml/pancake/semantics/panPropsScript.sml:549`), a prerequisite of the

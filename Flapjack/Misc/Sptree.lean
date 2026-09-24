@@ -115,4 +115,34 @@ theorem sptLookup_sptInsert_zero_overwrite {α : Type} (first second : α) (tree
     sptLookup 0 (sptInsert 0 second (sptInsert 0 first tree)) = some second := by
   cases tree <;> simp [sptInsert, sptLookup]
 
+/-- HOL `lrnext`: the increment used when placing subtrees in the spt index
+space (`HOL/src/finite_maps/sptreeScript.sml:421-422`). -/
+def lrNext : Nat → Nat
+  | 0 => 1
+  | n + 1 => 2 * lrNext (n / 2)
+
+/-- HOL sptree `foldi` (`HOL/src/finite_maps/sptreeScript.sml:737-749`) over
+the exact tree, in the same mixed order. -/
+def sptFoldi {α : Type} (f : Nat → α → List (Nat × α) → List (Nat × α))
+    (index : Nat) (accumulator : List (Nat × α)) : Spt α → List (Nat × α)
+  | .ln => accumulator
+  | .ls value => f index value accumulator
+  | .bn left right =>
+      let increment := lrNext index
+      sptFoldi f (index + increment)
+        (sptFoldi f (index + 2 * increment) accumulator left) right
+  | .bs left value right =>
+      let increment := lrNext index
+      sptFoldi f (index + increment)
+        (f index value (sptFoldi f (index + 2 * increment) accumulator left)) right
+
+/-- HOL `toAList` (`HOL/src/finite_maps/sptreeScript.sml:898-899`): the
+association list of the tree in the mixed sptree enumeration order. -/
+def sptToAList {α : Type} (tree : Spt α) : List (Nat × α) :=
+  sptFoldi (fun key value accumulator => (key, value) :: accumulator) 0 [] tree
+
+/-- `toAList` on the empty tree is empty. -/
+@[simp] theorem sptToAList_ln {α : Type} :
+    sptToAList (.ln : Spt α) = [] := by simp [sptToAList, sptFoldi]
+
 end Flapjack

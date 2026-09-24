@@ -1479,3 +1479,10 @@ run_probe pan_lang_prog_probeScript.sml pan_lang_prog_probe.out \
   pg_skip pg_annot_len \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The num_set toAList probe observes the exact HOL sptree enumeration order
+# (mixed order, but deterministic).
+run_probe num_set_to_alist_probeScript.sml num_set_to_alist_probe.out \
+  toalist_ln toalist_four \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"

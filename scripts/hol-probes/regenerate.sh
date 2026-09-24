@@ -1122,3 +1122,10 @@ run_probe word_convs_call_arg_probeScript.sml word_convs_call_arg_probe.out \
   inst_addcarry_ok call_seq_bad \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The register-allocation partition probe observes the three predicates and
+# the partition lemma on representative residues.
+run_probe reg_alloc_var_partition_probeScript.sml reg_alloc_var_partition_probe.out \
+  is_phy_6 part_none_0 \
+  "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend/reg_alloc"

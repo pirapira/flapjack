@@ -7454,5 +7454,21 @@
     "lean_name": "fmEmptyZipFlookup",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against fm_empty_zip_flookup at pan_commonPropsScript.sml:448; HOL EL rendered as bounded getElem as in elLoadGlobals; direct HOL-EVAL row zip_lookup_witness reproduced by Lean guard in Flapjack/Test/FmEmptyZipAlistParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "all_distinct_flookup_all_distinct",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "allDistinctFlookupAllDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against all_distinct_flookup_all_distinct at pan_commonPropsScript.sml:512; HOL ALL_DISTINCT rendered as List.Nodup, matching noOverlap; direct HOL-EVAL row slot_nodup_x=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean; Lean proof is projection noOverlap.1)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "no_overlap_flookup_distinct",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "noOverlapFlookupDistinct",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against no_overlap_flookup_distinct at pan_commonPropsScript.sml:519; HOL distinct_lists xs ys rendered as Lean distinctLists xs ys; direct HOL-EVAL row slots_disjoint=T reproduced by Lean guards in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

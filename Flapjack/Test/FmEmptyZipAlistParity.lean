@@ -62,6 +62,37 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 
+/-! ### HOL `all_distinct_flookup_all_distinct` / `no_overlap_flookup_distinct` -/
+
+/-- Direct HOL-EVAL rows in `scripts/hol-probes/pan_common_props_no_overlap_probe.out`. -/
+example (fm : FiniteMap String (Shape × List Nat)) (x : String) (y : Shape)
+    (zs : List Nat) (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) :
+    zs.Nodup :=
+  allDistinctFlookupAllDistinct fm x y zs hno hlookup
+
+example (fm : FiniteMap String (Shape × List Nat)) (x y : String) (a b : Shape)
+    (xs ys : List Nat) (hno : noOverlap fm) (hxy : x ≠ y)
+    (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
+    distinctLists xs ys = true :=
+  noOverlapFlookupDistinct fm x y a b xs ys hno hxy hx hy
+
+/-- The concrete context used by the HOL oracle: `x ↦ [1,2]`, `y ↦ [3,4]`. -/
+def noOverlapFm : FiniteMap String (Shape × List Nat) :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap String (Shape × List Nat))
+    ("x", (Shape.one, [1, 2]))) ("y", (Shape.one, [3, 4]))
+
+theorem noOverlapFm_x : FLOOKUP noOverlapFm "x" = some (Shape.one, [1, 2]) := by
+  simp only [noOverlapFm, FLOOKUP, FUPDATE]
+  rw [if_neg (by decide), if_pos (by decide)]
+
+theorem noOverlapFm_x_nodup : ([1, 2] : List Nat).Nodup := by decide
+
+/-- Disjointness of the two distinct variables' slots (`HOL slots_disjoint=T`). -/
+def slotsDisjointGuard : Bool :=
+  !(distinctLists [1, 2] [3, 4]) == false && distinctLists [1, 2] [3, 4]
+
+#guard slotsDisjointGuard
+
 def runChecks : IO Bool := do
   let ok := parityGuard && zipFlookupGuard
   IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL"

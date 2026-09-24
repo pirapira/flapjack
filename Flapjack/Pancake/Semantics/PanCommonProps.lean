@@ -1,5 +1,6 @@
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
+import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanLang
 
 /-!
@@ -135,5 +136,29 @@ theorem fmEmptyZipFlookup [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
   · obtain ⟨i, hi, _hj, hfst, hsnd⟩ := mem_zip_getElem xs ys entry hmem
     exact ⟨i, hi, by rw [List.getElem_zip, hfst, hsnd, hkey, hvalue]⟩
   · simp at hbase
+
+/-- Exact port of HOL `all_distinct_flookup_all_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:512`): the slot list of
+    any binding in a `no_overlap` context is duplicate-free. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_flookup_all_distinct"]
+theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat))
+    (x : String) (y : Shape) (zs : List Nat)
+    (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) : zs.Nodup :=
+  hno.1 x y zs hlookup
+
+/-- Exact port of HOL `no_overlap_flookup_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
+    variables in a `no_overlap` context have disjoint slot lists.  HOL
+    `distinct_lists xs ys` is Lean `distinctLists xs ys`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_flookup_distinct"]
+theorem noOverlapFlookupDistinct (fm : FiniteMap String (Shape × List Nat))
+    (x y : String) (a b : Shape) (xs ys : List Nat)
+    (hno : noOverlap fm) (hxy : x ≠ y)
+    (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
+    distinctLists xs ys = true := by
+  rw [show distinctLists xs ys = true ↔ ∀ z ∈ xs, z ∉ ys from by
+    simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]]
+  intro z hzxs hzys
+  exact hxy (hno.2 x y a b xs ys hx hy ⟨z, hzxs, hzys⟩)
 
 end Flapjack

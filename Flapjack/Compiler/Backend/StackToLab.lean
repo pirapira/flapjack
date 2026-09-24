@@ -26,18 +26,18 @@ structure FlattenOps (Inst Cmp RegImm AsmInst : Type) where
   lower : Cmp
   negate : Cmp → Cmp
 
-private abbrev FlatLine (Memop Addr Cmp RegImm MlString AsmInst Word : Type) :=
+abbrev FlatLine (Memop Addr Cmp RegImm MlString AsmInst Word : Type) :=
   Line (AsmOrCbw AsmInst Memop Addr) (AsmWithLab Cmp RegImm MlString) Word
 
 private def findLab (index : Nat) (labs : List Nat) : Nat :=
   (labs[index]?).getD 0
 
-private def isSkip {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+def stackIsSkip {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     Prog Inst Cmp RegImm Binop Memop Addr MlString → Bool
   | .skip => true
   | _ => false
 
-private def compileJump (ops : FlattenOps Inst Cmp RegImm AsmInst)
+def compileJump (ops : FlattenOps Inst Cmp RegImm AsmInst)
     (zero : Word) (target : Sum Nat Nat) : FlatLine Memop Addr Cmp RegImm MlString AsmInst Word :=
   match target with
   | .inl sectionId => .labAsm (.jump (.lab sectionId 0)) zero [] 0
@@ -61,12 +61,12 @@ def flatten {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
     | .ite condition register right thenBranch elseBranch =>
         let (xs, nr1, next) := flatten ops zero false thenBranch sectionId next conts breaks
         let (ys, nr2, next) := flatten ops zero false elseBranch sectionId next conts breaks
-        if isSkip thenBranch && isSkip elseBranch then
+        if stackIsSkip thenBranch && stackIsSkip elseBranch then
           ([], false, next)
-        else if isSkip thenBranch then
+        else if stackIsSkip thenBranch then
           ([.labAsm (.jumpCmp condition register right (.lab sectionId next)) zero [] 0] ++
             ys ++ [.label sectionId next 0], false, next + 1)
-        else if isSkip elseBranch then
+        else if stackIsSkip elseBranch then
           ([.labAsm (.jumpCmp (ops.negate condition) register right (.lab sectionId next)) zero [] 0] ++
             xs ++ [.label sectionId next 0], false, next + 1)
         else if nr1 then

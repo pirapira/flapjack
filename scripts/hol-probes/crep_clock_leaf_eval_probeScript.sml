@@ -1,5 +1,5 @@
-(* Direct Cake/HOL observations for the total Crep evaluate leaf clauses
-   Skip, Break, Continue, and Tick over the exact 11-field Crep state. *)
+(* Direct Cake/HOL observations for total Crep evaluate clock leaves and the
+   recursive If clause over the exact 11-field Crep state. *)
 
 load "bossLib";
 load "preamble";
@@ -47,3 +47,16 @@ val _ = print_eval "tick_zero_eval"
 val _ = print_eval "tick_positive_eval"
   ``evaluate ((Tick) : 64 crepLang$prog, ^s) =
       (NONE, dec_clock ^s)``;
+val _ = print_eval "if_true_eval"
+  ``evaluate ((If (Const (5w:64 word)) (Break 3) Skip) : 64 crepLang$prog, ^s) =
+      (SOME (Break 3), ^s)``;
+val _ = print_eval "if_false_eval"
+  ``evaluate ((If (Const (0w:64 word)) (Break 3) (Continue 4)) : 64 crepLang$prog, ^s) =
+      (SOME (Continue 4), ^s)``;
+val _ = print_eval "if_error_eval"
+  ``evaluate ((If (Var 9) Skip (Break 5)) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;
+val _ = print_eval "if_nested_eval"
+  ``evaluate ((If (Const (1w:64 word))
+      (If (Const (0w:64 word)) Skip (Break 6)) (Continue 4)) : 64 crepLang$prog, ^s) =
+      (SOME (Break 6), ^s)``;

@@ -7339,6 +7339,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadOne_localAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only corollary composing the generic Load One full IH with a state-owned local variable address. It adds no standalone HOL theorem claim; the underlying Load One constructor mapping is tracked by compile_exp_val_rel and remains part of the open expression-induction proof."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadTwo_localAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only corollary composing the generic two-word Load full IH with a state-owned local variable address under the fixed RV64 target invariant. It adds no standalone HOL theorem claim; arbitrary flattened shapes and the full expression-induction proof remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalPanSemStateExp_loadTwo_const_stateRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned two-word flat Load at a constant address with the two production target Crep Loads at offsets 0 and 8 under stateRel. It is a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."

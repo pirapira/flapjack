@@ -276,6 +276,13 @@ def evaluateSourceDecCallId :=
     (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
       (.return (.var .local "answer")) : Prog Word64)
 
+def evaluateSourceNestedDecCall :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    (emptyPanSourceState 10 sourceRecursiveCode)
+    (.decCall "answer" .one "f" []
+      (.return (.var .local "answer")) : Prog Word64)
+
 def evaluateSourceNestedCall :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -413,6 +420,9 @@ def observeSourceCallHandlesPairException : Bool :=
 
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
+
+def observeSourceNestedDecCall := isSourceReturnedWord evaluateSourceNestedDecCall
+  (BitVec.ofNat 64 7) 8
 
 def observeSourceNestedCodeCall := isSourceReturnedWord evaluateSourceNestedCall
   (BitVec.ofNat 64 7) 8
@@ -821,6 +831,8 @@ def runChecks : IO Bool := do
   else IO.println "FAIL state-owned Call recursively compiles nested records with an RField field like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
+  if observeSourceNestedDecCall then IO.println "PASS nested state-owned DecCall returns 7 and decrements the HOL clock twice" else
+    IO.println "FAIL nested state-owned DecCall returns 7 and decrements the HOL clock twice"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else
     IO.println "FAIL state-owned nested Call and DecCall match HOL recursive oracle"
   if observeSourceNestedOrdinaryCall then IO.println "PASS state-owned ordinary Call recursively resolves nested code entry" else
@@ -877,6 +889,7 @@ def runChecks : IO Bool := do
     observeSourceCallMiddlePairField &&
     observeSourceCallConstructedMiddlePairField &&
     observeSourceCodeDecCall &&
+    observeSourceNestedDecCall &&
     observeSourceNestedCodeCall &&
     observeSourceNestedOrdinaryCall &&
     observeSourceCodePreservedAfterRecursion &&

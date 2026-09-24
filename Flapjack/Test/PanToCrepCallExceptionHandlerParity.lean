@@ -12,6 +12,49 @@ open Flapjack.Test.PanEvaluateParity
 
 private abbrev Word64 := RiscV.Word 64
 
+/-! These kernel tests feed a Local-derived, nonconstant address IH into the
+flat-load Call-argument proofs. The generic assumptions let the fixture cover
+both source `PanSemState` and production target `CrepRuntimeState` boundaries. -/
+example (context : PanToCrepProofContext Word64)
+    (source : PanSemState Word64 (FfiState σ))
+    (target : CrepRuntimeState Word64 σ) (name : String)
+    (addressWord loaded : Word64)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceLocal : source.locals name = some (.word addressWord))
+    (hsourceLoad : evalPanSemStateExp source
+      (.load .one (.var .local name)) = some (.word loaded)) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load .one (.var .local name))).1 = some [loaded] := by
+  exact (compileExpHOL_loadOne_localAddress_ofHOLIH context source target name
+    addressWord loaded hstate hcode hlocals hsourceLocal hsourceLoad).1
+
+example (context : PanToCrepProofContext Word64)
+    (source : PanSemState Word64 (FfiState σ))
+    (target : CrepRuntimeState Word64 σ) (name : String)
+    (addressWord loaded0 loaded1 : Word64)
+    (hstate : stateRel source target)
+    (hcanonical : target = riscvCrepWordTarget target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceLocal : source.locals name = some (.word addressWord))
+    (hsourceLoad : evalPanSemStateExp source
+      (.load (.comb [.one, .one]) (.var .local name)) =
+        some (.rStruct [.word loaded0, .word loaded1])) :
+    evalCrepRuntimeExps target
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load (.comb [.one, .one]) (.var .local name))).1 =
+      some [loaded0, loaded1] := by
+  exact (compileExpHOL_loadTwo_localAddress_ofHOLIH context source target name
+    addressWord loaded0 loaded1 hstate hcanonical hcode hlocals hsourceLocal
+    hsourceLoad).1
+
 private def payload : Word64 := BitVec.ofNat 64 7
 private def exceptionCode : Word64 := BitVec.ofNat 64 3
 

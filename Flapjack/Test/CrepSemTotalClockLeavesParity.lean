@@ -112,11 +112,46 @@ def decOracleRowsMatch : Bool :=
     | _ => false
   shadowOk && newOk && errorOk
 
+def whileOracleRowsMatch : Bool :=
+  let state := sampleState 5
+  let zero := sampleState 0
+  let falseOk := match evalCrepClockProg
+      (.whileLoop (.const 0) (.leaf .skip)) state with
+    | (none, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  let errorOk := match evalCrepClockProg
+      (.whileLoop (.var 9) (.leaf .skip)) state with
+    | (some .error, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  let timeoutOk := match evalCrepClockProg
+      (.whileLoop (.const 1) (.leaf .skip)) zero with
+    | (some .timeOut, post) => post.clock == 0 && post.locals 0 == none
+    | _ => false
+  let recursionOk := match evalCrepClockProg
+      (.whileLoop (.var 0) (.assignLocal 0 (.const 0))) state with
+    | (none, post) => post.clock == 4 && post.locals 0 == some (.word 0)
+    | _ => false
+  let breakZeroOk := match evalCrepClockProg
+      (.whileLoop (.const 1) (.leaf (.breakAt 0))) state with
+    | (none, post) => post.clock == 4 && post.locals 0 == some (.word 7)
+    | _ => false
+  let breakLabelOk := match evalCrepClockProg
+      (.whileLoop (.const 1) (.leaf (.breakAt 1))) state with
+    | (some (.break 0), post) => post.clock == 4
+    | _ => false
+  let continueLabelOk := match evalCrepClockProg
+      (.whileLoop (.const 1) (.leaf (.continueAt 1))) state with
+    | (some (.continue 0), post) => post.clock == 4
+    | _ => false
+  falseOk && errorOk && timeoutOk && recursionOk && breakZeroOk &&
+    breakLabelOk && continueLabelOk
+
 #guard ifOracleRowsMatch
 #guard seqOracleRowsMatch
 #guard returnOracleRowsMatch
 #guard raiseOracleRowMatches
 #guard decOracleRowsMatch
+#guard whileOracleRowsMatch
 
 theorem skipFullState (state : CrepHolState (BitVec 64) Unit) :
     evalCrepClockLeaf .skip state = (none, state) :=
@@ -190,7 +225,12 @@ def runChecks : IO Bool := do
     IO.println "PASS total Crep HOL Dec bind/restore/error clauses match direct oracle"
   else
     IO.println "FAIL total Crep HOL Dec bind/restore/error clauses match direct oracle"
+  if whileOracleRowsMatch then
+    IO.println "PASS total Crep HOL While condition/clock/recursion/control clauses match direct oracle"
+  else
+    IO.println "FAIL total Crep HOL While condition/clock/recursion/control clauses match direct oracle"
   pure (holOracleRowsMatch && ifOracleRowsMatch && seqOracleRowsMatch &&
-    returnOracleRowsMatch && raiseOracleRowMatches && decOracleRowsMatch)
+    returnOracleRowsMatch && raiseOracleRowMatches && decOracleRowsMatch &&
+    whileOracleRowsMatch)
 
 end Flapjack.Test.CrepSemTotalClockLeavesParity

@@ -484,24 +484,24 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
-    "statement_status": "documented_mismatch",
-    "reviewer": "All-finite-dimension LoadGlob case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact LoadGlob constructor case of local simp_exp_correct1. HOL eval_def uses FLOOKUP s.globals gadr; Lean uses the same BitVec 5-keyed lookup and the code-only update preserves globals. The unused result binder, success premise, and full Option word_lab equality match this constructor case. Other cases and the assembled theorem remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase",
-    "statement_status": "documented_mismatch",
-    "reviewer": "All-finite-dimension BaseAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact BaseAddr constructor case of local simp_exp_correct1. Both HOL eval_def and the Lean source evaluator return the base address field; the unused result binder, success premise, code-only update, and full Option word_lab equality match this case. Other cases and the assembled theorem remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
-    "statement_status": "documented_mismatch",
-    "reviewer": "All-finite-dimension TopAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact TopAddr constructor case of local simp_exp_correct1. Both HOL eval_def and the Lean source evaluator return the top address field; the unused result binder, success premise, code-only update, and full Option word_lab equality match this case. Other cases and the assembled theorem remain open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -8310,6 +8310,14 @@
     "lean_name": "holShapeOf",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination; [NeZero width] matching HOL positive dimindex)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "lookup_code_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LookupCode.lean",
+    "lean_name": "panSemLookupCodeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (width-indexed lookup_code_def port over the HOL finite-map function carrier: FLOOKUP, duplicate-free formal names, recursive shape_of argument relation, and FEMPTY |++ ZIP output with body and return shape; lawful String equality makes the Boolean Shape equality exact; direct HOL-EVAL cases nonempty/missing/arity/shape/duplicate are in pan_sem_lookup_code_probe.out)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

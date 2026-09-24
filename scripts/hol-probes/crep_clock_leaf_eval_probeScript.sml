@@ -97,3 +97,25 @@ val _ = print_eval "dec_new_local_eval"
 val _ = print_eval "dec_error_eval"
   ``evaluate ((Dec 0 (Var 9) Skip) : 64 crepLang$prog, ^s) =
       (SOME Error, ^s)``;
+val _ = print_eval "while_false_eval"
+  ``evaluate ((While (Const (0w:64 word)) Skip) : 64 crepLang$prog, ^s) =
+      (NONE, ^s)``;
+val _ = print_eval "while_error_eval"
+  ``evaluate ((While (Var 9) Skip) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;
+val _ = print_eval "while_timeout_eval"
+  ``evaluate ((While (Const (1w:64 word)) Skip) : 64 crepLang$prog, ^s0) =
+      (SOME TimeOut, empty_locals ^s0)``;
+val _ = print_eval "while_normal_recursion_eval"
+  ``FST (evaluate ((While (Var 0) (Assign 0 (Const (0w:64 word)))) : 64 crepLang$prog, ^s)) = NONE /\
+    (SND (evaluate ((While (Var 0) (Assign 0 (Const (0w:64 word)))) : 64 crepLang$prog, ^s))).clock = 4 /\
+    FLOOKUP (SND (evaluate ((While (Var 0) (Assign 0 (Const (0w:64 word)))) : 64 crepLang$prog, ^s))).locals 0 = SOME (Word (0w:64 word))``;
+val _ = print_eval "while_break_zero_eval"
+  ``FST (evaluate ((While (Const (1w:64 word)) (Break 0)) : 64 crepLang$prog, ^s)) = NONE /\
+    (SND (evaluate ((While (Const (1w:64 word)) (Break 0)) : 64 crepLang$prog, ^s))).clock = 4``;
+val _ = print_eval "while_break_label_eval"
+  ``FST (evaluate ((While (Const (1w:64 word)) (Break 1)) : 64 crepLang$prog, ^s)) = SOME (Break 0) /\
+    (SND (evaluate ((While (Const (1w:64 word)) (Break 1)) : 64 crepLang$prog, ^s))).clock = 4``;
+val _ = print_eval "while_continue_label_eval"
+  ``FST (evaluate ((While (Const (1w:64 word)) (Continue 1)) : 64 crepLang$prog, ^s)) = SOME (Continue 0) /\
+    (SND (evaluate ((While (Const (1w:64 word)) (Continue 1)) : 64 crepLang$prog, ^s))).clock = 4``;

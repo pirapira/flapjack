@@ -1,4 +1,6 @@
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
 
 /-!
 # Original-domain parity for `pan_common$distinct_lists`
@@ -66,5 +68,28 @@ example : distinctLists [1, 2] [2, 4] = false := by decide
 example : distinctLists [5, 1, 2] [4, 5] = false := by decide
 example : distinctLists [1, 2, 3] [4, 5] =
     [1, 2, 3].all (fun x => !([4, 5].contains x)) := rfl
+
+/-- Width-indexed GENLIST rows matching the probe's `genlist_vmax_*`
+    observations (bead `flapjack-pxn.18.4.3.78.3`): with `vmax = 3`,
+    `GENLIST (λx. SUC x + vmax) 3` is `[4, 5, 6]`. -/
+example : distinctListsHol ((List.range 3).map (fun i => i + 1 + 3)) [0, 1, 2, 3] = true :=
+  by decide
+example : distinctListsHol ((List.range 3).map (fun i => i + 1 + 3)) [4, 7] = false :=
+  by decide
+example : distinctListsHol ((List.range 3).map (fun i => i + 1 + 3)) [7, 8] = true :=
+  by decide
+
+/-- The faithful width-indexed genlist statement type-checks with HOL's shape:
+    a `BitVec width` carrier with `[NeZero width]` and only `ctxtMax` as a side
+    condition. -/
+example {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (count : Nat)
+    (argExpressions : List (Exp (BitVec width)))
+    (hmax : ctxtMax context.vmax context.vars) :
+    distinctListsHol
+      ((List.range count).map (fun i => i + 1 + context.vmax))
+      ((argExpressions.map (compileExpHOL context)).flatMap
+        (fun compiled => compiled.1.flatMap crepExpVars)) = true :=
+  genlistVmaxDistinctListsCompiledExpsW context count argExpressions hmax
 
 end Flapjack.Test.PanCommonParity

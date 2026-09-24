@@ -6,3 +6,6 @@ distinct_empty_right=T
 distinct_eq_every_mem=T
 distinct_eq_disjoint=¬(1 = 4 ∨ 1 = 5) ∧ ¬(2 = 4 ∨ 2 = 5) ∧ ¬(3 = 4 ∨ 3 = 5) ⇔
 DISJOINT (set [1; 2; 3]) (set [4; 5])
+genlist_vmax_bound=T
+genlist_vmax_hit=F
+genlist_vmax_disjoint=T

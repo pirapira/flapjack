@@ -4565,7 +4565,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "genlistVmaxDistinctListsCompiledExps",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-deepseek-three (coordinator review HOLD on 8556c6d1f): the conclusion is the exact Boolean distinctListsHol and the ctxt_max premise is exact, but the declaration is generic in the element type a with [DecidableEq a][BEq a] and calls the generic-alpha compileExpHOL, while HOL compile_exp/context are word-indexed ('a word; pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions; per the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) an exact statement needs a BitVec width + [NeZero width] carrier. Untagged; faithful port tracked by bead flapjack-pxn.18.4.3.78.3. Direct HOL/Lean oracle rows remain in scripts/hol-probes/pan_common_distinct_lists_probe.out."
+    "reviewer": "flapjack-deepseek-three (coordinator review HOLD on 8556c6d1f): the conclusion is the exact Boolean distinctListsHol and the ctxt_max premise is exact, but the declaration is generic in the element type a with [DecidableEq a][BEq a] and calls the generic-alpha compileExpHOL, while HOL compile_exp/context are word-indexed ('a word; pan_to_crepScript.sml:10-16,39-101) with HOL equality and no typeclass side conditions; per the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228) an exact statement needs a BitVec width + [NeZero width] carrier. Untagged; faithful port tracked by bead flapjack-pxn.18.4.3.78.3. Direct HOL/Lean oracle rows remain in scripts/hol-probes/pan_common_distinct_lists_probe.out. The exact width-indexed @[hol] tag is now carried by genlistVmaxDistinctListsCompiledExpsW in the same file."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "genlist_vmax_distinct_lists_compiled_exps",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
+    "lean_name": "genlistVmaxDistinctListsCompiledExpsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.3): width-indexed faithful port of HOL genlist_vmax_distinct_lists_compiled_exps (pan_to_crepProofScript.sml:3094). HOL compile_exp/context are indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101); following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-231) the carrier is BitVec width with [NeZero width], the only side condition is ctxt_max ctxt.vmax ctxt.vars rendered as ctxtMax, and the conclusion is the exact Boolean distinctListsHol. Direct HOL oracle rows genlist_vmax_bound/genlist_vmax_hit/genlist_vmax_disjoint in scripts/hol-probes/pan_common_distinct_lists_probe.out; Lean fixture in Flapjack/Test/PanCommonParity.lean."
   },
   {
     "hol_path": null,
@@ -8367,12 +8375,12 @@
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only generic-α helper (untagged): the exact width-indexed tag is on crepInlineLocalsRel_decClockW."
   },
-{
-  "hol_path": "cakeml/pancake/pan_commonScript.sml",
-  "hol_name": "distinct_lists_def",
-  "lean_path": "Flapjack/Pancake/PanCommon.lean",
-  "lean_name": "distinctListsHol",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-}
+  {
+    "hol_path": "cakeml/pancake/pan_commonScript.sml",
+    "hol_name": "distinct_lists_def",
+    "lean_path": "Flapjack/Pancake/PanCommon.lean",
+    "lean_name": "distinctListsHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
+  }
 ]

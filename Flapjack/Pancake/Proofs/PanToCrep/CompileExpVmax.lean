@@ -358,8 +358,8 @@ theorem memCompileExpVmax [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     width-indexed `loadShapeBytesW` (`Flapjack/Pancake/CrepLang.lean:210-228`),
     the exact Lean statement needs a width-indexed (`BitVec width`, `[NeZero
     width]`) carrier. The generic-`α` form is retained as Flapjack support; the
-    faithful width-indexed port is tracked by bead `flapjack-pxn.18.4.3.78.3`.
-    Direct HOL/Lean oracle rows live in
+    faithful width-indexed port is `genlistVmaxDistinctListsCompiledExpsW`
+    below. Direct HOL/Lean oracle rows live in
     `scripts/hol-probes/pan_common_distinct_lists_probe.out`. -/
 theorem genlistVmaxDistinctListsCompiledExps
     [DecidableEq α] [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
@@ -380,5 +380,26 @@ theorem genlistVmaxDistinctListsCompiledExps
   rcases hvars with ⟨output, houtput, hvar⟩
   exact compileExpHOL_outputs_vars_bounded context hmax expression output
     houtput name hvar
+
+/-- Exact width-indexed port of HOL `genlist_vmax_distinct_lists_compiled_exps`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094`).
+
+    HOL's `compile_exp` and `context` are indexed by the word type `'a word`
+    (`pan_to_crepScript.sml:10-16,39-101`) with HOL equality and no typeclass
+    side conditions.  Following the `loadShapeBytes` versus `loadShapeBytesW`
+    standard (`Flapjack/Pancake/CrepLang.lean:210-231`), the faithful statement
+    fixes the carrier to `BitVec width` with `[NeZero width]`; the only side
+    condition is HOL's `ctxt_max ctxt.vmax ctxt.vars`, rendered as `ctxtMax`.
+    The generic-`α` form above is retained as Flapjack support. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "genlist_vmax_distinct_lists_compiled_exps"]
+theorem genlistVmaxDistinctListsCompiledExpsW {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (count : Nat)
+    (argExpressions : List (Exp (BitVec width)))
+    (hmax : ctxtMax context.vmax context.vars) :
+    distinctListsHol
+      ((List.range count).map (fun i => i + 1 + context.vmax))
+      ((argExpressions.map (compileExpHOL context)).flatMap
+        (fun compiled => compiled.1.flatMap crepExpVars)) = true :=
+  genlistVmaxDistinctListsCompiledExps context count argExpressions hmax
 
 end Flapjack

@@ -26,6 +26,12 @@ fun print_eval label q =
    857f0d98da8f8a3580f34423338e697809308ede, and their
    pancake/pan_commonScript.sml are byte-identical
    (sha256 569dafb0a2182549a1de3491a4472a22338cd93c87fe6b6c193f902cbfb1e759). *)
+
+(* The `genlist_vmax_*` rows additionally exercise the left-operand shape of
+   HOL `genlist_vmax_distinct_lists_compiled_exps`, the source of the
+   width-indexed Lean statement
+   `Flapjack.genlistVmaxDistinctListsCompiledExpsW`
+   (bead flapjack-pxn.18.4.3.78.3). *)
 val _ = print_eval "distinct_true" ``pan_common$distinct_lists [1;2] [3;4]``;
 val _ = print_eval "distinct_false_right_hit" ``pan_common$distinct_lists [1;2] [2;4]``;
 val _ = print_eval "distinct_false_middle_hit" ``pan_common$distinct_lists [5;1;2] [4;5]``;
@@ -35,3 +41,16 @@ val _ = print_eval "distinct_eq_every_mem"
   ``pan_common$distinct_lists [1;2;3] [4;5] = EVERY (\x. ~MEM x [4;5]) [1;2;3]``;
 val _ = print_eval "distinct_eq_disjoint"
   ``pan_common$distinct_lists [1;2;3] [4;5] = DISJOINT (set [1;2;3]) (set [4;5])``;
+
+(* Width-indexed genlist oracle (bead flapjack-pxn.18.4.3.78.3): the left
+   operand of HOL `genlist_vmax_distinct_lists_compiled_exps`
+   (cakeml/pancake/proofs/pan_to_crepProofScript.sml:3094) is
+   `GENLIST (\x. SUC x + ctxt.vmax) n`.  These rows evaluate that shape
+   directly for `ctxt.vmax = 3`, `n = 3` (so the left list is `[4;5;6]`),
+   against right lists that are bounded by `vmax` (`T`) or hit it (`F`). *)
+val _ = print_eval "genlist_vmax_bound"
+  ``pan_common$distinct_lists (GENLIST (\x. SUC x + 3) 3) [0;1;2;3]``;
+val _ = print_eval "genlist_vmax_hit"
+  ``pan_common$distinct_lists (GENLIST (\x. SUC x + 3) 3) [4;7]``;
+val _ = print_eval "genlist_vmax_disjoint"
+  ``pan_common$distinct_lists (GENLIST (\x. SUC x + 3) 3) [7;8]``;

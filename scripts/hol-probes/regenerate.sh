@@ -238,6 +238,9 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
 run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overlap_probe.out \
   slot_nodup_x nested_zip_lookup "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
+  alist_a_nodup alist_disjoint "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
   len0 flookup0 "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -264,6 +267,8 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
   empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_wf_shape_probeScript.sml pan_lang_wf_shape_probe.out \
+  one nested_unknown "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
   one known_named missing_named nested_comb nested_named_size_drop \
   "$cake_dir/pancake/panLangScript.sml"
@@ -320,6 +325,21 @@ run_probe stack_alloc_next_lab_probeScript.sml stack_alloc_next_lab_probe.out \
   next_lab_skip next_lab_both_continuations \
   "$cake_dir/compiler/backend/stack_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe stack_to_lab_flatten_probeScript.sml stack_to_lab_flatten_probe.out \
+  flat_skip flat_tick flat_inst flat_halt flat_seq_tail flat_seq_not_tail \
+  flat_if_both_skip flat_if_then_skip flat_if_else_skip \
+  flat_if_then_terminates flat_if_else_terminates flat_if_both_live \
+  flat_loop_if flat_raise flat_return flat_break flat_continue flat_raw_call \
+  flat_call_none_label flat_call_none_reg flat_call_return flat_call_handler \
+  flat_jump_lower flat_ffi flat_loc_value flat_install flat_shared_memory \
+  flat_code_buffer_write flat_default section_skip section_seq section_if \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe lab_props_preconditions_probeScript.sml lab_props_preconditions_probe.out \
+  pre_label pre_labasm pre_asmi_skip pre_cbw_to_asm pre_share_to_asm \
+  pre_empty_sections pre_label_section pre_skip_asm_section \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"

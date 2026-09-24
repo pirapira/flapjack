@@ -152,42 +152,52 @@ def stackErrLab : Nat := 2
 HOL `stackLangScript.sml:80-84` declares the `left_shift_inst`,
 `right_shift_inst`, `const_inst`, `load_inst`, and `store_inst` overloads, and
 `stack_removeScript.sml:58-60` defines `halt_inst` on top of `const_inst` and
-`Halt`.  All are stated over the canonical single-word-parameter carrier
-`StackCarrier.ProgW (BitVec width)`, matching HOL's `'a stackLang$prog`.
+`Halt`.  The Lean implementations below are stated over
+`StackCarrier.ProgW (BitVec width)`.
+
+These declarations are deliberately UNTAGGED.  HOL's `stackLang$prog` is
+parameterised by the message-string type `'a stackLang$mlstring`; our carrier
+`ProgW` still instantiates that parameter with Lean's `String`, not the HOL
+`mlstring` datatype, so `ProgW (BitVec width)` is not yet an exact HOL carrier
+and a `@[hol]` tag on a definition using it would over-claim.  The overload
+bodies match HOL's constructors, and they are exercised by the direct HOL
+oracle and the untagged parity test.  The exact `mlstring`/program carrier and
+the bridges that would let these be re-tagged are tracked by bead
+`flapjack-pxn.18.5.15.3.11.2`.
 -/
 
-/-- HOL `left_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:80`). -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "left_shift_inst"]
+/-- HOL `left_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:80`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def leftShiftInst {width : Nat} (register value : Nat) :
     StackCarrier.ProgW (BitVec width) :=
   .inst (.arith (.shift .lsl register register (.imm (BitVec.ofNat width value))))
 
-/-- HOL `right_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:81`). -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "right_shift_inst"]
+/-- HOL `right_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:81`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def rightShiftInst {width : Nat} (register value : Nat) :
     StackCarrier.ProgW (BitVec width) :=
   .inst (.arith (.shift .lsr register register (.imm (BitVec.ofNat width value))))
 
-/-- HOL `const_inst` (`cakeml/compiler/backend/stackLangScript.sml:82`). -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "const_inst"]
+/-- HOL `const_inst` (`cakeml/compiler/backend/stackLangScript.sml:82`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def constInst {width : Nat} (register : Nat) (value : BitVec width) :
     StackCarrier.ProgW (BitVec width) :=
   .inst (.const register value)
 
-/-- HOL `load_inst` (`cakeml/compiler/backend/stackLangScript.sml:83`). -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "load_inst"]
+/-- HOL `load_inst` (`cakeml/compiler/backend/stackLangScript.sml:83`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def loadInst {width : Nat} (register address : Nat) :
     StackCarrier.ProgW (BitVec width) :=
   .inst (.mem .load register (.addr address 0))
 
-/-- HOL `store_inst` (`cakeml/compiler/backend/stackLangScript.sml:84`). -/
-@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_inst"]
+/-- HOL `store_inst` (`cakeml/compiler/backend/stackLangScript.sml:84`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def storeInst {width : Nat} (register address : Nat) :
     StackCarrier.ProgW (BitVec width) :=
   .inst (.mem .store register (.addr address 0))
 
-/-- HOL `halt_inst` (`cakeml/compiler/backend/stack_removeScript.sml:58-60`). -/
-@[hol "cakeml/compiler/backend/stack_removeScript.sml" "halt_inst_def"]
+/-- HOL `halt_inst` (`cakeml/compiler/backend/stack_removeScript.sml:58-60`),
+untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
 def haltInst {width : Nat} (value : BitVec width) :
     StackCarrier.ProgW (BitVec width) :=
   .seq (.inst (.const 1 value)) (.halt 1)

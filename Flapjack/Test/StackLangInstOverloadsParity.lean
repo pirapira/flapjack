@@ -5,7 +5,9 @@ Kernel-checked parity for the stackLang instruction overloads and `halt_inst`
 against the direct HOL EVAL oracle `stack_lang_inst_overloads_probe`.  HOL prints
 the overloads back with overload notation, so the probe rows compare each
 application to the explicit constructor term (all `T`); the `example`s below are
-the corresponding definitional equalities.
+the corresponding definitional equalities.  The implementations are deliberately
+untagged: `ProgW` still instantiates HOL's `mlstring` parameter with `String`, so
+the carrier is not yet an exact HOL datatype (bead `flapjack-pxn.18.5.15.3.11.2`).
 -/
 
 namespace Flapjack.Test.StackLangInstOverloadsParity

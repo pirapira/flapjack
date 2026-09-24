@@ -25,7 +25,9 @@ the total HOL-shaped base cases:
 
 The If checks below pair with `scripts/hol-probes/pan_sem_ite_e2e_probe.out`.
 They evaluate the condition from the complete source state before invoking
-the selected total branch callback.
+the selected total branch callback. The oracle includes a condition that
+successfully evaluates to `RStruct []` as well as an unbound local and a failed
+load; each produces `SOME Error` without changing the state.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -115,6 +117,10 @@ def totalIfState : PanSemState Word64 (FfiState Unit) :=
   { totalState 5 with
     locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 3)) }
 
+def totalIfNonwordState : PanSemState Word64 (FfiState Unit) :=
+  { totalIfState with
+    locals := updatePanValueMap totalIfState.locals "nonword" (.rStruct []) }
+
 def totalIfEvaluateProgram (program : Prog Word64)
     (state : PanSemState Word64 (FfiState Unit)) :
     Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
@@ -164,6 +170,19 @@ def totalIfExpressionNonwordGuard : Bool :=
       (.var .local "missing")
       (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
   | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+/-- Unlike an unbound local, this condition evaluates successfully to a
+    structured value; HOL still rejects it because `If` requires a word. -/
+def totalIfExpressionNonwordValueGuard : Bool :=
+  match panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfNonwordState
+      (.var .local "nonword")
+      (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip with
+  | (some .error, state) =>
+      state.clock == 5 && isWordOption 3 (state.locals "x") &&
+        (match state.locals "nonword" with
+         | some (.rStruct []) => true
+         | _ => false)
   | _ => false
 
 def totalIfExpressionLoadFailureGuard : Bool :=
@@ -253,7 +272,8 @@ def totalGuard : Bool :=
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
     seqContinueGuard && seqTickGuard && totalIfNonzeroGuard && totalIfZeroGuard &&
     totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
-    totalIfExpressionNonwordGuard && totalIfExpressionLoadFailureGuard &&
+    totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&
+    totalIfExpressionLoadFailureGuard &&
     assignLocalGuard && assignGlobalGuard &&
     assignFreshGuard && assignMissingGuard
 
@@ -274,6 +294,21 @@ example :
     panSemTotalIfStep (totalState 5) none totalIfThenBranch totalIfElseBranch =
         (some .error, totalState 5) := by
   rfl
+
+example :
+    panSemEvaluateIfClauseRiscV64 totalIfEvaluateProgram totalIfNonwordState
+        (.var .local "nonword")
+        (.assign .local "x" (.const (BitVec.ofNat 64 9))) .skip =
+      (some .error, totalIfNonwordState) := by
+  apply panSemEvaluateIfClauseRiscV64_eval_nonword
+  change (evalPanValueExp totalIfNonwordState.structs totalIfNonwordState.locals
+      totalIfNonwordState.globals totalIfNonwordState.memory
+      totalIfNonwordState.baseAddress totalIfNonwordState.topAddress
+      panSemBitVec64BytesInWord (.var .local "nonword")
+      (memoryAccess := some (panSemBitVec64MemoryAccess totalIfNonwordState))) =
+    some (.rStruct [])
+  simp [totalIfNonwordState, totalIfState, totalState, updatePanValueMap,
+    evalPanValueExp]
 
 example :
     panSemEvaluateClockLeaf .skip (totalState 5) =

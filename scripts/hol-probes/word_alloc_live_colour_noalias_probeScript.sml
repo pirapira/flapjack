@@ -22,10 +22,19 @@ fun print_eval label q =
   end
 
 val live_write = ``[sptree$fromAList [(1n,()); (2n,())]]``;
+val live_after_write = ``[sptree$fromAList [(2n,()); (3n,())]]``;
 val distinct = ``\n:num. if n = 1 then 8 else if n = 2 then 9 else n``;
 val alias = ``\n:num. if n = 1 then 8 else if n = 2 then 8 else n``;
+val live_after_distinct =
+  ``\n:num. if n = 2 then 8 else if n = 3 then 9 else n``;
+val live_after_alias =
+  ``\n:num. if n = 2 then 8 else if n = 3 then 8 else n``;
 
 val _ = print_eval "colour_ok_distinct_write_live"
   ``check_colouring_ok_alt ^distinct ^live_write``;
 val _ = print_eval "colour_ok_alias_write_live"
   ``check_colouring_ok_alt ^alias ^live_write``;
+val _ = print_eval "colour_ok_distinct_write_live_after"
+  ``check_colouring_ok_alt ^live_after_distinct ^live_after_write``;
+val _ = print_eval "colour_ok_alias_write_live_after"
+  ``check_colouring_ok_alt ^live_after_alias ^live_after_write``;

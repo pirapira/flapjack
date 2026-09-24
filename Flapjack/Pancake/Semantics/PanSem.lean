@@ -1418,6 +1418,86 @@ theorem panSemEvaluateExactState_call_error_of_returned_invalid
     (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
     harguments hlookup hbind hparameters hclock hbody hret
 
+/-- HOL `Dec` (`panSemScript.sml:558-565`) whose initialiser expression fails to
+    evaluate returns `(SOME Error, s)` with the unchanged source state.  Stated
+    over the exact source state with the state-owned memory access; untagged
+    because the executed result is the reduced structured pair, not HOL's
+    literal `result option # state` pairing. -/
+theorem panSemEvaluateExactState_dec_error_of_eval_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (heval : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.dec name shape value body) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  have hle : 1 ≤ max (panSemProgFuel (Prog.dec name shape value body))
+      (panSemFunctionFuel state.legacy.functions) := by
+    rw [panSemProgFuel]
+    exact Nat.le_trans (by omega) (Nat.le_max_left _ _)
+  obtain ⟨k, hk⟩ : ∃ k, state.legacy.clock +
+      max (panSemProgFuel (Prog.dec name shape value body))
+        (panSemFunctionFuel state.legacy.functions) = k + 1 := by
+    cases h : state.legacy.clock +
+        max (panSemProgFuel (Prog.dec name shape value body))
+          (panSemFunctionFuel state.legacy.functions) with
+    | zero => omega
+    | succ k => exact ⟨k, rfl⟩
+  rw [hk]
+  simp [panValueDecAcceptedValue, heval]
+
+/-- HOL `Dec` (`panSemScript.sml:558-565`) whose initialiser value does not match
+    the declared shape returns `(SOME Error, s)` with the unchanged source state.
+    Stated over the exact source state with the state-owned memory access;
+    untagged. -/
+theorem panSemEvaluateExactState_dec_error_of_shape_mismatch
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (state : PanSemExactState α σ)
+    (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
+    (lastValue : PanValue α)
+    (heval : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = some lastValue)
+    (hshape : panShapeMatches (panValueShape state.legacy.structs lastValue)
+      shape = false) :
+    panSemEvaluateExactState context primitive handler state
+        (.dec name shape value body) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  have hle : 1 ≤ max (panSemProgFuel (Prog.dec name shape value body))
+      (panSemFunctionFuel state.legacy.functions) := by
+    rw [panSemProgFuel]
+    exact Nat.le_trans (by omega) (Nat.le_max_left _ _)
+  obtain ⟨k, hk⟩ : ∃ k, state.legacy.clock +
+      max (panSemProgFuel (Prog.dec name shape value body))
+        (panSemFunctionFuel state.legacy.functions) = k + 1 := by
+    cases h : state.legacy.clock +
+        max (panSemProgFuel (Prog.dec name shape value body))
+          (panSemFunctionFuel state.legacy.functions) with
+    | zero => omega
+    | succ k => exact ⟨k, rfl⟩
+  rw [hk]
+  simp [panValueDecAcceptedValue, heval, hshape]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

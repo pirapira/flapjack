@@ -290,6 +290,9 @@ run_probe word_to_stack_chunk_to_bits_probeScript.sml word_to_stack_chunk_to_bit
 run_probe word_to_stack_chunk_to_bitmap_probeScript.sml word_to_stack_chunk_to_bitmap_probe.out \
   cbm_empty cwb_split8 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_write_bitmap_probeScript.sml word_to_stack_write_bitmap_probe.out \
+  wb_empty wb_order_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

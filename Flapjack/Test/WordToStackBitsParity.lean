@@ -136,4 +136,41 @@ example : constWordsToBitmapW (width := 8)
     [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
     ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by native_decide
 
+/-! ## `write_bitmap` oracle parity (untagged model)
+
+`writeBitmapHOL` models HOL `write_bitmap_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:240`) at the domain level and
+is deliberately **not** tagged: HOL's `live` is a `num_set` (`unit spt`) whose
+finite-map/`toAList` carrier lives outside the CakeML tree, so the faithful
+observation is the `writeBitmapHOL_domain_insensitive` theorem rather than a
+matching declaration (see `docs/NUM-SET-AUDIT.md`).  Rows from the direct HOL
+`EVAL` probe `scripts/hol-probes/word_to_stack_write_bitmap_probe.out`:
+
+```
+wb_empty=[16w]  wb_single=[24w]  wb_two=[24w]  wb_offset=[240w; 2w]
+wb_boundary=[0xE000000000000000w; 3w]
+wb_order_a=[192w; 3w]  wb_order_b=[192w; 3w]  wb_order_eq=T
+```
+-/
+
+def writeBitmapParityGuard : Bool :=
+  (writeBitmapHOL (width := 8) ([] : List Nat) 0 4 == [16]) &&
+  (writeBitmapHOL (width := 8) [0] 0 4 == [24]) &&
+  (writeBitmapHOL (width := 8) [0, 1] 0 4 == [24]) &&
+  (writeBitmapHOL (width := 8) [2, 4, 6] 0 8 == [240, 2]) &&
+  (writeBitmapHOL (width := 64) [0, 2, 4] 0 64 == [(0xE000000000000000 : BitVec 64), 3]) &&
+  (writeBitmapHOL (width := 8) [0, 1, 2] 0 8 == [192, 3]) &&
+  (writeBitmapHOL (width := 8) [2, 0, 1] 0 8 == [192, 3])
+
+#eval writeBitmapParityGuard
+#guard writeBitmapParityGuard
+
+example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
+    writeBitmapHOL (width := 8) [2, 0, 1] 0 8 := by native_decide
+
+example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
+    writeBitmapHOL (width := 8) [2, 0, 1] 0 8 :=
+  writeBitmapHOL_domain_insensitive [0, 1, 2] [2, 0, 1] 0 8
+    (by intro r; simp only [List.mem_cons, List.not_mem_nil, or_false]; omega)
+
 end Flapjack.Test.WordToStackBitsParity

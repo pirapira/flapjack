@@ -97,6 +97,40 @@ tag a `wf := True` port: first establish (as a separate bead) either that the
 compiler always produces `wf` cutsets (carry the invariant) or record the
 `wf := True` simplification as a documented mismatch.
 
+## Application: `word_to_stack$write_bitmap` (bead `flapjack-pxn.18.5.15.3.5`)
+
+`write_bitmap_def` (`cakeml/compiler/backend/word_to_stackScript.sml:240-244`)
+is the same phenomenon one layer down, in the backend:
+
+```
+write_bitmap live k f' =
+  let names = MAP (\(r,y). (f' - 1) - (r DIV 2 - k)) (toAList live) in
+    word_list (GENLIST (\x. MEM x names) f' ++ [T]) (dimindex(:'a) - 1)
+```
+
+It consumes `toAList live` (a `num_set`/`cutsets`) only through `MEM`, so its
+result is insertion-order independent and depends only on the *domain* of
+`live`. The direct oracle
+(`scripts/hol-probes/word_to_stack_write_bitmap_probe.{sml,out}`, 8 rows, run
+from `cakeml/compiler/backend/.hol/objs`) shows `wb_order_a` and `wb_order_b`
+are equal (`wb_order_eq = T`) for `[0;1;2]` vs `[2;0;1]`, alongside value rows
+`wb_empty`/`wb_single`/`wb_two`/`wb_offset`/`wb_boundary`.
+
+Like the wordConvs uses, `write_bitmap` is **deliberately not `@[hol]`-tagged**:
+its `live` carrier is `num_set`/`sptree$toAList`, and `sptreeScript.sml` lives
+outside the CakeML submodule, so `scripts/check-hol-refs.py` cannot cite it.
+Instead `Flapjack/Compiler/Backend/WordToStack.lean` provides an untagged
+finite-domain model
+
+- `writeBitmapHOL live k f'` (over `List Nat`), built from the already-ported
+  `wordListW`, and
+- `writeBitmapHOL_domain_insensitive` — equal domain (`∀ r, r ∈ live₁ ↔ r ∈ live₂`)
+  gives equal output,
+
+with the oracle rows reproduced as `#guard`s and a kernel example in
+`Flapjack/Test/WordToStackBitsParity.lean`. This isolates the finite-map/toAList
+ordering prerequisite without tagging a carrier-mismatched `write_bitmap`.
+
 ## Deliberately not done here
 
 A rewrite of the `WordLangCutsets` carrier to an `sptree`-shaped structure

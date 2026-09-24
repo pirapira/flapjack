@@ -24,19 +24,21 @@ def crepDestConst : CrepExp α → Option α
 
 /-- Word-valued counterpart of CakeML's `crep_arith$dest_const_def`
     (`crep_arithScript.sml:10-12`). HOL's `Const` payload is an `'a word`,
-    represented here by the Boolean function `ι → Bool`; unlike the generic
-    production helper above, this definition has exactly the HOL value type. -/
+    represented here by the Boolean function `Fin width → Bool`; `NeZero`
+    records HOL's nonempty finite index requirement. Width-specializing the
+    tagged declaration avoids claiming that an arbitrary Boolean function
+    carrier is a HOL word. -/
 @[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
-def crepDestConstHolWord {ι : Type u} :
-    CrepExp (ι → Bool) → Option (ι → Bool)
+def crepDestConstHolWord {width : Nat} [NeZero width] :
+    CrepExp (Fin width → Bool) → Option (Fin width → Bool)
   | .const value => some value
   | _ => none
 
 /-- The executable arbitrary-carrier extractor reduces to the tagged HOL
     word definition whenever its carrier is a word. This keeps the production
     simp implementation reusable while exposing its exact word behavior. -/
-theorem crepDestConstHolWord_eq_production {ι : Type u}
-    (expression : CrepExp (ι → Bool)) :
+theorem crepDestConstHolWord_eq_production {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool)) :
     crepDestConstHolWord expression = crepDestConst expression := by
   cases expression <;> rfl
 

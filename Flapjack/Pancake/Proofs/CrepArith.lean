@@ -183,16 +183,14 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Lean's generic HOL word carrier is a Boolean function over the word's
-    index type. This is the polymorphic word-typed statement of CakeML's
-    `dest_const_thm` (`crep_arithProofScript.sml:64`): unlike the arbitrary-
-    carrier helper above, the expression and result are both HOL words. The
-    `HolFiniteDimension` instance records the finite, nonempty enumeration
-    corresponding to HOL's `finite_index` constraint. -/
+/-- Width-specialized word form of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
+    `NeZero width` supplies HOL's nonempty finite-index condition. The
+    arbitrary-carrier production helper remains untagged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
-theorem crepDestConstHolWord_eq_const {ι : Type} [HolFiniteDimension ι]
-    (expression : CrepExp (ι → Bool))
-    (value : ι → Bool)
+theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExp (Fin width → Bool))
+    (value : Fin width → Bool)
     (h : crepDestConstHolWord expression = some value) :
     expression = .const value := by
   cases expression <;> simp_all [crepDestConstHolWord]
@@ -1385,18 +1383,10 @@ private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
   change evalCrepRuntimeExp (toRuntime state) (simpExp right) = some rightValue at hright
   cases hL : crepDestConst (simpExp left) with
   | some leftConstant =>
-      have hLword : crepDestConstHolWord (simpExp left) = some leftConstant := by
-        rw [crepDestConstHolWord_eq_production]
-        exact hL
-      have hLshape := crepDestConstHolWord_eq_const
-        (simpExp left) leftConstant hLword
+      have hLshape := crepDestConst_eq_const (simpExp left) leftConstant hL
       cases hR : crepDestConst (simpExp right) with
       | some rightConstant =>
-          have hRword : crepDestConstHolWord (simpExp right) = some rightConstant := by
-            rw [crepDestConstHolWord_eq_production]
-            exact hR
-          have hRshape := crepDestConstHolWord_eq_const
-            (simpExp right) rightConstant hRword
+          have hRshape := crepDestConst_eq_const (simpExp right) rightConstant hR
           have hmulShape := crepSimpExp.eq_5 fromNat [left, right]
             leftConstant rightConstant (by simp [simpExp, hLshape, hRshape])
           rw [hmulShape]

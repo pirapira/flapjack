@@ -8069,7 +8069,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemLoadByteHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL mem_load_byte_def (panSemScript.sml:86) case m (byte_align w) of Word v => if in dm then SOME (get_byte w v be); HOL total word_lab memory and word set rendered as a total HolWordLab map and Prop/DecidablePred domain; HOL byte_align/get_byte via panRiscVByteAlign/panRiscVGetByteEndian; direct HOL EVAL rows mem_load_byte_def_little_first/little_last/big_first/missing in pan_sem_state_eval_probe.out; the executed widening adapter is tracked by flapjack-pxn.18.3.6.9.2)"
+    "reviewer": "Codex (source comparison; exact HOL byte_align = clear low LOG2(width/8) bits via panByteAlignHOL, NOT division by width/8; total word_lab memory rendered as a total HolWordLab map and the word set as a Prop/DecidablePred domain; returns the exact word8 option; direct HOL rows mem_load_byte_def_little_first/little_last/big_first/missing plus width-24 mem_load_byte_def_w24_addr5=SOME 17w)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8077,7 +8077,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemLoad32HOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; aligned 2 guard, byte_align via RiscV.panRiscVByteAlign on width/8, four get_byte bytes reassembled with RiscV.panRiscVWordOfBytes (width:=32) in the requested byte order; total word_lab memory rendered as a total HolWordLab map and the word set as a Prop/DecidablePred domain; direct HOL rows mem_load_32_def_little/big/misaligned/missing)"
+    "reviewer": "Codex (source comparison; aligned 2 guard, exact HOL byte_align via panByteAlignHOL (clear low LOG2(width/8) bits, not division), four get_byte bytes reassembled with RiscV.panRiscVWordOfBytes (width:=32) in the requested byte order; total word_lab memory rendered as a total HolWordLab map and the word set as a Prop/DecidablePred domain; direct HOL rows mem_load_32_def_little/big/misaligned/missing plus width-24 mem_load_32_def_w24_addr4=SOME 0x22331122w)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -8142,5 +8142,13 @@
     "lean_name": "crepToLoopStateRel_clock_add_zero",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemLoadHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL mem_load/mem_loads/mem_load_flds clauses over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop domain; argument order follows HOL currying (sh addr dm m stcs) with no free bytes_in_word parameter - the canonical panBytesInWord width = n2w(width/8) is used internally; HOL's dropWhile Named lookup is inlined as an equivalent structural scan rendering the lexicographic (LENGTH stcs, shape_size) measure; direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
   }
 ]

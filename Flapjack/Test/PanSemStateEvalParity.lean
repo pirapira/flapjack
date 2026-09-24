@@ -256,4 +256,56 @@ example : panMemLoad32HOL (width := 64) holMemory64 (fun a => a = 0) false 1 =
 example : panMemLoad32HOL (width := 64) holMemory64 (fun _ => False) false 0 =
     none := by decide
 
+
+/- Structured `mem_load` port; expected values are the checked-in direct HOL rows
+   `mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing`. -/
+private def structsS : StructContextHOL :=
+  [("S", { fields := [("f", Shape.one)], size := 3 })]
+
+private def memStructured : Word64 → HolWordLab 64 := fun address =>
+  if address == 0 then .word (BitVec.ofNat 64 0x11)
+  else if address == 8 then .word (BitVec.ofNat 64 0x22) else .word 0
+
+private abbrev domStructured : Word64 → Prop := fun address => address = 0 ∨ address = 8
+
+private def isVal (expected : Word64) : Option (HolValue 64) → Bool
+  | some (.val (.word value)) => value == expected
+  | _ => false
+
+private def isCombPair (left right : Word64) : Option (HolValue 64) → Bool
+  | some (.rStruct [.val (.word first), .val (.word second)]) =>
+      first == left && second == right
+  | _ => false
+
+private def isNamedField (name field : String) (expected : Word64) :
+    Option (HolValue 64) → Bool
+  | some (.nStruct actual [(actualField, .val (.word value))]) =>
+      actual == name && actualField == field && value == expected
+  | _ => false
+
+#guard isVal (BitVec.ofNat 64 0x11)
+  (panMemLoadHOL (width := 64) .one 0 domStructured memStructured structsS)
+#guard panMemLoadHOL (width := 64) .one 0 (fun _ => False) memStructured structsS
+  = none
+#guard isCombPair (BitVec.ofNat 64 0x11) (BitVec.ofNat 64 0x22)
+  (panMemLoadHOL (width := 64) (.comb [.one, .one]) 0 domStructured memStructured structsS)
+#guard isNamedField "S" "f" (BitVec.ofNat 64 0x11)
+  (panMemLoadHOL (width := 64) (.named "S") 0 domStructured memStructured structsS)
+#guard panMemLoadHOL (width := 64) (.named "T") 0 domStructured memStructured structsS
+  = none
+#guard sizeOfShWithCtxt structsS (.named "S") == 3
+#guard sizeOfShWithCtxt structsS (.comb [.one, .one]) == 2
+
+
+/- width-24 alignment rows `mem_load_byte_def_w24_addr5=SOME 17w` and
+   `mem_load_32_def_w24_addr4=SOME 0x22331122w`. -/
+private def mem24 : RiscV.Word 24 → HolWordLab 24 := fun address =>
+  if address == 4 then .word (BitVec.ofNat 24 0x112233) else .word 0
+
+private abbrev dom24 : RiscV.Word 24 → Prop := fun address => address = 4
+
+#guard panMemLoadByteHOL (width := 24) mem24 dom24 false (BitVec.ofNat 24 5) = some 17
+#guard panMemLoad32HOL (width := 24) mem24 dom24 false (BitVec.ofNat 24 4) =
+  some (BitVec.ofNat 32 0x22331122)
+
 end Flapjack.Test.PanSemStateEvalParity

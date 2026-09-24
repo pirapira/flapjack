@@ -3473,6 +3473,15 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
         compileArgConstLocalStructAddressOrRFieldInnerIH context source target expression) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.rStruct fields)
+  | globalVar (name : String) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.var .global name)
+  | nStruct (name : String) (fields : List (FieldName × Exp (RiscV.Word 64))) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.nStruct name fields)
+  | nField (name : FieldName) (expression : Exp (RiscV.Word 64)) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.nField name expression)
 
 private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
@@ -3551,6 +3560,21 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
           simpa [compilerContext, compileExpHOL,
             compileExpListHOL_flatMap_eq_compileArgsHOL,
             panValueFlatten_rStruct, panValueFlattenValues_eq_flatMap] using hcompiled
+  | globalVar name =>
+      intro value heval
+      have hglobals := stateRel_globals source target hstate
+      simp [evalPanSemStateExp, evalPanValueExp, hglobals, FEMPTY] at heval
+  | nStruct name fields =>
+      intro value heval
+      have hstructs := stateRel_structs source target hstate
+      simp [evalPanSemStateExp, evalPanValueExp, hstructs, lookupInfo] at heval
+  | nField name expression =>
+      intro value heval
+      have hstructs := stateRel_structs source target hstate
+      simp [evalPanSemStateExp, evalPanValueExp, hstructs, lookupInfo] at heval
+      simp only [Option.bind_eq_some_iff] at heval
+      rcases heval with ⟨innerValue, _, hresult⟩
+      cases innerValue <;> simp at hresult
 
 /-! Lift mixed Const/Local/RStruct/address/RField-supported arguments through
 the HOL `compile_args` list evaluator. This is a larger subset of the argument

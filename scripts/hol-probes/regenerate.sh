@@ -745,6 +745,12 @@ run_probe crep_eval_shift_rv64_probeScript.sml crep_eval_shift_rv64_probe.out \
   eval_shift_lsl_const eval_shift_amount_width \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The Crepop Mul probe observes HOL crep_op over constant operands (product and
+# the arity failures for three, one, and zero operands).
+run_probe crep_eval_crepop_mul_rv64_probeScript.sml crep_eval_crepop_mul_rv64_probe.out \
+  eval_crepop_mul_const eval_crepop_mul_empty \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

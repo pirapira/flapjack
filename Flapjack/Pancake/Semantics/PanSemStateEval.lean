@@ -706,4 +706,46 @@ theorem panValueFlatReadWord_eq_panValueWordHOL
       | nStruct nm fs =>
           cases hd : state.memaddrs address <;> simp [panValueWordDefined, hmem]
 
+/-! ### Structured `.load` Comb/Named induction prerequisites (flapjack-pxn.18.3.6.9.2.2.1)
+
+Fuel positivity facts for the production flattening load and the not-found named-scan
+agreement between `lookupInfoWithRest` and the tagged exact `panMemLoadHOL`. -/
+
+/-- Fuel positivity: the shape fuel is always at least one. -/
+theorem panValueFlatShapeFuel_pos (shape : Shape) : 1 ≤ panValueFlatShapeFuel shape := by
+  cases shape <;> simp only [panValueFlatShapeFuel] <;> omega
+
+/-- Fuel positivity: a nonempty shape list has list fuel at least one. -/
+theorem panValueFlatShapeListFuel_pos (shape : Shape) (shapes : List Shape) :
+    1 ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel (shape :: shapes) := by
+  simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel]
+  omega
+
+/-- Fuel positivity: a nonempty field list has field fuel at least one. -/
+theorem panValueFlatFieldsFuel_pos (field : FieldName × Shape)
+    (fields : List (FieldName × Shape)) :
+    1 ≤ panValueFlatFieldsFuel (field :: fields) := by
+  obtain ⟨name, shape⟩ := field
+  simp only [panValueFlatFieldsFuel]
+  omega
+
+/-- Named-scan agreement: when `lookupInfoWithRest` fails to find the name, the tagged exact
+structured load of `.named name` over the HOL-shaped context is `none` as well. -/
+theorem panMemLoadHOL_named_none (name : StructName) (structs : StructContext)
+    (address : RiscV.Word 64) (domain : RiscV.Word 64 → Prop) [DecidablePred domain]
+    (memory : RiscV.Word 64 → HolWordLab 64)
+    (h : lookupInfoWithRest name structs = none) :
+    panMemLoadHOL (width := 64) (.named name) address domain memory structs.toHOL = none := by
+  induction structs with
+  | nil => simp [StructContext.toHOL, panMemLoadHOL]
+  | cons entry rest ih =>
+      obtain ⟨candidate, info⟩ := entry
+      simp only [StructContext.toHOL, List.map_cons, lookupInfoWithRest] at h ⊢
+      by_cases hc : candidate == name
+      · simp [hc] at h
+      · have hrest : lookupInfoWithRest name rest = none := by simpa [hc] using h
+        rw [panMemLoadHOL.eq_def]
+        simp only [hc, Bool.false_eq_true, if_false]
+        exact ih hrest
+
 end Flapjack

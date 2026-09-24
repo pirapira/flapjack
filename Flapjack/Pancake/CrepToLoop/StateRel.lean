@@ -182,4 +182,22 @@ theorem crepToLoopDistinctFuncs_iff (functions : FiniteMap FunName (Nat × Nat))
         FLOOKUP functions y = some (m, rm') → n = m → x = y :=
   Iff.rfl
 
+/-- Exact port of HOL `crep_to_loop$distinct_vars_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:95-99`): distinct
+    variable-map keys are separated by their local slot, so two entries with
+    equal slots must share the key.  The map is over `FiniteMap Nat Nat`
+    (HOL `num |-> num`); no word-typed field occurs, so the statement is
+    word-length independent. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "distinct_vars_def"]
+def crepToLoopDistinctVars (vars : FiniteMap Nat Nat) : Prop :=
+  ∀ x y n m,
+    FLOOKUP vars x = some n → FLOOKUP vars y = some m → n = m → x = y
+
+/-- Untagged iff form of `crepToLoopDistinctVars`, kept for rewriting. -/
+theorem crepToLoopDistinctVars_iff (vars : FiniteMap Nat Nat) :
+    crepToLoopDistinctVars vars ↔
+      ∀ x y n m,
+        FLOOKUP vars x = some n → FLOOKUP vars y = some m → n = m → x = y :=
+  Iff.rfl
+
 end Flapjack

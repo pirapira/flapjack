@@ -440,4 +440,32 @@ example : ¬ crepToLoopDistinctFuncs distinctFuncsFm := by
       rfl
   exact absurd hkey (by decide)
 
+/-- Concrete variable map used to reproduce the `distinct_vars_*` oracle rows:
+    `1 ↦ 10`, `2 ↦ 20`, `3 ↦ 10`. -/
+def distinctVarsFm : FiniteMap Nat Nat :=
+  FUPDATE
+    (FUPDATE
+      (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10))
+      (2, 20))
+    (3, 10)
+
+/-- `distinct_vars_sep=T`: two entries with different slots satisfy the
+    pointwise obligation `n = m → x = y` vacuously. -/
+example (h : crepToLoopDistinctVars distinctVarsFm) :
+    (10 : Nat) = 20 → ((1 : Nat) = 2) :=
+  h 1 2 10 20
+    (by simp [distinctVarsFm, FLOOKUP_update])
+    (by simp [distinctVarsFm, FLOOKUP_update])
+
+/-- `distinct_vars_collision=F`: two distinct keys sharing a slot violate the
+    relation. -/
+example : ¬ crepToLoopDistinctVars distinctVarsFm := by
+  intro h
+  have hkey : (1 : Nat) = 3 :=
+    h 1 3 10 10
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      (by simp [distinctVarsFm, FLOOKUP_update])
+      rfl
+  exact absurd hkey (by decide)
+
 end Flapjack.Test.CrepToLoopParity

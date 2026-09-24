@@ -8174,5 +8174,13 @@
     "lean_name": "crepToLoopDistinctFuncs",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (exact statement comparison with distinct_funcs_def crep_to_loopProofScript.sml:60-65 over FiniteMap FunName (Nat x Nat); no word-typed field, so width-independent; direct HOL-EVAL body rows distinct_funcs_sep=T, distinct_funcs_collision=F reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean; untagged crepToLoopDistinctFuncs_iff keeps the iff form)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "distinct_vars_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopDistinctVars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against distinct_vars_def at crep_to_loopProofScript.sml:95-99: num |-> num finite map, two entries with equal slots must share the key; rendered as FiniteMap Nat Nat with no word-typed field, so word-length independent and no width-indexing needed; untagged crepToLoopDistinctVars_iff keeps the iff form; direct HOL oracle rows distinct_vars_sep=T/distinct_vars_collision=F/distinct_vars_absent=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

@@ -1202,3 +1202,10 @@ run_probe stack_to_lab_flatten_ops_probeScript.sml stack_to_lab_flatten_ops_prob
   negate_less compile_jump_reg \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The flatten base probe observes the non-recursive flatten constructors.
+run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_probe.out \
+  flatten_tick flatten_halt \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+

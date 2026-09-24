@@ -1975,6 +1975,49 @@ theorem evalCrepRuntimeExpWordLab_shift_rv64_const
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeShift_rv64_eq_holWordShift64]
 
+/-- Exact condition under which the production `Shift` hook coincides with
+HOL's fixed `word_sh` at 64 bits.  `crepRuntimeShift_rv64_eq_holWordShift64`
+is the `riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need
+not satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelShiftMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : Shift) (left right : RiscV.Word 64),
+    model.shift operator left right = holWordShift64 operator left right.toNat
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelShiftMatchesHOL64` computes `Shift` as HOL `word_sh`. -/
+theorem crepMemoryModelShift_eq_holWordShift64_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 model)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    model.shift operator left right = holWordShift64 operator left right.toNat :=
+  hmodel operator left right
+
+/-- The RV64 target's memory model satisfies the shift/HOL-`word_sh` predicate. -/
+theorem riscv64CrepRuntimeTarget_shift_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelShiftMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator left right => crepRuntimeShift_rv64_eq_holWordShift64 base operator left right
+
+/-- Exact production/source relation for `Shift` over constant operands: for
+*any* memory model matching HOL `word_sh`, the production evaluator agrees with
+the HOL primitive, without assuming the model is the RISC-V one. -/
+theorem evalCrepRuntimeExp_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.shift operator (.const left) (.const right)) =
+      holWordShift64 operator left right.toNat := by
+  simp [evalCrepRuntimeExp, hmodel operator left right]
+
+/-- Word_lab version of `evalCrepRuntimeExp_shift_const_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.shift operator (.const left) (.const right)) =
+      (holWordShift64 operator left right.toNat).map PanWordLab.word := by
+  simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, hmodel operator left right]
+
 /-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
 two word operands yields their product, any other arity is a failure. -/
 def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=

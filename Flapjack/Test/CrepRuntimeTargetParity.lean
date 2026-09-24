@@ -491,6 +491,45 @@ example :
 #guard corrGuard
 #eval corrGuard
 
+/-! ## Arbitrary Shift hook versus HOL `word_sh` -/
+
+/-- A memory model whose `shift` hook is literally HOL `word_sh` at 64 bits,
+    but which is otherwise not the RISC-V target model. -/
+def holShiftModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with
+    shift := fun operator left right => holWordShift64 operator left right.toNat }
+
+def holShiftBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memoryModel := holShiftModel }
+
+theorem holShiftBaseState_matches :
+    CrepMemoryModelShiftMatchesHOL64 holShiftBaseState.memoryModel :=
+  fun _ _ _ => rfl
+
+example : CrepMemoryModelShiftMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_shift_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 3)) =
+      holWordShift64 .lsl 1 3 :=
+  evalCrepRuntimeExp_shift_const_of_matches holShiftBaseState
+    holShiftBaseState_matches .lsl 1 3
+
+/-- The production evaluator over an arbitrary matching model agrees with HOL
+    `word_sh` on valid shifts and rejects an out-of-range amount. -/
+def shiftMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 3)) ==
+      some (8 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 64)) ==
+      none) &&
+    (evalCrepRuntimeExp holShiftBaseState (.shift .ror (.const 1) (.const 1)) ==
+      some (0x8000000000000000 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holShiftBaseState)
+        (.shift .lsl (.const 1) (.const 3)) == some (8 : RiscV.Word 64))
+
+#guard shiftMatchesGuard
+#eval shiftMatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -528,8 +567,12 @@ def runChecks : IO Bool := do
     IO.println "PASS crep RV64 evaluator correspondence holds on compound expressions"
   else
     IO.println "FAIL crep RV64 evaluator correspondence holds on compound expressions"
+  if shiftMatchesGuard then
+    IO.println "PASS crep Shift hook matches HOL word_sh over arbitrary model"
+  else
+    IO.println "FAIL crep Shift hook matches HOL word_sh over arbitrary model"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
-    crepOpEvalGuard && corrGuard)
+    crepOpEvalGuard && corrGuard && shiftMatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

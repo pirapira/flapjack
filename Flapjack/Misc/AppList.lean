@@ -65,4 +65,9 @@ theorem appListAppend_thm {α : Type} (left right : AppList α) (entries : List 
   · simp [appListAppend, appendAux]
   · rfl
 
+/-- Flatten the leading `AppList` of a `(AppList α × Bool × Nat)` (the shape of
+HOL `flatten`'s result) with `misc$append`. -/
+def appListFlatten {α : Type} (result : AppList α × Bool × Nat) : List α × Bool × Nat :=
+  (appListAppend result.1, result.2.1, result.2.2)
+
 end Flapjack

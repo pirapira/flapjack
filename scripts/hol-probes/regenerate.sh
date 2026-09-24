@@ -1243,3 +1243,10 @@ run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
   append_aux_list append_aux_suffix \
   "$cake_dir/misc/miscScript.sml" \
   "$cake_dir/misc"
+
+# The flatten app_list probe observes `misc$append` flattening the HOL
+# `stack_to_lab$flatten` app_list output to the production flat list.
+run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app_list_probe.out \
+  flatten_app_tick flatten_app_raise \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"

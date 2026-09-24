@@ -249,6 +249,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_2exp_bound",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpBound",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Width-parametric BitVec support only; HOL quantifies over polymorphic 'a word with implicit dimindex, and the Lean theorem has not been related to HOL's finite_index carrier. Do not tag until that carrier identification is proved. The local note records the exact gap."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "lookup_code",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProg",

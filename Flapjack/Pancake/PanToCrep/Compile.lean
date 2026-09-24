@@ -197,6 +197,51 @@ theorem mem_crepExpVars_le_maxCrepExpVarHOL
         · exact ih (max acc x) h
   exact hbound (expressions.flatMap crepExpVars) 0 hmem
 
+theorem allocatedNamesHOL_length (context : PanToCrepHOLContext α) (shape : Shape) :
+    (allocatedNamesHOL context shape).length = Shape.shapeSize shape := by
+  simp [allocatedNamesHOL]
+
+theorem freshNamesHOL_length (context : PanToCrepHOLContext α) (count start : Nat) :
+    (freshNamesHOL context count start).length = count := by
+  simp [freshNamesHOL]
+
+theorem not_mem_functionReturnNamesHOL (context : PanToCrepHOLContext α)
+    (function : FunName) {x : Nat} (hx : x ≤ context.vmax) :
+    x ∉ functionReturnNamesHOL context function := by
+  unfold functionReturnNamesHOL
+  split
+  · exact not_mem_allocatedNamesHOL context _ hx
+  · simp
+
+/-- A call-destination slot list is exactly the slot list recorded for the
+    destination variable in the finite-map context (the `wrap_rt` normalization
+    only drops the empty one-word return slot).  This is the finite-map
+    counterpart of the `locals_rel` slot link used by Cake's
+    `not_mem_context_assigned_mem_gt` (`pan_to_crepProofScript.sml:1252`). -/
+theorem callDestinationNamesHOL_mem (context : PanToCrepHOLContext α) (kind : VarKind)
+    (name : VarName) {slots : List Nat}
+    (h : callDestinationNamesHOL context kind name = some slots) :
+    ∃ sh ns, FLOOKUP context.vars name = some (sh, ns) ∧ slots = ns := by
+  unfold callDestinationNamesHOL at h
+  cases hlookup : FLOOKUP context.vars name with
+  | none => simp [wrapRt, hlookup] at h
+  | some pair =>
+      obtain ⟨sh, ns⟩ := pair
+      simp only [hlookup] at h
+      cases sh with
+      | one =>
+          cases ns with
+          | nil => simp [wrapRt] at h
+          | cons slot slots =>
+              simp only [wrapRt, Option.map_some] at h
+              exact ⟨_, _, rfl, (Option.some.inj h).symm⟩
+      | comb fields =>
+          simp only [wrapRt, Option.map_some] at h
+          exact ⟨_, _, rfl, (Option.some.inj h).symm⟩
+      | named structName =>
+          simp only [wrapRt, Option.map_some] at h
+          exact ⟨_, _, rfl, (Option.some.inj h).symm⟩
+
 def loadMemOpHOL : OpSize → CrepMemOp
   | .op8 => .load8
   | .opW => .load

@@ -351,6 +351,21 @@ def freshnessGuard : Bool :=
 
 #guard freshnessGuard
 
+example : (3 : Nat) ∈ crepAssignedFreeVars
+    (CrepProg.assign 3 (CrepExp.const (0 : Nat))) := by
+  rw [mem_crepAssignedFreeVars_assign]
+example : (3 : Nat) ∉ crepAssignedFreeVars (CrepProg.skip : CrepProg Nat) := by
+  simp [crepAssignedFreeVars]
+example : (3 : Nat) ∈ crepAssignedFreeVars
+    (CrepProg.seq (CrepProg.assign 3 (CrepExp.const (0 : Nat))) CrepProg.skip) := by
+  rw [mem_crepAssignedFreeVars_seq]
+  left
+  rw [mem_crepAssignedFreeVars_assign]
+example : (3 : Nat) ∉ crepAssignedFreeVars
+    (CrepProg.shMem CrepMemOp.load8 7 (CrepExp.const (0 : Nat))) := by
+  rw [mem_crepAssignedFreeVars_shMem]
+  decide
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),

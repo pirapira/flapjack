@@ -2,6 +2,7 @@ import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Backend.StackToLab
+import Flapjack.Compiler.Backend.StackProps
 
 /-!
 # Cake labProps pre-encoding predicates
@@ -549,5 +550,100 @@ theorem flatten_install_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmCo
   simp [lineOkPreConfig_labAsm, lineOkPreConfig_label]
 
 end FlattenBaseLinesAll
+
+/-
+Compatibility facts pulling the per-constructor validity information out of
+`StackProps.stackAsmOk` instantiated with the real `asm_config` predicates, so
+the `flatten_line_ok_pre` induction can discharge its hypotheses from HOL's
+`stack_asm_ok c p` and `byte_offset_ok c 0w` premises. -/
+section StackAsmOkBridge
+
+variable {width : Nat} (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+
+theorem stackAsmOk_asmChecksOfConfig_inst
+    (instruction : WordLangInst (BitVec width))
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.inst instruction : FlattenProg width) = true) :
+    Flapjack.Compiler.Encoders.Asm.asmInstOk config instruction = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_shMemOp
+    (operator : WordMemOp) (register : Nat) (address : WordLangAddr (BitVec width))
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.shMemOp operator register address : FlattenProg width) = true) :
+    (Flapjack.Compiler.Encoders.Asm.asmRegOk config register &&
+      StackProps.asmAddrOk config operator address) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_raise
+    (register : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.raise register : FlattenProg width) = true) :
+    (register < config.regCount && !config.avoidRegs.contains register) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_ret
+    (register : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.ret register : FlattenProg width) = true) :
+    (register < config.regCount && !config.avoidRegs.contains register) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+theorem stackAsmOk_asmChecksOfConfig_codeBufferWrite
+    (left right : Nat)
+    (h : StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.codeBufferWrite left right : FlattenProg width) = true) :
+    (left < config.regCount && right < config.regCount &&
+      !config.avoidRegs.contains left && !config.avoidRegs.contains right) = true := by
+  simpa [StackProps.stackAsmOk, StackProps.asmChecksOfConfig] using h
+
+/- Decomposition lemmas for the recursive `stackAsmOk` constructors, used by the
+`flatten_line_ok_pre` induction to split a program obligation into its
+sub-program obligations. -/
+
+theorem stackAsmOk_asmChecksOfConfig_seq
+    (first second : FlattenProg width) :
+    (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.seq first second : FlattenProg width) = true) ↔
+      (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) first = true ∧
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) second = true) := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Bool.and_eq_true]
+
+theorem stackAsmOk_asmChecksOfConfig_ite
+    (condition : Cmp) (register : Nat) (right : WordRegImm (BitVec width))
+    (thenBranch elseBranch : FlattenProg width) :
+    (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.ite condition register right thenBranch elseBranch : FlattenProg width) = true) ↔
+      (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) thenBranch = true ∧
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) elseBranch = true) := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Bool.and_eq_true]
+
+theorem stackAsmOk_asmChecksOfConfig_loop
+    (body : FlattenProg width) :
+    (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.loop body : FlattenProg width) = true) ↔
+      StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) body = true := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig]
+
+theorem stackAsmOk_asmChecksOfConfig_call_some_inl_none
+    (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel sectionId : Nat) :
+    (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel))
+          (.inl sectionId) none : FlattenProg width) = true) ↔
+      StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) returnProgram = true := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig]
+
+theorem stackAsmOk_asmChecksOfConfig_call_some_inl_some
+    (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel sectionId : Nat)
+    (handlerProgram : FlattenProg width) (handlerSection handlerLabel : Nat) :
+    (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel))
+          (.inl sectionId) (some (handlerProgram, handlerSection, handlerLabel)) :
+            FlattenProg width) = true) ↔
+      (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) returnProgram = true ∧
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) handlerProgram = true) := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Bool.and_eq_true]
+
+end StackAsmOkBridge
 
 end Flapjack.Compiler.Backend.LabProps

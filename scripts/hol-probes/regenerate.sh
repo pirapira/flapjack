@@ -253,6 +253,9 @@ run_probe crep_to_loop_distinct_vars_probeScript.sml crep_to_loop_distinct_vars_
 run_probe crep_to_loop_ctxt_max_probeScript.sml crep_to_loop_ctxt_max_probe.out \
   ctxt_max_within ctxt_max_absent "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
+  gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake"
 run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq zip_lookup_witness "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -1221,4 +1224,3 @@ run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_pr
   flatten_tick flatten_halt \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
-

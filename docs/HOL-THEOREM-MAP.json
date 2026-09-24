@@ -4939,6 +4939,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlTwoWords_handlerPrestateRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only composition of two-word exp_hdl with state_rel, code_rel, excp_rel, and locals_rel at the matching handler-body entry; the callee post-state relations and two payload globals remain premises, so this is not pc_compile_correct[Call_Ret_Exception]"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlOneWord_localsRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only composition of actual exp_hdl payload write with the HOL-shaped locals_rel update needed by the handler-body induction hypothesis; enclosing Call_Ret_Exception proof remains open"
@@ -5006,6 +5014,14 @@
     "lean_name": "evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual target Call_Ret_Exception dispatcher using a full compile_exp_val_rel-shaped expression IH to derive compile_args evaluation and state-owned code lookup, then composing the one-word exp_hdl relation and handler-body IH. It derives flattened parameter length from the successful source Call match and argument well-formedness; the target callee-body IH, source Call/post-state composition, and full pc_compile_correct theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only target Call_Ret_Exception dispatcher for a two-word payload using a full expression IH to derive compiled arguments and the state-owned callee lookup, then composing two-word exp_hdl state_rel/code_rel/excp_rel/locals_rel with the handler-body IH. The callee and handler simulations remain premises; this is not the full pc_compile_correct case."
   },
   {
     "hol_path": null,

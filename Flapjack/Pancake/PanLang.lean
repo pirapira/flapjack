@@ -67,7 +67,13 @@ abbrev StructContextHOL := List (StructName × StructInfoHOL)
     of HOL `alist$ALOOKUP`. The association list may use any key type with
     `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
     the exact `ALOOKUP` operation (the production `InfoMap` is the
-    `κ = String` instance). -/
+    `κ = String` instance). It is not `@[hol]`-tagged: the HOL source
+    (`alistTheory`, cited by HOL `FLOOKUP` users) is HOL stdlib, outside the
+    CakeML submodule, and the definition quantifies a `[BEq κ]` instance where
+    HOL uses `=`. Direct evidence: the review/audit bead
+    `flapjack-pxn.18.3.6.5`, the equality to core `List.lookup`
+    (`lookupInfo_eq_lookup`, `Proofs/PanStructs.lean:263`) under `[LawfulBEq
+    String]`, and the tagged `ALOOKUP_MAP3`/`ALOOKUP_MAP4` ports. -/
 def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
   | [] => none
   | (candidate, value) :: entries =>

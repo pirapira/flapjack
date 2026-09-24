@@ -87,9 +87,36 @@ def returnOracleRowsMatch : Bool :=
     | _ => false
   wordOk && emptyOk && errorOk
 
+def raiseOracleRowMatches : Bool :=
+  let state := sampleState 5
+  match evalCrepClockProg (.raiseException 9) state with
+  | (some (.exception 9), post) =>
+      post.clock == 5 && post.locals 0 == none && post.globals 0 == none &&
+        post.memory 0 == .word 0 && post.baseAddress == 0 && post.topAddress == 100
+  | _ => false
+
+def decOracleRowsMatch : Bool :=
+  let state := sampleState 5
+  let shadowOk := match evalCrepClockProg
+      (.decLocal 0 (.const 9) (.leaf .skip)) state with
+    | (none, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  let newOk := match evalCrepClockProg
+      (.decLocal 1 (.const 9) (.leaf .skip)) state with
+    | (none, post) => post.clock == 5 && post.locals 1 == none &&
+        post.locals 0 == some (.word 7)
+    | _ => false
+  let errorOk := match evalCrepClockProg
+      (.decLocal 0 (.var 9) (.leaf .skip)) state with
+    | (some .error, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  shadowOk && newOk && errorOk
+
 #guard ifOracleRowsMatch
 #guard seqOracleRowsMatch
 #guard returnOracleRowsMatch
+#guard raiseOracleRowMatches
+#guard decOracleRowsMatch
 
 theorem skipFullState (state : CrepHolState (BitVec 64) Unit) :
     evalCrepClockLeaf .skip state = (none, state) :=
@@ -155,7 +182,15 @@ def runChecks : IO Bool := do
     IO.println "PASS total Crep HOL Return values/empty/error clauses match direct oracle"
   else
     IO.println "FAIL total Crep HOL Return values/empty/error clauses match direct oracle"
+  if raiseOracleRowMatches then
+    IO.println "PASS total Crep HOL Raise exception/empty-locals clause matches direct oracle"
+  else
+    IO.println "FAIL total Crep HOL Raise exception/empty-locals clause matches direct oracle"
+  if decOracleRowsMatch then
+    IO.println "PASS total Crep HOL Dec bind/restore/error clauses match direct oracle"
+  else
+    IO.println "FAIL total Crep HOL Dec bind/restore/error clauses match direct oracle"
   pure (holOracleRowsMatch && ifOracleRowsMatch && seqOracleRowsMatch &&
-    returnOracleRowsMatch)
+    returnOracleRowsMatch && raiseOracleRowMatches && decOracleRowsMatch)
 
 end Flapjack.Test.CrepSemTotalClockLeavesParity

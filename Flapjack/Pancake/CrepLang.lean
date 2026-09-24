@@ -440,7 +440,19 @@ word)`), so the exact tagged declarations are stated over `BitVec width`
 (`= RiscV.Word width`); the generic helpers above remain untagged Flapjack
 infrastructure.  Every HOL `word` type has a positive `dimindex`, so the exact
 wrappers carry `[NeZero width]` (as the WordLang/CrepArith tagged ports do),
-even though their bodies never inspect the word bits. -/
+even though their bodies never inspect the word bits.
+
+The executed compiler path calls the generic helpers, whose carriers stay
+generic over the word element type (`compileProgHOL`/`compileProg` in
+`Flapjack/Pancake/PanToCrep/Compile.lean`, `crepInlineTmpNames`/
+`crepInlineCallBody`/`crepInlineProgFmap` in
+`Flapjack/Pancake/CrepInline/Pass.lean`, `crepVarProg`/`crepArgLoad` in
+`Flapjack/Pancake/CrepInline.lean`, and `maxCrepExpVarHOL`/`expHdlFiniteMap`).
+Each `...W` wrapper below is a definitional delegation (`def W ... := generic`),
+so those call sites compute the identical function; routing them literally
+through the `...W` names is blocked only by their generic carriers (the
+deferred width-indexing migration `flapjack-pxn.18.3.5.3.1`) and is tracked by
+`flapjack-pxn.18.4.3.82`. -/
 /-- Exact width-indexed port of HOL `crepLang$nested_seq_def`
     (`cakeml/pancake/crepLangScript.sml:89`). -/
 @[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]

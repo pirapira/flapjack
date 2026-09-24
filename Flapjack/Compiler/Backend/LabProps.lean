@@ -957,6 +957,36 @@ theorem flatten_line_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfig w
       )
   exact hmain (sizeOf program) program (Nat.le_refl _) tail sectionId next conts breaks hok hbyte
 
+/-- Flat-representation form of HOL `stack_to_labProofScript.sml`
+`compile_all_enc_ok_pre`: every section produced by `prog_to_section` for a list
+of `stack_asm_ok` programs satisfies `line_ok_pre`.  Untagged for the same
+`misc$append` versus `++` representation reason as `flatten_line_ok_pre`. -/
+theorem compile_all_enc_ok_pre (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (programs : List (Nat × FlattenProg width))
+    (hbyte : Flapjack.Compiler.Encoders.Asm.asmByteOffsetOk config (0 : BitVec width) = true)
+    (hok : programs.all (fun entry =>
+      StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) entry.2) = true) :
+    (programs.map (fun entry => StackToLab.progToSection (flattenOps (width := width))
+      (0 : BitVec width) entry.1 entry.2)).all (secOkPreConfig config) = true := by
+  induction programs with
+  | nil => rfl
+  | cons head tail ih =>
+    obtain ⟨sectionId, program⟩ := head
+    rw [List.all_cons, Bool.and_eq_true] at hok
+    obtain ⟨hokHead, hokTail⟩ := hok
+    rw [List.map_cons, List.all_cons]
+    have hsec : secOkPreConfig config
+        (StackToLab.progToSection (flattenOps (width := width)) (0 : BitVec width) sectionId program)
+        = true := by
+      simp only [StackToLab.progToSection, secOkPreConfig, secOkPre, List.all_append, List.all_cons,
+        List.all_nil, Bool.and_eq_true]
+      constructor
+      · exact flatten_line_ok_pre config program true sectionId
+          (Flapjack.Compiler.Backend.StackAlloc.nextLab program 2) [] [] hbyte hokHead
+      · simp [lineOkPre]
+    rw [hsec, ih hokTail]
+    rfl
+
 end FlattenLineOkPre
 
 end Flapjack.Compiler.Backend.LabProps

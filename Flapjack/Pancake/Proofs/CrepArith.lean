@@ -1073,6 +1073,9 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
     have hpanAmount : PanShiftWidth.amount (α := ι → Bool) amount = exponent := by
       change (holWordToBitVec dimension amount).toNat = exponent
       exact hamount
+    change (holFiniteWordSourceMemoryModel dimension state.bigEndian).shift
+      .lsl word amount = _
+    rw [holFiniteWordSourceMemoryModel_shift_eq_evalPanShiftFull]
     change evalPanShiftFull .lsl word amount = _
     simp only [evalPanShiftFull, hpanAmount]
     have hnotWidth : ¬ PanShiftWidth.width (α := ι → Bool) ≤ exponent :=

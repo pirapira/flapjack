@@ -261,4 +261,70 @@ example :
           none &&
         FLOOKUP (emptyCrepHolLocals localBase).locals 2 == none
 
+/-! ## Production local-update adapters to the tagged HOL local defs
+
+These are Flapjack-only (untagged) bridge lemmas connecting the runtime
+`updateCrepRuntimeLocal`/`clearCrepRuntimeLocals`/`assignCrepRuntimeLocals`
+state updates to the tagged HOL `setCrepHolVar`/`updCrepHolLocals`/
+`emptyCrepHolLocals` definitions on the 11-field projection. -/
+
+-- HOL `crepSem$set_var_def` body on the function-represented locals map.
+example :
+    updateCrepRuntimeLocal directUpdateState.locals 3 (.word (9 : Nat)) =
+      FUPDATE directUpdateState.locals (3, PanWordLab.word (9 : Nat)) :=
+  updateCrepRuntimeLocal_eq_FUPDATE directUpdateState.locals 3 (.word (9 : Nat))
+
+-- Production `setCrepRuntimeLocal` is the same record update.
+example :
+    setCrepRuntimeLocal 3 (.word (9 : Nat)) directUpdateState =
+      { directUpdateState with
+        locals :=
+          updateCrepRuntimeLocal directUpdateState.locals 3 (.word (9 : Nat)) } :=
+  setCrepRuntimeLocal_eq_update 3 (.word (9 : Nat)) directUpdateState
+
+-- Commutes with the tagged HOL `setCrepHolVar` under `toHolState`.
+example :
+    (setCrepRuntimeLocal 3 (.word (9 : Nat)) directUpdateState).toHolState =
+      setCrepHolVar 3 (PanWordLab.word (9 : Nat)) directUpdateState.toHolState :=
+  setCrepRuntimeLocal_toHolState 3 (.word (9 : Nat)) directUpdateState
+
+-- Commutes with the tagged HOL `emptyCrepHolLocals` under `toHolState`.
+example :
+    (clearCrepRuntimeLocals directUpdateState).toHolState =
+      emptyCrepHolLocals directUpdateState.toHolState :=
+  clearCrepRuntimeLocals_toHolState directUpdateState
+
+-- Production `assignCrepRuntimeLocals` is HOL's `|++`/`FUPDATE_LIST` fold.
+example :
+    assignCrepRuntimeLocals directUpdateState.locals [1, 2] [(5 : Nat), 6] =
+      some (FUPDATE_LIST directUpdateState.locals
+        [(1, PanWordLab.word (5 : Nat)), (2, PanWordLab.word (6 : Nat))]) := by
+  rw [assignCrepRuntimeLocals_eq_FUPDATE_LIST]
+  rfl
+
+-- `Call`-clause callee setup from the empty map is HOL's `upd_locals` body.
+example :
+    assignCrepRuntimeLocals (fun _ => none) [1, 2] [(5 : Nat), 6] =
+      some (FUPDATE_LIST FEMPTY
+        [(1, PanWordLab.word (5 : Nat)), (2, PanWordLab.word (6 : Nat))]) :=
+  assignCrepRuntimeLocals_empty_eq [1, 2] [(5 : Nat), 6] rfl
+
+-- Writing that map into a state projects to the tagged HOL `updCrepHolLocals`.
+example :
+    ({ directUpdateState with
+        locals := FUPDATE_LIST FEMPTY
+          [(1, PanWordLab.word (5 : Nat)), (2, PanWordLab.word (6 : Nat))] }).toHolState =
+      updCrepHolLocals
+        [(1, PanWordLab.word (5 : Nat)), (2, PanWordLab.word (6 : Nat))]
+        directUpdateState.toHolState :=
+  setCrepRuntimeLocalsFEMPTY_toHolState _ directUpdateState
+
+-- Concrete observations mirroring crep_local_updates_probe.out under the
+-- production adapters.
+#guard FLOOKUP (setCrepRuntimeLocal 3 (.word (9 : Nat)) directUpdateState).toHolState.locals 3 ==
+          some (PanWordLab.word (9 : Nat)) &&
+        FLOOKUP (setCrepRuntimeLocal 5 (.word (9 : Nat)) directUpdateState).toHolState.locals 3 ==
+          some (PanWordLab.word (7 : Nat)) &&
+        (FLOOKUP (clearCrepRuntimeLocals directUpdateState).toHolState.locals 3).isNone
+
 end Flapjack.Test.CrepGlobalShapeParity

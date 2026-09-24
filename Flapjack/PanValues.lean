@@ -18,7 +18,7 @@ namespace Flapjack
     directly. -/
 inductive PanWordLab (α : Type u) where
   | word (value : α)
-  deriving BEq, Repr
+  deriving BEq, DecidableEq, Repr
 
 def panIsWord : PanWordLab α → Bool
   | .word _ => true
@@ -1225,6 +1225,20 @@ def lookupPanValueField (name : FieldName) :
   | (candidate, value) :: fields =>
       if candidate == name then some value else lookupPanValueField name fields
 
+def panValueWordProjection : PanValue α → Option α
+  | .word value => some value
+  | _ => none
+
+@[simp] theorem panValueWordProjection_word (value : α) :
+    panValueWordProjection (.word value) = some value := rfl
+
+@[simp] theorem panValueWordProjection_rStruct (fields : List (PanValue α)) :
+    panValueWordProjection (.rStruct fields) = none := rfl
+
+@[simp] theorem panValueWordProjection_nStruct (name : StructName)
+    (fields : List (FieldName × PanValue α)) :
+    panValueWordProjection (.nStruct name fields) = none := rfl
+
 def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -1293,9 +1307,7 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .op operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
-      let values ← values.mapM fun value => match value with
-        | .word value => some value
-        | _ => none
+      let values ← values.mapM panValueWordProjection
       match memoryAccess with
       | none => match values with
           | [left, right] => some (.word (evalPanBinOp operator left right))
@@ -3165,8 +3177,9 @@ mutual
           match result with
           | .normal _ _ _ => none
           | .returned _ calleeGlobals calleeMemory values =>
-              if panValueReturnValid structs contracts function values &&
-                  panValueValuesWithinLimit structs values then
+              -- HOL's Call checks only `shape_of retv <> return_sh`; the
+              -- payload-size limit is enforced by the callee `Return`.
+              if panValueReturnValid structs contracts function values then
                 match info with
                 | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
                 | some (destination, _) => do
@@ -3424,8 +3437,9 @@ mutual
           match result with
           | .normal _ _ _ => none
           | .returned _ calleeGlobals calleeMemory values =>
-              if panValueReturnValid structs contracts function values &&
-                  panValueValuesWithinLimit structs values then
+              -- HOL's Call checks only `shape_of retv <> return_sh`; the
+              -- payload-size limit is enforced by the callee `Return`.
+              if panValueReturnValid structs contracts function values then
                 match info with
                 | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
                 | some (destination, _) => do
@@ -3726,8 +3740,9 @@ mutual
           match result with
           | .normal _ _ _ => none
           | .returned _ calleeGlobals calleeMemory values =>
-              if panValueReturnValid structs contracts function values &&
-                  panValueValuesWithinLimit structs values then
+              -- HOL's Call checks only `shape_of retv <> return_sh`; the
+              -- payload-size limit is enforced by the callee `Return`.
+              if panValueReturnValid structs contracts function values then
                 match info with
                 | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
                 | some (destination, _) => do

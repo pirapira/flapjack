@@ -1,6 +1,7 @@
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.CrepProps
+import Flapjack.Pancake.Proofs.CrepInline
 
 /-!
 Direct runtime checks against `scripts/hol-probes/crep_eval_probe.out` and
@@ -388,17 +389,41 @@ def lookupCodeMap : FunName → Option (List Nat × CrepProg Nat) :=
   fun name => if name == "id" then some ([1], CrepProg.skip) else none
 
 example :
-    (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+    (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7] 1).map
         (fun pair => FLOOKUP pair.2 1) = some (some (PanWordLab.word 7)) := by
   rfl
 
-example : lookupCrepHolCode lookupCodeMap "missing" [] = none := by
+example : lookupCrepHolCode lookupCodeMap "missing" [] 0 = none := by
   rfl
 
-#guard (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7]).map
+#guard (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7] 0).map
           (fun pair => FLOOKUP pair.2 1) == some (some (PanWordLab.word 7)) &&
-        (lookupCrepHolCode lookupCodeMap "missing" []).isNone &&
-        (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8]).isNone
+        (lookupCrepHolCode lookupCodeMap "missing" [] 0).isNone &&
+        (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8] 2).isNone
+
+/-- Kernel-checked adapter: the executed raw `lookupCrepRuntimeCode` agrees with
+    the tagged HOL-shaped `lookupCrepHolCode` on the wrapped arguments, and the
+    raw `eraseDups`-length distinctness check agrees with HOL `ALL_DISTINCT`. -/
+example :
+    lookupCrepRuntimeCode "id" [(7 : Nat)] lookupCodeMap =
+      lookupCrepHolCode lookupCodeMap "id" [(PanWordLab.word 7 : PanWordLab Nat)] 0 :=
+  lookupCrepRuntimeCode_eq_lookupCrepHolCode "id" [(7 : Nat)] 0 lookupCodeMap
+
+example : ([1, 2, 1] : List Nat).eraseDups.length = ([1, 2, 1] : List Nat).length ↔
+    ([1, 2, 1] : List Nat).Nodup :=
+  eraseDups_length_eq_iff_nodup [1, 2, 1]
+
+/-- HOL `crepPropsScript.sml:777` `flookup_res_var_distinct_zip_eq`: folding
+    `resVar` over the zip of a key list with its values leaves a key outside the
+    key list untouched. -/
+example :
+    FLOOKUP ((([1, 2, 3] : List Nat).zip
+        [(some 10 : Option Nat), some 20, some 30]).foldl resVar
+        (fun _ => (none : Option Nat))) 4 =
+      FLOOKUP (fun _ => (none : Option Nat)) 4 :=
+  flookup_res_var_distinct_zip_eq [1, 2, 3]
+    [(some 10 : Option Nat), some 20, some 30] (fun _ => none) 4 (by decide)
+    (by decide)
 
 /-- HOL `crepSem$mem_load_def` over the 11-field state: valid cell read and
     out-of-domain miss, matching `scripts/hol-probes/crep_mem_load_probe.out`
@@ -474,5 +499,35 @@ example :
 
 #guard evalCrepRuntimeExp bv64State
     (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
+
+/-- The executed generic `.crepOp` branch at `BitVec 64` computes the reviewed
+    tagged `crepOpCrep 64`: a bridge between the executed semantics and the HOL
+    definition, not a second evaluator. -/
+example :
+    evalCrepRuntimeExp bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      (do
+        let leftValue ← evalCrepRuntimeExp bv64State (.const (7 : RiscV.Word 64))
+        let rightValue ← evalCrepRuntimeExp bv64State (.const (3 : RiscV.Word 64))
+        crepOpCrep 64 CrepOp.mul [leftValue, rightValue]) :=
+  evalCrepRuntimeExp_crepOp_bitVec64 bv64State
+    (.const (7 : RiscV.Word 64)) (.const (3 : RiscV.Word 64))
+
+/-- `FOLDL_res_var_ZIP_lookup_var` at a concrete fixture: the fold of
+    `res_var` over `ns = []` is the identity, so a defined lookup survives in any
+    `SUBMAP` extension. -/
+example :
+    FLOOKUP (fun n : Nat => if n = 5 then some 7 else none) 5 = some 7 :=
+  FOLDL_res_var_ZIP_lookup_var (fun n : Nat => if n = 5 then some 7 else none)
+    (fun _ : Nat => none) (fun n : Nat => if n = 5 then some 7 else none)
+    [] 5 7 (fun _ _ h => h) rfl (by simp)
+
+/-- `FOLDL_res_var_ZIP_lookup` at a concrete fixture: the `OPT_MMAP` form with
+    an empty name list. -/
+example :
+    ([1, 2] : List Nat).mapM (FLOOKUP (fun n : Nat => some (n + 1))) =
+      some [2, 3] :=
+  FOLDL_res_var_ZIP_lookup (fun n : Nat => some (n + 1)) (fun _ : Nat => none)
+    (fun n : Nat => some (n + 1)) [] [1, 2] [2, 3] (fun _ _ h => h) rfl (by simp)
 
 end Flapjack.Test.CrepGlobalShapeParity

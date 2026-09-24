@@ -179,6 +179,38 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+/-- Exact generic list-success monotonicity helper from HOL's local
+    `OPT_MMAP_EQ_SOME_MONO` (`crep_arithProofScript.sml:93`).  `List.mapM` with
+    the `Option` monad is the Lean encoding of HOL's `OPT_MMAP`; this lemma is
+    independent of the Crep evaluator and is used for pointwise successful
+    result preservation in the arithmetic simplifier proof. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "OPT_MMAP_EQ_SOME_MONO" 93]
+theorem optMmapEqSomeMono {α β : Type} (f g : α → Option β)
+    (xs : List α) (ys : List β)
+    (hf : xs.mapM f = some ys)
+    (hmono : ∀ x z, x ∈ xs → f x = some z → g x = some z) :
+    xs.mapM g = some ys := by
+  induction xs generalizing ys with
+  | nil =>
+      simp_all
+  | cons x xs ih =>
+      simp only [List.mapM_cons] at hf ⊢
+      cases hfx : f x with
+      | none => simp [hfx] at hf
+      | some z =>
+          cases htail : xs.mapM f with
+          | none => simp [hfx, htail] at hf
+          | some tail =>
+              have hys : z :: tail = ys := by
+                simpa [hfx, htail] using hf
+              have hgx : g x = some z :=
+                hmono x z (by simp) hfx
+              have hgtail : xs.mapM g = some tail :=
+                ih tail htail (by
+                  intro y value hy hvalue
+                  exact hmono y value (by simp [hy]) hvalue)
+              simp [hgx, hgtail, hys]
+
 private theorem crepDestConst_mapCrepExpWord {α β : Type}
     (convert : α → β) (expression : CrepExp α) :
     crepDestConst (mapCrepExpWord convert expression) =
@@ -626,6 +658,36 @@ private theorem crepDest2ExpFuel_sound {n : Nat} [NeZero n]
                 omega
               _ = 2 ^ (result - start) % 2 ^ n := by
                 rw [hdiff, Nat.mod_eq_of_lt hpowlt]
+
+/-- Width-parametric BitVec support for HOL's `dest_2exp_bound`
+    (`crep_arithProofScript.sml:10`). HOL defines `word_log2 w` as
+    `n2w (LOG2 (w2n w))`; `BitVec.ofNat` and `BitVec.toNat` express those
+    operations for the Lean width-indexed word representation. This follows
+    from production `crepDest2Exp` soundness without assuming an
+    evaluator-preservation result. It is intentionally untagged: the Lean
+    theorem quantifies over `BitVec n`, while HOL quantifies over its
+    polymorphic `'a word`/implicit `dimindex`; the finite-index carrier
+    identification needed to claim the exact polymorphic HOL declaration has
+    not been established. -/
+theorem crepDest2ExpBound {n : Nat} [NeZero n]
+    (start : Nat) (word : BitVec n) (result : Nat)
+    (h : crepDest2Exp start word = some result) :
+    result ≤ start + (BitVec.ofNat n (Nat.log2 word.toNat)).toNat := by
+  change crepDest2ExpFuel (n + 1) start word = some result at h
+  have hs := crepDest2ExpFuel_sound (n + 1) start word result h
+  obtain ⟨hstart, hwidth, hword⟩ := hs
+  have hdiff : result - start < n := hwidth
+  have hpowlt : 2 ^ (result - start) < 2 ^ n :=
+    Nat.pow_lt_pow_right (by decide) hdiff
+  have hwordNat : word.toNat = 2 ^ (result - start) := by
+    rw [hword, Nat.mod_eq_of_lt hpowlt]
+  have hlog : Nat.log2 word.toNat = result - start := by
+    rw [hwordNat, Nat.log2_two_pow]
+  have hlogWrap : (BitVec.ofNat n (Nat.log2 word.toNat)).toNat = result - start := by
+    rw [hlog, BitVec.toNat_ofNat, Nat.mod_eq_of_lt]
+    exact Nat.lt_trans hdiff (Nat.lt_two_pow_self (n := n))
+  rw [hlogWrap]
+  omega
 
 /-- Fixed-width support instance of HOL `dest_2exp_thm`. The HOL theorem is
     polymorphic in `'a word`; this declaration proves only the `RiscV.Word n`
@@ -1376,9 +1438,38 @@ private theorem crepSimpExpEvalPreservesHolFiniteDimensionWithRuntime {ι : Type
         (toRuntime state) expressions with
     | none => simp [hx] at h
     | some values =>
-        have hi := ih.2 state (by simp [hx])
-        rw [← evalExpsMapM state (expressions.map (crepSimpExp fromNat)),
-          ← evalExpsMapM state expressions, hi]
+        have hOriginal : expressions.mapM
+            (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [← evalExpsMapM state expressions]
+          exact hx
+        have hSimplified : expressions.mapM
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) = some values := by
+          apply optMmapEqSomeMono
+            (evalCrepRuntimeExp (toRuntime state))
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) expressions values hOriginal
+          intro expression value hmem heval
+          have hSuccessful :
+              evalCrepRuntimeExp (toRuntime state) expression ≠ none := by
+            rw [heval]
+            simp
+          have hPreserved := ih.1 expression hmem state hSuccessful
+          rw [hPreserved, heval]
+        have hMapMapM (xs : List (CrepExp (ι → Bool))) :
+            (xs.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) =
+              xs.mapM (fun expression => evalCrepRuntimeExp (toRuntime state)
+                (crepSimpExp fromNat expression)) := by
+          induction xs with
+          | nil => rfl
+          | cons head tail ihTail => simp [List.mapM_cons, ihTail]
+        have hSimplifiedMapped :
+            (expressions.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [hMapMapM]
+          exact hSimplified
+        rw [hSimplifiedMapped, hOriginal]
   case crepOp operator expressions ih =>
     cases operator
     cases expressions with
@@ -1935,10 +2026,220 @@ theorem crepArithHolFiniteDimensionSourceMapCode_runtime {ι : Type}
   cases state
   rfl
 
+/-- Full-result all-width support for HOL `simp_exp_correct1` over the
+    production evaluator configured with the source-shaped finite-word memory
+    model. This keeps the successful-evaluation premise and the entire
+    `Option (PanWordLab word)` result, including its HOL `word_lab` wrapper;
+    `f` changes only the code map. It remains untagged because the explicit
+    finite-index carrier and its primitive operations have not yet been proved
+    identical to HOL's implicit `finite_index`/`crepSem$eval` interpretation.
+    The unused result binder mirrors HOL's `!s exp v` shape. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceRuntime {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression).map PanWordLab.word := by
+  let runtime := state.toHolFiniteWordSourceRuntime dimension
+  have hsimp := crepSimpExpEvalPreservesHolFiniteWordSource
+    dimension state expression h
+  calc
+    (evalCrepRuntimeExp
+        ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+          dimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word =
+      (evalCrepRuntimeExp (crepArithMapCode f runtime)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word := by
+            rw [crepArithHolFiniteDimensionSourceMapCode_runtime]
+    _ = (evalCrepRuntimeExp runtime
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          expression)).map PanWordLab.word := by
+            exact congrArg (Option.map PanWordLab.word)
+              (crepEvalCodeMapIrrel f runtime (crepSimpExp
+                (fun n => bitVecToHolWord dimension
+                  (BitVec.ofNat dimension.width n)) expression))
+    _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
+      congrArg (Option.map PanWordLab.word) hsimp
+
+/-- The `Const` case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). This case has the original success
+    premise, arbitrary code-map update, simplifier, and complete
+    `Option word_lab` equality. Both sides reduce directly to
+    `SOME (Word value)`, so it requires no evaluator correspondence beyond
+    the defining `Const` equations. It is one constructor case, not the full
+    recursive theorem. -/
+def crepArithHolMapCode {n : Nat} {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) :
+    CrepHolState (RiscV.Word n) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+/-- Apply the Crep arithmetic simplifier to the body stored at every function
+    name, preserving the declaration's parameter list. This is the Lean
+    function-map form of the `FMAP_MAP2` code transformation used by the local
+    `lookup_code` lemma in `crep_arithProofScript.sml`. -/
+def crepArithSimpCodeMap {α : Type} [BEq α] [OfNat α 0] [OfNat α 1]
+    [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    FunName → Option (List Nat × CrepProg α) :=
+  fun name => (code name).map fun (parameters, body) =>
+    (parameters, crepSimpProg fromNat body)
+
+/-- CakeML's local `lookup_code` simplification lemma
+    (`crep_arithProofScript.sml:162`): mapping `simp_prog` over every code
+    body commutes with a successful code lookup, leaving its argument-local
+    map unchanged. The unused length parameter is retained because it is a
+    quantified input in the HOL declaration. This theorem uses the faithful
+    `lookupCrepHolCode` definition rather than the executable runtime lookup. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "lookup_code" 162]
+theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
+    lookupCrepHolCode (crepArithSimpCodeMap fromNat code) fname args _len =
+      (lookupCrepHolCode code fname args _len).map
+        (fun (body, locals) => (crepSimpProg fromNat body, locals)) := by
+  unfold lookupCrepHolCode crepArithSimpCodeMap FLOOKUP
+  cases hlookup : code fname with
+  | none => simp [hlookup]
+  | some entry =>
+      rcases entry with ⟨parameters, body⟩
+      by_cases hvalid : parameters.length = args.length ∧ parameters.Nodup
+      · simp [hlookup, hvalid]
+      · simp [hlookup, hvalid]
+
+/-- Flapjack-specific `Const` case corresponding to part of CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, both sides reduce by
+    the defining `Const` evaluator equations. -/
+theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (value : RiscV.Word n)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.const value) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.const value)) =
+    evalCrepHolExpWordLab state (.const value) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11]
+
+/-- Flapjack-specific `Var` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, `mapc f` changes only
+    code and the local value is unchanged. -/
+theorem crepSimpExpCorrect1VarCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (name : Nat)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.var name) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.var name)) =
+    evalCrepHolExpWordLab state (.var name) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `LoadGlob` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the global lookup is
+    unchanged by `mapc f`. -/
+theorem crepSimpExpCorrect1LoadGlobCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (address : BitVec 5)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.loadGlob address) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.loadGlob address)) =
+    evalCrepHolExpWordLab state (.loadGlob address) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `BaseAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
+theorem crepSimpExpCorrect1BaseAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .baseAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .baseAddr) =
+    evalCrepHolExpWordLab state .baseAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `TopAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
+theorem crepSimpExpCorrect1TopAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .topAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .topAddr) =
+    evalCrepHolExpWordLab state .topAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Successful-result form of the all-width source-runtime support, following
+    HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
+    result. This remains untagged for the evaluator-correspondence gap recorded
+    on `crepSimpExpCorrect1HolFiniteWordSourceRuntime`. -/
+theorem crepSimpExpCorrectHolFiniteWordSourceRuntime {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (value : ι → Bool)
+    (h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      expression = some value) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word = some (.word value) := by
+  have hSuccess : evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression ≠ none := by
+    simp [h]
+  rw [crepSimpExpCorrect1HolFiniteWordSourceRuntime
+    (_v := .word value) f state expression hSuccess]
+  simp [h]
+
 /-- All-dimension production-evaluator support for HOL
     `simp_exp_correct1`. The hypothesis states successful evaluation, `f`
     updates only the source state's code map, and the conclusion preserves the
-    full optional `word_lab` result. `HolFiniteDimension` is explicit Lean
+    successful word projection. `HolFiniteDimension` is explicit Lean
     evidence for a finite index carrier, with `decode` serving as its
     `finite_index` map. This remains untagged because no theorem yet identifies
     that adapter and its operation instances with HOL's native implicit
@@ -2044,6 +2345,97 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEval {ι : Type} {σ : Type}
           PanWordLab.word :=
             congrArg (Option.map PanWordLab.word)
               (evalCrepRuntimeExp_sourceWord_eq dimension state expression)
+
+/-- HOL-shaped finite-index interface for the complete source-evaluator
+    simplifier result. The implicit `HolFiniteDimension` instance represents
+    HOL's implicit `finite_index` evidence, so this theorem quantifies over an
+    arbitrary finite word index type rather than a fixed `Fin width`. Its
+    unused `v` binder is retained to match HOL's `! s exp v` quantifier shape;
+    its successful-evaluation premise, code-map update, `simp_exp` image, and
+    full optional `word_lab` result follow `simp_exp_correct1`. It remains
+    untagged: the explicit source evaluator is not yet identified theoremically
+    with HOL's native `crepSem$eval` equations and word-operation instances. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none) :
+    (evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word := by
+  exact crepSimpExpCorrect1HolFiniteWordSourceEval dimension f state expression h
+
+/-- Full `Option word_lab` statement shape for all explicit finite word
+    dimensions. This is the Lean source-evaluator translation of HOL's local
+    `simp_exp_correct1`: the finite-index dictionary is implicit, the success
+    premise is on the evaluator result, `f` updates only the code map, and the
+    entire wrapped result is preserved. It stays untagged because the source
+    evaluator's operations and `HolFiniteDimension` dictionary have not yet
+    been formally identified with HOL's native `crepSem$eval` and
+    `finite_index` instances. -/
+theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension state expression ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state expression := by
+  change (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none at h
+  change (evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word
+  exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
+    f state expression _v h
+
+/-- Successful-result form of the all-finite-index source-evaluator theorem.
+    This follows HOL `simp_exp_correct`'s premise and conclusion, with the
+    same arbitrary code-map update and full `word_lab` value. It remains
+    untagged for the same explicit source-evaluator/native HOL correspondence
+    gap recorded on `crepSimpExpCorrect1HolFiniteWordSourceEvalClass`. -/
+theorem crepSimpExpCorrectHolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (value : PanWordLab (ι → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word = some value) :
+    (evalCrepHolFiniteWordSourceExp dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word = some value := by
+  have hSuccess : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word ≠ none := by simp [h]
+  calc
+    (evalCrepHolFiniteWordSourceExp dimension
+        (crepArithHolFiniteDimensionMapCode f state)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word =
+            (evalCrepHolFiniteWordSourceExp dimension state expression).map
+              PanWordLab.word :=
+            crepSimpExpCorrect1HolFiniteWordSourceEvalClass
+              f state expression value hSuccess
+    _ = some value := h
 
 /-- Full `word_lab` result form of the source-evaluator preservation theorem.
     The raw source evaluator returns `Option word`; mapping the `word`
@@ -2153,13 +2545,6 @@ theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
     width operations through the RISC-V model. The exact arbitrary HOL word
     carrier theorem remains open. The all-constructor production evaluator
     correspondence is proved in `CrepSem.Eval`. -/
-def crepArithHolMapCode {n : Nat} {σ : Type}
-    (f : (List Nat × CrepProg (RiscV.Word n)) →
-      (List Nat × CrepProg (RiscV.Word n)))
-    (state : CrepHolState (RiscV.Word n) σ) :
-    CrepHolState (RiscV.Word n) σ :=
-  { state with code := fun name => (state.code name).map f }
-
 theorem crepArithHolMapCode_target [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))

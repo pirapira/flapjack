@@ -150,6 +150,14 @@ val _ = print_simp "compile_exp_correct_rstruct"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
        (pan_structs$compile_exp ^ctxt ^rstruct_expression) =
          SOME (pan_structsProof$convert_v ^rstruct_value))``;
+val _ = print_eval "compile_exp_correct_rstruct_eval"
+  ``(pan_structs$old_exp_shape ^ctxt ^rstruct_expression,
+     panSem$shape_of ^rstruct_value,
+     pan_structsProof$v_flds_ok (^local_state).structs ^rstruct_value,
+     panSem$eval ^local_state ^rstruct_expression = SOME ^rstruct_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^local_state)
+       (pan_structs$compile_exp ^ctxt ^rstruct_expression) =
+         SOME (pan_structsProof$convert_v ^rstruct_value))``;
 
 val nstruct_value = ``NStruct (strlit "Pair")
   [(strlit "left", ValWord (3w:8 word));

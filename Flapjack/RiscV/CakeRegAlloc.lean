@@ -435,6 +435,131 @@ def set {α : Type u} (m : CakeNodeMap α) (i : Nat) (v : α) : CakeNodeMap α :
 def ofSize {α : Type u} (n : Nat) : CakeNodeMap α :=
   { slots := Array.replicate n none }
 
+/-- Embed a HOL node-field list as a dense in-range CakeNodeMap.  Each HOL
+    `EL` value becomes a present slot and the extension map stays empty. -/
+def ofList {α : Type u} (values : List α) : CakeNodeMap α :=
+  { slots := values.toArray.map some, outside := [] }
+
+/-- HOL `EL` reads agree with the dense list embedding at every valid index. -/
+theorem get_ofList_of_lt {α : Type u} (values : List α) (i : Nat)
+    (hi : i < values.length) :
+    get (ofList values) i = some values[i] := by
+  simp [get, ofList, hi]
+
+/-- A bounded node field is represented by a `CakeNodeMap` when its extension
+    map is empty, its dense dimension agrees with the HOL list length, and each
+    in-range lookup returns the corresponding HOL list element. -/
+def RepresentsHOLNodeList {α : Type u} (m : CakeNodeMap α)
+    (values : List α) : Prop :=
+  m.outside = [] ∧ m.slots.size = values.length ∧
+    ∀ i, (hi : i < values.length) →
+      m.get i = some (values.get ⟨i, hi⟩)
+
+/-- `CakeNodeMap.set` leaves the array dimension unchanged. -/
+theorem slots_size_set {α : Type u} (m : CakeNodeMap α) (i : Nat) (v : α) :
+    (set m i v).slots.size = m.slots.size := by
+  by_cases hi : i < m.slots.size <;> simp [set, hi]
+
+/-- An in-range update reads back the assigned value. -/
+theorem get_set_same_of_lt {α : Type u} (m : CakeNodeMap α)
+    (i : Nat) (v : α) (hi : i < m.slots.size) :
+    get (set m i v) i = some v := by
+  simp [get, set, hi]
+
+/-- An in-range update leaves a distinct in-range slot unchanged. -/
+theorem get_set_other_of_lt {α : Type u} (m : CakeNodeMap α)
+    (i j : Nat) (v : α) (hi : i < m.slots.size)
+    (hj : j < m.slots.size) (hji : j ≠ i) :
+    get (set m i v) j = get m j := by
+  simp [get, set, hi, hj, Ne.symm hji]
+
+/-- The dense list embedding establishes the representation invariant. -/
+theorem ofList_representsHOLNodeList {α : Type u} (values : List α) :
+    RepresentsHOLNodeList (ofList values) values := by
+  constructor
+  · rfl
+  constructor
+  · simp [ofList]
+  · intro i hi
+    exact get_ofList_of_lt values i hi
+
+/-- A bounded production update preserves the HOL node-list representation,
+    with exactly the list update `LUPDATE` at the same index. -/
+theorem set_representsHOLNodeList {α : Type u} (m : CakeNodeMap α)
+    (values : List α) (hrep : RepresentsHOLNodeList m values)
+    (i : Nat) (v : α) (hi : i < values.length) :
+    RepresentsHOLNodeList (set m i v) (values.set i v) := by
+  rcases hrep with ⟨houtside, hsize, hget⟩
+  have hisize : i < m.slots.size := by simpa [hsize] using hi
+  constructor
+  · simp [set, hisize, houtside]
+  constructor
+  · rw [slots_size_set, hsize]
+    simp
+  · intro j hj
+    have hj' : j < values.length := by simpa using hj
+    by_cases hji : j = i
+    · subst j
+      rw [get_set_same_of_lt _ _ _ hisize]
+      simp
+    · rw [get_set_other_of_lt _ _ _ _ hisize (by simpa [hsize] using hj') hji]
+      rw [hget j hj']
+      simp [Ne.symm hji]
+
+/-! HOL `reg_allocProofScript.sml:st_ex_MAP_node_tag_sub` reads node fields by
+    `EL i xs` under `i < LENGTH xs`.  `RepresentsHOLNodeList` is the narrow
+    production invariant for that access pattern: `outside=[]`, equal dense
+    length, and matching in-range reads.  `ofList` establishes it, and
+    `set_representsHOLNodeList` proves production `CakeNodeMap.set` preserves
+    it for bounded updates, corresponding to HOL `LUPDATE`.  This does not
+    cover arbitrary maps or out-of-range writes: those use Lean's `outside`
+    map and have no HOL list counterpart.  These support statements remain
+    untagged; they do not by themselves authorize `list_as_array` on a HOL
+    theorem. -/
+/-- Out-of-range reads are `none` in the dense list embedding.  This is a
+    Lean-side default and deliberately makes no claim about HOL `EL` outside
+    its list-length premise. -/
+theorem get_ofList_of_ge {α : Type u} (values : List α) (i : Nat)
+    (hi : values.length ≤ i) :
+    get (ofList values) i = none := by
+  simp [get, ofList, hi, cakeMapLookup, Flapjack.lookupNatInfo]
+
+/-- An empty HOL node field has no in-range index; its dense embedding also
+    returns no value at every index. -/
+theorem get_ofList_empty (i : Nat) :
+    get (ofList ([] : List α)) i = none := by
+  simp [get, ofList, cakeMapLookup, Flapjack.lookupNatInfo]
+
+/-! These update laws characterize the HOL `LUPDATE` observations on a dense
+    in-range list embedding.  `CakeNodeMap.set` is persistent, so the original
+    map remains readable after producing the updated map. -/
+theorem get_set_ofList_same {α : Type u} (values : List α) (i : Nat) (v : α)
+    (hi : i < values.length) :
+    get (set (ofList values) i v) i = some v := by
+  simp [get, set, ofList, hi]
+
+theorem get_set_ofList_other {α : Type u} (values : List α)
+    (i j : Nat) (v : α) (hi : i < values.length)
+    (hj : j < values.length) (hji : j ≠ i) :
+    get (set (ofList values) i v) j = some values[j] := by
+  have hij : i ≠ j := Ne.symm hji
+  simp [get, set, ofList, hi, hj, hij]
+
+theorem set_ofList_slots_size {α : Type u} (values : List α)
+    (i : Nat) (v : α) :
+    (set (ofList values) i v).slots.size = values.length := by
+  by_cases hi : i < values.length <;> simp [set, ofList, hi]
+
+/-- Lean's extension map intentionally gives out-of-range updates a location;
+    HOL `LUPDATE` leaves the list unchanged there, so this is not a port of its
+    out-of-range behavior. -/
+theorem get_set_ofList_outside {α : Type u} (values : List α)
+    (i : Nat) (v : α) (hi : values.length ≤ i) :
+    get (set (ofList values) i v) i = some v := by
+  have hbound : ¬ i < values.length := Nat.not_lt.mpr hi
+  simp [get, set, ofList, hbound, cakeMapLookup,
+    Flapjack.lookupNatInfo, cakeMapUpdate]
+
 /-- The association list read as a node-indexed field.  `cakeMapLookup`
     returns the *first* binding for a key, so the earlier entries must win;
     folding from the right lets them overwrite the later ones. -/
@@ -472,6 +597,11 @@ theorem cakeSpillCostMap_outside_lookup
     hlt]
 
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
+inductive CakeRaFailure where
+  | subscript
+  | missingDegreeSlot
+  deriving Repr, DecidableEq
+
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)
   /- Present for production states built by `cakeInitRaStateFromBij`; hand-
@@ -488,6 +618,7 @@ structure CakeRaState where
   availMovesWl : List (Nat × (Nat × Nat))
   unavailMovesWl : List (Nat × (Nat × Nat))
   stack : List Nat
+  failure : Option CakeRaFailure := none
   deriving Repr
 
 /-- The empty allocator state for `n` nodes. -/
@@ -942,11 +1073,75 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
 The original runs these transitions in a state monad over growable
 arrays; this port threads `CakeRaState` functionally. -/
 
-/-- `dec_deg` (`reg_allocScript.sml:256-272`): decrement one adjacent
-    node's degree. -/
+/-! `dec_deg` (`reg_allocScript.sml:252-257`) first reads `degrees[v]`, then
+    writes `degrees[v] - 1`. Both `degrees_sub_eqn` and `update_degrees_eqn`
+    return `M_failure Subscript` for an index outside the HOL list
+    (`reg_allocProofScript.sml:160-168, 229-237`). `cakeDecDegStep` carries that
+    failure explicitly, checks the dense array bound before using `set!`, and
+    treats an in-range missing option slot as an invalid array representation
+    rather than silently inventing degree zero. -/
+def cakeDecDegStep (v : Nat) (state : CakeRaState) : Except CakeRaFailure CakeRaState :=
+  if v < state.degrees.slots.size then
+    match state.degrees.slots[v]? with
+    | some (some degree) =>
+        .ok { state with degrees := state.degrees.set v (degree - 1) }
+    | _ => .error .missingDegreeSlot
+  else
+    .error .subscript
+
+/-! The allocator pipeline is pure, so it latches a failed monadic degree
+    update in the state and rejects the overall colouring result. Subsequent
+    degree updates preserve the first failure. On valid dense states this path
+    reduces to the same single `Array.set!` update as `CakeNodeMap.set`. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
-  let d := (state.degrees.get v).getD 0
-  { state with degrees := state.degrees.set v (d - 1) }
+  match state.failure with
+  | some _ => state
+  | none =>
+      match cakeDecDegStep v state with
+      | .ok updated => updated
+      | .error error => { state with failure := some error }
+
+private theorem cakeDecDegStep_stack_of_ok (v : Nat) (state updated : CakeRaState)
+    (h : cakeDecDegStep v state = .ok updated) : updated.stack = state.stack := by
+  unfold cakeDecDegStep at h
+  split at h
+  · split at h
+    · cases h
+      rfl
+    · cases h
+  · cases h
+
+private theorem cakeDecDegStep_simpWl_of_ok (v : Nat) (state updated : CakeRaState)
+    (h : cakeDecDegStep v state = .ok updated) : updated.simpWl = state.simpWl := by
+  unfold cakeDecDegStep at h
+  split at h
+  · split at h
+    · cases h
+      rfl
+    · cases h
+  · cases h
+
+@[simp] theorem cakeDecDeg_stack (v : Nat) (state : CakeRaState) :
+    (cakeDecDeg v state).stack = state.stack := by
+  cases hfailure : state.failure with
+  | some error => simp [cakeDecDeg, hfailure]
+  | none =>
+      cases hstep : cakeDecDegStep v state with
+      | error error => simp [cakeDecDeg, hfailure, hstep]
+      | ok updated =>
+          simp only [cakeDecDeg, hfailure, hstep]
+          exact cakeDecDegStep_stack_of_ok v state updated hstep
+
+@[simp] theorem cakeDecDeg_simpWl (v : Nat) (state : CakeRaState) :
+    (cakeDecDeg v state).simpWl = state.simpWl := by
+  cases hfailure : state.failure with
+  | some error => simp [cakeDecDeg, hfailure]
+  | none =>
+      cases hstep : cakeDecDegStep v state with
+      | error error => simp [cakeDecDeg, hfailure, hstep]
+      | ok updated =>
+          simp only [cakeDecDeg, hfailure, hstep]
+          exact cakeDecDegStep_simpWl_of_ok v state updated hstep
 
 /-- `dec_degree`: decrement the degrees of all nodes adjacent to `x`. -/
 def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
@@ -1037,7 +1232,7 @@ theorem cakeDoSimplify_stack_eq
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack x s
   have hdecDegSimp : ∀ (s : CakeRaState) (xs : List Nat),
       (xs.foldl (fun s x => cakeDecDeg x s) s).simpWl = s.simpWl := by
     intro s xs
@@ -1046,7 +1241,7 @@ theorem cakeDoSimplify_stack_eq
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_simpWl x s
   have hdec : ∀ (s : CakeRaState) (xs : List Nat),
       (xs.foldl (fun s x => cakeDecDegree x s) s).stack = s.stack := by
     intro s xs
@@ -1143,7 +1338,7 @@ theorem cakeDoCoalesceReal_selected_stack_lt_dim
     | cons v xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack v s
   refine ⟨y, hy, ?_⟩
   let coalescedState := { state with coalesced := state.coalesced.set y x }
   by_cases hfixed : !cakeIsFixed coalescedState x
@@ -1273,7 +1468,7 @@ theorem cakeDoFreeze_selected_stack_lt_dim
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        simp [cakeDecDeg]
+        exact cakeDecDeg_stack x s
   refine ⟨item, hitem, ?_⟩
   simp [cakeDoFreeze, hfreeze, cakePushStack, cakeDecDegree, hitem,
     hdecDeg, cakeUnspill, cakeReviveMoves, cakeAddSimpWl, cakeAddFreezeWl]
@@ -1428,7 +1623,7 @@ theorem cakeDoSpill_selected_stack_lt_dim
     | cons x xs ih =>
         simp only [List.foldl]
         rw [ih]
-        rfl
+        exact cakeDecDeg_stack x s
   cases hcost : scost with
   | none =>
       have hbounds := cakeStExListMaxDeg_bounds state.degrees rest
@@ -1744,7 +1939,7 @@ def cakeDoRegAllocFromState (alg : CakeAlgorithm) (scost : Option (CakeNodeMap N
   let mvs := cakeResortMovesSp (cakeMovesToSp moves0 (CakeNodeMap.ofSize bij.nextNode))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
-  some (cakeExtractColor state bij.toAllocator)
+  if state.failure.isSome then none else some (cakeExtractColor state bij.toAllocator)
 
 def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)

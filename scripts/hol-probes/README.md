@@ -82,6 +82,12 @@ missing global; the matching Lean guards live in
 `cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
 and multiplication expression. Its Lean constructor checks live in
 `Flapjack.Test.CrepeDestConstParity`.
+`crep_arith_lookup_code_probe.out` records the original
+`OPTION_MAP (simp_prog ## I)` result for a nonempty code map, directly
+exercising the result side of the local `lookup_code` lemma at
+`cakeml/pancake/proofs/crep_arithProofScript.sml:162`. Its Lean comparison
+uses the exact `lookupCrepHolCode` path in
+`Flapjack.Test.CrepeArithLookupCodeParity`.
 `crep_dest_2exp_probe.out` records direct HOL EVAL of
 `crep_arith$dest_2exp_def` at `cakeml/pancake/crep_arithScript.sml:15`, including
 the corresponding `word_lsl 1w` results for successful exponents. Its Lean
@@ -185,11 +191,17 @@ The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
 general multipliers, with a word-valued local. Its matching production runtime
 cases live in `Flapjack.Test.CrepeMulConstParity`.
 `crep_simp_exp_probe.out` records direct HOL EVAL of
-`crep_arith$simp_exp_def` (`crep_arithScript.sml:59`) for constant folding,
+`crep_arith$simp_exp_def` (`crep_arithScript.sml:59-64`) for constant folding,
 left/right constant multiplication, nested multiplication, and recursive
-load/word-operation children. Its Lean syntax checks live in
-`Flapjack.Test.CrepeSimpExpParity`; these cases do not establish the
-polymorphic evaluator-preservation theorem `simp_exp_correct1`.
+load/word-operation children. It also evaluates the original
+`crepSem$eval` before and after simplifying `Crepop Mul [Var 2; Const 8w]`
+with local 2 set to `Word 5w`; the simplifier yields `Shift Lsl (Var 2)
+(Const 3w)` and both evaluations return `SOME (Word 40w)`. The matching
+production source-runtime observation and all-width theorem application are
+in `Flapjack.Test.CrepeSimpExpParity`. These checks exercise the result shape,
+but do not close the polymorphic evaluator-preservation theorem
+`simp_exp_correct1`; the explicit finite-index adapter's relation to HOL's
+implicit word carrier remains open.
 `crep_eval_probe.out` records direct HOL EVAL of the `Const`, `Var`, `Load`,
 `LoadGlob`, `BaseAddr`, and `TopAddr` constructor cases from
 `cakeml/pancake/semantics/crepSemScript.sml:90-166`. The width-8 production
@@ -198,6 +210,11 @@ projection equations live beside `evalCrepRuntimeExp` in
 `Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
 scope slice only: the target-extended runtime state and the remaining
 word-operation and byte-load cases still need an evaluator correspondence.
+`crep_eval_cmp_rv64_probe.out` records direct HOL `crepSem$eval` results for all
+eight `asm$word_cmp_def` constructors, including signed-versus-unsigned order,
+negations, and overlapping/disjoint bit tests. Matching source-runtime
+comparisons are checked in `Flapjack.Test.CrepeSimpExpParity`; the generic
+finite-index-to-BitVec comparison equation is `holFiniteWord_evalPanCmp_toBitVec`.
 `pan_globals_compile_top_probe.out` records original Pancake HOL evaluation
 of `pan_globals$compile_top` for an absent start function (the total empty-list
 result), a present `main` entry, and a global initializer in a nonempty

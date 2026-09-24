@@ -89,11 +89,41 @@ def loadByteRecursiveAddressOK : Bool :=
 /-! The remaining probe rows are reproduced through the tagged finite-map
     `compileExpHOL`. These mirror the `compileExp` rows above but exercise the
     HOL-shaped path used by `compileProgHOL`/`compileProgRiscV`. -/
+/-! Includes the direct HOL `bytes_in_word` constructor row in
+    `compile_exp_probe.out`; the 64-bit value is separately pinned to `8w` by
+    the original HOL word-boundary probe and `CrepRuntimeTargetParity`. -/
 def holLeavesOK : Bool :=
   oneResultOK [.const 7] (compileExpHOL finiteMapContext (.const 7)) &&
   oneResultOK [.const 0] (compileExpHOL finiteMapContext (.var .global "g")) &&
   oneResultOK [.baseAddr] (compileExpHOL finiteMapContext (.baseAddr)) &&
-  oneResultOK [.topAddr] (compileExpHOL finiteMapContext (.topAddr))
+  oneResultOK [.topAddr] (compileExpHOL finiteMapContext (.topAddr)) &&
+  oneResultOK [.const CrepBytesInWord.bytesInWord]
+    (compileExpHOL finiteMapContext .bytesInWord)
+
+/-! These fallback outputs match direct HOL `nstruct` and `nfield` rows.
+    Source stateRel simultaneously rules out a successful source evaluation
+    with the empty PanSem struct table, so the full-IH proof cases are
+    discharged from source semantics rather than treating the fallback as a
+    successful translation. -/
+def holNamedFallbackOK : Bool :=
+  oneResultOK [.const 0] (compileExpHOL finiteMapContext (.nStruct "S" [])) &&
+  oneResultOK [.const 0]
+    (compileExpHOL finiteMapContext (.nField "x" (.const 1)))
+
+/-! Direct HOL `load_one` observation for `Load One (Const 3w)` in
+    `compile_exp_probe.out`. -/
+def holLoadOneOK : Bool :=
+  oneResultOK [.load (.const 3)]
+    (compileExpHOL finiteMapContext (.load .one (.const 3)))
+
+/-! Direct HOL `load_two` observation for a two-word flat Load in
+    `compile_exp_probe.out`. At RV64 its second compiled Load uses stride 8. -/
+def holLoadTwoOK : Bool :=
+  match compileExpHOL finiteMapContext
+      (.load (.comb [.one, .one]) (.const 3)) with
+  | ([.load (.const 3), .load (.op .add [.const 3, .const 8])],
+      .comb [.one, .one]) => true
+  | _ => false
 
 def holStructFieldOK : Bool :=
   combTwoResultOK [.const 1, .const 2]
@@ -111,6 +141,12 @@ def holLoadsOpsOK : Bool :=
   oneResultOK [.crepOp .mul [.const 5, .const 6]]
       (compileExpHOL finiteMapContext (.panOp .mul [.const 5, .const 6]))
 
+/-! This mirrors the direct HOL `op_nary` fixture and pins the original
+    compile_exp list-preserving case at arity three. -/
+def holNaryOpOK : Bool :=
+  oneResultOK [.op .add [.const 1, .const 2, .const 3]]
+    (compileExpHOL finiteMapContext (.op .add [.const 1, .const 2, .const 3]))
+
 def holCmpShiftOK : Bool :=
   oneResultOK [.cmp .equal (.const 1) (.const 0)]
       (compileExpHOL finiteMapContext (.cmp .equal (.const 1) (.const 0))) &&
@@ -120,7 +156,9 @@ def holCmpShiftOK : Bool :=
 def parityGuard : Bool :=
   leavesOK && structFieldOK && loadsOpsOK && cmpShiftOK && finiteMapLookupOK &&
   finiteMapLoad32LocalOK && finiteMapLoadByteLocalOK && loadByteRecursiveAddressOK &&
-  holLeavesOK && holStructFieldOK && holLoadsOpsOK && holCmpShiftOK
+  holLeavesOK && holNamedFallbackOK && holLoadOneOK && holLoadTwoOK &&
+  holStructFieldOK && holLoadsOpsOK &&
+  holNaryOpOK && holCmpShiftOK
 
 example : compileExpHOL finiteMapContext (.load32 (.var .local "p")) =
     ([.load32 (.var 5)], .one) := by

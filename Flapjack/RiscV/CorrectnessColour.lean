@@ -24,6 +24,97 @@ structure WordColourStateRelation (colour : Nat → Nat) [NeZero width]
     readRegister source ⟨name, hname⟩ =
       readRegister target ⟨colour name, hcolour⟩
 
+/-- The HOL `strong_locals_rel` relation is scoped to the variables live at a
+    program point. This small RISC-V state relation records the same scoping:
+    dead variables may share a colour with live variables. -/
+structure WordColourStateRelationOn (colour : Nat → Nat) (live : List Nat)
+    [NeZero width] (source target : State width) : Prop where
+  pc : source.pc = target.pc
+  memory : source.memory = target.memory
+  privilege : source.privilege = target.privilege
+  mode : source.mode = target.mode
+  register : ∀ (name : Nat) (_ : name ∈ live) (hname : name < 32)
+      (hcolour : colour name < 32),
+    readRegister source ⟨name, hname⟩ =
+      readRegister target ⟨colour name, hcolour⟩
+
+theorem wordColourStateRelationOn_nextPc
+    (colour : Nat → Nat) (live : List Nat)
+    (source target : State width) [NeZero width]
+    (hrelation : WordColourStateRelationOn colour live source target) :
+    WordColourStateRelationOn colour live
+      {source with pc := nextPc source} {target with pc := nextPc target} := by
+  constructor
+  · simp [nextPc, hrelation.pc]
+  · exact hrelation.memory
+  · exact hrelation.privilege
+  · exact hrelation.mode
+  · exact hrelation.register
+
+theorem wordColourStateRelationOn_writeRegister
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (live : List Nat) (hrelation : WordColourStateRelationOn colour live source target)
+    (name : Nat) (hname : name < 32)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ live → current ≠ name
+      → colour current ≠ colour name)
+    (value targetValue : Word width) (hvalue : value = targetValue) :
+    WordColourStateRelationOn colour live
+      (writeRegister source ⟨name, hname⟩ value)
+      (writeRegister target ⟨colour name, valid name hname⟩ targetValue) := by
+  by_cases hzero : name = 0
+  · have hcolourZero : colour name = 0 := by simpa [hzero] using colourZero
+    simpa [writeRegister, hzero, hcolourZero, colourZero] using hrelation
+  · have hsourceNonzero : (⟨name, hname⟩ : Fin 32) ≠ 0 := by
+      intro h
+      exact hzero (congrArg Fin.val h)
+    have hcolourNonzero' : colour name ≠ 0 := hcolourNonzero hzero
+    have htargetNonzero :
+        (⟨colour name, valid name hname⟩ : Fin 32) ≠ 0 := by
+      intro h
+      exact hcolourNonzero' (congrArg Fin.val h)
+    constructor
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.pc
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.memory
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.privilege
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.mode
+    · intro current hcurrent hcurrentValid hcurrentColourValid
+      by_cases hsame : current = name
+      · subst current
+        have hsourceEq :
+            (⟨name, hcurrentValid⟩ : Fin 32) = ⟨name, hname⟩ := by
+          apply Fin.ext
+          rfl
+        have htargetEq :
+            (⟨colour name, hcurrentColourValid⟩ : Fin 32) =
+              ⟨colour name, valid name hname⟩ := by
+          apply Fin.ext
+          rfl
+        simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false,
+          readRegister]
+        simp only [hsourceEq, htargetEq, if_true]
+        exact hvalue
+      · have htargetSame :
+            (⟨colour current, hcurrentColourValid⟩ : Fin 32) ≠
+              (⟨colour name, valid name hname⟩ : Fin 32) := by
+          intro h
+          apply hnoAlias current hcurrent hsame
+          exact congrArg Fin.val h
+        have hsourceCurrent :
+            (⟨current, hcurrentValid⟩ : Fin 32) ≠ ⟨name, hname⟩ := by
+          intro h
+          exact hsame (congrArg Fin.val h)
+        simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false,
+          readRegister]
+        rw [if_neg hsourceCurrent, if_neg htargetSame]
+        exact hrelation.register current hcurrent hcurrentValid hcurrentColourValid
+
 theorem wordColourStateRelation_nextPc
     (colour : Nat → Nat) (_valid : wordColourValid colour)
     (source target : State width) [NeZero width]
@@ -160,6 +251,219 @@ theorem evalWordProg_assignVar_applyColour
       wordColourStateRelation_executeAddi colour valid injective colourZero
       source target hrelation name sourceName hname hsource⟩
 
+/-! This assignment case needs only a live-set relation and a local no-clash
+    condition. In particular, the source and destination may have the same
+    colour because the source is read before the destination is written.
+
+    Keep this untagged: HOL `word_allocProof$evaluate_apply_colour` quantifies
+    over every Word program, uses `word_state_eq_rel` and
+    `strong_locals_rel f (domain (get_live prog live lt))`, and existentially
+    chooses the source permutation. This Lean support theorem covers only one
+    `assign` over the executable RISC-V `State`, with explicit `liveAfter`, a
+    destination nonzero-colour premise, and a caller-supplied no-alias premise;
+    it does not model HOL's permutation or derive liveness/clashes from
+    `colouring_ok`. -/
+theorem evalWordProg_assignVar_applyColour_live
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (liveAfter : List Nat)
+    (name sourceName : Nat) (hname : name < 32) (hsource : sourceName < 32)
+    (hrelation : WordColourStateRelationOn colour (sourceName :: liveAfter)
+      source target)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ liveAfter → current ≠ name
+      → colour current ≠ colour name) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.var sourceName)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  have hsourceRelation := hrelation.register sourceName (by simp) hsource
+    (valid sourceName hsource)
+  have hliveRelation : WordColourStateRelationOn colour liveAfter source target := by
+    refine ⟨hrelation.pc, hrelation.memory, hrelation.privilege,
+      hrelation.mode, ?_⟩
+    intro current hcurrent hcurrentValid hcurrentColourValid
+    exact hrelation.register current (by simp [hcurrent]) hcurrentValid
+      hcurrentColourValid
+  have hnext := wordColourStateRelationOn_nextPc colour liveAfter source target
+    hliveRelation
+  have hvalue :
+      readRegister source ⟨sourceName, hsource⟩ + 0 =
+        readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0 := by
+    rw [hsourceRelation]
+  have hsourceEval :
+      evalWordProg source (.assign name (.var sourceName)) =
+        some (execute source (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hname, hsource, executeInstructions]
+  have htargetEval :
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) =
+          some (execute target
+            (.addi ⟨colour name, valid name hname⟩
+              ⟨colour sourceName, valid sourceName hsource⟩ 0)) := by
+    rw [wordApplyColour_assign]
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, valid name hname, valid sourceName hsource,
+      executeInstructions]
+  have hstate := wordColourStateRelationOn_writeRegister colour valid
+    colourZero {source with pc := nextPc source} {target with pc := nextPc target}
+    liveAfter hnext name hname hcolourNonzero hnoAlias
+    (readRegister source ⟨sourceName, hsource⟩ + 0)
+    (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0)
+    hvalue
+  exact ⟨_, _, hsourceEval, htargetEval, by
+    simpa [execute, colourZero] using hstate⟩
+
+/-! The allocator's clash checker discharges the live-after no-alias premise
+    for a single assignment.  The edge list is exactly the one-write
+    interference relation generated from liveness; this remains untagged
+    because it is a local consequence over Flapjack's list graph/checker, not
+    HOL's full `colouring_ok` theorem over Word programs and live sets. -/
+theorem wordColouringRespectsClashes_edge
+    (colouring : NatInfoMap Nat) (left right : Nat)
+    (edges : List (Nat × Nat))
+    (hchecked : wordColouringRespectsClashes edges colouring = true)
+    (hedge : (left, right) ∈ edges) :
+    ∃ leftColour rightColour,
+      lookupNatInfo left colouring = some leftColour ∧
+      lookupNatInfo right colouring = some rightColour ∧
+      leftColour ≠ rightColour := by
+  induction edges with
+  | nil => simp at hedge
+  | cons edge rest ih =>
+      rcases edge with ⟨edgeLeft, edgeRight⟩
+      rcases List.mem_cons.mp hedge with hhead | htail
+      · have hpair : left = edgeLeft ∧ right = edgeRight := by
+          simpa [Prod.mk.injEq] using hhead
+        rcases hpair with ⟨rfl, rfl⟩
+        cases hleft : lookupNatInfo left colouring with
+        | none => simp [wordColouringRespectsClashes, hleft] at hchecked
+        | some leftColour =>
+          cases hright : lookupNatInfo right colouring with
+          | none => simp [wordColouringRespectsClashes, hleft, hright] at hchecked
+          | some rightColour =>
+            have hboth : (leftColour != rightColour) &&
+                wordColouringRespectsClashes rest colouring = true := by
+              simpa [wordColouringRespectsClashes, hleft, hright] using hchecked
+            have hparts : (leftColour != rightColour) = true ∧
+                decide (wordColouringRespectsClashes rest colouring = true) = true := by
+              simpa only [Bool.and_eq_true] using hboth
+            have hneq : leftColour ≠ rightColour := by
+              simpa using hparts.1
+            exact ⟨leftColour, rightColour, rfl, rfl, hneq⟩
+      · cases hleft : lookupNatInfo edgeLeft colouring with
+        | none => simp [wordColouringRespectsClashes, hleft] at hchecked
+        | some edgeLeftColour =>
+          cases hright : lookupNatInfo edgeRight colouring with
+          | none => simp [wordColouringRespectsClashes, hleft, hright] at hchecked
+          | some edgeRightColour =>
+            have hboth : (edgeLeftColour != edgeRightColour) &&
+                wordColouringRespectsClashes rest colouring = true := by
+              simpa [wordColouringRespectsClashes, hleft, hright] using hchecked
+            have hparts : (edgeLeftColour != edgeRightColour) = true ∧
+                decide (wordColouringRespectsClashes rest colouring = true) = true := by
+              simpa only [Bool.and_eq_true] using hboth
+            have htailChecked : wordColouringRespectsClashes rest colouring = true :=
+              of_decide_eq_true hparts.2
+            exact ih htailChecked htail
+
+theorem wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    (colouring : NatInfoMap Nat) (destination : Nat)
+    (liveAfter : List Nat) (edges : List (Nat × Nat)) (colour : Nat → Nat)
+    (hchecked : wordColouringRespectsClashes edges colouring = true)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ destination →
+      (destination, current) ∈ edges)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  have hedge : (destination, current) ∈ edges := hcontains current hcurrent hdifferent
+  obtain ⟨leftColour, rightColour, hleft, hright, hneq⟩ :=
+    wordColouringRespectsClashes_edge colouring destination current
+      edges hchecked hedge
+  have hleft' : leftColour = colour destination := by
+    rw [hlookup destination (Or.inl rfl)] at hleft
+    injection hleft with heq
+    exact heq.symm
+  have hright' : rightColour = colour current := by
+    rw [hlookup current (Or.inr hcurrent)] at hright
+    injection hright with heq
+    exact heq.symm
+  simpa [hleft', hright'] using hneq.symm
+
+/-! Local checker bridge for one write's live-after conflict row. The generated
+    edge list directly connects the destination with each surviving live name,
+    so callers no longer provide a separate edge-coverage premise. This is an
+    executable list encoding of the relevant `colouring_ok` injectivity
+    obligation, not a port of HOL's recursive `colouring_ok` or
+    `evaluate_apply_colour`. -/
+def wordSingleWriteClashEdges (destination : Nat) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  liveAfter.map (fun current => (destination, current))
+
+theorem wordColouringRespectsClashes_singleWrite_map_noAlias
+    (destination : Nat) (liveAfter : List Nat) (colour : Nat → Nat)
+    (colouring : NatInfoMap Nat)
+    (hchecked : wordColouringRespectsClashes
+      (wordSingleWriteClashEdges destination liveAfter) colouring = true)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  apply wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    colouring destination liveAfter (wordSingleWriteClashEdges destination liveAfter)
+    colour hchecked (fun name hname _ => by
+      simp [wordSingleWriteClashEdges, hname]) hlookup current hcurrent hdifferent
+
+theorem evalWordProg_assignVar_applyColour_liveClashes
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (liveAfter : List Nat)
+    (name sourceName : Nat) (hname : name < 32) (hsource : sourceName < 32)
+    (hrelation : WordColourStateRelationOn colour (sourceName :: liveAfter)
+      source target)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (edges : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hclashes : wordColouringRespectsClashes edges colouring = true)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ name →
+      (name, current) ∈ edges)
+    (hlookup : ∀ current, current = name ∨ current ∈ liveAfter →
+      lookupNatInfo current colouring = some (colour current)) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.var sourceName)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  apply evalWordProg_assignVar_applyColour_live colour valid colourZero
+    source target liveAfter name sourceName hname hsource hrelation hcolourNonzero
+  intro current hcurrent hcurrentNe
+  exact wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    colouring name liveAfter edges colour hclashes hcontains hlookup current hcurrent
+    hcurrentNe
+
+theorem wordAllocateVarsWithClashes_noAliasOnLiveAfter
+    (slots : List Nat) (edges : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hallocated : wordAllocateVarsWithClashes slots edges = some colouring)
+    (destination : Nat) (liveAfter : List Nat) (colour : Nat → Nat)
+    (hcontains : ∀ current, current ∈ liveAfter → current ≠ destination →
+      (destination, current) ∈ edges)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  have hchecked := (wordAllocateVarsWithClashes_sound slots edges colouring hallocated).2
+  exact wordColouringRespectsClashes_singleWrite_liveAfter_noAlias colouring destination
+    liveAfter edges colour hchecked hcontains hlookup current hcurrent hdifferent
+
 theorem evalWordProg_assignConst_applyColour
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (injective : Function.Injective colour) (colourZero : colour 0 = 0)
@@ -195,6 +499,52 @@ theorem evalWordProg_assignConst_applyColour
     injective colourZero {source with pc := nextPc source}
     {target with pc := nextPc target} hnext name hname
     (readRegister source 0 + value) (readRegister target 0 + value) hvalue
+  exact ⟨_, _, hsourceEval, htargetEval, by
+    simpa [execute, colourZero] using hstate⟩
+
+/-! Live-scoped Const assignment support for the HOL colouring simulation.
+    It avoids global colour injectivity: only the destination versus names
+    remaining live after the write must not clash. The explicit equality of
+    source/target register zero is a Lean `State` invariant absent from the HOL
+    `word_state_eq_rel` statement as represented here; this remains untagged
+    support, not an exact `evaluate_apply_colour` port. -/
+theorem evalWordProg_assignConst_applyColour_live
+    [NeZero width]
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) (liveAfter : List Nat)
+    (hrelation : WordColourStateRelationOn colour liveAfter source target)
+    (hzero : readRegister source 0 = readRegister target 0)
+    (name : Nat) (value : Word width) (hname : name < 32)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ liveAfter → current ≠ name →
+      colour current ≠ colour name) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.const value)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.const value))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  have hnext := wordColourStateRelationOn_nextPc colour liveAfter source target hrelation
+  have hvalue :
+      readRegister source 0 + value = readRegister target 0 + value := by
+    rw [hzero]
+  have hsourceEval :
+      evalWordProg source (.assign name (.const value)) =
+        some (execute source (.addi ⟨name, hname⟩ 0 value)) := by
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hname, executeInstructions]
+  have htargetEval :
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.const value))) =
+          some (execute target (.addi ⟨colour name, valid name hname⟩ 0 value)) := by
+    simp [wordApplyColour, wordApplyColourExp, evalWordProg,
+      wordExpToInstructions, wordExpToInstruction, registerOfNat,
+      valid name hname, executeInstructions]
+  have hstate := wordColourStateRelationOn_writeRegister colour valid
+    colourZero {source with pc := nextPc source}
+    {target with pc := nextPc target} liveAfter hnext name hname
+    hcolourNonzero hnoAlias (readRegister source 0 + value)
+    (readRegister target 0 + value) hvalue
   exact ⟨_, _, hsourceEval, htargetEval, by
     simpa [execute, colourZero] using hstate⟩
 
@@ -1534,7 +1884,22 @@ theorem wordAllocateProgramWithClashTreeAndColour_straightLine_simulation
     valid injective colourZero colourNoScratch source target hrelation program
     hprogram
 
-/-! The same simulation contract at the executable graph allocator boundary.
+/-! This is only a straight-line simulation contract at the executable graph
+    allocator boundary; it is not a port of CakeML's
+    `word_allocProof$word_alloc_correct`. That theorem covers every Word
+    statement under `even_starting_locals` and `wf_cutsets`, and obtains its
+    coloring guarantee from liveness-scoped `colouring_ok` via
+    `evaluate_apply_colour`. Here the supported programs are
+    `WordVarStraightLine`, and the proof still requires global
+    `Function.Injective` colouring. Global injectivity is stronger than the
+    allocator's clash constraint: noninterfering variables may share a
+    colour. The production source compiler reaches the full-SSA graph
+    allocator only on its checked-lowering fallback, through
+    `pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked`; the existing
+    theorem does not establish that returned allocation satisfies the
+    liveness-scoped semantic contract. Keep this untagged until the
+    `colouring_ok`-shaped relation and whole-Word evaluator bridge are present.
+
     The graph allocator stores its source colouring directly in the returned
     allocation, rather than wrapping it in a WordContext; exposing this
     equation keeps later lowering proofs independent of allocator internals. -/

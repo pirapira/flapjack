@@ -10,8 +10,30 @@ encodings at each use site.
 -/
 namespace Flapjack.RiscV
 
+/-! HOL `riscv_targetProof$word_extract_6` states that when a 64-bit word is
+    below 64, its low six-bit slice equals its 6-bit truncation (`w2w`).  HOL
+    unsigned `<+` is the `toNat` bound here, slicing `(5 >< 0)` is extraction
+    from bit 0 with length 6, and `w2w` retains the low six bits. -/
+@[hol "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml" "word_extract_6"]
+theorem wordExtract6OfLt64 (word : BitVec 64) (_hword : word.toNat < 64) :
+    BitVec.extractLsb' 0 6 word = BitVec.setWidth 6 word := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.extractLsb', Nat.shiftRight_zero, BitVec.toNat_ofNat,
+    BitVec.toNat_setWidth]
+
 /-! Cake's `riscv_encoding` target contract: every encoded instruction is a
-    nonempty four-byte artifact. -/
+    nonempty four-byte artifact.
+
+    HOL's `riscv_encoder_correct` (`riscv_targetProofScript.sml:512`) is much
+    stronger: it proves `encoder_correct riscv_target`, whose premise is a HOL
+    `asm_step` related to a target machine state and whose conclusion gives a
+    target-state simulation under interference, byte-preservation, and code-PC
+    invariants (`asmPropsScript.sml:117-130`). The current Lean `Model.execute`
+    consumes an already-decoded `Instruction`; it has no encoded-byte fetch /
+    decode step or corresponding HOL `target_state_rel`. Thus the byte-length
+    lemmas below are untagged support, not ports of `riscv_encoder_correct`.
+    Add the tag only after the production encoded bytes are connected to a
+    faithful target-state step theorem. -/
 
 theorem encodeInstructionBytes_mod_four [NeZero width]
     (instruction : Instruction width) :

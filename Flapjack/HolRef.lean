@@ -12,7 +12,11 @@ naming the HOL source file (repository-relative, inside the `cakeml`
 submodule) and the exact HOL declaration name (`Theorem`, `Triviality`,
 `Definition`, `Datatype`, ...). When a script declares the same name twice,
 append its source line, e.g. `@[hol "...Script.sml" "name" 123]`. The
-attribute is inert for the kernel; it
+experimental `list_as_array` qualifier records HOL list fields represented by
+Lean arrays, e.g. `@[hol "...Script.sml" "dec_deg_def"
+(list_as_array := [degrees])]`. It does not authorize a qualified tag until a
+checked same-module representation lemma and checker gate exist. The attribute
+is inert for the kernel; it
 exists so that
 
 * a reader can find the original statement without a lookup table, whatever
@@ -37,11 +41,30 @@ structure HolRef where
   name : String
   /-- Source line, required when the HOL script declares this name more than once. -/
   line? : Option Nat := none
+  /-- HOL list fields represented by arrays in this Lean port.  An empty array
+      denotes an exact port; qualified ports require a checked representation
+      lemma before the tag may be applied. Each named field must be declared in
+      a same-module structure and have a checked theorem named
+      `holListArrayWitness_<field>` whose conclusion relates that field to a HOL
+      list through `RepresentsHOLNodeList`, without assuming that relation in
+      the witness premises. The reference checker validates this shape; it does
+      not independently prove source-to-Lean semantic correspondence. -/
+  listAsArray : Array String := #[]
   deriving Inhabited, Repr, BEq
 
 open Lean
 
-syntax (name := hol) "hol " str str (num)? : attr
+syntax (name := hol) "hol " str str (num)? ("(" "list_as_array" ":=" "[" ident,+ "]" ")")? : attr
+
+private def checkedHolRef (path name : String) (line? : Option Nat := none)
+    (listAsArray : Array String := #[]) : CoreM HolRef := do
+  unless path.startsWith "cakeml/" && path.endsWith ".sml" do
+    throwError "@[hol]: path must be a repository-relative `cakeml/...Script.sml` file, got {path}"
+  if name.isEmpty || name.any Char.isWhitespace then
+    throwError "@[hol]: declaration name must be a single HOL identifier, got {repr name}"
+  if listAsArray.toList.eraseDups.length != listAsArray.size then
+    throwError "@[hol]: list_as_array fields must be distinct"
+  pure { path, name, line?, listAsArray }
 
 initialize holRefAttribute : ParametricAttribute HolRef ←
   registerParametricAttribute {
@@ -49,23 +72,17 @@ initialize holRefAttribute : ParametricAttribute HolRef ←
     descr := "original HOL4 declaration (file path and declaration name) ported by this Lean declaration"
     getParam := fun _ stx => do
       match stx with
+      | `(attr| hol $path:str $name:str $line:num (list_as_array := [$fields:ident,*])) =>
+          checkedHolRef path.getString name.getString (some line.getNat)
+            (fields.getElems.map (fun field => field.getId.toString))
+      | `(attr| hol $path:str $name:str (list_as_array := [$fields:ident,*])) =>
+          checkedHolRef path.getString name.getString none
+            (fields.getElems.map (fun field => field.getId.toString))
       | `(attr| hol $path:str $name:str $line:num) =>
-          let path := path.getString
-          let name := name.getString
-          unless path.startsWith "cakeml/" && path.endsWith ".sml" do
-            throwError "@[hol]: path must be a repository-relative `cakeml/...Script.sml` file, got {path}"
-          if name.isEmpty || name.any Char.isWhitespace then
-            throwError "@[hol]: declaration name must be a single HOL identifier, got {repr name}"
-          pure { path, name, line? := some line.getNat }
+          checkedHolRef path.getString name.getString (some line.getNat)
       | `(attr| hol $path:str $name:str) =>
-          let path := path.getString
-          let name := name.getString
-          unless path.startsWith "cakeml/" && path.endsWith ".sml" do
-            throwError "@[hol]: path must be a repository-relative `cakeml/...Script.sml` file, got {path}"
-          if name.isEmpty || name.any Char.isWhitespace then
-            throwError "@[hol]: declaration name must be a single HOL identifier, got {repr name}"
-          pure { path, name }
-      | _ => throwError "@[hol]: expected `hol \"<cakeml path>\" \"<HOL declaration name>\" [line]`"
+          checkedHolRef path.getString name.getString
+      | _ => throwError "@[hol]: expected `hol \"<cakeml path>\" \"<HOL declaration name>\" [line] [(list_as_array := [fields])]`"
   }
 
 /-- The HOL cross-reference attached to `declName`, if any. -/
@@ -91,6 +108,8 @@ open Elab Command in
 @[command_elab holRefsCmd] def elabHolRefs : CommandElab := fun _ => do
   let env ← getEnv
   for (declName, ref) in HolRef.all env do
-    logInfo m!"{declName}  {ref.path}  {ref.name}{ref.line?.map (fun line => s!" :{line}") |>.getD ""}"
+    let qualification := if ref.listAsArray.isEmpty then "" else
+      s!" (list_as_array := [{String.intercalate ", " ref.listAsArray.toList}])"
+    logInfo m!"{declName}  {ref.path}  {ref.name}{ref.line?.map (fun line => s!" :{line}") |>.getD ""}{qualification}"
 
 end Flapjack

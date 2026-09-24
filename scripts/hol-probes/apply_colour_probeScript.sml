@@ -29,6 +29,11 @@ val _ = print_eval "apply_colour_assign"
   ``apply_colour (total_colour ^colour)
       (wordLang$Assign 1 (wordLang$Var 3 : 64 word wordLang$exp))``;
 
+val alias_colour = ``\n:num. if n = 0n then 0n else 1n``;
+val _ = print_eval "apply_colour_alias_assign"
+  ``apply_colour ^alias_colour
+      (wordLang$Assign 2 (wordLang$Var 1 : 64 word wordLang$exp))``;
+
 val _ = print_eval "apply_colour_return_raise"
   ``apply_colour (total_colour ^colour)
       (wordLang$Seq
@@ -48,3 +53,7 @@ val _ = print_eval "apply_colour_loop_live"
       (wordLang$Loop (insert 1 () (insert 7 () LN))
         (wordLang$Assign 1 (wordLang$Var 3))
         (insert 3 () LN) : 64 wordLang$prog)``;
+
+val _ = print_eval "apply_colour_alias_const"
+  ``apply_colour ^alias_colour
+      (wordLang$Assign 2 (wordLang$Const 5w : 64 word wordLang$exp))``;

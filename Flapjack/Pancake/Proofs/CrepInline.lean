@@ -63,6 +63,238 @@ theorem max_list_genlist_add_suc_val (k : Nat) :
       maxList ((List.range n).map (fun x => (x + 1) + k)) = n + k :=
   maxList_genlist_add_suc_val k
 
+/-- CakeML's `cont_res` (`crep_inlineProofScript.sml:2168`): a finite,
+    "continuous" result predicate.  `NONE` and `SOME` results that stop the
+    walk (`Break`, `Continue`, `Error`) are `T`; all other results
+    (`TimeOut`, `Return`, `Exception`, `FinalFFI`) are `F`.  The carrier is
+    `CrepResultHOL`, the exact constructor-by-constructor encoding of
+    `crepSem$result` (`crepSemScript.sml:37-44`), so the fourth HOL equation
+    `cont_res _ = F` is the four remaining constructors. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "cont_res_def"]
+def contResHOL : Option (CrepResultHOL α ε) → Bool
+  | none => true
+  | some (.break _) => true
+  | some (.continue _) => true
+  | some .error => true
+  | some _ => false
+
+/-- CakeML's `MEM_MAP2_IMP` (`crep_inlineProofScript.sml:2233`): every element
+    of a pointwise map comes from elements of both input lists.  We keep the
+    Flapjack lemma name `panMap2_mem`; `panMap2` is the exact `MAP2` port. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "MEM_MAP2_IMP"]
+theorem panMap2_mem {α β γ : Type} {f : α → β → γ} {l1 : List α} {l2 : List β}
+    {x : γ} (hmem : x ∈ panMap2 f l1 l2) :
+    ∃ y1 y2, x = f y1 y2 ∧ y1 ∈ l1 ∧ y2 ∈ l2 := by
+  induction l1 generalizing l2 with
+  | nil => simp [panMap2] at hmem
+  | cons a as ih =>
+      cases l2 with
+      | nil => simp [panMap2] at hmem
+      | cons b bs =>
+          simp only [panMap2, List.mem_cons] at hmem
+          rcases hmem with heq | hmem
+          · exact ⟨a, b, heq, by simp, by simp⟩
+          · obtain ⟨y1, y2, heq, h1, h2⟩ := ih hmem
+            exact ⟨y1, y2, heq, by simp [h1], by simp [h2]⟩
+
+/-- CakeML's `not_some_is_none` (`crep_inlineProofScript.sml:778`): an option
+    with no `SOME` inhabitant is `NONE`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "not_some_is_none"]
+theorem not_some_is_none {α : Type u} (a : Option α) :
+    (∀ v, a ≠ some v) ↔ a = none := by
+  cases a <;> simp
+
+/-- CakeML's `fdom_eq_flookup_thm` (`crep_inlineProofScript.sml:784`): two
+    finite maps have the same domain iff each lookup in one is supported in the
+    other and a missing lookup in the first is missing in the second.  `FDOM`
+    is the repo finite-map domain predicate (`Flapjack/FiniteMap/Basic.lean`). -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdom_eq_flookup_thm"]
+theorem fdom_eq_flookup_thm {α : Type} {β : Type} (f1 f2 : FiniteMap α β) :
+    FDOM f1 = FDOM f2 ↔
+      (∀ x, (∃ v, FLOOKUP f1 x = some v) → (∃ v, FLOOKUP f2 x = some v)) ∧
+      (∀ x, FLOOKUP f1 x = none → FLOOKUP f2 x = none) := by
+  constructor
+  · intro h
+    constructor
+    · intro x hx
+      obtain ⟨v, hv⟩ := hx
+      have hv' : f1 x = some v := hv
+      have h1 : f1 x ≠ none := by rw [hv']; exact Option.some_ne_none v
+      have h2 : f2 x ≠ none := (congrFun h x).mp h1
+      cases hf2 : f2 x with
+      | none => exact absurd hf2 h2
+      | some w => exact ⟨w, hf2⟩
+    · intro x hx
+      have hx' : f1 x = none := hx
+      have h1 : ¬ (f1 x ≠ none) := fun hc => hc hx'
+      have h2 : ¬ (f2 x ≠ none) := fun hc => h1 ((congrFun h x).mpr hc)
+      cases hf2 : f2 x with
+      | none => exact hf2
+      | some w => exact (h2 (by rw [hf2]; exact Option.some_ne_none w)).elim
+  · rintro ⟨h12, hnone⟩
+    funext x
+    apply propext
+    constructor
+    · intro h1
+      have hx : ∃ v, f1 x = some v := by
+        cases hf1 : f1 x with
+        | none => exact absurd hf1 h1
+        | some v => exact ⟨v, rfl⟩
+      obtain ⟨w, hw⟩ := h12 x hx
+      change f2 x ≠ none
+      rw [show f2 x = some w from hw]
+      exact Option.some_ne_none w
+    · intro h2 hf1
+      exact h2 (hnone x hf1)
+
+/-- CakeML's `fdom_subset_flookup_thm` (`crep_inlineProofScript.sml:1456`):
+    `FDOM f` is contained in `FDOM g` iff every defined lookup in `f` is
+    defined in `g`.  Subset of the `FDOM` predicate is pointwise implication. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdom_subset_flookup_thm"]
+theorem fdom_subset_flookup_thm {α : Type} {β : Type} (f g : FiniteMap α β) :
+    (∀ x, FDOM f x → FDOM g x) ↔
+      (∀ x p, FLOOKUP f x = some p → ∃ q, FLOOKUP g x = some q) := by
+  constructor
+  · intro h x p hp
+    have hf : f x ≠ none := by rw [show f x = some p from hp]; exact Option.some_ne_none p
+    have hg : g x ≠ none := h x hf
+    cases hx : g x with
+    | none => exact absurd hx hg
+    | some q => exact ⟨q, hx⟩
+  · intro h x hf
+    cases hx : f x with
+    | none => exact absurd hx hf
+    | some p =>
+        obtain ⟨q, hq⟩ := h x p hx
+        change g x ≠ none
+        rw [show g x = some q from hq]
+        exact Option.some_ne_none q
+
+/-- CakeML's `res_var_commutes_strong` (`crep_inlineProofScript.sml:699`):
+    `res_var` updates at two keys commute, with no `n ≠ h` side condition (the
+    equal case is definitional).  Stated over the reviewed `resVar`
+    (`res_var_def`), whose Boolean key equality reflects HOL's `=` under
+    `[LawfulBEq α]`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem res_var_commutes_strong [BEq α] [LawfulBEq α] (lc lc' : FiniteMap α β)
+    (n h : α) :
+    resVar (resVar lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+    resVar (resVar lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  by_cases hne : n = h
+  · subst hne
+    rfl
+  · exact resVar_commutes lc lc' n h hne
+
+/-- CakeML's `res_var_foldl_commutes_strong`
+    (`crep_inlineProofScript.sml:706`): commuting a single `res_var` update past
+    a `foldl` of `res_var` over the `ZIP`ped lookup list.  `ZIP (vs, MAP f vs)`
+    is Lean's `vs.zip (vs.map f)`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem res_var_foldl_commutes_strong [BEq α] [LawfulBEq α]
+    (h : α) (vs : List α) (lc1 lc2 : FiniteMap α β) :
+    resVar ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVar lc1)
+        (h, FLOOKUP lc2 h) =
+      (vs.zip (vs.map (FLOOKUP lc2))).foldl resVar
+        (resVar lc1 (h, FLOOKUP lc2 h)) := by
+  induction vs generalizing lc1 with
+  | nil => simp
+  | cons v vs ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [ih (resVar lc1 (v, FLOOKUP lc2 v)),
+        (res_var_commutes_strong lc1 lc2 v h).symm]
+
+/-- CakeML's `flookup_res_var_is_mem_zip_eq` (`crep_inlineProofScript.sml:802`):
+    folding `res_var` over the `ZIP`ped lookup list and then looking up a member
+    `x` of the key list reproduces `lc2`'s binding for `x`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem flookup_res_var_is_mem_zip_eq [BEq α] [LawfulBEq α]
+    (xs : List α) (x : α) (lc1 lc2 : FiniteMap α β) (hx : x ∈ xs) :
+    FLOOKUP ((xs.zip (xs.map (FLOOKUP lc2))).foldl resVar lc1) x =
+      FLOOKUP lc2 x := by
+  induction xs with
+  | nil => simp at hx
+  | cons a as ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [← res_var_foldl_commutes_strong a as lc1 lc2, FLOOKUP_resVar]
+      rcases List.mem_cons.mp hx with hxa | hxas
+      · subst hxa
+        simp
+      · by_cases hxa : x = a
+        · subst hxa
+          simp
+        · rw [if_neg (by rw [beq_eq_false_iff_ne.mpr hxa]; simp)]
+          exact ih hxas
+
+/-- CakeML's `OPT_MMAP_SOME_ALL` (`crep_inlineProofScript.sml:36`): the optional
+    map over a list succeeds for some result exactly when every element maps to
+    a `some`.  `List.mapM` is the repo's `OPT_MMAP` carrier (cf. the tagged
+    `optMmapEqSome`). -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "OPT_MMAP_SOME_ALL"]
+theorem OPT_MMAP_SOME_ALL {α : Type} {β : Type} (f : α → Option β) (l : List α) :
+    (∃ x, l.mapM f = some x) ↔ (∀ e, e ∈ l → ∃ y, f e = some y) := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+      constructor
+      · rintro ⟨x, hx⟩ e he
+        rcases List.mem_cons.mp he with hea | he
+        · rw [hea]
+          cases hfa : f a with
+          | none => rw [List.mapM_cons] at hx; simp [hfa] at hx
+          | some y => exact ⟨y, rfl⟩
+        · cases hfa : f a with
+          | none => rw [List.mapM_cons] at hx; simp [hfa] at hx
+          | some y =>
+              cases hta : as.mapM f with
+              | none => rw [List.mapM_cons] at hx; simp [hfa, hta] at hx
+              | some rest => exact ih.mp ⟨rest, hta⟩ e he
+      · intro h
+        obtain ⟨y, hy⟩ := h a List.mem_cons_self
+        obtain ⟨ys, hys⟩ := ih.mpr (fun e he => h e (List.mem_cons_of_mem a he))
+        exact ⟨y :: ys, by simp [List.mapM_cons, hy, hys]⟩
+
+/-- CakeML's `OPT_MMAP_ALL_EQ` (`crep_inlineProofScript.sml:47`): two optional
+    maps over a list agree when their functions agree on every element. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "OPT_MMAP_ALL_EQ"]
+theorem OPT_MMAP_ALL_EQ {α : Type} {β : Type} (f g : α → Option β) (l : List α)
+    (h : ∀ e, e ∈ l → f e = g e) : l.mapM f = l.mapM g := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+      simp only [List.mapM_cons, h a List.mem_cons_self,
+        ih (fun e he => h e (List.mem_cons_of_mem a he))]
+
+/-- CakeML's `fdoms_eq_opt_mmap_flookup_some`
+    (`crep_inlineProofScript.sml:1833`): if two finite maps have the same
+    domain, an `OPT_MMAP` of `FLOOKUP` over the first succeeding implies the
+    same sequence over the second succeeds. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdoms_eq_opt_mmap_flookup_some"]
+theorem fdoms_eq_opt_mmap_flookup_some {α : Type} {β : Type} (vs : List α)
+    (fm fm' : FiniteMap α β) (vals : List β) (hdom : FDOM fm = FDOM fm')
+    (h : vs.mapM (FLOOKUP fm) = some vals) :
+    ∃ z, vs.mapM (FLOOKUP fm') = some z := by
+  have hall : ∀ e, e ∈ vs → ∃ y, FLOOKUP fm e = some y :=
+    (OPT_MMAP_SOME_ALL (FLOOKUP fm) vs).mp ⟨vals, h⟩
+  refine (OPT_MMAP_SOME_ALL (FLOOKUP fm') vs).mpr ?_
+  intro e he
+  obtain ⟨y, hy⟩ := hall e he
+  have hmem : FDOM fm' e := by
+    rw [← hdom]
+    change fm e ≠ none
+    change fm e = some y at hy
+    rw [hy]
+    exact Option.some_ne_none y
+  change fm' e ≠ none at hmem
+  cases h' : fm' e with
+  | none => rw [h'] at hmem; exact absurd rfl hmem
+  | some z => exact ⟨z, by change fm' e = some z; rw [h']⟩
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree
@@ -88,8 +320,99 @@ def crepInlineStateRel (s t : CrepHolState α σ) : Prop :=
     `SUBMAP` holds when `FLOOKUP s` and `FLOOKUP t` agree on `FDOM s`, which is
     exactly this statement.  Untagged infrastructure: HOL's `SUBMAP` is a
     finite-map operation, not a declaration of `crep_inlineProofScript.sml`. -/
-def crepHolSubmap (s t : Nat → Option β) : Prop :=
+def crepHolSubmap {κ : Type} (s t : κ → Option β) : Prop :=
   ∀ n v, s n = some v → t n = some v
+
+/-- Finite-map `SUBMAP_IMP_FUPDATE_SUBMAP`
+    (`crep_inlineProofScript.sml:117`): pointwise updates at the same key
+    preserve `SUBMAP`.  Stated over `crepHolSubmap`; `|+` is `FUPDATE`, whose
+    Boolean key equality reflects HOL's `=` under `[LawfulBEq κ]`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem SUBMAP_IMP_FUPDATE_SUBMAP {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp only [FUPDATE, beq_self_eq_true] at hn ⊢
+    exact hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FUPDATE, hb] at hn ⊢
+    exact h n v hn
+
+/-- Finite-map `SUBMAP_IMP_DOMSUB_SUBMAP`
+    (`crep_inlineProofScript.sml:127`): removing the same key from both sides
+    preserves `SUBMAP`.  `\\` is `FDOMSUB`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem SUBMAP_IMP_DOMSUB_SUBMAP {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FDOMSUB g x) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp [FDOMSUB] at hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FDOMSUB, hb] at hn ⊢
+    exact h n v hn
+
+/-- Finite-map `SUBMAP_IMP_DOMSUB_FUPDATE`
+    (`crep_inlineProofScript.sml:135`): removing a key from the left and
+    inserting it on the right preserves `SUBMAP`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem SUBMAP_IMP_DOMSUB_FUPDATE {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FUPDATE g (x, y)) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp [FDOMSUB] at hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FDOMSUB, FUPDATE, hb] at hn ⊢
+    exact h n v hn
+
+/-- CakeML's `FOLDL_res_var_ZIP_lookup_var` (`crep_inlineProofScript.sml:2661`):
+    a fold of `res_var` over the zipped names and their `l'`-lookups is a
+    `SUBMAP` (`crepHolSubmap`) of `l1`, so any lookup that `l` already defined at
+    a key not in `ns` survives in `l1`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem FOLDL_res_var_ZIP_lookup_var [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α β)
+    (ns : List α) (x : α) (v : β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) l1)
+    (hv : FLOOKUP l x = some v) (hx : x ∉ ns) :
+    FLOOKUP l1 x = some v := by
+  apply hsub x v
+  change FLOOKUP ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) x = some v
+  rw [FLOOKUP_foldl_resVar_zip_not_mem ns (ns.map (FLOOKUP l')) l x
+    (by simp [List.length_map]) hx]
+  exact hv
+
+/-- CakeML's `FOLDL_res_var_ZIP_lookup` (`crep_inlineProofScript.sml:2675`):
+    the `OPT_MMAP` (`List.mapM`) form of `FOLDL_res_var_ZIP_lookup_var`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar`/`FUPDATE` use Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+theorem FOLDL_res_var_ZIP_lookup [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α β)
+    (ns xs : List α) (vs : List β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) l1)
+    (h : xs.mapM (FLOOKUP l) = some vs)
+    (hx : ∀ x, x ∈ xs → x ∉ ns) :
+    xs.mapM (FLOOKUP l1) = some vs := by
+  have hpt : ∀ x, x ∈ xs → FLOOKUP l1 x = FLOOKUP l x := by
+    intro x hxmem
+    obtain ⟨y, hy⟩ := (OPT_MMAP_SOME_ALL (FLOOKUP l) xs).mp ⟨vs, h⟩ x hxmem
+    have hfl : FLOOKUP l1 x = some y :=
+      FOLDL_res_var_ZIP_lookup_var l l' l1 ns x y hsub hy (hx x hxmem)
+    rw [hfl, hy]
+  rw [OPT_MMAP_ALL_EQ (FLOOKUP l1) (FLOOKUP l) xs hpt]
+  exact h
 
 /-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
     `s.locals SUBMAP t.locals`. -/

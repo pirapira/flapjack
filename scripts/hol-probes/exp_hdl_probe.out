@@ -1,4 +1,6 @@
 missing=Skip
 known=Seq (Assign 3 (LoadGlob 0w)) (Seq (Assign 4 (LoadGlob 1w)) Skip)
+three_words=Seq (Assign 3 (LoadGlob 0w))
+  (Seq (Assign 4 (LoadGlob 1w)) (Seq (Assign 5 (LoadGlob 2w)) Skip))
 dup_update=Seq (Assign 7 (LoadGlob 0w)) Skip
 dup_list=Seq (Assign 7 (LoadGlob 0w)) Skip

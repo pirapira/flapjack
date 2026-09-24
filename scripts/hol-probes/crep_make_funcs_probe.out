@@ -1,0 +1,4 @@
+make_funcs_empty_params=T
+make_funcs_param_entry=T
+make_funcs_absent=T
+make_funcs_duplicate_first_wins=T

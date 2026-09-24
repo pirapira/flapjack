@@ -338,6 +338,22 @@ example :
   apply crepSimpExpCorrect1HolFiniteWordSource id boolDimensionHolState _
   simp [evalCrepRuntimeExp]
 
+/-! Instantiate the complete successful-result theorem at the non-`Fin`
+    Bool index carrier. The premise remains universally supplied, matching
+    HOL's conditional result statement rather than fixing a single output. -/
+example (value : PanWordLab (Bool → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (.crepOp .mul [.var 0, .const boolDimensionWord])).map PanWordLab.word =
+        some value) :
+    (evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.crepOp .mul [.var 0, .const boolDimensionWord]))).map PanWordLab.word =
+      some value := by
+  exact @crepSimpExpCorrectHolFiniteWordSourceEvalClass Bool Unit
+    boolWordDimension id boolDimensionHolState
+    (.crepOp .mul [.var 0, .const boolDimensionWord]) value h
+
 example : True := by
   letI : HolFiniteDimension Bool := boolWordDimensionSwapped
   have hresult :
@@ -394,6 +410,120 @@ def holWordBitsState64 : CrepHolState (Fin 64 → Bool) Unit where
   ffi := natCrepRuntimeFfiState
   baseAddress := holWordBits64 0
   topAddress := holWordBits64 0
+
+def holWordBitsState64WithLocal : CrepHolState (Fin 64 → Bool) Unit :=
+  { holWordBitsState64 with
+    locals := fun name =>
+      if name == 2 then some (.word (holWordBits64 5)) else none }
+
+def holWordBitsCmpResult (operator : Cmp) (left right : Nat) :
+    Option (PanWordLab (Fin 64 → Bool)) :=
+  (evalCrepRuntimeExp
+    (holWordBitsState64.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    (.cmp operator (.const (holWordBits64 left)) (.const (holWordBits64 right)))).map
+      PanWordLab.word
+
+/-! The corresponding original HOL probe exercises all eight `word_cmp`
+    constructors through `crepSem$eval`. These guards run the production
+    source runtime on the same RV64 word cases, including signed-vs-unsigned
+    order and overlapping/disjoint bit tests. -/
+#guard holWordBitsCmpResult .equal 5 5 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .equal 5 6 == some (.word (holWordBits64 0))
+#guard holWordBitsCmpResult .lower 3 5 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .less 0xFFFFFFFFFFFFFFFF 1 ==
+  some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notEqual 5 6 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notLower 5 3 == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notLess 1 0xFFFFFFFFFFFFFFFF ==
+  some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .test 0xF0 0x10 == some (.word (holWordBits64 0))
+#guard holWordBitsCmpResult .test 0xF0 0x0F == some (.word (holWordBits64 1))
+#guard holWordBitsCmpResult .notTest 0xF0 0x10 == some (.word (holWordBits64 1))
+
+def holWordBitsMulEight : CrepExp (Fin 64 → Bool) :=
+  .crepOp .mul [.var 2, .const (holWordBits64 8)]
+
+def holWordBitsMulEightSimplified : CrepExp (Fin 64 → Bool) :=
+  crepSimpExp (fun value => bitVecToHolWordBits (BitVec.ofNat 64 value))
+    holWordBitsMulEight
+
+/-! The HOL fixture evaluates the same local-times-eight expression before
+    and after `simp_exp`; both results are `SOME (Word 40w)`. These guards
+    exercise that original result through production evaluation configured
+    with the source memory model, not just the simplifier's output shape. -/
+#guard holWordBitsMulEightSimplified ==
+  .shift .lsl (.var 2) (.const (holWordBits64 3))
+#guard (evalCrepRuntimeExp
+    (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    holWordBitsMulEight).map PanWordLab.word ==
+  some (.word (holWordBits64 40))
+#guard (evalCrepRuntimeExp
+    (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    holWordBitsMulEightSimplified).map PanWordLab.word ==
+  some (.word (holWordBits64 40))
+
+example : (evalCrepRuntimeExp
+    (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    holWordBitsMulEightSimplified).map PanWordLab.word =
+  (evalCrepRuntimeExp
+    (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+      (instFinHolFiniteDimension (width := 64)))
+    holWordBitsMulEight).map PanWordLab.word := by
+  have hEval : (evalCrepRuntimeExp
+      (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64)))
+      holWordBitsMulEight).map PanWordLab.word ≠ none := by
+    simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime, holWordBitsMulEight,
+      holWordBitsState64WithLocal,
+      holWordBitsState64, holWordBits64]
+  exact crepSimpExpCorrect1HolWordBitsSourceRuntime id
+    holWordBitsState64WithLocal holWordBitsMulEight hEval
+
+/-! This also instantiates the arbitrary-index HOL-shaped source evaluator
+   theorem on the expression with direct HOL result `SOME (Word 40w)`. -/
+example :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 64))
+      (crepArithHolFiniteDimensionMapCode id holWordBitsState64WithLocal)
+      (crepSimpExp
+        (fun value => bitVecToHolWord
+          (instFinHolFiniteDimension (width := 64))
+          (BitVec.ofNat 64 value)) holWordBitsMulEight) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 64))
+      holWordBitsState64WithLocal holWordBitsMulEight := by
+  have hRuntime : evalCrepRuntimeExp
+      (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight ≠ none := by
+    simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime, holWordBitsMulEight,
+      holWordBitsState64WithLocal, holWordBitsState64, holWordBits64]
+  have hRuntimeWordLab : (evalCrepRuntimeExp
+      (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight).map
+        PanWordLab.word ≠ none := by
+    cases hResult : evalCrepRuntimeExp
+        (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+          (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight with
+    | none => exact (hRuntime hResult).elim
+    | some value => simp
+  have hSource : (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      holWordBitsState64WithLocal holWordBitsMulEight).map
+        PanWordLab.word ≠ none := by
+    rw [← congrArg (Option.map PanWordLab.word)
+      (evalCrepRuntimeExp_sourceWord_eq
+        (instFinHolFiniteDimension (width := 64))
+        holWordBitsState64WithLocal holWordBitsMulEight)]
+    exact hRuntimeWordLab
+  exact crepSimpExpCorrect1HolFiniteWordSourceWordLab id
+    holWordBitsState64WithLocal holWordBitsMulEight
+    (.word (holWordBits64 40)) hSource
 
 #guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime (.const holBits4) ==
   some holBits4
@@ -562,6 +692,49 @@ def holState8 : CrepHolState (RiscV.Word 8) Unit :=
     ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 0 }
+
+def holState8WithGlobal : CrepHolState (RiscV.Word 8) Unit :=
+  { holState8 with globals := fun _ => some (.word (word8 9)) }
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.const (word8 4))) =
+    evalCrepHolExpWordLab holState8 (.const (word8 4)) :=
+  crepSimpExpCorrect1ConstCase (fun entry => entry) holState8 (word8 4)
+    (.word (word8 4)) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.var 2)) =
+    evalCrepHolExpWordLab holState8 (.var 2) :=
+  crepSimpExpCorrect1VarCase (fun entry => entry) holState8 2
+    (.word (word8 7)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8,
+        updateCrepRuntimeLocal, panTheWord])
+
+example :
+    evalCrepHolExpWordLab
+        (crepArithHolMapCode (fun entry => entry) holState8WithGlobal)
+        (crepSimpExp (BitVec.ofNat 8) (.loadGlob 0)) =
+      evalCrepHolExpWordLab holState8WithGlobal (.loadGlob 0) :=
+  crepSimpExpCorrect1LoadGlobCase (fun entry => entry) holState8WithGlobal 0
+    (.word (word8 9)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8WithGlobal,
+        holState8, panTheWord])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .baseAddr) =
+    evalCrepHolExpWordLab holState8 .baseAddr :=
+  crepSimpExpCorrect1BaseAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .topAddr) =
+    evalCrepHolExpWordLab holState8 .topAddr :=
+  crepSimpExpCorrect1TopAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
 
 def holExpression8 : CrepExp (RiscV.Word 8) :=
   .crepOp .mul [.var 2, .const (word8 8)]

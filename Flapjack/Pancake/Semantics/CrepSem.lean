@@ -252,6 +252,10 @@ def crepOpValue [Mul α] : CrepOp → List α → Option α
   | _, _ => none
 
 /-- The width-polymorphic tagged port is the generic helper at `BitVec width`. -/
+@[simp] theorem crepOpValue_mul [Mul α] (left right : α) :
+    crepOpValue .mul [left, right] = some (left * right) := by
+  simp [crepOpValue]
+
 theorem crepOpCrep_eq_crepOpValue (width : Nat) [NeZero width] (operator : CrepOp)
     (arguments : List (BitVec width)) :
     crepOpCrep width operator arguments = crepOpValue operator arguments := by
@@ -461,6 +465,112 @@ theorem setCrepRuntimeLocalsFEMPTY_toHolState
     ({ state with locals := FUPDATE_LIST FEMPTY varargs }).toHolState =
       updCrepHolLocals varargs state.toHolState := rfl
 
+/-! ### `eraseDups`/`Nodup` bridge for routing the executed code lookup
+
+    The executed lookup previously selected the duplicate-free check
+    `parameters.eraseDups.length = parameters.length`; HOL `lookup_code_def`
+    uses `ALL_DISTINCT` (`List.Nodup`).  The following Flapjack-specific lemmas
+    (no HOL original) show these agree under `[LawfulBEq]`. -/
+
+theorem filter_ne_eq_self_iff {α : Type} [BEq α] [LawfulBEq α] (a : α) (l : List α) :
+    l.filter (fun b => !(b == a)) = l ↔ a ∉ l := by
+  rw [List.filter_eq_self]
+  constructor
+  · intro h ha
+    have := h a ha
+    simp at this
+  · intro ha b hb
+    have hne : (b == a) = false :=
+      beq_eq_false_iff_ne.mpr (fun hba => ha (hba ▸ hb))
+    simp [hne]
+
+theorem eraseDups_sublist {α : Type} [BEq α] [LawfulBEq α] (l : List α) :
+    List.Sublist l.eraseDups l :=
+  (Nat.strongRecOn
+    (motive := fun n => ∀ l : List α, l.length = n → List.Sublist l.eraseDups l)
+    l.length (fun n ih l hl => by
+      cases l with
+      | nil => exact List.Sublist.slnil
+      | cons a as =>
+        rw [List.eraseDups_cons]
+        have hfilt : List.Sublist (as.filter fun b => !(b == a)) as := List.filter_sublist
+        have hlt : (as.filter fun b => !(b == a)).length < n := by
+          have := hfilt.length_le
+          simp only [List.length_cons] at hl
+          omega
+        exact List.Sublist.cons_cons a ((ih _ hlt _ rfl).trans hfilt)))
+    l rfl
+
+theorem eraseDups_nodup {α : Type} [BEq α] [LawfulBEq α] (l : List α) : l.eraseDups.Nodup :=
+  (Nat.strongRecOn
+    (motive := fun n => ∀ l : List α, l.length = n → l.eraseDups.Nodup)
+    l.length (fun n ih l hl => by
+      cases l with
+      | nil => exact List.nodup_nil
+      | cons a as =>
+        rw [List.eraseDups_cons, List.nodup_cons]
+        have hfilt : List.Sublist (as.filter fun b => !(b == a)) as := List.filter_sublist
+        have hlt : (as.filter fun b => !(b == a)).length < n := by
+          have := hfilt.length_le
+          simp only [List.length_cons] at hl
+          omega
+        refine ⟨?_, ih _ hlt _ rfl⟩
+        intro hmem
+        rw [List.mem_eraseDups, List.mem_filter] at hmem
+        obtain ⟨_, hp⟩ := hmem
+        simp at hp))
+    l rfl
+
+theorem eraseDups_eq_self_of_nodup_general {α : Type} [BEq α] [LawfulBEq α] (l : List α)
+    (h : l.Nodup) : l.eraseDups = l := by
+  induction l with
+  | nil => rfl
+  | cons a as ih =>
+    rw [List.eraseDups_cons]
+    obtain ⟨ha, has⟩ := List.nodup_cons.mp h
+    have hf : as.filter (fun b => !(b == a)) = as := (filter_ne_eq_self_iff a as).mpr ha
+    rw [hf, ih has]
+
+theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : List α) :
+    l.eraseDups.length = l.length ↔ l.Nodup := by
+  constructor
+  · intro h
+    have heq : l.eraseDups = l := (eraseDups_sublist l).eq_of_length h
+    rw [← heq]
+    exact eraseDups_nodup l
+  · intro hn
+    rw [eraseDups_eq_self_of_nodup_general l hn]
+
+/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
+    over the finite map: look the function up, require the declared parameter
+    list to have the argument count and be duplicate-free, and return the body
+    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+
+    The HOL source quantifies `args : 'a word_lab list`; the executable
+    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
+    with `PanWordLab.word`. Its `len` argument is retained from the HOL
+    `lookup_code` signature, where the definition does not inspect it. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
+    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
+  match FLOOKUP code fname with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length = args.length ∧ parameters.Nodup
+      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
+      else none
+
+/-- Executed code lookup.  Kept in its original raw form; the kernel-checked
+    adapter `lookupCrepRuntimeCode_eq_lookupCrepHolCode` shows that under
+    `[LawfulBEq String]` it agrees with the tagged HOL-shaped
+    `lookupCrepHolCode` (`lookup_code_def`) applied to the arguments wrapped
+    with `PanWordLab.word`.  The HOL `ALL_DISTINCT` (`List.Nodup`) check of
+    `lookupCrepHolCode` agrees with the `parameters.eraseDups.length ==
+    parameters.length` check here (`eraseDups_length_eq_iff_nodup`), and the
+    locals agree (`zip_word_eq`).  Literal routing of the executed path through
+    `lookupCrepHolCode` (which requires migrating the `EvaluateCases.lean`
+    unfold sites) is tracked separately. -/
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
     Option (CrepProg α × (Nat → Option (PanWordLab α))) :=
@@ -474,27 +584,44 @@ def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
         | none => none
       else none
 
-/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
-    over the finite map: look the function up, require the declared parameter
-    list to have the argument count and be duplicate-free, and return the body
-    together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
+theorem zip_word_eq {α : Type} (names : List Nat) (values : List α) :
+    names.zip (values.map PanWordLab.word) =
+      (names.zip values).map (fun entry => (entry.1, PanWordLab.word entry.2)) := by
+  rw [List.zip_map_right]
+  rfl
 
-    The HOL source quantifies `args : 'a word_lab list`; the executable
-    `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
-    with `PanWordLab.word`, and checks distinctness with
-    `eraseDups.length = length` rather than `ALL_DISTINCT`.  This declaration
-    is the exact HOL-shaped operation; routing the executed path through it is
-    tracked separately (the two distinctness checks agree under `LawfulBEq`). -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
-def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
-    (fname : FunName) (args : List (PanWordLab α)) :
-    Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
-  match FLOOKUP code fname with
-  | none => none
-  | some (parameters, body) =>
-      if parameters.length = args.length ∧ parameters.Nodup
-      then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
-      else none
+/-- Kernel-checked adapter: the executed raw lookup agrees with the tagged
+    HOL-shaped `lookupCrepHolCode` on the wrapped arguments, under
+    `[LawfulBEq String]`. -/
+theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq String]
+    (name : FunName) (values : List α) (len : Nat)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    lookupCrepRuntimeCode name values code =
+      lookupCrepHolCode code name (values.map PanWordLab.word) len := by
+  unfold lookupCrepRuntimeCode lookupCrepHolCode
+  cases hcode : FLOOKUP code name with
+  | none => rfl
+  | some pair =>
+    obtain ⟨parameters, body⟩ := pair
+    simp only []
+    by_cases hlen : parameters.length = values.length
+    · by_cases hnodup : parameters.Nodup
+      · have hlenb : (parameters.length == values.length) = true := beq_iff_eq.mpr hlen
+        have hnodupb : (parameters.eraseDups.length == parameters.length) = true :=
+          beq_iff_eq.mpr ((eraseDups_length_eq_iff_nodup parameters).mpr hnodup)
+        rw [hlenb, hnodupb, Bool.and_self, if_pos (show true = true from rfl)]
+        rw [assignCrepRuntimeLocals_empty_eq parameters values hlen]
+        rw [if_pos ⟨by rw [hlen, List.length_map], hnodup⟩]
+        rw [zip_word_eq]
+      · have hlenb : (parameters.length == values.length) = true := beq_iff_eq.mpr hlen
+        have hnodupb : (parameters.eraseDups.length == parameters.length) = false :=
+          beq_eq_false_iff_ne.mpr
+            (fun h => hnodup ((eraseDups_length_eq_iff_nodup parameters).mp h))
+        rw [hlenb, hnodupb, Bool.and_false, if_neg (by decide)]
+        rw [if_neg (fun h => hnodup h.2)]
+    · have hlenb : (parameters.length == values.length) = false := beq_eq_false_iff_ne.mpr hlen
+      rw [hlenb, Bool.false_and, if_neg (by decide)]
+      rw [if_neg (fun h => hlen (by rw [h.1, List.length_map]))]
 
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
@@ -518,6 +645,22 @@ inductive CrepRuntimeResult (α ε : Type u) where
   | continued (label : Nat)
   | returned (values : List α)
   | raised (exception : α)
+  | finalFfi (event : ε)
+  deriving DecidableEq, Repr
+
+/-- Exact constructor-by-constructor encoding of HOL's `crepSem$result`
+    (`crepSemScript.sml:37-44`): `Error | TimeOut | Break num | Continue num |
+    Return (('a word_lab) list) | Exception ('a word) | FinalFFI final_event`.
+    Unlike `CrepRuntimeResult` it has no Flapjack-only `normal` convenience
+    constructor, so it is the exact carrier for ports of proof-script
+    definitions stated over `crepSem$result` such as `cont_res_def`. -/
+inductive CrepResultHOL (α ε : Type u) where
+  | error
+  | timeOut
+  | break (label : Nat)
+  | continue (label : Nat)
+  | return (values : List (PanWordLab α))
+  | exception (value : α)
   | finalFfi (event : ε)
   deriving DecidableEq, Repr
 
@@ -933,7 +1076,7 @@ def evalCrepRuntimeExp
   | .crepOp .mul [left, right] => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
-      pure (left * right)
+      crepOpValue .mul [left, right]
   | .cmp operator left right => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
@@ -1111,7 +1254,7 @@ theorem evalCrepRuntimeExp_crepOp_mul_wordLab
       | nil => simp [evalCrepRuntimeExp]
       | cons right rest =>
         cases rest with
-        | nil => simp [evalCrepRuntimeExp, Option.map_bind, Function.comp_def]
+        | nil => simp [evalCrepRuntimeExp, crepOpValue, Option.map_bind, Option.map_some, Function.comp_def]
         | cons extra tail => simp [evalCrepRuntimeExp]
 
 /-- Production bridge for `crep_op_def`: the executed `.crepOp .mul` clause is
@@ -1309,7 +1452,7 @@ theorem evalCrepRuntimeExp_wordLab_projection
         | cons right tail =>
             cases tail with
             | nil =>
-                simp [evalCrepRuntimeExp, Function.comp_def, Option.map_bind,
+                simp [evalCrepRuntimeExp, crepOpValue, Function.comp_def, Option.map_bind,
                   Option.map_some]
             | cons extra more =>
                 simp [evalCrepRuntimeExp]

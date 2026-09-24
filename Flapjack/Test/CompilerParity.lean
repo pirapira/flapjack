@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Encoding
+import Flapjack.Test.RiscVColourLivenessParity
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
@@ -201,8 +202,14 @@ import Flapjack.Test.PanSemWhileErrorParity
 import Flapjack.Test.PanSemReturnRaiseErrorParity
 import Flapjack.Test.PanSemExtCallErrorParity
 import Flapjack.Test.PanSemSeqParity
+import Flapjack.Test.PanSemTotalParity
 import Flapjack.Test.PanSemIteParity
+import Flapjack.Test.PanSemAssignMemoryParity
+import Flapjack.Test.PanSemReturnRaiseExactParity
+import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.CrepReplicateConstParity
+import Flapjack.Test.WordConvsLabelsRelParity
+import Flapjack.Test.WordLangExtractLabelsParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
@@ -239,6 +246,9 @@ import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVArtifactParity
+import Flapjack.Test.RiscVWordExtract6Parity
+import Flapjack.Test.RiscVEncodeLengthParity
+import Flapjack.Test.WordColourLivenessParity
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
@@ -782,8 +792,14 @@ def main : IO Unit := do
     Flapjack.Test.PanSemReturnRaiseErrorParity.runChecks,
     Flapjack.Test.PanSemExtCallErrorParity.runChecks,
     Flapjack.Test.PanSemSeqParity.runChecks,
+    Flapjack.Test.PanSemTotalParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
+    Flapjack.Test.PanSemAssignMemoryParity.runChecks,
+Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
+Flapjack.Test.PanSemCallErrorExactParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
+    Flapjack.Test.WordConvsLabelsRelParity.runChecks,
+    Flapjack.Test.WordLangExtractLabelsParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
@@ -804,6 +820,9 @@ def main : IO Unit := do
     Flapjack.Test.CakeStackReseatParity.runChecks,
     Flapjack.Test.RiscVMemOpParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
+    Flapjack.Test.RiscVWordExtract6Parity.runChecks,
+    Flapjack.Test.RiscVEncodeLengthParity.runChecks,
+    Flapjack.Test.WordColourLivenessParity.runChecks,
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,

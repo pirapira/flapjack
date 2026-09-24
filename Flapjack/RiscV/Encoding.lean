@@ -185,6 +185,30 @@ def encodeWordBytes (value : BitVec 32) : List (BitVec 8) :=
   , BitVec.ofNat 8 (value.toNat / (256 ^ 2) % 256)
   , BitVec.ofNat 8 (value.toNat / (256 ^ 3) % 256) ]
 
+/-! HOL `riscv_encode_def` emits the 8-bit slices at offsets 0, 8, 16, and 24
+    from the encoded 32-bit word. This is the corresponding executable
+    little-endian byte equation. It stays untagged: HOL's result is a
+    `word8 list`, while Lean uses `List (BitVec 8)`, and the HOL declaration
+    itself is a definition rather than a theorem. -/
+theorem encodeWordBytes_eq_extracts (value : BitVec 32) :
+    encodeWordBytes value =
+      [ value.extractLsb' 0 8
+      , value.extractLsb' 8 8
+      , value.extractLsb' 16 8
+      , value.extractLsb' 24 8 ] := by
+  simp only [encodeWordBytes, List.cons.injEq, and_true]
+  constructor
+  · apply BitVec.eq_of_toNat_eq
+    simp [BitVec.extractLsb', Nat.shiftRight_eq_div_pow]
+  constructor
+  · apply BitVec.eq_of_toNat_eq
+    simp [BitVec.extractLsb', Nat.shiftRight_eq_div_pow]
+  constructor
+  · apply BitVec.eq_of_toNat_eq
+    simp [BitVec.extractLsb', Nat.shiftRight_eq_div_pow]
+  · apply BitVec.eq_of_toNat_eq
+    simp [BitVec.extractLsb', Nat.shiftRight_eq_div_pow]
+
 def encodeInstructionBytes [NeZero width] (instruction : Instruction width) :
     List (BitVec 8) :=
   encodeWordBytes (encodeInstruction instruction)
@@ -208,6 +232,14 @@ def encodeLinkedSections [NeZero width] :
       { label, address, bytes := encodeInstructions instructions } ::
         encodeLinkedSections sections
 
+/-! The closest HOL result is `riscv_targetProof$length_riscv_encode[local]`
+    (`LENGTH (riscv_encode i) = 4`).  It quantifies over HOL's full
+    `riscv$instruction` type, which includes AMO, floating-point, FENCE,
+    system, and unknown-instruction constructors.  `Flapjack.RiscV.Instruction`
+    is a width-indexed, hand-ported subset of that datatype and has none of
+    those constructors, so this generic Lean length fact is untagged: its
+    quantified instruction domain is not the exact HOL domain.  For each
+    represented instruction, both encoders emit four bytes. -/
 @[simp] theorem encodeInstructionBytes_length [NeZero width]
     (instruction : Instruction width) :
     (encodeInstructionBytes instruction).length = 4 := by

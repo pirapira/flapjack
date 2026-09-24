@@ -116,6 +116,16 @@ evaluators (no clock, no memory domain, compile-and-execute "semantics") are
 not ports of HOL theorems about the faithful semantics and must not carry
 the tag of one.
 
+**Reviewed statements are pinned.** `docs/HOL-TYPE-HASHES.json` records the
+elaborated Lean type of each `reviewed_exact` entry in
+`docs/HOL-THEOREM-MAP.json`. CI runs `scripts/check_hol_type_hashes.py` and
+rejects statement drift. After comparing a changed Lean statement with its HOL
+source, run `python3 scripts/check_hol_type_hashes.py --update` and review the
+lock-file diff. The hash gate detects Lean statement changes only: it does not
+hash the bodies of tagged definitions, the bodies of referenced dependencies,
+or the HOL declarations, and it does not prove HOL-to-Lean equivalence or
+replace source-level review.
+
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side
 conditions, and conclusions. A different evaluator, an extra successful-pass
@@ -127,6 +137,30 @@ docstring, and file a bead for the faithful port. Preserve useful Flapjack-only
 infrastructure; delete a declaration only when it is unsalvageable or itself
 implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
+
+**Qualify only named list-to-array state fields.** An unqualified tag records a
+statement reviewed as exact and has manifest status `reviewed_exact`. The
+`(list_as_array := [field, ...])` qualifier is only for specific HOL list
+fields represented by Lean arrays; it does not allow any other difference in
+the theorem statement or semantics. Review the fields against the surrounding
+HOL state relation, list lengths, index bounds, and update behavior. The
+manifest must list the same fields and use `reviewed_list_as_array` after that
+comparison; never call a qualified theorem `reviewed_exact`.
+
+Each qualified field must be a field of a structure in the same Lean module
+and have a kernel-checked theorem named `holListArrayWitness_<field>`. Its
+result type must establish `RepresentsHOLNodeList` for that field and a HOL
+list, without assuming `RepresentsHOLNodeList` in its premises. The reference
+checker enforces this shape and Lake checks the theorem proof, but those gates
+do not independently establish the cross-language correspondence. Review the
+witness and HOL/Lean theorem statements manually; the qualifier does not
+authorize changed evaluators, errors, quantified types, side conditions, or
+conclusions. If bounds or out-of-range behavior differ, leave the theorem
+untagged and document the mismatch beside it.
+
+Representation witnesses alone do not establish transition equivalence.
+Review successful updates, invalid representations, and out-of-range errors
+separately before tagging any transition theorem.
 
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`

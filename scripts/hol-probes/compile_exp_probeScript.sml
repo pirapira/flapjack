@@ -25,6 +25,24 @@ val _ = print_eval "leaves"
     pan_to_crep$compile_exp ^ctxt (Var Global «g»),
     pan_to_crep$compile_exp ^ctxt BaseAddr,
     pan_to_crep$compile_exp ^ctxt TopAddr)``;
+val _ = print_eval "bytes_in_word"
+  ``(pan_to_crep$compile_exp ^ctxt panLang$BytesInWord :
+      64 word crepLang$exp list # panLang$shape)``;
+val nstruct_expression = ``panLang$NStruct (strlit "S")
+  [(strlit "x", panLang$Const (1w : 64 word))]``;
+val nfield_expression = ``(panLang$NField (strlit "x")
+  (panLang$Const (1w : 64 word)))``;
+val _ = print_eval "nstruct"
+  ``pan_to_crep$compile_exp ^ctxt ^nstruct_expression``;
+val _ = print_eval "nfield"
+  ``pan_to_crep$compile_exp ^ctxt ^nfield_expression``;
+val _ = print_eval "load_one"
+  ``pan_to_crep$compile_exp ^ctxt
+      (panLang$Load panLang$One (panLang$Const (3w : 64 word)))``;
+val _ = print_eval "load_two"
+  ``pan_to_crep$compile_exp ^ctxt
+      (panLang$Load (panLang$Comb [panLang$One; panLang$One])
+        (panLang$Const (3w : 64 word)))``;
 val _ = print_eval "struct_field"
   ``(pan_to_crep$compile_exp ^ctxt
       (RStruct [Const (1w : 8 word); Const 2w]),
@@ -37,6 +55,9 @@ val _ = print_eval "loads_ops"
       (Op Add [Const (1w : 8 word); Const 2w]),
     pan_to_crep$compile_exp ^ctxt
       (Panop Mul [Const (5w : 8 word); Const 6w]))``;
+val _ = print_eval "op_nary"
+  ``pan_to_crep$compile_exp ^ctxt
+      (Op Add [Const (1w : 8 word); Const 2w; Const 3w])``;
 val _ = print_eval "cmp_shift"
   ``(pan_to_crep$compile_exp ^ctxt
       (Cmp Equal (Const (1w : 8 word)) (Const 0w)),

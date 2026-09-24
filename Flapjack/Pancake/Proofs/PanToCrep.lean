@@ -505,6 +505,115 @@ def excpRel
       FLOOKUP compilerCodes exception' = some code' →
       code = code' → exception = exception'
 
+/-! ### Exact HOL `get_eids_imp_excp_rel`
+
+    Flapjack-specific list support for the port below: membership in a zip
+    yields aligned indices (HOL `MEM_ZIP`). -/
+theorem mem_zip_getElem? {names : List α} {values : List β} {key : α} {value : β}
+    (h : (key, value) ∈ names.zip values) :
+    ∃ i : Nat, names[i]? = some key ∧ values[i]? = some value := by
+  induction names generalizing values with
+  | nil => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons val values =>
+          rw [List.zip_cons_cons, List.mem_cons] at h
+          rcases h with h | h
+          · obtain ⟨rfl, rfl⟩ := h
+            exact ⟨0, rfl, rfl⟩
+          · obtain ⟨i, hni, hvi⟩ := ih h
+            exact ⟨i + 1, by rw [List.getElem?_cons_succ]; exact hni,
+              by rw [List.getElem?_cons_succ]; exact hvi⟩
+
+/-- Flapjack-specific support: an exception table is no longer than the
+    exception-identifier count of the same declaration list. -/
+theorem exceptionEntries_length_le_sizeOfEids (pc : List (Decl (BitVec width))) :
+    (exceptionEntries pc).length ≤ sizeOfEids pc := by
+  induction pc with
+  | nil => simp [exceptionEntries, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [exceptionEntries, sizeOfEids_cons, isExnDecl] <;> omega
+
+/-- Flapjack-specific support: `BitVec.ofNat width` is injective below
+    `2 ^ width`, which is where HOL's `LESS_MOD` step is used. -/
+theorem bitVecOfNat_inj {width i j : Nat} (hi : i < 2 ^ width) (hj : j < 2 ^ width)
+    (h : BitVec.ofNat width i = BitVec.ofNat width j) : i = j := by
+  have hmod : i % 2 ^ width = j % 2 ^ width := by
+    have := congrArg BitVec.toNat h
+    simpa [BitVec.toNat_ofNat] using this
+  rwa [Nat.mod_eq_of_lt hi, Nat.mod_eq_of_lt hj] at hmod
+
+/-- Flapjack-specific unfolding of the tagged `get_eids_from_decls` port. -/
+theorem panToCrepGetEidsFromDeclsHOL_eq (declarations : List (Decl (BitVec width))) :
+    panToCrepGetEidsFromDeclsHOL declarations =
+      FUPDATE_LIST FEMPTY
+        (((exceptionEntries declarations).map Prod.fst).zip
+          ((List.range ((exceptionEntries declarations).map Prod.fst).length).map
+            (BitVec.ofNat width))).reverse := rfl
+
+/-- Flapjack-specific inverse lookup fact: a successful exception-code lookup
+    comes from one of the zipped source entries. -/
+theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
+    (declarations : List (Decl (BitVec width))) (exception : ExceptionId)
+    (code : BitVec width)
+    (h : FLOOKUP (panToCrepGetEidsFromDeclsHOL declarations) exception = some code) :
+    (exception, code) ∈ ((exceptionEntries declarations).map Prod.fst).zip
+        ((List.range ((exceptionEntries declarations).map Prod.fst).length).map
+          (BitVec.ofNat width)) := by
+  rw [panToCrepGetEidsFromDeclsHOL_eq declarations] at h
+  rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap ExceptionId (BitVec width))
+      _ exception code h with ⟨entry, hentry, hkey, hvalue⟩ | hbase
+  · rw [List.mem_reverse] at hentry
+    have heq : entry = (exception, code) := by
+      rw [← hkey, ← hvalue]
+    rwa [heq] at hentry
+  · exact absurd hbase (by simp)
+
+/-- Exact port of HOL `get_eids_imp_excp_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4656`): if the source
+    exception map has the compiler's exception-code domain and the declaration
+    list has fewer exception declarations than `2 ^ width`, then the compiler's
+    code map is injective, matching HOL's `excp_rel`. The word type fixes the
+    value conversion as in `get_eids_from_decls_def`; the HOL-vs-Lean
+    equivalence is reviewed by comparing definitions (per SOUNDNESS), not
+    proved by this theorem. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "get_eids_imp_excp_rel"]
+theorem getEidsFromDeclsImpExcpRel
+    (seids : FiniteMap ExceptionId (BitVec width))
+    (pc : List (Decl (BitVec width)))
+    (hsize : sizeOfEids pc < 2 ^ width)
+    (hdom : FDOM seids = FDOM (panToCrepGetEidsFromDeclsHOL pc)) :
+    excpRel (panToCrepGetEidsFromDeclsHOL pc) seids := by
+  refine ⟨hdom, ?_⟩
+  intro exception exception' code code' hcode hcode' hcodeeq
+  have hentry := panToCrepGetEidsFromDeclsHOL_lookup_mem pc exception code hcode
+  have hentry' := panToCrepGetEidsFromDeclsHOL_lookup_mem pc exception' code' hcode'
+  obtain ⟨i, hnamei, hvali⟩ := mem_zip_getElem? hentry
+  obtain ⟨j, hnamej, hvalj⟩ := mem_zip_getElem? hentry'
+  have hlti : i < ((exceptionEntries pc).map Prod.fst).length :=
+    (List.getElem?_eq_some_iff.mp hnamei).1
+  have hltj : j < ((exceptionEntries pc).map Prod.fst).length :=
+    (List.getElem?_eq_some_iff.mp hnamej).1
+  have hbound : ((exceptionEntries pc).map Prod.fst).length ≤ sizeOfEids pc := by
+    simpa using exceptionEntries_length_le_sizeOfEids pc
+  have hi : i < 2 ^ width := by omega
+  have hj : j < 2 ^ width := by omega
+  have hcodei : BitVec.ofNat width i = code := by
+    rw [List.getElem?_map, List.getElem?_range hlti] at hvali
+    exact Option.some.inj hvali
+  have hcodej : BitVec.ofNat width j = code' := by
+    rw [List.getElem?_map, List.getElem?_range hltj] at hvalj
+    exact Option.some.inj hvalj
+  have hij : i = j :=
+    bitVecOfNat_inj hi hj (by rw [hcodei, hcodeeq, ← hcodej])
+  have hnamej' : ((exceptionEntries pc).map Prod.fst)[i]? = some exception' := by
+    rw [← hij] at hnamej
+    exact hnamej
+  rw [hnamei] at hnamej'
+  exact Option.some.inj hnamej'
+
 /-! HOL `ctxt_fc_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:25`).
     `FUPDATE_LIST` and `withShape` preserve the source definition's ZIP
     truncation and TAKE/DROP slicing, and `maxList` is Cake's `MAX_LIST`. -/
@@ -518,6 +627,77 @@ def ctxtFc
     funcs := compilerFunctions
     eids := exceptionCodes
     vmax := maxList names }
+
+/-- Flapjack-specific support for the HOL `MAX_LIST_i_genlist` step: dropping
+    the first `n` entries of `List.range m` is the same as mapping `n + ·` over
+    `List.range (m - n)` (used to line up `ctxt_fc`'s `with_shape` slices with
+    `compileParamVars`'s per-parameter slot ranges). -/
+theorem drop_range_map (m n : Nat) (h : n ≤ m) :
+    (List.range m).drop n = (List.range (m - n)).map (fun index => n + index) := by
+  rw [show m = n + (m - n) from (Nat.add_sub_cancel' h).symm]
+  rw [List.range_add, List.drop_append_of_le_length (by simp [List.length_range])]
+  simp
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map built by `compileParamVars` and the proof-side
+    `ctxt_fc` variable map agree after shifting the slot ranges by `offset`.
+    This is the correspondence the HOL proof discharges with
+    `gvs[ctxt_fc_def, make_vmap_def]`; HOL `make_vmap` is `panToCrepMakeVmapHOL`. -/
+theorem compileParamVars_range_withShape (params : List (VarName × Shape)) (offset : Nat) :
+    (compileParamVars params offset).1 =
+      (params.map Prod.fst).zip
+        ((params.map Prod.snd).zip
+          (withShape (params.map Prod.snd)
+            ((List.range (Shape.shapeSize (.comb (params.map Prod.snd)))).map
+              (fun index => offset + index)))) := by
+  induction params generalizing offset with
+  | nil => simp [compileParamVars, withShape]
+  | cons param params ih =>
+      obtain ⟨name, shape⟩ := param
+      simp only [compileParamVars, List.map_cons]
+      rw [shapeSize_comb_cons]
+      have htake :
+          List.take (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => offset + index)
+              (List.range (Shape.shapeSize shape)) := by
+        rw [← List.map_take, List.take_range]
+        simp
+      have hdrop :
+          List.drop (Shape.shapeSize shape)
+              (List.map (fun index => offset + index)
+                (List.range (Shape.shapeSize shape +
+                  Shape.shapeSize (.comb (params.map Prod.snd))))) =
+            List.map (fun index => (offset + Shape.shapeSize shape) + index)
+              (List.range (Shape.shapeSize (.comb (params.map Prod.snd)))) := by
+        rw [← List.map_drop]
+        rw [drop_range_map
+          (Shape.shapeSize shape + Shape.shapeSize (.comb (params.map Prod.snd)))
+          (Shape.shapeSize shape) (Nat.le_add_right _ _)]
+        rw [Nat.add_sub_cancel_left]
+        rw [List.map_map]
+        congr 1
+        funext index
+        simp [Nat.add_assoc]
+      simp only [withShape]
+      rw [htake, hdrop, ih (offset + Shape.shapeSize shape)]
+      simp only [List.zip_cons_cons]
+
+/-- Flapjack-specific bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    production parameter map `panToCrepMakeVmapHOL` equals the `vars` field of
+    the proof-side `ctxt_fc` context at the standard slot window. -/
+theorem panToCrepMakeVmapHOL_eq_ctxtFcVars
+    (params : List (VarName × Shape))
+    (functions : FiniteMap FunName (List (VarName × Shape) × Shape))
+    (exceptionCodes : FiniteMap ExceptionId α) :
+    panToCrepMakeVmapHOL params =
+      (ctxtFc functions exceptionCodes (params.map Prod.fst) (params.map Prod.snd)
+        (panToCrepVars params)).vars := by
+  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars]
+  rw [compileParamVars_range_withShape params 0]
+  simp
 
 /-! Indexed projection of the parameter variable map constructed by HOL
 `ctxtFc`. This support lemma exposes the corresponding `withShape` slot window
@@ -1649,15 +1829,18 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For one-word and two-word payloads, the paired
-`EvaluateCases.crepRuntimeExpHdlOneWord` / `crepRuntimeExpHdlOneWord_localsRel`
-and `crepRuntimeExpHdlTwoWords` / `crepRuntimeExpHdlTwoWords_localsRel`
-lemmas prove execution of the target finite-map `exp_hdl` program and its
-resulting `locals_rel` postcondition. This lemma supplies the source-to-target
-map-update relation used there. The full HOL
-`pc_compile_correct[Call_Ret_Exception]` simulation remains open: the general
-Call state transition and arbitrary payload-shape cases are not yet
-established. -/
+The target runtime `exp_hdl` writes and their `locals_rel` updates are proved
+for arbitrary flattened payload widths by
+`EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
+`crepRuntimeExpHdlFiniteMapWords_localsRel`. The one-word execution is also
+stated directly as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
+`crepRuntimeExpHdlOneWord_localsRel` giving its local-map result. The
+corresponding actual-state matching-handler prestate composition is available in
+`crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations` as untagged
+induction support. This lemma supplies the source-to-target map-update
+relation used by those proofs. The general HOL `Call_Ret_Exception`
+simulation remains open because the recursive callee and handler induction
+hypotheses have not yet been composed into the source/target Call case. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1912,6 +2095,300 @@ theorem firstCompileToCrepAllDistinct
     ((compileToCrepHOL declarations).map
       fun (name, _, _) => name).Nodup := by
   simpa [compileToCrepHOL, List.map_map, Function.comp_def] using hdistinct
+
+/-- `compileToCrepHOL` is the source function list mapped through `comp_func`
+    and `crep_vars`, with the context built from the same declaration list. -/
+theorem compileToCrepHOL_eq_map
+    (declarations : List (Decl (BitVec width))) :
+    compileToCrepHOL declarations =
+      (functionEntries declarations).map
+        (fun entry =>
+          (entry.1,
+           (panToCrepVars entry.2.1,
+            panToCrepCompFuncRiscV
+              (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+                (panToCrepGetEidsFromDeclsHOL declarations))
+              entry.2.1 entry.2.2.1))) := by
+  simp [compileToCrepHOL, functionInfosHOL_eq_makeFuncsHOL,
+    panToCrepCompFuncRiscV_eq_compFuncHOL, panToCrepMkCtxtHOL]
+
+/-- Exact port of HOL `alookup_compile_prog_code`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575`): a source
+    function entry with empty parameters and body `prog` is compiled to the
+    Crepe entry whose argument slots are `crep_vars []` and whose body is
+    `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)
+    [] prog`.  `List.lookup` on the nested-pair triple list is HOL's `ALOOKUP`.
+
+    Tagged counterparts used here: `compileToCrepHOL` (`compile_to_crep_def`),
+    `panToCrepVars` (`crep_vars_def`), `panToCrepGetEidsFromDeclsHOL`
+    (`get_eids_from_decls_def`), `panToCrepMkCtxtHOL` (`mk_ctxt_def`),
+    `panToCrepMakeVmapHOL` (`make_vmap_def`) and `compileProgRiscV`
+    (`compile_def`).  Two helpers are deliberate untagged adapters and are NOT
+    tagged counterparts:
+    * `functionInfosHOL` computes the HOL finite-map value
+      `alist_to_fmap (make_funcs (functions pan_code))`: `panToCrepMakeFuncs`
+      produces the same source-order `(name, (params, return))` list as HOL
+      `make_funcs`, and `FUPDATE_LIST FEMPTY ·.reverse` is `alist_to_fmap`
+      (`FOLDR FUPDATE FEMPTY`, first duplicate wins);
+    * `panToCrepCompFuncRiscV` is `comp_func` after threading the context as a
+      record: it reads `context.funcs`/`context.eids` instead of HOL's separate
+      `fs`/`eids` arguments and applies the tagged `compile_def` to the tagged
+      `mk_ctxt_def`/`make_vmap_def`. No HOL side condition or body step is
+      dropped.  The HOL-vs-Lean equivalence of the statement is not proved by
+      this theorem: the theorem is a within-Lean lookup fact, and the HOL
+      correspondence is reviewed by comparing the definitions (per SOUNDNESS),
+      not established by the proof below. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
+theorem alookupCompileToCrepCode
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (prog : Prog (BitVec width)) (rshape : Shape)
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some ([], (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some ([], panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) [] prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := ([], panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) [] prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
+    simp [panToCrepVars, Shape.shapeSize]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
+
+/-! Flapjack-specific finite-map support: reversing an association list before
+    `FUPDATE_LIST` makes the first source occurrence win, exactly like
+    `List.lookup` (HOL `ALOOKUP`). This is list infrastructure, not a standalone
+    HOL theorem port. -/
+theorem FLOOKUP_FUPDATE_LIST_reverse_eq_lookup [BEq α] [LawfulBEq α]
+    (entries : List (α × β)) (key : α) :
+    FLOOKUP (FUPDATE_LIST FEMPTY entries.reverse) key = List.lookup key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.reverse_cons, FUPDATE_LIST_append, FUPDATE_LIST_cons,
+        FUPDATE_LIST_nil, FLOOKUP_update, List.lookup_cons]
+      by_cases h : entryKey = key
+      · subst h
+        simp
+      · have h1 : (entryKey == key) = false := beq_eq_false_iff_ne.mpr h
+        have h2 : (key == entryKey) = false :=
+          beq_eq_false_iff_ne.mpr (fun he => h he.symm)
+        simp [h1, h2, ih]
+
+/-- Flapjack-specific list fact: mapping a key-preserving projection through an
+    association list commutes with `List.lookup` (the list-level `ALOOKUP_MAP`
+    step used by HOL inside `mk_ctxt_code_imp_code_rel`). -/
+theorem lookup_map_preserveFst [BEq α] [LawfulBEq α] (functions : List (α × β))
+    (project : β → γ) (key : α) :
+    List.lookup key (functions.map (fun entry => (entry.1, project entry.2))) =
+      (List.lookup key functions).map project := by
+  induction functions with
+  | nil => rfl
+  | cons entry functions ih =>
+      obtain ⟨entryKey, entryValue⟩ := entry
+      rw [List.map_cons, List.lookup_cons, List.lookup_cons]
+      by_cases h : (key == entryKey) = true
+      · simp [h]
+      · simp [h, ih]
+
+/-- Flapjack-specific lookup link for HOL `make_funcs`: a source function entry
+    (name, params, body, return) is visible in the `make_funcs` finite map with
+    the parameter list and return shape (the body is dropped). -/
+theorem makeFuncsHOL_lookup_of_lookup
+    (functions : List (FunName × List (VarName × Shape) × Prog α × Shape))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog α) (rshape : Shape)
+    (h : List.lookup start functions = some (vshs, (prog, rshape))) :
+    FLOOKUP (makeFuncsHOL functions) start = some (vshs, rshape) := by
+  have hrewrite : FLOOKUP (makeFuncsHOL functions) start =
+      List.lookup start
+        (functions.map (fun entry => (entry.1, (entry.2.1, entry.2.2.2)))) := by
+    rw [makeFuncsHOL]
+    exact FLOOKUP_FUPDATE_LIST_reverse_eq_lookup _ _
+  rw [hrewrite, lookup_map_preserveFst
+    (project := fun value : List (VarName × Shape) × Prog α × Shape =>
+      (value.1, value.2.2))]
+  rw [h]
+  rfl
+
+/-- General form of the compiled-function lookup: a source entry with
+    parameters `vshs` and body `prog` is compiled to the entry whose argument
+    slots are `crep_vars vshs` and whose body is `comp_func ... vshs prog`.
+    This is the parameter-general companion of the tagged
+    `alookupCompileToCrepCode`; HOL discharges it inside
+    `mk_ctxt_code_imp_code_rel` rather than as a separate theorem, so it
+    deliberately carries no `@[hol]` tag. -/
+theorem alookupCompileToCrepCodeGeneral
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (vshs : List (VarName × Shape)) (prog : Prog (BitVec width))
+    (rshape : Shape)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some (vshs, (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some (panToCrepVars vshs, panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := (panToCrepVars vshs, panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
+
+/-- Production/proof-context bridge used by HOL `mk_ctxt_code_imp_code_rel`: the
+    checked compiler's per-function body (`panToCrepCompFuncRiscV`) is the
+    `codeRel` proof-context compilation (`compileCodeRelProg`) at the `ctxt_fc`
+    context. The variable map agrees by `panToCrepMakeVmapHOL_eq_ctxtFcVars`
+    and `vmax` by `maxList_range`. -/
+theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
+    (declarations : List (Decl (BitVec width)))
+    (vshs : List (VarName × Shape)) (prog : Prog (BitVec width)) :
+    panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) vshs prog =
+      compileCodeRelProg
+        (ctxtFc (functionInfosHOL declarations)
+          (panToCrepGetEidsFromDeclsHOL declarations)
+          (vshs.map Prod.fst) (vshs.map Prod.snd) (panToCrepVars vshs)) prog := by
+  simp only [panToCrepCompFuncRiscV, compileProgRiscV, compileCodeRelProg,
+    panToCrepMkCtxtHOL, ctxtFc]
+  rw [panToCrepMakeVmapHOL_eq_ctxtFcVars vshs (functionInfosHOL declarations)
+    (panToCrepGetEidsFromDeclsHOL declarations)]
+  simp only [panToCrepVars, maxList_range, ctxtFc]
+
+/-- Exact port-shaped HOL `mk_ctxt_code_imp_code_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4604`): with distinct
+    function names and localised bodies, the checked compiler's code table is
+    `code_rel` to the source function table under the `mk_ctxt`/`make_funcs`/
+    `get_eids_from_decls` context. The source map is the finite-map list form
+    (`FUPDATE_LIST … .reverse`), the `make_funcs` lookup drops the body
+    (`makeFuncsHOL_lookup_of_lookup`), the target entry comes from
+    `alookupCompileToCrepCodeGeneral`, and the compiled body is rewritten to
+    `compileCodeRelProg` by `panToCrepCompFuncRiscV_eq_compileCodeRelProg`. Lean
+    splits HOL's single `ctxt` record into `PanToCrepHOLContext`/
+    `PanToCrepProofContext`, so the relation is stated with the proof-context
+    literal (as for `mk_ctxt_imp_locals_rel`). The HOL-vs-Lean equivalence of
+    the statement is reviewed by comparing the definitions (per SOUNDNESS). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_code_imp_code_rel"]
+theorem mkCtxtCodeImpCodeRel
+    (declarations : List (Decl (BitVec width)))
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlocalised : ∀ entry ∈ functionEntries declarations,
+      localisedProg entry.2.2.1) :
+    codeRel
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := functionInfosHOL declarations
+        eids := panToCrepGetEidsFromDeclsHOL declarations
+        vmax := 0 }
+      (FUPDATE_LIST FEMPTY (functionEntries declarations).reverse)
+      (FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse) := by
+  intro function vshs prog rshape hsource
+  rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup] at hsource
+  refine ⟨?_, ?_, ?_⟩
+  · obtain ⟨l₁, l₂, hdecomp, _hnotin⟩ := List.lookup_eq_some_iff.mp hsource
+    have hmem : (function, vshs, prog, rshape) ∈ functionEntries declarations := by
+      rw [hdecomp]
+      simp
+    have hloc := hlocalised (function, vshs, prog, rshape) hmem
+    simpa using hloc
+  · simp only []
+    rw [functionInfosHOL_eq_makeFuncsHOL]
+    exact makeFuncsHOL_lookup_of_lookup (functionEntries declarations)
+      function vshs prog rshape hsource
+  · simp only []
+    rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup]
+    rw [alookupCompileToCrepCodeGeneral declarations function vshs prog rshape
+      hsource]
+    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
+    rfl
+
+/-- Exact port of HOL `el_compile_prog_el_prog_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
+    entry at index `n` comes from the source table at the same index, with
+    identical name, empty argument slots, body and return shape.  `List.get?`
+    is the bounded form of HOL `EL` (the same `n < length` hypothesis is
+    present), and `lookupFunctionEntry` is HOL `ALOOKUP` on the
+    `(name, params, body, rshape)` projection.  The HOL-vs-Lean equivalence of
+    the statement is reviewed by comparing the definitions (per SOUNDNESS), not
+    proved by this theorem, which is a within-Lean indexed-table fact. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "el_compile_prog_el_prog_eq"]
+theorem elCompileToCrepElProgEq
+    (declarations : List (Decl (BitVec width))) (n : Nat) (start : FunName)
+    (cprog : CrepProg (BitVec width)) (p : Prog (BitVec width)) (rshape : Shape)
+    (hentry : (compileToCrepHOL declarations)[n]? = some (start, [], cprog))
+    (hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (_hlen : n < (functionEntries declarations).length)
+    (hlookup : lookupFunctionEntry start (functionEntries declarations) =
+      some ([], p, rshape)) :
+    (functionEntries declarations)[n]? = some (start, [], p, rshape) := by
+  rw [compileToCrepHOL_eq_map, List.getElem?_map] at hentry
+  have hsome : (functionEntries declarations)[n]? ≠ none := by
+    intro hnone
+    rw [hnone] at hentry
+    simp at hentry
+  obtain ⟨entry, hentry_eq⟩ := Option.ne_none_iff_exists'.mp hsome
+  have hproj :
+      (entry.1, panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1) = (start, [], cprog) := by
+    rw [hentry_eq] at hentry
+    simpa using hentry
+  have h1 : entry.1 = start := by
+    simpa using congrArg Prod.fst hproj
+  have hlookupEntry :=
+    lookupFunctionEntry_of_getElem? (functionEntries declarations) hdistinct hentry_eq
+  rw [h1] at hlookupEntry
+  rw [hlookup] at hlookupEntry
+  have hp : (entry.2.1, entry.2.2.1, entry.2.2.2) = ([], p, rshape) :=
+    (Option.some.inj hlookupEntry).symm
+  have g1 : entry.2.1 = [] := by simpa using congrArg Prod.fst hp
+  have g2 : entry.2.2.1 = p := by
+    simpa using congrArg Prod.fst (congrArg Prod.snd hp)
+  have g3 : entry.2.2.2 = rshape := by
+    simpa using congrArg Prod.snd (congrArg Prod.snd hp)
+  rw [hentry_eq]
+  congr 1
+  refine Prod.ext (by simpa using h1) ?_
+  refine Prod.ext (by simpa using g1) ?_
+  exact Prod.ext (by simpa using g2) (by simpa using g3)
 
 /-- Exact port of HOL `first_compile_prog_all_distinct`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original
@@ -2665,6 +3142,576 @@ theorem panValueFfiSharedStore_stateRel_final
          crepRuntimeSharedMem, hname, Option.map_some, panTheWord, hvalid, if_true]
        erw [hcallGoal])
   · simpa only [stateRel] using hstate
+
+private theorem compileProgHOL_call_none [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α)) :
+    compileProgHOL context (Prog.call none function arguments) =
+      CrepProg.call none function (compileArgsHOL context arguments) := by
+  simp only [compileProgHOL.eq_def] <;> rfl
+
+private theorem compileProgHOL_call_destNone_handlerNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α)) :
+    compileProgHOL context (Prog.call (some (none, none)) function arguments) =
+      nestedDecs (functionReturnNamesHOL context function)
+        ((functionReturnNamesHOL context function).map (fun _ => CrepExp.const 0))
+        (CrepProg.call (some (functionReturnNamesHOL context function, none)) function
+          (compileArgsHOL context arguments)) := by
+  simp only [compileProgHOL.eq_def] <;> rfl
+
+private theorem compileProgHOL_call_destNone_handlerSome_eidsNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (heid : FLOOKUP context.eids exception = none) :
+    compileProgHOL context (Prog.call (some (none, some (exception, handlerVar, handlerProgram))) function arguments) =
+      nestedDecs (functionReturnNamesHOL context function)
+        ((functionReturnNamesHOL context function).map (fun _ => CrepExp.const 0))
+        (CrepProg.call (some (functionReturnNamesHOL context function, none)) function
+          (compileArgsHOL context arguments)) := by
+  simp only [compileProgHOL.eq_def, heid] <;> rfl
+
+private theorem compileProgHOL_call_destNone_handlerSome_eidsSome [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (code : α) (heid : FLOOKUP context.eids exception = some code) :
+    compileProgHOL context (Prog.call (some (none, some (exception, handlerVar, handlerProgram))) function arguments) =
+      nestedDecs (functionReturnNamesHOL context function)
+        ((functionReturnNamesHOL context function).map (fun _ => CrepExp.const 0))
+        (CrepProg.call (some (functionReturnNamesHOL context function,
+            some (code, CrepProg.seq (expHdlFiniteMap context.vars handlerVar)
+              (compileProgHOL context handlerProgram)))) function
+          (compileArgsHOL context arguments)) := by
+  rw [compileProgHOL.eq_def]
+  simp only [heid] <;> rfl
+
+private theorem compileProgHOL_call_destSome_nocall_handlerNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName)
+    (hcall : callDestinationNamesHOL context kind name = none) :
+    compileProgHOL context (Prog.call (some (some (kind, name), none)) function arguments) =
+      CrepProg.call none function (compileArgsHOL context arguments) := by
+  simp only [compileProgHOL.eq_def, hcall] <;> rfl
+
+private theorem compileProgHOL_call_destSome_nocall_handlerSome_eidsNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName)
+    (hcall : callDestinationNamesHOL context kind name = none)
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (heid : FLOOKUP context.eids exception = none) :
+    compileProgHOL context (Prog.call (some (some (kind, name), some (exception, handlerVar, handlerProgram))) function arguments) =
+      CrepProg.call none function (compileArgsHOL context arguments) := by
+  simp only [compileProgHOL.eq_def, hcall, heid] <;> rfl
+
+private theorem compileProgHOL_call_destSome_nocall_handlerSome_eidsSome [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName)
+    (hcall : callDestinationNamesHOL context kind name = none)
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (code : α) (heid : FLOOKUP context.eids exception = some code) :
+    compileProgHOL context (Prog.call (some (some (kind, name), some (exception, handlerVar, handlerProgram))) function arguments) =
+      CrepProg.call (some ([], some (code, CrepProg.seq (expHdlFiniteMap context.vars handlerVar)
+          (compileProgHOL context handlerProgram)))) function
+        (compileArgsHOL context arguments) := by
+  rw [compileProgHOL.eq_def]
+  simp only [hcall, heid] <;> rfl
+
+private theorem compileProgHOL_call_destSome_somecall_handlerNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName) (names : List Nat)
+    (hcall : callDestinationNamesHOL context kind name = some names) :
+    compileProgHOL context (Prog.call (some (some (kind, name), none)) function arguments) =
+      CrepProg.call (some (names, none)) function (compileArgsHOL context arguments) := by
+  simp only [compileProgHOL.eq_def, hcall] <;> rfl
+
+private theorem compileProgHOL_call_destSome_somecall_handlerSome_eidsNone [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName) (names : List Nat)
+    (hcall : callDestinationNamesHOL context kind name = some names)
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (heid : FLOOKUP context.eids exception = none) :
+    compileProgHOL context (Prog.call (some (some (kind, name), some (exception, handlerVar, handlerProgram))) function arguments) =
+      CrepProg.call (some (names, none)) function (compileArgsHOL context arguments) := by
+  simp only [compileProgHOL.eq_def, hcall, heid] <;> rfl
+
+private theorem compileProgHOL_call_destSome_somecall_handlerSome_eidsSome [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (function : FunName) (arguments : List (Exp α))
+    (kind : VarKind) (name : VarName) (names : List Nat)
+    (hcall : callDestinationNamesHOL context kind name = some names)
+    (exception : ExceptionId) (handlerVar : VarName) (handlerProgram : Prog α)
+    (code : α) (heid : FLOOKUP context.eids exception = some code) :
+    compileProgHOL context (Prog.call (some (some (kind, name), some (exception, handlerVar, handlerProgram))) function arguments) =
+      CrepProg.call (some (names, some (code, CrepProg.seq (expHdlFiniteMap context.vars handlerVar)
+          (compileProgHOL context handlerProgram)))) function
+        (compileArgsHOL context arguments) := by
+  rw [compileProgHOL.eq_def]
+  simp only [hcall, heid] <;> rfl
+
+/-- Workhorse for Cake `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`): any slot above the
+    context bound cannot be assigned by `compileProgHOL`, provided no context
+    variable's slot list contains it.  Proved by strong induction on
+    `sizeOf program` because `Prog` is a nested inductive type whose generated
+    induction principle is not usable. -/
+theorem compileProgHOL_not_mem_assignedFreeVars
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α] :
+    ∀ (program : Prog α) (context : PanToCrepHOLContext α) (x : Nat),
+      (∀ v sh ns', FLOOKUP context.vars v = some (sh, ns') → x ∉ ns') →
+      x ≤ context.vmax →
+      x ∉ crepAssignedFreeVars (compileProgHOL context program) := by
+  have main : ∀ n, ∀ (program : Prog α), sizeOf program = n →
+      ∀ (context : PanToCrepHOLContext α) (x : Nat),
+        (∀ v sh ns', FLOOKUP context.vars v = some (sh, ns') → x ∉ ns') →
+        x ≤ context.vmax →
+        x ∉ crepAssignedFreeVars (compileProgHOL context program) := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+      intro program hn context x hfresh hx
+      cases program with
+      | skip => simp [compileProgHOL, crepAssignedFreeVars]
+      | dec name shape value body =>
+          cases hcomp : compileExpHOL context value with
+          | mk expressions compiledShape =>
+            simp only [compileProgHOL, hcomp]
+            split
+            · next hlen =>
+              intro hmem
+              rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                (by rw [allocatedNamesHOL_length]; exact hlen)] at hmem
+              have hnames : x ∉ allocatedNamesHOL context compiledShape :=
+                not_mem_allocatedNamesHOL context compiledShape hx
+              have hfreshNext :=
+                hfresh_update context name compiledShape
+                  (allocatedNamesHOL context compiledShape) x hfresh hnames
+              have hxNext : x ≤ context.vmax + Shape.shapeSize compiledShape := by omega
+              exact ih (sizeOf body) (by rw [← hn]; decreasing_trivial) body rfl
+                { context with
+                  vars := FUPDATE context.vars (name, (compiledShape, allocatedNamesHOL context compiledShape))
+                  vmax := context.vmax + Shape.shapeSize compiledShape }
+                x hfreshNext hxNext hmem.1
+            · next hlen =>
+              intro hmem
+              simp [crepAssignedFreeVars] at hmem
+      | assign kind name value =>
+          cases kind with
+          | «global» => simp [compileProgHOL, crepAssignedFreeVars]
+          | «local» =>
+              cases hlookup : FLOOKUP context.vars name with
+              | none => simp [compileProgHOL, hlookup, crepAssignedFreeVars]
+              | some pair =>
+                  obtain ⟨variableShape, names⟩ := pair
+                  cases hcomp : compileExpHOL context value with
+                  | mk expressions expressionShape =>
+                    simp only [compileProgHOL, hlookup, hcomp]
+                    split
+                    · next hlen =>
+                        split
+                        · next hdistinct =>
+                            intro hmem
+                            rw [crepAssignedFreeVars_nestedSeq_assign_zipWith _ _ hlen] at hmem
+                            exact hfresh name variableShape names hlookup hmem
+                        · next hnotdistinct =>
+                            intro hmem
+                            rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                              (by rw [freshNamesHOL_length]; exact hlen)] at hmem
+                            rw [crepAssignedFreeVars_nestedSeq_assign_var_zipWith _ _
+                              (by rw [freshNamesHOL_length])] at hmem
+                            exact hfresh name variableShape names hlookup hmem.1
+                    · next hlen =>
+                        intro hmem
+                        simp [crepAssignedFreeVars] at hmem
+      | primitive name operator arguments =>
+          cases hlookup : FLOOKUP context.vars name with
+          | none => simp [compileProgHOL, hlookup, crepAssignedFreeVars]
+          | some pair =>
+              obtain ⟨variableShape, names⟩ := pair
+              simp only [compileProgHOL, hlookup]
+              intro hmem
+              rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                (by rw [freshNamesHOL_length])] at hmem
+              rw [mem_crepAssignedFreeVars_primitive] at hmem
+              exact hfresh name variableShape names hlookup hmem.1
+      | store address value =>
+          cases hcompA : compileExpHOL context address with
+          | mk addressExpressions addressShape =>
+            cases hcompV : compileExpHOL context value with
+            | mk valueExpressions valueShape =>
+              cases addressExpressions with
+              | nil => simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+              | cons addressHead addressTail =>
+                simp only [compileProgHOL, hcompA, hcompV]
+                split
+                · next hlen =>
+                    intro hmem
+                    rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                      (by simp [freshNamesHOL_length])] at hmem
+                    rw [crepAssignedFreeVars_nestedSeq_stores] at hmem
+                    simp at hmem
+                · next hne =>
+                    intro hmem
+                    simp [crepAssignedFreeVars] at hmem
+      | store32 address value =>
+          cases hcompA : compileExpHOL context address with
+          | mk addressExpressions addressShape =>
+            cases hcompV : compileExpHOL context value with
+            | mk valueExpressions valueShape =>
+              cases addressExpressions with
+              | nil => simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+              | cons addressHead addressTail =>
+                cases valueExpressions with
+                | nil => simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+                | cons valueHead valueTail =>
+                  simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+      | storeByte address value =>
+          cases hcompA : compileExpHOL context address with
+          | mk addressExpressions addressShape =>
+            cases hcompV : compileExpHOL context value with
+            | mk valueExpressions valueShape =>
+              cases addressExpressions with
+              | nil => simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+              | cons addressHead addressTail =>
+                cases valueExpressions with
+                | nil => simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+                | cons valueHead valueTail =>
+                  simp [compileProgHOL, hcompA, hcompV, crepAssignedFreeVars]
+      | seq first second =>
+          intro hmem
+          simp only [compileProgHOL] at hmem
+          rw [mem_crepAssignedFreeVars_seq] at hmem
+          rcases hmem with hmem | hmem
+          · exact ih (sizeOf first) (by rw [← hn]; decreasing_trivial) first rfl
+              context x hfresh hx hmem
+          · exact ih (sizeOf second) (by rw [← hn]; decreasing_trivial) second rfl
+              context x hfresh hx hmem
+      | ite condition thenBranch elseBranch =>
+          cases hcomp : compileExpHOL context condition with
+          | mk expressions conditionShape =>
+            simp only [compileProgHOL, hcomp]
+            cases expressions with
+            | nil => simp [crepAssignedFreeVars]
+            | cons head tail =>
+                intro hmem
+                rw [mem_crepAssignedFreeVars_ite] at hmem
+                rcases hmem with hmem | hmem
+                · exact ih (sizeOf thenBranch) (by rw [← hn]; decreasing_trivial) thenBranch rfl
+                    context x hfresh hx hmem
+                · exact ih (sizeOf elseBranch) (by rw [← hn]; decreasing_trivial) elseBranch rfl
+                    context x hfresh hx hmem
+      | «while» condition body =>
+          cases hcomp : compileExpHOL context condition with
+          | mk expressions conditionShape =>
+            simp only [compileProgHOL, hcomp]
+            cases expressions with
+            | nil => simp [crepAssignedFreeVars]
+            | cons head tail =>
+                intro hmem
+                rw [mem_crepAssignedFreeVars_while] at hmem
+                exact ih (sizeOf body) (by rw [← hn]; decreasing_trivial) body rfl
+                  context x hfresh hx hmem
+      | «break» => simp [compileProgHOL, crepAssignedFreeVars]
+      | «continue» => simp [compileProgHOL, crepAssignedFreeVars]
+      | decCall name shape function arguments body =>
+          simp only [compileProgHOL]
+          intro hmem
+          rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+            (by simp [allocatedNamesHOL_length])] at hmem
+          rcases hmem with ⟨hmem, hnotNames⟩
+          rw [mem_crepAssignedFreeVars_seq] at hmem
+          rcases hmem with hmem | hmem
+          · rw [mem_crepAssignedFreeVars_call_some_none] at hmem
+            exact hnotNames hmem
+          · have hnames : x ∉ allocatedNamesHOL context shape :=
+              not_mem_allocatedNamesHOL context shape hx
+            have hfreshNext :=
+              hfresh_update context name shape (allocatedNamesHOL context shape) x hfresh hnames
+            have hxNext : x ≤ context.vmax + Shape.shapeSize shape := by omega
+            exact ih (sizeOf body) (by rw [← hn]; decreasing_trivial) body rfl
+              { context with
+                vars := FUPDATE context.vars (name, (shape, allocatedNamesHOL context shape))
+                vmax := context.vmax + Shape.shapeSize shape }
+              x hfreshNext hxNext hmem
+      | extCall function configuration configurationLength array arrayLength =>
+          cases h1 : compileExpHOL context configuration with
+          | mk configurationExpressions configurationShape =>
+            cases h2 : compileExpHOL context configurationLength with
+            | mk configurationLengthExpressions configurationLengthShape =>
+              cases h3 : compileExpHOL context array with
+              | mk arrayExpressions arrayShape =>
+                cases h4 : compileExpHOL context arrayLength with
+                | mk arrayLengthExpressions arrayLengthShape =>
+                  cases configurationExpressions with
+                  | nil => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                  | cons configurationHead configurationTail =>
+                    cases configurationShape with
+                    | one =>
+                      cases configurationLengthExpressions with
+                      | nil => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                      | cons configurationLengthHead configurationLengthTail =>
+                        cases configurationLengthShape with
+                        | one =>
+                          cases arrayExpressions with
+                          | nil => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                          | cons arrayHead arrayTail =>
+                            cases arrayShape with
+                            | one =>
+                              cases arrayLengthExpressions with
+                              | nil => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                              | cons arrayLengthHead arrayLengthTail =>
+                                cases arrayLengthShape with
+                                | one =>
+                                  simp only [compileProgHOL, h1, h2, h3, h4]
+                                  intro hmem
+                                  rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                                    (by simp)] at hmem
+                                  simp [crepAssignedFreeVars] at hmem
+                                | comb fields => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                                | named structName => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                            | comb fields => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                            | named structName => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                        | comb fields => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                        | named structName => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                    | comb fields => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+                    | named structName => simp [compileProgHOL, h1, h2, h3, h4, crepAssignedFreeVars]
+      | raise exception value =>
+          cases heid : FLOOKUP context.eids exception with
+          | none => simp [compileProgHOL, heid, crepAssignedFreeVars]
+          | some code =>
+              cases hcomp : compileExpHOL context value with
+              | mk expressions expressionShape =>
+                simp only [compileProgHOL, heid, hcomp]
+                split
+                · next hlen =>
+                    intro hmem
+                    rw [mem_crepAssignedFreeVars_seq] at hmem
+                    rcases hmem with hmem | hmem
+                    · rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                        (by rw [freshNamesHOL_length])] at hmem
+                      rw [crepAssignedFreeVars_nestedSeq_storeGlobals] at hmem
+                      simp at hmem
+                    · simp [crepAssignedFreeVars] at hmem
+                · next hne =>
+                    intro hmem
+                    simp [crepAssignedFreeVars] at hmem
+      | «return» value =>
+          cases hcomp : compileExpHOL context value with
+          | mk expressions expressionShape =>
+            simp only [compileProgHOL, hcomp]
+            split <;> (intro hmem; simp [crepAssignedFreeVars] at hmem)
+      | shMemLoad size kind name address =>
+          cases kind with
+          | «global» => simp [compileProgHOL, crepAssignedFreeVars]
+          | «local» =>
+              cases hlookup : FLOOKUP context.vars name with
+              | none => simp [compileProgHOL, hlookup, crepAssignedFreeVars]
+              | some pair =>
+                  obtain ⟨variableShape, slotList⟩ := pair
+                  cases haddress : firstCompiledExpAnyShapeHOL context address with
+                  | none => simp [compileProgHOL, hlookup, haddress, crepAssignedFreeVars]
+                  | some addressExpression =>
+                      simp only [compileProgHOL, hlookup, haddress]
+                      cases slotList with
+                      | nil => simp [crepAssignedFreeVars]
+                      | cons destination tail =>
+                          intro hmem
+                          rw [mem_crepAssignedFreeVars_shMem] at hmem
+                          exact hfresh name variableShape (destination :: tail) hlookup
+                            (by rw [hmem]; exact List.mem_cons_self)
+      | shMemStore size address value =>
+          cases haddress : firstCompiledExpAnyShapeHOL context address with
+          | none => simp [compileProgHOL, haddress, crepAssignedFreeVars]
+          | some addressExpression =>
+              cases hvalue : firstCompiledExpAnyShapeHOL context value with
+              | none => simp [compileProgHOL, haddress, hvalue, crepAssignedFreeVars]
+              | some valueExpression =>
+                  simp only [compileProgHOL, haddress, hvalue]
+                  intro hmem
+                  rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _
+                    (by simp)] at hmem
+                  rw [mem_crepAssignedFreeVars_shMem] at hmem
+                  exact hmem.2 (by rw [hmem.1]; exact List.mem_cons_self)
+      | tick => simp [compileProgHOL, crepAssignedFreeVars]
+      | annot tag text => simp [compileProgHOL, crepAssignedFreeVars]
+      | call info function arguments =>
+          cases info with
+          | none =>
+              intro hmem
+              rw [compileProgHOL_call_none context function arguments] at hmem
+              simp only [crepAssignedFreeVars] at hmem
+              simp at hmem
+          | some destinationHandler =>
+              obtain ⟨destination, handler⟩ := destinationHandler
+              cases handler with
+              | none =>
+                  cases destination with
+                  | none =>
+                      intro hmem
+                      rw [compileProgHOL_call_destNone_handlerNone context function arguments] at hmem
+                      rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _ (by simp)] at hmem
+                      simp only [mem_crepAssignedFreeVars_call_some_none] at hmem
+                      exact hmem.2 hmem.1
+                  | some destinationPair =>
+                      obtain ⟨kind, name⟩ := destinationPair
+                      cases hcall : callDestinationNamesHOL context kind name with
+                      | none =>
+                          intro hmem
+                          rw [compileProgHOL_call_destSome_nocall_handlerNone context function arguments kind name hcall] at hmem
+                          simp only [crepAssignedFreeVars] at hmem
+                          simp at hmem
+                      | some names =>
+                          intro hmem
+                          rw [compileProgHOL_call_destSome_somecall_handlerNone context function arguments kind name names hcall] at hmem
+                          simp only [mem_crepAssignedFreeVars_call_some_none] at hmem
+                          obtain ⟨sh, ns, hlk, hslots⟩ :=
+                            callDestinationNamesHOL_mem context kind name hcall
+                          rw [hslots] at hmem
+                          exact hfresh name sh ns hlk hmem
+              | some handlerTriple =>
+                  obtain ⟨exception, handlerVar, handlerProgram⟩ := handlerTriple
+                  cases heid : FLOOKUP context.eids exception with
+                  | none =>
+                      cases destination with
+                      | none =>
+                          intro hmem
+                          rw [compileProgHOL_call_destNone_handlerSome_eidsNone context function arguments exception handlerVar handlerProgram heid] at hmem
+                          rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _ (by simp)] at hmem
+                          simp only [mem_crepAssignedFreeVars_call_some_none] at hmem
+                          exact hmem.2 hmem.1
+                      | some destinationPair =>
+                          obtain ⟨kind, name⟩ := destinationPair
+                          cases hcall : callDestinationNamesHOL context kind name with
+                          | none =>
+                              intro hmem
+                              rw [compileProgHOL_call_destSome_nocall_handlerSome_eidsNone context function arguments kind name hcall exception handlerVar handlerProgram heid] at hmem
+                              simp only [crepAssignedFreeVars] at hmem
+                              simp at hmem
+                          | some names =>
+                              intro hmem
+                              rw [compileProgHOL_call_destSome_somecall_handlerSome_eidsNone context function arguments kind name names hcall exception handlerVar handlerProgram heid] at hmem
+                              simp only [mem_crepAssignedFreeVars_call_some_none] at hmem
+                              obtain ⟨sh, ns, hlk, hslots⟩ :=
+                                callDestinationNamesHOL_mem context kind name hcall
+                              rw [hslots] at hmem
+                              exact hfresh name sh ns hlk hmem
+                  | some code =>
+                      have hprog : x ∉ crepAssignedFreeVars (compileProgHOL context handlerProgram) :=
+                        ih (sizeOf handlerProgram) (by rw [← hn]; decreasing_trivial)
+                          handlerProgram rfl context x hfresh hx
+                      have hsetup : x ∉ crepAssignedFreeVars (expHdlFiniteMap (α := α) context.vars handlerVar) := by
+                        cases hvh : FLOOKUP context.vars handlerVar with
+                        | none => simp [expHdlFiniteMap, hvh, crepAssignedFreeVars]
+                        | some pair =>
+                            obtain ⟨handlerShape, handlerNames⟩ := pair
+                            rw [expHdlFiniteMap_eq_assignRet (shape := handlerShape) hvh,
+                              crepAssignedFreeVars_assignRet]
+                            exact hfresh handlerVar handlerShape handlerNames hvh
+                      have hseq : x ∉ crepAssignedFreeVars
+                          (CrepProg.seq (expHdlFiniteMap (α := α) context.vars handlerVar)
+                            (compileProgHOL context handlerProgram)) := by
+                        rw [mem_crepAssignedFreeVars_seq]
+                        rintro (h | h)
+                        · exact hsetup h
+                        · exact hprog h
+                      cases destination with
+                      | none =>
+                          intro hmem
+                          rw [compileProgHOL_call_destNone_handlerSome_eidsSome context function arguments exception handlerVar handlerProgram code heid] at hmem
+                          rw [crepAssignedFreeVars_nestedDecs_mem_iff _ _ _ (by simp)] at hmem
+                          simp only [mem_crepAssignedFreeVars_call_some_some] at hmem
+                          rcases hmem.1 with hmem1 | hmem1
+                          · exact hmem.2 hmem1
+                          · exact hseq hmem1
+                      | some destinationPair =>
+                          obtain ⟨kind, name⟩ := destinationPair
+                          cases hcall : callDestinationNamesHOL context kind name with
+                          | none =>
+                              intro hmem
+                              rw [compileProgHOL_call_destSome_nocall_handlerSome_eidsSome context function arguments kind name hcall exception handlerVar handlerProgram code heid] at hmem
+                              simp only [mem_crepAssignedFreeVars_call_some_some] at hmem
+                              rcases hmem with h0 | hmem
+                              · simp at h0
+                              · exact hseq hmem
+                          | some names =>
+                              intro hmem
+                              rw [compileProgHOL_call_destSome_somecall_handlerSome_eidsSome context function arguments kind name names hcall exception handlerVar handlerProgram code heid] at hmem
+                              simp only [mem_crepAssignedFreeVars_call_some_some] at hmem
+                              rcases hmem with hnames | hmem
+                              · obtain ⟨sh, ns, hlk, hslots⟩ :=
+                                  callDestinationNamesHOL_mem context kind name hcall
+                                rw [hslots] at hnames
+                                exact hfresh name sh ns hlk hnames
+                              · exact hseq hmem
+  intro program context x hfresh hx
+  exact main (sizeOf program) program rfl context x hfresh hx
+
+/-- Exact HOL port of Cake `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`): if the context
+    bound holds and no variable's slot list contains `x`, then `x` is not among
+    the assigned free variables of the compiled program.  `ctxt_max` is only
+    needed to match HOL's statement shape (the bound argument uses the
+    freshness hypothesis directly). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "not_mem_context_assigned_mem_gt"]
+theorem notMemContextAssignedMemGt
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
+    (context : PanToCrepHOLContext α) (program : Prog α) (x : Nat)
+    (_hmax : ctxtMax context.vmax context.vars)
+    (hfresh : ∀ v sh ns', FLOOKUP context.vars v = some (sh, ns') → x ∉ ns')
+    (hx : x ≤ context.vmax) :
+    x ∉ crepAssignedFreeVars (compileProgHOL context program) :=
+  compileProgHOL_not_mem_assignedFreeVars program context x hfresh hx
+
+/-- `distinctLists` as a set-disjointness predicate: every element of the left
+    list is absent from the right list. -/
+theorem distinctLists_eq_true_iff {left right : List Nat} :
+    distinctLists left right = true ↔ ∀ x ∈ left, x ∉ right := by
+  simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]
+
+/-- Exact HOL port of Cake `rewritten_context_unassigned`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457`): extending the
+    context with the slot list `nvars` for variable `v` (whose previous slot
+    list is `ns`, with `distinct_lists nvars ns`) keeps every slot of `ns`
+    outside the assigned free variables of the compiled program. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "rewritten_context_unassigned"]
+theorem rewrittenContextUnassigned [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    [CrepBytesInWord α]
+    (program : Prog α) (nctxt ctxt : PanToCrepHOLContext α) (v : VarName)
+    (ns nvars : List Nat) (sh sh' : Shape)
+    (hnctxt : nctxt =
+      { ctxt with
+        vars := FUPDATE ctxt.vars (v, (sh, nvars))
+        vmax := ctxt.vmax + Shape.shapeSize sh })
+    (hlookup : FLOOKUP ctxt.vars v = some (sh', ns))
+    (hnoOverlap : noOverlap ctxt.vars) (hctxtMax : ctxtMax ctxt.vmax ctxt.vars)
+    (_hnoOverlapN : noOverlap nctxt.vars)
+    (hctxtMaxN : ctxtMax nctxt.vmax nctxt.vars)
+    (hdistinct : distinctLists nvars ns = true) :
+    distinctLists ns (crepAssignedFreeVars (compileProgHOL nctxt program)) = true := by
+  rw [distinctLists_eq_true_iff] at hdistinct ⊢
+  intro x hxns hxafv
+  subst hnctxt
+  have hxle : x ≤ ctxt.vmax + Shape.shapeSize sh := by
+    have hle := hctxtMax.2 v sh' ns hlookup x hxns
+    omega
+  have hfreshN :
+      ∀ v' sh'' ns'', FLOOKUP (FUPDATE ctxt.vars (v, (sh, nvars))) v' =
+        some (sh'', ns'') → x ∉ ns'' := by
+    intro v' sh'' ns'' hlk
+    rw [FLOOKUP_update] at hlk
+    by_cases hv : (v == v') = true
+    · rw [if_pos hv] at hlk
+      have hpair : (sh, nvars) = (sh'', ns'') := Option.some.inj hlk
+      have hn : nvars = ns'' := congrArg Prod.snd hpair
+      intro hxns''
+      exact (hdistinct x (by rw [hn]; exact hxns'')) hxns
+    · rw [if_neg hv] at hlk
+      intro hxns''
+      have hveq : v = v' :=
+        hnoOverlap.2 v v' sh' sh'' ns ns'' hlookup hlk ⟨x, hxns, hxns''⟩
+      rw [beq_iff_eq] at hv
+      exact hv hveq
+  exact notMemContextAssignedMemGt
+    { ctxt with
+      vars := FUPDATE ctxt.vars (v, (sh, nvars))
+      vmax := ctxt.vmax + Shape.shapeSize sh }
+    program x hctxtMaxN hfreshN hxle hxafv
 
 /-- Flapjack-specific analogue of HOL `pan_to_crepProofScript.sml:3051`
 `evaluate_replicate_const`.  NOT a port: the production Crep evaluator

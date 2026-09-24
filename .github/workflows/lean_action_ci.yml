@@ -26,8 +26,10 @@ jobs:
         run: |
           git submodule update --init --depth 1 -- cakeml
           python3 -m unittest discover -s scripts/tests -p 'test_check_hol*.py'
+          bash scripts/test-hol-ref-syntax.sh
           python3 scripts/check-hol-refs.py
           python3 scripts/check_hol_theorem_map.py
+          python3 scripts/check_hol_type_hashes.py
 
       - name: Check exact Pancake RISC-V parity fixtures
         run: |

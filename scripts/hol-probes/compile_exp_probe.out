@@ -1,7 +1,13 @@
 leaves=(([Const 7w],One),([Const 0w],One),([BaseAddr],One),[TopAddr],One)
+bytes_in_word=([Const (n2w (dimindex (:word64) DIV 8))],One)
+nstruct=([Const 0w],One)
+nfield=([Const 0w],One)
+load_one=([Load (Const 3w)],One)
+load_two=([Load (Const 3w); Load (Op Add [Const 3w; Const 8w])],Comb [One; One])
 struct_field=(([Const 1w; Const 2w],Comb [One; One]),[Const 2w],One)
 loads_ops=(([Load32 (Const 3w)],One),([LoadByte (Const 4w)],One),
  ([Op Add [Const 1w; Const 2w]],One),[Crepop Mul [Const 5w; Const 6w]],One)
+op_nary=([Op Add [Const 1w; Const 2w; Const 3w]],One)
 cmp_shift=(([Cmp Equal (Const 1w) (Const 0w)],One),[Shift Lsl (Const 2w) (Const 1w)],
  One)
 finite_map_shadow=([Var 5],One)

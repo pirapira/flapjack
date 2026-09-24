@@ -1,17 +1,12 @@
 const_mul=Const 6w
-
 left_const=Shift Lsl (Var 2) (Const 1w)
-
 right_const=Shift Lsl (Var 2) (Const 1w)
-
 odd_const=Crepop Mul [Var 2; Const 3w]
-
 nested_const=Const 24w
-
 load_child=Load (Shift Lsl (Var 2) (Const 1w))
-
 op_child=Op Add [Shift Lsl (Var 2) (Const 1w)]
-
 mul_vars=Crepop Mul [Var 2; Var 3]
-
 fallback_var=Var 7
+mul_eight_shape=Shift Lsl (Var 2) (Const 3w)
+eval_simp_before=SOME (Word 40w)
+eval_simp_after=SOME (Word 40w)

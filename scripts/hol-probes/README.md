@@ -155,14 +155,23 @@ explicit. Focused checks for the source overlay and production mismatch are in
 direct HOL `get_byte` index arithmetic; tests cover both endiannesses at width
 24, plus a 24-bit 32-bit-load fixture. Its `aligned` operation is now expressed
 as divisibility by the requested byte alignment. The `word_of_bytes` operation
-still comes from the transported RISC-V model and needs its own correspondence
-proof. The generic
+uses a four-byte arithmetic expansion with the source byte-slot wrap for
+`dimindex DIV 8`; `word_byte_memory_probe.out` records the imported recursive
+`word_of_bytes`/`set_byte` definitions and HOL's width-17 four-write expansion.
+The equality between the arithmetic expansion and HOL's recursive definition
+is not yet proved for arbitrary dimensions. `setByte` now uses the
+byte-slot arithmetic update in the source adapter, but its equality with HOL's
+bit-slice `set_byte` formula is also unproved. The generic
 Crep source helpers `crepHolEvalMemLoadByte` and `crepHolEvalMemLoad32`, plus
 their equations to `panModelReadByte`/`panModelRead32`, are in
 `Flapjack.Pancake.Semantics.CrepSem`; they keep the `PanMemoryModel` explicit
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
+`word_byte_memory_probeScript.sml` is run from HOL4's built
+`src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
+depend on built CakeML Pancake theories. Refresh it with
+`HOL_PROBE_ONLY=word_byte_memory_probeScript.sml scripts/hol-probes/regenerate.sh`.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of
 `crepSem$eval` after `crep_arith$mul_const` for zero, one, power-of-two, and
 general multipliers, with a word-valued local. Its matching production runtime

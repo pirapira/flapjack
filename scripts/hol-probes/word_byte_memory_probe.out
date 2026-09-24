@@ -1,0 +1,28 @@
+byte_index_definition=∀a is_bigendian.
+  byte_index a is_bigendian =
+  (let
+     d = dimindex (:α) DIV 8
+   in
+     if is_bigendian then 8 * (d − 1 − w2n a MOD d) else 8 * (w2n a MOD d))
+get_byte_definition=∀a w is_bigendian.
+  get_byte a w is_bigendian = w2w (w ⋙ byte_index a is_bigendian)
+set_byte_definition=∀a b w is_bigendian.
+  set_byte a b w is_bigendian =
+  (let
+     i = byte_index a is_bigendian
+   in
+     word_slice_alt (dimindex (:α)) (i + 8) w ‖ w2w b ≪ i ‖
+     word_slice_alt i 0 w)
+word_of_bytes_definition=(∀be a. word_of_bytes be a [] = 0w) ∧
+∀be a b bs.
+  word_of_bytes be a (b::bs) = set_byte a b (word_of_bytes be (a + 1w) bs) be
+word_of_bytes_width17_little=word_of_bytes F 0w [17w; 50w; 17w; 50w] =
+set_byte 0w 17w
+  (set_byte (0w + 1w) 50w
+     (set_byte (0w + 1w + 1w) 17w (set_byte (0w + 1w + 1w + 1w) 50w 0w F) F)
+     F) F
+word_of_bytes_width17_big=word_of_bytes T 0w [50w; 17w; 50w; 17w] =
+set_byte 0w 50w
+  (set_byte (0w + 1w) 17w
+     (set_byte (0w + 1w + 1w) 50w (set_byte (0w + 1w + 1w + 1w) 17w 0w T) T)
+     T) T

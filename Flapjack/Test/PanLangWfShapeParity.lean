@@ -31,4 +31,15 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- Build/executable regression: the production `isWfShape` reproduces the six
+    checked-in direct HOL rows. This checks behavior only; exactness is not
+    claimed (see `flapjack-pxn.18.3.6.3` / `.18.3.6.7`). -/
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS panLang is_wf_shape parity (6 HOL rows)"
+    pure true
+  else
+    IO.println "FAIL panLang is_wf_shape parity"
+    pure false
+
 end Flapjack.Test.PanLangWfShapeParity

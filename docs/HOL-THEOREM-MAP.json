@@ -1155,9 +1155,9 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "dec_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "decCrepHolClock",
+    "lean_name": "decCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact 11-field CrepHolState clock decrement, co-located with the crepSem counterpart and used by the tagged crep_inline locals_rel_dec_clock theorem. The executable CrepRuntimeState has extra configuration fields and retains its documented untagged decCrepClock adapter."
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of dec_clock_def crepSemScript.sml:145-148 at the word-length carrier 'a := BitVec width: decCrepHolClockW s = s with clock := s.clock - 1. Generic-alpha decCrepHolClock stays untagged as production's implementation; kernel-checked bridge decCrepHolClockW_eq_decCrepHolClock; the width-indexed theorem decCrepHolClock_simp (Flapjack/Pancake/Semantics/CrepProps.lean) uses the generic def instantiated at BitVec width; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -6979,9 +6979,9 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "fix_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "fixCrepHolClock",
+    "lean_name": "fixCrepHolClockW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (clause-for-clause port of crepSemScript.sml:150-152 over the 11-field CrepHolState; direct HOL-EVAL rows fix_clock_clamps/fix_clock_keeps_lower reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)."
+    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of fix_clock_def crepSemScript.sml:150-152 at the word-length carrier 'a := BitVec width: keep the result and clamp the returned clock to MIN old/new. Generic-alpha fixCrepHolClock stays untagged as production's implementation; kernel-checked bridge fixCrepHolClockW_eq_fixCrepHolClock; untagged fixCrepHolClock_clock_le keeps HOL fix_clock_IMP_LESS_EQ; exact-shape rule requires the width-indexed carrier)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",

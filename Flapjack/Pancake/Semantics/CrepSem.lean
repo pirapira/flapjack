@@ -200,10 +200,26 @@ theorem setCrepHolGlobalsW_eq_setCrepHolGlobals {width : Nat} {σ : Type}
     (state : CrepHolState (BitVec width) σ) :
     setCrepHolGlobalsW key value state = setCrepHolGlobals key value state := rfl
 
-/-- HOL `crepSem$dec_clock_def` on the 11-field Crep state. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+/-- Generic production clock decrement on the 11-field `CrepHolState`. HOL
+    `crepSem$dec_clock_def` (`crepSemScript.sml:145-148`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `decCrepHolClockW` below. -/
 def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with clock := state.clock - 1 }
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$dec_clock_def`
+    (`crepSemScript.sml:145-148`): `dec_clock s = s with clock := s.clock - 1`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+def decCrepHolClockW {width : Nat} {σ : Type} (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Kernel-checked bridge: the width-indexed exact `dec_clock` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem decCrepHolClockW_eq_decCrepHolClock {width : Nat} {σ : Type}
+    (state : CrepHolState (BitVec width) σ) :
+    decCrepHolClockW state = decCrepHolClock state := rfl
 
 /-- Generic production local-binding update on the 11-field `CrepHolState`.
     HOL `crepSem$set_var_def` (`crepSemScript.sml:55-57`) is word-length indexed
@@ -725,11 +741,10 @@ inductive CrepResultHOL (α ε : Type u) where
 abbrev CrepRuntimeStep (α σ ε : Type u) :=
   CrepRuntimeResult α ε × CrepRuntimeState α σ
 
-/-- HOL `crepSem$fix_clock_def` (crepSemScript.sml:150-152) on the 11-field
-    Crep state: keep the result and clamp the returned clock to the smaller of
-    the old and new clocks.  This is the clock-clamping component used by the
-    faithful `Seq`/`While`/`Call` clauses of `evaluate_def`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+/-- Generic production clock-clamping on the 11-field `CrepHolState`. HOL
+    `crepSem$fix_clock_def` (`crepSemScript.sml:150-152`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `fixCrepHolClockW` below. -/
 def fixCrepHolClock (oldState : CrepHolState α σ)
     (step : CrepRuntimeResult α ε × CrepHolState α σ) :
     CrepRuntimeResult α ε × CrepHolState α σ :=
@@ -737,6 +752,26 @@ def fixCrepHolClock (oldState : CrepHolState α σ)
     { step.2 with
       clock :=
         if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$fix_clock_def`
+    (`crepSemScript.sml:150-152`) over the word-length-indexed carrier
+    `CrepHolState (BitVec width) σ`: keep the result and clamp the returned
+    clock to the smaller of the old and new clocks. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+def fixCrepHolClockW {width : Nat} {σ ε : Type} (oldState : CrepHolState (BitVec width) σ)
+    (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :
+    CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ :=
+  (step.1,
+    { step.2 with
+      clock :=
+        if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- Kernel-checked bridge: the width-indexed exact `fix_clock` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem fixCrepHolClockW_eq_fixCrepHolClock {width : Nat} {σ ε : Type}
+    (oldState : CrepHolState (BitVec width) σ)
+    (step : CrepRuntimeResult (BitVec width) ε × CrepHolState (BitVec width) σ) :
+    fixCrepHolClockW oldState step = fixCrepHolClock oldState step := rfl
 
 /-- The clock bound `fix_clock_IMP_LESS_EQ` (crepSemScript.sml:155-157): the
     clamped clock never exceeds the old state's clock.  Untagged here because

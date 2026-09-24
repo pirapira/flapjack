@@ -284,6 +284,18 @@ example :
     emptyCrepHolLocalsW localBase = emptyCrepHolLocals localBase :=
   emptyCrepHolLocalsW_eq_emptyCrepHolLocals localBase
 
+example :
+    decCrepHolClockW localBase = decCrepHolClock localBase :=
+  decCrepHolClockW_eq_decCrepHolClock localBase
+
+example :
+    fixCrepHolClockW localBase
+        ((CrepRuntimeResult.normal : CrepRuntimeResult (BitVec 64) Unit), localBase) =
+      fixCrepHolClock localBase
+        ((CrepRuntimeResult.normal : CrepRuntimeResult (BitVec 64) Unit), localBase) :=
+  fixCrepHolClockW_eq_fixCrepHolClock localBase
+    ((CrepRuntimeResult.normal : CrepRuntimeResult (BitVec 64) Unit), localBase)
+
 /-! ## Production local-update adapters to the tagged HOL local defs
 
 These are Flapjack-only (untagged) bridge lemmas connecting the runtime

@@ -25,7 +25,11 @@ This module starts the genuinely HOL-shaped total interface:
 * `panSemProgResultOfClockResult` maps the executed clocked result onto it;
 * `panSemEvaluateSkip` and `panSemEvaluateTick` are base-case infrastructure
   for the eventual evaluator, not yet the single total recursive
-  `panSemEvaluate`.
+  `panSemEvaluate`;
+* `panSemTotalSeqStep` is the HOL `Seq` composition (clamp the first result's
+  clock with `fix_clock`, continue only on a normal completion) as a helper over
+  an already evaluated first pair and a continuation, not a whole-program
+  evaluator.
 
 The state half is the production `PanSemState`, so the eventual total
 `panSemEvaluate` returns a `PanSemProgResult α σ × PanSemState α (FfiState σ)`
@@ -187,5 +191,53 @@ theorem panSemEvaluateCodeStateWithPostState_tick_total
   rw [panSemEvaluateCodeStateWithPostState_tick]
   by_cases hclock : state.clock = 0 <;>
     simp [panSemTotalOfExecuted, panSemEvaluateTick, panSemProgResultOfClockResult, hclock]
+
+/-- HOL `fix_clock` (`cakeml/pancake/semantics/panSemScript.sml:446-449`): clamp
+    a returned state's clock to the entry clock. -/
+def panSemFixClock (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
+    PanSemState α (FfiState σ) :=
+  { state with clock := min entryClock state.clock }
+
+/-! ## Compositional `Seq` step
+
+    HOL `Seq` (`cakeml/pancake/semantics/panSemScript.sml:615-618`) fixes the
+    clock of the first command's result and continues with the second command
+    only on a normal completion.  This is exposed as a compositional helper over
+    an already evaluated first `(result, state)` pair and a continuation for the
+    second command: it is not a whole-program evaluator and has no default
+    branch for unimplemented constructors. -/
+
+/-- HOL `Seq` composition: given the evaluated first command's `(result, state)`
+    pair and a continuation for the second command, clamp the first state's
+    clock to the entry clock (`fix_clock`) and run the continuation only on a
+    normal completion; otherwise return the first outcome with the clamped
+    state. -/
+def panSemTotalSeqStep
+    (entryClock : Nat)
+    (firstResult : PanSemProgResult α σ) (firstState : PanSemState α (FfiState σ))
+    (continueSecond :
+      PanSemState α (FfiState σ) → PanSemProgResult α σ × PanSemState α (FfiState σ)) :
+    PanSemProgResult α σ × PanSemState α (FfiState σ) :=
+  let fixedState := panSemFixClock entryClock firstState
+  match firstResult with
+  | .normal => continueSecond fixedState
+  | other => (other, fixedState)
+
+@[simp] theorem panSemTotalSeqStep_normal
+    (entryClock : Nat) (firstState : PanSemState α (FfiState σ))
+    (continueSecond :
+      PanSemState α (FfiState σ) → PanSemProgResult α σ × PanSemState α (FfiState σ)) :
+    panSemTotalSeqStep entryClock .normal firstState continueSecond =
+      continueSecond (panSemFixClock entryClock firstState) := rfl
+
+theorem panSemTotalSeqStep_of_ne_normal
+    (entryClock : Nat) (firstResult : PanSemProgResult α σ)
+    (firstState : PanSemState α (FfiState σ))
+    (continueSecond :
+      PanSemState α (FfiState σ) → PanSemProgResult α σ × PanSemState α (FfiState σ))
+    (h : firstResult ≠ .normal) :
+    panSemTotalSeqStep entryClock firstResult firstState continueSecond =
+      (firstResult, panSemFixClock entryClock firstState) := by
+  cases firstResult <;> simp_all [panSemTotalSeqStep]
 
 end Flapjack

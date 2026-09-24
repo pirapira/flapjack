@@ -298,7 +298,7 @@ example : List.lookup "g" (compileToCrepHOL alookupDecls) =
         (panToCrepGetEidsFromDeclsHOL alookupDecls)) [("x", Shape.one)]
       Prog.skip) :=
   alookupCompileToCrepCodeGeneral alookupDecls "g" [("x", Shape.one)]
-    Prog.skip Shape.one (by decide)
+    Prog.skip Shape.one
     (by simp [alookupDecls, functionEntries, List.lookup_cons])
 
 def generalAlookupGuard : Bool :=

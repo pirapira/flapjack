@@ -241,4 +241,28 @@ example : numStackRet 1 [10, 20] = 2 := rfl
 example : stackArgCount (α := Nat) (β := Nat) (Sum.inr 4) 7 2 = 4 := rfl
 example : stackFree (α := Nat) (β := Nat) (Sum.inr 4) 7 2 7 9 = 3 := rfl
 
+/-! ## perf / handler-slot constant oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_perf_slots_probe.out` (bead
+`flapjack-pxn.18.5.15.3.8`):
+
+```
+ps_perf_rsp=14   ps_perf_rbp=15
+ps_handler_slots_true=5   ps_handler_slots_false=3
+```
+-/
+
+def perfSlotsParityGuard : Bool :=
+  (perfRsp == 14) && (perfRbp == 15) &&
+  (handlerSlots true == 5) && (handlerSlots false == 3)
+
+#eval perfSlotsParityGuard
+#guard perfSlotsParityGuard
+
+example : perfRsp = 14 := rfl
+example : perfRbp = 15 := rfl
+example : handlerSlots true = 5 := rfl
+example : handlerSlots false = 3 := rfl
+
 end Flapjack.Test.WordToStackBitsParity

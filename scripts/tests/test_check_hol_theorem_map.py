@@ -146,6 +146,62 @@ class ValidateInventoryTest(unittest.TestCase):
         )
         self.assertEqual(errors, [])
 
+    def test_reviewed_list_as_array_requires_qualified_tag_and_fields(self):
+        fields = ("degrees",)
+        tagged = {
+            (self.path, "exampleTheorem"): (
+                "cakeml/pancake/proofs/exampleProofScript.sml",
+                "example_theorem",
+                fields,
+            )
+        }
+        record = self.record(
+            statement_status="reviewed_list_as_array", list_as_array=["degrees"]
+        )
+        self.assertEqual(
+            MAP["validate_inventory"](
+                [record], {(self.path, "exampleTheorem")}, tagged
+            ),
+            [],
+        )
+
+    def test_qualified_tag_rejects_absent_or_misnamed_witness_field(self):
+        tagged = {
+            (self.path, "exampleTheorem"): (
+                "cakeml/pancake/proofs/exampleProofScript.sml",
+                "example_theorem",
+                ("degrees",),
+            )
+        }
+        exact = self.record(statement_status="reviewed_exact")
+        errors = MAP["validate_inventory"](
+            [exact], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("use reviewed_list_as_array" in e for e in errors))
+
+        qualified = self.record(
+            statement_status="reviewed_list_as_array", list_as_array=["move"]
+        )
+        errors = MAP["validate_inventory"](
+            [qualified], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("fields do not match" in e for e in errors))
+
+    def test_exact_tag_regression_remains_reviewed_exact(self):
+        record = self.record(statement_status="reviewed_exact")
+        errors = MAP["validate_inventory"](
+            [record],
+            {(self.path, "exampleTheorem")},
+            {
+                (self.path, "exampleTheorem"): (
+                    "cakeml/pancake/proofs/exampleProofScript.sml",
+                    "example_theorem",
+                    (),
+                )
+            },
+        )
+        self.assertEqual(errors, [])
+
     def test_missing_proofs_declaration_fails(self):
         errors = MAP["validate_inventory"](
             [], {(self.path, "exampleTheorem")}, {}

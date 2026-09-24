@@ -114,6 +114,7 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
   compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
+  compile_exp_correct_load_out_of_domain \
   compile_exp_correct_load_nested_named \
   compile_exp_correct_load32_le_success \
   compile_exp_correct_load_byte_out_of_domain \
@@ -378,6 +379,18 @@ run_probe pan_sem_while_error_probeScript.sml pan_sem_while_error_probe.out \
 # `fix_clock` clamp after a `Tick`.
 run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The If probe observes the then branch, the else branch, a non-word condition,
+# and a condition whose own evaluation fails (empty memory domain).
+run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
+  if_true_result if_fail_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The If memory probe observes a memory-reading condition: a nonzero cell
+# selecting the then branch, a zero cell selecting the else branch, an address
+# outside `memaddrs` rejected with Error, and the same cell selecting different
+# branches under little- versus big-endian byte reads.
+run_probe pan_sem_ite_memory_probeScript.sml pan_sem_ite_memory_probe.out \
+  if_mem_nonzero_result if_mem_byte_be_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.

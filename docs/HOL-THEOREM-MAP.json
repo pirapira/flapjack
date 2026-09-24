@@ -5213,7 +5213,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectLoadCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Load-constructor specialization proving the old-shape, value-field-validity, and converted-evaluation conclusion roles from successful source evaluation, context-view equality, field-validity and shape-map adapters, structInfosOk, and a recursive address IH. Intentionally untagged: HOL has only the universally quantified compile_exp_correct theorem; Lean's context premise compares projected field views rather than exact StructInfo records, uses total lookup functions/Bool adapters and explicit bytesInWord with a fuel-indexed Option loader, while HOL uses finite-map predicates and mem_load_conversion_inst over fixed-width memory. The local/global validity and map premises are retained but unused for this constructor. Direct HOL EVAL and paired Lean regression cover a nested named Pair load."
+    "reviewer": "Kernel-checked Load-constructor specialization proving the old-shape, value-field-validity, and converted-evaluation conclusion roles from successful source evaluation, context-view equality, field-validity and shape-map adapters, structInfosOk, and a recursive address IH. Source evaluation, address IH, and converted execution all use evalPanValueExpFull with the same explicit PanValueMemoryAccess derived from the state memory domain/endian fields. Intentionally untagged: HOL has only the universally quantified compile_exp_correct theorem; Lean compares projected field views rather than exact StructInfo records, uses total lookup functions/Bool adapters, exposes bytesInWord and the memory adapter, while HOL uses finite-map predicates and mem_load_conversion_inst over fixed-width memory. The local/global validity and map premises are retained but unused for this constructor. Direct HOL EVAL and paired Lean regressions cover successful flat/nested loads and out-of-domain failure."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -5265,6 +5265,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct_mmap_helper",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpsFullEvalOfPointwiseCorrect",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Full-evaluator counterpart of the local list-evaluation support for the Op specialization. One explicit PanValueMemoryAccess is threaded through source operands, pointwise recursive correctness, and converted operand-list evaluation. It remains untagged because HOL's helper is local over fixed-width eval and finite-map state, while Lean uses PanSemState total lookups, explicit bytesInWord, and a memory adapter."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectNStructCase",
@@ -5301,7 +5309,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpCorrectOpCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Kernel-checked Op-constructor specialization over production structCompileExp/evalPanValueExp. It retains source evaluation, projected context equality, pointwise Bool field validity, struct_infos_ok, local/global shape maps, and all three compile_exp_correct conclusions in the per-argument induction hypothesis. Successful Op evaluation is shown to produce exactly two words; the proof uses the production list-evaluation bridge and verifies word filtering commutes with panStructConvertValue. It remains untagged because HOL has only the universal compile_exp_correct theorem and the Lean state/evaluator interfaces use PanSemState lookups, pointwise adapters, and explicit bytesInWord."
+    "reviewer": "Kernel-checked Op-constructor specialization over production structCompileExp/evalPanValueExpFull. It retains source evaluation, projected context equality, pointwise Bool field validity, struct_infos_ok, local/global shape maps, and all three compile_exp_correct conclusions in the per-argument induction hypothesis. The same PanValueMemoryAccess drives source evaluation, recursive operand hypotheses, and converted execution, preserving memory behavior in nested arguments. It remains untagged because HOL has only the universal compile_exp_correct theorem and Lean uses PanSemState lookups, projected/Bool adapters, explicit bytesInWord, and a memory-access parameter."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

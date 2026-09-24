@@ -236,6 +236,15 @@ val _ = print_eval "compile_exp_correct_load"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^load_state)
        (pan_structs$compile_exp ^ctxt ^load_expression) =
          SOME (pan_structsProof$convert_v ^load_value))``;
+val load_out_of_domain_state = ``^load_state with memaddrs := {1w}``;
+val _ = print_eval "compile_exp_correct_load_out_of_domain"
+  ``(pan_structs$old_exp_shape ^ctxt ^load_expression,
+     panSem$shape_of ^load_value,
+     pan_structsProof$v_flds_ok (^load_out_of_domain_state).structs ^load_value,
+     panSem$eval ^load_out_of_domain_state ^load_expression = SOME ^load_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^load_out_of_domain_state)
+       (pan_structs$compile_exp ^ctxt ^load_expression) =
+         SOME (pan_structsProof$convert_v ^load_value))``;
 
 val nested_load_ctxt =
   ``<| structs := [(strlit "Pair", [(strlit "inner", Named (strlit "Inner"));

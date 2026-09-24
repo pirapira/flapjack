@@ -8374,5 +8374,37 @@
   "lean_name": "distinctListsHol",
   "statement_status": "reviewed_exact",
   "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-}
+},
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "append_aux_def",
+    "lean_path": "Flapjack/Misc/AppList.lean",
+    "lean_name": "appendAux",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "append_def",
+    "lean_path": "Flapjack/Misc/AppList.lean",
+    "lean_name": "appListAppend",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "append_aux_thm",
+    "lean_path": "Flapjack/Misc/AppList.lean",
+    "lean_name": "appendAux_thm",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "append_thm",
+    "lean_path": "Flapjack/Misc/AppList.lean",
+    "lean_name": "appListAppend_thm",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  }
 ]

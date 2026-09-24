@@ -1236,3 +1236,10 @@ run_probe riscv_config_probeScript.sml riscv_config_probe.out \
   cfg_isa valid_imm_add_max12p1 \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
+
+# The misc app_list probe observes HOL `append_aux`/`append` flattening the
+# `app_list` concatenation tree used by the stack_to_lab flatten statement.
+run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
+  append_aux_list append_aux_suffix \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"

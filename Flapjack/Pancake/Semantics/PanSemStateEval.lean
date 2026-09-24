@@ -674,4 +674,36 @@ theorem panValueFlatContextFuel_lookupInfoWithRest_le [BEq String] (name : Strin
         simp only [panValueFlatContextFuel]
         omega
 
+/-! ### Per-node word read agreement (flapjack-pxn.18.3.6.9.2.2.1)
+
+    The executed `PanSemBitVec64` memory access reads a word cell only when the
+    address is in `state.memaddrs` and the cell holds a `.word`; the exact
+    `panMemLoadHOL` reads the total `HolWordLab` view under the domain
+    `state.memaddrs address && panValueWordDefined memory address = true`.  This
+    lemma shows the production `panValueFlatReadWord` agrees with that exact
+    domain/memory pair at every address. -/
+theorem panValueFlatReadWord_eq_panValueWordHOL
+    (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (address : RiscV.Word 64) :
+    panValueFlatReadWord memory panSemBitVec64BytesInWord
+        (some (panSemBitVec64MemoryAccess state)) address
+      = (if state.memaddrs address && panValueWordDefined memory address = true
+          then some (panValueWordHOL memory address) else none).map
+          (fun lab => match lab with | .word value => value) := by
+  unfold panValueFlatReadWord
+  unfold panSemBitVec64MemoryAccess panValueMemoryAccessOfModel
+  simp only []
+  cases hmem : memory address with
+  | none => cases hd : state.memaddrs address <;> simp [panValueWordDefined, hmem]
+  | some cell =>
+      cases cell with
+      | word w =>
+          cases hd : state.memaddrs address <;>
+            simp [panValueWordHOL, panValueWordDefined, hmem]
+      | rStruct fs =>
+          cases hd : state.memaddrs address <;> simp [panValueWordDefined, hmem]
+      | nStruct nm fs =>
+          cases hd : state.memaddrs address <;> simp [panValueWordDefined, hmem]
+
 end Flapjack

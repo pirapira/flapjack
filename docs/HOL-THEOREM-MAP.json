@@ -7382,5 +7382,13 @@
     "lean_name": "labelsRel_of_perm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_empty_zip_flookup",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fmEmptyZipFlookup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against fm_empty_zip_flookup at pan_commonPropsScript.sml:448; HOL EL rendered as bounded getElem as in elLoadGlobals; direct HOL-EVAL row zip_lookup_witness reproduced by Lean guard in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   }
 ]

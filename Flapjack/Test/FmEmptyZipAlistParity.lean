@@ -1,8 +1,8 @@
 import Flapjack.Pancake.Semantics.PanCommonProps
 
 /-!
-Parity checks for the exact port of HOL `fm_empty_zip_alist` in
-`Flapjack/Pancake/Semantics/PanCommonProps.lean`.
+Parity checks for the exact ports of HOL `fm_empty_zip_alist` and
+`fm_empty_zip_flookup` in `Flapjack/Pancake/Semantics/PanCommonProps.lean`.
 
 Direct HOL-EVAL rows in `scripts/hol-probes/fm_empty_zip_alist_probe.out`:
 
@@ -10,6 +10,7 @@ Direct HOL-EVAL rows in `scripts/hol-probes/fm_empty_zip_alist_probe.out`:
 fold_flookup_eq=T
 flookup_first=SOME 20
 flookup_absent=NONE
+zip_lookup_witness=T
 ```
 -/
 
@@ -35,6 +36,21 @@ theorem foldFlookupEq :
 example : FUPDATE_LIST FEMPTY (xs.zip ys) = alistToFmap (xs.zip ys) :=
   fmEmptyZipAlist xs ys xsLength xsNodup
 
+/-- The duplicate-free zip lookup exposes the common index (HOL
+    `fm_empty_zip_flookup`). -/
+theorem zipLookupWitness :
+    ∃ (n : Nat) (hn : n < xs.length),
+      (xs.zip ys)[n]'(by rw [List.length_zip]; exact Nat.lt_min.mpr ⟨hn, xsLength ▸ hn⟩) =
+        (3, 30) :=
+  fmEmptyZipFlookup xs ys 3 30 xsLength xsNodup (by decide)
+
+/-- Bool guard for the lookup-witness oracle row `zip_lookup_witness=T`. -/
+def zipFlookupGuard : Bool :=
+  (FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) 3 == some 30) &&
+  ((xs.zip ys)[2]? == some (3, 30))
+
+#guard zipFlookupGuard
+
 /-- Fold/fmap equality restricted to the concrete oracle lookups. -/
 def parityGuard : Bool :=
   (FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) 2 == some 20) &&
@@ -47,9 +63,9 @@ def parityGuard : Bool :=
 #eval parityGuard
 
 def runChecks : IO Bool := do
-  let ok := parityGuard
-  IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality matches HOL"
-    else "FAIL Crep fm_empty_zip_alist fold/alist equality matches HOL")
+  let ok := parityGuard && zipFlookupGuard
+  IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL"
+    else "FAIL Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL")
   return ok
 
 end Flapjack.Test.FmEmptyZipAlistParity

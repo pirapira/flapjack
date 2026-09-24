@@ -117,4 +117,23 @@ theorem fmEmptyZipAlist [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
             rw [hkeys]; exact hmem
           exact (FUPDATE_FUPDATE_LIST_commutes FEMPTY x y (xs.zip ys) hnotin).symm
 
+/-- Exact port of HOL `fm_empty_zip_flookup`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:448`): a successful
+    lookup in a duplicate-free zipped finite map comes from one of the listed
+    pairs, exposing the common index. HOL's `EL n (ZIP (xs,ys)) = (x,y)` is
+    rendered as a bounded `getElem`, matching the tagged `elLoadGlobals`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_empty_zip_flookup"]
+theorem fmEmptyZipFlookup [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
+    (x : α) (y : β) (_hlen : xs.length = ys.length) (_hdistinct : xs.Nodup)
+    (hlookup : FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) x = some y) :
+    ∃ (n : Nat) (hn : n < xs.length),
+      (xs.zip ys)[n]'(by rw [List.length_zip]; exact Nat.lt_min.mpr ⟨hn, by omega⟩) =
+        (x, y) := by
+  rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap α β) (xs.zip ys) x y
+      hlookup with
+    ⟨entry, hmem, hkey, hvalue⟩ | hbase
+  · obtain ⟨i, hi, _hj, hfst, hsnd⟩ := mem_zip_getElem xs ys entry hmem
+    exact ⟨i, hi, by rw [List.getElem_zip, hfst, hsnd, hkey, hvalue]⟩
+  · simp at hbase
+
 end Flapjack

@@ -8085,6 +8085,6 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemLoadHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL mem_load_def defines mem_load/mem_loads/mem_load_flds; Lean mutual panMemLoadHOL/panMemLoadsHOL/panMemLoadFldsHOL over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop/DecidablePred word-set domain, recursive address advance addr + bytesInWord * n2w (size_of_sh_with_ctxt stcs shape) with sizeOfShWithCtxt; HOL Named lookup dropWhile (\\(n,i). ~(n = nm)) stcs rendered as the equivalent structural scan over the context (termination image of HOL's (LENGTH stcs, shape_size)); direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
+    "reviewer": "Codex (source comparison; HOL mem_load/mem_loads/mem_load_flds clauses over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop domain; argument order follows HOL currying (sh addr dm m stcs) with no free bytes_in_word parameter - the canonical panBytesInWord width = n2w(width/8) is used internally; HOL's dropWhile Named lookup is inlined as an equivalent structural scan rendering the lexicographic (LENGTH stcs, shape_size) measure; direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
   }
 ]

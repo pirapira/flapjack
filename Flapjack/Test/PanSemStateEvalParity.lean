@@ -268,8 +268,6 @@ private def memStructured : Word64 → HolWordLab 64 := fun address =>
 
 private abbrev domStructured : Word64 → Prop := fun address => address = 0 ∨ address = 8
 
-private def bytesInWord64 : Word64 := BitVec.ofNat 64 8
-
 private def isVal (expected : Word64) : Option (HolValue 64) → Bool
   | some (.val (.word value)) => value == expected
   | _ => false
@@ -286,17 +284,14 @@ private def isNamedField (name field : String) (expected : Word64) :
   | _ => false
 
 #guard isVal (BitVec.ofNat 64 0x11)
-  (panMemLoadHOL (width := 64) structsS bytesInWord64 memStructured domStructured 0 .one)
-#guard panMemLoadHOL (width := 64) structsS bytesInWord64 memStructured (fun _ => False) 0 .one
+  (panMemLoadHOL (width := 64) .one 0 domStructured memStructured structsS)
+#guard panMemLoadHOL (width := 64) .one 0 (fun _ => False) memStructured structsS
   = none
 #guard isCombPair (BitVec.ofNat 64 0x11) (BitVec.ofNat 64 0x22)
-  (panMemLoadHOL (width := 64) structsS bytesInWord64 memStructured domStructured 0
-    (.comb [.one, .one]))
+  (panMemLoadHOL (width := 64) (.comb [.one, .one]) 0 domStructured memStructured structsS)
 #guard isNamedField "S" "f" (BitVec.ofNat 64 0x11)
-  (panMemLoadHOL (width := 64) structsS bytesInWord64 memStructured domStructured 0
-    (.named "S"))
-#guard panMemLoadHOL (width := 64) structsS bytesInWord64 memStructured domStructured 0
-    (.named "T")
+  (panMemLoadHOL (width := 64) (.named "S") 0 domStructured memStructured structsS)
+#guard panMemLoadHOL (width := 64) (.named "T") 0 domStructured memStructured structsS
   = none
 #guard sizeOfShWithCtxt structsS (.named "S") == 3
 #guard sizeOfShWithCtxt structsS (.comb [.one, .one]) == 2

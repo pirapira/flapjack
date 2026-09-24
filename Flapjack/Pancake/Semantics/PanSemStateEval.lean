@@ -203,25 +203,34 @@ termination_by shape => sizeOf shape
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial
 
+
+/-- HOL `bytes_in_word` (`n2w (dimindex(:'a) DIV 8)`), used by `mem_load` to
+    advance the address between structure fields. -/
+def panBytesInWord (width : Nat) : RiscV.Word width :=
+  BitVec.ofNat width (width / 8)
+
 /-! Statement-exact port of HOL `panSem$mem_load` (`cakeml/pancake/semantics/panSemScript.sml:137`,
-    defining `mem_load`, `mem_loads`, and `mem_load_flds`).  The struct context is
-    the HOL-shaped `StructContextHOL`; the memory is rendered as a total
-    `HolWordLab` map with a `Prop` domain (HOL `'a word set`), and the recursive
-    address advance is `addr + bytes_in_word * n2w (size_of_sh_with_ctxt stcs shape)`
-    with `bytesInWord = n2w (width / 8)`.  HOL's `Named` lookup
-    `dropWhile (\(n,i). ~(n = nm)) stcs` is inlined as the equivalent structural
-    scan over the context (needed for the Lean termination measure
-    `(structs.length, sizeOf shape)`, the image of HOL's lexicographic
+    defining `mem_load`, `mem_loads`, and `mem_load_flds`).  The argument order
+    follows HOL currying (`mem_load sh addr dm m stcs`), and `bytes_in_word` is
+    the canonical `panBytesInWord width`, exactly as HOL's global
+    `bytes_in_word = n2w (dimindex(:'a) DIV 8)` (no free parameter).  The struct
+    context is the HOL-shaped `StructContextHOL`; the memory is rendered as a
+    total `HolWordLab` map with a `Prop` domain (HOL `'a word set`).  HOL's
+    `Named` lookup `dropWhile (\(n,i). ~(n = nm)) stcs` is inlined as the
+    equivalent structural scan over the context (needed for the Lean termination
+    measure `(structs.length, sizeOf shape)`, the image of HOL's lexicographic
     `(LENGTH stcs, shape_size)`); the scan returns the first name match together
     with the remaining context, exactly the `(nm,info)::stcs'` HOL destructures. -/
 mutual
   @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_def"]
-  def panMemLoadHOL {width : Nat} (structs : StructContextHOL) (bytesInWord : RiscV.Word width)
-      (memory : RiscV.Word width → HolWordLab width) (domain : RiscV.Word width → Prop)
-      [DecidablePred domain] (address : RiscV.Word width) : Shape → Option (HolValue width)
+  def panMemLoadHOL {width : Nat} (shape : Shape) (address : RiscV.Word width)
+      (domain : RiscV.Word width → Prop) [DecidablePred domain]
+      (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
+      Option (HolValue width) :=
+    match shape with
     | .one => if domain address then some (.val (memory address)) else none
     | .comb shapes =>
-        match panMemLoadsHOL structs bytesInWord memory domain address shapes with
+        match panMemLoadsHOL shapes address domain memory structs with
         | some values => some (.rStruct values)
         | none => none
     | .named name =>
@@ -229,11 +238,11 @@ mutual
         | [] => none
         | (candidate, info) :: rest =>
             if candidate == name then
-              match panMemLoadFldsHOL rest bytesInWord memory domain address info.fields with
+              match panMemLoadFldsHOL info.fields address domain memory rest with
               | some fields => some (.nStruct candidate fields)
               | none => none
-            else panMemLoadHOL rest bytesInWord memory domain address (.named name)
-  termination_by _shape => (structs.length, sizeOf _shape)
+            else panMemLoadHOL (.named name) address domain memory rest
+  termination_by (structs.length, sizeOf shape)
   decreasing_by
     all_goals
       simp_wf
@@ -243,17 +252,20 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadsHOL {width : Nat} (structs : StructContextHOL) (bytesInWord : RiscV.Word width)
-      (memory : RiscV.Word width → HolWordLab width) (domain : RiscV.Word width → Prop)
-      [DecidablePred domain] (address : RiscV.Word width) : List Shape → Option (List (HolValue width))
+  def panMemLoadsHOL {width : Nat} (shapes : List Shape) (address : RiscV.Word width)
+      (domain : RiscV.Word width → Prop) [DecidablePred domain]
+      (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
+      Option (List (HolValue width)) :=
+    match shapes with
     | [] => some []
-    | shape :: shapes =>
-        match panMemLoadHOL structs bytesInWord memory domain address shape,
-              panMemLoadsHOL structs bytesInWord memory domain
-                (address + bytesInWord * BitVec.ofNat width (sizeOfShWithCtxt structs shape)) shapes with
+    | shape :: rest =>
+        match panMemLoadHOL shape address domain memory structs,
+              panMemLoadsHOL rest
+                (address + panBytesInWord width * BitVec.ofNat width (sizeOfShWithCtxt structs shape))
+                domain memory structs with
         | some value, some values => some (value :: values)
         | _, _ => none
-  termination_by _shapes => (structs.length, sizeOf _shapes)
+  termination_by (structs.length, sizeOf shapes)
   decreasing_by
     all_goals
       simp_wf
@@ -263,18 +275,20 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadFldsHOL {width : Nat} (structs : StructContextHOL) (bytesInWord : RiscV.Word width)
-      (memory : RiscV.Word width → HolWordLab width) (domain : RiscV.Word width → Prop)
-      [DecidablePred domain] (address : RiscV.Word width) :
-      List (FieldName × Shape) → Option (List (FieldName × HolValue width))
+  def panMemLoadFldsHOL {width : Nat} (fields : List (FieldName × Shape)) (address : RiscV.Word width)
+      (domain : RiscV.Word width → Prop) [DecidablePred domain]
+      (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
+      Option (List (FieldName × HolValue width)) :=
+    match fields with
     | [] => some []
-    | (field, shape) :: fields =>
-        match panMemLoadHOL structs bytesInWord memory domain address shape,
-              panMemLoadFldsHOL structs bytesInWord memory domain
-                (address + bytesInWord * BitVec.ofNat width (sizeOfShWithCtxt structs shape)) fields with
+    | (field, shape) :: rest =>
+        match panMemLoadHOL shape address domain memory structs,
+              panMemLoadFldsHOL rest
+                (address + panBytesInWord width * BitVec.ofNat width (sizeOfShWithCtxt structs shape))
+                domain memory structs with
         | some value, some values => some ((field, value) :: values)
         | _, _ => none
-  termination_by _fields => (structs.length, sizeOf _fields)
+  termination_by (structs.length, sizeOf fields)
   decreasing_by
     all_goals
       simp_wf

@@ -400,4 +400,26 @@ example : lookupCrepHolCode lookupCodeMap "missing" [] = none := by
         (lookupCrepHolCode lookupCodeMap "missing" []).isNone &&
         (lookupCrepHolCode lookupCodeMap "id" [PanWordLab.word 7, PanWordLab.word 8]).isNone
 
+/-- HOL `crepSem$mem_load_def` over the 11-field state: valid cell read and
+    out-of-domain miss, matching `scripts/hol-probes/crep_mem_load_probe.out`
+    (`mem_load_valid=SOME (Word 7w)`, `mem_load_invalid=NONE`). -/
+def memLoadBase : CrepHolState Nat Unit :=
+  { holBase with
+    memory := fun address => if address == 8 then .word 7 else .word 0
+    memaddrs := fun address => address == 8 }
+
+example : memLoadCrepHol (8 : Nat) memLoadBase = some (.word 7) := by
+  rfl
+
+example : memLoadCrepHol (9 : Nat) memLoadBase = none := by
+  rfl
+
+/-- The production runtime load is the tagged HOL `mem_load` on `toHolState`. -/
+example : crepRuntimeLoad globalState (8 : Nat) =
+    (memLoadCrepHol (8 : Nat) globalState.toHolState).map panTheWord :=
+  crepRuntimeLoad_eq_memLoadCrepHol globalState (8 : Nat)
+
+#guard (memLoadCrepHol (8 : Nat) memLoadBase == some (.word 7)) &&
+  (memLoadCrepHol (9 : Nat) memLoadBase).isNone
+
 end Flapjack.Test.CrepGlobalShapeParity

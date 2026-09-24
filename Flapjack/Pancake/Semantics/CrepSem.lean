@@ -216,6 +216,15 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
 
+/-- Exact HOL-shaped port of `crepSem$mem_load_def` (crepSemScript.sml:48-52)
+    over the 11-field `CrepHolState`:
+    `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`.
+    This is the word load used by the `Load` clause of `evaluate`; the result is
+    the total `word_lab` cell, exactly as in HOL. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+def memLoadCrepHol (address : α) (state : CrepHolState α σ) : Option (PanWordLab α) :=
+  if state.memaddrs address then some (state.memory address) else none
+
 /-- Forget the three target-configuration fields of the executable runtime
     state, obtaining the 11-field HOL-shaped state. -/
 def CrepRuntimeState.toHolState (state : CrepRuntimeState α σ) :
@@ -520,6 +529,14 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
 
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memaddrs address then some (panTheWord (state.memory address)) else none
+
+/-- The executed runtime word load is the tagged HOL `mem_load` on the
+    `toHolState` view, with the `word_lab` cell projected by `panTheWord`. -/
+theorem crepRuntimeLoad_eq_memLoadCrepHol (state : CrepRuntimeState α σ) (address : α) :
+    crepRuntimeLoad state address =
+      (memLoadCrepHol address state.toHolState).map panTheWord := by
+  by_cases h : state.memaddrs address <;>
+    simp [crepRuntimeLoad, memLoadCrepHol, CrepRuntimeState.toHolState, h]
 
 def crepRuntimeLoadByte [Add α] [OfNat α 1]
     (state : CrepRuntimeState α σ) (address : α) : Option α :=

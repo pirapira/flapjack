@@ -137,6 +137,30 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "fun_decl",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "FunDeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (field-by-field source comparison; HOL Datatype fun_decl = <| name : mlstring; inline : bool; export : bool; params : (varname # shape) list; body : 'a prog; return : shape |> (panLangScript.sml:102-109) vs FunDeclHOL {width} [NeZero width] with name : MlS, inline : Bool, exported : Bool (HOL 'export'), params : List (MlS x ShapeHOL), body : ProgHOL width, returnShape : ShapeHOL (HOL 'return', retyped because Lean reserves return as a keyword). Field types and order match with varname = MlS (exact mlstring carrier) and the word-indexed body. Production Flapjack.FunDecl is generic over String names and is untagged; codec funDeclToHOL/funDeclOfHOL with total kernel roundtrip funDeclToHOL_funDeclOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "decl",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "DeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype decl = Function ('a fun_decl) | Decl shape mlstring ('a exp) | ExnDecl eid shape | Name stcname ((fldname # shape) list) (panLangScript.sml:111-116) vs DeclHOL {width} [NeZero width] with the same four constructors and field types: function(FunDeclHOL width); decl(ShapeHOL)(MlS)(ExpHOL width); exnDecl(MlS)(ShapeHOL); name(MlS)(List (MlS x ShapeHOL)). Names eid/stcname/fldname = MlS (exact mlstring carrier). Production Flapjack.Decl is generic over String names and is untagged; codec declToHOL/declOfHOL with total kernel roundtrip declToHOL_declOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "struct_info",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "StructInfoHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (field-by-field source comparison; HOL Datatype struct_info = <| fields : (fldname # shape) list; size : num |> (panLangScript.sml:118-122) vs StructInfoHOLExact with fields : List (MlS x ShapeHOL) and size : Nat. fldname = MlS (exact mlstring carrier). The production Flapjack.StructInfoHOL uses String names and monomorphic Shape and is untagged; codec structInfoToHOL/structInfoOfHOL with total kernel roundtrip structInfoToHOL_structInfoOfHOL; direct HOL oracle scripts/hol-probes/pan_lang_decl_probe.out reproduced by Flapjack/Test/PanLangDeclHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",
@@ -1308,14 +1332,6 @@
     "hol_name": "compile_panop_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "compilePanOp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "exp_hdl_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "expHdlFiniteMap",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
   },
@@ -4478,14 +4494,6 @@
     "lean_name": "compileProgRiscV",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (RISC-V statement review)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "mk_ctxt_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "panToCrepMkCtxtHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -8750,6 +8758,22 @@
     "lean_name": "wMoveAux",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wMoveAux_def` at word_to_stackScript.sml:71-76 - [] -> Skip; [xy] -> wMoveSingle xy kf; xy::xys -> Seq (wMoveSingle xy kf) (wMoveAux xys kf), over the exact carrier ProgM alpha; HOL-EVAL rows wma_empty=T/wma_two=T reproduced by wMoveParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "copy_ret_aux_def",
+    "lean_name": "copyRetAux",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_aux_def` at word_to_stackScript.sml:429-441 - n=0 -> Skip else list_Seq [StackLoad k (n-1); StackStore k ((n-1)+f); copy_ret_aux k f (n-1)]. Word-independent (only Seq/StackLoad/StackStore/list_Seq with num fields), so exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cra_zero=T/cra_one=T/cra_two=T reproduced by copyRetParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "copy_ret_def",
+    "lean_name": "copyRet",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree, exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T reproduced by copyRetParityGuard.)"
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",

@@ -187,6 +187,35 @@ def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
 def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with clock := state.clock - 1 }
 
+/-- Exact HOL-shaped port of `crepSem$set_var_def` (crepSemScript.sml:55-57)
+    over the 11-field `CrepHolState`:
+    `set_var v w s = s with locals := s.locals |+ (v,w)`.
+    This is the local-binding step used by the `Assign` and `Primitive`
+    clauses of `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+def setCrepHolVar (name : Nat) (value : PanWordLab α)
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FUPDATE state.locals (name, value) }
+
+/-- Exact HOL-shaped port of `crepSem$upd_locals_def` (crepSemScript.sml:66-68)
+    over the 11-field `CrepHolState`, following HOL's `|++` (foldl `|+`) order:
+    `upd_locals varargs s = s with locals := FEMPTY |++ varargs`.
+    This is the callee-parameter step used by the `Call` clause of
+    `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
+    (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FUPDATE_LIST FEMPTY varargs }
+
+/-- Exact HOL-shaped port of `crepSem$empty_locals_def` (crepSemScript.sml:71)
+    over the 11-field `CrepHolState`:
+    `empty_locals s = s with locals := FEMPTY`.
+    This is the state-clearing step at the terminal `While` timeout, `Raise`
+    and `Return` boundaries of `evaluate`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
+  { state with locals := FEMPTY }
+
 /-- Forget the three target-configuration fields of the executable runtime
     state, obtaining the 11-field HOL-shaped state. -/
 def CrepRuntimeState.toHolState (state : CrepRuntimeState α σ) :

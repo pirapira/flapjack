@@ -6382,5 +6382,29 @@
     "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual Call-entry locals_rel composition for arbitrary full expression IHs: uses source lookup/bindPanValueParameters, production target code lookup, and code_rel to derive callee locals_rel. It derives the flattened argument-length equality internally from the successful source parameter match and source-value well-formedness; the expression induction and recursive body/handler Call_Ret_Exception composition remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "setCrepHolVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Ports set_var v w s = s with locals := s.locals |+ (v,w) (crepSemScript.sml:55-57) over the 11-field CrepHolState. Direct HOL oracle scripts/hol-probes/crep_local_updates_probe.out rows set_var_hit/set_var_keeps_other/set_var_fields_preserved; Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "upd_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "updCrepHolLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Ports upd_locals varargs s = s with locals := FEMPTY |++ varargs (crepSemScript.sml:66-68), following HOL foldl |+ order. Direct oracle row upd_locals_replace; Lean guards."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "emptyCrepHolLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Ports empty_locals s = s with locals := FEMPTY (crepSemScript.sml:71) over CrepHolState. Direct oracle rows empty_locals_none/empty_locals_fields_preserved; Lean guards."
   }
 ]

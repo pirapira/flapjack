@@ -6163,6 +6163,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized Call-argument IH for Const, Local, baseAddr, topAddr, and bytesInWord. It derives production target argument evaluation plus expression length, shape, and well-formedness; other constructors and the complete HOL expression theorem remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
@@ -6774,6 +6782,14 @@
     "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constOrLocalOfHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local argument lists. It derives the full per-expression IH from the dedicated four-conclusion argument-list proof, then uses production source/target code maps to derive target lookup and callee locals_rel. Other expression constructors and recursive body/handler Call composition remain open; no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOfHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local and the three fixed RISC-V address leaves. It derives the expression IHs from state_rel and proves production target code lookup plus callee locals_rel; other argument constructors and recursive Call body/handler composition remain open."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",

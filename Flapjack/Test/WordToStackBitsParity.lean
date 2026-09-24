@@ -3,29 +3,24 @@ import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.CakeAllocatorBitsBridge
 
 /-!
-# Word-to-Stack `bits_to_word` / `word_list` parity
+# Word-to-Stack `bits_to_word` parity
 
-Parity fixture for `Flapjack.Compiler.Backend.WordToStack.bitsToWordW` and
-`wordListW`, the width-indexed faithful counterparts of HOL
-`bits_to_word_def`/`word_list_def`
-(`cakeml/compiler/backend/word_to_stackScript.sml:225,231`) tagged in bead
+Parity fixture for `Flapjack.Compiler.Backend.WordToStack.bitsToWordW`, the
+width-indexed faithful counterpart of HOL `bits_to_word_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:225`) tagged in bead
 `flapjack-pxn.18.5.15.3.1`.
 
 The expected rows are the direct HOL `EVAL` results checked in at
-`scripts/hol-probes/word_to_stack_bits_to_word_probe.out`:
+`scripts/hol-probes/word_to_stack_bits_to_word_probe.out` (oracle checkout
+`flapjack2`, `word_to_stackTheory` prebuilt):
 
 ```
 bits_empty=0w  bits_true=1w  bits_false=0w
 bits_true_false_true=5w  bits_all_true_3=7w  bits_pattern=18w
-bits_overflow_65=0xFFFFFFFFFFFFFFFFw  wordlist_short=[1w]
-wordlist_chunk=[7w; 7w; 1w]
 ```
 
-The examples also tie the faithful words back to the untagged executable
-`Flapjack.RiscV.CakeAlloc` `bitsToWord`/`frameBitmapWords`, via the untagged
-bridge lemmas in `Flapjack.RiscV.CakeAllocatorBitsBridge` (`bitsToWord_ofNat_eq`,
-`frameBitmapWords_map`).  `bits_overflow_65` documents the out-of-range boundary:
-inputs longer than the word width wrap on both sides.
+The last example ties the faithful word result back to the untagged executable
+`Flapjack.RiscV.CakeAlloc.bitsToWord` for the in-range case.
 -/
 
 namespace Flapjack.Test.WordToStackBitsParity
@@ -38,14 +33,7 @@ def parityGuard : Bool :=
   (bitsToWordW (width := 64) [false] == 0) &&
   (bitsToWordW (width := 64) [true, false, true] == 5) &&
   (bitsToWordW (width := 64) [true, true, true] == 7) &&
-  (bitsToWordW (width := 64) [false, true, false, false, true] == 18) &&
-  (bitsToWordW (width := 64) (List.replicate 65 true) == 0xFFFFFFFFFFFFFFFF) &&
-  (wordListW (width := 64) [true, false] 4 == [1]) &&
-  (wordListW (width := 64) [true, true, true, true, true] 2 == [7, 7, 1]) &&
-  ((Flapjack.RiscV.CakeAlloc.frameBitmapWords 4 [true, false]).map (BitVec.ofNat 64) ==
-    wordListW (width := 64) [true, false] 4) &&
-  (BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord (List.replicate 65 true)) ==
-    bitsToWordW (width := 64) (List.replicate 65 true))
+  (bitsToWordW (width := 64) [false, true, false, false, true] == 18)
 
 #eval parityGuard
 #guard parityGuard
@@ -55,7 +43,124 @@ example : bitsToWordW (width := 64) [true, false, true] = (5 : BitVec 64) := by 
 example : (bitsToWordW (width := 8) [true, false, true]).toNat =
     Flapjack.RiscV.CakeAlloc.bitsToWord [true, false, true] := by decide
 
-/-- Arbitrary-input executable/tagged equivalence (stronger than in-range). -/
+/-! ## `word_list` parity
+
+Rows for the width-indexed `wordListW`, tagged against HOL `word_list_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:231`; bead
+`flapjack-pxn.18.5.15.3.2`), from
+`scripts/hol-probes/word_to_stack_word_list_probe.out`:
+
+```
+wl_empty_d3=[0w]  wl_empty_d0=[0w]  wl_d0=[5w]
+wl_short=[5w]  wl_split=[5w; 3w]  wl_twostep=[7w; 7w; 1w]
+```
+-/
+
+def wordListParityGuard : Bool :=
+  (wordListW (width := 64) ([] : List Bool) 3 == [0]) &&
+  (wordListW (width := 64) ([] : List Bool) 0 == [0]) &&
+  (wordListW (width := 64) [true, false, true] 0 == [5]) &&
+  (wordListW (width := 64) [true, false, true] 5 == [5]) &&
+  (wordListW (width := 64) [true, false, true, true] 2 == [5, 3]) &&
+  (wordListW (width := 64) [true, true, true, true, true] 2 == [7, 7, 1])
+
+#eval wordListParityGuard
+#guard wordListParityGuard
+
+example : wordListW (width := 64) [true, false, true, true] 2 =
+    ([5, 3] : List (BitVec 64)) := by decide +kernel
+
+/-! ## `chunk_to_bits` parity
+
+Rows for the width-indexed `chunkToBitsW`, tagged against HOL
+`chunk_to_bits_def` (`cakeml/compiler/backend/word_to_stackScript.sml:386`;
+bead `flapjack-pxn.18.5.15.3.3`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bits_probe.out`:
+
+```
+cb_empty=1w  cb_single_true=3w  cb_single_false=2w
+cb_true_false=5w  cb_false_true=6w  cb_three=11w  cb_ignores_word=T
+```
+-/
+
+def chunkToBitsParityGuard : Bool :=
+  (chunkToBitsW (width := 64) ([] : List (Bool × BitVec 64)) == 1) &&
+  (chunkToBitsW (width := 64) [(true, 0)] == 3) &&
+  (chunkToBitsW (width := 64) [(false, 0)] == 2) &&
+  (chunkToBitsW (width := 64) [(true, 0), (false, 0)] == 5) &&
+  (chunkToBitsW (width := 64) [(false, 0), (true, 0)] == 6) &&
+  (chunkToBitsW (width := 64) [(true, 0), (true, 0), (false, 0)] == 11)
+
+#eval chunkToBitsParityGuard
+#guard chunkToBitsParityGuard
+
+example : chunkToBitsW (width := 64) [(true, (0 : BitVec 64)), (false, 9)] =
+    chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by decide
+
+/-! ## `chunk_to_bitmap` / `const_words_to_bitmap` parity
+
+Rows for the width-indexed `chunkToBitmapW` and `constWordsToBitmapW`, tagged
+against HOL `chunk_to_bitmap_def` / `const_words_to_bitmap_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:393,397`; bead
+`flapjack-pxn.18.5.15.3.4`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bitmap_probe.out`:
+
+```
+cbm_empty=[1w]  cbm_two=[5w; 0w; 9w]  cbm_payload=[3w; 7w]
+cwb_empty=[1w]  cwb_short=[5w; 0w; 9w]
+cwb_boundary8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 1w]
+cwb_split8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 2w; 8w]
+```
+
+`cwb_boundary8` exercises `word8` (`dimindex (:'a) = 8`) with
+`ws_len = dimindex-1 = 7`: HOL's strict `<` still recurses, splitting off the
+first seven words and appending `chunk_to_bitmap [] = [1w]`.
+-/
+
+def chunkToBitmapParityGuard : Bool :=
+  (chunkToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) == [1]) &&
+  (chunkToBitmapW (width := 64) [(true, 0), (false, 9)] == [5, 0, 9]) &&
+  (chunkToBitmapW (width := 64) [(true, 7)] == [3, 7]) &&
+  (constWordsToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) 0 == [1]) &&
+  (constWordsToBitmapW (width := 64) [(true, 0), (false, 9)] 2 == [5, 0, 9]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7)] 7
+      == [213, 1, 2, 3, 4, 5, 6, 7, 1]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8
+      == [213, 1, 2, 3, 4, 5, 6, 7, 2, 8])
+
+#eval chunkToBitmapParityGuard
+#guard chunkToBitmapParityGuard
+
+example : constWordsToBitmapW (width := 8)
+    [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
+    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by decide +kernel
+
+
+/-! ## Executable bitmap recursion ↔ tagged recursion
+
+Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
+`Flapjack.RiscV.CakeAlloc` bitmap recursion maps onto the tagged
+`bitsToWordW`/`wordListW` for every input, including the out-of-range
+`LENGTH > width` boundary (both sides truncate). -/
+
+def bridgeParityGuard : Bool :=
+  (BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord (List.replicate 65 true)) ==
+    bitsToWordW (width := 64) (List.replicate 65 true)) &&
+  (BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord [true, false, true]) ==
+    bitsToWordW (width := 64) [true, false, true]) &&
+  ((Flapjack.RiscV.CakeAlloc.frameBitmapWords 4 [true, false]).map (BitVec.ofNat 64) ==
+    wordListW (width := 64) [true, false] 4) &&
+  ((Flapjack.RiscV.CakeAlloc.frameBitmapWords 2
+      [true, true, true, true, true]).map (BitVec.ofNat 64) ==
+    wordListW (width := 64) [true, true, true, true, true] 2)
+
+#eval bridgeParityGuard
+#guard bridgeParityGuard
+
+/-- Arbitrary-input executable/tagged `bitsToWord` equivalence (stronger than
+in-range). -/
 example : BitVec.ofNat 64 (Flapjack.RiscV.CakeAlloc.bitsToWord [false, true, true, false]) =
     bitsToWordW (width := 64) [false, true, true, false] :=
   Flapjack.RiscV.CakeAlloc.bitsToWord_ofNat_eq _
@@ -66,9 +171,17 @@ example : (Flapjack.RiscV.CakeAlloc.frameBitmapWords 2
     wordListW (width := 64) [true, true, true, true, true] 2 :=
   Flapjack.RiscV.CakeAlloc.frameBitmapWords_map 2 _
 
+/-- Kernel-checked equality of the executed bitmap recursion with the tagged
+`wordListW`, for the prose-level `dimindex = width` identification. -/
+example : (Flapjack.RiscV.CakeAlloc.frameBitmapWords 3 [true, false, true]).map
+      (BitVec.ofNat 64) =
+    wordListW (width := 64) [true, false, true] 3 :=
+  Flapjack.RiscV.CakeAlloc.frameBitmapWords_map 3 _
+
 def runChecks : IO Bool := do
-  IO.println "PASS Word-to-Stack bits_to_word/word_list oracle rows"
-  IO.println "PASS executable bitsToWord/frameBitmapWords map to tagged recursion"
-  pure parityGuard
+  IO.println "PASS Word-to-Stack bits_to_word/word_list/chunk_to_bits oracle rows"
+  IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
+  pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
+    chunkToBitmapParityGuard && bridgeParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

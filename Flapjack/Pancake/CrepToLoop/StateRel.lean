@@ -357,4 +357,41 @@ def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
   | some (n, _) => n
   | none => 0
 
+/-! ## Context construction
+
+`crep_to_loopScript.sml`'s `mk_ctxt`/`make_vmap` build the finite-map compiler
+context. Over `CrepToLoopFiniteMapContext` (whose `vars`/`funcs` are the same
+HOL finite maps) they need no width parameter. -/
+
+/-- Exact port of HOL `mk_ctxt_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:221-228`). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "mk_ctxt_def"]
+def mkCtxtHOL (target : RiscV.Architecture) (vmap : FiniteMap Nat Nat)
+    (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
+    CrepToLoopFiniteMapContext :=
+  { vars := vmap, funcs := functions, vmax := vmax, target := target }
+
+/-- Exact port of HOL `make_vmap_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:230-233`): Cake's
+    `FEMPTY |++ ZIP (params, GENLIST I (LENGTH params))`. -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "make_vmap_def"]
+def makeVmapHOL (params : List Nat) : FiniteMap Nat Nat :=
+  FUPDATE_LIST FEMPTY (params.zip (List.range params.length))
+
+/-- Exact port of HOL `make_funcs` (`cakeml/pancake/crep_to_loopScript.sml:247`).
+    HOL derives, for each program entry `(name, params, body)`,
+    `(name, (num, LENGTH params))` where `num = index + first_name`; the result
+    is `alist_to_fmap` of that association list. HOL is polymorphic in the
+    triple components, so this port keeps `α`, `β`, `γ` polymorphic too; the
+    `alist_to_fmap` first-inserted-binding-wins behaviour is rendered as
+    `FUPDATE_LIST FEMPTY entries.reverse` (matching the `functionInfosHOL`
+    precedent). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "make_funcs_def"]
+def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
+    (prog : List (α × List β × γ)) : FiniteMap α (Nat × Nat) :=
+  FUPDATE_LIST FEMPTY
+    ((prog.zip (List.range prog.length)).map
+      (fun entry =>
+        (entry.1.1, (firstLoopName + entry.2, entry.1.2.1.length)))).reverse
+
 end Flapjack

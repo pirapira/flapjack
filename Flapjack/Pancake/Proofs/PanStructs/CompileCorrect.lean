@@ -719,6 +719,281 @@ private theorem lookupInfoWithRest_fields_wf_for_load
       · simp only [lookupInfoWithRest, hmatch] at hlookup
         exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
+private theorem panValueFlatShapeFuel_pos (shape : Shape) :
+    1 ≤ panValueFlatShapeFuel shape := by
+  cases shape <;> simp [panValueFlatShapeFuel]
+
+private theorem panValueFlatFieldsFuel_eq_shapeListFuel
+    (fields : List (FieldName × Shape)) :
+    panValueFlatFieldsFuel fields =
+      panValueFlatShapeFuel.panValueFlatShapeListFuel (fields.map Prod.snd) := by
+  induction fields with
+  | nil => rfl
+  | cons field fields ih =>
+      cases field
+      simp [panValueFlatFieldsFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel, ih]
+
+/-! General `Named` load conversion used by the HOL `mem_load_conversion`
+    step. This theorem is untagged: production loading is `Option`-valued with
+    explicit `bytesInWord` and a `readWord` callback, whereas HOL uses a finite
+    address domain and word-labelled memory. -/
+theorem panValueFlatLoadFuel_convert_all [BEq α] [Add α]
+    (bytesInWord : α) (readWord : α → Option α) :
+    ∀ (context : StructContext) (fuelSource : Nat) (shape : Shape) (address : α)
+      (fuelTarget : Nat) (value : PanValue α),
+      structInfosOk context →
+      isWfShape context shape = true →
+      panValueFlatContextFuel context + panValueFlatShapeFuel shape + 1 ≤ fuelSource →
+      panValueFlatShapeFuel (structCompileShapeWF context shape) + 1 ≤ fuelTarget →
+      panValueFlatLoadFuel context readWord bytesInWord fuelSource shape address =
+        some value →
+      panValueFlatLoadFuel [] readWord bytesInWord fuelTarget
+        (structCompileShapeWF context shape) address =
+          some (panStructConvertValue value) := by
+  apply panValueFlatLoadFuel.induct (α := α) bytesInWord
+    (motive1 := fun context fuel shape address =>
+      ∀ fuelTarget value, structInfosOk context →
+        isWfShape context shape = true →
+        panValueFlatContextFuel context + panValueFlatShapeFuel shape + 1 ≤ fuel →
+        panValueFlatShapeFuel (structCompileShapeWF context shape) + 1 ≤ fuelTarget →
+        panValueFlatLoadFuel context readWord bytesInWord fuel shape address =
+          some value →
+        panValueFlatLoadFuel [] readWord bytesInWord fuelTarget
+          (structCompileShapeWF context shape) address =
+            some (panStructConvertValue value))
+    (motive2 := fun context fuel fields address =>
+      ∀ fuelTarget values, structInfosOk context →
+        isWfShape.isWfShapeList context (fields.map Prod.snd) = true →
+        panValueFlatContextFuel context + panValueFlatFieldsFuel fields + 1 ≤ fuel →
+        panValueFlatShapeFuel.panValueFlatShapeListFuel
+          (structCompileShapeWF.structCompileShapesWF context (fields.map Prod.snd)) +
+            1 ≤ fuelTarget →
+        panValueFlatLoadFieldsFuel context readWord bytesInWord fuel fields address =
+          some values →
+        panValueFlatLoadListFuel [] readWord bytesInWord fuelTarget
+          (structCompileShapeWF.structCompileShapesWF context (fields.map Prod.snd)) address =
+            some (values.map (panStructConvertValue ∘ Prod.snd)))
+    (motive3 := fun context fuel shapes address =>
+      ∀ fuelTarget values, structInfosOk context →
+        isWfShape.isWfShapeList context shapes = true →
+        panValueFlatContextFuel context +
+          panValueFlatShapeFuel.panValueFlatShapeListFuel shapes + 1 ≤ fuel →
+        panValueFlatShapeFuel.panValueFlatShapeListFuel
+          (structCompileShapeWF.structCompileShapesWF context shapes) +
+            1 ≤ fuelTarget →
+        panValueFlatLoadListFuel context readWord bytesInWord fuel shapes address =
+          some values →
+        panValueFlatLoadListFuel [] readWord bytesInWord fuelTarget
+          (structCompileShapeWF.structCompileShapesWF context shapes) address =
+            some (values.map panStructConvertValue))
+  · intro context shape address fuelTarget value hok hwf hsource htarget hload
+    have hshapeFuel := panValueFlatShapeFuel_pos shape
+    omega
+  · intro context fuel address fuelTarget value hok hwf hsource htarget hload
+    cases fuelTarget with
+    | zero => omega
+    | succ fuelTarget =>
+        simp only [panValueFlatLoadFuel] at hload
+        cases hread : readWord address with
+        | none => simp [hread] at hload
+        | some word =>
+            have hvalue : PanValue.word word = value := by
+              simpa [hread] using hload
+            cases hvalue
+            simp [structCompileShapeWF, panValueFlatLoadFuel,
+              panStructConvertValue, hread]
+  · intro context fuel shapes address ih fuelTarget value hok hwf hsource htarget hload
+    have hwfList : isWfShape.isWfShapeList context shapes = true := by
+      simpa [isWfShape] using hwf
+    simp only [panValueFlatLoadFuel] at hload
+    cases hvalues : panValueFlatLoadListFuel context readWord bytesInWord fuel
+        shapes address with
+    | none => simp [hvalues] at hload
+    | some values =>
+        have hvalue : PanValue.rStruct values = value := by
+          simpa [hvalues] using hload
+        cases hvalue
+        have hsourceList :
+            panValueFlatContextFuel context +
+                panValueFlatShapeFuel.panValueFlatShapeListFuel shapes + 1 ≤ fuel := by
+          simp only [panValueFlatShapeFuel] at hsource
+          omega
+        cases fuelTarget with
+        | zero => omega
+        | succ fuelTarget =>
+            have htargetList :
+                panValueFlatShapeFuel.panValueFlatShapeListFuel
+                    (structCompileShapeWF.structCompileShapesWF context shapes) + 1 ≤
+                  fuelTarget := by
+              simp only [structCompileShapeWF.eq_def,
+                panValueFlatShapeFuel] at htarget
+              omega
+            have hconverted := ih fuelTarget values hok hwfList hsourceList
+              htargetList hvalues
+            simpa [structCompileShapeWF.eq_def, structCompileShapes_eq_map,
+              panValueFlatLoadFuel, panStructConvertValue,
+              panStructConvertValues_eq_map] using
+              congrArg (Option.map PanValue.rStruct) hconverted
+  · intro context fuel name address ih fuelTarget value hok hwf hsource htarget hload
+    cases hlookup : lookupInfoWithRest name context with
+    | none => simp [panValueFlatLoadFuel, hlookup] at hload
+    | some entry =>
+        obtain ⟨info, suffix⟩ := entry
+        have hokSuffix := structInfosOk_suffix_for_load
+          name context info suffix hlookup hok
+        have hfieldsWf := lookupInfoWithRest_fields_wf_for_load
+          name context info suffix hlookup hok
+        have hcontextFuel := panValueFlatContextFuel_lookup_ge
+          name context info suffix hlookup
+        simp only [panValueFlatLoadFuel] at hload
+        cases hfields : panValueFlatLoadFieldsFuel suffix readWord bytesInWord fuel
+            info.fields address with
+        | none => simp [hlookup, hfields] at hload
+        | some fields =>
+            have hvalue : PanValue.nStruct name fields = value := by
+              simpa [panValueFlatLoadFuel, hlookup, hfields] using hload
+            cases hvalue
+            have hsourceFields :
+                panValueFlatContextFuel suffix + panValueFlatFieldsFuel info.fields + 1 ≤
+                  fuel := by
+              simp only [panValueFlatShapeFuel] at hsource
+              omega
+            have hcompileEq :
+              structCompileShapeWF context (.named name) =
+                  .comb (structCompileShapeWF.structCompileShapesWF suffix
+                    (info.fields.map Prod.snd)) := by
+              rw [structCompileShapeWF.eq_def]
+              split
+              · simp_all
+              · simp_all
+              · split <;> simp_all
+            cases fuelTarget with
+            | zero => omega
+            | succ fuelTarget =>
+                have htargetFields :
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel
+                        (structCompileShapeWF.structCompileShapesWF suffix
+                          (info.fields.map Prod.snd)) + 1 ≤ fuelTarget := by
+                  rw [hcompileEq] at htarget
+                  simp only [panValueFlatShapeFuel] at htarget
+                  omega
+                have hconverted := ih info suffix fuelTarget fields hokSuffix hfieldsWf
+                  hsourceFields htargetFields hfields
+                rw [hcompileEq]
+                simpa [panValueFlatLoadFuel, panStructConvertValue,
+                  panStructConvertFieldValues_eq_map, List.map_map,
+                  Function.comp_def] using
+                  congrArg (Option.map PanValue.rStruct) hconverted
+  · intro context fuel address fuelTarget values hok hwf hsource htarget hload
+    simp [panValueFlatLoadFieldsFuel] at hload
+    subst values
+    simp [structCompileShapeWF.structCompileShapesWF, panValueFlatLoadListFuel]
+  · intro context head tail address fuelTarget values hok hwf hsource htarget hload
+    simp_all
+  · intro context fuel field shape fields address ihHead ihTail fuelTarget values
+      hok hwf hsource htarget hload
+    simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true] at hwf
+    cases hhead : panValueFlatLoadFuel context readWord bytesInWord fuel shape address with
+    | none => simp_all [panValueFlatLoadFieldsFuel]
+    | some value =>
+        let nextAddress := panValueFlatOffset bytesInWord address
+          (shapeSizeWithContext context shape)
+        cases htail : panValueFlatLoadFieldsFuel context readWord bytesInWord fuel fields
+            nextAddress with
+        | none => simp_all [panValueFlatLoadFieldsFuel, nextAddress]
+        | some tailValues =>
+            have hsourceHead :
+                panValueFlatContextFuel context + panValueFlatShapeFuel shape + 1 ≤ fuel := by
+              simp only [panValueFlatFieldsFuel] at hsource
+              omega
+            have hsourceTail :
+                panValueFlatContextFuel context + panValueFlatFieldsFuel fields + 1 ≤ fuel := by
+              simp only [panValueFlatFieldsFuel] at hsource
+              omega
+            cases fuelTarget with
+            | zero => omega
+            | succ fuelTarget =>
+                have htargetParts :
+                    panValueFlatShapeFuel (structCompileShapeWF context shape) + 1 ≤ fuelTarget ∧
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel
+                        (structCompileShapeWF.structCompileShapesWF context
+                          (fields.map Prod.snd)) + 1 ≤ fuelTarget := by
+                  simp only [List.map_cons, structCompileShapeWF.structCompileShapesWF,
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel] at htarget
+                  omega
+                have hheadConverted := ihHead fuelTarget value hok hwf.1
+                  hsourceHead htargetParts.1 hhead
+                have htailConverted := ihTail fuelTarget tailValues hok hwf.2
+                  hsourceTail htargetParts.2 htail
+                have hsize := structCompileShapeWF_size context shape hwf.1 hok
+                have hoffset :
+                    panValueFlatOffset bytesInWord address
+                        (shapeSizeWithContext [] (structCompileShapeWF context shape)) =
+                      nextAddress := by
+                  simp [nextAddress, hsize]
+                have hvalues : values = (field, value) :: tailValues := by
+                  simpa [panValueFlatLoadFieldsFuel, hhead, htail, nextAddress] using hload.symm
+                subst values
+                simp only [List.map_cons, structCompileShapeWF.structCompileShapesWF,
+                  panValueFlatLoadListFuel]
+                rw [hheadConverted, hoffset, htailConverted]
+                simp [Function.comp_def]
+  · intro context fuel address fuelTarget values hok hwf hsource htarget hload
+    simp [panValueFlatLoadListFuel] at hload
+    subst values
+    simp [structCompileShapeWF.structCompileShapesWF, panValueFlatLoadListFuel]
+  · intro context head tail address fuelTarget values hok hwf hsource htarget hload
+    simp [panValueFlatLoadListFuel] at hload
+  · intro context fuel shape shapes address ihHead ihTail fuelTarget values
+      hok hwf hsource htarget hload
+    simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at hwf
+    cases hhead : panValueFlatLoadFuel context readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadListFuel, hhead] at hload
+    | some value =>
+        let nextAddress := panValueFlatOffset bytesInWord address
+          (shapeSizeWithContext context shape)
+        cases htail : panValueFlatLoadListFuel context readWord bytesInWord fuel shapes
+            nextAddress with
+        | none => simp [panValueFlatLoadListFuel, hhead, htail, nextAddress] at hload
+        | some tailValues =>
+            have hsourceHead :
+                panValueFlatContextFuel context + panValueFlatShapeFuel shape + 1 ≤ fuel := by
+              simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel] at hsource
+              omega
+            have hsourceTail :
+                panValueFlatContextFuel context +
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel shapes + 1 ≤ fuel := by
+              simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel] at hsource
+              omega
+            cases fuelTarget with
+            | zero => omega
+            | succ fuelTarget =>
+                have htargetParts :
+                    panValueFlatShapeFuel (structCompileShapeWF context shape) + 1 ≤ fuelTarget ∧
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel
+                        (structCompileShapeWF.structCompileShapesWF context shapes) + 1 ≤
+                          fuelTarget := by
+                  simp only [structCompileShapeWF.structCompileShapesWF,
+                    panValueFlatShapeFuel.panValueFlatShapeListFuel] at htarget
+                  omega
+                have hheadConverted := ihHead fuelTarget value hok hwf.1
+                  hsourceHead htargetParts.1 hhead
+                have htailConverted := ihTail fuelTarget tailValues hok hwf.2
+                  hsourceTail htargetParts.2 htail
+                have hsize := structCompileShapeWF_size context shape hwf.1 hok
+                have hoffset :
+                    panValueFlatOffset bytesInWord address
+                        (shapeSizeWithContext [] (structCompileShapeWF context shape)) =
+                      nextAddress := by
+                  simp [nextAddress, hsize]
+                have hvalues : values = value :: tailValues := by
+                  simpa [panValueFlatLoadListFuel, hhead, htail, nextAddress] using hload.symm
+                subst values
+                simp only [structCompileShapeWF.structCompileShapesWF,
+                  panValueFlatLoadListFuel]
+                rw [hheadConverted, hoffset, htailConverted]
+                simp
+
 private theorem panValueFieldsHaveShapesNames [BEq String] [LawfulBEq String]
     (context : StructContext) (expected : List (FieldName × Shape))
     (actual : List (FieldName × PanValue α))

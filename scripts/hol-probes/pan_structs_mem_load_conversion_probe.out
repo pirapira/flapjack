@@ -1,2 +1,17 @@
 mem_load_conversion_one=(T,(∀i nm info. T),T,T)
 mem_load_conversion_comb_multiword=(T,(∀i nm info. T),T,T,T)
+mem_load_conversion_named_nested=(T,
+ (∀i nm info.
+    i < 2 ∧
+    [(«Pair»,<|fields := [(«inner»,Named «Inner»); («last»,One)]; size := 3|>);
+     («Inner»,<|fields := [(«left»,One); («right»,One)]; size := 2|>)]❲
+      i
+    ❳ = (nm,info) ⇒
+    EVERY
+      (is_wf_shape
+         (DROP (i + 1)
+            [(«Pair»,
+              <|fields := [(«inner»,Named «Inner»); («last»,One)];
+                size := 3|>);
+             («Inner»,<|fields := [(«left»,One); («right»,One)]; size := 2|>)]))
+      (MAP SND info.fields)),T,T,T,T)

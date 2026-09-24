@@ -226,6 +226,96 @@ example :
       panValueFlatShapeFuel.panValueFlatShapeListFuel, shapeSizeWithContext,
       isWfShape, isWfShape.isWfShapeList]
 
+def nestedLoadReadWord (address : Word64) : Option Word64 :=
+  panValueFlatReadWord nestedLoadRuntime.memory (BitVec.ofNat 64 1) none address
+
+example :
+    structInfosOk nestedLoadStructContext ∧
+    isWfShape nestedLoadStructContext (.named "Pair") = true ∧
+    panValueFlatLoadFuel nestedLoadStructContext nestedLoadReadWord
+      (BitVec.ofNat 64 1) 20 (.named "Pair") (BitVec.ofNat 64 0) =
+        some nestedLoadSourceValue ∧
+    panValueFlatLoadFuel [] nestedLoadReadWord (BitVec.ofNat 64 1) 20
+      (.comb [.comb [.one, .one], .one]) (BitVec.ofNat 64 0) =
+        some nestedLoadConvertedValue ∧
+    panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true ∧
+    shapeSizeWithContext [] (structCompileShapeWF nestedLoadStructContext (.named "Pair")) =
+      shapeSizeWithContext nestedLoadStructContext (.named "Pair") := by
+  have hok : structInfosOk nestedLoadStructContext := by
+    let innerInfo : StructInfo := {
+      fields := [("left", .one), ("right", .one)]
+      size := 2
+    }
+    let pairInfo : StructInfo := {
+      fields := [("inner", .named "Inner"), ("last", .one)]
+      size := 3
+    }
+    have hinner : structInfosOk [("Inner", innerInfo)] := by
+      apply structInfosOk_cons
+      · simp [structInfosOk]
+      · simp [innerInfo]
+      · simp
+      · intro shape hshape
+        simp [innerInfo] at hshape
+        rcases hshape with rfl | rfl <;> simp [isWfShape]
+      · change (2 : Nat) = shapeSizeWithContext [] (.comb [.one, .one])
+        simp [shapeSizeWithContext]
+    change structInfosOk (("Pair", pairInfo) :: [("Inner", innerInfo)])
+    apply structInfosOk_cons
+    · exact hinner
+    · simp [pairInfo]
+    · simp
+    · intro shape hshape
+      simp [pairInfo] at hshape
+      rcases hshape with hshape | hshape
+      · rw [hshape]
+        simp [isWfShape, lookupInfo]
+      · rw [hshape]
+        simp [isWfShape]
+    · change (3 : Nat) = shapeSizeWithContext
+        [("Inner", innerInfo)] (.comb [.named "Inner", .one])
+      simp [shapeSizeWithContext, lookupInfo, innerInfo]
+  have hwf : isWfShape nestedLoadStructContext (.named "Pair") = true := by
+    simp [isWfShape, nestedLoadStructContext, lookupInfo]
+  have hsourceFuel :
+      panValueFlatContextFuel nestedLoadStructContext +
+          panValueFlatShapeFuel (.named "Pair") + 1 ≤ 20 := by
+    simp [nestedLoadStructContext, panValueFlatContextFuel,
+      panValueFlatFieldsFuel, panValueFlatShapeFuel]
+  have hcompiled : structCompileShapeWF nestedLoadStructContext (.named "Pair") =
+      .comb [.comb [.one, .one], .one] := by
+    simp [structCompileShapeWF, List.map_cons,
+      structCompileShapeWF.structCompileShapesWF,
+      nestedLoadStructContext, lookupInfoWithRest]
+  have htargetFuel :
+      panValueFlatShapeFuel
+          (structCompileShapeWF nestedLoadStructContext (.named "Pair")) + 1 ≤ 20 := by
+    rw [hcompiled]
+    simp [panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel]
+  have hsource :
+      panValueFlatLoadFuel nestedLoadStructContext nestedLoadReadWord
+        (BitVec.ofNat 64 1) 20 (.named "Pair") (BitVec.ofNat 64 0) =
+          some nestedLoadSourceValue := by
+    simp [panValueFlatLoadFuel, panValueFlatLoadFieldsFuel,
+      nestedLoadReadWord, panValueFlatReadWord,
+      nestedLoadRuntime, nestedLoadStructContext, nestedLoadSourceValue,
+      finiteMapRuntime, panValueFlatOffset, shapeSizeWithContext,
+      lookupInfoWithRest, lookupInfo]
+  have hconverted := panValueFlatLoadFuel_convert_all
+    (bytesInWord := BitVec.ofNat 64 1) (readWord := nestedLoadReadWord)
+    nestedLoadStructContext 20 (.named "Pair") (BitVec.ofNat 64 0) 20
+    nestedLoadSourceValue hok hwf hsourceFuel htargetFuel hsource
+  have hfields :
+      panStructValueFieldsOkBool nestedLoadStructContext nestedLoadSourceValue = true := by
+    simp [panStructValueFieldsOkBool, panStructFieldValuesFieldsOkBool,
+      nestedLoadStructContext, nestedLoadSourceValue, panValueFieldsHaveShapes,
+      panValueShape, panShapeMatches, lookupInfo]
+  have hsize := structCompileShapeWF_size nestedLoadStructContext (.named "Pair") hwf hok
+  refine ⟨hok, hwf, hsource, ?_, hfields, ?_⟩
+  · simpa [hcompiled, nestedLoadSourceValue, nestedLoadConvertedValue,
+      panStructConvertValue, panStructConvertFieldValues, panStructConvertValues] using hconverted
+  · simpa [hcompiled] using hsize
+
 example :
     structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =
         .comb [.one, .one] ∧

@@ -1,5 +1,6 @@
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
+import Flapjack.Pancake.CrepLang
 import Flapjack.PanToCrepMaxList
 import Flapjack.Pancake.PanLang
 
@@ -118,6 +119,48 @@ theorem fmEmptyZipAlist [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
             rw [hkeys]; exact hmem
           exact (FUPDATE_FUPDATE_LIST_commutes FEMPTY x y (xs.zip ys) hnotin).symm
 
+/-- Exact port of HOL `fm_empty_zip_flookup`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:448`): a successful
+    lookup in a duplicate-free zipped finite map comes from one of the listed
+    pairs, exposing the common index. HOL's `EL n (ZIP (xs,ys)) = (x,y)` is
+    rendered as a bounded `getElem`, matching the tagged `elLoadGlobals`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_empty_zip_flookup"]
+theorem fmEmptyZipFlookup [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
+    (x : α) (y : β) (_hlen : xs.length = ys.length) (_hdistinct : xs.Nodup)
+    (hlookup : FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) x = some y) :
+    ∃ (n : Nat) (hn : n < xs.length),
+      (xs.zip ys)[n]'(by rw [List.length_zip]; exact Nat.lt_min.mpr ⟨hn, by omega⟩) =
+        (x, y) := by
+  rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap α β) (xs.zip ys) x y
+      hlookup with
+    ⟨entry, hmem, hkey, hvalue⟩ | hbase
+  · obtain ⟨i, hi, _hj, hfst, hsnd⟩ := mem_zip_getElem xs ys entry hmem
+    exact ⟨i, hi, by rw [List.getElem_zip, hfst, hsnd, hkey, hvalue]⟩
+  · simp at hbase
+
+/-- Exact port of HOL `all_distinct_flookup_all_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:512`): the slot list of
+    any binding in a `no_overlap` context is duplicate-free. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_flookup_all_distinct"]
+theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat))
+    (x : String) (y : Shape) (zs : List Nat)
+    (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) : zs.Nodup :=
+  hno.1 x y zs hlookup
+
+/-- Exact port of HOL `no_overlap_flookup_distinct`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
+    variables in a `no_overlap` context have disjoint slot lists.  HOL
+    `distinct_lists xs ys` is Lean `distinctLists xs ys`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_flookup_distinct"]
+theorem noOverlapFlookupDistinct (fm : FiniteMap String (Shape × List Nat))
+    (x y : String) (a b : Shape) (xs ys : List Nat)
+    (hno : noOverlap fm) (hxy : x ≠ y)
+    (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
+    distinctLists xs ys = true := by
+  rw [show distinctLists xs ys = true ↔ ∀ z ∈ xs, z ∉ ys from by
+    simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]]
+  intro z hzxs hzys
+  exact hxy (hno.2 x y a b xs ys hx hy ⟨z, hzxs, hzys⟩)
 /-- Exact port of HOL `MAX_LIST_add_not_mem`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:642`): `MAX_LIST xs + 1`
     is never a member of `xs`.  `maxList` is the faithful `rich_list$MAX_LIST`
@@ -319,5 +362,22 @@ theorem opt_mmap_opt_map {α β γ : Type} (l : List α) (f : α → Option β)
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "set_eq_membership"]
 theorem set_eq_membership {α : Type} {a b : List α} {x : α}
     (h : a = b ∧ x ∈ a) : x ∈ b := h.1 ▸ h.2
+
+/-- Exact port of HOL `fm_empty_zip_flookup_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:479`): looking up the
+    `n`-th distinct key of a doubly zipped finite map returns the `n`-th pair
+    of the value lists. HOL `EL` is rendered as a bounded `getElem`, matching
+    `fmEmptyZipFlookup`/`elLoadGlobals`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_empty_zip_flookup_el"]
+theorem fmEmptyZipFlookupEl [BEq α] [LawfulBEq α] (xs : List α) (ys zs : List β)
+    (n : Nat) (x : α) (hdistinct : xs.Nodup)
+    (hlen1 : xs.length = ys.length) (hlen2 : ys.length = zs.length)
+    (hn : n < xs.length) (hget : xs[n]'hn = x) :
+    FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip (ys.zip zs))) x =
+      some (ys[n]'(by omega), zs[n]'(by omega)) := by
+  subst hget
+  rw [FLOOKUP_FUPDATE_LIST_zip_getElem xs (ys.zip zs) FEMPTY n hdistinct
+    (by rw [List.length_zip]; omega) hn]
+  simp only [List.getElem_zip]
 
 end Flapjack

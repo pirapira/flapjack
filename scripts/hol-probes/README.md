@@ -234,6 +234,11 @@ projection equations live beside `evalCrepRuntimeExp` in
 `Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
 scope slice only: the target-extended runtime state and the remaining
 word-operation and byte-load cases still need an evaluator correspondence.
+For the isolated `Const` case of local `simp_exp_correct1`, this direct
+`eval_def` observation pairs with the constant-preserving simp results in
+`crep_simp_exp_probe.out`; the exact word_lab theorem case and Fin 4 fixture
+are `crepSimpExpCorrect1ConstHolFiniteWordSourceCase` and its nearby example
+in `Flapjack.Test.CrepeSimpExpParity`. The assembling theorem remains open.
 `crep_eval_cmp_rv64_probe.out` records direct HOL `crepSem$eval` results for all
 eight `asm$word_cmp_def` constructors, including signed-versus-unsigned order,
 negations, and overlapping/disjoint bit tests. Matching source-runtime

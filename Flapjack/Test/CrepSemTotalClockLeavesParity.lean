@@ -72,8 +72,24 @@ def seqOracleRowsMatch : Bool :=
       ((none : Option (CrepResultHOL (BitVec 64) FfiFinalEvent)), raisedClock)).2.clock == 5
   normalOk && controlOk && tickOk && timeoutOk && clampOk
 
+def returnOracleRowsMatch : Bool :=
+  let state := sampleState 5
+  let wordOk := match evalCrepClockProg
+      (.returnValues [.const 9]) state with
+    | (some (.return [.word 9]), post) =>
+        post.clock == 5 && post.locals 0 == none
+    | _ => false
+  let emptyOk := match evalCrepClockProg (.returnValues []) state with
+    | (some (.return []), post) => post.clock == 5 && post.locals 0 == none
+    | _ => false
+  let errorOk := match evalCrepClockProg (.returnValues [.var 9]) state with
+    | (some .error, post) => post.clock == 5 && post.locals 0 == some (.word 7)
+    | _ => false
+  wordOk && emptyOk && errorOk
+
 #guard ifOracleRowsMatch
 #guard seqOracleRowsMatch
+#guard returnOracleRowsMatch
 
 theorem skipFullState (state : CrepHolState (BitVec 64) Unit) :
     evalCrepClockLeaf .skip state = (none, state) :=
@@ -135,6 +151,11 @@ def runChecks : IO Bool := do
     IO.println "PASS total Crep HOL Seq fix_clock normal/control/timeout clauses match direct oracle"
   else
     IO.println "FAIL total Crep HOL Seq fix_clock normal/control/timeout clauses match direct oracle"
-  pure (holOracleRowsMatch && ifOracleRowsMatch && seqOracleRowsMatch)
+  if returnOracleRowsMatch then
+    IO.println "PASS total Crep HOL Return values/empty/error clauses match direct oracle"
+  else
+    IO.println "FAIL total Crep HOL Return values/empty/error clauses match direct oracle"
+  pure (holOracleRowsMatch && ifOracleRowsMatch && seqOracleRowsMatch &&
+    returnOracleRowsMatch)
 
 end Flapjack.Test.CrepSemTotalClockLeavesParity

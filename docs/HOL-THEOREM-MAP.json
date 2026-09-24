@@ -5193,6 +5193,30 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectBaseAddrCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked BaseAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectTopAddrCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked TopAddr-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. The local/global and struct-info premises are retained but unused in the literal case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectBytesInWordCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked BytesInWord-constructor specialization with all three compile_exp_correct conclusion roles and translated premise adapters. Intentionally untagged because HOL has only the universal theorem; Lean represents context equality by a projected shape view and FEVERY/FMAP_MAP2 through total-function Bool/map predicates. HOL uses its fixed bytes_in_word value, while production Lean exposes the value through the explicit bytesInWord evaluator parameter."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "compile_exp_correct_mmap_helper",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructCompileExpsEvalOfPointwiseCorrect",

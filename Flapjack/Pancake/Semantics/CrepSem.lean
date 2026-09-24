@@ -205,34 +205,74 @@ theorem setCrepHolGlobalsW_eq_setCrepHolGlobals {width : Nat} {σ : Type}
 def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with clock := state.clock - 1 }
 
-/-- Exact HOL-shaped port of `crepSem$set_var_def` (crepSemScript.sml:55-57)
-    over the 11-field `CrepHolState`:
-    `set_var v w s = s with locals := s.locals |+ (v,w)`.
-    This is the local-binding step used by the `Assign` and `Primitive`
-    clauses of `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+/-- Generic production local-binding update on the 11-field `CrepHolState`.
+    HOL `crepSem$set_var_def` (`crepSemScript.sml:55-57`) is word-length indexed
+    (`'a crepSem$state`), so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `setCrepHolVarW` below. -/
 def setCrepHolVar (name : Nat) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE state.locals (name, value) }
 
-/-- Exact HOL-shaped port of `crepSem$upd_locals_def` (crepSemScript.sml:66-68)
-    over the 11-field `CrepHolState`, following HOL's `|++` (foldl `|+`) order:
-    `upd_locals varargs s = s with locals := FEMPTY |++ varargs`.
-    This is the callee-parameter step used by the `Call` clause of
-    `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$set_var_def`
+    (`crepSemScript.sml:55-57`): `set_var v w s = s with locals := s.locals |+ (v,w)`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+def setCrepHolVarW {width : Nat} {σ : Type} (name : Nat)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with locals := FUPDATE state.locals (name, value) }
+
+/-- Kernel-checked bridge: the width-indexed exact `set_var` counterpart agrees
+    with the generic production definition at `BitVec width`. -/
+theorem setCrepHolVarW_eq_setCrepHolVar {width : Nat} {σ : Type} (name : Nat)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    setCrepHolVarW name value state = setCrepHolVar name value state := rfl
+
+/-- Generic production callee-parameter update on the 11-field `CrepHolState`.
+    HOL `crepSem$upd_locals_def` (`crepSemScript.sml:66-68`) is word-length
+    indexed, so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `updCrepHolLocalsW` below. -/
 def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE_LIST FEMPTY varargs }
 
-/-- Exact HOL-shaped port of `crepSem$empty_locals_def` (crepSemScript.sml:71)
-    over the 11-field `CrepHolState`:
-    `empty_locals s = s with locals := FEMPTY`.
-    This is the state-clearing step at the terminal `While` timeout, `Raise`
-    and `Return` boundaries of `evaluate`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+/-- Width-indexed exact HOL-shaped port of `crepSem$upd_locals_def`
+    (`crepSemScript.sml:66-68`) following HOL's `|++` (foldl `|+`) order:
+    `upd_locals varargs s = s with locals := FEMPTY |++ varargs` over
+    `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+def updCrepHolLocalsW {width : Nat} {σ : Type}
+    (varargs : List (Nat × PanWordLab (BitVec width)))
+    (state : CrepHolState (BitVec width) σ) : CrepHolState (BitVec width) σ :=
+  { state with locals := FUPDATE_LIST FEMPTY varargs }
+
+/-- Kernel-checked bridge: the width-indexed exact `upd_locals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem updCrepHolLocalsW_eq_updCrepHolLocals {width : Nat} {σ : Type}
+    (varargs : List (Nat × PanWordLab (BitVec width)))
+    (state : CrepHolState (BitVec width) σ) :
+    updCrepHolLocalsW varargs state = updCrepHolLocals varargs state := rfl
+
+/-- Generic production locals-clearing step on the 11-field `CrepHolState`.
+    HOL `crepSem$empty_locals_def` (`crepSemScript.sml:71`) is word-length
+    indexed, so this generic-`α` form is deliberately UNTAGGED; the
+    width-indexed exact counterpart is `emptyCrepHolLocalsW` below. -/
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$empty_locals_def`
+    (`crepSemScript.sml:71`): `empty_locals s = s with locals := FEMPTY` over
+    `CrepHolState (BitVec width) σ`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+def emptyCrepHolLocalsW {width : Nat} {σ : Type} (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with locals := FEMPTY }
+
+/-- Kernel-checked bridge: the width-indexed exact `empty_locals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem emptyCrepHolLocalsW_eq_emptyCrepHolLocals {width : Nat} {σ : Type}
+    (state : CrepHolState (BitVec width) σ) :
+    emptyCrepHolLocalsW state = emptyCrepHolLocals state := rfl
 
 /-- Exact port of Cake's `res_var_def` (cakeml/pancake/semantics/crepSemScript.sml:163):
     `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`, with `\\`

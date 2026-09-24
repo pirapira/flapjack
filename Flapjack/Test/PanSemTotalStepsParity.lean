@@ -278,6 +278,40 @@ def partialEvaluateGuard : Bool :=
   partialSkipGuard && partialBreakGuard && partialAssignGuard &&
     partialDecGuard && partialSeqGuard
 
+/-- Deterministic mapped-read/write oracle returning eight zero bytes. -/
+def shMemTestFfi : FfiState Unit :=
+  { oracle := fun _ _ _ bytes => .returned () bytes
+    state := ()
+    ioEvents := [] }
+
+def shMemTestState : PanSemState Word64 (FfiState Unit) :=
+  { stepsState with
+    locals := fun name => if name == "x" then some (.word (BitVec.ofNat 64 7)) else none
+    sharedMemaddrs := fun _ => true
+    ffi := shMemTestFfi }
+
+def shMemLoadGuard : Bool :=
+  let result := panSemTotalShMemLoadClause shMemTestState .opW .local "x" (.const (BitVec.ofNat 64 0))
+  isNoneResult result.1 && wordAt result.2.locals "x" 0
+
+def shMemLoadMissingGuard : Bool :=
+  isErrorResult (panSemTotalShMemLoadClause shMemTestState .opW .local "y"
+    (.const (BitVec.ofNat 64 0))).1
+
+def shMemLoadUnsharedGuard : Bool :=
+  isErrorResult (panSemTotalShMemLoadClause
+    { shMemTestState with sharedMemaddrs := fun _ => false }
+    .opW .local "x" (.const (BitVec.ofNat 64 0))).1
+
+def shMemStoreGuard : Bool :=
+  let result := panSemTotalShMemStoreClause shMemTestState .opW
+    (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 5))
+  isNoneResult result.1 && result.2.clock == shMemTestState.clock
+
+def shMemStoreNonWordGuard : Bool :=
+  isErrorResult (panSemTotalShMemStoreClause shMemTestState .opW
+    (.const (BitVec.ofNat 64 0)) (.rStruct ([] : List (Exp Word64)))).1
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -288,14 +322,16 @@ def stepsGuard : Bool :=
     storeGuard && storeNonWordGuard && storeErrorGuard &&
     store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard &&
     decOkGuard && decShapeErrorGuard && decErrorGuard &&
-    partialEvaluateGuard
+    partialEvaluateGuard &&
+    shMemLoadGuard && shMemLoadMissingGuard && shMemLoadUnsharedGuard &&
+    shMemStoreGuard && shMemStoreNonWordGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

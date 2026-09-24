@@ -1456,3 +1456,10 @@ run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
   ex_const ex_bytesinword \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The panLang prog probe pins the `prog` constructor arities, the `mlstring`
+# identifier fields, and the word-indexed exp payloads at word type 64.
+run_probe pan_lang_prog_probeScript.sml pan_lang_prog_probe.out \
+  pg_skip pg_annot_len \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"

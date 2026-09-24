@@ -529,6 +529,38 @@ example : crepToLoopLocalsRel localsRelContext (fun _ => false)
   · intro vname v hv
     simp [FLOOKUP, FEMPTY] at hv
 
+/-- Finite-map context carrier for the tagged exact `locals_rel_def` port
+    (bead `flapjack-pxn.18.5.6.9.1`); empty vars/maxVar satisfy the two
+    context clauses vacuously. -/
+def localsRelHOLContext : CrepToLoopFiniteMapContext :=
+  { vars := (FEMPTY : FiniteMap Nat Nat),
+    funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
+    vmax := 5, target := .rv64i }
+
+/-- The tagged exact `locals_rel_def` port satisfies every clause vacuously for
+    an empty context and empty source locals. -/
+example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+    (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64)))) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y n m hx
+    exact absurd hx (fun h => Option.some_ne_none n h.symm)
+  · intro v m hv
+    exact absurd hv (fun h => Option.some_ne_none m h.symm)
+  · intro n hn
+    exact absurd hn (Bool.false_ne_true)
+  · intro vname v hv
+    exact absurd hv (fun h => Option.some_ne_none v h.symm)
+
+/-- The `∃n` clause of the tagged exact relation for a present binding: source
+    local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
+    `wlab` value in the target map. -/
+example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some n ∧
+    (fun m => m == 5) n = true ∧
+    (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
+      some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
+  ⟨5, by simp [FLOOKUP, FUPDATE], by decide, by simp [wlabWloc]⟩
+
 /-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
     local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
     locals hold `wlab 9` at `5`. -/

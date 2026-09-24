@@ -1228,3 +1228,11 @@ run_probe stack_to_lab_flatten_base_probeScript.sml stack_to_lab_flatten_base_pr
   flatten_tick flatten_halt \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The RISC-V configuration probe observes the exact `riscv_config` field
+# values at 64-bit (register file, offsets, immediates) used by the stack
+# assembler checks.
+run_probe riscv_config_probeScript.sml riscv_config_probe.out \
+  cfg_isa valid_imm_add_max12p1 \
+  "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
+  "$cake_dir/compiler/encoders/riscv"

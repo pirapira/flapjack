@@ -2,6 +2,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.PanToCrepMaxList
+import Flapjack.Pancake.PanCommon
 import Flapjack.Pancake.PanLang
 
 /-!
@@ -170,18 +171,16 @@ theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat)
 
 /-- Exact port of HOL `no_overlap_flookup_distinct`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
-    variables in a `no_overlap` context have disjoint slot lists.  HOL
-    `distinct_lists xs ys` is Lean `distinctLists xs ys`. -/
+    variables in a `no_overlap` context have `distinct_lists` slot lists. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_flookup_distinct"]
 theorem noOverlapFlookupDistinct (fm : FiniteMap String (Shape × List Nat))
     (x y : String) (a b : Shape) (xs ys : List Nat)
     (hno : noOverlap fm) (hxy : x ≠ y)
     (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
-    distinctLists xs ys = true := by
-  rw [show distinctLists xs ys = true ↔ ∀ z ∈ xs, z ∉ ys from by
-    simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]]
-  intro z hzxs hzys
-  exact hxy (hno.2 x y a b xs ys hx hy ⟨z, hzxs, hzys⟩)
+    distinctListsHol xs ys = true :=
+  (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr
+    (fun value hzxs hzys => hxy (hno.2 x y a b xs ys hx hy ⟨value, hzxs, hzys⟩))
+
 /-- Exact port of HOL `MAX_LIST_add_not_mem`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:642`): `MAX_LIST xs + 1`
     is never a member of `xs`.  `maxList` is the faithful `rich_list$MAX_LIST`
@@ -238,58 +237,67 @@ theorem all_distinct_drop {α : Type} (ns : List α) (n : Nat) (h : ns.Nodup)
   nodup_drop ns n h
 
 /-- Exact port of HOL `distinct_lists_append`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`): an
-    `ALL_DISTINCT` concatenation has pairwise-disjoint halves; HOL
-    `distinct_lists` is the proposition `ListDisjoint`. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append"]
-theorem distinct_lists_append {α : Type} (xs ys : List α)
-    (h : (xs ++ ys).Nodup) : ListDisjoint xs ys :=
-  listDisjoint_append xs ys h
+theorem distinct_lists_append {α : Type} [DecidableEq α] (xs ys : List α)
+    (h : (xs ++ ys).Nodup) : distinctListsHol xs ys = true :=
+  (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr (listDisjoint_append xs ys h)
 
 /-- Exact port of HOL `distinct_lists_cons`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`): pairwise
-    disjointness of concatenations restricts to the inner halves. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_cons"]
-theorem distinct_lists_cons {α : Type} (ns xs ys zs : List α)
-    (h : ListDisjoint (ns ++ xs) (ys ++ zs)) : ListDisjoint xs zs :=
-  listDisjoint_of_append_left ns xs ys zs h
+theorem distinct_lists_cons {α : Type} [DecidableEq α] (ns xs ys zs : List α)
+    (h : distinctListsHol (ns ++ xs) (ys ++ zs) = true) : distinctListsHol xs zs = true :=
+  (distinctListsHol_eq_true_iff_listDisjoint xs zs).mpr
+    (listDisjoint_of_append_left ns xs ys zs
+      ((distinctListsHol_eq_true_iff_listDisjoint (ns ++ xs) (ys ++ zs)).mp h))
 
 /-- Exact port of HOL `distinct_lists_simp_cons`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`): pairwise
-    disjointness survives dropping the head of the right list. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_simp_cons"]
-theorem distinct_lists_simp_cons {α : Type} (xs : List α) (y : α) (ys : List α)
-    (h : ListDisjoint xs (y :: ys)) : ListDisjoint xs ys :=
-  listDisjoint_of_cons_right xs y ys h
+theorem distinct_lists_simp_cons {α : Type} [DecidableEq α] (xs : List α) (y : α)
+    (ys : List α) (h : distinctListsHol xs (y :: ys) = true) : distinctListsHol xs ys = true :=
+  (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr
+    (listDisjoint_of_cons_right xs y ys
+      ((distinctListsHol_eq_true_iff_listDisjoint xs (y :: ys)).mp h))
 
 /-- Exact port of HOL `distinct_lists_commutes`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`): HOL states the
-    Boolean equality `distinct_lists xs ys = distinct_lists ys xs`; since the
-    Lean rendering of `distinct_lists` is the proposition `ListDisjoint`, the
-    equality of decidable predicates becomes a biconditional. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116`), stated as the
+    Boolean equality HOL uses. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_commutes"]
-theorem distinct_lists_commutes {α : Type} (xs ys : List α) :
-    ListDisjoint xs ys ↔ ListDisjoint ys xs :=
-  ⟨fun h => listDisjoint_comm xs ys h, fun h => listDisjoint_comm ys xs h⟩
+theorem distinct_lists_commutes {α : Type} [DecidableEq α] (xs ys : List α) :
+    distinctListsHol xs ys = distinctListsHol ys xs := by
+  rw [Bool.eq_iff_iff]
+  constructor
+  · intro h
+    exact (distinctListsHol_eq_true_iff_listDisjoint ys xs).mpr
+      (listDisjoint_comm xs ys ((distinctListsHol_eq_true_iff_listDisjoint xs ys).mp h))
+  · intro h
+    exact (distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr
+      (listDisjoint_comm ys xs ((distinctListsHol_eq_true_iff_listDisjoint ys xs).mp h))
 
 /-- Exact port of HOL `distinct_lists_append_intro`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`): the reverse of
-    `distinct_lists_append`, disjoint from both halves implies disjoint from
-    the concatenation. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:141`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_intro"]
-theorem distinct_lists_append_intro {α : Type} (xs ys zs : List α)
-    (hys : ListDisjoint xs ys) (hzs : ListDisjoint xs zs) :
-    ListDisjoint xs (ys ++ zs) :=
-  listDisjoint_append_right xs ys zs hys hzs
+theorem distinct_lists_append_intro {α : Type} [DecidableEq α] (xs ys zs : List α)
+    (h : distinctListsHol xs ys = true ∧ distinctListsHol xs zs = true) :
+    distinctListsHol xs (ys ++ zs) = true :=
+  (distinctListsHol_eq_true_iff_listDisjoint xs (ys ++ zs)).mpr
+    (listDisjoint_append_right xs ys zs
+      ((distinctListsHol_eq_true_iff_listDisjoint xs ys).mp h.1)
+      ((distinctListsHol_eq_true_iff_listDisjoint xs zs).mp h.2))
 
 /-- Exact port of HOL `distinct_lists_append_right_elim`
-    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`): disjointness
-    from a concatenation splits into disjointness from each half. -/
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:150`). -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append_right_elim"]
-theorem distinct_lists_append_right_elim {α : Type} (xs ys zs : List α)
-    (h : ListDisjoint xs (ys ++ zs)) :
-    ListDisjoint xs ys ∧ ListDisjoint xs zs :=
-  listDisjoint_append_right_elim xs ys zs h
+theorem distinct_lists_append_right_elim {α : Type} [DecidableEq α] (xs ys zs : List α)
+    (h : distinctListsHol xs (ys ++ zs) = true) :
+    distinctListsHol xs ys = true ∧ distinctListsHol xs zs = true := by
+  have hd := (distinctListsHol_eq_true_iff_listDisjoint xs (ys ++ zs)).mp h
+  exact ⟨(distinctListsHol_eq_true_iff_listDisjoint xs ys).mpr
+      (listDisjoint_append_right_elim xs ys zs hd).1,
+    (distinctListsHol_eq_true_iff_listDisjoint xs zs).mpr
+      (listDisjoint_append_right_elim xs ys zs hd).2⟩
 
 /-! ## `OPT_MMAP` rewriting facts
 

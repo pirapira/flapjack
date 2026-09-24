@@ -1115,3 +1115,10 @@ run_probe word_convs_full_inst_ok_less_probeScript.sml word_convs_full_inst_ok_l
   eta_var fiol_alloc \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The call_arg_convention probe observes `wordConvs$inst_arg_convention` and
+# `wordConvs$call_arg_convention` over the backend wordLang syntax.
+run_probe word_convs_call_arg_probeScript.sml word_convs_call_arg_probe.out \
+  inst_addcarry_ok call_seq_bad \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

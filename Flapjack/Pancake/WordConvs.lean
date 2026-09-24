@@ -291,4 +291,50 @@ def fullInstOkLess {width : Nat} (config : AsmConfig width) :
       | none => false
   | _ => true
 
+/-- HOL `wordConvs$inst_arg_convention` (`wordConvsScript.sml:378-386`):
+per-instruction calling-convention argument placement. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_arg_convention_def"]
+def instArgConvention {width : Nat} : WordLangInst (BitVec width) -> Bool
+  | .arith (.addCarry _ _ _ r4) => r4 == 0
+  | .arith (.shift _ _ _ (.reg r)) => r == 8
+  | .arith (.addOverflow _ _ _ r4) => r4 == 0
+  | .arith (.subOverflow _ _ _ r4) => r4 == 0
+  | .arith (.longMul r1 r2 r3 r4) =>
+      r1 == 6 && r2 == 0 && r3 == 0 && r4 == 4
+  | .arith (.longDiv r1 r2 r3 r4 _) =>
+      r1 == 0 && r2 == 6 && r3 == 6 && r4 == 0
+  | _ => true
+
+/-- HOL `wordConvs$call_arg_convention` (`wordConvsScript.sml:391-423`):
+the generated Calling-Convention placement of arguments in registers.
+`GENLIST f n` is represented by `(List.range n).map f`. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "call_arg_convention_def"]
+def callArgConvention {width : Nat} : WordLangProg (BitVec width) -> Bool
+  | .inst value => instArgConvention value
+  | .return _ values => values == (List.range values.length).map (fun x => 2 * (x + 1))
+  | .raise exception => exception == 2
+  | .install ptr len _ _ _ => ptr == 2 && len == 4
+  | .ffi _ configuration configurationLength array arrayLength _ =>
+      configuration == 2 && configurationLength == 4 &&
+        array == 6 && arrayLength == 8
+  | .alloc destination _ => destination == 2
+  | .storeConsts a b c d _ => a == 0 && b == 2 && c == 4 && d == 6
+  | .call returns _ arguments handler =>
+      (match returns with
+        | none => arguments == (List.range arguments.length).map (fun x => 2 * x)
+        | some (returns, _, returnHandler, _, _) =>
+            arguments == (List.range arguments.length).map (fun x => 2 * (x + 1)) &&
+            returns == (List.range returns.length).map (fun x => 2 * (x + 1)) &&
+            callArgConvention returnHandler &&
+            (match handler with
+              | none => true
+              | some (value, handlerProg, _, _) =>
+                  value == 2 && callArgConvention handlerProg))
+  | .mustTerminate body => callArgConvention body
+  | .seq first second => callArgConvention first && callArgConvention second
+  | .loop _ body _ => callArgConvention body
+  | .ite _ _ _ thenBranch elseBranch =>
+      callArgConvention thenBranch && callArgConvention elseBranch
+  | _ => true
+
 end Flapjack

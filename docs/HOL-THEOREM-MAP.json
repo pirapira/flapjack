@@ -7943,5 +7943,21 @@
   "lean_name": "fullInstOkLess",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+} ,
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "inst_arg_convention_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "instArgConvention",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "call_arg_convention_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "callArgConvention",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

@@ -203,12 +203,15 @@ def loadShape [BEq α] [OfNat α 0] [Add α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShape (address + stride) stride count value
 
-/-- Faithful port of `crepLang$load_shape_def`
-    (`cakeml/pancake/crepLangScript.sml:82-86`): load `count` consecutive words
-    starting at `address`, stepping by the fixed machine byte width.  Unlike the
-    pipeline's `loadShape`, the stride is not a parameter; it is the fixed
-    `byte$bytes_in_word` supplied by the `CrepBytesInWord` instance. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+/-- Faithful fixed-stride loading: load `count` consecutive words starting at
+    `address`, stepping by the fixed machine byte width supplied by the
+    `CrepBytesInWord` instance.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over the
+    word element type, while HOL `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`) is indexed by the word length
+    (`address : 'a word`, `0w`, `byte$bytes_in_word`).  The exact width-indexed
+    tag is on `loadShapeBytesW` below. -/
 def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (address : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with
@@ -216,6 +219,16 @@ def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
   | count + 1 =>
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
+
+/-- Exact width-indexed port of `crepLang$load_shape_def`
+    (`cakeml/pancake/crepLangScript.sml:82-86`).  Carrier `BitVec width` with
+    `[NeZero width]` because HOL word types have positive `dimindex`; body is the
+    fixed-stride helper instantiated at the concrete word carrier. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+def loadShapeBytesW {width : Nat} [NeZero width]
+    (address : BitVec width) (count : Nat) (value : CrepExp (BitVec width)) :
+    List (CrepExp (BitVec width)) :=
+  loadShapeBytes address count value
 
 /-- Checked invariant connecting the pipeline's parameterized `loadShape` to the
     faithful fixed-width `loadShapeBytes`: when the explicit stride is the

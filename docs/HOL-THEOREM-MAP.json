@@ -1027,9 +1027,9 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_shape_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "loadShapeBytes",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadShapeBytesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against load_shape_def at crepLangScript.sml:82-86; width-indexed wrapper loadShapeBytesW over BitVec width with [NeZero width] because HOL word types have positive dimindex; the generic-CrepExp helper loadShapeBytes stays untagged; clauses reviewed: a=0w -> Load e, else Load (Op Add [e; Const a]), stepping by bytes_in_word, count 0 -> []. HOL probe scripts/hol-probes/crep_load_shape*.out and Lean guards in Flapjack/Test/CrepeLoadShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
@@ -4275,57 +4275,57 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "assigned_free_vars_store_globals_empty",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedSeq_storeGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "crepAssignedFreeVars_nestedSeq_storeGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "assigned_vars_store_globals_empty",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedSeq_storeGlobals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "crepAssignedVars_nestedSeq_storeGlobalsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "length_load_shape_eq_shape",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "length_loadShape_eq_shape",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "length_loadShape_eq_shapeW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "var_cexp_load_globals_empty",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "loadGlobals_crepExpVars_empty",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadGlobals_crepExpVars_emptyW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "el_load_globals_elem",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "loadGlobals_getElem",
+    "lean_name": "loadGlobals_getElemW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "Codex (source comparison) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "length_load_globals_eq_read_size",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "loadGlobals_length",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadGlobals_lengthW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "map_var_cexp_eq_var",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "map_var_crepExpVars_eq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "map_var_crepExpVars_eqW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -6363,25 +6363,25 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "assigned_free_vars_IMP_assigned_vars",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVars",
+    "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:373; direct HOL-EVAL oracle crep_assigned_vars_probe.out imp_mem/imp_mem_absent reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:373; direct HOL-EVAL oracle crep_assigned_vars_probe.out imp_mem/imp_mem_absent reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "nested_seq_assigned_vars_eq",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWith",
+    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWithW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:411; oracle row nested_av=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:411; oracle row nested_av=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "nested_seq_assigned_free_vars_eq",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWith",
+    "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWithW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean)"
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",

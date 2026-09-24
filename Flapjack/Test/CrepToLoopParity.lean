@@ -763,4 +763,15 @@ example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := b
 example : ([(1, 7), (2, 9)] : List (Nat × Nat)).lookup 2 = some 9 :=
   memLookupFromAListSome (n := 2) (x := 9) (by decide) (by decide)
 
+/-- HOL `make_vmap` is a left fold of `|+`, so a duplicate parameter keeps the
+    LAST binding (`mvd_dup_last_wins` in
+    `scripts/hol-probes/crep_to_loop_make_vmap_dup_probe.out`).  The executed
+    `crepMakeVmap` replays the positional pairs most-recent-first so its
+    first-match lookup reproduces that, and agrees with the tagged
+    `makeVmapHOL` for every parameter list. -/
+example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = some 1 := by decide
+
+example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = FLOOKUP (makeVmapHOL [7, 7]) 7 :=
+  lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL [7, 7] 7
+
 end Flapjack.Test.CrepToLoopParity

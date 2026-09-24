@@ -37,11 +37,16 @@ def crepMkCtxt {α : Type u}
   { vars := vmap, functions := functions, maxVar := maxVar, target := target }
 
 /-! Source-named port of CakeML Pancake's `make_vmap_def`
-    (`crep_to_loopScript.sml:230`).  Cake's finite map is populated by
-    `ZIP (params, GENLIST I (LENGTH params))`; the list-backed context uses
-    the same positional pairs and preserves their lookup order. -/
+    (`crep_to_loopScript.sml:230`).  Cake populates `FEMPTY |++ ZIP (params,
+    GENLIST I (LENGTH params))`, a left fold of `|+`, so for a *duplicate*
+    parameter name the LAST binding wins.  The list-backed context is consulted
+    with `lookupNatInfo`'s first match, so the positional pairs are replayed
+    most-recent-first (reversed): the first match then reproduces HOL's
+    last-binding-wins behaviour.  `lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL`
+    proves the result agrees with the tagged `makeVmapHOL` for every parameter
+    list, duplicates included. -/
 def crepMakeVmap (params : List Nat) : NatInfoMap Nat :=
-  params.zip (List.range params.length)
+  (params.zip (List.range params.length)).reverse
 
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with

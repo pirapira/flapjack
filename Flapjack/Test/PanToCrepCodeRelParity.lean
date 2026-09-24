@@ -366,6 +366,31 @@ example : (3 : Nat) ∉ crepAssignedFreeVars
   rw [mem_crepAssignedFreeVars_shMem]
   decide
 
+/-- The `.var`-form nested-sequence assignment produced by the non-`distinctLists`
+    branch of `compileProgHOL` assigns exactly the destination `names`. -/
+example :
+    crepAssignedFreeVars
+        (crepNestedSeq
+          ([1, 2].zipWith
+            (fun name temporary => CrepProg.assign name (.var temporary : CrepExp Nat))
+            [3, 4])) =
+      [1, 2] :=
+  crepAssignedFreeVars_nestedSeq_assign_var_zipWith (α := Nat) [1, 2] [3, 4] (by decide)
+
+/-- Adding a variable's freshly allocated slots preserves the context
+    freshness hypothesis for a slot that was neither used before nor among the
+    new slots. -/
+example :
+    ∀ v sh ns',
+      FLOOKUP
+          (FUPDATE (freshContext.vars : FiniteMap String (Shape × List Nat))
+            ("a", (Shape.one, [1]))) v = some (sh, ns') →
+        (0 : Nat) ∉ ns' := by
+  refine hfresh_update (context := freshContext) "a" Shape.one [1] 0 ?_ ?_
+  · intro v sh ns' hlk
+    simp [freshContext] at hlk
+  · decide
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),

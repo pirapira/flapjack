@@ -230,6 +230,29 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWith {α : Type u} (names : Lis
           simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
           simp [crepNestedSeq, crepAssignedFreeVars, ih values (by omega)]
 
+/-- Variable-form of `nested_seq_assigned_free_vars_eq`: assigning each name
+    from a temporary variable still assigns exactly the names. This is the form
+    emitted by the non-`distinctLists` branch of `compileProgHOL`. -/
+theorem crepAssignedFreeVars_nestedSeq_assign_var_zipWith {α : Type u}
+    (names temporaries : List Nat) (h : names.length = temporaries.length) :
+    crepAssignedFreeVars
+        (crepNestedSeq
+          (names.zipWith
+            (fun name temporary => CrepProg.assign name (.var temporary : CrepExp α))
+            temporaries)) =
+      names := by
+  induction names generalizing temporaries with
+  | nil =>
+      cases temporaries with
+      | nil => simp [crepNestedSeq, crepAssignedFreeVars]
+      | cons temporary temporaries => simp at h
+  | cons name names ih =>
+      cases temporaries with
+      | nil => simp at h
+      | cons temporary temporaries =>
+          simp only [List.zipWith_cons_cons, List.length_cons] at h ⊢
+          simp [crepNestedSeq, crepAssignedFreeVars, ih temporaries (by omega)]
+
 /-- Untagged production adapter: writing a `word_lab` global cell on the
     14-field `CrepRuntimeState` leaves every local binding unchanged. HOL's
     exact `FLOOKUP_set_globals` (crepPropsScript.sml:297) is over the 11-field

@@ -333,7 +333,7 @@ run_probe stack_lang_store_name_probeScript.sml stack_lang_store_name_probe.out 
   sn_count sn_temp_word_bits "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe asm_inst_fragment_probeScript.sml asm_inst_fragment_probe.out \
-  ar_reg ai_mem_base "$cake_dir/compiler/encoders/asm/asmScript.sml" \
+  ar_reg as_loc "$cake_dir/compiler/encoders/asm/asmScript.sml" \
   "$cake_dir/compiler/encoders/asm"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \

@@ -1649,12 +1649,13 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-For one-word and two-word payloads, the paired
-`EvaluateCases.crepRuntimeExpHdlOneWord` / `crepRuntimeExpHdlOneWord_localsRel`
-and `crepRuntimeExpHdlTwoWords` / `crepRuntimeExpHdlTwoWords_localsRel`
-lemmas prove execution of the target finite-map `exp_hdl` program and its
-resulting `locals_rel` postcondition. This lemma supplies the source-to-target
-map-update relation used there. The full HOL
+The one-word target execution is established by
+`EvaluateCases.crepRuntimeExpHdlOneWord`, and
+`crepRuntimeExpHdlOneWord_localsRel` proves its post-state `locals_rel`
+condition. The corresponding `crepRuntimeExpHdlTwoWords` and
+`crepRuntimeExpHdlTwoWords_localsRel` lemmas establish the same boundary for
+two-word payloads. This lemma supplies the source-to-target map-update
+relation used by those proofs. The full HOL
 `pc_compile_correct[Call_Ret_Exception]` simulation remains open: the general
 Call state transition and arbitrary payload-shape cases are not yet
 established. -/
@@ -1912,6 +1913,83 @@ theorem firstCompileToCrepAllDistinct
     ((compileToCrepHOL declarations).map
       fun (name, _, _) => name).Nodup := by
   simpa [compileToCrepHOL, List.map_map, Function.comp_def] using hdistinct
+
+/-- `compileToCrepHOL` is the source function list mapped through `comp_func`
+    and `crep_vars`, with the context built from the same declaration list. -/
+theorem compileToCrepHOL_eq_map
+    (declarations : List (Decl (BitVec width))) :
+    compileToCrepHOL declarations =
+      (functionEntries declarations).map
+        (fun entry =>
+          (entry.1,
+           (panToCrepVars entry.2.1,
+            panToCrepCompFuncRiscV
+              (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+                (panToCrepGetEidsFromDeclsHOL declarations))
+              entry.2.1 entry.2.2.1))) := by
+  simp only [compileToCrepHOL]
+
+/-- Exact port of HOL `alookup_compile_prog_code`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575`): a source
+    function entry with empty parameters and body `prog` is compiled to the
+    Crepe entry whose argument slots are `crep_vars []` and whose body is
+    `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)
+    [] prog`.  `List.lookup` on the nested-pair triple list is HOL's `ALOOKUP`.
+
+    Tagged counterparts used here: `compileToCrepHOL` (`compile_to_crep_def`),
+    `panToCrepVars` (`crep_vars_def`), `panToCrepGetEidsFromDeclsHOL`
+    (`get_eids_from_decls_def`), `panToCrepMkCtxtHOL` (`mk_ctxt_def`),
+    `panToCrepMakeVmapHOL` (`make_vmap_def`) and `compileProgRiscV`
+    (`compile_def`).  Two helpers are deliberate untagged adapters and are NOT
+    tagged counterparts:
+    * `functionInfosHOL` computes the HOL finite-map value
+      `alist_to_fmap (make_funcs (functions pan_code))`: `panToCrepMakeFuncs`
+      produces the same source-order `(name, (params, return))` list as HOL
+      `make_funcs`, and `FUPDATE_LIST FEMPTY ·.reverse` is `alist_to_fmap`
+      (`FOLDR FUPDATE FEMPTY`, first duplicate wins);
+    * `panToCrepCompFuncRiscV` is `comp_func` after threading the context as a
+      record: it reads `context.funcs`/`context.eids` instead of HOL's separate
+      `fs`/`eids` arguments and applies the tagged `compile_def` to the tagged
+      `mk_ctxt_def`/`make_vmap_def`. No HOL side condition or body step is
+      dropped.  The HOL-vs-Lean equivalence of the statement is not proved by
+      this theorem: the theorem is a within-Lean lookup fact, and the HOL
+      correspondence is reviewed by comparing the definitions (per SOUNDNESS),
+      not established by the proof below. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
+theorem alookupCompileToCrepCode
+    (declarations : List (Decl (BitVec width)))
+    (start : FunName) (prog : Prog (BitVec width)) (rshape : Shape)
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlookup : List.lookup start (functionEntries declarations) =
+      some ([], (prog, rshape))) :
+    List.lookup start (compileToCrepHOL declarations) =
+      some ([], panToCrepCompFuncRiscV
+        (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+          (panToCrepGetEidsFromDeclsHOL declarations)) [] prog) := by
+  obtain ⟨l₁, l₂, hdecomp, hnotin⟩ :=
+    List.lookup_eq_some_iff.mp hlookup
+  rw [compileToCrepHOL_eq_map]
+  apply (List.lookup_eq_some_iff
+    (b := ([], panToCrepCompFuncRiscV
+      (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+        (panToCrepGetEidsFromDeclsHOL declarations)) [] prog))).mpr
+  refine ⟨l₁.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))),
+    l₂.map (fun entry =>
+      (entry.1, (panToCrepVars entry.2.1,
+        panToCrepCompFuncRiscV
+          (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL declarations) 0
+            (panToCrepGetEidsFromDeclsHOL declarations))
+          entry.2.1 entry.2.2.1))), ?_, ?_⟩
+  · rw [hdecomp, List.map_append, List.map_cons]
+    simp [panToCrepVars, Shape.shapeSize]
+  · intro p hp
+    obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
+    simpa using hnotin q hq
 
 /-- Exact port of HOL `first_compile_prog_all_distinct`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original

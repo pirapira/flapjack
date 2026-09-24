@@ -387,6 +387,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEvalClass",
+    "statement_status": "documented_mismatch",
+    "reviewer": "The implicit HolFiniteDimension instance now mirrors HOL's finite_index constraint and the theorem has the success premise, arbitrary code-map update, simp_exp, and full Option word_lab result over every finite index carrier. It remains untagged because CrepHolState and the source operation dictionary are not yet identified theoremically with HOL crepSem state/eval and native word operations."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceFull",
     "statement_status": "documented_mismatch",
     "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension source evaluator and CrepHolState adapter are not yet proved identical to HOL crepSem eval and its implicit finite_index operations."
@@ -6622,5 +6630,21 @@
     "lean_name": "compileExpListHOL_heads_eq_compileArgs_of_singleton",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean-only list representation bridge: if every expression compiles to one word expression, cexpHeads over mapped compileExpHOL results equals compileArgsHOL. This is reusable induction infrastructure, not a standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "alookup_compile_prog_code",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "alookupCompileToCrepCode",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileToCrepHOL_eq_map",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper: compileToCrepHOL is the source function list mapped through comp_func/crep_vars with the context built from the same declarations; used to move ALOOKUP over compile_to_crep onto the source table."
   }
 ]

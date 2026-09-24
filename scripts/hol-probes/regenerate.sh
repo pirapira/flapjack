@@ -283,6 +283,9 @@ run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
 run_probe crep_to_loop_make_vmap_dup_probeScript.sml crep_to_loop_make_vmap_dup_probe.out \
   mvd_single_hit mvd_dup_last_wins "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_rt_vars_distinct_probeScript.sml crep_to_loop_rt_vars_distinct_probe.out \
+  acd_distinct acd_missing "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_map_map2_fst_probeScript.sml crep_to_loop_map_map2_fst_probe.out \
   mm2_pair_eq mm2_empty "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"

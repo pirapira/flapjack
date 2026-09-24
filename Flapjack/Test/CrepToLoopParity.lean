@@ -793,4 +793,26 @@ example : alookupElProg[1]'(by decide) = ("b", [], 9) :=
   alookupElPairEqEl alookupElProg "b" 9 1
     (by decide) (by decide) (by decide) (by decide)
 
+/-- HOL `all_distinct_ctxt_lookup_all_distinct` oracle rows (`acd_*` in
+    `scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out`): a distinct
+    context (`1 ↦ 10`, `2 ↦ 20`) keeps `rt_vars` distinct on the success list
+    `[1, 2]`, and the `OPT_MMAP`-failure list `[1, 3]` still yields `[n+1]`. -/
+def rtVarsCtxtFm : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)) (2, 20)
+
+theorem rtVarsCtxtFm_distinct : crepToLoopDistinctVars rtVarsCtxtFm := by
+  intro x y n m hx hy h
+  simp only [rtVarsCtxtFm, FLOOKUP_update] at hx hy
+  split at hx <;> split at hy <;> simp_all <;> omega
+
+def rtVarsCtxt : CrepToLoopFiniteMapContext :=
+  { vars := rtVarsCtxtFm, funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
+    vmax := 5, target := .riscv }
+
+example : (rtVars rtVarsCtxtFm [1, 2] 0).Nodup :=
+  allDistinctCtxtLookupAllDistinct rtVarsCtxt [1, 2] 0 (by decide) rtVarsCtxtFm_distinct
+
+example : (rtVars rtVarsCtxtFm [1, 3] 0).Nodup :=
+  allDistinctCtxtLookupAllDistinct rtVarsCtxt [1, 3] 0 (by decide) rtVarsCtxtFm_distinct
+
 end Flapjack.Test.CrepToLoopParity

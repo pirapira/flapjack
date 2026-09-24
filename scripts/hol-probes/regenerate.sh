@@ -1435,6 +1435,14 @@ run_probe stack_lang_prog_carrier_probeScript.sml stack_lang_prog_carrier_probe.
   "$cake_dir/compiler/backend/stackLangScript.sml" \
   "$cake_dir/compiler/backend"
 
+# The panLang shape probe pins the exact `panLang$shape` name field as
+# `mlstring` via `shape_to_str` (Named nm returns nm), plus constructor
+# equality and arity.
+run_probe pan_lang_shape_probeScript.sml pan_lang_shape_probe.out \
+  shp_one_str shp_comb_len \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
 # The loopLang exp/loop_arith probe pins the exact constructor and field shapes
 # of the faithful width-indexed carriers HolLoopExp/LoopArith.
 run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \

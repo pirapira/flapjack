@@ -517,6 +517,13 @@ theorem lineOkPreConfig_compileJump_inl (config : Flapjack.Compiler.Encoders.Asm
       (StackToLab.compileJump (flattenOps (width := width)) (0 : BitVec width) (.inl sectionId) : FlatLineC width) = true := by
   simp [StackToLab.compileJump, lineOkPreConfig_labAsm]
 
+theorem lineOkPreConfig_compileJump_inr (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (register : Nat) :
+    lineOkPreConfig config
+      (StackToLab.compileJump (flattenOps (width := width)) (0 : BitVec width) (.inr register) : FlatLineC width) =
+        Flapjack.Compiler.Encoders.Asm.asmRegOk config register := by
+  simp [StackToLab.compileJump, lineOkPreConfig_flattenOps_jumpReg]
+
 theorem flatten_jumpLower_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (tail : Bool) (left right target sectionId next : Nat) (conts breaks : List Nat) :
     ((StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) tail

@@ -6582,5 +6582,21 @@
     "lean_name": "compileExpHOL_op2_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only two-argument Op constructor case for localized Call arguments. It consumes full operand IHs, derives singleton compiled operands, and proves production Crep word_op evaluation plus the four compile_exp_val_rel conclusions; general arity remains open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "crep_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "crepOpCrep",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause port of crepSem$crep_op_def (crep_op Mul [w1;w2]=SOME(w1*w2), otherwise NONE) over the HOL word carrier: width-polymorphic BitVec width with [NeZero width]; direct HOL-EVAL rows mirrored by Lean guards incl. an RV64 runtime instantiation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpListHOL_heads_eq_compileArgs_of_singleton",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only list representation bridge: if every expression compiles to one word expression, cexpHeads over mapped compileExpHOL results equals compileArgsHOL. This is reusable induction infrastructure, not a standalone HOL declaration."
   }
 ]

@@ -284,8 +284,25 @@ def hol_declaration_lines(
             r"^(?:%s)\s+([A-Za-z0-9_']+)" % "|".join(HOL_HEADER_KEYWORDS)
         )
         sml_val = re.compile(r"^val\s+([A-Za-z0-9_']+)\s*=")
+        # HOL ``Datatype:`` blocks put the declared type name on the next
+        # line(s) (``name = ...``) and terminate with a top-level ``End``.
+        datatype_header = re.compile(r"^Datatype\s*:?\s*$")
+        datatype_name = re.compile(r"^\s*([A-Za-z0-9_']+)\s*=")
+        datatype_end = re.compile(r"^End\b")
+        in_datatype = False
         with path.open(encoding="utf-8", errors="replace") as handle:
             for number, line in enumerate(handle, start=1):
+                if in_datatype:
+                    if datatype_end.match(line):
+                        in_datatype = False
+                    else:
+                        match = datatype_name.match(line)
+                        if match:
+                            names.setdefault(match.group(1), []).append(number)
+                    continue
+                if datatype_header.match(line):
+                    in_datatype = True
+                    continue
                 match = header.match(line) or sml_val.match(line)
                 if match:
                     names.setdefault(match.group(1), []).append(number)

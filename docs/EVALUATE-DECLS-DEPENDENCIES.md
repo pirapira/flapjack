@@ -4,8 +4,11 @@ Bead: `flapjack-pxn.18.3.6.1` (child of the `flapjack-pxn.18.3.6` audit).
 Scope: the **direct** production calls and datatypes reachable from the tagged
 `evaluateDecls`, paired with their HOL definitions, plus the HOL-defined calls
 traced one layer deep. This is a review-frontier triage, not a proof: it records
-what is exact/tagged, exact/untagged, a representation refinement, or a
-mismatch, and links a child bead for every remaining node.
+what is tagged `reviewed_exact`, what is unreviewed (and thus a *possible*
+mismatch until clause-by-clause evidence exists), a representation refinement,
+or a confirmed mismatch, and links a child bead for every remaining node. A
+classification of "unreviewed" does **not** assert exactness — it only means no
+review has been done yet.
 
 ## Root
 
@@ -23,11 +26,11 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 
 | Dependency | Lean (file:line) | HOL counterpart | Classification | Bead |
 | --- | --- | --- | --- | --- |
-| `evalPanValueExp` | `Flapjack/PanValues.lean:1242` | `eval_def` (`panSemScript.sml:209`) | **exact / untagged** (semantic gap) | `.18.3.6.2` |
-| `isWfShape` | `Flapjack/Pancake/PanStatic.lean:142` | `is_wf_shape_def` (`panLangScript.sml:139`) | **exact / untagged** | `.18.3.6.3` |
+| `evalPanValueExp` | `Flapjack/PanValues.lean:1242` | `eval_def` (`panSemScript.sml:209`) | **unreviewed / possible mismatch** (no clause-by-clause evidence for the `NStruct`, memory/domain, or word-operation cases) | `.18.3.6.2` |
+| `isWfShape` | `Flapjack/Pancake/PanStatic.lean:142` | `is_wf_shape_def` (`panLangScript.sml:139`) | **unreviewed / possible mismatch** (shape equality and key lookup not yet reviewed) | `.18.3.6.3` |
 | `panValueShape` | `Flapjack/PanValues.lean:491` | `shape_of_def` (`panSemScript.sml:80`) | **mismatch**: unused `context` parameter; duplicate of the tagged `panSemShapeOf` (`PanSem.lean:36`) | `.18.3.6.4` |
 | `panShapeMatches` | `Flapjack/PanValues.lean:1039` | HOL `=` on `Shape` (`sh = shape_of res`) | **representation**: structural `Bool` using `==` for `Named` | `.18.3.6.4` |
-| `lookupInfo` | `Flapjack/Pancake/PanStatic.lean:64` | `alist$ALOOKUP` / `FLOOKUP` | **exact / untagged** (key-polymorphic, `[BEq κ]`) | `.18.3.6.5` |
+| `lookupInfo` | `Flapjack/Pancake/PanStatic.lean:64` | `alist$ALOOKUP` / `FLOOKUP` | **unreviewed** (key-polymorphic `[BEq κ]`; needs review to establish `==` reflects HOL `=`) | `.18.3.6.5` |
 | `panSemDeclUpdateGlobal` | `Flapjack/Pancake/Semantics/PanSem.lean:1428` | `globals |+ (v,res)` (`FUPDATE` on a finite map) | **representation**: total function vs finite map | `.18.3.6.5` |
 | `panSemDeclUpdateInfo` | `Flapjack/Pancake/Semantics/PanSem.lean:1421` | `code |+ ...` / `eshapes |+ ...` (sptree update) | **representation**: association list vs `num_map` | `.18.3.6.5` |
 | `Decl` | `Flapjack/Pancake/PanLang.lean:220` | `panLang$decl` datatype | datatype | existing `.18.3.5.5` |
@@ -73,8 +76,8 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 
 ## Child beads (parent `flapjack-pxn.18.3.6`)
 
-- `.18.3.6.2` — port/tag exact HOL `eval_def` over the production expression evaluator.
-- `.18.3.6.3` — review/tag exact HOL `is_wf_shape_def` over the production `Shape` predicate.
+- `.18.3.6.2` — review the production expression evaluator against HOL `eval_def`; tag only if review establishes exactness.
+- `.18.3.6.3` — review the production `Shape` predicate against HOL `is_wf_shape_def` (shape equality, key lookup); tag only if exact.
 - `.18.3.6.4` — align `evaluateDecls` shape comparison with tagged `panSemShapeOf` / HOL shape equality.
 - `.18.3.6.5` — review finite-map lookup/update helpers (`lookupInfo`, `panSemDeclUpdateGlobal`, `panSemDeclUpdateInfo`).
 - `.18.3.6.6` — review/tag the `word_lab` value datatype (`PanValue`).

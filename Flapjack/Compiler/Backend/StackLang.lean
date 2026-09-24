@@ -9,7 +9,7 @@ instructions. The generic carriers below preserve the HOL datatype boundary
 without claiming that the existing executable AST is already related to it.
 -/
 
-namespace Flapjack.RiscV.CakeStackLang
+namespace Flapjack.Compiler.Backend.StackLang
 
 /-- HOL `stackLang$store_name`; `Temp` retains the HOL word payload type. -/
 inductive StoreName (Word : Type) where
@@ -79,4 +79,4 @@ inductive Prog (Word Inst Cmp RegImm Binop Memop Addr MlString : Type) where
   | halt (register : Nat)
   deriving Repr
 
-end Flapjack.RiscV.CakeStackLang
+end Flapjack.Compiler.Backend.StackLang

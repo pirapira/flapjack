@@ -1,9 +1,9 @@
-import Flapjack.RiscV.CakeStackProps
+import Flapjack.Compiler.Backend.StackProps
 
-namespace Flapjack.Test.CakeStackProps
+namespace Flapjack.Test.StackProps
 
-open Flapjack.RiscV.CakeStackLang
-open Flapjack.RiscV.CakeStackProps
+open Flapjack.Compiler.Backend.StackLang
+open Flapjack.Compiler.Backend.StackProps
 
 abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat Nat String
 
@@ -69,4 +69,4 @@ def defaultClauseGuards : Bool :=
 
 #guard defaultClauseGuards
 
-end Flapjack.Test.CakeStackProps
+end Flapjack.Test.StackProps

@@ -185,8 +185,8 @@ import Flapjack.Pancake.LoopLive
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
-import Flapjack.RiscV.CakeStackLang
-import Flapjack.RiscV.CakeStackProps
+import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackProps
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.StackAlloc.Machine

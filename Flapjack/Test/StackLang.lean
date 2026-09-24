@@ -1,8 +1,8 @@
-import Flapjack.RiscV.CakeStackLang
+import Flapjack.Compiler.Backend.StackLang
 
-namespace Flapjack.Test.CakeStackLang
+namespace Flapjack.Test.StackLang
 
-open Flapjack.RiscV.CakeStackLang
+open Flapjack.Compiler.Backend.StackLang
 
 abbrev ProbeProg := Prog Nat Nat Nat Nat Nat Nat Nat String
 
@@ -108,4 +108,4 @@ def storeNameConstructorFixtures : List (StoreName Nat) :=
 
 #guard (storeNameConstructorFixtures.map storeNameConstructorIndex) == List.range 18
 
-end Flapjack.Test.CakeStackLang
+end Flapjack.Test.StackLang

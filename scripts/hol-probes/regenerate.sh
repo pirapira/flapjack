@@ -1172,3 +1172,10 @@ run_probe word_lang_every_name_probeScript.sml word_lang_every_name_probe.out \
   en_empty esv_seq_bad \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# `pre_alloc_conventions` / `post_alloc_conventions`: stack/phy predicates,
+# the `2*k` bound, and the call-argument convention.
+run_probe word_convs_alloc_conventions_probeScript.sml word_convs_alloc_conventions_probe.out \
+  pre_ok_ffi post_ok_ret \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

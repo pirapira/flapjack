@@ -34,6 +34,11 @@ The recursive sequence-fragment checks below pair with
 two `Skip`s, first-command `Break`/`Continue`, and `Tick` followed by `Skip`.
 The fragment evaluator is structural on those source syntax forms and returns
 HOL's result option with the complete source state.
+
+Its restricted recursive `If` checks also pair with
+`scripts/hol-probes/pan_sem_ite_e2e_probe.out` (`panSemScript.sml:618-620`):
+Const and direct Local conditions select Tick/Skip branches, while missing or
+non-word locals produce Error without changing the state.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -273,6 +278,57 @@ def totalSeqFragmentGuard : Bool :=
    | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
    | _ => false)
 
+def totalSeqFragmentZeroState : PanSemState Word64 (FfiState Unit) :=
+  { totalSeqFragmentState with
+    locals := updatePanValueMap totalSeqFragmentState.locals "x" (.word 0) }
+
+def totalSeqFragmentNonwordState : PanSemState Word64 (FfiState Unit) :=
+  { totalSeqFragmentState with
+    locals := updatePanValueMap totalSeqFragmentState.locals "y" (.rStruct []) }
+
+def totalIfFragmentTrueGuard : Bool :=
+  match panSemEvaluateSeqFragment
+      (.iteConst (BitVec.ofNat 64 1) (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentFalseGuard : Bool :=
+  match panSemEvaluateSeqFragment
+      (.iteConst (BitVec.ofNat 64 0) (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentLocalTrueGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "x" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentLocalZeroGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "x" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentZeroState with
+  | (none, state) => state.clock == 5 && isWordOption 0 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentMissingGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "missing" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentState with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentNonwordGuard : Bool :=
+  match panSemEvaluateSeqFragment (.iteLocal "y" (.leaf .tick) (.leaf .skip))
+      totalSeqFragmentNonwordState with
+  | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+  | _ => false
+
+def totalIfFragmentGuard : Bool :=
+  totalIfFragmentTrueGuard && totalIfFragmentFalseGuard &&
+    totalIfFragmentLocalTrueGuard && totalIfFragmentLocalZeroGuard &&
+    totalIfFragmentMissingGuard && totalIfFragmentNonwordGuard
+
 /-- A state whose global `g` is bound, for the global-assignment case. -/
 def totalAssignState : PanSemState Word64 (FfiState Unit) :=
   { totalState 5 with
@@ -306,7 +362,7 @@ def totalGuard : Bool :=
   skipGuard && tickSuccGuard && tickZeroGuard && totalSkipClauseGuard &&
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
-    seqContinueGuard && seqTickGuard && totalSeqFragmentGuard &&
+    seqContinueGuard && seqTickGuard && totalSeqFragmentGuard && totalIfFragmentGuard &&
     totalIfNonzeroGuard && totalIfZeroGuard &&
     totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
     totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&

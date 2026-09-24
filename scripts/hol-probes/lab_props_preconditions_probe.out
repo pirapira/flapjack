@@ -1,0 +1,8 @@
+pre_label=T
+pre_labasm=T
+pre_asmi_skip=T
+pre_cbw_to_asm=Inst (Mem Store8 2 (Addr 1 0w))
+pre_share_to_asm=Inst (Mem Load 2 (Addr 3 0w))
+pre_empty_sections=T
+pre_label_section=T
+pre_skip_asm_section=T

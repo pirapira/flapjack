@@ -99,6 +99,14 @@ example :
   cases hFalse
 
 def boolDimensionWord : Bool → Bool := id
+def boolDimensionOne : Bool → Bool :=
+  bitVecToHolWord boolWordDimension (BitVec.ofNat 2 1)
+
+/-! The generic finite-word comparison instance handles signed order from the
+    source word encoding: the 2-bit value 2 (two's-complement -2) is below 1. -/
+#guard PanCmp.less boolDimensionWord boolDimensionOne
+#guard holWordToBitVec boolWordDimension
+  (evalPanCmp .less boolDimensionWord boolDimensionOne) == BitVec.ofNat 2 1
 
 /-! Generic finite-dimension `dest_2exp` support is checked on Bool-indexed
     words, in addition to the existing BitVec fixture. These remain support

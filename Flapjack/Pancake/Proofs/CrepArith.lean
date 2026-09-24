@@ -1050,8 +1050,8 @@ theorem crepEvalMulConstHolFiniteWordSourceEval {ι : Type} {σ : Type}
     crepSem$eval s (mul_const exp c) = SOME (Word (w * c))`, over its
     polymorphic word carrier and arbitrary `crepSem` state. This Lean support
     instead fixes values to `RiscV.Word n`, evaluates the state through
-    `riscvCrepWordTarget`, and projects the `Option` result through
-    `PanWordLab.word`. The helper proves the shift arithmetic for that target;
+    `riscvCrepWordTarget`, and wraps the result in the `PanWordLab.word`
+    constructor. The helper proves the shift arithmetic for that target;
     there is no theorem relating the resulting production evaluator to HOL's
     `eval_def`/`crep_op_def`/`word_sh` for arbitrary HOL states and word types.
     The prior `@[hol]` claim was removed and its theorem-map row is classified
@@ -1799,28 +1799,15 @@ private theorem crepEvalCodeMapIrrel {α : Type} [BEq α] [OfNat α 0] [OfNat α
     It retains the successful-evaluation premise, arbitrary local `mapc f`
     code update, and complete optional word-lab result: HOL's `word_lab` and
     Lean's `PanWordLab` each have only the `Word` constructor. It remains
-    untagged as HOL `simp_exp_correct1` because this evaluator interprets the
-    carrier through an explicit `HolFiniteDimension` enumeration and the
-    RISC-V/BitVec operation model. The chosen `encode` determines the bit
-    order used by `n2w`; a Lean fixture shows that permuting the enumeration
-    changes the word denoted by 1. No theorem currently identifies the
-    selected encoding with HOL's canonical `dimindex`/index map, so this is
-    not yet an unrestricted correspondence for HOL's polymorphic word type.
-    The address-load constructors now pass through source-shaped helpers
-    `crepHolEvalMemLoad32`/`crepHolEvalMemLoadByte`, but the evaluator supplies
-    `RiscV.panRiscVMemoryModelForEndian` and a BitVec-derived `bytesInWord`.
-    HOL `crepSem$eval_def` instead gets `mem_load_32`/`mem_load_byte` and their
-    `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` operations from
-    the polymorphic word type. Their equality for every HOL word dimension
-    and memory state remains unproved. The successful evaluation induction
-    needs these branches, so this theorem is not tagged as HOL
-    `simp_exp_correct1`. There is a concrete counterexample to identifying
-    the current RISC-V model with the HOL model at every dimension: for a
-    24-bit word, the probed HOL definition gives `byte_align 5w = 4w` because
-    it aligns by `LOG2 (24 DIV 8) = 1`, while the production model supplied
-    `bytesInWord = 3` and rounds address 5 down to 3. See
+    untagged as HOL `simp_exp_correct1` because this theorem runs the
+    compiler's canonical RISC-V runtime, whose memory model is target-specific.
+    The all-width source runtime below uses the same finite-index dimension
+    witness with HOL-shaped memory operations. The two runtime configurations
+    differ at width 24: HOL maps `byte_align 5w` to 4, while the RISC-V model
+    with `bytesInWord = 3` maps address 5 to 3. See
     `PanFixedLoadParity.holByteAlignWidth24Address5` and the direct HOL row in
-    `pan_fixed_load_probe.out`. -/
+    `pan_fixed_load_probe.out`. This remains an untagged target specialization,
+    not the polymorphic HOL theorem. -/
 theorem crepSimpExpCorrect1HolFiniteDimension {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))
@@ -1912,14 +1899,13 @@ theorem crepSimpExpCorrect1HolFiniteDimensionSource {ι : Type} {σ : Type}
       hSourceRuntime.symm
 
 /-! This source-runtime corollary runs the recursive preservation induction
-    over the finite-word runtime whose byte loads use the explicit HOL-shaped
-    finite-word memory model. It removes the RISC-V byte-alignment mismatch
-    from that induction. `evalCrepRuntimeExp_sourceWord_eq` now proves that
-    production evaluation over this adapter equals the recursive source
-    equations for each explicit finite dimension. The theorem remains
-    Flapjack-only: the adapter's `HolFiniteDimension` witness has not been
-    identified with HOL's implicit finite-index dictionary, so this is not
-    yet tagged as HOL `simp_exp_correct1`. -/
+    over the finite-word runtime whose byte loads use the HOL-shaped source
+    memory model. `evalCrepRuntimeExp_sourceWord_eq` proves that production
+    evaluation over this adapter equals the recursive source equations for
+    each dimension. It remains support rather than a HOL tag because the
+    compiler's canonical RISC-V runtime selects a different memory model at
+    some widths, and no all-width relation between those production
+    configurations is proved. -/
 theorem crepSimpExpEvalPreservesHolFiniteWordSource {ι : Type} {σ : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ)
@@ -2060,11 +2046,12 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEval {ι : Type} {σ : Type}
               (evalCrepRuntimeExp_sourceWord_eq dimension state expression)
 
 /-- Full `word_lab` result form of the source-evaluator preservation theorem.
-    Since `PanWordLab` has only its `word` constructor, this strengthens the
-    payload-projected helper above to equality of the complete optional result.
-    It remains untagged until the source evaluator and state operations are
-    proved identical to HOL `crepSem$eval` for its implicit finite-index
-    instance. -/
+    The raw source evaluator returns `Option word`; mapping the `word`
+    constructor gives HOL's complete `Option word_lab` result. This form keeps
+    the successful-evaluation premise on the raw evaluator. It remains untagged
+    because production evaluation is configured with the HOL-shaped source
+    memory model rather than the compiler's canonical RISC-V memory model;
+    their arbitrary-carrier relation is not proved. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceFull {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) →

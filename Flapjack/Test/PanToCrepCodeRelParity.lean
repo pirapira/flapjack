@@ -212,6 +212,38 @@ def elCompileGuard : Bool :=
 
 #guard elCompileGuard
 
+/-- Two-function declaration list used to exercise the exact HOL `make_funcs`
+    port: `f` has no parameters, `g` has one. -/
+def makeFuncsDecls : List (Decl (BitVec 64)) :=
+  [Decl.function ⟨"f", false, false, [], Prog.skip, Shape.one⟩,
+   Decl.function ⟨"g", false, false, [("x", Shape.one)], Prog.skip, Shape.one⟩]
+
+example :
+    FLOOKUP (makeFuncsHOL (functionEntries makeFuncsDecls)) "f" =
+      some ([], Shape.one) := by
+  simp [makeFuncsHOL, makeFuncsDecls, functionEntries, FUPDATE_LIST,
+    FLOOKUP_update]
+
+example :
+    FLOOKUP (makeFuncsHOL (functionEntries makeFuncsDecls)) "g" =
+      some ([("x", Shape.one)], Shape.one) := by
+  simp [makeFuncsHOL, makeFuncsDecls, functionEntries, FUPDATE_LIST,
+    FLOOKUP_update]
+
+example :
+    FLOOKUP (makeFuncsHOL (functionEntries makeFuncsDecls)) "h" = none := by
+  simp [makeFuncsHOL, makeFuncsDecls, functionEntries, FUPDATE_LIST,
+    FLOOKUP_update]
+
+example : functionInfosHOL makeFuncsDecls =
+    makeFuncsHOL (functionEntries makeFuncsDecls) :=
+  functionInfosHOL_eq_makeFuncsHOL makeFuncsDecls
+
+def makeFuncsGuard : Bool :=
+  (FLOOKUP (makeFuncsHOL (functionEntries makeFuncsDecls)) "f").isSome
+
+#guard makeFuncsGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -219,7 +251,8 @@ def runChecks : IO Bool := do
     ("HOL code_rel compiled parameter return", compiledReturnGuard),
     ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle),
     ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard),
-    ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard)]
+    ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard),
+    ("HOL make_funcs_def parameter table", makeFuncsGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

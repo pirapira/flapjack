@@ -1,0 +1,5 @@
+flatten_app_tick=[Asm (Asmi (Inst Skip)) [] 0]
+flatten_app_halt=[LabAsm Halt 0w [] 0]
+flatten_app_inst=[Asm (Asmi (Inst Skip)) [] 0]
+flatten_app_seq=[Asm (Asmi (Inst Skip)) [] 0; Label 0 1 0; LabAsm Halt 0w [] 0]
+flatten_app_raise=[Asm (Asmi (JumpReg 3)) [] 0]

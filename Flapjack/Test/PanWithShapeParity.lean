@@ -1,6 +1,7 @@
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.Pancake.Proofs.PanGlobals
+import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
 
 /-!
@@ -434,6 +435,53 @@ def map3Guard : Bool :=
 #eval map3Guard
 #guard map3Guard
 
+/-! Exact tagged ports of `max_foldr_lt` and `MAP3_MAP2`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:768/827`). -/
+
+theorem maxFoldrLt_tagged_fixture : 3 < ([1, 3].foldr max 2) + 1 :=
+  max_foldr_lt [1, 3] 3 2 1 (by decide) (by decide) (by decide)
+
+theorem MAP3_MAP2_tagged_fixture :
+    panMap3 (fun (a b c : Nat) => a + b * c) [1, 2] [3, 4] [5, 6] =
+      panMap2 (fun (pair : Nat × Nat) (z : Nat) => pair.1 + pair.2 * z)
+        ([1, 2].zip [3, 4]) [5, 6] :=
+  MAP3_MAP2 _ [1, 2] [3, 4] [5, 6] (by decide) (by decide)
+
+/-! Exact tagged ports of `all_distinct_take`, `all_distinct_drop`,
+    `distinct_lists_append`, `distinct_lists_cons` and
+    `distinct_lists_simp_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:384/392/108/125/133`). -/
+
+theorem allDistinctTake_tagged_fixture : ([1, 2, 3, 4].take 2).Nodup :=
+  all_distinct_take [1, 2, 3, 4] 2 (by decide) (by decide)
+
+theorem allDistinctDrop_tagged_fixture : ([1, 2, 3, 4].drop 1).Nodup :=
+  all_distinct_drop [1, 2, 3, 4] 1 (by decide) (by decide)
+
+theorem distinctListsAppend_tagged_fixture :
+    ListDisjoint ([] : List Nat) [1, 2] :=
+  distinct_lists_append [] [1, 2] (by decide)
+
+theorem distinctListsCons_tagged_fixture :
+    ListDisjoint [1] [4] :=
+  distinct_lists_cons [] [1] [] [4] (by
+    intro value hmem h
+    simp at hmem h
+    omega)
+
+theorem distinctListsSimpCons_tagged_fixture :
+    ListDisjoint [1] [3, 4] :=
+  distinct_lists_simp_cons [1] 2 [3, 4] (by
+    intro value hmem h
+    simp at hmem h
+    omega)
+
+def distinctListsTaggedGuard : Bool :=
+  (([1, 2, 3, 4].take 2).Nodup) && (([1, 2, 3, 4].drop 1).Nodup)
+
+#eval distinctListsTaggedGuard
+#guard distinctListsTaggedGuard
+
 /-! Cake's `map_map2_fst`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`). -/
 
@@ -613,10 +661,12 @@ def runChecks : IO Bool := do
     checkDisjoint "pan list_rel_flatten_with_shape_flookup" listRelFlattenFlookupGuard
   let optMmapMemImpOk ←
     checkDisjoint "pan OPT_MMAP_MEM_IMP" optMmapMemImpGuard
+  let distinctListsTaggedOk ←
+    checkDisjoint "pan all_distinct_take/drop tagged" distinctListsTaggedGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
-    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk)
+    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk && distinctListsTaggedOk)
 
 end Flapjack.Test.PanWithShapeParity

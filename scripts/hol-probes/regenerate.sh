@@ -316,6 +316,10 @@ run_probe reg_alloc_dec_deg_probeScript.sml reg_alloc_dec_deg_probe.out \
   dec_deg_in_bounds_result update_degrees_out_of_bounds_result \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend/reg_alloc"
+run_probe stack_alloc_next_lab_probeScript.sml stack_alloc_next_lab_probe.out \
+  next_lab_skip next_lab_both_continuations \
+  "$cake_dir/compiler/backend/stack_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
@@ -1042,5 +1046,21 @@ run_probe word_convs_labels_rel_probeScript.sml word_convs_labels_rel_probe.out 
 # even when a handler is present.
 run_probe word_convs_extract_labels_probeScript.sml word_convs_extract_labels_probe.out \
   el_inst el_nested \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The instruction-predicate probe observes the `distinct_tar_reg` and
+# `two_reg_inst` arithmetic cases, and `every_inst` descending through the
+# program's structural positions (including the `Call` return-metadata
+# nesting).
+run_probe word_convs_inst_preds_probeScript.sml word_convs_inst_preds_probe.out \
+  dtr_binop_same ei_alloc \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The flat-exp probe observes the expression-shape restrictions of
+# `flat_exp_conventions` and its descent through composition and `Call`.
+run_probe word_convs_flat_exp_probeScript.sml word_convs_flat_exp_probe.out \
+  fl_assign fl_inst \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"

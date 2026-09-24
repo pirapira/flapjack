@@ -298,17 +298,19 @@ theorem panToCrepPcCompileCorrectSkipCodeState
   · simpa [hsourcePost] using hexcp
   · simpa [hsourcePost] using hlocals
 
-/-- Width-indexed full Skip specialization of HOL
-    `pc_compile_correct[Skip]` (`pan_to_crepProofScript.sml:493`). It carries
-    the complete source and target runs, `state_rel`, width-indexed `code_rel`,
-    `excp_rel`, the normal result, and the result-dependent `locals_rel`
-    obligation. Unlike the generic support theorem above, both code-relation
-    boundaries use `codeRelW`, whose compiler expression is the tagged
-    word-indexed HOL `compile_def`. The source Skip run is derived, and the
-    target fuel is existential; neither run is a premise. This remains
-    untagged because HOL proves this branch inside the single quantified
-    `pc_compile_correct` theorem rather than exporting a named Skip theorem. -/
-theorem panToCrepPcCompileCorrectSkipCaseW
+/-- Width-indexed, fuel-bounded evaluator bridge for the HOL
+    `pc_compile_correct[Skip]` proof branch (`pan_to_crepProofScript.sml:493`).
+    It preserves the `state_rel`, width-indexed `code_rel`, `excp_rel`, and
+    `locals_rel` clauses, with `codeRelW` at both code boundaries. It derives
+    successful source and target runs from the incoming relations; the target
+    run uses an existential fuel. This is useful case support, but it is not
+    the full HOL Skip case: HOL's `panSem$evaluate` and `crepSem$evaluate` are
+    total functions returning `(result, state)`, while these Lean interfaces
+    return `Option` results from fuel-indexed evaluators. In particular, the
+    Lean target `.normal` result is not itself HOL's `NONE` result. A faithful
+    total-evaluator interface and its result/state correspondence are still
+    prerequisites for restating the full HOL boundary. Keep this untagged. -/
+theorem panToCrepPcCompileCorrectSkipFuelBoundedBridgeW
     (width : Nat)
     [BEq String]
     (context : PanToCrepProofContext (BitVec width))

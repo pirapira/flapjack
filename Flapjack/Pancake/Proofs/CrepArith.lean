@@ -180,6 +180,19 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
+/-- Width-parametric word port of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`). The positive-width `BitVec` carrier
+    represents HOL's nonempty finite-index word type; unlike the generic
+    support lemma above, both the expression constant and extracted value are
+    word-typed as in HOL. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+theorem crepDestConstWord_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExp (RiscV.Word width))
+    (value : RiscV.Word width)
+    (h : crepDestConst expression = some value) :
+    expression = .const value := by
+  cases expression <;> simp_all [crepDestConst]
+
 /-- Exact generic list-success monotonicity helper from HOL's local
     `OPT_MMAP_EQ_SOME_MONO` (`crep_arithProofScript.sml:93`).  `List.mapM` with
     the `Option` monad is the Lean encoding of HOL's `OPT_MMAP`; this lemma is

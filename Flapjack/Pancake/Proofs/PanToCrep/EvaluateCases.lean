@@ -3678,8 +3678,8 @@ private theorem crepRuntimeLocals_zip_eq_fupdateList
           rw [hfirst, ih]
           rfl
 
-/-! Compose the restricted HOL compiled-argument cases with the state-owned
-code_rel lookup. For Const/Local/RStruct/address arguments, target argument
+/-! Compose the mixed HOL compiled-argument cases, including arbitrary-inner
+RField arguments, with the state-owned `code_rel` lookup. Target argument
 evaluation is derived from the source state evaluator, and the production
 target callee lookup then uses those exact words. The explicit flattened
 parameter-length premise is still an obligation for a full Call case. -/
@@ -3696,7 +3696,7 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
     (hlocals : localsRel context source.locals target.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target expression)
     (hsource : evalPanSemStateExps source expressions = some values)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -3720,8 +3720,8 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
   let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
     { vars := context.vars, funcs := context.funcs,
       eids := context.eids, vmax := context.vmax }
-  have harguments := compileArgsHOL_constLocalStructAddress_eval_flatten
-    context source target expressions values hstate hlocals hsupported hsource
+  have harguments := compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
+    context source target expressions values hstate hcode hlocals hsupported hsource
   obtain ⟨targetLocals, hlookup, htargetFold⟩ :=
     lookupCrepRuntimeCode_ofCodeRel context source target function parameters
       sourceBody returnShape (values.flatMap panValueFlatten) hcode hentry
@@ -3761,7 +3761,7 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel
     (arguments : List (PanValue (RiscV.Word 64)))
     (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target expression)
     (hstate : stateRel source target)
     (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
     (hlocals : localsRel context source.locals target.locals)
@@ -4021,7 +4021,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandler_ofCodeRelArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
     (hlocals : localsRel context source.locals caller.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -4105,7 +4105,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs
     (hcode : codeRel context (panSemCodeAsLookup source.code) caller.code)
     (hlocals : localsRel context source.locals caller.locals)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -4202,7 +4202,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relati
     (hslot : ∃ current, caller.locals slot = some current)
     (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -4299,7 +4299,7 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_postRe
     (hslot : ∃ current, caller.locals slot = some current)
     (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
@@ -4469,7 +4469,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
       some (Shape.one, [slot]))
     (hslot : ∃ current, caller.locals slot = some current)
     (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddress source expression)
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))

@@ -8760,6 +8760,22 @@
     "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `wMoveAux_def` at word_to_stackScript.sml:71-76 - [] -> Skip; [xy] -> wMoveSingle xy kf; xy::xys -> Seq (wMoveSingle xy kf) (wMoveAux xys kf), over the exact carrier ProgM alpha; HOL-EVAL rows wma_empty=T/wma_two=T reproduced by wMoveParityGuard.)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "copy_ret_aux_def",
+    "lean_name": "copyRetAux",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_aux_def` at word_to_stackScript.sml:429-441 - n=0 -> Skip else list_Seq [StackLoad k (n-1); StackStore k ((n-1)+f); copy_ret_aux k f (n-1)]. Word-independent (only Seq/StackLoad/StackStore/list_Seq with num fields), so exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cra_zero=T/cra_one=T/cra_two=T reproduced by copyRetParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "copy_ret_def",
+    "lean_name": "copyRet",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree, exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T reproduced by copyRetParityGuard.)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",

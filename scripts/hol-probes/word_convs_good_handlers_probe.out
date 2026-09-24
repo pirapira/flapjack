@@ -1,0 +1,12 @@
+gh_call_none=T
+gh_call_ret_ok=T
+gh_handler_ok=T
+gh_handler_bad=F
+gh_handler_body_bad=F
+gh_ret_body_bad=F
+gh_seq_ok=T
+gh_seq_bad=F
+gh_loop_bad=F
+gh_if_bad=F
+gh_mt_bad=F
+gh_other=T

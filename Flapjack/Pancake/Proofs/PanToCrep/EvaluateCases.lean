@@ -3504,6 +3504,66 @@ theorem compileExpHOL_bytesInWord_ofHOLIH
     panSemBitVec64BytesInWord, CrepBytesInWord.bytesInWord,
     panValueShape, isWfShape]
 
+/-! Under HOL `state_rel`, the source struct table is empty. PanSem therefore
+    cannot successfully evaluate named-struct construction or field access.
+    These full-IH cases discharge that source-inaccessible part of the
+    expression induction; they do not claim named structures are supported by
+    the target compiler. -/
+theorem compileExpHOL_nStruct_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : StructName) (fields : List (FieldName × Exp (RiscV.Word 64)))
+    (value : PanValue (RiscV.Word 64))
+    (hstate : stateRel source target)
+    (_hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (_hlocals : localsRel context source.locals target.locals)
+    (_hlocalized : expGlobalVars (.nStruct name fields) = [])
+    (hsource : evalPanSemStateExp source (.nStruct name fields) = some value) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.nStruct name fields)).1 =
+          some (panValueFlatten value) ∧
+      (compileExpHOL compilerContext (.nStruct name fields)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.nStruct name fields)).2 ∧
+      panValueShape [] value = (compileExpHOL compilerContext (.nStruct name fields)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.nStruct name fields)).2 = true := by
+  have hstructs : source.structs = [] := stateRel_structs source target hstate
+  simp [evalPanSemStateExp, evalPanValueExp, hstructs, lookupInfo] at hsource
+
+theorem compileExpHOL_nField_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : FieldName) (expression : Exp (RiscV.Word 64))
+    (value : PanValue (RiscV.Word 64))
+    (hstate : stateRel source target)
+    (_hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (_hlocals : localsRel context source.locals target.locals)
+    (_hlocalized : expGlobalVars (.nField name expression) = [])
+    (hsource : evalPanSemStateExp source (.nField name expression) = some value) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.nField name expression)).1 =
+          some (panValueFlatten value) ∧
+      (compileExpHOL compilerContext (.nField name expression)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.nField name expression)).2 ∧
+      panValueShape [] value = (compileExpHOL compilerContext (.nField name expression)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.nField name expression)).2 = true := by
+  have hstructs : source.structs = [] := stateRel_structs source target hstate
+  simp only [evalPanSemStateExp, evalPanValueExp] at hsource
+  rw [hstructs] at hsource
+  cases hinner : evalPanValueExp [] source.locals source.globals
+      source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+      expression (memoryAccess := some (panSemBitVec64MemoryAccess source)) with
+  | none => simp [hinner] at hsource
+  | some inner =>
+      cases inner <;> simp [hinner, lookupInfo] at hsource
+
 inductive compileArgConstOrLocal : Exp (RiscV.Word 64) → Prop where
   | const (value : RiscV.Word 64) : compileArgConstOrLocal (.const value)
   | localVar (name : String) : compileArgConstOrLocal (.var .local name)

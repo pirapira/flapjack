@@ -102,4 +102,81 @@ theorem getVarImm_imm_eq_of_loopMachineStateRel {width : Nat} [NeZero width]
     getVarImm m (.imm value) = some (.word value) :=
   getVarImm_imm m value
 
+/-! ## Carrier-level `get_var_imm` / `get_vars`
+
+`get_var_imm_def` (`loopSemScript.sml:165-167`) and `get_vars_def`
+(`loopSemScript.sml:98-107`) read only the `locals` finite map.  The defs below
+are the exact source recursion expressed directly on `LoopSemState`, so
+statement-level ports can be phrased over the source-shaped carrier; they are
+UNTAGGED for the same reason the carrier is (see the module note), and are
+intended to be retagged together with the carrier once `code`/`ffi` are exact.
+-/
+
+namespace LoopSemState
+
+/-- Exact `get_var_imm_def` (`loopSemScript.sml:165-167`), operand first as in
+    HOL.  Untagged: the carrier is not yet source-exact. -/
+def getVarImm {width : Nat} [NeZero width] {F : Type}
+    (operand : RegImm (BitVec width)) (s : LoopSemState width F) :
+    Option (WordLocW width) :=
+  match operand with
+  | .reg name => s.locals name
+  | .imm value => some (.word value)
+
+@[simp] theorem getVarImm_reg {width : Nat} [NeZero width] {F : Type}
+    (s : LoopSemState width F) (name : Nat) :
+    getVarImm (.reg name) s = s.locals name := rfl
+
+@[simp] theorem getVarImm_imm {width : Nat} [NeZero width] {F : Type}
+    (s : LoopSemState width F) (value : BitVec width) :
+    getVarImm (.imm value) s = some (.word value) := rfl
+
+/-- `get_var_imm` ignores the clock, the loopProps clock-reduction fact. -/
+theorem getVarImm_clock {width : Nat} [NeZero width] {F : Type}
+    (operand : RegImm (BitVec width)) (s : LoopSemState width F) (ck : Nat) :
+    getVarImm operand { s with clock := ck } = getVarImm operand s := by
+  cases operand <;> rfl
+
+/-- Exact `get_vars_def` (`loopSemScript.sml:98-107`), state second as in HOL.
+    Untagged: the carrier is not yet source-exact. -/
+def getVars {width : Nat} [NeZero width] {F : Type} :
+    List Nat → LoopSemState width F → Option (List (WordLocW width))
+  | [], _ => some []
+  | name :: names, s =>
+      (s.locals name).bind
+        (fun value => (getVars names s).map (fun values => value :: values))
+
+@[simp] theorem getVars_nil {width : Nat} [NeZero width] {F : Type}
+    (s : LoopSemState width F) :
+    getVars [] s = some [] := rfl
+
+theorem getVars_cons {width : Nat} [NeZero width] {F : Type}
+    (name : Nat) (names : List Nat) (s : LoopSemState width F) :
+    getVars (name :: names) s =
+      (s.locals name).bind
+        (fun value => (getVars names s).map (fun values => value :: values)) :=
+  rfl
+
+/-- `get_vars` ignores the clock, the loopProps clock-reduction fact. -/
+theorem getVars_clock {width : Nat} [NeZero width] {F : Type}
+    (names : List Nat) (s : LoopSemState width F) (ck : Nat) :
+    getVars names { s with clock := ck } = getVars names s := by
+  induction names with
+  | nil => rfl
+  | cons name names ih =>
+      simp only [getVars]
+      rw [ih]
+
+/-- The exact carrier's `get_var_imm` maps to the production `get_var_imm`
+    through `loopValueOfWordLocW` under the state bridge. -/
+theorem getVarImm_map_eq_of_loopMachineStateRel {width : Nat} [NeZero width]
+    {F : Type} {s : LoopSemState width F} {m : LoopMachineState (BitVec width) F}
+    (h : LoopMachineStateRel s m) (operand : RegImm (BitVec width)) :
+    (getVarImm operand s).map loopValueOfWordLocW = Flapjack.getVarImm m operand := by
+  cases operand with
+  | reg name => simp only [getVarImm_reg, Flapjack.getVarImm_reg, h.1 name]
+  | imm value => rfl
+
+end LoopSemState
+
 end Flapjack

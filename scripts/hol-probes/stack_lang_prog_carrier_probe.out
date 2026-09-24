@@ -1,0 +1,9 @@
+pg_skip=Skip
+pg_seq=Seq Skip Skip
+pg_inst=8
+pg_get=7
+pg_stackalloc=4
+pg_shmem=12
+pg_ffi_len=2
+pg_ffi_explode="AB"
+pg_ffi_eq=T

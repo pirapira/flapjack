@@ -1019,9 +1019,9 @@
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_shape_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "loadShapeBytes",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "lean_name": "loadShapeBytesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against load_shape_def at crepLangScript.sml:82-86; width-indexed wrapper loadShapeBytesW over BitVec width with [NeZero width] because HOL word types have positive dimindex; the generic-CrepExp helper loadShapeBytes stays untagged; clauses reviewed: a=0w -> Load e, else Load (Op Add [e; Const a]), stepping by bytes_in_word, count 0 -> []. HOL probe scripts/hol-probes/crep_load_shape*.out and Lean guards in Flapjack/Test/CrepeLoadShapeParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",

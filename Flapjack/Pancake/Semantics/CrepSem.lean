@@ -625,9 +625,11 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
     The HOL source quantifies `args : 'a word_lab list`; the executable
     `lookupCrepRuntimeCode` below consumes raw `List α` values and wraps them
     with `PanWordLab.word`. Its `len` argument is retained from the HOL
-    `lookup_code` signature, where the definition does not inspect it. -/
+    `lookup_code` signature, where the definition does not inspect it. Function
+    names are concrete HOL strings, so this definition uses Lean's canonical
+    `String` equality and adds no arbitrary equality-instance parameter. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
-def lookupCrepHolCode [BEq String] (code : FunName → Option (List Nat × CrepProg α))
+def lookupCrepHolCode (code : FunName → Option (List Nat × CrepProg α))
     (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
     Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
   match FLOOKUP code fname with

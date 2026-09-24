@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
+import Flapjack.Pancake.Semantics.PanCommonProps
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -387,5 +388,53 @@ theorem listRelFlattenWithShapeFlookup (shapes : List Shape) (names : List Nat)
   exact (FLOOKUP_FUPDATE_LIST_zip_getElem names ((arguments.map panValueFlatten).flatten)
     FEMPTY (Shape.shapeSize (.comb (shapes.take n)) + n') hdistinct hnames hbound).trans
     (congrArg some hflatElem)
+
+/-- Exact port of HOL `all_distinct_alist_no_overlap`
+    (`cakeml/pancake/semantics/panPropsScript.sml:476`): a duplicate-free slot
+    list laid out by `withShape` makes the zipped finite map overlap-free.
+    HOL `alist_to_fmap (ZIP (vs, ZIP (sh, with_shape sh ns)))` is Lean
+    `FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns)))`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "all_distinct_alist_no_overlap"]
+theorem allDistinctAlistNoOverlap (sh : List Shape) (ns : List Nat) (vs : List String)
+    (hdistinct : ns.Nodup) (hlen1 : ns.length = Shape.shapeSize (.comb sh))
+    (hlen2 : vs.length = sh.length) :
+    noOverlap (FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns)))) := by
+  constructor
+  · intro x a xs hlk
+    rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap String (Shape × List Nat))
+        (vs.zip (sh.zip (withShape sh ns))) x (a, xs) hlk with
+      ⟨e, hmem, hke, hve⟩ | hbase
+    · have he : e = (x, (a, xs)) := Prod.ext hke hve
+      subst he
+      obtain ⟨n, hn, _hj, _hfst, hsnd⟩ :=
+        mem_zip_getElem vs (sh.zip (withShape sh ns)) (x, (a, xs)) hmem
+      have hnsh : n < sh.length := by rw [← hlen2]; exact hn
+      have hz := hsnd
+      rw [List.getElem_zip] at hz
+      have hshapeget :
+          (withShape sh ns)[n]'(by rw [withShape_length]; exact hnsh) = xs :=
+        congrArg Prod.snd hz
+      exact hshapeget ▸ all_distinct_withShape sh ns n hdistinct hnsh hlen1
+    · simp at hbase
+  · intro x y a b xs ys hx hy hinter
+    rcases hinter with ⟨z, hzxs, hzys⟩
+    rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap String (Shape × List Nat))
+        (vs.zip (sh.zip (withShape sh ns))) x (a, xs) hx with
+      ⟨e, hme, hke, hve⟩ | hbase
+    · rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap String (Shape × List Nat))
+          (vs.zip (sh.zip (withShape sh ns))) y (b, ys) hy with
+        ⟨f, hmf, hkf, hvf⟩ | hbase'
+      · have he : e = (x, (a, xs)) := Prod.ext hke hve
+        subst he
+        have hf : f = (y, (b, ys)) := Prod.ext hkf hvf
+        subst hf
+        by_cases hxy : x = y
+        · exact hxy
+        · have hdisj :=
+            listDisjoint_of_mem_zip_withShape vs sh ns (x, (a, xs)) (y, (b, ys))
+              hlen2 (by rw [withShape_length]) hdistinct hlen1 hme hmf hxy
+          exact (hdisj z hzxs hzys).elim
+      · simp at hbase'
+    · simp at hbase
 
 end Flapjack

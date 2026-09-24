@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.HolRef
 
 /-!
 Static-checker data and shape-context operations.
@@ -32,11 +33,12 @@ structure StructInfo where
 abbrev StructContext := List (StructName × StructInfo)
 abbrev InfoMap (α : Type u) := List (String × α)
 
-/-- HOL-shaped `struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
+/-- HOL `panLang$struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
     component of the contexts that `pan_structsProof$v_flds_ok` and
     `panProps$is_wf_shape_v` range over (via `ALOOKUP`). It carries exactly the
     HOL fields `fields` and `size`, without the production
     `StructInfo.shapedFields` cache that has no HOL counterpart. -/
+@[hol "cakeml/pancake/panLangScript.sml" "struct_info"]
 structure StructInfoHOL where
   fields : List (FieldName × Shape)
   size : Nat

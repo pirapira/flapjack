@@ -136,6 +136,30 @@
     "reviewer": "Codex (constructor, field-order, recursive-position, and nested Call metadata comparison against panLangScript.sml:82-100)"
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "fun_decl",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "FunDecl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (field-by-field comparison against panLangScript.sml:102-109)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "decl",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Decl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (constructor and field-order comparison against panLangScript.sml:112-116)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "struct_info",
+    "lean_path": "Flapjack/Pancake/PanStatic.lean",
+    "lean_name": "StructInfoHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (fields/size comparison against panLangScript.sml:121; production StructInfo cache remains untagged)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
     "hol_name": "loop_primop_def",
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",

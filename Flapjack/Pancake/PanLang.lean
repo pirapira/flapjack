@@ -213,6 +213,8 @@ inductive Prog (α : Type u) where
   | annot (tag text : String)
   deriving Repr
 
+/-- HOL `panLang$fun_decl` (`cakeml/pancake/panLangScript.sml:102-109`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "fun_decl"]
 structure FunDecl (α : Type u) where
   name : FunName
   inline : Bool
@@ -222,6 +224,8 @@ structure FunDecl (α : Type u) where
   returnShape : Shape
   deriving Repr
 
+/-- HOL `panLang$decl` (`cakeml/pancake/panLangScript.sml:112-116`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "decl"]
 inductive Decl (α : Type u) where
   | function (declaration : FunDecl α)
   | decl (shape : Shape) (name : DeclarationName) (value : Exp α)

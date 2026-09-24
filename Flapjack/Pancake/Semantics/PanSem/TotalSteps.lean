@@ -464,4 +464,209 @@ def panSemTotalAnnotClause {α : Type u} {σ : Type u}
     (state : PanSemState α (FfiState σ)) (tag text : String) :
     panSemTotalAnnotClause state tag text = (none, state) := rfl
 
+/-- HOL `Store` (`cakeml/pancake/semantics/panSemScript.sml:583-589`): evaluate
+    the destination and the source; the destination must be a word; store the
+    flattened source value at that address (`mem_stores addr (flatten value)
+    s.memaddrs s.memory`), modelled here by `panValueStoreWithAccess` over the
+    machine access.  Failed evaluation, a non-word destination, or a failed
+    store all yield `SOME Error` with the state unchanged. -/
+def panSemTotalStoreClause [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state address (fun addressValue =>
+    match addressValue with
+    | .word addr =>
+        panSemTotalExprStep state value (fun storedValue =>
+          match panValueStoreWithAccess state.memory panSemBitVec64BytesInWord addr
+              storedValue (some (panSemBitVec64MemoryAccess state)) with
+          | some memory => (none, { state with memory := memory })
+          | none => (some .error, state))
+    | _ => (some .error, state))
+
+@[simp] theorem panSemTotalStoreClause_none [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state address = none) :
+    panSemTotalStoreClause state address value = (some .error, state) := by
+  simp [panSemTotalStoreClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalStoreClause_ok [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) (addr : RiscV.Word 64)
+    (storedValue : PanValue (RiscV.Word 64))
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (hevalAddr : evalPanSemStateExp state address = some (.word addr))
+    (hevalValue : evalPanSemStateExp state value = some storedValue)
+    (hstore : panValueStoreWithAccess state.memory panSemBitVec64BytesInWord addr
+      storedValue (some (panSemBitVec64MemoryAccess state)) = some memory) :
+    panSemTotalStoreClause state address value = (none, { state with memory := memory }) := by
+  simp [panSemTotalStoreClause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
+
+/-- HOL `Store32` (`cakeml/pancake/semantics/panSemScript.sml:590-596`): both the
+    destination and the source must be words; store the low 32 bits widened back
+    to the word carrier via `mem_store_32 s.memory s.memaddrs s.be adr (w2w w)`,
+    modelled by the machine `access.store32`. -/
+def panSemTotalStore32Clause [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state address (fun addressValue =>
+    match addressValue with
+    | .word addr =>
+        panSemTotalExprStep state value (fun storedValue =>
+          match storedValue with
+          | .word word =>
+              match (panSemBitVec64MemoryAccess state).store32
+                  (panSemBitVec64MemoryAccess state).domain state.memory
+                  panSemBitVec64BytesInWord addr word with
+              | some memory => (none, { state with memory := memory })
+              | none => (some .error, state)
+          | _ => (some .error, state))
+    | _ => (some .error, state))
+
+@[simp] theorem panSemTotalStore32Clause_none [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state address = none) :
+    panSemTotalStore32Clause state address value = (some .error, state) := by
+  simp [panSemTotalStore32Clause, panSemTotalExprStep, heval]
+
+theorem panSemTotalStore32Clause_ok [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) (addr word : RiscV.Word 64)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (hevalAddr : evalPanSemStateExp state address = some (.word addr))
+    (hevalValue : evalPanSemStateExp state value = some (.word word))
+    (hstore : (panSemBitVec64MemoryAccess state).store32
+      (panSemBitVec64MemoryAccess state).domain state.memory
+      panSemBitVec64BytesInWord addr word = some memory) :
+    panSemTotalStore32Clause state address value = (none, { state with memory := memory }) := by
+  simp [panSemTotalStore32Clause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
+
+/-- HOL `StoreByte` (`cakeml/pancake/semantics/panSemScript.sml:597-603`): both
+    the destination and the source must be words; store the low byte via
+    `mem_store_byte s.memory s.memaddrs s.be adr (w2w w)`, modelled by the
+    machine `access.storeByte`. -/
+def panSemTotalStoreByteClause [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state address (fun addressValue =>
+    match addressValue with
+    | .word addr =>
+        panSemTotalExprStep state value (fun storedValue =>
+          match storedValue with
+          | .word word =>
+              match (panSemBitVec64MemoryAccess state).storeByte
+                  (panSemBitVec64MemoryAccess state).domain state.memory
+                  panSemBitVec64BytesInWord addr word with
+              | some memory => (none, { state with memory := memory })
+              | none => (some .error, state)
+          | _ => (some .error, state))
+    | _ => (some .error, state))
+
+@[simp] theorem panSemTotalStoreByteClause_none [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state address = none) :
+    panSemTotalStoreByteClause state address value = (some .error, state) := by
+  simp [panSemTotalStoreByteClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalStoreByteClause_ok [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (address value : Exp (RiscV.Word 64)) (addr word : RiscV.Word 64)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (hevalAddr : evalPanSemStateExp state address = some (.word addr))
+    (hevalValue : evalPanSemStateExp state value = some (.word word))
+    (hstore : (panSemBitVec64MemoryAccess state).storeByte
+      (panSemBitVec64MemoryAccess state).domain state.memory
+      panSemBitVec64BytesInWord addr word = some memory) :
+    panSemTotalStoreByteClause state address value = (none, { state with memory := memory }) := by
+  simp [panSemTotalStoreByteClause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
+
 end Flapjack

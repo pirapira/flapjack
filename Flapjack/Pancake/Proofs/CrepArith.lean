@@ -2043,11 +2043,13 @@ theorem crepSimpExpCorrect1ConstCase {ι : Type} {σ : Type}
       (.const value)).map PanWordLab.word := by
   simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
 
-/-- Flapjack-only `Var` code-map irrelevance support. Although the source
-    constructor is unchanged by `simp_exp`, this is not tagged as a HOL case:
-    Lean's `PanWordLab` has only `word`, while HOL `word_lab` also has `Label`,
-    and the runtime projects local cells through `panTheWord`. -/
-theorem crepSimpExpVarCodeIrrel {ι : Type} {σ : Type}
+/-- The `Var` case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
+    constructor (`panSemScript.sml:17`), matching `PanWordLab`; projecting a
+    local cell with `panTheWord` and wrapping it again is identity. `mapc f`
+    changes only code. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+theorem crepSimpExpCorrect1VarCase {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) →
       (List Nat × CrepProg (ι → Bool)))
@@ -2067,10 +2069,12 @@ theorem crepSimpExpVarCodeIrrel {ι : Type} {σ : Type}
     CrepHolState.toHolFiniteWordSourceRuntime,
     CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
 
-/-- Flapjack-only `LoadGlob` code-map irrelevance support. It is not tagged as
-    a HOL case because Lean `PanWordLab` omits HOL's `Label` constructor and
-    the runtime projects global cells through `panTheWord`. -/
-theorem crepSimpExpLoadGlobCodeIrrel {ι : Type} {σ : Type}
+/-- The `LoadGlob` case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
+    constructor (`panSemScript.sml:17`), matching `PanWordLab`; the global
+    cell projection and rewrapping is identity. `mapc f` changes only code. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+theorem crepSimpExpCorrect1LoadGlobCase {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) →
       (List Nat × CrepProg (ι → Bool)))

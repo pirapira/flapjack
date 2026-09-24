@@ -223,7 +223,7 @@ example :
     (evalCrepRuntimeExp
       (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
       (.var 0)).map PanWordLab.word :=
-  crepSimpExpVarCodeIrrel (fun entry => entry) boolDimensionHolState 0
+  crepSimpExpCorrect1VarCase (fun entry => entry) boolDimensionHolState 0
     (.word boolDimensionWord) (by
       simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
         CrepHolState.toHolFiniteWordRuntime, boolDimensionHolState])
@@ -238,7 +238,7 @@ example :
     (evalCrepRuntimeExp
       (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
       (.loadGlob 0)).map PanWordLab.word :=
-  crepSimpExpLoadGlobCodeIrrel (fun entry => entry)
+  crepSimpExpCorrect1LoadGlobCase (fun entry => entry)
     boolDimensionHolState 0 (.word boolDimensionWord)
     (by
       simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,

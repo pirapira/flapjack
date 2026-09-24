@@ -171,9 +171,13 @@ dimensions.
 `src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
 depend on built CakeML Pancake theories. Refresh it with
 `HOL_PROBE_ONLY=word_byte_memory_probeScript.sml scripts/hol-probes/regenerate.sh`.
-The width-17 rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
-by HOL evaluation; the little- and big-endian fixtures both reduce to `12817w`
-(`0x3211w`) for the corresponding byte orders.
+The width-17 word fixtures use four distinct bytes, `0x11`, `0x22`, `0x33`,
+and `0x44`, so the HOL recursive overwrite order is visible: little-endian
+reduces to `0x2211w` and big-endian to `0x1122w`. The nonzero-initial-value
+`set_byte` rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
+by evaluation, preserving the other bits while reducing to concrete words.
+For initial value `0x1abcdw`, byte `0xa5w` at address `1w` reduces to
+`0x1a5cdw` little-endian and `0x1abaw` big-endian.
 The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
 `byte_index` branches, which the Lean source adapter handles explicitly.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of

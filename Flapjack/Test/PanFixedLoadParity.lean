@@ -135,10 +135,13 @@ def finiteWord17 (value : Nat) : Fin 17 → Bool :=
   bitVecToHolWord dimension17 (BitVec.ofNat 17 value)
 def finiteWord17WordOfBytes : Fin 17 → Bool :=
   (holFiniteWordSourceMemoryModel dimension17 false).wordOfBytes false
-    [finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32]
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
 def finiteWord17BigWordOfBytes : Fin 17 → Bool :=
   (holFiniteWordSourceMemoryModel dimension17 true).wordOfBytes true
-    [finiteWord17 0x32, finiteWord17 0x11, finiteWord17 0x32, finiteWord17 0x11]
+    [finiteWord17 0x11, finiteWord17 0x22, finiteWord17 0x33, finiteWord17 0x44]
+def finiteWord17SetByteLittle : Fin 17 → Bool :=
+  holFiniteWordSourceSetByte dimension17 (finiteWord17 1) (finiteWord17 0xA5)
+    (finiteWord17 0x1ABCD) false
 
 /-! HOL natural MOD has x MOD 0 = x. A width-5 word has no full byte slots,
     so this checks the imported byte_index zero-divisor branch directly. -/
@@ -174,9 +177,11 @@ def finiteWord5BigGetByte : Fin 5 → Bool :=
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
 #guard holWordToBitVec dimension17 finiteWord17WordOfBytes ==
-  BitVec.ofNat 17 0x3211
+  BitVec.ofNat 17 0x2211
 #guard holWordToBitVec dimension17 finiteWord17BigWordOfBytes ==
-  BitVec.ofNat 17 0x3211
+  BitVec.ofNat 17 0x1122
+#guard holWordToBitVec dimension17 finiteWord17SetByteLittle ==
+  BitVec.ofNat 17 0x1A5CD
 #guard holWordToBitVec dimension5 finiteWord5LittleGetByte == BitVec.ofNat 5 0
 #guard holWordToBitVec dimension5 finiteWord5BigGetByte == BitVec.ofNat 5 31
 

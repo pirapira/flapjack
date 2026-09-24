@@ -29,19 +29,23 @@ w2w
   (FCP i.
      i + (let d = 0 in 8 * (d − (1 MOD d + 1))) < 5 ∧
      31w ' (i + (let d = 0 in 8 * (d − (1 MOD d + 1)))))
-word_of_bytes_width17_little=word_of_bytes F 0w [17w; 50w; 17w; 50w] =
+word_of_bytes_width17_little=word_of_bytes F 0w [17w; 34w; 51w; 68w] =
 set_byte 0w 17w
-  (set_byte 1w 50w (set_byte 2w 17w (set_byte 3w 50w 0w F) F) F) F
-word_of_bytes_width17_big=word_of_bytes T 0w [50w; 17w; 50w; 17w] =
-set_byte 0w 50w
-  (set_byte 1w 17w (set_byte 2w 50w (set_byte 3w 17w 0w T) T) T) T
+  (set_byte 1w 34w (set_byte 2w 51w (set_byte 3w 68w 0w F) F) F) F
+word_of_bytes_width17_big=word_of_bytes T 0w [17w; 34w; 51w; 68w] =
+set_byte 0w 17w
+  (set_byte 1w 34w (set_byte 2w 51w (set_byte 3w 68w 0w T) T) T) T
 word_of_bytes_width17_little_numeric=bit_field_insert (byte_index 0w F + 7) (byte_index 0w F) 17w
-  (bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 50w
-     (bit_field_insert (byte_index 2w F + 7) (byte_index 2w F) 17w
-        (bit_field_insert (byte_index 3w F + 7) (byte_index 3w F) 50w 0w))) =
-12817w
-word_of_bytes_width17_big_numeric=bit_field_insert (byte_index 0w T + 7) (byte_index 0w T) 50w
-  (bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 17w
-     (bit_field_insert (byte_index 2w T + 7) (byte_index 2w T) 50w
-        (bit_field_insert (byte_index 3w T + 7) (byte_index 3w T) 17w 0w))) =
-12817w
+  (bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 34w
+     (bit_field_insert (byte_index 2w F + 7) (byte_index 2w F) 51w
+        (bit_field_insert (byte_index 3w F + 7) (byte_index 3w F) 68w 0w))) =
+8721w
+word_of_bytes_width17_big_numeric=bit_field_insert (byte_index 0w T + 7) (byte_index 0w T) 17w
+  (bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 34w
+     (bit_field_insert (byte_index 2w T + 7) (byte_index 2w T) 51w
+        (bit_field_insert (byte_index 3w T + 7) (byte_index 3w T) 68w 0w))) =
+4386w
+set_byte_width17_little_nonzero_numeric=bit_field_insert (byte_index 1w F + 7) (byte_index 1w F) 165w 0x1ABCDw =
+0x1A5CDw
+set_byte_width17_big_nonzero_numeric=bit_field_insert (byte_index 1w T + 7) (byte_index 1w T) 165w 0x1ABCDw =
+0x1ABA5w

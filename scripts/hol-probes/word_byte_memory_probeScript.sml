@@ -49,13 +49,17 @@ val _ = print_get_byte_simp "get_byte_width5_big"
 
 val _ = print_eval "word_of_bytes_width17_little"
   ``word_of_bytes F (0w:17 word)
-      [0x11w:word8; 0x32w:word8; 0x11w:word8; 0x32w:word8]``;
+      [0x11w:word8; 0x22w:word8; 0x33w:word8; 0x44w:word8]``;
 val _ = print_eval "word_of_bytes_width17_big"
   ``word_of_bytes T (0w:17 word)
-      [0x32w:word8; 0x11w:word8; 0x32w:word8; 0x11w:word8]``;
+      [0x11w:word8; 0x22w:word8; 0x33w:word8; 0x44w:word8]``;
 val _ = print_simp "word_of_bytes_width17_little_numeric"
   ``word_of_bytes F (0w:17 word)
-      [0x11w:word8; 0x32w:word8; 0x11w:word8; 0x32w:word8]``;
+      [0x11w:word8; 0x22w:word8; 0x33w:word8; 0x44w:word8]``;
 val _ = print_simp "word_of_bytes_width17_big_numeric"
   ``word_of_bytes T (0w:17 word)
-      [0x32w:word8; 0x11w:word8; 0x32w:word8; 0x11w:word8]``;
+      [0x11w:word8; 0x22w:word8; 0x33w:word8; 0x44w:word8]``;
+val _ = print_simp "set_byte_width17_little_nonzero_numeric"
+  ``set_byte (1w:17 word) (0xA5w:word8) (0x1ABCDw:17 word) F``;
+val _ = print_simp "set_byte_width17_big_nonzero_numeric"
+  ``set_byte (1w:17 word) (0xA5w:word8) (0x1ABCDw:17 word) T``;

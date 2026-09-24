@@ -364,6 +364,40 @@ theorem SUBMAP_IMP_DOMSUB_FUPDATE {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ
     simp only [FDOMSUB, FUPDATE, hb] at hn ⊢
     exact h n v hn
 
+/-- CakeML's `FOLDL_res_var_ZIP_lookup_var` (`crep_inlineProofScript.sml:2661`):
+    a fold of `res_var` over the zipped names and their `l'`-lookups is a
+    `SUBMAP` (`crepHolSubmap`) of `l1`, so any lookup that `l` already defined at
+    a key not in `ns` survives in `l1`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "FOLDL_res_var_ZIP_lookup_var"]
+theorem FOLDL_res_var_ZIP_lookup_var [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α β)
+    (ns : List α) (x : α) (v : β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) l1)
+    (hv : FLOOKUP l x = some v) (hx : x ∉ ns) :
+    FLOOKUP l1 x = some v := by
+  apply hsub x v
+  change FLOOKUP ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) x = some v
+  rw [FLOOKUP_foldl_resVar_zip_not_mem ns (ns.map (FLOOKUP l')) l x
+    (by simp [List.length_map]) hx]
+  exact hv
+
+/-- CakeML's `FOLDL_res_var_ZIP_lookup` (`crep_inlineProofScript.sml:2675`):
+    the `OPT_MMAP` (`List.mapM`) form of `FOLDL_res_var_ZIP_lookup_var`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "FOLDL_res_var_ZIP_lookup"]
+theorem FOLDL_res_var_ZIP_lookup [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α β)
+    (ns xs : List α) (vs : List β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVar l) l1)
+    (h : xs.mapM (FLOOKUP l) = some vs)
+    (hx : ∀ x, x ∈ xs → x ∉ ns) :
+    xs.mapM (FLOOKUP l1) = some vs := by
+  have hpt : ∀ x, x ∈ xs → FLOOKUP l1 x = FLOOKUP l x := by
+    intro x hxmem
+    obtain ⟨y, hy⟩ := (OPT_MMAP_SOME_ALL (FLOOKUP l) xs).mp ⟨vs, h⟩ x hxmem
+    have hfl : FLOOKUP l1 x = some y :=
+      FOLDL_res_var_ZIP_lookup_var l l' l1 ns x y hsub hy (hx x hxmem)
+    rw [hfl, hy]
+  rw [OPT_MMAP_ALL_EQ (FLOOKUP l1) (FLOOKUP l) xs hpt]
+  exact h
+
 /-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
     `s.locals SUBMAP t.locals`. -/
 @[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "locals_rel_def"]

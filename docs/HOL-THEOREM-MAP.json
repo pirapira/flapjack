@@ -809,6 +809,22 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup_var",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup_var",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL SUBMAP rendered as crepHolSubmap over the extensional finite map, res_var fold and FLOOKUP; built on tagged FLOOKUP_foldl_resVar_zip_not_mem)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "FOLDL_res_var_ZIP_lookup",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "FOLDL_res_var_ZIP_lookup",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; OPT_MMAP carrier is List.mapM, uses tagged OPT_MMAP_SOME_ALL and OPT_MMAP_ALL_EQ plus FOLDL_res_var_ZIP_lookup_var)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",

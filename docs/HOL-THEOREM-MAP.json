@@ -7838,8 +7838,7 @@
     "lean_name": "codeRelW_iff_codeRel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-only bridge: the width-indexed codeRelW is definitionally the generic codeRel at BitVec width)"
-  }
-,
+  },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "reg_ok_def",
@@ -7912,12 +7911,68 @@
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
-{
-  "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
-  "hol_name": "asm_ok_def",
-  "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
-  "lean_name": "asmOk",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "asm_ok_def",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "asmOk",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "inst_ok_less_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "instOkLess",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "exp_to_addr_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "expToAddr",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "full_inst_ok_less_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "fullInstOkLess",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison; Call NONE handler case oracle added after review)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "inst_arg_convention_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "instArgConvention",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "call_arg_convention_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "callArgConvention",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRel_of_codeRelW",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack bridge lemma for the width-indexed codeRelW exact HOL code_rel_def boundary; no standalone HOL original)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "mkCtxtCodeImpCodeRelW",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack bridge lemma for the width-indexed codeRelW exact HOL code_rel_def boundary; no standalone HOL original)"
+  }
 ]

@@ -348,40 +348,40 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact Const case over evalCrepHolExpWordLab and the full CrepHolState code-map update; it preserves HOL's success premise and Option word_lab equality and reduces by constructor equations"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific Const case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1VarCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact Var case over evalCrepHolExpWordLab/full CrepHolState; HOL word_lab is the single Word constructor (panSemScript.sml:17), PanWordLab matches it, and mapc f changes only code"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific Var case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact LoadGlob case over evalCrepHolExpWordLab/full CrepHolState; HOL word_lab is the single Word constructor (panSemScript.sml:17), PanWordLab matches it, and mapc f changes only code"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific LoadGlob case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1BaseAddrCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact BaseAddr case over evalCrepHolExpWordLab/full CrepHolState; the expression and state address are unchanged by simp_exp and mapc f"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific BaseAddr case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact TopAddr case over evalCrepHolExpWordLab/full CrepHolState; the expression and state address are unchanged by simp_exp and mapc f"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific TopAddr case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

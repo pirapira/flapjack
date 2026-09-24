@@ -2097,7 +2097,11 @@ theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
       · simp [hlookup, hvalid]
       · simp [hlookup, hvalid]
 
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+/-- Flapjack-specific `Const` case corresponding to part of CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, both sides reduce by
+    the defining `Const` evaluator equations. -/
 theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))
@@ -2109,12 +2113,11 @@ theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
     evalCrepHolExpWordLab state (.const value) := by
   simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11]
 
-/-- The `Var` case of CakeML's local `simp_exp_correct1`
-    (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
-    constructor (`panSemScript.sml:17`), matching `PanWordLab`; projecting a
-    local cell with `panTheWord` and wrapping it again is identity. `mapc f`
-    changes only code. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+/-- Flapjack-specific `Var` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, `mapc f` changes only
+    code and the local value is unchanged. -/
 theorem crepSimpExpCorrect1VarCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))
@@ -2127,11 +2130,11 @@ theorem crepSimpExpCorrect1VarCase {n : Nat} [NeZero n] {σ : Type}
   simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
     crepArithHolMapCode]
 
-/-- The `LoadGlob` case of CakeML's local `simp_exp_correct1`
-    (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
-    constructor (`panSemScript.sml:17`), matching `PanWordLab`; the global
-    cell projection and rewrapping is identity. `mapc f` changes only code. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+/-- Flapjack-specific `LoadGlob` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the global lookup is
+    unchanged by `mapc f`. -/
 theorem crepSimpExpCorrect1LoadGlobCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))
@@ -2144,10 +2147,11 @@ theorem crepSimpExpCorrect1LoadGlobCase {n : Nat} [NeZero n] {σ : Type}
   simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
     crepArithHolMapCode]
 
-/-- The `BaseAddr` constructor case of CakeML's local `simp_exp_correct1`
-    (`crep_arithProofScript.sml:111`). It retains the success premise and full
-    wrapped result; `mapc f` leaves the base address unchanged. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+/-- Flapjack-specific `BaseAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
 theorem crepSimpExpCorrect1BaseAddrCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))
@@ -2160,10 +2164,11 @@ theorem crepSimpExpCorrect1BaseAddrCase {n : Nat} [NeZero n] {σ : Type}
   simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
     crepArithHolMapCode]
 
-/-- The `TopAddr` constructor case of CakeML's local `simp_exp_correct1`
-    (`crep_arithProofScript.sml:111`). It retains the success premise and full
-    wrapped result; `mapc f` leaves the top address unchanged. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+/-- Flapjack-specific `TopAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
 theorem crepSimpExpCorrect1TopAddrCase {n : Nat} [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))

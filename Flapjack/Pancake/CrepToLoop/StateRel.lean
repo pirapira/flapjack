@@ -460,4 +460,22 @@ def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
       (fun entry =>
         (entry.1.1, (firstLoopName + entry.2, entry.1.2.1.length)))).reverse
 
+/-! ## Association-list lookup
+
+`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`): a member
+of a duplicate-free association list is returned by looking up its key in the
+`fromAList` tree.  HOL `sptree$fromAList`/`lookup` on a duplicate-free list is
+rendered as `List.lookup` on that list (equivalently `FLOOKUP` of the standard
+alist→finite-map encoding), and `ALL_DISTINCT (MAP FST xs)` as
+`(entries.map Prod.fst).Nodup`; the key type is fixed to `num` as in HOL. -/
+
+/-- Exact port of HOL `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_lookup_fromalist_some"]
+theorem memLookupFromAListSome {β : Type} [BEq Nat] [LawfulBEq Nat]
+    {entries : List (Nat × β)} {n : Nat} {x : β}
+    (hnodup : (entries.map Prod.fst).Nodup) (hmem : (n, x) ∈ entries) :
+    entries.lookup n = some x :=
+  list_lookup_of_mem_of_nodup hnodup hmem
+
 end Flapjack

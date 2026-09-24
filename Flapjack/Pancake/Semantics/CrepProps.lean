@@ -327,7 +327,9 @@ theorem mem_crepAssignedFreeVars_call_some_none {α : Type u} (returns : List Na
 /-- Exact HOL `flookup_res_var_distinct_zip_eq` (`crepPropsScript.sml:777`):
     folding `res_var` over the zip of a key list with its values leaves a key
     that is not in the key list untouched. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "flookup_res_var_distinct_zip_eq"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
+-- statement requires [BEq α] [LawfulBEq α] because `resVar` uses Boolean key equality.
+-- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
 theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List (Option β)) (fm : FiniteMap α β) (x : α)
     (hlen : xs.length = ys.length) (hx : x ∉ xs) :

@@ -669,4 +669,102 @@ theorem panSemTotalStoreByteClause_ok [NeZero 64] [BEq (RiscV.Word 64)]
     panSemTotalStoreByteClause state address value = (none, { state with memory := memory }) := by
   simp [panSemTotalStoreByteClause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
 
+/-- HOL `Dec` (`panSemScript.sml:556-561`): evaluate the initialiser, require
+    `is_valid_value`, bind the variable through `set_kvar`, and continue with the
+    body `c`; a failed initialiser or invalid binding is `SOME Error` with the
+    state unchanged.  The body continuation is supplied by the eventual clause
+    assembly. -/
+def panSemTotalDecClause [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (body : PanSemState (RiscV.Word 64) (FfiState σ) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state expression (fun value =>
+    if panValueAssignmentValid state.structs state.locals state.globals kind name value then
+      body
+        (match kind with
+        | .local => { state with locals := updatePanValueMap state.locals name value }
+        | .global => { state with globals := updatePanValueMap state.globals name value })
+    else
+      (some .error, state))
+
+@[simp] theorem panSemTotalDecClause_none [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (body : PanSemState (RiscV.Word 64) (FfiState σ) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (heval : evalPanSemStateExp state expression = none) :
+    panSemTotalDecClause state kind name expression body = (some .error, state) := by
+  simp [panSemTotalDecClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalDecClause_normal [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (body : PanSemState (RiscV.Word 64) (FfiState σ) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals
+      kind name value = true) :
+    panSemTotalDecClause state kind name expression body =
+      body
+        (match kind with
+        | .local => { state with locals := updatePanValueMap state.locals name value }
+        | .global => { state with globals := updatePanValueMap state.globals name value }) := by
+  cases kind <;> simp [panSemTotalDecClause, panSemTotalExprStep, heval, hvalid]
+
+theorem panSemTotalDecClause_invalid [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (body : PanSemState (RiscV.Word 64) (FfiState σ) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals
+      kind name value = false) :
+    panSemTotalDecClause state kind name expression body = (some .error, state) := by
+  simp [panSemTotalDecClause, panSemTotalExprStep, heval, hvalid]
+
 end Flapjack

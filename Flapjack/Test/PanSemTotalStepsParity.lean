@@ -193,20 +193,43 @@ def storeByteErrorGuard : Bool :=
   isErrorResult (panSemTotalStoreByteClause storeState (.const (BitVec.ofNat 64 0))
     (.const (BitVec.ofNat 64 0xAB))).1
 
+/-- `Dec` body continuation: return the bound variable `x`. -/
+def decBody (state : PanSemState Word64 (FfiState Unit)) :
+    Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  match state.locals "x" with
+  | some value => (some (.returned value), state)
+  | none => (some .error, state)
+
+/-- `Dec` of a valid local initialiser updates the binding and runs the body. -/
+def decOkGuard : Bool :=
+  let result := panSemTotalDecClause stepsState .local "x"
+    (.const (BitVec.ofNat 64 9)) decBody
+  isReturnedWord 9 result.1
+
+/-- `Dec` with an invalid binding shape is `SOME Error`. -/
+def decInvalidGuard : Bool :=
+  isErrorResult (panSemTotalDecClause stepsState .local "x" (.rStruct []) decBody).1
+
+/-- `Dec` whose initialiser fails to evaluate is `SOME Error`. -/
+def decErrorGuard : Bool :=
+  isErrorResult (panSemTotalDecClause stepsState .local "x"
+    (.var .local "missing") decBody).1
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
     raiseGuard && exprStepErrorGuard && exprStepSomeGuard &&
     primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
     primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
     storeGuard && storeNonWordGuard && storeErrorGuard &&
-    store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard
+    store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard &&
+    decOkGuard && decInvalidGuard && decErrorGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

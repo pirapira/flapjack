@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Misc.AppList
+import Flapjack.Compiler.Backend.StackLang
 
 /-!
 # Faithful Cake Word-to-Stack bitmap helpers
@@ -13,9 +14,12 @@ GC/liveness bitmaps consumed by `compile_word_to_stack`, together with the pure
 stack-slot arithmetic helpers `num_stack_ret`, `skip_free`, `stack_arg_count`
 and `stack_free` used by the return/argument path of `comp`, plus the
 perf/handler-slot constants `perf_rsp`, `perf_rbp` and `handler_slots` used by
-the exception-handler sizing path (`raise_stub`/`PushHandler`/`copy_ret`);
-eventually these feed the Word-to-Stack `compile_semantics` theorem
-(`word_to_stackProofScript.sml:10709`).
+the exception-handler sizing path (`raise_stub`/`PushHandler`/`copy_ret`), and
+the word-independent program combinators `SeqStackFree`, `wStackLoad` and
+`wStackStore` over the faithful HOL stackLang `prog` carrier
+(`Flapjack.Compiler.Backend.StackLang`), which build the stackLang program
+emitted by the pass; eventually these feed the Word-to-Stack `compile_semantics`
+theorem (`word_to_stackProofScript.sml:10709`).
 
 HOL's `bits_to_word` is polymorphic over the word carrier (`'a word`) and has
 no typeclass side conditions.  Following the established repository standard
@@ -305,5 +309,63 @@ handler_slots perf = if perf then 5n else 3n
     `raise_stub`/`PushHandler`/`StackHandlerArgs`/`copy_ret`. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "handler_slots_def"]
 def handlerSlots (perf : Bool) : Nat := if perf then 5 else 3
+
+open Flapjack.Compiler.Backend.StackLang (Prog)
+
+/-- Exact port of HOL `SeqStackFree_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:260`):
+
+```
+SeqStackFree n p = if n = 0 then p else Seq (StackFree n) p
+```
+
+    The stack-free combinator used by the return path of `comp`.  HOL is
+    polymorphic in the word type `'a` and touches only the word-independent
+    `Skip`/`Seq`/`StackFree` constructors (whose fields are `num`); the Lean
+    definition is correspondingly polymorphic in the carrier's type parameters
+    and uses none of the word-indexed constructors. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "SeqStackFree_def"]
+def seqStackFree {Inst Cmp RegImm Binop Memop Addr MlString : Type}
+    (n : Nat) (p : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    Prog Inst Cmp RegImm Binop Memop Addr MlString :=
+  if n = 0 then p else .seq (.stackFree n) p
+
+/-- Exact port of HOL `wStackLoad_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:52`):
+
+```
+(wStackLoad [] x = x) /\
+(wStackLoad ((r,i)::ps) x = Seq (StackLoad r i) (wStackLoad ps x))
+```
+
+    Loads the register/frame-slot pairs of `ps` in order, wrapping the body `x`
+    in nested `Seq`/`StackLoad`.  HOL is polymorphic in the word type `'a` and
+    touches only word-independent constructors whose fields are `num`; the Lean
+    definition is correspondingly polymorphic in the carrier's type parameters. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackLoad_def"]
+def wStackLoad {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+    List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
+      Prog Inst Cmp RegImm Binop Memop Addr MlString
+  | [], x => x
+  | (r, i) :: ps, x => .seq (.stackLoad r i) (wStackLoad ps x)
+
+/-- Exact port of HOL `wStackStore_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:57`):
+
+```
+(wStackStore [] x = x) /\
+(wStackStore ((r,i)::ps) x = Seq (wStackStore ps x) (StackStore r i))
+```
+
+    Stores the register/frame-slot pairs of `ps` onto the stack, building the
+    `Seq` chain tail-first.  HOL is polymorphic in the word type `'a` and
+    touches only word-independent constructors whose fields are `num`; the Lean
+    definition is correspondingly polymorphic in the carrier's type parameters. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackStore_def"]
+def wStackStore {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
+    List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
+      Prog Inst Cmp RegImm Binop Memop Addr MlString
+  | [], x => x
+  | (r, i) :: ps, x => .seq (wStackStore ps x) (.stackStore r i)
 
 end Flapjack.Compiler.Backend.WordToStack

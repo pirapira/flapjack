@@ -1,0 +1,5 @@
+is_label_label=T
+is_label_asm=F
+sec_label_end=T
+sec_asm_end=F
+sec_empty=F

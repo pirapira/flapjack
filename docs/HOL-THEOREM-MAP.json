@@ -8966,45 +8966,5 @@
     "lean_name": "WordLocW",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek (exact HOL wordLangScript.sml:331-333 word_loc = Word ('a word) | Loc num num; Lean width-indexed WordLocW (width) [NeZero width] | word (value : BitVec width) | loc (block offset : Nat): same constructor arity/field types, payload fixed-width BitVec width, and the instance binder enforces HOL's nonzero dimindex(:'a) so width=0 is not admitted. Untagged wordLocWToGeneric/wordLocWOfGeneric plus round-trip theorems bridge the generic WordLoc (BitVec width).)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
-    "hol_name": "get_var_imm_def",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
-    "lean_name": "getVarImmHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopSemScript.sml:165-167: get_var_imm (Reg n) s = sptree$lookup n s.locals and get_var_imm (Imm w) s = SOME (Word w), operand FIRST and state second (HOL order preserved by the tagged signature); carrier width-indexed to LoopMachineState (BitVec width) F with [NeZero width] because HOL word_loc is word-length indexed; HOL s.locals is an sptree$num_map rendered extensionally as LoopMachineState.locals : Nat -> Option (LoopValue W) and the other machine-state fields are unused, so only the operand/locals boundary is tagged, not the whole state carrier; the polymorphic state-first getVarImm in Flapjack/LoopGetVarImm.lean stays untagged and the rfl bridge maps the two argument orders; direct oracle scripts/hol-probes/loop_sem_get_var_imm_probe.out reproduced by Flapjack/Test/LoopGetVarImmParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopSemScript.sml",
-    "hol_name": "get_vars_def",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopProps.lean",
-    "lean_name": "getVarsHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopSemScript.sml:98-106 get_vars [] s = SOME [] and the cons case lookup/get_vars nesting; carrier width-indexed to LoopMachineState (BitVec width) F with [NeZero width] because HOL word_loc is word-length indexed; HOL s.locals sptree$num_map is rendered extensionally as LoopMachineState.locals : Nat -> Option (LoopValue W); the generic getVars stays untagged; direct oracle rows get_vars_two/get_vars_miss/get_vars_empty in scripts/hol-probes/loop_props_get_vars_probe.out reproduced by Flapjack/Test/LoopGetVarImmParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "get_var_imm_add_clk_eq",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopProps.lean",
-    "lean_name": "getVarImmHOL_add_clock_eq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopPropsScript.sml:251-255 get_var_imm ri (s with clock := ck) = get_var_imm ri s; width-indexed operand-first getVarImmHOL over LoopMachineState (BitVec width) F; oracle row get_var_imm_add_clk_eq=T in scripts/hol-probes/loop_props_get_vars_probe.out reproduced by Flapjack/Test/LoopGetVarImmParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "get_vars_local_clock_upd_eq",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopProps.lean",
-    "lean_name": "getVarsHOL_local_clock_upd_eq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopPropsScript.sml:260-266 get_vars ns (st with <|locals := l; clock := ck|>) = get_vars ns (st with locals := l); proven generically as untagged getVars_local_clock_upd_eq and exposed width-indexed; oracle row get_vars_local_clock_upd_eq=T in scripts/hol-probes/loop_props_get_vars_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "get_vars_clock_upd_eq",
-    "lean_path": "Flapjack/Pancake/Semantics/LoopProps.lean",
-    "lean_name": "getVarsHOL_clock_upd_eq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopPropsScript.sml:269-275 get_vars ns (st with clock := ck) = get_vars ns st; proven generically as untagged getVars_clock_upd_eq and exposed width-indexed; oracle row get_vars_clock_upd_eq=T in scripts/hol-probes/loop_props_get_vars_probe.out)"
   }
 ]

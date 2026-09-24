@@ -245,6 +245,24 @@ def makeFuncsGuard : Bool :=
 
 #guard makeFuncsGuard
 
+/-- Two exception declarations used to exercise the exact HOL
+    `get_eids_imp_excp_rel` port (`excp_rel` domain plus code injectivity). -/
+def eidsDecls : List (Decl (BitVec 8)) :=
+  [Decl.exnDecl "E" Shape.one, Decl.exnDecl "F" Shape.one]
+
+example :
+    excpRel (panToCrepGetEidsFromDeclsHOL eidsDecls)
+      (panToCrepGetEidsFromDeclsHOL eidsDecls) :=
+  getEidsFromDeclsImpExcpRel _ eidsDecls (by simp [sizeOfEids, eidsDecls]; decide) rfl
+
+def getEidsGuard : Bool :=
+  (FLOOKUP (panToCrepGetEidsFromDeclsHOL eidsDecls) "E" ==
+    some (0 : BitVec 8)) &&
+  (FLOOKUP (panToCrepGetEidsFromDeclsHOL eidsDecls) "F" ==
+    some (1 : BitVec 8))
+
+#guard getEidsGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -253,7 +271,8 @@ def runChecks : IO Bool := do
     ("HOL global call destination adapter", compiledGlobalDestinationMatchesHolOracle),
     ("HOL alookup_compile_prog_code empty-parameter entry", alookupGuard),
     ("HOL el_compile_prog_el_prog_eq indexed provenance", elCompileGuard),
-    ("HOL make_funcs_def parameter table", makeFuncsGuard)]
+    ("HOL make_funcs_def parameter table", makeFuncsGuard),
+    ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

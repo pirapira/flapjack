@@ -505,6 +505,115 @@ def excpRel
       FLOOKUP compilerCodes exception' = some code' →
       code = code' → exception = exception'
 
+/-! ### Exact HOL `get_eids_imp_excp_rel`
+
+    Flapjack-specific list support for the port below: membership in a zip
+    yields aligned indices (HOL `MEM_ZIP`). -/
+theorem mem_zip_getElem? {names : List α} {values : List β} {key : α} {value : β}
+    (h : (key, value) ∈ names.zip values) :
+    ∃ i : Nat, names[i]? = some key ∧ values[i]? = some value := by
+  induction names generalizing values with
+  | nil => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons val values =>
+          rw [List.zip_cons_cons, List.mem_cons] at h
+          rcases h with h | h
+          · obtain ⟨rfl, rfl⟩ := h
+            exact ⟨0, rfl, rfl⟩
+          · obtain ⟨i, hni, hvi⟩ := ih h
+            exact ⟨i + 1, by rw [List.getElem?_cons_succ]; exact hni,
+              by rw [List.getElem?_cons_succ]; exact hvi⟩
+
+/-- Flapjack-specific support: an exception table is no longer than the
+    exception-identifier count of the same declaration list. -/
+theorem exceptionEntries_length_le_sizeOfEids (pc : List (Decl (BitVec width))) :
+    (exceptionEntries pc).length ≤ sizeOfEids pc := by
+  induction pc with
+  | nil => simp [exceptionEntries, sizeOfEids]
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [exceptionEntries, sizeOfEids_cons, isExnDecl] <;> omega
+
+/-- Flapjack-specific support: `BitVec.ofNat width` is injective below
+    `2 ^ width`, which is where HOL's `LESS_MOD` step is used. -/
+theorem bitVecOfNat_inj {width i j : Nat} (hi : i < 2 ^ width) (hj : j < 2 ^ width)
+    (h : BitVec.ofNat width i = BitVec.ofNat width j) : i = j := by
+  have hmod : i % 2 ^ width = j % 2 ^ width := by
+    have := congrArg BitVec.toNat h
+    simpa [BitVec.toNat_ofNat] using this
+  rwa [Nat.mod_eq_of_lt hi, Nat.mod_eq_of_lt hj] at hmod
+
+/-- Flapjack-specific unfolding of the tagged `get_eids_from_decls` port. -/
+theorem panToCrepGetEidsFromDeclsHOL_eq (declarations : List (Decl (BitVec width))) :
+    panToCrepGetEidsFromDeclsHOL declarations =
+      FUPDATE_LIST FEMPTY
+        (((exceptionEntries declarations).map Prod.fst).zip
+          ((List.range ((exceptionEntries declarations).map Prod.fst).length).map
+            (BitVec.ofNat width))).reverse := rfl
+
+/-- Flapjack-specific inverse lookup fact: a successful exception-code lookup
+    comes from one of the zipped source entries. -/
+theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
+    (declarations : List (Decl (BitVec width))) (exception : ExceptionId)
+    (code : BitVec width)
+    (h : FLOOKUP (panToCrepGetEidsFromDeclsHOL declarations) exception = some code) :
+    (exception, code) ∈ ((exceptionEntries declarations).map Prod.fst).zip
+        ((List.range ((exceptionEntries declarations).map Prod.fst).length).map
+          (BitVec.ofNat width)) := by
+  rw [panToCrepGetEidsFromDeclsHOL_eq declarations] at h
+  rcases flookupFupdateList_mem_or_base (FEMPTY : FiniteMap ExceptionId (BitVec width))
+      _ exception code h with ⟨entry, hentry, hkey, hvalue⟩ | hbase
+  · rw [List.mem_reverse] at hentry
+    have heq : entry = (exception, code) := by
+      rw [← hkey, ← hvalue]
+    rwa [heq] at hentry
+  · exact absurd hbase (by simp)
+
+/-- Exact port of HOL `get_eids_imp_excp_rel`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4656`): if the source
+    exception map has the compiler's exception-code domain and the declaration
+    list has fewer exception declarations than `2 ^ width`, then the compiler's
+    code map is injective, matching HOL's `excp_rel`. The word type fixes the
+    value conversion as in `get_eids_from_decls_def`; the HOL-vs-Lean
+    equivalence is reviewed by comparing definitions (per SOUNDNESS), not
+    proved by this theorem. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "get_eids_imp_excp_rel"]
+theorem getEidsFromDeclsImpExcpRel
+    (seids : FiniteMap ExceptionId (BitVec width))
+    (pc : List (Decl (BitVec width)))
+    (hsize : sizeOfEids pc < 2 ^ width)
+    (hdom : FDOM seids = FDOM (panToCrepGetEidsFromDeclsHOL pc)) :
+    excpRel (panToCrepGetEidsFromDeclsHOL pc) seids := by
+  refine ⟨hdom, ?_⟩
+  intro exception exception' code code' hcode hcode' hcodeeq
+  have hentry := panToCrepGetEidsFromDeclsHOL_lookup_mem pc exception code hcode
+  have hentry' := panToCrepGetEidsFromDeclsHOL_lookup_mem pc exception' code' hcode'
+  obtain ⟨i, hnamei, hvali⟩ := mem_zip_getElem? hentry
+  obtain ⟨j, hnamej, hvalj⟩ := mem_zip_getElem? hentry'
+  have hlti : i < ((exceptionEntries pc).map Prod.fst).length :=
+    (List.getElem?_eq_some_iff.mp hnamei).1
+  have hltj : j < ((exceptionEntries pc).map Prod.fst).length :=
+    (List.getElem?_eq_some_iff.mp hnamej).1
+  have hbound : ((exceptionEntries pc).map Prod.fst).length ≤ sizeOfEids pc := by
+    simpa using exceptionEntries_length_le_sizeOfEids pc
+  have hi : i < 2 ^ width := by omega
+  have hj : j < 2 ^ width := by omega
+  have hcodei : BitVec.ofNat width i = code := by
+    rw [List.getElem?_map, List.getElem?_range hlti] at hvali
+    exact Option.some.inj hvali
+  have hcodej : BitVec.ofNat width j = code' := by
+    rw [List.getElem?_map, List.getElem?_range hltj] at hvalj
+    exact Option.some.inj hvalj
+  have hij : i = j :=
+    bitVecOfNat_inj hi hj (by rw [hcodei, hcodeeq, ← hcodej])
+  have hnamej' : ((exceptionEntries pc).map Prod.fst)[i]? = some exception' := by
+    rw [← hij] at hnamej
+    exact hnamej
+  rw [hnamei] at hnamej'
+  exact Option.some.inj hnamej'
+
 /-! HOL `ctxt_fc_def` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:25`).
     `FUPDATE_LIST` and `withShape` preserve the source definition's ZIP
     truncation and TAKE/DROP slicing, and `maxList` is Cake's `MAX_LIST`. -/

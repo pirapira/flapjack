@@ -6213,7 +6213,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgsHOL_constLocalAddressOrStruct_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only full localized Call-argument IH for Const/Local/address leaves and one-level RStructs over those leaves. It derives target argument evaluation and per-expression shape facts; arbitrary nested structs and other constructors remain open."
+    "reviewer": "Flapjack-only full localized Call-argument IH for Const/Local/address leaves, one-level RStructs over those leaves, and one-word Loads from constant addresses. It derives target argument evaluation and per-expression shape facts; arbitrary nested structs and other constructors remain open."
   },
   {
     "hol_path": null,
@@ -6981,7 +6981,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOrStructOfHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local/address leaves and one-level RStructs over them. It derives the expression IHs and proves production target code lookup plus callee locals_rel; arbitrary nested expression constructors and recursive Call body/handler composition remain open."
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local/address leaves, one-level RStructs over them, and one-word Loads from constant addresses. It derives the expression IHs and proves production target code lookup plus callee locals_rel; arbitrary nested expression constructors and recursive Call body/handler composition remain open."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -7069,7 +7069,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpHOL_constLocalAddressOrStruct_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only full expression IH for Const/Local/address leaves and a one-level RStruct built from them. It composes the HOL-shaped RStruct constructor proof with leaf IHs; general nested expressions remain open and no HOL tag is claimed."
+    "reviewer": "Flapjack-only full expression IH for Const/Local/address leaves, a one-level RStruct built from them, and one-word Loads from constant addresses. It composes the HOL-shaped RStruct and Load proofs with leaf IHs; general nested expressions remain open and no HOL tag is claimed."
   },
   {
     "hol_path": null,
@@ -7085,7 +7085,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalAddressOrStruct_localized",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only helper proving the supported Const/Local/address and one-level RStruct argument grammar has no global variables."
+    "reviewer": "Flapjack-only helper proving the supported Const/Local/address, one-level RStruct, and constant-address one-word Load argument grammar has no global variables."
   },
   {
     "hol_path": null,

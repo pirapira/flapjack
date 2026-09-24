@@ -61,3 +61,13 @@ val _ =
     print (term_to_string (rconc th));
     print "\n"
   end;
+
+val _ =
+  let
+    val th = riscv_bytes_conv
+      ``riscv_encode (ArithR (ADD (5w, 3w, 7w)))``
+  in
+    print "riscv_encode_bytes_add=";
+    print (term_to_string (rconc th));
+    print "\n"
+  end;

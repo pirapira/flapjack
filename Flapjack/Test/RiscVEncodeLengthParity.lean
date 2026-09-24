@@ -37,6 +37,13 @@ example :
       [0x93, 0x82, 0xf1, 0x7f] := by
   decide
 
+/-! `riscv_encode_bytes_add` is the matching HOL observation for this R-type
+    ADD input. -/
+example :
+    encodeInstructionBytes (.add 5 3 7 : Instruction 64) =
+      [0xb3, 0x82, 0x71, 0x00] := by
+  decide
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("RISC-V ADDI encoding has four bytes", decide ((encodeInstructionBytes addi).length = 4)),
@@ -46,7 +53,10 @@ def runChecks : IO Bool := do
       ("RISC-V ADDI emits HOL-matched little-endian bytes",
         decide (encodeInstructionBytes
           (.addi 5 3 (BitVec.ofNat 64 2047) : Instruction 64) =
-            [0x93, 0x82, 0xf1, 0x7f])) ]
+            [0x93, 0x82, 0xf1, 0x7f])),
+      ("RISC-V ADD emits HOL-matched little-endian bytes",
+        decide (encodeInstructionBytes (.add 5 3 7 : Instruction 64) =
+          [0xb3, 0x82, 0x71, 0x00])) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

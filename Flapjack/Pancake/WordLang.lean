@@ -166,4 +166,58 @@ def expToAddr {width : Nat} :
   | .op .add [.var name, .const offset] => some (.addr name offset)
   | _ => none
 
+mutual
+/-- HOL `wordLang$every_var_exp` (`wordLangScript.sml:85-91`): every register
+occurring in an expression satisfies `P`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_exp_def"]
+def everyVarExp {width : Nat} (P : Nat -> Bool) :
+    WordLangExp (BitVec width) -> Bool
+  | .var num => P num
+  | .load exp => everyVarExp P exp
+  | .op _ expressions => everyVarExps P expressions
+  | .shift _ left right => everyVarExp P left && everyVarExp P right
+  | _ => true
+
+/-- Flapjack helper: the `EVERY (every_var_exp P)` list traversal of HOL
+`every_var_exp`. -/
+def everyVarExps {width : Nat} (P : Nat -> Bool) :
+    List (WordLangExp (BitVec width)) -> Bool
+  | [] => true
+  | expression :: expressions =>
+      everyVarExp P expression && everyVarExps P expressions
+end
+
+/-- HOL `wordLang$every_var_imm` (`wordLangScript.sml:93-96`). -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_imm_def"]
+def everyVarImm {width : Nat} (P : Nat -> Bool) :
+    WordRegImm (BitVec width) -> Bool
+  | .reg num => P num
+  | _ => true
+
+/-- HOL `wordLang$every_var_inst` (`wordLangScript.sml:98-133`). -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_inst_def"]
+def everyVarInst {width : Nat} (P : Nat -> Bool) :
+    WordLangInst (BitVec width) -> Bool
+  | .const reg _ => P reg
+  | .arith (.binop _ r1 r2 right) => P r1 && P r2 && everyVarImm P right
+  | .arith (.shift _ r1 r2 right) => P r1 && P r2 && everyVarImm P right
+  | .arith (.div r1 r2 r3) => P r1 && P r2 && P r3
+  | .arith (.addCarry r1 r2 r3 r4) => P r1 && P r2 && P r3 && P r4
+  | .arith (.addOverflow r1 r2 r3 r4) => P r1 && P r2 && P r3 && P r4
+  | .arith (.subOverflow r1 r2 r3 r4) => P r1 && P r2 && P r3 && P r4
+  | .arith (.longMul r1 r2 r3 r4) => P r1 && P r2 && P r3 && P r4
+  | .arith (.longDiv r1 r2 r3 r4 r5) => P r1 && P r2 && P r3 && P r4 && P r5
+  | .mem .load reg (.addr base _) => P reg && P base
+  | .mem .store reg (.addr base _) => P reg && P base
+  | .mem .load32 reg (.addr base _) => P reg && P base
+  | .mem .store32 reg (.addr base _) => P reg && P base
+  | .mem .load8 reg (.addr base _) => P reg && P base
+  | .mem .store8 reg (.addr base _) => P reg && P base
+  | .fp (.fpLess reg _ _) => P reg
+  | .fp (.fpLessEqual reg _ _) => P reg
+  | .fp (.fpEqual reg _ _) => P reg
+  | .fp (.fpMovToReg r1 r2 _) => if width = 64 then P r1 else (P r1 && P r2)
+  | .fp (.fpMovFromReg _ r1 r2) => if width = 64 then P r1 else (P r1 && P r2)
+  | _ => true
+
 end Flapjack

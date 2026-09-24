@@ -8014,5 +8014,29 @@
   "lean_name": "conventionPartitions",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_exp_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarExp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_imm_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarImm",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "every_var_inst_def",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "everyVarInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

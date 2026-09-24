@@ -63,14 +63,14 @@ abbrev WordLangNumSet := FiniteMap Nat Unit
 /-- HOL `cutsets = num_set # num_set`. -/
 abbrev WordLangCutsets := WordLangNumSet × WordLangNumSet
 
-/-- `asm$arith` (`cakeml/compiler/encoders/asm/asmScript.sml:75-85`). -/
+/-- `asm$arith` (`cakeml/compiler/encoders/asm/asmScript.sml:85-95`). -/
 inductive WordLangArith (α : Type u) where
   | binop (operator : BinOp) (destination source : Nat) (right : WordRegImm α)
   | shift (operator : Shift) (destination source : Nat) (right : WordRegImm α)
   | div (destination dividend divisor : Nat)
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
-  | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
+  | addCarry (destination resultCarry sourceLeft sourceRight : Nat)
   | addOverflow (destination resultCarry sourceLeft sourceRight : Nat)
   | subOverflow (destination resultCarry sourceLeft sourceRight : Nat)
   deriving Repr

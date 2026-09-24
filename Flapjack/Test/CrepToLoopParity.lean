@@ -489,6 +489,28 @@ example : ¬ crepToLoopCtxtMax 5 ctxtMaxFm := by
   have hle := h 1 10 (by simp [ctxtMaxFm, FLOOKUP_update])
   omega
 
+/-- Polymorphism witnesses pinning the exact HOL inferred types of the three
+    un-annotated HOL `Definition`s.  `distinct_funcs` is polymorphic in the key
+    and both tuple components (`'a |-> ('b # 'c)`); `distinct_vars` in the key
+    and value (`'a |-> 'b`); `ctxt_max` in the key only (`'a |-> num`).  Empty
+    maps satisfy each relation vacuously. -/
+example : crepToLoopDistinctFuncs
+    (fun _ : Bool => none : FiniteMap Bool (Bool × Bool)) := by
+  intro x y n m rm rm' hx
+  change (fun _ : Bool => none) x = some (n, rm) at hx
+  simp at hx
+
+example : crepToLoopDistinctVars (fun _ : Bool => none : FiniteMap Bool Bool) := by
+  intro x y n m hx
+  change (fun _ : Bool => none) x = some n at hx
+  simp at hx
+
+example : crepToLoopCtxtMax (κ := String) 5
+    (fun _ : String => none : FiniteMap String Nat) := by
+  intro v m hv
+  change (fun _ : String => none) v = some m at hv
+  simp at hv
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

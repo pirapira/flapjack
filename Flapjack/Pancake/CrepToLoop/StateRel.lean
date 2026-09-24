@@ -14,9 +14,12 @@ Only the fields the relation constrains are compared; HOL's `memaddrs`/
 (`BitVec width → Bool`), matching the `mdomain`/`shMdomain` fields of
 `LoopMachineState`.
 
-Every tagged declaration is width-specialized to `BitVec width`: HOL
-`crepSem$state`/`loopSem$state` are word-length indexed (`'a word` fields), so
-a generic-`α` carrier is not an exact counterpart.
+Tagged declarations that compare word-typed state fields are width-specialized
+to `BitVec width`, because HOL `crepSem$state`/`loopSem$state` are word-length
+indexed (`'a word` fields) and a generic-`α` carrier would not be an exact
+counterpart.  The relations over pure `num`/`num` finite maps (`distinct_funcs`,
+`distinct_vars`, `ctxt_max`) are polymorphic exactly as the un-annotated HOL
+`Definition`s infer them (key, and value where no arithmetic constrains it).
 -/
 
 namespace Flapjack
@@ -165,19 +168,19 @@ theorem loopMemoryTotal_eq_some {W F : Type} (default : LoopValue W)
 /-- Exact port of HOL `crep_to_loop$distinct_funcs_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:60-65`): distinct
     function-map keys are separated by their target labels, so two entries with
-    equal labels must share the key.  The map is over `FiniteMap FunName (Nat × Nat)`
-    (HOL `mlstring |-> num # num`); no word-typed field occurs, so the statement
-    is word-length independent. -/
+    equal labels must share the key.  HOL's un-annotated `Definition` infers
+    `fm : 'a |-> ('b # 'c)`, so the Lean port is polymorphic in the key and in
+    both tuple components (exactly the inferred HOL polymorphism). -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "distinct_funcs_def"]
-def crepToLoopDistinctFuncs (functions : FiniteMap FunName (Nat × Nat)) : Prop :=
-  ∀ x y n m rm rm',
+def crepToLoopDistinctFuncs {κ α β : Type} (functions : FiniteMap κ (α × β)) : Prop :=
+  ∀ (x y : κ) (n m : α) (rm rm' : β),
     FLOOKUP functions x = some (n, rm) →
     FLOOKUP functions y = some (m, rm') → n = m → x = y
 
 /-- Untagged iff form of `crepToLoopDistinctFuncs`, kept for rewriting. -/
-theorem crepToLoopDistinctFuncs_iff (functions : FiniteMap FunName (Nat × Nat)) :
+theorem crepToLoopDistinctFuncs_iff {κ α β : Type} (functions : FiniteMap κ (α × β)) :
     crepToLoopDistinctFuncs functions ↔
-      ∀ x y n m rm rm',
+      ∀ (x y : κ) (n m : α) (rm rm' : β),
         FLOOKUP functions x = some (n, rm) →
         FLOOKUP functions y = some (m, rm') → n = m → x = y :=
   Iff.rfl
@@ -185,32 +188,33 @@ theorem crepToLoopDistinctFuncs_iff (functions : FiniteMap FunName (Nat × Nat))
 /-- Exact port of HOL `crep_to_loop$distinct_vars_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:95-99`): distinct
     variable-map keys are separated by their local slot, so two entries with
-    equal slots must share the key.  The map is over `FiniteMap Nat Nat`
-    (HOL `num |-> num`); no word-typed field occurs, so the statement is
-    word-length independent. -/
+    equal slots must share the key.  HOL's un-annotated `Definition` infers
+    `fm : 'a |-> 'b`, so the Lean port is polymorphic in the key and the value
+    (exactly the inferred HOL polymorphism). -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "distinct_vars_def"]
-def crepToLoopDistinctVars (vars : FiniteMap Nat Nat) : Prop :=
-  ∀ x y n m,
+def crepToLoopDistinctVars {κ β : Type} (vars : FiniteMap κ β) : Prop :=
+  ∀ (x y : κ) (n m : β),
     FLOOKUP vars x = some n → FLOOKUP vars y = some m → n = m → x = y
 
 /-- Untagged iff form of `crepToLoopDistinctVars`, kept for rewriting. -/
-theorem crepToLoopDistinctVars_iff (vars : FiniteMap Nat Nat) :
+theorem crepToLoopDistinctVars_iff {κ β : Type} (vars : FiniteMap κ β) :
     crepToLoopDistinctVars vars ↔
-      ∀ x y n m,
+      ∀ (x y : κ) (n m : β),
         FLOOKUP vars x = some n → FLOOKUP vars y = some m → n = m → x = y :=
   Iff.rfl
 
 /-- Exact port of HOL `crep_to_loop$ctxt_max_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:90-93`): every value
-    stored in the `num |-> num` map is bounded by `n`.  No word-typed field
-    occurs, so the statement is word-length independent. -/
+    stored in the map is bounded by `n`.  HOL's un-annotated `Definition` infers
+    `fm : 'a |-> num` (`m <= n` constrains the values to `num`), so the Lean
+    port is polymorphic in the key and fixed at `Nat` for the values. -/
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "ctxt_max_def"]
-def crepToLoopCtxtMax (n : Nat) (fm : FiniteMap Nat Nat) : Prop :=
-  ∀ v m, FLOOKUP fm v = some m → m ≤ n
+def crepToLoopCtxtMax {κ : Type} (n : Nat) (fm : FiniteMap κ Nat) : Prop :=
+  ∀ (v : κ) (m : Nat), FLOOKUP fm v = some m → m ≤ n
 
 /-- Untagged iff form of `crepToLoopCtxtMax`, kept for rewriting. -/
-theorem crepToLoopCtxtMax_iff (n : Nat) (fm : FiniteMap Nat Nat) :
-    crepToLoopCtxtMax n fm ↔ ∀ v m, FLOOKUP fm v = some m → m ≤ n :=
+theorem crepToLoopCtxtMax_iff {κ : Type} (n : Nat) (fm : FiniteMap κ Nat) :
+    crepToLoopCtxtMax n fm ↔ ∀ (v : κ) (m : Nat), FLOOKUP fm v = some m → m ≤ n :=
   Iff.rfl
 
 end Flapjack

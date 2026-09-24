@@ -95,11 +95,3 @@
 # `crepDest2Exp_eq_shift` / `crepDest2Exp_lt_width` theorems, so `#guard`
 # cannot stand in; the surrounding execution check is already a `#guard`.
 4 Flapjack/Test/CrepeDest2ExpParity.lean
-
-# --- PanStructs Load32 memory-access side condition --------------------------
-# The private theorem `load32CompileCaseRead32` is a side condition consumed by
-# the surrounding Load32 compile-case proof, so `#guard` cannot stand in. The
-# goal reduces over the PanValue memory-access representation and stalls under
-# `decide`/`decide +kernel` (termination_by unfolding does not get through),
-# matching the `compileExp`-stall class.
-1 Flapjack/Test/PanStructsCompileCorrect.lean

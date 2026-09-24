@@ -705,6 +705,13 @@ run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
   mem_store_valid_lookup mem_store_invalid \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval LoadByte probe observes the fixed RV64 get_byte/byte_align path:
+# little-endian byte extraction from a total word -> word_lab memory, plus the
+# memaddrs guard and the underlying mem_load_byte.
+run_probe crep_eval_load_byte_probeScript.sml crep_eval_load_byte_probe.out \
+  eval_loadbyte_addr8 mem_load_byte_addr9 \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

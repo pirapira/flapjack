@@ -42,4 +42,98 @@ example : bitsToWordW (width := 64) [true, false, true] = (5 : BitVec 64) := by 
 example : (bitsToWordW (width := 8) [true, false, true]).toNat =
     Flapjack.RiscV.CakeAlloc.bitsToWord [true, false, true] := by decide
 
+/-! ## `word_list` parity
+
+Rows for the width-indexed `wordListW`, tagged against HOL `word_list_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:231`; bead
+`flapjack-pxn.18.5.15.3.2`), from
+`scripts/hol-probes/word_to_stack_word_list_probe.out`:
+
+```
+wl_empty_d3=[0w]  wl_empty_d0=[0w]  wl_d0=[5w]
+wl_short=[5w]  wl_split=[5w; 3w]  wl_twostep=[7w; 7w; 1w]
+```
+-/
+
+def wordListParityGuard : Bool :=
+  (wordListW (width := 64) ([] : List Bool) 3 == [0]) &&
+  (wordListW (width := 64) ([] : List Bool) 0 == [0]) &&
+  (wordListW (width := 64) [true, false, true] 0 == [5]) &&
+  (wordListW (width := 64) [true, false, true] 5 == [5]) &&
+  (wordListW (width := 64) [true, false, true, true] 2 == [5, 3]) &&
+  (wordListW (width := 64) [true, true, true, true, true] 2 == [7, 7, 1])
+
+#eval wordListParityGuard
+#guard wordListParityGuard
+
+example : wordListW (width := 64) [true, false, true, true] 2 =
+    ([5, 3] : List (BitVec 64)) := by native_decide
+
+/-! ## `chunk_to_bits` parity
+
+Rows for the width-indexed `chunkToBitsW`, tagged against HOL
+`chunk_to_bits_def` (`cakeml/compiler/backend/word_to_stackScript.sml:386`;
+bead `flapjack-pxn.18.5.15.3.3`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bits_probe.out`:
+
+```
+cb_empty=1w  cb_single_true=3w  cb_single_false=2w
+cb_true_false=5w  cb_false_true=6w  cb_three=11w  cb_ignores_word=T
+```
+-/
+
+def chunkToBitsParityGuard : Bool :=
+  (chunkToBitsW (width := 64) ([] : List (Bool × BitVec 64)) == 1) &&
+  (chunkToBitsW (width := 64) [(true, 0)] == 3) &&
+  (chunkToBitsW (width := 64) [(false, 0)] == 2) &&
+  (chunkToBitsW (width := 64) [(true, 0), (false, 0)] == 5) &&
+  (chunkToBitsW (width := 64) [(false, 0), (true, 0)] == 6) &&
+  (chunkToBitsW (width := 64) [(true, 0), (true, 0), (false, 0)] == 11)
+
+#eval chunkToBitsParityGuard
+#guard chunkToBitsParityGuard
+
+example : chunkToBitsW (width := 64) [(true, (0 : BitVec 64)), (false, 9)] =
+    chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by native_decide
+
+/-! ## `chunk_to_bitmap` / `const_words_to_bitmap` parity
+
+Rows for the width-indexed `chunkToBitmapW` and `constWordsToBitmapW`, tagged
+against HOL `chunk_to_bitmap_def` / `const_words_to_bitmap_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:393,397`; bead
+`flapjack-pxn.18.5.15.3.4`), from
+`scripts/hol-probes/word_to_stack_chunk_to_bitmap_probe.out`:
+
+```
+cbm_empty=[1w]  cbm_two=[5w; 0w; 9w]  cbm_payload=[3w; 7w]
+cwb_empty=[1w]  cwb_short=[5w; 0w; 9w]
+cwb_boundary8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 1w]
+cwb_split8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 2w; 8w]
+```
+
+`cwb_boundary8` exercises `word8` (`dimindex (:'a) = 8`) with
+`ws_len = dimindex-1 = 7`: HOL's strict `<` still recurses, splitting off the
+first seven words and appending `chunk_to_bitmap [] = [1w]`.
+-/
+
+def chunkToBitmapParityGuard : Bool :=
+  (chunkToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) == [1]) &&
+  (chunkToBitmapW (width := 64) [(true, 0), (false, 9)] == [5, 0, 9]) &&
+  (chunkToBitmapW (width := 64) [(true, 7)] == [3, 7]) &&
+  (constWordsToBitmapW (width := 64) ([] : List (Bool × BitVec 64)) 0 == [1]) &&
+  (constWordsToBitmapW (width := 64) [(true, 0), (false, 9)] 2 == [5, 0, 9]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7)] 7
+      == [213, 1, 2, 3, 4, 5, 6, 7, 1]) &&
+  (constWordsToBitmapW (width := 8)
+      [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8
+      == [213, 1, 2, 3, 4, 5, 6, 7, 2, 8])
+
+#eval chunkToBitmapParityGuard
+#guard chunkToBitmapParityGuard
+
+example : constWordsToBitmapW (width := 8)
+    [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
+    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by native_decide
+
 end Flapjack.Test.WordToStackBitsParity

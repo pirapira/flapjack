@@ -287,6 +287,15 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
   bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
+  wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_chunk_to_bits_probeScript.sml word_to_stack_chunk_to_bits_probe.out \
+  cb_empty cb_ignores_word "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_chunk_to_bitmap_probeScript.sml word_to_stack_chunk_to_bitmap_probe.out \
+  cbm_empty cwb_split8 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -869,7 +878,8 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion bound_eight \
+  "$cake_dir/pancake/crep_arithScript.sml"
 run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
   n2w_zero_word bit_high6 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"

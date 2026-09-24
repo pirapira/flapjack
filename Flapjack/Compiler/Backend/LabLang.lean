@@ -13,7 +13,7 @@ namespace Flapjack.Compiler.Backend.LabLang
 /-- HOL `labLang$lab`. -/
 inductive Lab where
   | lab (sectionNumber label : Nat)
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 /-- HOL `labLang$asm_with_lab`, with imported carriers explicit. -/
 inductive AsmWithLab (Cmp RegImm MlString : Type) where
@@ -24,14 +24,14 @@ inductive AsmWithLab (Cmp RegImm MlString : Type) where
   | callFFI (function : MlString)
   | install
   | halt
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 /-- HOL `labLang$asm_or_cbw`. -/
 inductive AsmOrCbw (Inst Memop Addr : Type) where
   | asmi (instruction : Inst)
   | cbw (left right : Nat)
   | shareMem (operator : Memop) (register : Nat) (address : Addr)
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 /-- HOL `labLang$line`; bytes are fixed `word8` values and positions retain
 the width-polymorphic HOL word carrier. -/
@@ -40,12 +40,12 @@ inductive Line (AsmOrCbw AsmWithLab Word : Type) where
   | asm (instruction : AsmOrCbw) (encoded : List (BitVec 8)) (length : Nat)
   | labAsm (instruction : AsmWithLab) (position : Word)
       (encoded : List (BitVec 8)) (length : Nat)
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 /-- HOL `labLang$sec`. -/
 structure Section (Line : Type) where
   sectionId : Nat
   lines : List Line
-  deriving Repr
+  deriving Repr, BEq, DecidableEq
 
 end Flapjack.Compiler.Backend.LabLang

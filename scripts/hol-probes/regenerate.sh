@@ -323,6 +323,21 @@ run_probe stack_alloc_next_lab_probeScript.sml stack_alloc_next_lab_probe.out \
   next_lab_skip next_lab_both_continuations \
   "$cake_dir/compiler/backend/stack_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe stack_to_lab_flatten_probeScript.sml stack_to_lab_flatten_probe.out \
+  flat_skip flat_tick flat_inst flat_halt flat_seq_tail flat_seq_not_tail \
+  flat_if_both_skip flat_if_then_skip flat_if_else_skip \
+  flat_if_then_terminates flat_if_else_terminates flat_if_both_live \
+  flat_loop_if flat_raise flat_return flat_break flat_continue flat_raw_call \
+  flat_call_none_label flat_call_none_reg flat_call_return flat_call_handler \
+  flat_jump_lower flat_ffi flat_loc_value flat_install flat_shared_memory \
+  flat_code_buffer_write flat_default section_skip section_seq section_if \
+  "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe lab_props_preconditions_probeScript.sml lab_props_preconditions_probe.out \
+  pre_label pre_labasm pre_asmi_skip pre_cbw_to_asm pre_share_to_asm \
+  pre_empty_sections pre_label_section pre_skip_asm_section \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"

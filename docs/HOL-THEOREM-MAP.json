@@ -784,6 +784,22 @@
     "reviewer": "Codex (source comparison; HOL FDOM f SUBSET FDOM g is rendered as the pointwise implication on the repo FDOM predicate, and the FLOOKUP support condition matches HOL exactly; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "fdoms_eq_flookup_some_none",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "fdoms_eq_flookup_some_none",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "fdoms_eq_opt_mmap_flookup_some",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "fdoms_eq_opt_mmap_flookup_some",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",

@@ -264,6 +264,31 @@ theorem OPT_MMAP_ALL_EQ {α : Type} {β : Type} (f g : α → Option β) (l : Li
       simp only [List.mapM_cons, h a List.mem_cons_self,
         ih (fun e he => h e (List.mem_cons_of_mem a he))]
 
+/-- CakeML's `fdoms_eq_opt_mmap_flookup_some`
+    (`crep_inlineProofScript.sml:1833`): if two finite maps have the same
+    domain, an `OPT_MMAP` of `FLOOKUP` over the first succeeding implies the
+    same sequence over the second succeeds. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "fdoms_eq_opt_mmap_flookup_some"]
+theorem fdoms_eq_opt_mmap_flookup_some {α : Type} {β : Type} (vs : List α)
+    (fm fm' : FiniteMap α β) (vals : List β) (hdom : FDOM fm = FDOM fm')
+    (h : vs.mapM (FLOOKUP fm) = some vals) :
+    ∃ z, vs.mapM (FLOOKUP fm') = some z := by
+  have hall : ∀ e, e ∈ vs → ∃ y, FLOOKUP fm e = some y :=
+    (OPT_MMAP_SOME_ALL (FLOOKUP fm) vs).mp ⟨vals, h⟩
+  refine (OPT_MMAP_SOME_ALL (FLOOKUP fm') vs).mpr ?_
+  intro e he
+  obtain ⟨y, hy⟩ := hall e he
+  have hmem : FDOM fm' e := by
+    rw [← hdom]
+    change fm e ≠ none
+    change fm e = some y at hy
+    rw [hy]
+    exact Option.some_ne_none y
+  change fm' e ≠ none at hmem
+  cases h' : fm' e with
+  | none => rw [h'] at hmem; exact absurd rfl hmem
+  | some z => exact ⟨z, by change fm' e = some z; rw [h']⟩
+
 /-! ## State and locals relations of `inline_prog_correct` -/
 
 /-- CakeML's `state_rel` (`crep_inlineProofScript.sml:12`): two Crep states agree

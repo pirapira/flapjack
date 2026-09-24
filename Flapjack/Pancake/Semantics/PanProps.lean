@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 
 /-!
@@ -182,5 +183,23 @@ mutual
         rw [panIsWfShapeValueHOL_toHOL context value,
           panIsWfShapeValuesHOL_mapSnd_toHOL context fields]
 end
+
+/-- HOL `fdoms_eq_flookup_some_none` (`panPropsScript.sml:276`): if two finite
+    maps have the same domain, every defined lookup in the first is also defined
+    in the second. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "fdoms_eq_flookup_some_none"]
+theorem fdoms_eq_flookup_some_none {α : Type} {β : Type} (fm fm' : FiniteMap α β) (n : α)
+    (v : β) (hdom : FDOM fm = FDOM fm') (hv : FLOOKUP fm n = some v) :
+    ∃ v', FLOOKUP fm' n = some v' := by
+  have hmem : FDOM fm' n := by
+    rw [← hdom]
+    change fm n ≠ none
+    change fm n = some v at hv
+    rw [hv]
+    exact Option.some_ne_none v
+  change fm' n ≠ none at hmem
+  cases h' : fm' n with
+  | none => rw [h'] at hmem; exact absurd rfl hmem
+  | some v' => exact ⟨v', by change fm' n = some v'; rw [h']⟩
 
 end Flapjack

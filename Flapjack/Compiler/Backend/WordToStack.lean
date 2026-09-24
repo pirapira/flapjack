@@ -126,7 +126,63 @@ def constWordsToBitmapW {width : Nat} [NeZero width]
     let h := ws.take (width - 1)
     let t := ws.drop (width - 1)
     chunkToBitmapW h ++ constWordsToBitmapW t (ws_len - (width - 1))
-termination_by ws_len
-decreasing_by omega
+  termination_by ws_len
+  decreasing_by omega
+
+/-- Order-insensitive Lean model of HOL `write_bitmap_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:240`):
+
+```
+(write_bitmap live k f'):'a word list =
+  let names = MAP (\(r,y). (f' - 1) - (r DIV 2 - k)) (toAList live) in
+    word_list (GENLIST (\x. MEM x names) f' ++ [T]) (dimindex (:'a) - 1)
+```
+
+UNTAGGED.  HOL's `live` is a `num_set` (`unit spt`), whose finite-map carrier
+and `toAList` ordering live in `HOL/src/finite_maps/sptreeScript.sml`, outside
+the CakeML tree: `scripts/check-hol-refs.py` rejects `@[hol]` paths that are not
+under `cakeml/`, and `docs/NUM-SET-AUDIT.md` models `num_set` as an
+order-insensitive domain because the passes observe `toAList` only through
+`MEM`/`EVERY`.  `write_bitmap` reads `toAList live` only through `MEM` of the
+mapped names, so its value depends solely on the domain of `live`; this model
+takes that domain directly as a `List Nat`.  The kernel-checked
+`writeBitmapHOL_domain_insensitive` records exactly that insensitivity.  This is
+a documented carrier mismatch, not an exact port: the definition is deliberately
+**not** marked `@[hol]`.
+
+The direct HOL `EVAL` evidence is checked in at
+`scripts/hol-probes/word_to_stack_write_bitmap_probe.out`; the Lean parity
+fixture is `Flapjack.Test.WordToStackBitsParity`. -/
+def writeBitmapHOL {width : Nat} [NeZero width]
+    (live : List Nat) (k f' : Nat) : List (BitVec width) :=
+  let names := live.map (fun r => (f' - 1) - (r / 2 - k))
+  wordListW ((List.range f').map (fun x => decide (x ∈ names)) ++ [true]) (width - 1)
+
+/-- `writeBitmapHOL` depends only on the domain of `live`: any two lists with the
+    same membership define the same bitmap.  This is the observable half of the
+    HOL `num_set`/`toAList` carrier that `write_bitmap` uses. -/
+theorem writeBitmapHOL_domain_insensitive {width : Nat} [NeZero width]
+    (live₁ live₂ : List Nat) (k f' : Nat)
+    (h : ∀ r, r ∈ live₁ ↔ r ∈ live₂) :
+    writeBitmapHOL (width := width) live₁ k f' =
+      writeBitmapHOL (width := width) live₂ k f' := by
+  have hmap : ∀ x, x ∈ live₁.map (fun r => (f' - 1) - (r / 2 - k)) ↔
+      x ∈ live₂.map (fun r => (f' - 1) - (r / 2 - k)) := by
+    intro x
+    simp only [List.mem_map]
+    constructor
+    · rintro ⟨r, hr, rfl⟩
+      exact ⟨r, (h r).mp hr, rfl⟩
+    · rintro ⟨r, hr, rfl⟩
+      exact ⟨r, (h r).mpr hr, rfl⟩
+  have hlist : (List.range f').map
+        (fun x => decide (x ∈ live₁.map (fun r => (f' - 1) - (r / 2 - k)))) =
+      (List.range f').map
+        (fun x => decide (x ∈ live₂.map (fun r => (f' - 1) - (r / 2 - k)))) := by
+    apply List.map_congr_left
+    intro x _
+    exact decide_eq_decide.mpr (hmap x)
+  simp only [writeBitmapHOL]
+  rw [hlist]
 
 end Flapjack.Compiler.Backend.WordToStack

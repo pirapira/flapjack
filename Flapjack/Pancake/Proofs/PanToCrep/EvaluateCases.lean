@@ -9820,6 +9820,29 @@ private theorem panShapeListMatches_self_forSourceCall :
         panShapeListMatches_self_forSourceCall shapes]
 end
 
+private theorem list_mapM_some_lookup_of_mem {α β : Type _}
+    (lookup : α → Option β) {keys : List α} {values : List β}
+    (hmap : keys.mapM lookup = some values) :
+    ∀ key, key ∈ keys → ∃ value, lookup key = some value := by
+  induction keys generalizing values with
+  | nil =>
+      intro key hmem
+      cases hmem
+  | cons key keys ih =>
+      intro candidate hmem
+      simp only [List.mapM_cons] at hmap
+      cases hlookup : lookup key with
+      | none => simp [hlookup] at hmap
+      | some value =>
+          cases htail : keys.mapM lookup with
+          | none => simp [hlookup, htail] at hmap
+          | some tail =>
+              simp [hlookup, htail] at hmap
+              rcases List.mem_cons.mp hmem with hhead | htailMem
+              · subst candidate
+                exact ⟨value, hlookup⟩
+              · exact ih htail candidate htailMem
+
 /-! Compose a production source Call with its recursive callee and handler
     simulation hypotheses for a matching raised payload of any supported shape.
     Both recursive source evaluations use the parent Call's canonical budget
@@ -9883,7 +9906,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           with ffi := calleeFfi }
         with clock := min (decPanClock source.clock) calleeClock })
     (hsourceHandlerLocal : FLOOKUP source.locals handlerVariable = some old)
-    (hshape : panValueShape [] old = panValueShape [] payload)
     (hpayloadShape : panValueShape [] payload = shape)
     (hflatten : panValueFlatten payload = values)
     (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
@@ -9895,8 +9917,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (hexcp : excpRel context.eids source.exceptionShapes)
     (hlocals : localsRel context source.locals caller.locals)
     (hvariable : FLOOKUP context.vars handlerVariable = some (shape, slots))
-    (hslots : ∀ slot, slot ∈ slots →
-      ∃ current, (crepRuntimeCallerState caller calleeState).locals slot = some current)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
     (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
@@ -10047,6 +10067,25 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
   have hsourceStructs := stateRel_structs source caller hinitialState
+  obtain ⟨handlerSlots, handlerWords, hsourceVariableShape, hsourceHandlerWords,
+      _hsourceHandlerFlatten, _hsourceHandlerShapeWf⟩ :=
+    hlocals.2.2 handlerVariable old hsourceHandlerLocal
+  have hsourceVariablePair : (panValueShape [] old, handlerSlots) = (shape, slots) :=
+    Option.some.inj (hsourceVariableShape.symm.trans hvariable)
+  have hsourceVariableShapeEq : panValueShape [] old = shape := by
+    exact congrArg Prod.fst hsourceVariablePair
+  have hhandlerSlotsEq : handlerSlots = slots :=
+    congrArg Prod.snd hsourceVariablePair
+  have hslots : ∀ slot, slot ∈ slots →
+      ∃ current, (crepRuntimeCallerState caller calleeState).locals slot = some current := by
+    intro slot hslot
+    have hslot' : slot ∈ handlerSlots := by
+      simpa [hhandlerSlotsEq] using hslot
+    obtain ⟨current, hcurrent⟩ :=
+      list_mapM_some_lookup_of_mem (FLOOKUP caller.locals) hsourceHandlerWords slot hslot'
+    exact ⟨current, by simpa [crepRuntimeCallerState, FLOOKUP] using hcurrent⟩
+  have hshape : panValueShape [] old = panValueShape [] payload := by
+    rw [hsourceVariableShapeEq, hpayloadShape]
   have hsourceShapeMatch : panShapeMatches
       (panValueShape source.structs payload) shape = true := by
     rw [hsourceStructs, hpayloadShape]
@@ -10058,8 +10097,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     unfold panValueAssignmentValid
     rw [hsourceStructs, hsourceHandlerLookup]
     change panShapeMatches (panValueShape [] payload) (panValueShape [] old) = true
-    rw [← hshape]
-    exact panShapeMatches_self_forSourceCall (panValueShape [] old)
+    rw [hsourceVariableShapeEq, hpayloadShape]
+    exact panShapeMatches_self_forSourceCall shape
   have hsourceClock : source.clock ≠ 0 := by
     rcases hinitialState with ⟨_, _, _, _, _, hclockRel, _, _, _, _⟩
     intro hzero
@@ -10346,7 +10385,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hsource : FLOOKUP source.locals handlerVariableTarget = some old)
     (hvariable : FLOOKUP context.vars handlerVariableTarget =
       some (Shape.one, [slot]))
-    (hslot : ∃ current, caller.locals slot = some current)
     (hlocalized : ∀ expression, expression ∈ expressions →
       expGlobalVars expression = [])
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
@@ -10492,10 +10530,16 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     simpa [hsourceHandlerVariable] using hsourceHandlerLookup
   obtain ⟨names, words, hsourceVariableShape, _hsourceWords, _hsourceFlatten,
       _hsourceShapeWf⟩ := hlocals.2.2 handlerVariableTarget old hsource
+  have hsourceVariablePair : (panValueShape [] old, names) = (Shape.one, [slot]) :=
+    Option.some.inj (hsourceVariableShape.symm.trans hvariable)
   have hsourceVariableShapeEq : panValueShape [] old = Shape.one := by
-    have hpair : (panValueShape [] old, names) = (Shape.one, [slot]) :=
-      Option.some.inj (hsourceVariableShape.symm.trans hvariable)
-    exact congrArg Prod.fst hpair
+    exact congrArg Prod.fst hsourceVariablePair
+  have hslotNamesEq : names = [slot] := congrArg Prod.snd hsourceVariablePair
+  have hslot : ∃ current, caller.locals slot = some current := by
+    have hslotMem : slot ∈ names := by simp [hslotNamesEq]
+    obtain ⟨current, hcurrent⟩ :=
+      list_mapM_some_lookup_of_mem (FLOOKUP caller.locals) _hsourceWords slot hslotMem
+    exact ⟨current, by simpa [FLOOKUP] using hcurrent⟩
   have hsourceStructs := stateRel_structs source caller hstate
   have hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
       (fun _ => none) .local handlerVariable (.word value) = true := by

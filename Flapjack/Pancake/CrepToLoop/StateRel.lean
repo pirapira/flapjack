@@ -217,4 +217,67 @@ theorem crepToLoopCtxtMax_iff {κ : Type} (n : Nat) (fm : FiniteMap κ Nat) :
     crepToLoopCtxtMax n fm ↔ ∀ (v : κ) (m : Nat), FLOOKUP fm v = some m → m ≤ n :=
   Iff.rfl
 
+/-! ## `locals_rel` (UNTTAGGED — carrier gap)
+
+HOL `locals_rel_def`
+(`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) is stated over
+
+    locals_rel ctxt (l:sptree$num_set) (s_locals:num |-> 'a word_lab) t_locals <=>
+      distinct_vars ctxt.vars /\\ ctxt_max ctxt.vmax ctxt.vars /\\
+      domain l ⊆ domain t_locals /\\
+      ∀vname v. FLOOKUP s_locals vname = SOME v =>
+        ?n. FLOOKUP ctxt.vars vname = SOME n /\\ n ∈ domain l /\\
+            lookup n t_locals = SOME (wlab_wloc v)
+
+The Lean port below reproduces every side condition, but it is deliberately
+**not** tagged, because three HOL carriers do not yet have exact Lean
+counterparts:
+
+* `ctxt.vars : num |-> num` (a finite map) versus the Lean
+  `LoopContext.vars : NatInfoMap Nat = List (Nat × Nat)` (list-backed,
+  first-match lookup) — so `distinct_vars ctxt.vars` / `ctxt_max ctxt.vmax
+  ctxt.vars` / `FLOOKUP ctxt.vars vname` are rendered with `lookupNatInfo`;
+* `l : sptree$num_set` (with `domain l` and `n ∈ domain l`) versus a Boolean
+  membership function `live : Nat → Bool` (the same set-as-membership-map
+  rendering used for `memaddrs`/`sh_memaddrs`);
+* `t_locals : sptree$num_map` (with `lookup n t_locals`) versus the flat
+  function `LoopMachineState.locals : Nat → Option (LoopValue W)`, so
+  `domain l ⊆ domain t_locals` becomes `live n = true → (tLocals n).isSome`
+  and `lookup n t_locals = SOME w` becomes `tLocals n = some w`.
+
+The exact port is tracked by a dependency bead (finite-map `LoopContext.vars`
+plus `sptree$num_set`/`num_map` domain/lookup carriers). -/
+
+/-- Untagged faithful-shape rendering of HOL `crep_to_loop$locals_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`); see the
+    section note above for the three carrier gaps that withhold the HOL tag. -/
+def crepToLoopLocalsRel {width : Nat} {α : Type} (context : LoopContext α)
+    (live : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals : Nat → Option (LoopValue (BitVec width))) : Prop :=
+  (∀ x y n m,
+      lookupNatInfo x context.vars = some n →
+      lookupNatInfo y context.vars = some m → n = m → x = y) ∧
+    (∀ v m, lookupNatInfo v context.vars = some m → m ≤ context.maxVar) ∧
+    (∀ n, live n = true → (tLocals n).isSome) ∧
+    ∀ vname v, FLOOKUP sLocals vname = some v →
+      ∃ n, lookupNatInfo vname context.vars = some n ∧ live n = true ∧
+        tLocals n = some (wlabWloc v)
+
+/-- Untagged iff form of `crepToLoopLocalsRel`, kept for rewriting. -/
+theorem crepToLoopLocalsRel_iff {width : Nat} {α : Type} (context : LoopContext α)
+    (live : Nat → Bool)
+    (sLocals : FiniteMap Nat (PanWordLab (BitVec width)))
+    (tLocals : Nat → Option (LoopValue (BitVec width))) :
+    crepToLoopLocalsRel context live sLocals tLocals ↔
+      (∀ x y n m,
+          lookupNatInfo x context.vars = some n →
+          lookupNatInfo y context.vars = some m → n = m → x = y) ∧
+        (∀ v m, lookupNatInfo v context.vars = some m → m ≤ context.maxVar) ∧
+        (∀ n, live n = true → (tLocals n).isSome) ∧
+        (∀ vname v, FLOOKUP sLocals vname = some v →
+          ∃ n, lookupNatInfo vname context.vars = some n ∧ live n = true ∧
+            tLocals n = some (wlabWloc v)) :=
+  Iff.rfl
+
 end Flapjack

@@ -1,9 +1,10 @@
 import Flapjack.Pancake.Proofs.CrepArith
 
-/-! Direct original-HOL boundary for the `lookup_code` helper used by
+/-! Direct original-HOL boundary for the local `lookup_code` theorem used by
 `crep_arithProofScript.sml:simp_prog_correct`. The HOL fixture simplifies an
-8-bit multiplication in the stored function body before looking it up; the
-Lean theorem below states that exact commute law over `lookupCrepHolCode`. -/
+8-bit multiplication in the stored function body before looking it up. The
+width-indexed Lean theorem states the source `FMAP_MAP2`/`OPTION_MAP` commute
+law over `lookupCrepHolCodeW`; the generic helper remains untagged support. -/
 
 namespace Flapjack.Test.CrepeArithLookupCodeParity
 
@@ -31,6 +32,12 @@ example :
   crepArithLookupCodeSimpProg (fromNat := BitVec.ofNat 8)
     code "f" arguments 1
 
+example :
+    lookupCrepHolCodeW simpCode "f" arguments 1 =
+      (lookupCrepHolCodeW code "f" arguments 1).map
+        (fun (body, locals) => (crepSimpProg (BitVec.ofNat 8) body, locals)) :=
+  crepArithLookupCodeSimpProgW code "f" arguments 1
+
 /-- The HOL definition accepts `len` but does not inspect it. The exact lemma
     retains that quantified input, including values different from the
     parameter count. -/
@@ -44,6 +51,14 @@ example :
 /- HOL `simp_prog_after_lookup` in `crep_arith_lookup_code_probe.out` is
    `SOME (Assign 2 (Const 8w), FEMPTY⟨1 ↦ Word 9w⟩)`. -/
 #guard match lookupCrepHolCode simpCode "f" arguments 1 with
+  | some (body, locals) =>
+      (match body with
+       | .assign 2 (.const value) => value == BitVec.ofNat 8 8
+       | _ => false) &&
+      FLOOKUP locals 1 == some (.word (BitVec.ofNat 8 9))
+  | none => false
+
+#guard match lookupCrepHolCodeW simpCode "f" arguments 1 with
   | some (body, locals) =>
       (match body with
        | .assign 2 (.const value) => value == BitVec.ofNat 8 8

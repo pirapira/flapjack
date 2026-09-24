@@ -1,25 +1,29 @@
 import Flapjack.Pancake.Semantics.PanSem.Total
+import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 
 /-!
-# Measure-driven total If/Seq evaluator fragment
+# Measure-driven total PanSem control fragment
 
-This module is an incremental evaluator step over the existing explicit
+This module is an incremental evaluator step over the explicit
 `PanSemExprIfFragmentRiscV64` domain. Its recursive calls are justified by the
 same `(clock, panSemProgFuel)` measure intended for the full `evaluate_def`
 port. It evaluates conditions from the complete `PanSemState`, applies HOL
-`fix_clock` between sequence commands, and returns HOL's `result option ×
-state` shape. The syntax domain still excludes other `Prog` constructors, so
-this is untagged support and does not claim the whole `evaluate_def` clause.
+`fix_clock` between sequence commands, and uses the HOL-shaped total clause
+helpers for Assign/Return/Raise. Other `Prog` constructors remain outside the
+domain, so this is untagged support and does not claim the whole
+`evaluate_def` clause.
 -/
 
 namespace Flapjack
 
 variable {σ : Type v}
 
-/-- Total recursive evaluation of the RV64 clock-leaf/Seq/If fragment using
-    the source evaluator's lexicographic measure. The fragment embeds into the
-    production `Prog`; the measure is therefore the same one used to justify
-    recursive calls in the planned whole-program evaluator. -/
+/-- Total recursive evaluation of the RV64 clock-leaf/Seq/If/Assign/Return/
+    Raise fragment using the source evaluator's lexicographic measure. The
+    fragment embeds into production `Prog`; the measure is therefore the same
+    one used to justify recursive calls in the planned whole-program evaluator.
+    Assign/Return/Raise use the shared expression and clause steps from
+    `TotalSteps`; all such cases preserve the complete state on Error. -/
 def panSemEvaluateExprIfFragmentRiscV64ByMeasure [NeZero 64]
     [BEq (RiscV.Word 64)] [DecidableEq (RiscV.Word 64)]
     [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
@@ -51,6 +55,12 @@ def panSemEvaluateExprIfFragmentRiscV64ByMeasure [NeZero 64]
           else
             panSemEvaluateExprIfFragmentRiscV64ByMeasure thenBranch state
       | _ => (some .error, state)
+  | .assign kind name expression, state =>
+      panSemTotalAssignClause state kind name expression
+  | .returnValue expression, state =>
+      panSemTotalReturnClause state expression
+  | .raiseException exception expression, state =>
+      panSemTotalRaiseClause state exception expression
 termination_by program state => panSemEvalMeasure state program.toProg
 decreasing_by
   · change panSemEvalMeasureRel (state, first.toProg)

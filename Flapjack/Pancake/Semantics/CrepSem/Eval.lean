@@ -2568,6 +2568,36 @@ theorem evalCrepRuntimeExp_sourceWordLab_eq {ι : Type} {σ : Type}
         PanWordLab.word
   rw [evalCrepRuntimeExp_sourceWord_eq]
 
+/-- The source evaluator's recursive `LoadByte` case, after a successful
+    address evaluation, is exactly the tagged HOL `mem_load_byte_def` port
+    followed by HOL's `w2w` widening back to the expression word type. The
+    explicit finite-index/BitVec representation remains a parameter, so this
+    constructor equation does not claim the whole polymorphic `eval_def`
+    correspondence. -/
+theorem evalCrepHolFiniteWordSourceExp_loadByte_eq_panMemLoadByteHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression = some address) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.loadByte addressExpression)).map (holWordToBitVec dimension) =
+    (panMemLoadByteHOL
+      (fun bitAddress =>
+        ((CrepHolState.toHolFiniteBitVecState dimension state).memory
+          bitAddress).toHolWordLab)
+      (fun bitAddress =>
+        (CrepHolState.toHolFiniteBitVecState dimension state).memaddrs
+          bitAddress = true)
+      state.bigEndian (holWordToBitVec dimension address)).map
+        (fun byte => BitVec.ofNat dimension.width byte.toNat) := by
+  simp only [evalCrepHolFiniteWordSourceExp, hAddress]
+  exact crepHolEvalMemLoadByte_source_eq_panMemLoadByteHOL dimension
+    state.bigEndian
+    (bitVecToHolWord dimension
+      (BitVec.ofNat dimension.width (dimension.width / 8)))
+    state address
+
 theorem evalCrepRuntimeExp_finiteDimension_const {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) (value : ι → Bool) :

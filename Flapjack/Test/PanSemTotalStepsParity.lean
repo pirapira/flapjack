@@ -229,18 +229,18 @@ def decBody (state : PanSemState Word64 (FfiState Unit)) :
 /-- `Dec` of a valid local initialiser updates the binding, runs the body, then
     restores the previous local binding of the name. -/
 def decOkGuard : Bool :=
-  let result := panSemTotalDecClause stepsState .local "x" Shape.one
+  let result := panSemTotalDecClause stepsState "x" Shape.one
     (.const (BitVec.ofNat 64 9)) decBody
   isReturnedWord 9 result.1 && wordAt result.2.locals "x" 7
 
 /-- `Dec` whose declared shape does not match the value shape is `SOME Error`. -/
 def decShapeErrorGuard : Bool :=
-  isErrorResult (panSemTotalDecClause stepsState .local "x" Shape.one
+  isErrorResult (panSemTotalDecClause stepsState "x" Shape.one
     (.rStruct []) decBody).1
 
 /-- `Dec` whose initialiser fails to evaluate is `SOME Error`. -/
 def decErrorGuard : Bool :=
-  isErrorResult (panSemTotalDecClause stepsState .local "x" Shape.one
+  isErrorResult (panSemTotalDecClause stepsState "x" Shape.one
     (.var .local "missing") decBody).1
 
 def stepsGuard : Bool :=

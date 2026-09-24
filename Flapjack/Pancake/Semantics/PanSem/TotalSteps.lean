@@ -690,60 +690,59 @@ theorem panSemTotalStoreByteClause_ok [NeZero 64] [BEq (RiscV.Word 64)]
   simp [panSemTotalStoreByteClause, panSemTotalExprStep, hevalAddr, hevalValue, hstore]
 
 
--- HOL `Dec` statement clause (panSemScript.sml:556-561).
+-- HOL `Dec` statement clause (panSemScript.sml:556-561). Note `Dec` has no
+-- `VarKind`: it always binds the name in `s.locals`.
 def panSemTotalDecBind [BEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
-    (kind : VarKind) (name : VarName) (value : PanValue (RiscV.Word 64)) :
+    (name : VarName) (value : PanValue (RiscV.Word 64)) :
     PanSemState (RiscV.Word 64) (FfiState σ) :=
-  match kind with
-  | .local => { state with locals := updatePanValueMap state.locals name value }
-  | .global => { state with globals := updatePanValueMap state.globals name value }
+  { state with locals := updatePanValueMap state.locals name value }
 
 /-- HOL `Dec` (`panSemScript.sml:556-561`): evaluate the source; on a value whose
-    shape equals the declared shape, bind `name` in the chosen map, run the body,
+    shape equals the declared shape, bind `name` in the locals, run the body,
     then restore the previous local binding of `name` with `res_var`. -/
 def panSemTotalDecClause [BEq String] [LawfulBEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
-    (kind : VarKind) (name : VarName) (shape : Shape)
+    (name : VarName) (shape : Shape)
     (expression : Exp (RiscV.Word 64))
     (body : PanSemState (RiscV.Word 64) (FfiState σ) →
       Option (PanSemHOLResult (RiscV.Word 64)) × PanSemState (RiscV.Word 64) (FfiState σ)) :
     Option (PanSemHOLResult (RiscV.Word 64)) × PanSemState (RiscV.Word 64) (FfiState σ) :=
   panSemTotalExprStep state expression (fun value =>
     if panShapeMatches shape (panSemShapeOf value) then
-      let result := body (panSemTotalDecBind state kind name value)
+      let result := body (panSemTotalDecBind state name value)
       (result.1, { result.2 with locals := resVar result.2.locals (name, state.locals name) })
     else (some .error, state))
 
 @[simp] theorem panSemTotalDecClause_none [BEq String] [LawfulBEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
-    (kind : VarKind) (name : VarName) (shape : Shape)
+    (name : VarName) (shape : Shape)
     (expression : Exp (RiscV.Word 64))
     (body : PanSemState (RiscV.Word 64) (FfiState σ) →
       Option (PanSemHOLResult (RiscV.Word 64)) × PanSemState (RiscV.Word 64) (FfiState σ))
     (heval : evalPanSemStateExp state expression = none) :
-    panSemTotalDecClause state kind name shape expression body = (some .error, state) := by
+    panSemTotalDecClause state name shape expression body = (some .error, state) := by
   simp [panSemTotalDecClause, panSemTotalExprStep, heval]
 
 theorem panSemTotalDecClause_normal [BEq String] [LawfulBEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
-    (kind : VarKind) (name : VarName) (shape : Shape)
+    (name : VarName) (shape : Shape)
     (expression : Exp (RiscV.Word 64))
     (body : PanSemState (RiscV.Word 64) (FfiState σ) →
       Option (PanSemHOLResult (RiscV.Word 64)) × PanSemState (RiscV.Word 64) (FfiState σ))
     (value : PanValue (RiscV.Word 64))
     (heval : evalPanSemStateExp state expression = some value)
     (hshape : panShapeMatches shape (panSemShapeOf value) = true) :
-    panSemTotalDecClause state kind name shape expression body =
-      (let result := body (panSemTotalDecBind state kind name value)
+    panSemTotalDecClause state name shape expression body =
+      (let result := body (panSemTotalDecBind state name value)
        (result.1, { result.2 with locals := resVar result.2.locals (name, state.locals name) })) := by
   simp [panSemTotalDecClause, panSemTotalExprStep, heval, hshape]
 
 theorem panSemTotalDecClause_shapeError [BEq String] [LawfulBEq String] (state : PanSemState (RiscV.Word 64) (FfiState σ) )
-    (kind : VarKind) (name : VarName) (shape : Shape)
+    (name : VarName) (shape : Shape)
     (expression : Exp (RiscV.Word 64))
     (body : PanSemState (RiscV.Word 64) (FfiState σ) →
       Option (PanSemHOLResult (RiscV.Word 64)) × PanSemState (RiscV.Word 64) (FfiState σ))
     (value : PanValue (RiscV.Word 64))
     (heval : evalPanSemStateExp state expression = some value)
     (hshape : panShapeMatches shape (panSemShapeOf value) = false) :
-    panSemTotalDecClause state kind name shape expression body = (some .error, state) := by
+    panSemTotalDecClause state name shape expression body = (some .error, state) := by
   simp [panSemTotalDecClause, panSemTotalExprStep, heval, hshape]
 
 

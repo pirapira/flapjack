@@ -360,12 +360,20 @@
     "reviewer": "Flapjack-only commuting equation for code-map update and source-shaped finite-word runtime projection"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSource",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update; remains untagged because the explicit finite-dimension enumeration and BitVec/RISC-V operation correspondence do not establish the polymorphic HOL word carrier"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension enumeration and CrepHolState adapter have not been identified with HOL's implicit finite_index word carrier and crepSem state."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This source-evaluator corollary has HOL's success premise, code-map update, simplifier, and complete Option word_lab result, with production evaluation proved equal to its recursive source equations. It is not tagged because its explicit HolFiniteDimension encoding and CrepHolState adapter are not yet identified with HOL's implicit finite_index word type and crepSem state."
   },
   {
     "hol_path": null,

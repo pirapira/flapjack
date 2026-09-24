@@ -535,4 +535,37 @@ example : crepToLoopMemRel
   intro _ h
   cases h
 
+/-! Pure-num `crep_to_loopScript.sml` helper definitions (`gen_temps_def`,
+    `rt_var_def`, `rt_vars_def`, `first_name_def`), matching oracle rows
+    `gen_temps_3`, `first_name`, `rt_var_some/none/absent`,
+    `rt_vars_some/absent` in `scripts/hol-probes/crep_to_loop_helpers_probe.out`. -/
+example : genTemps 5 3 = [5, 6, 7] := by decide
+
+example : firstLoopName = 64 := rfl
+
+def rtVarFm : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)) (2, 7)
+
+example : rtVar rtVarFm (some 2) 9 99 = 7 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVar rtVarFm none 9 99 = 9 := rfl
+
+example : rtVar rtVarFm (some 4) 9 99 = 100 := by
+  simp [rtVar, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 2] 99 = [10, 7] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+example : rtVars rtVarFm [1, 4] 99 = [100] := by
+  simp [rtVars, rtVarFm, FLOOKUP_update]
+
+/-- Polymorphism witness: `rtVar`/`rtVars` accept any finite-map key, exactly the
+    inferred HOL type `'a |-> num`. -/
+example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 := by
+  simp [rtVar, FLOOKUP]
+
+example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
+  simp [rtVars, FLOOKUP]
+
 end Flapjack.Test.CrepToLoopParity

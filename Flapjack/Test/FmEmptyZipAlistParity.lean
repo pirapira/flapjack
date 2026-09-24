@@ -93,10 +93,6 @@ def slotsDisjointGuard : Bool :=
 
 #guard slotsDisjointGuard
 
-def runChecks : IO Bool := do
-  let ok := parityGuard && zipFlookupGuard
-  IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL"
-    else "FAIL Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL")
 /-- Exact HOL `MAX_LIST_add_not_mem` port: `maxList xs + 1` is never in `xs`. -/
 theorem maxListAddNotMem : maxList xs + 1 ∉ xs :=
   MAX_LIST_add_not_mem xs

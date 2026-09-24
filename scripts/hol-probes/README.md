@@ -262,10 +262,14 @@ constructor case and the required memory-conversion induction remain open. The
 `cakeml/pancake/proofs/pan_structsProofScript.sml:512`; the generic Lean theorem
 and concrete fixture live in `Flapjack.Test.PanStructsCompileShapeParity`.
 `pan_structs_mem_load_conversion_probe.out` directly evaluates the HOL One
-branch and a nested three-word Comb branch of `mem_load_conversion` at
-`cakeml/pancake/proofs/pan_structsProofScript.sml:609`. The corresponding
-production fuel-loader conversion theorem is kept untagged and paired with a
-Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
+branch, a nested three-word Comb branch, and a nested named `Pair`/`Inner`
+branch of `mem_load_conversion` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:609`. The named row prints
+the concrete `struct_infos_ok` result separately as `T` (proved from HOL's
+`struct_infos_ok_cons`) and prints both the source `NStruct` load and converted
+target `RStruct` load values, followed by their expected-value checks. The
+corresponding production fuel-loader conversion theorem is kept untagged and
+paired with a Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

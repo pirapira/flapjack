@@ -1,4 +1,4 @@
-(* Direct HOL-EVAL cases for the One/Comb branches of
+(* Direct HOL checks for One/Comb/nested-Named cases of
    pan_structsProof$mem_load_conversion. *)
 load "bossLib";
 load "preamble";
@@ -7,6 +7,7 @@ load "pan_structsProofTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
+open panLangTheory pan_structsTheory pan_structsProofTheory;
 
 fun print_eval label q =
   let
@@ -16,6 +17,11 @@ fun print_eval label q =
     print_term (rconc th);
     print "\n"
   end
+
+fun print_conversion label th =
+  (print (label ^ "=");
+   print_term (rconc th);
+   print "\n")
 
 val scalar_domain = ``{0w:8 word}``;
 val scalar_memory = ``\a:8 word. if a = 0w then Word (7w:8 word) else ARB``;
@@ -66,14 +72,31 @@ val named_value =
         [(strlit "left", ValWord (7w:8 word));
          (strlit "right", ValWord (11w:8 word))]);
        (strlit "last", ValWord (13w:8 word))]``;
+
+(* EVAL leaves the bounded universal in struct_infos_ok_def open even for this
+   concrete two-entry context. Prove the HOL antecedent from the source
+   struct_infos_ok_cons theorem, then rewrite that proved Bool result to T in
+   the printed oracle row. *)
+val named_struct_infos_ok = prove
+  (``struct_infos_ok ^named_struct_ctxt``,
+   SIMP_TAC (srw_ss()) [struct_infos_ok_cons, struct_infos_ok_def,
+     is_wf_shape_def, size_of_sh_with_ctxt_def]);
+
+val _ = print_conversion "mem_load_conversion_named_nested_struct_infos_ok"
+  (REWRITE_CONV [EQT_INTRO named_struct_infos_ok]
+    ``struct_infos_ok ^named_struct_ctxt``);
+
+val named_source_load =
+  ``mem_load ^named_shape 0w ^named_domain ^named_memory ^named_struct_ctxt``;
+val named_compiled_load =
+  ``mem_load (compile_shape_n ^named_shape_ctxt 0 ^named_shape) 0w
+      ^named_domain ^named_memory ^named_struct_ctxt``;
 val _ = print_eval "mem_load_conversion_named_nested"
   ``(is_wf_shape (DROP 0 ^named_struct_ctxt) ^named_shape,
-     struct_infos_ok ^named_struct_ctxt,
-     mem_load ^named_shape 0w ^named_domain ^named_memory ^named_struct_ctxt =
-       SOME ^named_value,
-     mem_load (compile_shape_n ^named_shape_ctxt 0 ^named_shape) 0w
-       ^named_domain ^named_memory ^named_struct_ctxt =
-       SOME (convert_v ^named_value),
+     ^named_source_load,
+     ^named_compiled_load,
+     ^named_source_load = SOME ^named_value,
+     ^named_compiled_load = SOME (convert_v ^named_value),
      v_flds_ok ^named_struct_ctxt ^named_value,
      size_of_sh_with_ctxt []
        (compile_shape_n ^named_shape_ctxt 0 ^named_shape) =

@@ -661,7 +661,7 @@ run_probe pan_sh_mem_store_probeScript.sml pan_sh_mem_store_probe.out \
   zero_width_domain_error nonzero_width_domain_error \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_eval_probeScript.sml pan_eval_probe.out \
-  eval_const eval_missing \
+  eval_const eval_probe_done \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_mrec_probeScript.sml pan_mrec_probe.out \
   mrec_ret mrec_external \
@@ -1138,3 +1138,24 @@ run_probe reg_alloc_var_partition_probeScript.sml reg_alloc_var_partition_probe.
   is_phy_6 part_none_0 \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend/reg_alloc"
+
+# The not-created-subprograms probe observes the four no_* specialisations on
+# their own constants and on nesting/handler cases.
+run_probe word_convs_not_created_probeScript.sml word_convs_not_created_probe.out \
+  nac_skip nac_install_empty \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The every_var family probe observes the wordLang expression/immediate/
+# instruction revisors on even/odd registers and the width-dependent FP moves.
+run_probe word_lang_every_var_probeScript.sml word_lang_every_var_probe.out \
+  evar_var einst_skip \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The good_handlers probe observes the structural handler-label predicate,
+# including the NONE-ret case (handler ignored) and nested bad handlers.
+run_probe word_convs_good_handlers_probeScript.sml word_convs_good_handlers_probe.out \
+  gh_call_none gh_other \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

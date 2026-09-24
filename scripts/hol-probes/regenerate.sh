@@ -304,6 +304,7 @@ run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.
 run_probe word_alloc_live_colour_noalias_probeScript.sml \
   word_alloc_live_colour_noalias_probe.out \
   colour_ok_distinct_write_live colour_ok_alias_write_live \
+  colour_ok_distinct_write_live_after colour_ok_alias_write_live_after \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \

@@ -51,6 +51,55 @@ def shapeToString : Shape → String
 
 end Shape
 
+/-- Exact port of Cake's `struct_info` datatype (`cakeml/pancake/panLangScript.sml:121`):
+field types `(fldname # shape) list` (`List (FieldName × Shape)`) and `num` (`Nat`) match,
+without the production-only `StructInfo.shapedFields` cache. -/
+structure StructInfoHOL where
+  fields : List (FieldName × Shape)
+  size : Nat
+  deriving Repr
+
+/-- HOL-shaped struct context: the association list `(stcname # struct_info) list`
+(`(StructName × StructInfoHOL) list`) that `is_wf_shape` ranges over via `ALOOKUP`. -/
+abbrev StructContextHOL := List (StructName × StructInfoHOL)
+
+/-- Key-polymorphic first-match association-list lookup: the Lean counterpart
+    of HOL `alist$ALOOKUP`. The association list may use any key type with
+    `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
+    the exact `ALOOKUP` operation (the production `InfoMap` is the
+    `κ = String` instance). -/
+def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
+  | [] => none
+  | (candidate, value) :: entries =>
+      if candidate == key then some value else lookupInfo key entries
+
+/-
+Exact executable port of HOL `panLang$is_wf_shape`
+    (`cakeml/pancake/panLangScript.sml:139`). The HOL clauses are reproduced
+    literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
+    `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered
+    with the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart)
+    and `isSome` as the Bool rendering of `<> NONE`. The context is the
+    HOL-shaped `StructContextHOL`, and under `[LawfulBEq String]` the `==` test
+    reflects HOL's `=`. The direct original-HOL rows are pinned in
+    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+mutual
+  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_shape_def"]
+  def isWfShapeHOL [LawfulBEq String] (context : StructContextHOL) : Shape → Bool
+    | .one => true
+    | .comb shapes => isWfShapeListHOL context shapes
+    | .named name => (lookupInfo name context).isSome
+  termination_by shape => sizeOf shape
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def isWfShapeListHOL [LawfulBEq String] (context : StructContextHOL) :
+      List Shape → Bool
+    | [] => true
+    | shape :: shapes => isWfShapeHOL context shape && isWfShapeListHOL context shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
 inductive BinOp where
   | add
   | sub

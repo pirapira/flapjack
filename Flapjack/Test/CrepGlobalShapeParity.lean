@@ -530,4 +530,19 @@ example :
   FOLDL_res_var_ZIP_lookup (fun n : Nat => some (n + 1)) (fun _ : Nat => none)
     (fun n : Nat => some (n + 1)) [] [1, 2] [2, 3] (fun _ _ h => h) rfl (by simp)
 
+/-- HOL `crepProps$dec_clock_simp`: the clock decrement changes only `clock`
+    (checked here by two extremes: `.locals` and `.topAddress`). -/
+example : (decCrepHolClock localBase).locals = localBase.locals :=
+  (decCrepHolClock_simp localBase).1
+
+example : (decCrepHolClock localBase).topAddress = localBase.topAddress :=
+  (decCrepHolClock_simp localBase).2.2.2.2.2.2.2.2.2
+
+/-- HOL `crepProps$empty_locals_simp`: the locals clear changes only `locals`. -/
+example : (emptyCrepHolLocals localBase).globals = localBase.globals :=
+  (emptyCrepHolLocals_simp localBase).1
+
+example : (emptyCrepHolLocals localBase).clock = localBase.clock :=
+  (emptyCrepHolLocals_simp localBase).2.2.2.2.2.1
+
 end Flapjack.Test.CrepGlobalShapeParity

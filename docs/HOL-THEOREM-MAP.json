@@ -7934,5 +7934,21 @@
     "lean_name": "mkCtxtCodeImpCodeRelW",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack bridge lemma for the width-indexed codeRelW exact HOL code_rel_def boundary; no standalone HOL original)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "dec_clock_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "decCrepHolClock_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the 10-conjunct projection equality over the 11-field CrepHolState uses the tagged decCrepHolClock (dec_clock_def); direct HOL-EVAL rows dec_clock_clock/dec_clock_globals/dec_clock_be/dec_clock_top in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "empty_locals_simp",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "emptyCrepHolLocals_simp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the 10-conjunct projection equality over the 11-field CrepHolState uses the tagged emptyCrepHolLocals (empty_locals_def); direct HOL-EVAL rows empty_locals_locals/empty_locals_clock/empty_locals_memory in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)"
   }
 ]

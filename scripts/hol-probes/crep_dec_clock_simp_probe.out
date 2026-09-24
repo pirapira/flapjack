@@ -1,0 +1,7 @@
+dec_clock_clock=T
+dec_clock_globals=T
+dec_clock_be=T
+dec_clock_top=T
+empty_locals_locals=T
+empty_locals_clock=T
+empty_locals_memory=T

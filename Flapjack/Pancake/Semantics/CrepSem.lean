@@ -172,15 +172,33 @@ theorem crepHolEvalMemLoad32_eq_panModelRead32 [Add α]
     simp [hcell, panTheWord]
   · simp [haligned]
 
-/-- Exact HOL-shaped port of `crepSem$set_globals_def` (crepSemScript.sml:61)
-    over the 11-field `CrepHolState`:
-    `set_globals gv w s = s with globals := s.globals |+ (gv,w)`.
+/-- Generic production global update on the 11-field `CrepHolState`.
+    HOL `crepSem$set_globals_def` (`crepSemScript.sml:61`) is word-length
+    indexed (`'a crepSem$state`), so the generic-`α` form is deliberately
+    UNTAGGED (a generic parameter is not the fixed HOL word carrier); the
+    width-indexed exact counterpart is `setCrepHolGlobalsW` below.
     Production `setCrepRuntimeGlobals` routes its globals update through this
     definition while preserving its three extra configuration fields. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
 def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with globals := FUPDATE state.globals (key, value) }
+
+/-- Width-indexed exact HOL-shaped port of `crepSem$set_globals_def`
+    (`crepSemScript.sml:61`): `set_globals gv w s = s with globals := s.globals |+ (gv,w)`
+    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`, which
+    is HOL's `'a crepSem$state` at `'a := BitVec width`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+def setCrepHolGlobalsW {width : Nat} {σ : Type} (key : BitVec 5)
+    (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { state with globals := FUPDATE state.globals (key, value) }
+
+/-- Kernel-checked bridge: the width-indexed exact `set_globals` counterpart
+    agrees with the generic production definition at `BitVec width`. -/
+theorem setCrepHolGlobalsW_eq_setCrepHolGlobals {width : Nat} {σ : Type}
+    (key : BitVec 5) (value : PanWordLab (BitVec width))
+    (state : CrepHolState (BitVec width) σ) :
+    setCrepHolGlobalsW key value state = setCrepHolGlobals key value state := rfl
 
 /-- HOL `crepSem$dec_clock_def` on the 11-field Crep state. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]

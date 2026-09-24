@@ -666,7 +666,8 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
     The generic-`α` form is deliberately UNTAGGED (HOL is word-length indexed);
     the width-indexed exact counterpart is `lookupCrepHolCodeW` below.  No key
     equality assumption is needed: the lookup is plain function application and
-    the duplicate check uses `List.Nodup`. -/
+    the duplicate check uses `List.Nodup`. Function names are concrete HOL
+    strings, so no arbitrary equality-instance parameter is needed. -/
 def lookupCrepHolCode (code : FunName → Option (List Nat × CrepProg α))
     (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
     Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=

@@ -134,4 +134,134 @@ def chunkToBitmapParityGuard : Bool :=
 example : constWordsToBitmapW (width := 8)
     [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
     ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by decide +kernel
+
+/-! ## `write_bitmap` oracle parity (untagged model)
+
+`writeBitmapHOL` models HOL `write_bitmap_def`
+(`cakeml/compiler/backend/word_to_stackScript.sml:240`) at the domain level and
+is deliberately **not** tagged: HOL's `live` is a `num_set` (`unit spt`) whose
+finite-map/`toAList` carrier lives outside the CakeML tree, so the faithful
+observation is the `writeBitmapHOL_domain_insensitive` theorem rather than a
+matching declaration (see `docs/NUM-SET-AUDIT.md`).  Rows from the direct HOL
+`EVAL` probe `scripts/hol-probes/word_to_stack_write_bitmap_probe.out`:
+
+```
+wb_empty=[16w]  wb_single=[24w]  wb_two=[24w]  wb_offset=[240w; 2w]
+wb_boundary=[0xE000000000000000w; 3w]
+wb_order_a=[192w; 3w]  wb_order_b=[192w; 3w]  wb_order_eq=T
+```
+-/
+
+def writeBitmapParityGuard : Bool :=
+  (writeBitmapHOL (width := 8) ([] : List Nat) 0 4 == [16]) &&
+  (writeBitmapHOL (width := 8) [0] 0 4 == [24]) &&
+  (writeBitmapHOL (width := 8) [0, 1] 0 4 == [24]) &&
+  (writeBitmapHOL (width := 8) [2, 4, 6] 0 8 == [240, 2]) &&
+  (writeBitmapHOL (width := 64) [0, 2, 4] 0 64 == [(0xE000000000000000 : BitVec 64), 3]) &&
+  (writeBitmapHOL (width := 8) [0, 1, 2] 0 8 == [192, 3]) &&
+  (writeBitmapHOL (width := 8) [2, 0, 1] 0 8 == [192, 3])
+
+#eval writeBitmapParityGuard
+#guard writeBitmapParityGuard
+
+example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
+    writeBitmapHOL (width := 8) [2, 0, 1] 0 8 :=
+  writeBitmapHOL_domain_insensitive [0, 1, 2] [2, 0, 1] 0 8
+    (by intro r; simp only [List.mem_cons, List.not_mem_nil, or_false]; omega)
+
+/-!
+## `insert_bitmap` oracle parity
+
+`Flapjack.Compiler.Backend.WordToStack.insertBitmap` is the exact generic-`α`
+port of HOL `insert_bitmap_def` (`word_to_stackScript.sml:246-250`).  The HOL
+definition uses no word operation, so the `app_list`/`num` result is compared
+structurally here.  Rows from the direct HOL `EVAL` probe
+`scripts/hol-probes/word_to_stack_insert_bitmap_probe.out`:
+
+```
+ib_empty=((Append Nil (List []),0),0)
+ib_flat=((Append (List [9; 8]) (List [1; 2; 3]),8),5)
+ib_nested=((Append (Append (List [1]) (List [2])) (List [4]),8),7)
+ib_data_len=5   ib_new_len=8
+```
+-/
+
+def insertBitmapParityGuard : Bool :=
+  (match insertBitmap (α := Nat) ([] : List Nat) (AppList.nil, 0) with
+   | ((AppList.append AppList.nil (AppList.list []), 0), 0) => true
+   | _ => false) &&
+  (match insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5) with
+   | ((AppList.append (AppList.list [9, 8]) (AppList.list [1, 2, 3]), 8), 5) => true
+   | _ => false) &&
+  (match insertBitmap (α := Nat) [4]
+        (AppList.append (AppList.list [1]) (AppList.list [2]), 7) with
+   | ((AppList.append (AppList.append (AppList.list [1]) (AppList.list [2]))
+          (AppList.list [4]), 8), 7) => true
+   | _ => false) &&
+  ((insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5)).2 == 5) &&
+  ((insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5)).1.2 == 8)
+
+#eval insertBitmapParityGuard
+#guard insertBitmapParityGuard
+
+example : insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5) =
+    ((AppList.append (AppList.list [9, 8]) (AppList.list [1, 2, 3]), 8), 5) := rfl
+
+/-!
+## stack-slot arithmetic oracle parity
+
+`numStackRet`, `skipFree`, `stackArgCount` and `stackFree` are the exact
+generic ports of HOL `num_stack_ret_def`, `skip_free_def`, `stack_arg_count_def`
+and `stack_free_def` (`word_to_stackScript.sml:417,423,274,281`).  They are pure
+`num`/`sum` arithmetic with no word operation, so the ports carry no side
+condition.  Rows from the direct HOL `EVAL` probe
+`scripts/hol-probes/word_to_stack_stack_slots_probe.out`:
+
+```
+ss_num_stack_ret_pair=2   ss_num_stack_ret_three=1   ss_skip_free_pair=5
+ss_arg_count_inl=5        ss_arg_count_inr=4
+ss_stack_free_inr=3       ss_stack_free_inl=2
+```
+-/
+
+def stackSlotsParityGuard : Bool :=
+  (numStackRet 1 [10, 20] == 2) &&
+  (numStackRet (α := Nat) 3 [10, 20, 30] == 1) &&
+  (skipFree (α := Nat) 1 7 9 [10, 20] == 5) &&
+  (stackArgCount (α := Nat) (β := Nat) (Sum.inl 4) 7 2 == 5) &&
+  (stackArgCount (α := Nat) (β := Nat) (Sum.inr 4) 7 2 == 4) &&
+  (stackFree (α := Nat) (β := Nat) (Sum.inr 4) 7 2 7 9 == 3) &&
+  (stackFree (α := Nat) (β := Nat) (Sum.inl 4) 7 2 7 9 == 2)
+
+#eval stackSlotsParityGuard
+#guard stackSlotsParityGuard
+
+example : numStackRet 1 [10, 20] = 2 := rfl
+example : stackArgCount (α := Nat) (β := Nat) (Sum.inr 4) 7 2 = 4 := rfl
+example : stackFree (α := Nat) (β := Nat) (Sum.inr 4) 7 2 7 9 = 3 := rfl
+
+/-! ## perf / handler-slot constant oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_perf_slots_probe.out` (bead
+`flapjack-pxn.18.5.15.3.8`):
+
+```
+ps_perf_rsp=14   ps_perf_rbp=15
+ps_handler_slots_true=5   ps_handler_slots_false=3
+```
+-/
+
+def perfSlotsParityGuard : Bool :=
+  (perfRsp == 14) && (perfRbp == 15) &&
+  (handlerSlots true == 5) && (handlerSlots false == 3)
+
+#eval perfSlotsParityGuard
+#guard perfSlotsParityGuard
+
+example : perfRsp = 14 := rfl
+example : perfRbp = 15 := rfl
+example : handlerSlots true = 5 := rfl
+example : handlerSlots false = 3 := rfl
+
 end Flapjack.Test.WordToStackBitsParity

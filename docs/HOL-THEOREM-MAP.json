@@ -459,6 +459,46 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1ConstHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension Const case support with HOL's unused result binder, success premise, code-map update, and complete Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval, even though this constructor reduces directly to the same word value."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1VarHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension Var case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension LoadGlob case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension BaseAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension TopAddr case support with the unused result binder, success premise, code-map update, and full Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Flapjack-specific Const case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"
@@ -8544,6 +8584,70 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches the HOL `const_words_to_bitmap_def` at word_to_stackScript.sml:397-405 — if ws_len < dimindex (:'a) - 1 \\/ dimindex (:'a) - 1 = 0 then chunk_to_bitmap ws else chunk_to_bitmap (TAKE (dimindex-1) ws) ++ const_words_to_bitmap (DROP (dimindex-1) ws) (ws_len - (dimindex-1)) — with dimindex (:'a) rendered as the fixed Lean width, the strict `<` boundary and the (=0) escape kept verbatim, and termination measured by ws_len as in HOL; HOL is polymorphic over 'a word while the Lean faithful counterpart fixes the carrier to BitVec width + [NeZero width] per the loadShapeBytes/loadShapeBytesW standard; direct HOL-EVAL rows cwb_empty=[1w]/cwb_short=[5w; 0w; 9w]/cwb_boundary8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 1w]/cwb_split8=[213w; 1w; 2w; 3w; 4w; 5w; 6w; 7w; 2w; 8w] in scripts/hol-probes/word_to_stack_chunk_to_bitmap_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "insert_bitmap_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "insertBitmap",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `insert_bitmap_def` at word_to_stackScript.sml:246-250 — insert_bitmap ws (data,data_len) = let l = LENGTH ws in ((Append data (List ws), data_len + l), data_len) — with Append/List the misc$app_list constructors and the same length/data_len arithmetic; HOL is fully polymorphic in the word element type 'a and insert_bitmap uses no word operation or dimindex, so the generic-α Lean port introduces no side condition, matching the reviewed generic app_list/append_aux/append tags in Flapjack/Misc/AppList.lean; direct HOL-EVAL rows ib_empty=((Append Nil (List []),0),0)/ib_flat=((Append (List [9; 8]) (List [1; 2; 3]),8),5)/ib_nested=((Append (Append (List [1]) (List [2])) (List [4]),8),7)/ib_data_len=5/ib_new_len=8 in scripts/hol-probes/word_to_stack_insert_bitmap_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "num_stack_ret_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "numStackRet",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `num_stack_ret_def` at word_to_stackScript.sml:417-420 - num_stack_ret k vs = LENGTH vs + 1 - k - with the same LENGTH-based list length and HOL num truncating subtraction (Lean Nat subtraction); HOL is polymorphic in the value type and only measures LENGTH, so the generic-alpha Lean port introduces no side condition; direct HOL-EVAL rows ss_num_stack_ret_pair=2/ss_num_stack_ret_three=1 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "skip_free_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "skipFree",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `skip_free_def` at word_to_stackScript.sml:423-426 - skip_free (k,f,f') vs = f - num_stack_ret k vs - with the (k,f,f') triple kept as three Nat arguments, f' unused as in HOL, and the tagged numStackRet; pure num arithmetic with no word operation, so the generic-alpha Lean port introduces no side condition; direct HOL-EVAL row ss_skip_free_pair=5 in scripts/hol-probes/word_to_stack_stack_slots_probe.out is reproduced by a Lean guard in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "stack_arg_count_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "stackArgCount",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_arg_count_def` at word_to_stackScript.sml:274-279 - case dest of INL _ => (arg_count - k:num) | INR _ => ((arg_count - 1) - k:num) - with HOL's ('a,'b) sum rendered as Lean Sum alpha beta and only the constructor inspected; pure num arithmetic, so the generic Lean port introduces no side condition; direct HOL-EVAL rows ss_arg_count_inl=5/ss_arg_count_inr=4 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "stack_free_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "stackFree",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_free_def` at word_to_stackScript.sml:281-284 - stack_free dest arg_count (k,f,f') = f - stack_arg_count dest arg_count k - with the (k,f,f') triple kept as four Nat arguments (f' unused as in HOL), HOL's ('a,'b) sum rendered as Lean Sum alpha beta, and the tagged stackArgCount; pure num arithmetic, so the generic Lean port introduces no side condition; direct HOL-EVAL rows ss_stack_free_inr=3/ss_stack_free_inl=2 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "perf_rsp_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "perfRsp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `perf_rsp_def` at word_to_stackScript.sml:310-312 - perf_rsp = 14n - the x64 RSP register number used by the unverified perf-mode instrumentation; a pure num constant with no word operation or dimindex, so the monomorphic Lean port is exact; direct HOL-EVAL row ps_perf_rsp=14 in scripts/hol-probes/word_to_stack_perf_slots_probe.out is reproduced by a Lean guard/kernel example in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "perf_rbp_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "perfRbp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `perf_rbp_def` at word_to_stackScript.sml:315-317 - perf_rbp = 15n - the x64 RBP register number used by the unverified perf-mode instrumentation; a pure num constant with no word operation or dimindex, so the monomorphic Lean port is exact; direct HOL-EVAL row ps_perf_rbp=15 in scripts/hol-probes/word_to_stack_perf_slots_probe.out is reproduced by a Lean guard/kernel example in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "handler_slots_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "handlerSlots",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `handler_slots_def` at word_to_stackScript.sml:346-348 - handler_slots perf = if perf then 5n else 3n - pure bool/num sizing of exception-handler stack slots used by raise_stub/PushHandler/StackHandlerArgs/copy_ret, with no word operation or dimindex, so the monomorphic Lean port is exact; direct HOL-EVAL rows ps_handler_slots_true=5/ps_handler_slots_false=3 in scripts/hol-probes/word_to_stack_perf_slots_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -8590,5 +8694,21 @@
     "lean_name": "progIfW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared clause-by-clause against prog_if_def at crep_to_loopScript.sml:34; width-indexed over List (LoopProg (BitVec width))/LoopExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex and Const 1w/Const 0w are 'a word; generic progIf stays untagged. Direct HOL-EVAL row prog_if_basic=T reproduced by the width-indexed example in Flapjack/Test/CrepProgIfParity.lean. Production-path note in the docstring: loopCompileExp's .cmp case inlines the identical statement list and is generic over the word element type, pending the deferred width-indexing migration.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "locals_rel_insert_gt_vmax",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopLocalsRelHOL_insert_gt_vmax",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against locals_rel_insert_gt_vmax at crep_to_loopProofScript.sml:228; conclusion adds a fresh num_map binding insert n w lcl' above ctxt.vmax to the tagged finite-map locals_rel carrier crepToLoopLocalsRelHOL, rendering sptree insert extensionally as fun m => if m = n then some w else tLocals m (same rendering as the tagged locals_rel_def). Direct HOL-EVAL rows insert_same/insert_other_unchanged/gt_vmax_bounded_survives/subset_preserved in scripts/hol-probes/crep_to_loop_locals_insert_probe.out reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean. Carrier is width-indexed over BitVec width with [NeZero width] because HOL word types have positive dimindex.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "locals_rel_cutset_prop",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopLocalsRelHOL_cutset_prop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against locals_rel_cutset_prop at crep_to_loopProofScript.sml:239-249; HOL subspt cset cset' rendered as the pointwise implication (forall n, live n = true -> live' n = true) and sptree locals/domain rendered extensionally as in crepToLoopLocalsRelHOL; the two source-local obligations are reconciled by FLOOKUP functionality on ctxt.vars; direct HOL-EVAL rows cutset_* in scripts/hol-probes/crep_to_loop_locals_cutset_probe.out reproduced by Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

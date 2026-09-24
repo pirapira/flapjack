@@ -2541,6 +2541,120 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
   exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     f state expression _v h
 
+/-- All-finite-dimension support for the Const case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). It keeps the unused
+    result binder, successful-evaluation premise, arbitrary code-map update,
+    source simplifier, and complete Option word_lab equality. Both sides reduce
+    to the same word value. This remains untagged because the explicit source
+    evaluator is not yet proved identical to native HOL crepSem eval; the
+    theorem is a useful case of the all-width support, not a claimed HOL port. -/
+theorem crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (value : ι → Bool)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.const value) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.const value)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.const value) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp.eq_11]
+
+/-- All-finite-dimension support for the Var case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). The variable lookup
+    and code-map-only state update are unchanged. This remains untagged for the
+    same source-evaluator/native HOL crepSem correspondence gap as the Const
+    case above. -/
+theorem crepSimpExpCorrect1VarHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (name : Nat)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.var name) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.var name)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.var name) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp]
+
+/-- All-finite-dimension support for the LoadGlob case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). The code-map update
+    preserves the global table. This remains untagged for the source-evaluator/
+    native HOL crepSem correspondence gap recorded above. -/
+theorem crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (address : BitVec 5)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.loadGlob address) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.loadGlob address)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.loadGlob address) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp]
+
+/-- All-finite-dimension support for the BaseAddr case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). This remains untagged
+    for the source-evaluator/native HOL crepSem correspondence gap recorded
+    above. -/
+theorem crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      .baseAddr ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        .baseAddr) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state .baseAddr := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp]
+
+/-- All-finite-dimension support for the TopAddr case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). This remains untagged
+    for the source-evaluator/native HOL crepSem correspondence gap recorded
+    above. -/
+theorem crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      .topAddr ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        .topAddr) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state .topAddr := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp]
+
 /-- Successful-result form of the all-finite-index source-evaluator theorem.
     This follows HOL `simp_exp_correct`'s premise and conclusion, with the
     same arbitrary code-map update and full `word_lab` value. It remains

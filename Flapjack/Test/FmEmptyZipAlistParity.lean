@@ -46,8 +46,21 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 
+/-- Exact HOL `MAX_LIST_add_not_mem` port: `maxList xs + 1` is never in `xs`. -/
+theorem maxListAddNotMem : maxList xs + 1 ∉ xs :=
+  MAX_LIST_add_not_mem xs
+
+/-- Exact HOL `MAX_LIST_i_genlist` port: `maxList (List.range n) = n - 1`. -/
+theorem maxListRange : maxList (List.range 5) = 5 - 1 :=
+  MAX_LIST_i_genlist 5
+
+def maxListGuard : Bool :=
+  (!(xs.contains (maxList xs + 1))) && (maxList (List.range 5) == 4)
+
+#guard maxListGuard
+
 def runChecks : IO Bool := do
-  let ok := parityGuard
+  let ok := parityGuard && maxListGuard
   IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality matches HOL"
     else "FAIL Crep fm_empty_zip_alist fold/alist equality matches HOL")
   return ok

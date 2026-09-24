@@ -6694,6 +6694,159 @@ theorem compileExpHOL_loadTwo_ofHOLIH
       | cons _ _ => simp [hcompiledAddress] at haddressLength
 
 
+/-! Regression corollaries compose the generic flat-load expression IH with a
+localized variable address. They keep the address nonconstant and verify that
+the recursive address IH, source state, and exact target load path compose for
+both one-word and two-word loads. These are untagged induction support. -/
+theorem compileExpHOL_loadOne_localAddress_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (addressWord loaded : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceLocal : source.locals name = some (.word addressWord))
+    (hsourceLoad : evalPanSemStateExp source
+      (.load .one (.var .local name)) = some (.word loaded)) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.load .one (.var .local name))).1 = some [loaded] ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load .one (.var .local name))).1.length =
+          Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.load .one (.var .local name))).2 ∧
+      panValueShape [] (.word loaded) = (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load .one (.var .local name))).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load .one (.var .local name))).2 = true := by
+  have haddress : evalPanSemStateExp source (.var .local name) =
+      some (.word addressWord) := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceLocal
+  have haddressIH : ∀ addressValue,
+      evalPanSemStateExp source (.var .local name) = some addressValue →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars (.var .local name : Exp (RiscV.Word 64)) = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.var .local name)).1 = some (panValueFlatten addressValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              (.var .local name)).2 ∧
+        panValueShape [] addressValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).2 = true := by
+    intro (addressValue : PanValue (RiscV.Word 64)) hvalue hstate' hcode' hlocals' hlocalized'
+    have hvalue' : addressValue = .word addressWord :=
+      Option.some.inj (hvalue.symm.trans haddress)
+    subst addressValue
+    exact compileExpHOL_local_ofHOLIH context source target name
+      (.word addressWord) hstate' hcode' hlocals' hlocalized' haddress
+  exact compileExpHOL_loadOne_ofHOLIH context source target
+    (.var .local name) addressWord loaded hstate hcode hlocals
+    (by simp [expGlobalVars]) haddress haddressIH hsourceLoad
+
+theorem compileExpHOL_loadTwo_localAddress_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (addressWord loaded0 loaded1 : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcanonical : target = riscvCrepWordTarget target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsourceLocal : source.locals name = some (.word addressWord))
+    (hsourceLoad : evalPanSemStateExp source
+      (.load (.comb [.one, .one]) (.var .local name)) =
+        some (.rStruct [.word loaded0, .word loaded1])) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.load (.comb [.one, .one]) (.var .local name))).1 =
+          some [loaded0, loaded1] ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load (.comb [.one, .one]) (.var .local name))).1.length =
+          Shape.shapeSize (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.load (.comb [.one, .one]) (.var .local name))).2 ∧
+      panValueShape [] (.rStruct [.word loaded0, .word loaded1]) =
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.load (.comb [.one, .one]) (.var .local name))).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.load (.comb [.one, .one]) (.var .local name))).2 = true := by
+  have haddress : evalPanSemStateExp source (.var .local name) =
+      some (.word addressWord) := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceLocal
+  have haddressIH : ∀ addressValue,
+      evalPanSemStateExp source (.var .local name) = some addressValue →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars (.var .local name : Exp (RiscV.Word 64)) = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.var .local name)).1 = some (panValueFlatten addressValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              (.var .local name)).2 ∧
+        panValueShape [] addressValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.var .local name)).2 = true := by
+    intro (addressValue : PanValue (RiscV.Word 64)) hvalue hstate' hcode' hlocals' hlocalized'
+    have hvalue' : addressValue = .word addressWord :=
+      Option.some.inj (hvalue.symm.trans haddress)
+    subst addressValue
+    exact compileExpHOL_local_ofHOLIH context source target name
+      (.word addressWord) hstate' hcode' hlocals' hlocalized' haddress
+  exact compileExpHOL_loadTwo_ofHOLIH context source target
+    (.var .local name) addressWord loaded0 loaded1 hstate hcanonical hcode hlocals
+    (by simp [expGlobalVars]) haddress haddressIH hsourceLoad
+
+
 /-! The Cmp constructor case for a full localized-expression IH, at the fixed
 RISC-V target. This is induction support for the HOL expression relation; the
 enclosing Call simulation remains open. -/

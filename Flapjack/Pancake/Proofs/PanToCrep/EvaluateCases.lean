@@ -3595,6 +3595,11 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.load32 (.var .local name))
+  | loadByteLocalCanonicalTarget (name : String) (slot : Nat)
+      (hvariable : FLOOKUP context.vars name = some (.one, [slot]))
+      (hcanonical : target = riscvCrepWordTarget target) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.loadByte (.var .local name))
   | panOpMul (left right : Exp (RiscV.Word 64))
       (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
       (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
@@ -3799,6 +3804,72 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
               | word word =>
                   have htarget :
                       evalCrepRuntimeExp target (.load32 (.const address)) =
+                        some word := by
+                    simpa using heval
+                  simp [hcompiled, evalCrepRuntimeExps,
+                    htargetLoad, htarget, panValueFlatten]
+              | rStruct fields => simp at heval
+              | nStruct name fields => simp at heval
+          | rStruct fields =>
+              have hlocal : source.locals name = some (.rStruct fields) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+          | nStruct structName fields =>
+              have hlocal : source.locals name = some (.nStruct structName fields) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+  | loadByteLocalCanonicalTarget name slot hvariable hcanonical =>
+      intro value heval
+      cases haddressValue : evalPanSemStateExp source (.var .local name) with
+      | none =>
+          have hlocal : source.locals name = none := by
+            simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+          simp [evalPanSemStateExp, evalPanValueExp, hlocal] at heval
+      | some addressValue =>
+          cases addressValue with
+          | word address =>
+              have hlocal : source.locals name = some (.word address) := by
+                simpa [evalPanSemStateExp, evalPanValueExp] using haddressValue
+              have hsourceConst :
+                  evalPanSemStateExp source (.loadByte (.var .local name)) =
+                    evalPanSemStateExp source (.loadByte (.const address)) := by
+                simp [evalPanSemStateExp, evalPanValueExp, hlocal]
+              have hsourceTarget := evalPanSemStateExp_loadByte_const_riscvTarget
+                source target address hstate
+              have hsourceTarget' : evalPanSemStateExp source
+                  (.loadByte (.const address)) =
+                (evalCrepRuntimeExp target (.loadByte (.const address))).map
+                  PanValue.word := by
+                simpa [hcanonical.symm] using hsourceTarget
+              have hcompiledLocal := compileExpHOL_local_eval_flatten context
+                source target name (.word address) hlocals haddressValue
+              have htargetVariable :
+                  evalCrepRuntimeExp target (.var slot) = some address := by
+                have hmap : evalCrepRuntimeExps target [.var slot] =
+                    some [address] := by
+                  simpa [compileExpHOL, hvariable, panValueFlatten] using
+                    hcompiledLocal
+                cases hvalue : evalCrepRuntimeExp target (.var slot) with
+                | none => simp [evalCrepRuntimeExps, hvalue] at hmap
+                | some word =>
+                    have hword : word = address := by
+                      simpa [evalCrepRuntimeExps, hvalue] using hmap
+                    simp [hword]
+              have htargetLoad :
+                  evalCrepRuntimeExp target (.loadByte (.var slot)) =
+                    evalCrepRuntimeExp target (.loadByte (.const address)) := by
+                simp [evalCrepRuntimeExp, htargetVariable]
+              have hcompiled :
+                  (compileExpHOL
+                    { vars := context.vars, funcs := context.funcs,
+                      eids := context.eids, vmax := context.vmax }
+                    (.loadByte (.var .local name))).1 = [.loadByte (.var slot)] := by
+                simp [compileExpHOL, hvariable]
+              rw [hsourceConst, hsourceTarget'] at heval
+              cases value with
+              | word word =>
+                  have htarget :
+                      evalCrepRuntimeExp target (.loadByte (.const address)) =
                         some word := by
                     simpa using heval
                   simp [hcompiled, evalCrepRuntimeExps,

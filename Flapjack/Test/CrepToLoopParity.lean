@@ -468,4 +468,28 @@ example : ¬ crepToLoopDistinctVars distinctVarsFm := by
       rfl
   exact absurd hkey (by decide)
 
+/-! The following proofs exercise the *relation itself* on the same 8-bit
+    cases as the checked-in HOL oracle, rather than only its total-memory view. -/
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 7)
+    (fun ad => ad == 4) := by
+  intro ad _
+  rfl
+
+example : ¬ crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun ad => ad == 4) := by
+  intro h
+  have h4 := h 4 (by decide)
+  simp [wlabWloc] at h4
+
+example : crepToLoopMemRel
+    (fun _ : BitVec 8 => .word 7)
+    (fun _ : BitVec 8 => .word 9)
+    (fun _ => false) := by
+  intro _ h
+  cases h
+
 end Flapjack.Test.CrepToLoopParity

@@ -2115,14 +2115,11 @@ def crepArithSimpCodeMap {α : Type} [BEq α] [OfNat α 0] [OfNat α 1]
   fun name => (code name).map fun (parameters, body) =>
     (parameters, crepSimpProg fromNat body)
 
-/-- CakeML's local `lookup_code` simplification lemma
-    (`crep_arithProofScript.sml:162`): mapping `simp_prog` over every code
-    body commutes with a successful code lookup, leaving its argument-local
-    map unchanged. The unused length parameter is retained because it is a
-    quantified input in the HOL declaration. This theorem uses the faithful
-    `lookupCrepHolCode` definition rather than the executable runtime lookup. -/
-@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "lookup_code" 162]
-theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
+/-- Flapjack's generic lookup/simplification commuting lemma. This is not yet
+    tagged as HOL `crep_arithProofScript.sml:162` `lookup_code`: HOL quantifies
+    over word-valued Crep programs, whereas this lemma accepts arbitrary `α`.
+    The exact width-indexed theorem is tracked by bead flapjack-pxn.18.5.4.4. -/
+theorem crepArithLookupCodeSimpProg {α : Type}
     [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
     [ShiftRight α] [PanShiftWidth α]
     (fromNat : Nat → α)

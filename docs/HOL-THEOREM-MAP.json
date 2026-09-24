@@ -308,8 +308,8 @@
     "hol_name": "lookup_code",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProg",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Clause-for-clause with local lookup_code at line 162: FMAP_MAP2 maps each stored simp_prog body, and OPTION_MAP (simp_prog ## I) changes only the returned program; Lean fromNat exposes the word type's implicit n2w operation, len is retained as the unused HOL input, and lookup uses lookupCrepHolCode"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack helper is generic over arbitrary alpha; HOL local lookup_code at line 162 is word-valued. Exact width-indexed port remains open in bead flapjack-pxn.18.5.4.4. The generic lemma is intentionally untagged."
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",

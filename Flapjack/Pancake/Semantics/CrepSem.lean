@@ -329,10 +329,17 @@ def crepOpCrep [Mul α] : CrepOp → List α → Option α
   | .mul, [left, right] => some (left * right)
   | _, _ => none
 
-/-- Exact width-parametric Lean counterpart of CakeML's
-    `crepSem$crep_op_def` (`crepSemScript.sml:85-88`). For each positive word
-    width, Mul on exactly two words succeeds with their product; every other
-    operator/arity combination returns none, matching the HOL definition. -/
+/-- Exact HOL-shaped port of `crepSem$crep_op_def` (crepSemScript.sml:85-88):
+    `crep_op crepLang$Mul [w1;w2] = SOME (w1 * w2)` and `crep_op _ _ = NONE`.
+    HOL's carrier is `'a word`, so the tagged port is width-polymorphic over
+    `BitVec width` with the positive-width side condition `[NeZero width]`
+    (HOL's `:'a word` requires a nonempty index type) rather than an arbitrary
+    `[Mul α]`. The wildcard clause
+    covers `.mul` at every other arity, matching HOL's total-over-malformed-
+    operand-lists `crep_op _ _ = NONE`. The generic production evaluator still
+    multiplies directly in its `.crepOp` clause; the RV64 executed-path
+    instantiation is tested, but routing execution through this tagged
+    definition remains open (bead flapjack-pxn.18.4.3.48.1.20). -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
 def crepOpCrepWord {width : Nat} [NeZero width] :
     CrepOp → List (BitVec width) → Option (BitVec width)
@@ -691,10 +698,9 @@ theorem lookupCrepHolCodeW_eq_lookupCrepHolCode {width : Nat}
     lookupCrepHolCodeW code fname args len = lookupCrepHolCode code fname args len :=
   rfl
 
-/-- Executed code lookup routed through the exact HOL-shaped
-    `lookupCrepHolCode` definition. The runtime passes evaluated words as
-    `PanWordLab.word` cells; its local map is the same function representation
-    used by the HOL-shaped finite map. -/
+/-- Executed code lookup routed through the generic `lookupCrepHolCode` helper.
+    The word-width-specific tagged counterpart is definitionally equal to that
+    helper, but literal routing through it remains tracked separately. -/
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
     Option (CrepProg α × (Nat → Option (PanWordLab α))) :=

@@ -12,3 +12,6 @@ seq_break_stops_eval=T
 seq_tick_skip_eval=T
 seq_tick_zero_eval=T
 seq_fix_clock_upper_clamp_eval=T
+return_word_eval=T
+return_empty_eval=T
+return_missing_eval=T

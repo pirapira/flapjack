@@ -74,3 +74,12 @@ val _ = print_eval "seq_tick_zero_eval"
       (SOME TimeOut, empty_locals ^s0)``;
 val _ = print_eval "seq_fix_clock_upper_clamp_eval"
   ``fix_clock ^s (NONE, ^s with clock := 7) = (NONE, ^s)``;
+val _ = print_eval "return_word_eval"
+  ``evaluate ((Return [Const (9w:64 word)]) : 64 crepLang$prog, ^s) =
+      (SOME (Return [Word (9w:64 word)]), empty_locals ^s)``;
+val _ = print_eval "return_empty_eval"
+  ``evaluate ((Return []) : 64 crepLang$prog, ^s) =
+      (SOME (Return []), empty_locals ^s)``;
+val _ = print_eval "return_missing_eval"
+  ``evaluate ((Return [Var 9]) : 64 crepLang$prog, ^s) =
+      (SOME Error, ^s)``;

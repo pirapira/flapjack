@@ -1,0 +1,5 @@
+call_arity_miss_result=SOME Error
+call_arity_miss_locals=SOME (ValWord 3w)
+call_arity_miss_clock=5
+call_arity_ok_result=SOME (Return (ValWord 0w))
+call_arity_shape_miss_result=SOME Error

@@ -114,8 +114,24 @@ private def loadMiss : Exp Word64 := .load Shape.one (.const 11)
 
 private def missingCall : Prog Word64 := .call none "f" [.const 1]
 
+/-- Callee contracts declaring one `One`-shaped parameter for `f`. -/
+private def parameterContracts : Option PanValueCallContracts :=
+  some { returnShapes := [], exceptionShapes := [],
+         parameterShapes := [("f", [("p", Shape.one)])] }
+
+/-- State with a one-parameter callee `f` and matching contracts. -/
+private def parameterState : PanSemExactState Word64 Unit :=
+  exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 7)) (fun _ => none)
+      parameterContracts) with functions := [("f", ["p"], .skip)] }
+
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
+
+private def callParamArityGuard : Bool :=
+  isErrorKeeping 5 7 (evaluate parameterState (.call none "f" []))
+
+private def callParamShapeGuard : Bool :=
+  isErrorKeeping 5 7 (evaluate parameterState (.call none "f" [.rStruct []]))
 
 private def callMissingGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState missingCall)
@@ -124,7 +140,8 @@ private def callDomainGuard : Bool :=
   isErrorKeeping 5 3 (evaluate emptyDomainState (.call none "f" [loadHit]))
 
 private def callGuard : Bool :=
-  callLoadMissGuard && callMissingGuard && callDomainGuard
+  callLoadMissGuard && callMissingGuard && callDomainGuard &&
+    callParamArityGuard && callParamShapeGuard
 
 #guard callGuard
 
@@ -150,6 +167,23 @@ theorem callMissing_eq :
   · simp [wordState, exactStateOf, exactStateOfWith, exactLegacy, panValueCallTarget,
       lookupPanFunction]
 
+/-- A `Call` whose argument list does not match the callee's parameter shapes
+    returns `SOME Error` over the full exact state. -/
+theorem callParamArity_eq :
+    evaluate parameterState (.call none "f" []) =
+      some (.control (.error parameterState.legacy.locals parameterState.legacy.globals
+        parameterState.legacy.memory parameterState.legacy.ffi),
+        parameterState.legacy.clock) := by
+  apply panSemEvaluateExactState_call_error_of_parameters_invalid
+    (parameters := ["p"]) (body := .skip) (values := [])
+  · simp [parameterState, exactStateOf, exactStateOfWith, exactLegacy,
+      evalPanValueExps, evalPanValueExp.evalPanValueExps]
+  · simp [parameterState, exactStateOf, exactStateOfWith, exactLegacy,
+      lookupPanFunction]
+  · simp [parameterState, exactStateOf, exactStateOfWith, exactLegacy,
+      parameterContracts, panValueParametersValid, lookupInfo,
+      panValueValuesMatchShapes]
+
 def runChecks : IO Bool := do
   if callLoadMissGuard then
     IO.println "PASS exact-state Call failing argument keeps state and clock"
@@ -160,6 +194,12 @@ def runChecks : IO Bool := do
   if callDomainGuard then
     IO.println "PASS exact-state Call memory domain gates an argument read"
   else IO.println "FAIL exact-state Call memory domain gates an argument read"
+  if callParamArityGuard then
+    IO.println "PASS exact-state Call parameter arity mismatch keeps state and clock"
+  else IO.println "FAIL exact-state Call parameter arity mismatch keeps state and clock"
+  if callParamShapeGuard then
+    IO.println "PASS exact-state Call parameter shape mismatch keeps state and clock"
+  else IO.println "FAIL exact-state Call parameter shape mismatch keeps state and clock"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

@@ -1305,14 +1305,6 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "exp_hdl_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "expHdlFiniteMap",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "ret_hdl_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "retHdl",
@@ -4470,14 +4462,6 @@
     "lean_name": "compileProgRiscV",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (RISC-V statement review)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "mk_ctxt_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "panToCrepMkCtxtHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",

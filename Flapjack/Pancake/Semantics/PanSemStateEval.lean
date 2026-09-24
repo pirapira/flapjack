@@ -188,13 +188,13 @@ def panMemLoad32HOL {width : Nat} [NeZero width]
     match memory aligned with
     | .word value =>
         if domain aligned then
-          let getByte := RiscV.panRiscVGetByteEndian
-            (BitVec.ofNat width (width / 8))
+          let getByte := fun currentAddress =>
+            BitVec.ofNat width (panGetByteHOL currentAddress value bigEndian).toNat
           let bytes :=
-            [ getByte address value bigEndian,
-              getByte (address + 1) value bigEndian,
-              getByte (address + 2) value bigEndian,
-              getByte (address + 3) value bigEndian ]
+            [ getByte address,
+              getByte (address + 1),
+              getByte (address + 2),
+              getByte (address + 3) ]
           some (RiscV.panRiscVWordOfBytes (width := 32) bigEndian
             (bytes.map (fun byte => BitVec.ofNat 32 byte.toNat)))
         else none
@@ -379,6 +379,23 @@ theorem panRiscVGetByteEndian_toNat_lt_256 (address value : RiscV.Word 64)
   rw [BitVec.toNat_ofNat]
   exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (Nat.mod_lt _ (by decide))
 
+/-- The Flapjack-specific HOL byte codec agrees with the RISC-V endian byte
+    helper at the production width 64. -/
+theorem panGetByteHOL_eq_panRiscVGetByteEndian (address value : RiscV.Word 64)
+    (bigEndian : Bool) :
+    panGetByteHOL address value bigEndian =
+      UInt8.ofNat (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+        address value bigEndian).toNat := by
+  unfold panGetByteHOL
+  apply congrArg UInt8.ofNat
+  simp [RiscV.panRiscVGetByteEndian, RiscV.panRiscVByteIndex]
+  have hsmall :
+      (value.toNat / 256 ^
+        (if bigEndian = true then 7 - address.toNat % 8
+         else address.toNat % 8)) % 256 < 2 ^ 64 := by
+    exact Nat.lt_trans (Nat.mod_lt _ (by decide)) (by decide)
+  rw [Nat.mod_eq_of_lt hsmall]
+
 /-- Executed `readByte` at BitVec 64 agrees with the tagged exact
     `panMemLoadByteHOL` (then widened with `BitVec.ofNat 64`). -/
 theorem panSemBitVec64ReadByte_eq_panMemLoadByteHOL
@@ -540,7 +557,32 @@ theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word
             show (1#64 : RiscV.Word 64) = (1 : RiscV.Word 64) from rfl,
             show (2#64 : RiscV.Word 64) = (2 : RiscV.Word 64) from rfl,
             show (3#64 : RiscV.Word 64) = (3 : RiscV.Word 64) from rfl]
-          simp only [panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
+          simp only [panSemBitVec64GetByte_eq_panRiscVGetByteEndian,
+            panGetByteHOL_eq_panRiscVGetByteEndian]
+          have hbyte0 := panRiscVGetByteEndian_toNat_lt_256 address w state.be
+          have hbyte1 := panRiscVGetByteEndian_toNat_lt_256 (address + 1) w state.be
+          have hbyte2 := panRiscVGetByteEndian_toNat_lt_256 (address + 2) w state.be
+          have hbyte3 := panRiscVGetByteEndian_toNat_lt_256 (address + 3) w state.be
+          have hu0 : (UInt8.ofNat (RiscV.panRiscVGetByteEndian
+              (8 : RiscV.Word 64) address w state.be).toNat).toNat =
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                address w state.be).toNat := by
+            exact UInt8.toNat_ofNat_of_lt hbyte0
+          have hu1 : (UInt8.ofNat (RiscV.panRiscVGetByteEndian
+              (8 : RiscV.Word 64) (address + 1) w state.be).toNat).toNat =
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                (address + 1) w state.be).toNat := by
+            exact UInt8.toNat_ofNat_of_lt hbyte1
+          have hu2 : (UInt8.ofNat (RiscV.panRiscVGetByteEndian
+              (8 : RiscV.Word 64) (address + 2) w state.be).toNat).toNat =
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                (address + 2) w state.be).toNat := by
+            exact UInt8.toNat_ofNat_of_lt hbyte2
+          have hu3 : (UInt8.ofNat (RiscV.panRiscVGetByteEndian
+              (8 : RiscV.Word 64) (address + 3) w state.be).toNat).toNat =
+              (RiscV.panRiscVGetByteEndian (8 : RiscV.Word 64)
+                (address + 3) w state.be).toNat := by
+            exact UInt8.toNat_ofNat_of_lt hbyte3
           cases hb : state.memaddrs (panByteAlignHOL (width := 64) address)
           · simp
           · rw [panSemBitVec64WordOfBytes32_eq_widen state.be
@@ -552,6 +594,7 @@ theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word
               (panRiscVGetByteEndian_toNat_lt_256 (address + 1) w state.be)
               (panRiscVGetByteEndian_toNat_lt_256 (address + 2) w state.be)
               (panRiscVGetByteEndian_toNat_lt_256 (address + 3) w state.be)]
+            rw [hu0, hu1, hu2, hu3]
             by_cases hg : address >>> 2 <<< 2 = address <;> simp
       | rStruct fs => simp [panValueWordDefined, hcell]
       | nStruct nm fs => simp [panValueWordDefined, hcell]

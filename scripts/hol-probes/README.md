@@ -157,7 +157,11 @@ address 1 shifts past the word and extracts zero. Big endian uses natural
 subtraction `0 - 1 - (address MOD 0)`, which saturates to zero at both
 addresses, so both extract `0xB`. The accompanying `byte_index`/`get_byte`
 rows record the little-endian `1 MOD 0` formula directly. Matching Lean guards
-live in `Flapjack.Test.PanSemStateEvalParity`. They differ
+live in `Flapjack.Test.PanSemStateEvalParity`. The width-4 `mem_load_32` rows
+exercise the same formulas over addresses 0 through 3: little endian packs the
+four bytes `[0xB, 0, 0, 0]` to `0xB`, while big endian packs `[0xB, 0xB, 0xB,
+0xB]` to `0x0B0B0B0B`. The direct `word_of_bytes` EVAL rows reduce those packed
+results to `11w` and `0xB0B0B0Bw`. They differ
 from production RISC-V's `panRiscVByteAlign 3 5 = 3`,
 which misses the domain containing only address 4. RISC-V rounds by a multiple
 of three while the HOL definition aligns using `LOG2 (dimindex DIV 8)`. The

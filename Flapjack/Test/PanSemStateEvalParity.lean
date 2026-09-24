@@ -1007,4 +1007,25 @@ example :
         (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState)))
   == some sourceMemoryWord
 
+/-- The arbitrary-`Shape` `.load` bridge also covers an ill-formed shape, where
+both the production `panValueFlatLoad` and the tagged `isWfShapeHOL` guard fail. -/
+example :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
+        0 0 panSemBitVec64BytesInWord (.load (.named "Nope") (.const 0))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holLoadState (.load (.named "Nope") (.const 0))).map HolValue.toPanValue :=
+  evalPanValueExp_load_eq_evalHOL_anyShape holLoadState littleEndianState littleEndianState.memory
+    ([] : StructContext) (fun _ => none) (fun _ => none) 0 0 panSemBitVec64BytesInWord
+    (.named "Nope") (.const 0)
+    (evalPanValueExp_const_eq_evalHOL holLoadState ([] : StructContext) (fun _ => none)
+      (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 0)
+    rfl rfl rfl rfl
+
+#guard evalPanValueWordResult
+    (evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
+        0 0 panSemBitVec64BytesInWord (.load (.named "Nope") (.const 0))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState)))
+  == none
+
 end Flapjack.Test.PanSemStateEvalParity

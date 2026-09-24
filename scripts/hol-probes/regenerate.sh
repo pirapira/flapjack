@@ -739,6 +739,12 @@ run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
   eval_cmp_equal_true eval_cmp_test_disjoint \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval Shift probe observes HOL word_sh over constant operands for the RV64
+# target (Lsl/Lsr/Asr/Ror, amount zero, and the invalid width-sized amount).
+run_probe crep_eval_shift_rv64_probeScript.sml crep_eval_shift_rv64_probe.out \
+  eval_shift_lsl_const eval_shift_amount_width \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

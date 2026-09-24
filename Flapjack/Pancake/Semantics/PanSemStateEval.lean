@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.PanBst
+import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.RiscV.PanMemory
 
@@ -2402,7 +2403,132 @@ theorem evalPanValueExp_eq_evalHOL_of_rel {σ ffi : Type} [LawfulBEq String]
   intro expression
   exact hmain expression (some (panSemBitVec64MemoryAccess execState)) rfl
 
-
 end
+
+/-! ## Unconditional executed-path capstone (`flapjack-pxn.18.3.6.9.2.18.1`)
+
+An **observational projection** of an executed `PanSemState` into the
+`PanSemHolState` shape that `evalHOL` reads.  It is not an exact whole-state
+port: `code`/`eshapes`/`shMemaddrs` are set to defaults (they do not affect
+`evalHOL` expression evaluation) and `memaddrs` is narrowed to the
+word-defined cells `panValueFlatMachineDomain execState memory`.  The
+`memory`/`structs`/`locals`/`globals`/base/top arguments are supplied
+independently; the wrapper `evalPanValueExp_eq_evalHOL_state` instantiates them
+from `execState`.  Because the executed RV64 compare/shift codec equalities and
+the byte/word load bridges are now proved, this projected state satisfies
+`PanValueEvalRel` unconditionally, so `evalPanValueExp` agrees with `evalHOL` on
+the executed path.  Untagged production-side adapter. -/
+abbrev machineHolState (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress : RiscV.Word 64) : PanSemHolState 64 ffi where
+  locals := fun name => (locals name).map PanValue.toHolValue
+  globals := fun name => (globals name).map PanValue.toHolValue
+  structs := structs.toHOL
+  code := fun _ => none
+  eshapes := fun _ => none
+  memory := panValueWordHOL memory
+  memaddrs := panValueFlatMachineDomain execState memory
+  shMemaddrs := fun _ => False
+  clock := execState.clock
+  be := execState.be
+  ffi := holFfi
+  baseAddr := baseAddress
+  topAddr := topAddress
+
+instance machineHolStateDecidablePred (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress : RiscV.Word 64) :
+    DecidablePred
+      (machineHolState execState holFfi memory structs locals globals baseAddress topAddress).memaddrs :=
+  fun a => inferInstanceAs
+    (Decidable (execState.memaddrs a && panValueWordDefined memory a = true))
+
+/-- The projected state above satisfies the bundled relation, unconditionally. -/
+theorem panValueEvalRel_machineHolState
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress : RiscV.Word 64) :
+    PanValueEvalRel
+        (machineHolState execState holFfi memory structs locals globals baseAddress topAddress)
+        execState structs locals globals memory baseAddress topAddress panSemBitVec64BytesInWord := by
+  refine ⟨rfl, rfl, rfl, ?_, ?_, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · intro name
+    rw [Option.map_map]
+    rw [show (HolValue.toPanValue ∘ PanValue.toHolValue)
+        = (id : PanValue (RiscV.Word 64) → PanValue (RiscV.Word 64)) from
+      by funext a; exact PanValue.toHolValue_toPanValue a]
+    rw [Option.map_id]
+    rfl
+  · intro name
+    rw [Option.map_map]
+    rw [show (HolValue.toPanValue ∘ PanValue.toHolValue)
+        = (id : PanValue (RiscV.Word 64) → PanValue (RiscV.Word 64)) from
+      by funext a; exact PanValue.toHolValue_toPanValue a]
+    rw [Option.map_id]
+    rfl
+  · exact fun op values => panSemBitVec64MemoryAccess_wordOp execState op values
+  · intro op l r
+    exact panRiscVCmp_eq_wordCmpResultHOL (width := 64) op l r
+  · intro op l r
+    exact panRiscVShift_eq_wordShiftHOL (width := 64) op l r
+  · intro word
+    have h := panSemBitVec64Read32_eq_panMemLoad32HOL execState memory word
+    rw [h, Option.map_map]
+    rfl
+  · intro word
+    have h := panSemBitVec64ReadByte_eq_panMemLoadByteHOL execState memory word
+    rw [h, Option.map_map]
+    rfl
+
+/-- Unconditional executed-path capstone: on the projected state built from the
+executed `PanSemState`, `evalPanValueExp` agrees with the exact tagged `evalHOL`.
+The `memory`/`structs`/`locals`/`globals`/base/top arguments may be supplied
+independently; `evalPanValueExp_eq_evalHOL_state` instantiates them from
+`execState`.  Untagged. -/
+theorem evalPanValueExp_eq_evalHOL_executed {ffi : Type} [LawfulBEq String]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress : RiscV.Word 64)
+    (expression : Exp (RiscV.Word 64)) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress panSemBitVec64BytesInWord
+        expression (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL
+            (machineHolState execState holFfi memory structs locals globals baseAddress topAddress)
+            expression).map HolValue.toPanValue :=
+  evalPanValueExp_eq_evalHOL_of_rel _ execState structs locals globals memory baseAddress topAddress
+    panSemBitVec64BytesInWord
+    (panValueEvalRel_machineHolState execState holFfi memory structs locals globals baseAddress
+      topAddress)
+    expression
+
+/-- Actual-state corollary: `evalPanValueExp` run over the executed
+`PanSemState`'s own `structs`/`locals`/`globals`/`memory`/base/top agrees with
+the tagged `evalHOL` over the observational projection `machineHolState`.
+Untagged. -/
+theorem evalPanValueExp_eq_evalHOL_state {ffi : Type} [LawfulBEq String]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (holFfi : FfiState ffi)
+    (expression : Exp (RiscV.Word 64)) :
+    evalPanValueExp execState.structs execState.locals execState.globals execState.memory
+        execState.baseAddress execState.topAddress panSemBitVec64BytesInWord expression
+        (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+      = (evalHOL
+            (machineHolState execState holFfi execState.memory execState.structs
+              execState.locals execState.globals execState.baseAddress execState.topAddress)
+            expression).map HolValue.toPanValue :=
+  evalPanValueExp_eq_evalHOL_executed execState holFfi execState.memory execState.structs
+    execState.locals execState.globals execState.baseAddress execState.topAddress expression
 
 end Flapjack

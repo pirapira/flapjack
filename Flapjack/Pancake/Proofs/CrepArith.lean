@@ -2017,6 +2017,32 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceRuntime {ι : Type} {σ : Type}
     _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
       congrArg (Option.map PanWordLab.word) hsimp
 
+/-- The `Const` case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). This case has the original success
+    premise, arbitrary code-map update, simplifier, and complete
+    `Option word_lab` equality. Both sides reduce directly to
+    `SOME (Word value)`, so it requires no evaluator correspondence beyond
+    the defining `Const` equations. It is one constructor case, not the full
+    recursive theorem. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+theorem crepSimpExpCorrect1ConstCase {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (value : ι → Bool)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.const value) ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.const value))).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.const value)).map PanWordLab.word := by
+  simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+
 /-- Successful-result form of the all-width source-runtime support, following
     HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
     result. This remains untagged for the evaluator-correspondence gap recorded

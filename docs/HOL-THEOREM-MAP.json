@@ -339,6 +339,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1ConstCase",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact Const constructor case: original success premise, arbitrary code-map update, simp_exp result, and Option word_lab equality; the constructor equations require no word-operation or memory correspondence"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteDimension",
     "statement_status": "documented_mismatch",
     "reviewer": "Generic finite-dimension production support preserves HOL's full optional word_lab result (both HOL word_lab and PanWordLab have only Word), the successful premise, and arbitrary code-map update. It remains untagged because it interprets the polymorphic word carrier through explicit HolFiniteDimension enumeration and the RISC-V/BitVec operation model; unrestricted HOL word-type/operation correspondence is not proved."

@@ -200,6 +200,20 @@ def boolDimensionHolState : CrepHolState (Bool → Bool) Unit where
       some boolDimensionWord
 
 example :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
+        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+        (.const boolDimensionWord))).map PanWordLab.word =
+    (evalCrepRuntimeExp
+      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
+      (.const boolDimensionWord)).map PanWordLab.word := by
+  exact crepSimpExpCorrect1ConstCase (fun entry => entry)
+    boolDimensionHolState boolDimensionWord (.word boolDimensionWord)
+    (by simp [evalCrepRuntimeExp])
+
+example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) =
       evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.var 0) :=

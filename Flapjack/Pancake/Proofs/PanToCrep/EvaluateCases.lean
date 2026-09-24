@@ -3449,6 +3449,56 @@ private theorem compileExpHOL_rStruct_constOrRFieldInnerIH_eval_flatten
 
 /-! Mixed Call-argument evidence combines the already-proved constructors
 with arbitrary-inner RField evidence. -/
+private theorem evalPanSemStateExp_loadByte_const_riscvTarget
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64)
+    (hstate : stateRel source target) :
+    evalPanSemStateExp source (.loadByte (.const address)) =
+      (evalCrepRuntimeExp (riscvCrepWordTarget target)
+        (.loadByte (.const address))).map PanValue.word := by
+  rcases hstate with ⟨hmemory, hdomain, _, _, _, _, hbe, _, _, _⟩
+  have hmemoryView : panValueWordMemory source.memory =
+      crepRuntimeMemoryView target.memory := by
+    funext query
+    simp [panValueWordMemory, crepRuntimeMemoryView, hmemory]
+  have hread :
+      panModelReadByte panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be =
+        panModelReadByte (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian := by
+    rw [← hdomain, ← hmemoryView, ← hbe]
+    cases source.be with
+    | false =>
+        simp [panModelReadByte, panSemBitVec64WordModel,
+          RiscV.panRiscVMemoryModelForEndian, RiscV.panRiscVMemoryModel,
+          RiscV.panRiscVGetByteEndian, RiscV.panRiscVGetByte,
+          panSemBitVec64BytesInWord]
+    | true =>
+        have hindex : ∀ index : Nat, 8 - index - 1 = 7 - index := by
+          intro index
+          omega
+        simp [panModelReadByte, panSemBitVec64WordModel,
+          RiscV.panRiscVMemoryModelForEndian, RiscV.panRiscVMemoryModel,
+          RiscV.panRiscVGetByteEndian, RiscV.panRiscVGetByte,
+          panSemBitVec64BytesInWord, hindex]
+  calc
+    evalPanSemStateExp source (.loadByte (.const address)) =
+        (panModelReadByte panSemBitVec64WordModel source.memaddrs
+          (panValueWordMemory source.memory) panSemBitVec64BytesInWord address source.be).map
+            PanValue.word := by
+      simp [evalPanSemStateExp, evalPanValueExp,
+        panSemBitVec64MemoryAccess,
+        panValueMemoryAccessOfModel, panSemBitVec64BytesInWord]
+    _ = (panModelReadByte (RiscV.panRiscVMemoryModelForEndian target.bigEndian)
+          target.memaddrs (crepRuntimeMemoryView target.memory)
+          (BitVec.ofNat 64 (64 / 8)) address target.bigEndian).map PanValue.word := by
+      rw [hread]
+    _ = (evalCrepRuntimeExp (riscvCrepWordTarget target)
+          (.loadByte (.const address))).map PanValue.word := by
+      simp [evalCrepRuntimeExp, crepRuntimeLoadByte_wordTarget_eq_riscv]
+
 inductive compileArgConstLocalStructAddressOrRFieldInnerIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
@@ -3482,9 +3532,35 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
   | nField (name : FieldName) (expression : Exp (RiscV.Word 64)) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.nField name expression)
-  | panOpMulConst (left right : RiscV.Word 64) :
+  | loadByteConstCanonicalTarget (address : RiscV.Word 64)
+      (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
-        (.panOp .mul [.const left, .const right])
+        (.loadByte (.const address))
+  | panOpMul (left right : Exp (RiscV.Word 64))
+      (hleft : compileArgConstLocalStructAddressOrRFieldInnerIH context source target left)
+      (hright : compileArgConstLocalStructAddressOrRFieldInnerIH context source target right) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.panOp .mul [left, right])
+
+private theorem evalCrepRuntimeExps_length_of_some
+    (state : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (CrepExp (RiscV.Word 64)))
+    (values : List (RiscV.Word 64))
+    (heval : evalCrepRuntimeExps state expressions = some values) :
+    values.length = expressions.length := by
+  induction expressions generalizing values with
+  | nil => simp [evalCrepRuntimeExps] at heval; subst values; rfl
+  | cons expression expressions ih =>
+      cases hhead : evalCrepRuntimeExp state expression with
+      | none => simp [evalCrepRuntimeExps, hhead] at heval
+      | some head =>
+          cases htail : evalCrepRuntimeExps state expressions with
+          | none => simp [evalCrepRuntimeExps, hhead, htail] at heval
+          | some tail =>
+              have hvalues : values = head :: tail := by
+                simpa [evalCrepRuntimeExps, hhead, htail] using heval.symm
+              subst values
+              simp [ih tail htail]
 
 private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
@@ -3578,22 +3654,158 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       simp only [Option.bind_eq_some_iff] at heval
       rcases heval with ⟨innerValue, _, hresult⟩
       cases innerValue <;> simp at hresult
-  | panOpMulConst left right =>
+  | loadByteConstCanonicalTarget address hcanonical =>
       intro value heval
-      have hcomputed : evalPanSemStateExp source
-          (.panOp .mul [.const left, .const right]) = some (.word (left * right)) := by
-        simp [evalPanSemStateExp, evalPanValueExp, evalPanValueExp.evalPanValueExps,
-          evalPanOp]
-      have hvalue : value = .word (left * right) := by
-        exact Option.some.inj (heval.symm.trans hcomputed)
-      subst value
-      simp [evalCrepRuntimeExps, compileExpHOL, compileExpHOL.compileExpListHOL,
-        evalCrepRuntimeExp, cexpHeads, compilePanOp, panValueFlatten]
+      have hsourceTarget := evalPanSemStateExp_loadByte_const_riscvTarget
+        source target address hstate
+      have hsourceTarget' : evalPanSemStateExp source
+          (.loadByte (.const address)) =
+        (evalCrepRuntimeExp target (.loadByte (.const address))).map PanValue.word := by
+        simpa [hcanonical.symm] using hsourceTarget
+      rw [hsourceTarget'] at heval
+      cases value with
+      | word word =>
+          have htarget : evalCrepRuntimeExp target
+              (.loadByte (.const address)) = some word := by
+            simpa using heval
+          simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
+      | rStruct fields => simp at heval
+      | nStruct name fields => simp at heval
+  | panOpMul left right hleft hright ihLeft ihRight =>
+      intro value heval
+      have hevalSource : evalPanValueExp source.structs source.locals source.globals
+          source.memory source.baseAddress source.topAddress panSemBitVec64BytesInWord
+          (.panOp .mul [left, right])
+          (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some value := by
+        simpa [evalPanSemStateExp] using heval
+      cases hleftValue : evalPanSemStateExp source left with
+      | none =>
+          have hleftValue' : evalPanValueExp source.structs source.locals
+              source.globals source.memory source.baseAddress source.topAddress
+              panSemBitVec64BytesInWord left
+              (memoryAccess := some (panSemBitVec64MemoryAccess source)) = none := by
+            simpa [evalPanSemStateExp] using hleftValue
+          simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+            hleftValue'] at hevalSource
+      | some leftValue =>
+          have hleftValue' : evalPanValueExp source.structs source.locals
+              source.globals source.memory source.baseAddress source.topAddress
+              panSemBitVec64BytesInWord left
+              (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some leftValue := by
+            simpa [evalPanSemStateExp] using hleftValue
+          cases hrightValue : evalPanSemStateExp source right with
+          | none =>
+              have hrightValue' : evalPanValueExp source.structs source.locals
+                  source.globals source.memory source.baseAddress source.topAddress
+                  panSemBitVec64BytesInWord right
+                  (memoryAccess := some (panSemBitVec64MemoryAccess source)) = none := by
+                simpa [evalPanSemStateExp] using hrightValue
+              simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                hleftValue', hrightValue'] at hevalSource
+          | some rightValue =>
+              have hrightValue' : evalPanValueExp source.structs source.locals
+                  source.globals source.memory source.baseAddress source.topAddress
+                  panSemBitVec64BytesInWord right
+                  (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some rightValue := by
+                simpa [evalPanSemStateExp] using hrightValue
+              cases leftValue with
+              | word leftWord =>
+                  cases rightValue with
+                  | word rightWord =>
+                      have hcomputed : evalPanValueExp source.structs source.locals
+                          source.globals source.memory source.baseAddress source.topAddress
+                          panSemBitVec64BytesInWord (.panOp .mul [left, right])
+                          (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
+                            some (.word (leftWord * rightWord)) := by
+                        simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                          hleftValue', hrightValue', evalPanOp]
+                      have hvalue : value = .word (leftWord * rightWord) :=
+                        Option.some.inj (hevalSource.symm.trans hcomputed)
+                      subst value
+                      let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+                        { vars := context.vars, funcs := context.funcs,
+                          eids := context.eids, vmax := context.vmax }
+                      have hleftRun : evalCrepRuntimeExps target
+                          (compileExpHOL compilerContext left).1 = some [leftWord] := by
+                        simpa [panValueFlatten] using
+                          ihLeft (.word leftWord) hleftValue
+                      have hrightRun : evalCrepRuntimeExps target
+                          (compileExpHOL compilerContext right).1 = some [rightWord] := by
+                        simpa [panValueFlatten] using
+                          ihRight (.word rightWord) hrightValue
+                      have hleftLength : (compileExpHOL compilerContext left).1.length = 1 := by
+                        simpa using (evalCrepRuntimeExps_length_of_some target
+                          (compileExpHOL compilerContext left).1 [leftWord] hleftRun).symm
+                      have hrightLength : (compileExpHOL compilerContext right).1.length = 1 := by
+                        simpa using (evalCrepRuntimeExps_length_of_some target
+                          (compileExpHOL compilerContext right).1 [rightWord] hrightRun).symm
+                      cases hleftCompiled : (compileExpHOL compilerContext left).1 with
+                      | nil => simp [hleftCompiled] at hleftLength
+                      | cons leftExpression leftTail =>
+                          cases leftTail with
+                          | nil =>
+                              have hleftSingleton :
+                                  (compileExpHOL compilerContext left).1 = [leftExpression] := by
+                                simp [hleftCompiled]
+                              have hleftExpressionRun :
+                                  evalCrepRuntimeExp target leftExpression = some leftWord := by
+                                rw [hleftSingleton] at hleftRun
+                                cases hword : evalCrepRuntimeExp target leftExpression with
+                                | none => simp [evalCrepRuntimeExps, hword] at hleftRun
+                                | some word =>
+                                    have hwordEq : word = leftWord := by
+                                      simpa [evalCrepRuntimeExps, hword] using hleftRun
+                                    simp [hwordEq]
+                              cases hrightCompiled : (compileExpHOL compilerContext right).1 with
+                              | nil => simp [hrightCompiled] at hrightLength
+                              | cons rightExpression rightTail =>
+                                  cases rightTail with
+                                  | nil =>
+                                      have hrightSingleton :
+                                          (compileExpHOL compilerContext right).1 =
+                                            [rightExpression] := by
+                                        simp [hrightCompiled]
+                                      have hrightExpressionRun :
+                                          evalCrepRuntimeExp target rightExpression =
+                                            some rightWord := by
+                                        rw [hrightSingleton] at hrightRun
+                                        cases hword : evalCrepRuntimeExp target rightExpression with
+                                        | none => simp [evalCrepRuntimeExps, hword] at hrightRun
+                                        | some word =>
+                                            have hwordEq : word = rightWord := by
+                                              simpa [evalCrepRuntimeExps, hword] using hrightRun
+                                            simp [hwordEq]
+                                      have hcompiled :
+                                          (compileExpHOL compilerContext
+                                            (.panOp .mul [left, right])).1 =
+                                            [.crepOp .mul [leftExpression, rightExpression]] := by
+                                        simp [compileExpHOL,
+                                          compileExpHOL.compileExpListHOL,
+                                          hleftSingleton, hrightSingleton,
+                                          cexpHeads, compilePanOp]
+                                      simp [compilerContext, hcompiled, evalCrepRuntimeExps,
+                                        evalCrepRuntimeExp, hleftExpressionRun,
+                                        hrightExpressionRun, panValueFlatten]
+                                  | cons _ _ => simp [hrightCompiled] at hrightLength
+                          | cons _ _ => simp [hleftCompiled] at hleftLength
+                  | rStruct _ =>
+                      simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                        hleftValue', hrightValue', evalPanOp] at hevalSource
+                  | nStruct _ _ =>
+                      simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                        hleftValue', hrightValue', evalPanOp] at hevalSource
+              | rStruct _ =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleftValue', hrightValue', evalPanOp] at hevalSource
+              | nStruct _ _ =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleftValue', hrightValue', evalPanOp] at hevalSource
 
-/-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and the
-constant-operand PanOp multiplication case through the HOL `compile_args` list
-evaluator. Load expressions, operators with variable operands, and the full
-expression induction remain open. -/
+/-! Lift mixed Const/Local/RStruct/address/RField-supported arguments and
+PanOp multiplication over recursively supported operands, plus constant-address
+LoadByte for the canonical RISC-V word target, through the HOL `compile_args`
+list evaluator. Other Load forms, operators, and the full expression induction
+remain open. -/
 theorem compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

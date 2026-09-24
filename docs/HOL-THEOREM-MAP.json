@@ -360,12 +360,20 @@
     "reviewer": "Flapjack-only commuting equation for code-map update and source-shaped finite-word runtime projection"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSource",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update; remains untagged because the explicit finite-dimension enumeration and BitVec/RISC-V operation correspondence do not establish the polymorphic HOL word carrier"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension enumeration and CrepHolState adapter have not been identified with HOL's implicit finite_index word carrier and crepSem state."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "This source-evaluator corollary has HOL's success premise, code-map update, simplifier, and complete Option word_lab result, with production evaluation proved equal to its recursive source equations. It is not tagged because its explicit HolFiniteDimension encoding and CrepHolState adapter are not yet identified with HOL's implicit finite_index word type and crepSem state."
   },
   {
     "hol_path": null,
@@ -422,6 +430,14 @@
     "lean_name": "crepEvalMulConstHolFiniteWordSource",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only eval_mul_const support for the source-shaped finite-word runtime. It retains the explicit HolFiniteDimension carrier and is untagged pending exact evaluator correspondence."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolFiniteWordSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-evaluator theorem with HOL's successful Word premise and complete Option word_lab result for every explicit finite dimension. It remains untagged until the finite-index and CrepHolState encodings are reviewed as exact representations of the implicit HOL word dimension and crepSem state."
   },
   {
     "hol_path": null,
@@ -693,7 +709,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField and recursively nested RStruct cases, but is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, and constant-address LoadByte under the explicit canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_loadByte_const_riscvTarget",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge showing the state-owned PanSem LoadByte evaluator agrees with production Crep LoadByte on riscvCrepWordTarget under stateRel; this preserves the target-model invariant explicitly and makes no standalone HOL theorem claim."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeExps_length_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production Crep list-evaluator fact: successful evaluation preserves list length; used to show a scalar compiled PanOp operand has exactly one target expression."
   },
   {
     "hol_path": null,
@@ -5589,7 +5621,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgsHOL_constLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only mixed Call argument list theorem combining Const/Local/RStruct/address cases and arbitrary-inner RField cases with an explicit compile_exp_val_rel-shaped IH; other constructors and the full expression induction remain open."
+    "reviewer": "Flapjack-only mixed Call argument list theorem over the restricted evaluator evidence, including Const/Local/RStruct/address/RField, PanOp.mul over supported operands, and constant-address LoadByte with an explicit canonical target invariant; it is not the full compile_exp_val_rel list theorem and other constructors remain open."
   },
   {
     "hol_path": null,
@@ -6126,5 +6158,13 @@
     "lean_name": "crepInlineOptMmapEvalCodeInl",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only untagged list-level opt-mmap correspondence (opt_mmap_eval_code_inl, cakeml/pancake/proofs/crep_inlineProofScript.sml:1530); untagged because the Lean evaluator is the fixed-width evalCrepHolExp and the carrier is List.mapM rather than HOL OPT_MMAP. HOL oracle: scripts/hol-probes/crep_inline_eval_probe.{sml,out}."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "crepInlineRuntimeSkip",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Runtime Skip constructor case toward HOL inline_prog_correct (crep_inlineProofScript.sml:2301): from a source evalCrepRuntimeResult Skip run and the runtime relations, derives an existential target run on crepInlineProgFmap and preserves the postrelations. Untagged: Lean uses the fuel-bounded evalCrepRuntimeResult, not HOL's clock-based evaluate."
   }
 ]

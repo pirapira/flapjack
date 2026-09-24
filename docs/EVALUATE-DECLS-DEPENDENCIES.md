@@ -27,7 +27,7 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 | Dependency | Lean (file:line) | HOL counterpart | Classification | Bead |
 | --- | --- | --- | --- | --- |
 | `evalPanValueExp` | `Flapjack/PanValues.lean:1242` | `eval_def` (`panSemScript.sml:209`) | **unreviewed / possible mismatch** (no clause-by-clause evidence for the `NStruct`, memory/domain, or word-operation cases) | `.18.3.6.2` |
-| `isWfShape` | `Flapjack/Pancake/PanStatic.lean:142` | `is_wf_shape_def` (`panLangScript.sml:139`) | **unreviewed / possible mismatch** (shape equality and key lookup not yet reviewed) | `.18.3.6.3` |
+| `isWfShape` | `Flapjack/Pancake/PanStatic.lean:142` | `is_wf_shape_def` (`panLangScript.sml:139`) | **reviewed, not exact** (clauses align: `One`/`Comb`=EVERY/`Named`=presence; but `StructInfo` has an extra `shapedFields` field vs HOL `struct_info`, and `Named` uses `lookupInfo`'s canonical String `==` rather than HOL `ALOOKUP` with `=`). Direct HOL oracle: `pan_lang_wf_shape_probe` | `.18.3.6.7` (+ carrier `.18.3.5.5`) |
 | `panValueShape` | `Flapjack/PanValues.lean:491` | `shape_of_def` (`panSemScript.sml:80`) | **mismatch**: unused `context` parameter; duplicate of the tagged `panSemShapeOf` (`PanSem.lean:36`) | `.18.3.6.4` |
 | `panShapeMatches` | `Flapjack/PanValues.lean:1039` | HOL `=` on `Shape` (`sh = shape_of res`) | **representation**: structural `Bool` using `==` for `Named` | `.18.3.6.4` |
 | `lookupInfo` | `Flapjack/Pancake/PanStatic.lean:64` | `alist$ALOOKUP` / `FLOOKUP` | **unreviewed** (key-polymorphic `[BEq κ]`; needs review to establish `==` reflects HOL `=`) | `.18.3.6.5` |
@@ -50,8 +50,10 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
   `LENGTH`, `EL`, and itself recursively on subexpressions. Its `NStruct` case
   additionally checks `field_names' = field_names` and
   `EVERY (\(s,v). s = shape_of v) (ZIP ...)`.
-- `is_wf_shape_def` (`panLangScript.sml:139`) — untagged in Lean
-  (`.18.3.6.3`). It calls `EVERY` and `ALOOKUP` (`lookupInfo`).
+- `is_wf_shape_def` (`panLangScript.sml:139`) — reviewed in `.18.3.6.3`:
+  production `isWfShape` clauses align, but it is not statement-exact (carrier
+  plus `lookupInfo` equality); the exact HOL-shaped Shape-level port is tracked
+  by `.18.3.6.7`. It calls `EVERY` and `ALOOKUP` (`lookupInfo`).
 - `shape_of_def` (`panSemScript.sml:80`) — tagged exact as `panSemShapeOf`; the
   behavior used by `evaluateDecls` also flows through the untagged
   `panValueShape`/`panShapeMatches` pair (`.18.3.6.4`).
@@ -77,7 +79,8 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 ## Child beads (parent `flapjack-pxn.18.3.6`)
 
 - `.18.3.6.2` — review the production expression evaluator against HOL `eval_def`; tag only if review establishes exactness.
-- `.18.3.6.3` — review the production `Shape` predicate against HOL `is_wf_shape_def` (shape equality, key lookup); tag only if exact.
+- `.18.3.6.3` — reviewed the production `Shape` predicate against HOL `is_wf_shape_def`: clauses align, but not statement-exact (carrier/equality); exact port tracked by `.18.3.6.7`.
+- `.18.3.6.7` — port the exact HOL-shaped `is_wf_shape_def` Shape-level predicate over `StructContextHOL`.
 - `.18.3.6.4` — align `evaluateDecls` shape comparison with tagged `panSemShapeOf` / HOL shape equality.
 - `.18.3.6.5` — review finite-map lookup/update helpers (`lookupInfo`, `panSemDeclUpdateGlobal`, `panSemDeclUpdateInfo`).
 - `.18.3.6.6` — review/tag the `word_lab` value datatype (`PanValue`).

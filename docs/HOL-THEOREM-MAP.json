@@ -5163,6 +5163,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalCrepRuntimeCall_catchesRaisedHandlerBody_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-payload target Call dispatcher deriving compiled arguments and state-owned callee lookup, then composing the finite-map exp_hdl state_rel/code_rel/excp_rel/locals_rel boundary with the handler-body IH. The recursive callee and handler simulations remain premises; this is not pc_compile_correct[Call_Ret_Exception]."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only target Call_Ret_Exception dispatcher for a two-word payload using a full expression IH to derive compiled arguments and the state-owned callee lookup, then composing two-word exp_hdl state_rel/code_rel/excp_rel/locals_rel with the handler-body IH. The callee and handler simulations remain premises; this is not the full pc_compile_correct case."
@@ -6406,6 +6414,14 @@
     "lean_name": "crepRuntimeLocals_zip_eq_fupdateList",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equality between the production target local assignment fold and its finite-map FUPDATE_LIST view"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeGlobalWordsRel_length",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only consequence of the Flapjack global-word relation: each related destination slot has exactly one corresponding loaded word; no standalone HOL declaration"
   },
   {
     "hol_path": null,

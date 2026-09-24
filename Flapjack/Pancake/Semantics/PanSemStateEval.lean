@@ -777,4 +777,26 @@ theorem panMemLoadHOL_named_some (name : StructName) (structs : StructContext)
         simp only [hb, if_true]
         split <;> simp_all [Option.map]
 
+/-! The equation lemmas of the exact-HOL value isomorphism `HolValue.toPanValue`
+    (`cakeml/pancake/semantics/panSemScript.sml:22`), needed to push `Option.map
+    HolValue.toPanValue` through the structured `mem_load` cases of the executed
+    `.load` widening adapter (flapjack-pxn.18.3.6.9.2.2.1).  Untagged
+    production-side helpers. -/
+
+theorem HolValue.toPanValue_val {width : Nat} (bits : RiscV.Word width) :
+    HolValue.toPanValue (width := width) (HolValue.val (HolWordLab.word bits)) =
+      PanValue.word bits := by
+  rw [HolValue.toPanValue]
+
+theorem HolValue.toPanValue_rStruct {width : Nat} (fields : List (HolValue width)) :
+    HolValue.toPanValue (width := width) (HolValue.rStruct fields) =
+      PanValue.rStruct (fields.map HolValue.toPanValue) := by
+  rw [HolValue.toPanValue]
+
+theorem HolValue.toPanValue_nStruct {width : Nat} (name : StructName)
+    (fields : List (FieldName × HolValue width)) :
+    HolValue.toPanValue (width := width) (HolValue.nStruct name fields) =
+      PanValue.nStruct name (fields.map (fun p => (p.1, HolValue.toPanValue p.2))) := by
+  rw [HolValue.toPanValue]
+
 end Flapjack

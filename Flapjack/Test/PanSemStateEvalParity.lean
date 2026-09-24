@@ -467,4 +467,23 @@ example :
     { fields := [("f", Shape.one)], size := 1 } []
     (by simp [lookupInfoWithRest])
 
+/-- Equation lemmas of the exact-HOL `HolValue.toPanValue` isomorphism. -/
+example :
+    HolValue.toPanValue (width := 64) (HolValue.val (HolWordLab.word (7 : RiscV.Word 64))) =
+      PanValue.word (7 : RiscV.Word 64) :=
+  HolValue.toPanValue_val (7 : RiscV.Word 64)
+
+example :
+    HolValue.toPanValue (width := 64) (HolValue.rStruct []) =
+      PanValue.rStruct ([] : List (PanValue (RiscV.Word 64))) :=
+  HolValue.toPanValue_rStruct ([] : List (HolValue 64))
+
+example :
+    HolValue.toPanValue (width := 64)
+        (HolValue.nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]) =
+      PanValue.nStruct "S" [("f", PanValue.word (7 : RiscV.Word 64))] :=
+  by
+    simpa [HolValue.toPanValue_val] using
+      HolValue.toPanValue_nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]
+
 end Flapjack.Test.PanSemStateEvalParity

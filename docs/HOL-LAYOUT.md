@@ -37,6 +37,8 @@ the review rule and the `dec_deg` out-of-range mismatch example.
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |
 | `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
+| `compiler/backend/stackLangScript.sml` | `Flapjack/RiscV/CakeStackLang.lean` (generic HOL `store_name` and `prog` syntax) |
+| `compiler/backend/stack_to_labScript.sml` | `Flapjack/RiscV/CakeStackLang.lean` (faithful syntax only; `prog_to_section` remains open) |
 | `panStaticScript.sml` | `Flapjack/Pancake/PanStatic.lean` |
 | `pan_simpScript.sml` | `Flapjack/Pancake/PanSimp.lean` |
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |

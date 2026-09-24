@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Misc.AppList
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepToLoop.StateRel
 import Flapjack.Pancake.PanGlobals

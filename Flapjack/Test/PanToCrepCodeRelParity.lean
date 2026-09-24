@@ -332,6 +332,25 @@ def mkCtxtCodeRelGuard : Bool :=
 
 #guard mkCtxtCodeRelGuard
 
+/-- Exact finite-map `PanToCrepHOLContext` with `vmax = 5` used to check the
+    compiler temporary freshness bounds. -/
+def freshContext : PanToCrepHOLContext Nat :=
+  { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+    funcs := (FEMPTY : FiniteMap String (List (String × Shape) × Shape))
+    eids := (FEMPTY : FiniteMap String Nat)
+    vmax := 5 }
+
+example : (5 : Nat) ∉ allocatedNamesHOL freshContext Shape.one :=
+  not_mem_allocatedNamesHOL freshContext Shape.one (by decide)
+example : (5 : Nat) ∉ freshNamesHOL freshContext 4 2 :=
+  not_mem_freshNamesHOL freshContext 4 2 (by decide) (by decide)
+
+def freshnessGuard : Bool :=
+  (allocatedNamesHOL freshContext Shape.one).all (fun slot => 5 < slot) &&
+    (freshNamesHOL freshContext 4 2).all (fun slot => 5 < slot)
+
+#guard freshnessGuard
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL code_rel matching source and target entries", matchingTargetGuard),
@@ -344,7 +363,8 @@ def runChecks : IO Bool := do
     ("HOL get_eids_imp_excp_rel exception codes", getEidsGuard),
     ("HOL mk_ctxt_code_imp_code_rel makeFuncsHOL/alookup link", generalAlookupGuard),
     ("HOL mk_ctxt_code_imp_code_rel make_vmap/ctxt_fc bridge", vmapCtxtFCGuard),
-    ("HOL mk_ctxt_code_imp_code_rel compiled code_rel", mkCtxtCodeRelGuard)]
+    ("HOL mk_ctxt_code_imp_code_rel compiled code_rel", mkCtxtCodeRelGuard),
+    ("HOL-context compiler temporary freshness bounds", freshnessGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

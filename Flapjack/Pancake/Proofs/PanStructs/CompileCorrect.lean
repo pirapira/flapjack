@@ -1218,6 +1218,351 @@ mutual
         rw [panValueShape_eq_panSemShapeOf, panValueShapeList_eq_panSemShapeOf]
 end
 
+mutual
+private theorem panShapeMatches_self : ∀ shape, panShapeMatches shape shape = true
+    | .one => by simp [panShapeMatches]
+    | .named _ => by simp [panShapeMatches]
+    | .comb shapes => by
+        simp only [panShapeMatches]
+        exact panShapeListMatches_self shapes
+
+  private theorem panShapeListMatches_self :
+      ∀ shapes, panShapeMatches.panShapeListMatches shapes shapes = true
+    | [] => by simp [panShapeMatches.panShapeListMatches]
+    | shape :: shapes => by
+        simp [panShapeMatches.panShapeListMatches, panShapeMatches_self shape,
+          panShapeListMatches_self shapes]
+end
+
+private theorem panValueFieldsHaveShapes_context_irrel
+    (left right : StructContext) (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue α)) :
+    panValueFieldsHaveShapes left expected actual =
+      panValueFieldsHaveShapes right expected actual := by
+  induction expected generalizing actual with
+  | nil => cases actual <;> rfl
+  | cons expected expectedTail ih =>
+      cases actual with
+      | nil => rfl
+      | cons actual actualTail =>
+          simp only [panValueFieldsHaveShapes,
+            panValueShape_eq_panSemShapeOf left actual.2,
+            panValueShape_eq_panSemShapeOf right actual.2]
+          exact congrArg _ (ih actualTail)
+
+private theorem lookupInfo_append_eq_of_some_context
+    (pfx context : StructContext) (key : String) (value : StructInfo)
+    (hdisjoint : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup)
+    (hlookup : lookupInfo key context = some value) :
+    lookupInfo key (pfx ++ context) = some value := by
+  letI : LawfulBEq String := instLawfulBEqString
+  letI : BEq String := instBEqOfDecidableEq
+  induction pfx with
+  | nil => exact hlookup
+  | cons entry pfx ih =>
+      obtain ⟨candidate, info⟩ := entry
+      rcases List.nodup_cons.mp hdisjoint with ⟨hnot, htailNodup⟩
+      have hkeyMem := lookupInfo_mem_of_some key context value hlookup
+      have hcandidateNe : candidate ≠ key := by
+        intro heq
+        subst candidate
+        exact hnot (List.mem_append_right _ hkeyMem)
+      have hmatch : (candidate == key) = false := by
+        cases hbeq : candidate == key with
+        | false => rfl
+        | true => exact False.elim (hcandidateNe (LawfulBEq.eq_of_beq hbeq))
+      simp only [List.map_cons] at hdisjoint
+      have hresult := ih htailNodup
+      simpa [lookupInfo, hmatch] using hresult
+
+private theorem panStructValueFieldsOkBool_append
+    (pfx context : StructContext) (value : PanValue α)
+    (hvalue : panStructValueFieldsOkBool context value = true)
+    (hkeys : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup) :
+    panStructValueFieldsOkBool (pfx ++ context) value = true := by
+  letI : LawfulBEq String := instLawfulBEqString
+  letI : BEq String := instBEqOfDecidableEq
+  revert hvalue hkeys pfx
+  apply panStructValueFieldsOkBool.induct (α := α)
+    (motive1 := fun value =>
+      ∀ pfx, panStructValueFieldsOkBool context value = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panStructValueFieldsOkBool (pfx ++ context) value = true)
+    (motive2 := fun fields =>
+      ∀ pfx, panStructFieldValuesFieldsOkBool context fields = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panStructFieldValuesFieldsOkBool (pfx ++ context) fields = true)
+    (motive3 := fun values =>
+      ∀ pfx, panStructValuesFieldsOkBool context values = true →
+        (pfx.map Prod.fst ++ context.map Prod.fst).Nodup →
+          panStructValuesFieldsOkBool (pfx ++ context) values = true)
+  · intro word pfx hvalue hkeys
+    simp [panStructValueFieldsOkBool]
+  · intro values ih pfx hvalue hkeys
+    simpa [panStructValueFieldsOkBool] using ih pfx
+      (by simpa [panStructValueFieldsOkBool] using hvalue) hkeys
+  · intro name fields ih pfx hvalue hkeys
+    simp only [panStructValueFieldsOkBool, Bool.and_eq_true] at hvalue ⊢
+    cases hlookup : lookupInfo name context with
+    | none => simp [hlookup] at hvalue
+    | some info =>
+        have hlookupExtended := lookupInfo_append_eq_of_some_context
+          pfx context name info hkeys hlookup
+        have hfields := ih pfx hvalue.1 hkeys
+        have hshapeSame := panValueFieldsHaveShapes_context_irrel
+          (pfx ++ context) context info.fields fields
+        have hshape : panValueFieldsHaveShapes (pfx ++ context)
+            info.fields fields = true := by
+          rw [hshapeSame]
+          simpa [hlookup] using hvalue.2
+        simp only [hlookupExtended, hfields, hshape]
+        constructor <;> trivial
+  · intro pfx hvalue hkeys
+    simp [panStructFieldValuesFieldsOkBool]
+  · intro name value fields ihValue ihFields pfx hvalue hkeys
+    simp only [panStructFieldValuesFieldsOkBool, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihFields pfx hvalue.2 hkeys⟩
+  · intro pfx hvalue hkeys
+    simp [panStructValuesFieldsOkBool]
+  · intro value values ihValue ihValues pfx hvalue hkeys
+    simp only [panStructValuesFieldsOkBool, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihValues pfx hvalue.2 hkeys⟩
+
+private theorem lookupInfoWithRest_lookupInfo_for_load
+    (name : String) (context : StructContext) (info : StructInfo)
+    (suffix : StructContext)
+    (hlookup : lookupInfoWithRest name context = some (info, suffix)) :
+    lookupInfo name context = some info := by
+  letI : LawfulBEq String := instLawfulBEqString
+  letI : BEq String := instBEqOfDecidableEq
+  induction context with
+  | nil => simp [lookupInfoWithRest] at hlookup
+  | cons entry context ih =>
+      obtain ⟨candidate, entryInfo⟩ := entry
+      by_cases hmatch : candidate == name
+      · simp [lookupInfoWithRest, hmatch] at hlookup
+        rcases hlookup with ⟨rfl, rfl⟩
+        simp [lookupInfo, hmatch]
+      · simp only [lookupInfoWithRest, hmatch] at hlookup
+        simpa [lookupInfo, hmatch] using ih hlookup
+
+private theorem panValueFieldsHaveShapes_of_maps
+    (context : StructContext) (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue α))
+    (hnames : expected.map Prod.fst = actual.map Prod.fst)
+    (hshapes : actual.map (fun field => panSemShapeOf field.2) =
+      expected.map Prod.snd) :
+    panValueFieldsHaveShapes context expected actual = true := by
+  induction expected generalizing actual with
+  | nil =>
+      cases actual with
+      | nil => rfl
+      | cons field actual => simp at hnames
+  | cons expected expectedTail ih =>
+      cases actual with
+      | nil => simp at hnames
+      | cons actual actualTail =>
+          obtain ⟨expectedName, expectedShape⟩ := expected
+          obtain ⟨actualName, actualValue⟩ := actual
+          have hnames' :
+              expectedName :: expectedTail.map Prod.fst =
+                actualName :: actualTail.map Prod.fst := by
+            simpa only [List.map_cons] using hnames
+          rcases List.cons.inj hnames' with ⟨hname, htailNames⟩
+          have hshapes' :
+              panSemShapeOf actualValue ::
+                  actualTail.map (fun field => panSemShapeOf field.2) =
+                expectedShape :: expectedTail.map Prod.snd := by
+            simpa only [List.map_cons] using hshapes
+          rcases List.cons.inj hshapes' with ⟨hshape, htailShapes⟩
+          have htail := ih actualTail htailNames htailShapes
+          subst actualName
+          simp only [panValueFieldsHaveShapes, Bool.and_eq_true]
+          rw [panValueShape_eq_panSemShapeOf context actualValue, hshape]
+          exact ⟨⟨by simp, panShapeMatches_self expectedShape⟩, htail⟩
+
+private theorem panStructFieldValuesFieldsOkBool_append
+    (pfx context : StructContext) (fields : List (FieldName × PanValue α))
+    (hfields : panStructFieldValuesFieldsOkBool context fields = true)
+    (hkeys : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup) :
+    panStructFieldValuesFieldsOkBool (pfx ++ context) fields = true := by
+  induction fields with
+  | nil => simp [panStructFieldValuesFieldsOkBool]
+  | cons field fields ih =>
+      cases field with
+      | mk fieldName value =>
+          simp only [panStructFieldValuesFieldsOkBool, Bool.and_eq_true] at hfields ⊢
+          exact ⟨panStructValueFieldsOkBool_append pfx context value
+            hfields.1 hkeys, ih hfields.2⟩
+
+/-- A successful production load preserves the requested HOL shape and the
+    field layout checked by `v_flds_ok`. This is an untagged production support
+    theorem, not a HOL theorem port: its premise names the fuel-indexed Option
+    loader and an arbitrary `readWord`, whereas HOL `mem_load` uses a
+    finite-domain word-memory relation. It requires no extra in-bounds or
+    value-validity premise; the successful load, well-formed shape, and
+    `structInfosOk` context suffice. -/
+theorem panValueFlatLoadFuel_shape_fields [BEq α] [Add α]
+    (bytesInWord : α) (readWord : α → Option α) :
+    ∀ (context : StructContext) (fuel : Nat) (shape : Shape) (address : α)
+      (value : PanValue α),
+      structInfosOk context →
+      isWfShape context shape = true →
+      panValueFlatLoadFuel context readWord bytesInWord fuel shape address = some value →
+      panSemShapeOf value = shape ∧
+        panStructValueFieldsOkBool context value = true := by
+  letI : LawfulBEq String := instLawfulBEqString
+  letI : BEq String := instBEqOfDecidableEq
+  apply panValueFlatLoadFuel.induct (α := α) bytesInWord
+    (motive1 := fun context fuel shape address =>
+      ∀ value, structInfosOk context → isWfShape context shape = true →
+        panValueFlatLoadFuel context readWord bytesInWord fuel shape address =
+          some value →
+        panSemShapeOf value = shape ∧ panStructValueFieldsOkBool context value = true)
+    (motive2 := fun context fuel fields address =>
+      ∀ values, structInfosOk context →
+        isWfShape.isWfShapeList context (fields.map Prod.snd) = true →
+        panValueFlatLoadFieldsFuel context readWord bytesInWord fuel fields address =
+          some values →
+        fields.map Prod.fst = values.map Prod.fst ∧
+          values.map (fun field => panSemShapeOf field.2) = fields.map Prod.snd ∧
+          panStructFieldValuesFieldsOkBool context values = true)
+    (motive3 := fun context fuel shapes address =>
+      ∀ values, structInfosOk context →
+        isWfShape.isWfShapeList context shapes = true →
+        panValueFlatLoadListFuel context readWord bytesInWord fuel shapes address =
+          some values →
+        values.map panSemShapeOf = shapes ∧
+          panStructValuesFieldsOkBool context values = true)
+  · intro context shape address value hok hwf hload
+    simp only [panValueFlatLoadFuel] at hload
+    cases hload
+  · intro context fuel address value hok hwf hload
+    cases hread : readWord address with
+    | none => simp [panValueFlatLoadFuel, hread] at hload
+    | some word =>
+        have hvalue : PanValue.word word = value := by
+          simpa [panValueFlatLoadFuel, hread] using hload
+        cases hvalue
+        simp [panSemShapeOf, panStructValueFieldsOkBool]
+  · intro context fuel shapes address ih value hok hwf hload
+    have hwfList : isWfShape.isWfShapeList context shapes = true := by
+      simpa [isWfShape] using hwf
+    cases hvalues : panValueFlatLoadListFuel context readWord bytesInWord fuel
+        shapes address with
+    | none => simp [panValueFlatLoadFuel, hvalues] at hload
+    | some values =>
+        have hvalue : PanValue.rStruct values = value := by
+          simpa [panValueFlatLoadFuel, hvalues] using hload
+        cases hvalue
+        obtain ⟨hshapes, hfields⟩ := ih values hok hwfList hvalues
+        constructor
+        · simpa [panSemShapeOf] using congrArg Shape.comb hshapes
+        · simpa [panStructValueFieldsOkBool] using hfields
+  · intro context fuel name address ih value hok hwf hload
+    cases hlookup : lookupInfoWithRest name context with
+    | none =>
+        simp [panValueFlatLoadFuel, hlookup] at hload
+    | some entry =>
+        obtain ⟨info, suffix⟩ := entry
+        have hokSuffix := structInfosOk_suffix_for_load name context info suffix
+          hlookup hok
+        have hfieldsWf := lookupInfoWithRest_fields_wf_for_load
+          name context info suffix hlookup hok
+        cases hfields : panValueFlatLoadFieldsFuel suffix readWord bytesInWord fuel
+            info.fields address with
+        | none =>
+            simp [panValueFlatLoadFuel, hlookup, hfields] at hload
+        | some fields =>
+            have hvalue : PanValue.nStruct name fields = value := by
+              simpa [panValueFlatLoadFuel, hlookup, hfields] using hload
+            cases hvalue
+            obtain ⟨hnames, hshapes, hfieldsValid⟩ :=
+              ih info suffix fields hokSuffix hfieldsWf hfields
+            have hlookupInfo := lookupInfoWithRest_lookupInfo_for_load
+              name context info suffix hlookup
+            have hfieldShapes := panValueFieldsHaveShapes_of_maps context
+              info.fields fields hnames hshapes
+            obtain ⟨n, hdrop⟩ := lookupInfoWithRest_suffix_drop_for_load
+              name context info suffix hlookup
+            have hcontext : context = context.take n ++ suffix := by
+              calc
+                context = context.take n ++ context.drop n :=
+                  (List.take_append_drop n context).symm
+                _ = context.take n ++ suffix := by rw [hdrop]
+            have hkeys :
+                ((context.take n).map Prod.fst ++ suffix.map Prod.fst).Nodup := by
+              have hkeysAll := hok.2.1
+              rw [hcontext] at hkeysAll
+              simpa only [List.map_append] using hkeysAll
+            have hfieldsValidFull :
+                panStructFieldValuesFieldsOkBool context fields = true := by
+              have hvalid := panStructFieldValuesFieldsOkBool_append
+                (context.take n) suffix fields hfieldsValid hkeys
+              rw [hcontext]
+              exact hvalid
+            constructor
+            · simp [panSemShapeOf]
+            · simp [panStructValueFieldsOkBool, hlookupInfo, hfieldsValidFull,
+                hfieldShapes]
+  · intro context fuel address values hok hwf hload
+    simp [panValueFlatLoadFieldsFuel] at hload
+    subst values
+    simp [panStructFieldValuesFieldsOkBool]
+  · intro context head tail address values hok hwf hload
+    simp [panValueFlatLoadFieldsFuel] at hload
+  · intro context fuel field shape fields address ihHead ihTail values
+      hok hwf hload
+    simp only [List.map_cons, isWfShape.isWfShapeList, Bool.and_eq_true] at hwf
+    cases hhead : panValueFlatLoadFuel context readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadFieldsFuel, hhead] at hload
+    | some headValue =>
+        let nextAddress := panValueFlatOffset bytesInWord address
+          (shapeSizeWithContext context shape)
+        cases htail : panValueFlatLoadFieldsFuel context readWord bytesInWord fuel
+            fields nextAddress with
+        | none => simp [panValueFlatLoadFieldsFuel, hhead, htail, nextAddress] at hload
+        | some tailValues =>
+            have hheadResult := ihHead headValue hok hwf.1 hhead
+            have htailResult := ihTail tailValues hok hwf.2 htail
+            have hvalues : values = (field, headValue) :: tailValues := by
+              have hsome : some ((field, headValue) :: tailValues) = some values := by
+                simpa [panValueFlatLoadFieldsFuel, hhead, htail, nextAddress] using hload
+              exact (Option.some.inj hsome).symm
+            subst values
+            refine ⟨?_, ?_, ?_⟩
+            · simp [htailResult.1]
+            · simp [hheadResult.1, htailResult.2.1]
+            · simp [panStructFieldValuesFieldsOkBool, hheadResult.2,
+                htailResult.2.2]
+  · intro context fuel address values hok hwf hload
+    simp [panValueFlatLoadListFuel] at hload
+    subst values
+    simp [panStructValuesFieldsOkBool]
+  · intro context head tail address values hok hwf hload
+    simp [panValueFlatLoadListFuel] at hload
+  · intro context fuel shape shapes address ihHead ihTail values hok hwf hload
+    simp only [isWfShape.isWfShapeList, Bool.and_eq_true] at hwf
+    cases hhead : panValueFlatLoadFuel context readWord bytesInWord fuel shape address with
+    | none => simp [panValueFlatLoadListFuel, hhead] at hload
+    | some headValue =>
+        let nextAddress := panValueFlatOffset bytesInWord address
+          (shapeSizeWithContext context shape)
+        cases htail : panValueFlatLoadListFuel context readWord bytesInWord fuel
+            shapes nextAddress with
+        | none => simp [panValueFlatLoadListFuel, hhead, htail, nextAddress] at hload
+        | some tailValues =>
+            have hheadResult := ihHead headValue hok hwf.1 hhead
+            have htailResult := ihTail tailValues hok hwf.2 htail
+            have hvalues : values = headValue :: tailValues := by
+              have hsome : some (headValue :: tailValues) = some values := by
+                simpa [panValueFlatLoadListFuel, hhead, htail, nextAddress] using hload
+              exact (Option.some.inj hsome).symm
+            subst values
+            constructor
+            · simp [hheadResult.1, htailResult.1]
+            · simp [panStructValuesFieldsOkBool, hheadResult.2, htailResult.2]
+
 /-! ## Adapter between the HOL-shaped predicates and production struct contexts
 
 These lemmas relate the exact HOL-shaped predicates over `StructContextHOL`
@@ -2553,9 +2898,10 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   exact lookupInfo_eq_panPropsALookupEq key entries
 
 /-- Untagged derived Local/Global Var-constructor specialization of HOL
-    `compile_exp_correct`; this note applies to this theorem only. HOL has only
-    the universally quantified theorem, not a separately named Var-case
-    declaration, and this Lean statement is not an exact statement port. It
+    `compile_exp_correct`; this note documents only the following declaration.
+    HOL has only the universally quantified theorem, not a separately named
+    Var-case declaration, and this Lean statement is not an exact statement
+    port. It
     keeps successful source evaluation but re-encodes the HOL premises: the
     direct `ctxt.structs = MAP ... s.structs` equality is replaced by equality
     of shape views (which observes names and fields, not the full Lean struct
@@ -2569,8 +2915,7 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
     not inspect, and its evaluator takes an explicit `bytesInWord` parameter.
     Its three conclusions are the Var instance of HOL's old-shape,
     `v_flds_ok`, and converted-evaluation conclusions. Other expression
-    constructors remain open. This note documents only the Var theorem below;
-    the preceding private lookup bridge has its own separate comment. -/
+    constructors remain open. -/
 theorem panStructCompileExpCorrectVarCase
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

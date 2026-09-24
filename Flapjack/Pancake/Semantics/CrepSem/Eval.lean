@@ -1103,6 +1103,16 @@ def CrepHolState.toHolFiniteWordSourceRuntime {ι : Type u}
   { runtime with
     memoryModel := holFiniteWordSourceMemoryModel dimension state.bigEndian }
 
+/-- The generic finite-word production adapter projects back to exactly the
+    eleven fields of HOL `crepSem$state`. The explicit `HolFiniteDimension`
+    witness chooses word operations and byte semantics, but does not alter the
+    represented HOL state. This closes the state-record part of the evaluator
+    correspondence; the source word-operation correspondence remains open. -/
+theorem CrepHolState.toHolState_toHolFiniteWordSourceRuntime {ι : Type u}
+    (dimension : HolFiniteDimension ι) (state : CrepHolState (ι → Bool) σ) :
+    (state.toHolFiniteWordSourceRuntime dimension).toHolState = state := by
+  rfl
+
 /-! The production byte/word load branches over the source-shaped runtime
     reduce to the model-parametric state helpers that spell out HOL's
     `mem_load_byte_def` and `mem_load_32_def`. These equations connect the

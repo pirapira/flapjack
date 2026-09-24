@@ -48,3 +48,9 @@ val finite_map_shadow_ctxt =
        funcs := FEMPTY; eids := FEMPTY; vmax := 5 |>``;
 val _ = print_eval "finite_map_shadow"
   ``pan_to_crep$compile_exp ^finite_map_shadow_ctxt (Var Local «p»)``;
+val _ = print_eval "finite_map_load32_local"
+  ``pan_to_crep$compile_exp ^finite_map_shadow_ctxt
+      (Load32 (Var Local «p»))``;
+val _ = print_eval "finite_map_load_byte_local"
+  ``pan_to_crep$compile_exp ^finite_map_shadow_ctxt
+      (LoadByte (Var Local «p»))``;

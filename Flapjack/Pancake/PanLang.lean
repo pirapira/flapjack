@@ -18,6 +18,7 @@ abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
 
+@[hol "cakeml/pancake/panLangScript.sml" "shape"]
 inductive Shape where
   | one
   | comb (fields : List Shape)

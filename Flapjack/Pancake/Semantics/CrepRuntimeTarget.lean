@@ -1896,4 +1896,48 @@ theorem evalCrepRuntimeExpWordLab_shift_rv64_const
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeShift_rv64_eq_holWordShift64]
 
+/-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
+two word operands yields their product, any other arity is a failure. -/
+def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
+  match values with
+  | [left, right] => some (left * right)
+  | _ => none
+
+/-- Evaluator case: the production `Crepop Mul` over constant operands at the
+RV64 target is HOL `crep_op`. -/
+theorem evalCrepRuntimeExp_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      holCrepOpMul64 args := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExp, holCrepOpMul64]
+
+/-- Word_lab evaluator case: the production word_lab core's `Crepop Mul` over
+constant operands at the RV64 target is HOL `crep_op` wrapped in
+`PanWordLab.word`. -/
+theorem evalCrepRuntimeExpWordLab_crepOpMul_rv64_const
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (args : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab (riscv64CrepRuntimeTarget base)
+        (.crepOp .mul (args.map (fun value => .const value))) =
+      (holCrepOpMul64 args).map PanWordLab.word := by
+  cases args with
+  | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+  | cons left rest =>
+      cases rest with
+      | nil => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+      | cons right tail =>
+          cases tail with
+          | nil => simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp, holCrepOpMul64]
+          | cons extra more => simp [evalCrepRuntimeExpWordLab, holCrepOpMul64]
+
 end Flapjack

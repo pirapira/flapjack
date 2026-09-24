@@ -561,6 +561,7 @@ run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
   leaves struct_field loads_ops cmp_shift finite_map_shadow finite_map_load32_local \
+  finite_map_load_byte_local \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
   missing known dup_update dup_list "$cake_dir/pancake/pan_to_crepScript.sml"
@@ -743,6 +744,12 @@ run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
 # target (Lsl/Lsr/Asr/Ror, amount zero, and the invalid width-sized amount).
 run_probe crep_eval_shift_rv64_probeScript.sml crep_eval_shift_rv64_probe.out \
   eval_shift_lsl_const eval_shift_amount_width \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+# The Crepop Mul probe observes HOL crep_op over constant operands (product and
+# the arity failures for three, one, and zero operands).
+run_probe crep_eval_crepop_mul_rv64_probeScript.sml crep_eval_crepop_mul_rv64_probe.out \
+  eval_crepop_mul_const eval_crepop_mul_empty \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \

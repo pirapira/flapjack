@@ -489,6 +489,49 @@ def holWordBitsGlobalState4 (value : Fin 4 → Bool) :
     CrepHolState (Fin 4 → Bool) Unit :=
   { holWordBitsState4 with globals := fun _ => some (.word value) }
 
+def holWordBitsLoadState4 (value : Fin 4 → Bool) :
+    CrepHolState (Fin 4 → Bool) Unit :=
+  { holWordBitsState4 with
+    memory := fun _ => .word value
+    memaddrs := fun _ => true }
+
+example (value : Fin 4 → Bool) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+        (holWordBitsLoadState4 value))
+      (crepSimpExp
+        (fun n => bitVecToHolWord (instFinHolFiniteDimension (width := 4))
+          (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n))
+        (.load (.const value))) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (holWordBitsLoadState4 value) (.load (.const value)) := by
+  have hsuccess : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (holWordBitsLoadState4 value) (.load (.const value)) ≠ none := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, holWordBitsLoadState4,
+      holWordBitsState4]
+  have ih : ∀ (source : CrepHolState (Fin 4 → Bool) Unit)
+      (_result : PanWordLab (Fin 4 → Bool)),
+      evalCrepHolFiniteWordSourceExpWordLab
+          (instFinHolFiniteDimension (width := 4)) source (.const value) ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab
+          (instFinHolFiniteDimension (width := 4))
+          (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry) source)
+          (crepSimpExp
+            (fun n => bitVecToHolWord (instFinHolFiniteDimension (width := 4))
+              (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n)) (.const value)) =
+        evalCrepHolFiniteWordSourceExpWordLab
+          (instFinHolFiniteDimension (width := 4)) source (.const value) := by
+    intro source result h
+    exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+      (f := fun (_, entry) => entry) source value result h
+  exact crepSimpExpCorrect1LoadHolFiniteWordSourceCase
+    (f := fun (_, entry) => entry) (holWordBitsLoadState4 value)
+    (.const value) (.word value) hsuccess ih
+
 example (address : BitVec 5) (value : Fin 4 → Bool) :
     evalCrepHolFiniteWordSourceExp
       (instFinHolFiniteDimension (width := 4))

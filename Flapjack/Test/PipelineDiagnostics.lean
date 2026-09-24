@@ -353,4 +353,66 @@ def nestedLocalStoreBytesAccepted : Bool :=
   | .ok artifact => artifact.bytes.length > 0 && artifact.bytes.length % 4 == 0
   | .error _ => false
 
+/-! GH #1157 (`Normalize or explain mode-specific section IDs in lowering
+    errors`): the section id recorded in a lowering error is a crepe-local
+    label, not a stable function identity.  `--hex` numbers crepe sections
+    from 1 while the default runtime-image mode numbers them from
+    `stackFunctionFirstLabel`, so the equal failing function shows up as
+    different section ids.  These guards pin the presentation-layer regression
+    without changing the internal Cake-compatible labels. -/
+def diagnosticCompiledFunctions : List (CompiledFunction Nat) :=
+  [ { name := "helper", params := [], body := .skip, returnShape := .one },
+    diagnosticCompiledMain ]
+
+def hexModeLoweringError : SourceRiscVCompileError :=
+  sourceRiscVCompileErrorOfLowering 1 diagnosticCompiledFunctions
+    (.allocationFailure 2)
+
+def runtimeModeLoweringError : SourceRiscVImageError :=
+  sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
+    diagnosticCompiledFunctions (.allocationFailure 4)
+
+def compileErrorFunction : SourceRiscVCompileError → Option FunName
+  | .loweringInFunction functionName _ => some functionName
+  | _ => none
+
+def imageErrorFunction : SourceRiscVImageError → Option FunName
+  | .loweringInFunction functionName _ => some functionName
+  | _ => none
+
+example :
+    hexModeLoweringError = .loweringInFunction "main" (.allocationFailure 2) := by
+  rfl
+
+example :
+    runtimeModeLoweringError = .loweringInFunction "main" (.allocationFailure 4) := by
+  rfl
+
+#guard stackFunctionFirstLabel = 3
+
+/-! The same failing function keeps a single stable identity while the
+    mode-local section ids differ by two. -/
+#guard compileErrorFunction hexModeLoweringError = some "main"
+#guard imageErrorFunction runtimeModeLoweringError = some "main"
+
+#guard
+  sourceRiscVCompileErrorDescription hexModeLoweringError =
+    "in function 'main': register allocation failed in mode-local section 2"
+
+#guard
+  sourceRiscVImageErrorDescription runtimeModeLoweringError =
+    "in function 'main': register allocation failed in mode-local section 4"
+
+/-! An unresolved section id still reports as mode-local rather than leaking a
+    bare number as if it were stable. -/
+#guard
+  sourceRiscVImageErrorDescription
+      (sourceRiscVImageErrorOfLowering 1 [diagnosticCompiledMain]
+        (.allocationFailure 5)) =
+    "register allocation failed in mode-local section 5"
+
+#guard
+  sourceRiscVCompileErrorDescription .entryNotFound =
+    "no entry point named 'main'"
+
 end Flapjack

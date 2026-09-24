@@ -427,6 +427,48 @@ def sourceRiscVImageErrorOfLowering (firstLabel : Nat)
       | none => .lowering error
   | none => .lowering error
 
+/-- Human-readable name of the pipeline pass that reported a lowering error. -/
+def pipelineRiscVLoweringPassName : PipelineRiscVLoweringError → String
+  | .wordToStack _ => "word-to-stack"
+  | .allocationFailure _ => "register allocation"
+  | .wordToStackFailure _ _ => "word-to-stack"
+  | .labToRiscV _ => "lab-to-riscv"
+  | .stackToRiscV => "stack-to-riscv"
+
+/-- User-facing description of a lowering error.
+
+The `sectionId` inside a lowering error is the position of the failing
+function in the crepe list the pass consumed, so it is a pipeline-local label
+rather than a stable identity: `--hex` numbers crepe sections from 1 while the
+default runtime-image mode numbers them from `stackFunctionFirstLabel`, and the
+same failing function is therefore section `n` in one mode and `n + 2` in the
+other.  Diagnostics name the containing function when `loweringInFunction`
+resolved one and always mark the raw section id as mode-local, while leaving
+the Cake-compatible internal labels unchanged. -/
+def pipelineRiscVLoweringErrorDescription
+    (error : PipelineRiscVLoweringError) : String :=
+  match pipelineLoweringSectionId error with
+  | some sectionId =>
+      s!"{pipelineRiscVLoweringPassName error} failed in mode-local section {sectionId}"
+  | none => s!"{pipelineRiscVLoweringPassName error} failed (section id unavailable)"
+
+def sourceRiscVCompileErrorDescription : SourceRiscVCompileError → String
+  | .parse errors => s!"parse error: {repr errors}"
+  | .static error => s!"static check failed: {repr error}"
+  | .entryNotFound => "no entry point named 'main'"
+  | .lowering error => pipelineRiscVLoweringErrorDescription error
+  | .loweringInFunction functionName error =>
+      s!"in function '{functionName}': {pipelineRiscVLoweringErrorDescription error}"
+
+def sourceRiscVImageErrorDescription : SourceRiscVImageError → String
+  | .parse errors => s!"parse error: {repr errors}"
+  | .static error => s!"static check failed: {repr error}"
+  | .entryNotFound => "no entry point named 'main'"
+  | .lowering error => pipelineRiscVLoweringErrorDescription error
+  | .loweringInFunction functionName error =>
+      s!"in function '{functionName}': {pipelineRiscVLoweringErrorDescription error}"
+  | .artifactFailure => "failed to assemble a runtime artifact section"
+
 structure SourceRiscVImage (width : Nat) where
   sections : List (RiscV.EncodedRiscVSection width)
   warnings : List StatErr

@@ -1,3 +1,4 @@
+import Flapjack.Compiler.Encoders.Asm
 import Flapjack.PanBst
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.RiscV.PanMemory
@@ -1043,5 +1044,179 @@ theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) f
   exact (panValueFlatLoadFuel_eq_panMemLoadHOL state memory
       (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)).1
     structs shape address (by omega)
+
+/-! ## Exact HOL `panSem$eval_def` expression evaluator (flapjack-pxn.18.3.6.9.3)
+
+Statement-exact port of Cake's expression evaluator `eval_def`
+(`cakeml/pancake/semantics/panSemScript.sml:209-283`).  The state is the
+HOL-shaped source state: `locals`/`globals` are finite maps into the exact
+`v` carrier, `structs` is the HOL `(stcname # struct_info) list`, the memory is
+HOL's total `'a word -> 'a word_lab`, and `memaddrs` is the source word set
+(rendered as a `Prop` predicate, exactly as in the tagged `mem_load_*`
+definitions).  Every clause reuses the tagged exact helpers
+(`panMemLoadHOL`/`panMemLoad32HOL`/`panMemLoadByteHOL`/`wordOpHOL`/
+`wordShiftHOL`/`wordCmpHOL`/`isWfShapeHOL`/`panBytesInWord`).
+
+`bytes_in_word` is HOL's global `n2w (dimindex(:'a) DIV 8)`; the `word set`
+domain carries the classical `[DecidablePred]` instance that HOL membership
+has implicitly. -/
+
+/-- HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`) over the
+    exact `v` carrier `HolValue`. -/
+def holShapeOf {width : Nat} : HolValue width → Shape
+  | .val _ => .one
+  | .rStruct values => .comb (values.map holShapeOf)
+  | .nStruct name _ => .named name
+termination_by value => sizeOf value
+
+/-- HOL `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`) over
+    `HolValue`. -/
+def holValueIsWord {width : Nat} : HolValue width → Bool
+  | .val (.word _) => true
+  | _ => false
+
+/-- HOL `theValWord` (`cakeml/pancake/semantics/panSemScript.sml:39`), totalized
+    with a default word; total because the `Op`/`Panop` clauses guard with
+    `EVERY isValWord` exactly as HOL does. -/
+def holValueWord {width : Nat} : HolValue width → RiscV.Word width
+  | .val (.word value) => value
+  | _ => 0
+
+/-- HOL-shaped source state for `panSem$eval_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:44-62`).  The fields are the
+    source state components; `memaddrs`/`shMemaddrs` render the HOL word sets
+    as predicates. -/
+structure PanSemHolState (width : Nat) (σ : Type) where
+  locals : VarName → Option (HolValue width)
+  globals : VarName → Option (HolValue width)
+  structs : StructContextHOL
+  code : FunName → Option (List (VarName × Shape) × Prog (BitVec width) × Shape)
+  eshapes : ExceptionId → Option Shape
+  memory : RiscV.Word width → HolWordLab width
+  memaddrs : RiscV.Word width → Prop
+  shMemaddrs : RiscV.Word width → Prop
+  clock : Nat
+  be : Bool
+  ffi : FfiState σ
+  baseAddr : RiscV.Word width
+  topAddr : RiscV.Word width
+
+/- Exact width-indexed port of HOL `panSem$eval_def`.  HOL quantifies over
+   `'a word`; Lean represents that polymorphic width by `BitVec width`
+   (`RiscV.Word width`) with `[NeZero width]` (HOL `dimindex(:'a)` is nonzero). -/
+mutual
+  @[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"]
+  def evalHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+      [DecidablePred state.memaddrs] : Exp (BitVec width) → Option (HolValue width)
+    | .const value => some (.val (.word value))
+    | .var .local name => state.locals name
+    | .var .global name => state.globals name
+    | .rStruct fields => (evalListHOL state fields).map HolValue.rStruct
+    | .rField index value =>
+        match evalHOL state value with
+        | some (.rStruct values) => values[index]?
+        | _ => none
+    | .nStruct name fields =>
+        match lookupInfo name state.structs with
+        | none => none
+        | some info =>
+            if info.fields.map Prod.fst == fields.map Prod.fst then
+              match evalFieldsHOL state fields with
+              | none => none
+              | some fieldValues =>
+                  if ((info.fields.map Prod.snd).zip (fieldValues.map Prod.snd)).all
+                        (fun pair => panShapeMatches pair.1 (holShapeOf pair.2)) then
+                    some (.nStruct name fieldValues)
+                  else none
+            else none
+    | .nField name value =>
+        match evalHOL state value with
+        | some (.nStruct structName values) =>
+            if (lookupInfo structName state.structs).isSome then
+              lookupInfo name values
+            else none
+        | _ => none
+    | .load shape address =>
+        if isWfShapeHOL state.structs shape then
+          match evalHOL state address with
+          | some (.val (.word word)) =>
+              panMemLoadHOL shape word state.memaddrs state.memory state.structs
+          | _ => none
+        else none
+    | .load32 address =>
+        match evalHOL state address with
+        | some (.val (.word word)) =>
+            (panMemLoad32HOL state.memory state.memaddrs state.be word).map
+              (fun value => .val (.word (BitVec.ofNat width value.toNat)))
+        | _ => none
+    | .loadByte address =>
+        match evalHOL state address with
+        | some (.val (.word word)) =>
+            (panMemLoadByteHOL state.memory state.memaddrs state.be word).map
+              (fun byte => .val (.word (BitVec.ofNat width byte.toNat)))
+        | _ => none
+    | .op operator args =>
+        match evalListHOL state args with
+        | none => none
+        | some values =>
+            if values.all holValueIsWord then
+              (wordOpHOL operator (values.map holValueWord)).map
+                (fun word => .val (.word word))
+            else none
+    | .panOp operator args =>
+        match evalListHOL state args with
+        | none => none
+        | some values =>
+            if values.all holValueIsWord then
+              (evalPanOp operator (values.map holValueWord)).map
+                (fun word => .val (.word word))
+            else none
+    | .cmp operator left right =>
+        match evalHOL state left, evalHOL state right with
+        | some (.val (.word leftWord)), some (.val (.word rightWord)) =>
+            some (.val (.word (if Flapjack.Compiler.Encoders.Asm.wordCmpHOL operator leftWord rightWord then 1 else 0)))
+        | _, _ => none
+    | .shift operator left right =>
+        match evalHOL state left, evalHOL state right with
+        | some (.val (.word leftWord)), some (.val (.word rightWord)) =>
+            (wordShiftHOL operator leftWord rightWord.toNat).map
+              (fun word => .val (.word word))
+        | _, _ => none
+    | .baseAddr => some (.val (.word state.baseAddr))
+    | .topAddr => some (.val (.word state.topAddr))
+    | .bytesInWord => some (.val (.word (panBytesInWord width)))
+  termination_by expression => sizeOf expression
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial | omega
+
+  def evalListHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+      [DecidablePred state.memaddrs] :
+      List (Exp (BitVec width)) → Option (List (HolValue width))
+    | [] => some []
+    | expression :: expressions =>
+        match evalHOL state expression, evalListHOL state expressions with
+        | some value, some values => some (value :: values)
+        | _, _ => none
+  termination_by expressions => sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial | omega
+
+  def evalFieldsHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ)
+      [DecidablePred state.memaddrs] :
+      List (FieldName × Exp (BitVec width)) → Option (List (FieldName × HolValue width))
+    | [] => some []
+    | pair :: rest =>
+        match evalHOL state pair.2, evalFieldsHOL state rest with
+        | some value, some values => some ((pair.1, value) :: values)
+        | _, _ => none
+  termination_by fields => sizeOf fields
+  decreasing_by
+    all_goals
+      simp_wf
+      first
+      | (have : sizeOf pair.2 < sizeOf pair := by cases pair; simp +arith
+         omega)
+      | omega
+end
 
 end Flapjack

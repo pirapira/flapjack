@@ -8208,6 +8208,14 @@
     "reviewer": "Codex (source comparison; HOL mem_load/mem_loads/mem_load_flds clauses over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop domain; argument order follows HOL currying (sh addr dm m stcs) with no free bytes_in_word parameter - the canonical panBytesInWord width = n2w(width/8) is used internally; HOL's dropWhile Named lookup is inlined as an equivalent structural scan rendering the lexicographic (LENGTH stcs, shape_size) measure; direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "evalHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact width-indexed port of HOL panSem$eval_def expression clauses over the HOL-shaped PanSemHolState (locals/globals finite maps into the exact HolValue v carrier, StructContextHOL structs, total HolWordLab memory, Prop memaddrs word set with the classical [DecidablePred], be, base/top addr, bytes_in_word = panBytesInWord)); every clause reuses the tagged exact panMemLoadHOL/panMemLoad32HOL/panMemLoadByteHOL/wordOpHOL/wordShiftHOL/wordCmpHOL/isWfShapeHOL; direct HOL rows word_load_hit/byte_little_first/word32_little/op_add_fold_three/op_sub_wrong_arity match the Lean guards)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "mem_rel_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -8367,12 +8375,12 @@
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only generic-α helper (untagged): the exact width-indexed tag is on crepInlineLocalsRel_decClockW."
   },
-{
-  "hol_path": "cakeml/pancake/pan_commonScript.sml",
-  "hol_name": "distinct_lists_def",
-  "lean_path": "Flapjack/Pancake/PanCommon.lean",
-  "lean_name": "distinctListsHol",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-}
+  {
+    "hol_path": "cakeml/pancake/pan_commonScript.sml",
+    "hol_name": "distinct_lists_def",
+    "lean_path": "Flapjack/Pancake/PanCommon.lean",
+    "lean_name": "distinctListsHol",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
+  }
 ]

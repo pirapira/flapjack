@@ -311,6 +311,10 @@ val _ = print_eval "compile_exp_correct_load_byte"
      panSem$eval (pan_structsProof$convert_s ^ctxt ^load_byte_state)
        (pan_structs$compile_exp ^ctxt ^load_byte_expression) =
        SOME (pan_structsProof$convert_v ^load_byte_value))``;
+val load_byte_out_of_domain_state =
+  ``^load_byte_state with memaddrs := {}``;
+val _ = print_eval "compile_exp_correct_load_byte_out_of_domain"
+  ``panSem$eval ^load_byte_out_of_domain_state ^load_byte_expression``;
 
 val load32_64_state =
   ``(s:(64,'ffi) panSem$state) with <|

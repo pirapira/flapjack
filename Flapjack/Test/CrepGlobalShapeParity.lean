@@ -422,4 +422,57 @@ example : crepRuntimeLoad globalState (8 : Nat) =
 #guard (memLoadCrepHol (8 : Nat) memLoadBase == some (.word 7)) &&
   (memLoadCrepHol (9 : Nat) memLoadBase).isNone
 
+/-- Direct observations of the width-polymorphic tagged HOL `crep_op_def` port
+    `crepOpCrep`, matching `scripts/hol-probes/crep_op_probe.out` (HOL uses
+    `64 word`, i.e. `BitVec 64`):
+    `op_mul_two=SOME 21w`, `op_mul_one/op_mul_three/op_mul_empty=NONE`. -/
+example : crepOpCrep 64 .mul [(7 : BitVec 64), 3] = some 21 := by rfl
+
+example : crepOpCrep 64 .mul [(7 : BitVec 64)] = none := by rfl
+
+example : crepOpCrep 64 .mul [(7 : BitVec 64), 3, 1] = none := by rfl
+
+example : crepOpCrep 64 .mul ([] : List (BitVec 64)) = none := by rfl
+
+/-- Width polymorphism: the tagged port also works at 8-bit words. -/
+example : crepOpCrep 8 .mul [(7 : BitVec 8), 3] = some 21 := by rfl
+
+/-- The tagged port equals the generic untagged helper at every width. -/
+example : crepOpCrep 64 .mul [(7 : BitVec 64), 3] = crepOpValue .mul [(7 : BitVec 64), 3] := by
+  rw [crepOpCrep_eq_crepOpValue]
+
+/-- The production `.crepOp` evaluator clause is the HOL `OPT_MMAP`-then-`crep_op`
+    shape: at `.mul` the evaluated operands feed the generic value helper
+    `crepOpValue`, which is the tagged `crepOpCrep` at `BitVec width`. -/
+example :
+    evalCrepRuntimeExp globalState (.crepOp .mul [.const (7 : Nat), .const 3]) =
+      some 21 := by
+  simp [evalCrepRuntimeExp]
+
+#guard (crepOpCrep 64 .mul [(7 : BitVec 64), 3] == some 21) &&
+  (crepOpCrep 64 .mul [(7 : BitVec 64)]).isNone &&
+  (crepOpCrep 64 .mul [(7 : BitVec 64), 3, 1]).isNone &&
+  (crepOpCrep 64 .mul ([] : List (BitVec 64))).isNone
+
+/-- Canonical RISC-V 64 runtime state used for the executed `.crepOp` path. -/
+def bv64State : CrepRuntimeState (RiscV.Word 64) Unit :=
+  ({ locals := fun _ => none, globals := FEMPTY, code := FEMPTY,
+     memory := fun _ => .word 0, memaddrs := fun _ => false,
+     shMemaddrs := fun _ => false, clock := 1, bigEndian := false,
+     ffi := natCrepRuntimeFfiState, baseAddress := 0, topAddress := 0 } :
+    CrepHolState (RiscV.Word 64) Unit).toRuntime
+
+/-- Canonical RV64 executed-path instantiation: evaluating `.crepOp .mul` on a
+    `BitVec 64` runtime state is the tagged `crepOpCrep 64`, via the generic
+    `crepOpValue` helper and `crepOpCrep_eq_crepOpValue`. -/
+example :
+    evalCrepRuntimeExp bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      crepOpCrep 64 .mul [(7 : RiscV.Word 64), 3] := by
+  rw [evalCrepRuntimeExp_crepOp_eq, crepOpCrep_eq_crepOpValue]
+  simp only [evalCrepRuntimeExp]
+
+#guard evalCrepRuntimeExp bv64State
+    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
+
 end Flapjack.Test.CrepGlobalShapeParity

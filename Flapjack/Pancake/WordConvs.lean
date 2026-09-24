@@ -338,4 +338,65 @@ def callArgConvention {width : Nat} : WordLangProg (BitVec width) -> Bool
       callArgConvention thenBranch && callArgConvention elseBranch
   | _ => true
 
+/-- HOL `ARB : memop`, represented by a fixed representative. Untagged
+Flapjack-specific stand-in: `not_created_subprogs` cannot denote HOL's
+arbitrary value directly. The `no_alloc`/`no_install`/`no_mt`/`no_share_inst`
+specialisations below are invariant to this choice, because each only tests
+its own constant. -/
+def wordLangArbMemOp : WordMemOp := .load
+
+/-- HOL `wordConvs$not_created_subprogs_def` (`wordConvsScript.sml:536-566`)
+over the faithful backend WordLang syntax. `P` is `Prop`-valued (HOL's is
+`Bool`): the `Alloc`/`Install` clauses compare against `(LN,LN)` and the
+`ShareInst` clause against `ARB`, and `WordLangNumSet` has no decidable
+equality. The recursion and every constructor clause match HOL. Untagged:
+exact HOL statement shape is not claimed while the value is `Prop`. -/
+def notCreatedSubprogs {width : Nat}
+    (P : WordLangProg (BitVec width) → Prop) :
+    WordLangProg (BitVec width) → Prop
+  | .mustTerminate body => P (.mustTerminate .skip) ∧ notCreatedSubprogs P body
+  | .seq first second =>
+      notCreatedSubprogs P first ∧ notCreatedSubprogs P second
+  | .loop _ body _ => notCreatedSubprogs P body
+  | .ite _ _ _ thenBranch elseBranch =>
+      notCreatedSubprogs P thenBranch ∧ notCreatedSubprogs P elseBranch
+  | .call returns destination _arguments handler =>
+      P (.call none destination [] none) ∧
+        (match returns with
+          | none => True
+          | some (_, _, body, _, _) => notCreatedSubprogs P body) ∧
+        (match handler with
+          | none => True
+          | some (_, body, label, _) =>
+              P (.call none none [] (some (0, .skip, label, 0))) ∧
+                notCreatedSubprogs P body)
+  | .alloc _ _ => P (.alloc 0 ((FEMPTY : WordLangNumSet), (FEMPTY : WordLangNumSet)))
+  | .locValue _ label => P (.locValue 0 label)
+  | .shareInst _ _ _ => P (.shareInst wordLangArbMemOp 0 (.var 0))
+  | .install _ _ _ _ _ =>
+      P (.install 0 0 0 0 ((FEMPTY : WordLangNumSet), (FEMPTY : WordLangNumSet)))
+  | _ => True
+
+/-- HOL `wordConvs$no_alloc_subprogs_def`: `not_created_subprogs (λq. q ≠ Alloc 0 (LN,LN))`. -/
+def noAllocSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : Prop :=
+  notCreatedSubprogs
+    (fun q => q ≠ .alloc 0 ((FEMPTY : WordLangNumSet), (FEMPTY : WordLangNumSet)))
+    program
+
+/-- HOL `wordConvs$no_install_subprogs_def`. -/
+def noInstallSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : Prop :=
+  notCreatedSubprogs
+    (fun q => q ≠ .install 0 0 0 0 ((FEMPTY : WordLangNumSet), (FEMPTY : WordLangNumSet)))
+    program
+
+/-- HOL `wordConvs$no_mt_subprogs_def`. -/
+def noMtSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : Prop :=
+  notCreatedSubprogs (fun q => q ≠ .mustTerminate .skip) program
+
+/-- HOL `wordConvs$no_share_inst_subprogs_def`. -/
+def noShareInstSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : Prop :=
+  notCreatedSubprogs
+    (fun q => q ≠ .shareInst wordLangArbMemOp 0 (.var 0))
+    program
+
 end Flapjack

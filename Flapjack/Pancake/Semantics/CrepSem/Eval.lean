@@ -1151,6 +1151,19 @@ def holFiniteWordSourceAligned {ι : Type u}
   let exponent := Nat.log2 alignment
   decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
 
+/-- Source-model alignment is HOL `aligned` expressed through HOL `w2n`:
+    clearing `LOG2 alignment` low bits is divisibility by that power of two.
+    The address conversion is the weighted-SBIT sum proved for `w2n_def`. -/
+theorem holFiniteWordSourceAligned_eq_holW2N {ι : Type u}
+    (dimension : HolFiniteDimension ι) (alignment : Nat)
+    (address : ι → Bool) :
+    holFiniteWordSourceAligned dimension alignment address =
+      decide (holFiniteWordSBitSum dimension address %
+        (2 ^ Nat.log2 alignment) = 0) := by
+  change decide (holFiniteWordW2N dimension address %
+    (2 ^ Nat.log2 alignment) = 0) = _
+  rw [holFiniteWordW2N_eq_SBitSum]
+
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
     (bytes : List (ι → Bool)) : ι → Bool :=

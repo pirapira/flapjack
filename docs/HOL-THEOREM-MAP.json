@@ -717,7 +717,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, and a one-word Local Load32 under the explicit canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, and one-word Local LoadByte/Load32 under the explicit canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
   },
   {
     "hol_path": null,

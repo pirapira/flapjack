@@ -330,7 +330,7 @@ run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_prob
   ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_reg_format_probeScript.sml word_to_stack_reg_format_probe.out \
-  rf_reg1_high rf_format_var_some_frame "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  rf_reg1_high sa_inl_term "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinators_probe.out \
   lc_empty wss_two "$cake_dir/compiler/backend/stackLangScript.sml" \

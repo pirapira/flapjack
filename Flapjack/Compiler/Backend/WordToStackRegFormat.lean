@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Compiler.Backend.StackCarrier
+import Flapjack.Compiler.Backend.WordToStack
 
 /-!
 # Faithful Cake Word-to-Stack register-format helpers
@@ -109,5 +110,46 @@ def wRegWrite2 {α : Type} (g : Nat → InstW α)
 def formatVar (k : Nat) : Option Nat → Sum Nat Nat
   | none => .inl (k + 1)
   | some x => if x < k then .inl x else .inr x
+
+/-- Exact port of HOL `stack_move_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:288-291`):
+
+```
+(stack_move 0 start offset i p = p) /\
+(stack_move (SUC n) start offset i p =
+   Seq (stack_move n (start+1) offset i p)
+       (Seq (StackLoad i (start+offset)) (StackStore i start)))
+```
+
+    Builds the `StackLoad`/`StackStore` chain that moves `n` argument slots.
+    HOL is polymorphic in the word type `'a`; only `Seq`/`StackLoad`/`StackStore`
+    (num fields) are used, so the exact statement is over the canonical
+    shared-word `ProgW` carrier. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_move_def"]
+def stackMove {α : Type} (n start offset i : Nat) (p : ProgW α) : ProgW α :=
+  match n with
+  | 0 => p
+  | n + 1 =>
+    .seq (stackMove n (start + 1) offset i p)
+      (.seq (.stackLoad i (start + offset)) (.stackStore i start))
+
+/-- Exact port of HOL `StackArgs_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:293-297`):
+
+```
+StackArgs dest arg_count (k,f,f') =
+  let n = stack_arg_count dest arg_count k in
+    stack_move n 0 f k (StackAlloc n)
+```
+
+    Allocates the argument slots and moves the return/argument registers into
+    them.  Uses the already-ported `stackArgCount` and `stackMove`; HOL is
+    polymorphic in the word type `'a`, so the exact statement is over the
+    canonical shared-word `ProgW` carrier. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "StackArgs_def"]
+def stackArgs {α β γ : Type} (dest : Sum α β) (argCount : Nat)
+    (kf : Nat × Nat × Nat) : ProgW γ :=
+  let n := Flapjack.Compiler.Backend.WordToStack.stackArgCount dest argCount kf.1
+  stackMove n 0 kf.2.1 kf.1 (.stackAlloc n)
 
 end Flapjack.Compiler.Backend.WordToStackRegFormat

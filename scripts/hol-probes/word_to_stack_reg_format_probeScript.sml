@@ -54,3 +54,30 @@ val _ = print_eval "rf_format_var_some_reg"
   ``(word_to_stack$format_var 5 (SOME 2)) : (num, num) sum``;
 val _ = print_eval "rf_format_var_some_frame"
   ``(word_to_stack$format_var 5 (SOME 7)) : (num, num) sum``;
+
+(* stack_move / StackArgs (word_to_stackScript.sml:288-297).  Both are
+   polymorphic in the word type 'a and touch only Seq/StackLoad/StackStore/
+   StackAlloc (num fields); the `prog` results are compared structurally via
+   a boolean equality to avoid printing an unprintable word type.  Use
+   `stackLang$prog` at a concrete word type (64) so EVAL can reduce. *)
+
+val _ = print_eval "sm_zero"
+  ``(word_to_stack$stack_move 0 0 5 3 (stackLang$Skip) : 64 stackLang$prog) =
+      (stackLang$Skip)``;
+val _ = print_eval "sm_one"
+  ``(word_to_stack$stack_move 1 0 5 3 (stackLang$Skip) : 64 stackLang$prog) =
+      (stackLang$Seq (stackLang$Skip)
+        (stackLang$Seq (stackLang$StackLoad 3 5) (stackLang$StackStore 3 0)))``;
+val _ = print_eval "sm_two"
+  ``(word_to_stack$stack_move 2 0 5 3 (stackLang$Skip) : 64 stackLang$prog) =
+      (stackLang$Seq
+        (stackLang$Seq (stackLang$Skip)
+          (stackLang$Seq (stackLang$StackLoad 3 6) (stackLang$StackStore 3 1)))
+        (stackLang$Seq (stackLang$StackLoad 3 5) (stackLang$StackStore 3 0)))``;
+val _ = print_eval "sa_inr"
+  ``(word_to_stack$StackArgs (INR 4) 3 (2,7,9) : 64 stackLang$prog) =
+      (stackLang$StackAlloc 0)``;
+val _ = print_eval "sa_inl"
+  ``(word_to_stack$StackArgs (INL 4) 7 (2,7,9) : 64 stackLang$prog) =
+      (word_to_stack$stack_move 5 0 7 2 (stackLang$StackAlloc 5))``;
+

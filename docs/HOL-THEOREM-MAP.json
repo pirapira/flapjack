@@ -8712,6 +8712,22 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `format_var_def` at word_to_stackScript.sml:78-80 - format_var k NONE = INL (k+1) /\\ format_var k (SOME x) = if x < k then INL x else INR x - pure num/option/sum, no word operation or dimindex, exact with no width index; HOL-EVAL rows rf_format_var_none=INL 6/rf_format_var_some_reg=INL 2/rf_format_var_some_frame=INR 7 in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "stack_move_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "stackMove",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_move_def` at word_to_stackScript.sml:288-291 - stack_move 0 start offset i p = p /\\ stack_move (SUC n) start offset i p = Seq (stack_move n (start+1) offset i p) (Seq (StackLoad i (start+offset)) (StackStore i start)). HOL is fully polymorphic in the word type 'a and the body uses only Seq/StackLoad/StackStore with num fields, so the Lean def is exact stated over the canonical single-word-parameter carrier Flapjack.Compiler.Backend.StackCarrier.ProgW alpha with generic alpha; no word operation or dimindex. HOL-EVAL rows sm_zero/sm_one/sm_two in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "StackArgs_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "stackArgs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `StackArgs_def` at word_to_stackScript.sml:293-297 - StackArgs dest arg_count (k,f,f') = let n = stack_arg_count dest arg_count k in stack_move n 0 f k (StackAlloc n). HOL is fully polymorphic in the word type and the body uses only stack_arg_count (already ported exact) and stackMove over StackAlloc (num field), so the Lean def is exact over Flapjack.Compiler.Backend.StackCarrier.ProgW gamma with generic alpha/beta/gamma. HOL-EVAL rows sa_inr/sa_inl in scripts/hol-probes/word_to_stack_reg_format_probe.out reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",

@@ -299,6 +299,57 @@ example : wReg2 4 (3, 10, 12) = ([], 2) := rfl
 example : formatVar 5 none = Sum.inl 6 := rfl
 example : formatVar 5 (some 7) = Sum.inr 7 := rfl
 
+/-! ## stack_move / StackArgs oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.14`), for `stack_move` (`word_to_stackScript.sml:288`)
+and `StackArgs` (`:293`):
+
+```
+sm_zero=T   sm_one=T   sm_two=T   sa_inr=T   sa_inl=T
+```
+
+`ProgW` has no `BEq`/`DecidableEq`, so the rows are compared by pattern
+matching over the `Seq`/`StackLoad`/`StackStore`/`StackAlloc` fragment.
+-/
+
+abbrev StackMoveProg := Flapjack.Compiler.Backend.StackCarrier.ProgW (BitVec 64)
+
+/-- Structural equality for the `stack_move`/`StackArgs` fragment of `ProgW`. -/
+def stackMoveProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => stackMoveProgBEq a c && stackMoveProgBEq b d
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackAlloc n, .stackAlloc m => n == m
+  | _, _ => false
+
+def smSkip : StackMoveProg := .skip
+def smSeq (a b : StackMoveProg) : StackMoveProg := .seq a b
+def smLoad (r i : Nat) : StackMoveProg := .stackLoad r i
+def smStore (r i : Nat) : StackMoveProg := .stackStore r i
+def smAlloc (n : Nat) : StackMoveProg := .stackAlloc n
+
+def stackMoveParityGuard : Bool :=
+  stackMoveProgBEq (stackMove 0 0 5 3 smSkip) smSkip &&
+  stackMoveProgBEq (stackMove 1 0 5 3 smSkip)
+    (smSeq smSkip (smSeq (smLoad 3 5) (smStore 3 0))) &&
+  stackMoveProgBEq (stackMove 2 0 5 3 smSkip)
+    (smSeq (smSeq smSkip (smSeq (smLoad 3 6) (smStore 3 1)))
+      (smSeq (smLoad 3 5) (smStore 3 0))) &&
+  stackMoveProgBEq (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+      (Sum.inr 4) 3 (2, 7, 9)) (smAlloc 0) &&
+  stackMoveProgBEq (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+      (Sum.inl 4) 7 (2, 7, 9)) (stackMove 5 0 7 2 (smAlloc 5))
+
+#eval stackMoveParityGuard
+#guard stackMoveParityGuard
+
+example : stackMove (α := BitVec 64) 0 0 5 3 .skip = .skip := rfl
+example : stackArgs (α := Nat) (β := Nat) (γ := BitVec 64)
+    (Sum.inr 4) 3 (2, 7, 9) = .stackAlloc 0 := rfl
+
 /-! ## Executable bitmap recursion ↔ tagged recursion
 
 Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
@@ -474,6 +525,7 @@ def runChecks : IO Bool := do
   pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
-    progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard)
+    progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
+    stackMoveParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

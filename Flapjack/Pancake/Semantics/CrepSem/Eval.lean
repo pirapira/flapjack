@@ -1482,6 +1482,171 @@ def evalCrepHolFiniteDimensionExpWordLab {ι : Type}
   fun expression =>
     (evalCrepHolFiniteDimensionExp dimension state expression).map PanWordLab.word
 
+/-! Source equations for the HOL evaluator on an explicitly enumerated finite
+    word carrier. This helper follows crepSem$eval_def and the source memory
+    helpers. It is not tagged: the explicit finite-index encoding still needs
+    a theorem identifying it with HOL's implicit finite_index representation. -/
+def evalCrepHolFiniteWordSourceExp {ι : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) :
+    CrepExp (ι → Bool) → Option (ι → Bool)
+  | .const value => some value
+  | .var name => (state.locals name).map panTheWord
+  | .load address => do
+      let address ← evalCrepHolFiniteWordSourceExp dimension state address
+      if state.memaddrs address then some (panTheWord (state.memory address)) else none
+  | .load32 address => do
+      let address ← evalCrepHolFiniteWordSourceExp dimension state address
+      let model := holFiniteWordSourceMemoryModel dimension state.bigEndian
+      let bytesInWord := bitVecToHolWord dimension
+        (BitVec.ofNat dimension.width (dimension.width / 8))
+      crepHolEvalMemLoad32 model bytesInWord state address
+  | .loadByte address => do
+      let address ← evalCrepHolFiniteWordSourceExp dimension state address
+      let model := holFiniteWordSourceMemoryModel dimension state.bigEndian
+      let bytesInWord := bitVecToHolWord dimension
+        (BitVec.ofNat dimension.width (dimension.width / 8))
+      crepHolEvalMemLoadByte model bytesInWord state address
+  | .loadGlob address => (state.globals address).map panTheWord
+  | .op operator expressions => do
+      let values ← expressions.mapM
+        (evalCrepHolFiniteWordSourceExp dimension state)
+      let model := holFiniteWordSourceMemoryModel dimension state.bigEndian
+      model.wordOp operator values
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepHolFiniteWordSourceExp dimension state left
+      let right ← evalCrepHolFiniteWordSourceExp dimension state right
+      pure (holFiniteWordSourceMul dimension left right)
+  | .crepOp _ _ => none
+  | .cmp operator left right => do
+      let left ← evalCrepHolFiniteWordSourceExp dimension state left
+      let right ← evalCrepHolFiniteWordSourceExp dimension state right
+      let model := holFiniteWordSourceMemoryModel dimension state.bigEndian
+      pure (model.compare operator left right)
+  | .shift operator left right => do
+      let left ← evalCrepHolFiniteWordSourceExp dimension state left
+      let right ← evalCrepHolFiniteWordSourceExp dimension state right
+      let model := holFiniteWordSourceMemoryModel dimension state.bigEndian
+      model.shift operator left right
+  | .baseAddr => some state.baseAddress
+  | .topAddr => some state.topAddress
+termination_by expression => sizeOf expression
+
+/-! This all-constructor bridge connects production evaluation to the explicit
+    source equations above, including the source load model and source
+    multiplication. It remains Flapjack representation support until the
+    finite-index witness is related to HOL's implicit word carrier. -/
+theorem evalCrepRuntimeExp_sourceWord_eq {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool)) :
+    evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension) expression =
+      evalCrepHolFiniteWordSourceExp dimension state expression := by
+  letI : HolFiniteDimension ι := dimension
+  have evalExpsMapM (sourceState : CrepHolState (ι → Bool) σ) :
+      ∀ expressions,
+        evalCrepRuntimeExps
+            (sourceState.toHolFiniteWordSourceRuntime dimension) expressions =
+          expressions.mapM
+            (evalCrepRuntimeExp
+              (sourceState.toHolFiniteWordSourceRuntime dimension)) := by
+    intro expressions
+    induction expressions with
+    | nil => simp [evalCrepRuntimeExps]
+    | cons head tail ih => simp [evalCrepRuntimeExps, ih]
+  induction expression using
+      (CrepExp.rec (motive_2 := fun expressions =>
+        (∀ e, e ∈ expressions → ∀ (sourceState : CrepHolState (ι → Bool) σ),
+          evalCrepRuntimeExp
+              (sourceState.toHolFiniteWordSourceRuntime dimension) e =
+            evalCrepHolFiniteWordSourceExp dimension sourceState e) ∧
+        (∀ (sourceState : CrepHolState (ι → Bool) σ),
+          evalCrepRuntimeExps
+              (sourceState.toHolFiniteWordSourceRuntime dimension) expressions =
+            expressions.mapM
+              (evalCrepHolFiniteWordSourceExp dimension sourceState))))
+      generalizing state
+  case const value => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+  case var name =>
+    simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime]
+  case load address ih =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      Option.bind_eq_bind]
+    rw [ih state]
+    rfl
+  case load32 address ih =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      Option.bind_eq_bind]
+    rw [ih state]
+    cases hAddress : evalCrepHolFiniteWordSourceExp dimension state address with
+    | none => simp
+    | some value =>
+      simp only [Option.bind_some]
+      exact crepHolFiniteWordSourceRuntime_load32 state value
+  case loadByte address ih =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      Option.bind_eq_bind]
+    rw [ih state]
+    cases hAddress : evalCrepHolFiniteWordSourceExp dimension state address with
+    | none => simp
+    | some value =>
+      simp only [Option.bind_some]
+      exact crepHolFiniteWordSourceRuntime_loadByte state value
+  case loadGlob address =>
+    simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime]
+  case op operator expressions ih =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+    rw [← evalExpsMapM state expressions]
+    rw [ih.2 state]
+    rfl
+  case crepOp operator expressions ih =>
+    cases expressions with
+    | nil => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+    | cons left rest => cases rest with
+      | nil => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+      | cons right rest => cases rest with
+        | nil =>
+          cases operator with
+          | mul =>
+            simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+              Option.bind_eq_bind]
+            rw [ih.1 left (by simp) state, ih.1 right (by simp) state]
+            congr 1
+        | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+  case cmp operator left right ihLeft ihRight =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      Option.bind_eq_bind]
+    rw [ihLeft state, ihRight state]
+    rfl
+  case shift operator left right ihLeft ihRight =>
+    simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      Option.bind_eq_bind]
+    rw [ihLeft state, ihRight state]
+    rfl
+  case baseAddr =>
+    simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime]
+  case topAddr =>
+    simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+      CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime]
+  case nil => simp [evalCrepRuntimeExps]
+  case cons head tail ihHead ihTail =>
+    constructor
+    · intro e he sourceState
+      simp only [List.mem_cons] at he
+      rcases he with he | he
+      · subst e
+        exact ihHead sourceState
+      · exact ihTail.1 e he sourceState
+    · intro sourceState
+      simp [evalCrepRuntimeExps, ihHead sourceState, ihTail.2 sourceState]
+
 theorem evalCrepRuntimeExp_finiteDimension_const {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) (value : ι → Bool) :

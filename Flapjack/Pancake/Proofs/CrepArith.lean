@@ -716,6 +716,32 @@ theorem crepDest2ExpBound {n : Nat} [NeZero n]
   rw [hlogWrap]
   omega
 
+/-- Flapjack support for CakeML's `dest_2exp_bound`
+    (`crep_arithProofScript.sml:10`) over every explicit finite word
+    dimension. The right side encodes `w2n (word_log2 word)` by transporting
+    through `BitVec` and computing `Nat.log2`. It remains untagged: the
+    equality of this explicit `HolFiniteDimension`/`Nat.log2` encoding with
+    HOL's implicit `finite_index`/`word_log2` interpretation has not been
+    separately established. This recognizer bound does not assume either
+    `eval_mul_const` or `simp_exp_correct1`. -/
+theorem crepDest2ExpHolFiniteDimensionBoundSupport {ι : Type}
+    (dimension : HolFiniteDimension ι)
+    (start : Nat) (word : ι → Bool) (result : Nat)
+    (h : crepDest2Exp start word = some result) :
+    result ≤ start +
+      (holWordToBitVec dimension
+        (bitVecToHolWord dimension (BitVec.ofNat dimension.width
+          (Nat.log2 (holWordToBitVec dimension word).toNat)))).toNat := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hBits : crepDest2Exp start (holWordToBitVec dimension word) =
+      some result := by
+    rw [← crepDest2Exp_holFiniteDimension start word]
+    exact h
+  have hBound := crepDest2ExpBound start
+    (holWordToBitVec dimension word) result hBits
+  simpa only [holWordToBitVec_bitVecToHolWord] using hBound
+
 /-- Fixed-width support instance of HOL `dest_2exp_thm`. The HOL theorem is
     polymorphic in `'a word`; this declaration proves only the `RiscV.Word n`
     representation and therefore has no HOL tag. A genuinely generic theorem

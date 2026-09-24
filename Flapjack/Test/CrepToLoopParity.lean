@@ -511,6 +511,34 @@ example : crepToLoopCtxtMax (κ := String) 5
   change (fun _ : String => none) v = some m at hv
   simp at hv
 
+/-- Untagged `locals_rel` rendering (bead `flapjack-pxn.18.5.6.9`): the empty
+    context/source/target tuple satisfies every side condition vacuously. -/
+def localsRelContext : LoopContext Unit :=
+  { vars := [], functions := [], maxVar := 0, target := .rv64i }
+
+example : crepToLoopLocalsRel localsRelContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => none) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y n m hx
+    simp [localsRelContext, lookupNatInfo] at hx
+  · intro v m hv
+    simp [localsRelContext, lookupNatInfo] at hv
+  · intro n hn
+    simp at hn
+  · intro vname v hv
+    simp [FLOOKUP, FEMPTY] at hv
+
+/-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
+    local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
+    locals hold `wlab 9` at `5`. -/
+def localsRelLive : Nat → Bool := fun n => n == 5
+
+example : ∃ n, lookupNatInfo 1 [(1, 5)] = some n ∧ localsRelLive n = true ∧
+    (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
+      some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
+  ⟨5, rfl, by decide, by simp [wlabWloc]⟩
+
 /-! The following proofs exercise the *relation itself* on the same 8-bit
     cases as the checked-in HOL oracle, rather than only its total-memory view. -/
 example : crepToLoopMemRel

@@ -76,4 +76,12 @@ val _ = print_eval "mem_load_byte_def_big_first"
   ``mem_load_byte ^mem_little ^dm_little T 0w``;
 val _ = print_eval "mem_load_byte_def_missing"
   ``mem_load_byte ^mem_little ({} : 64 word set) F 0w``;
+val _ = print_eval "mem_load_32_def_little"
+  ``mem_load_32 ^mem_little ^dm_little F 0w``;
+val _ = print_eval "mem_load_32_def_big"
+  ``mem_load_32 ^mem_little ^dm_little T 0w``;
+val _ = print_eval "mem_load_32_def_misaligned"
+  ``mem_load_32 ^mem_little ^dm_little F 1w``;
+val _ = print_eval "mem_load_32_def_missing"
+  ``mem_load_32 ^mem_little ({} : 64 word set) F 0w``;
 val _ = print_eval "pan_sem_state_eval_done" ``0``;

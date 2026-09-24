@@ -84,6 +84,29 @@ private def bridgeGuard : Bool :=
 
 #guard bridgeGuard
 
+/-- Carrier-level register read and clock-independence. -/
+example : LoopSemState.getVarImm (.reg 0) exactState =
+    some (.word (BitVec.ofNat 8 7)) := rfl
+
+example : LoopSemState.getVarImm (.reg 0) { exactState with clock := 9 } =
+    LoopSemState.getVarImm (.reg 0) exactState :=
+  LoopSemState.getVarImm_clock (.reg 0) exactState 9
+
+/-- Carrier-level `get_vars` and clock-independence. -/
+example : LoopSemState.getVars [0] exactState =
+    some [.word (BitVec.ofNat 8 7)] := rfl
+
+example : LoopSemState.getVars [0, 1] exactState = none := rfl
+
+example : LoopSemState.getVars [0] { exactState with clock := 9 } =
+    LoopSemState.getVars [0] exactState :=
+  LoopSemState.getVars_clock [0] exactState 9
+
+/-- Exact carrier `get_var_imm` maps to the production read under the bridge. -/
+example : (LoopSemState.getVarImm (.reg 0) exactState).map loopValueOfWordLocW =
+    getVarImm machineState (.reg 0) :=
+  LoopSemState.getVarImm_map_eq_of_loopMachineStateRel bridgeSample (.reg 0)
+
 def runChecks : IO Bool := do
   if bridgeGuard then
     IO.println "PASS loopSem exact state carrier fields and production state bridge"

@@ -328,6 +328,82 @@ private def asmSyntaxGuard : Bool :=
 example : (Flapjack.BinOp.add : HolBinop) = Flapjack.BinOp.add := rfl
 example : (Flapjack.WordMemOp.store32 : HolMemop) = Flapjack.WordMemOp.store32 := rfl
 example : (HolProg 64) = Flapjack.Compiler.Backend.StackLang.Prog (HolInst 64)
-    HolCmp (HolRegImm 64) HolBinop HolMemop (HolAddr 64) String := rfl
+    HolCmp (HolRegImm 64) HolBinop HolMemop (HolAddr 64)
+    Flapjack.Compiler.Backend.MlString.MlString := rfl
+
+/-! ### Exact `stackLang$prog` carrier oracle parity (bead 18.5.15.3.11.2.2)
+
+`scripts/hol-probes/stack_lang_prog_carrier_probe.out` pins the HOL
+`64 stackLang$prog` FFI field (`mlstring`) and representative constructor
+shapes.  The rows below reproduce every oracle line with `HolProg 64`. -/
+
+private abbrev P64 := HolProg 64
+
+private def pSkip : P64 := Flapjack.Compiler.Backend.StackLang.Prog.skip
+
+private def pSeq (first second : P64) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.seq first second
+
+private def pInst (instruction : HolInst 64) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.inst instruction
+
+private def pGet (destination : Nat) (store : Flapjack.Compiler.Backend.StackLang.StoreName) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.get destination store
+
+private def pStackAlloc (words : Nat) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.stackAlloc words
+
+private def pShMem (operator : HolMemop) (register : Nat) (address : HolAddr 64) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.shMemOp operator register address
+
+private def pFfi (function : Flapjack.Compiler.Backend.MlString.MlString)
+    (configuration configurationLength array arrayLength returnAddress : Nat) : P64 :=
+  Flapjack.Compiler.Backend.StackLang.Prog.ffi function configuration configurationLength
+    array arrayLength returnAddress
+
+private def c8 (n : Nat) : Flapjack.Compiler.Backend.MlString.HolChar := BitVec.ofNat 8 n
+
+private def progInstTag : Nat :=
+  match pInst (.const 3 (w64 5)) with
+  | .inst (.const r v) => r + v.toNat
+  | _ => 0
+
+private def progGetTag : Nat :=
+  match pGet 7 (.temp 3) with
+  | .get n _ => n
+  | _ => 0
+
+private def progAllocTag : Nat :=
+  match pStackAlloc 4 with
+  | .stackAlloc n => n
+  | _ => 0
+
+private def progShMemTag : Nat :=
+  match pShMem (.load) 3 (.addr 4 (w64 5)) with
+  | .shMemOp _ r (.addr b off) => r + b + off.toNat
+  | _ => 0
+
+private def progFfiLen : Nat :=
+  match pFfi (Flapjack.Compiler.Backend.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
+  | .ffi s _ _ _ _ _ => s.explode.length
+  | _ => 0
+
+private def progSkipSeq : Bool :=
+  match pSeq pSkip pSkip with
+  | .seq .skip .skip => true
+  | _ => false
+
+private def progFfiExplode : List Flapjack.Compiler.Backend.MlString.HolChar :=
+  match pFfi (Flapjack.Compiler.Backend.MlString.MlString.implode [c8 65, c8 66]) 1 2 3 4 5 with
+  | .ffi s _ _ _ _ _ => s.explode
+  | _ => []
+
+private def progCarrierGuard : Bool :=
+  progSkipSeq &&
+  progInstTag == 8 && progGetTag == 7 && progAllocTag == 4 &&
+  progShMemTag == 12 && progFfiLen == 2 &&
+  progFfiExplode == [c8 65, c8 66]
+
+#guard progCarrierGuard
 
 end Flapjack.Test.AsmConfigChecksParity

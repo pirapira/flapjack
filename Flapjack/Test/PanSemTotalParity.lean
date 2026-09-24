@@ -1,5 +1,6 @@
 import Flapjack.Pancake.Semantics.PanSem.Total
 import Flapjack.Pancake.Semantics.PanSem.TotalMeasure
+import Flapjack.Pancake.Semantics.PanSem.TotalMeasureIf
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Test.PanValueFfiSemantics
 
@@ -349,6 +350,9 @@ def totalExprIfFailedLoad : PanSemExprIfFragmentRiscV64 :=
 def totalExprIfNonwordLocal : PanSemExprIfFragmentRiscV64 :=
   .ite (.var .local "y") (.leaf .tick) (.leaf .skip)
 
+def totalExprIfThenSeq : PanSemExprIfFragmentRiscV64 :=
+  .seq totalExprIfAddTrue (.leaf .skip)
+
 def totalExprIfFragmentGuard : Bool :=
   (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfAddTrue totalSeqFragmentState with
    | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
@@ -364,6 +368,32 @@ def totalExprIfFragmentGuard : Bool :=
    | (some .error, state) =>
        state.clock == 5 && isWordOption 3 (state.locals "x") &&
          (match state.locals "y" with | some (.rStruct []) => true | _ => false)
+   | _ => false)
+
+/-- The measure-driven implementation is checked against the same direct HOL
+    expression-If oracle rows as the structurally recursive support fragment. -/
+def totalExprIfFragmentMeasureGuard : Bool :=
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalExprIfAddTrue totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalExprIfSubZero totalSeqFragmentState with
+   | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalExprIfFailedLoad totalSeqFragmentState with
+   | (some .error, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalExprIfNonwordLocal totalSeqFragmentNonwordState with
+   | (some .error, state) =>
+       state.clock == 5 && isWordOption 3 (state.locals "x") &&
+         (match state.locals "y" with | some (.rStruct []) => true | _ => false)
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalExprIfThenSeq totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
    | _ => false)
 
 /-- A state whose global `g` is bound, for the global-assignment case. -/
@@ -400,7 +430,7 @@ def totalGuard : Bool :=
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
     seqContinueGuard && seqTickGuard && totalSeqFragmentGuard && totalIfFragmentGuard &&
-    totalExprIfFragmentGuard &&
+    totalExprIfFragmentGuard && totalExprIfFragmentMeasureGuard &&
     totalIfNonzeroGuard && totalIfZeroGuard &&
     totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
     totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&

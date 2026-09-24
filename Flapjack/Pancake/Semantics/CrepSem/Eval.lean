@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
+import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 
 /-!
@@ -11,6 +12,8 @@ type, and the source-shaped evaluator follows `crepSem$eval_def`.
 -/
 
 namespace Flapjack
+
+open Compiler.Encoders.Asm
 
 /-! HOL's polymorphic `'a word` carrier is a Boolean function indexed by the
     finite dimension type `'a`. This canonical `Fin width` representation
@@ -1517,7 +1520,10 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
     wordOp := fun operator values =>
       (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
         (bitVecToHolWord dimension)
-    compare := evalPanCmp
+    compare := fun operator left right =>
+      bitVecToHolWord dimension
+        (wordCmpResultHOL operator (holWordToBitVec dimension left)
+          (holWordToBitVec dimension right))
     shift := fun operator left right =>
       (wordShiftHOL operator (holWordToBitVec dimension left)
         (holWordToBitVec dimension right).toNat).map
@@ -1560,6 +1566,28 @@ def holFiniteWordSourceMemoryModelToBitVec {ι : Type u}
   transportPanMemoryModel (holWordToBitVec dimension)
     (bitVecToHolWord dimension)
     (holFiniteWordSourceMemoryModel dimension bigEndian)
+
+theorem wordCmpResultHOL_eq_evalPanCmp [NeZero width]
+    (operator : Cmp) (left right : BitVec width) :
+    wordCmpResultHOL operator left right = evalPanCmp operator left right := by
+  cases operator with
+  | equal => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
+  | less =>
+      simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less,
+        holAsmSignedLess, RiscV.signedLess]
+  | lower =>
+      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.lower]
+      rfl
+  | test => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
+  | notEqual => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
+  | notLess =>
+      have hless : holAsmSignedLess left right = RiscV.signedLess left right := rfl
+      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.less, hless]
+      by_cases h : RiscV.signedLess left right = true <;> simp [h]
+  | notLower =>
+      simp only [wordCmpResultHOL, wordCmpHOL, evalPanCmp, PanCmp.lower]
+      by_cases h : decide (left < right) = true <;> simp [h]
+  | notTest => simp [wordCmpResultHOL, wordCmpHOL, evalPanCmp]
 
 /-- The `setByte` field of the generic source memory model transports to its
     explicit BitVec slice operation. -/
@@ -1667,8 +1695,11 @@ theorem holFiniteWordSourceMemoryModel_compare_toBitVec {ι : Type u}
       RiscV.panRiscVCmp operator (holWordToBitVec dimension left)
         (holWordToBitVec dimension right) := by
   letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
-  change holWordToBitVec dimension (evalPanCmp operator left right) = _
-  rw [holFiniteWord_evalPanCmp_toBitVec]
+  change holWordToBitVec dimension
+    (bitVecToHolWord dimension
+      (wordCmpResultHOL operator (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right))) = _
+  rw [holWordToBitVec_bitVecToHolWord, wordCmpResultHOL_eq_evalPanCmp]
   exact (panRiscVCmp_eq_evalPanCmp operator _ _).symm
 
 /-- A load model with HOL's dimension-derived byte alignment and the existing

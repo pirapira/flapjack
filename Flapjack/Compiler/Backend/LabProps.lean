@@ -512,6 +512,60 @@ theorem flatten_call_some_lines_all (config : Flapjack.Compiler.Encoders.Asm.Asm
             lineOkPreConfig_labAsm, lineOkPreConfig_label]
           rfl
 
+/-- `Call (some ...) _ none` variant of the composition step: the bundled
+`flatten_call_some_lines_all` requires a handler obligation even when the
+handler is `none`, which the `stackAsmOk`-carrying induction cannot supply for
+an arbitrary handler program.  This variant keeps only the return obligation. -/
+theorem flatten_call_some_none_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel : Nat)
+    (target : Sum Nat Nat) (sectionId next : Nat) (conts breaks : List Nat)
+    (hjump : lineOkPreConfig config
+      (StackToLab.compileJump (flattenOps (width := width)) (0 : BitVec width) target : FlatLineC width) = true)
+    (ihRet : ∀ n, (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false returnProgram
+        sectionId n conts breaks).1.all (lineOkPreConfig config) = true) :
+    ((StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) tail
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target none : FlattenProg width)
+        sectionId next conts breaks).1.all (lineOkPreConfig config)) = true := by
+  simp only [StackToLab.flatten]
+  cases h1 : StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false returnProgram
+      sectionId next conts breaks with
+  | mk xs r1 => cases r1 with | mk nr1 nx =>
+    have ihR : xs.all (lineOkPreConfig config) = true := by simpa only [h1] using ihRet next
+    simp only [List.all_append, List.all_cons, List.all_nil, ihR, hjump,
+      lineOkPreConfig_labAsm, lineOkPreConfig_label]
+    rfl
+
+/-- `Call (some ...) _ (some ...)` variant of the composition step taking the
+handler obligation at any label counter, so the `stackAsmOk`-carrying
+induction can discharge it from the handler program's own hypothesis. -/
+theorem flatten_call_some_some_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel : Nat)
+    (target : Sum Nat Nat) (handlerProgram : FlattenProg width) (handlerSection handlerLabel : Nat)
+    (sectionId next : Nat) (conts breaks : List Nat)
+    (hjump : lineOkPreConfig config
+      (StackToLab.compileJump (flattenOps (width := width)) (0 : BitVec width) target : FlatLineC width) = true)
+    (ihRet : ∀ n, (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false returnProgram
+        sectionId n conts breaks).1.all (lineOkPreConfig config) = true)
+    (ihHandler : ∀ n, (StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false handlerProgram
+        sectionId n conts breaks).1.all (lineOkPreConfig config) = true) :
+    ((StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) tail
+        (.call (some (returnProgram, linkRegister, returnSection, returnLabel)) target
+          (some (handlerProgram, handlerSection, handlerLabel)) : FlattenProg width)
+        sectionId next conts breaks).1.all (lineOkPreConfig config)) = true := by
+  simp only [StackToLab.flatten]
+  cases h1 : StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false returnProgram
+      sectionId next conts breaks with
+  | mk xs r1 => cases r1 with | mk nr1 nx =>
+    have ihR : xs.all (lineOkPreConfig config) = true := by simpa only [h1] using ihRet next
+    cases h2 : StackToLab.flatten (flattenOps (width := width)) (0 : BitVec width) false handlerProgram
+        sectionId nx conts breaks with
+    | mk ys r2 => cases r2 with | mk nr2 ny =>
+      have ihH : ys.all (lineOkPreConfig config) = true := by
+        simpa only [h2] using ihHandler nx
+      simp only [List.all_append, List.all_cons, List.all_nil, ihR, ihH, hjump,
+        lineOkPreConfig_labAsm, lineOkPreConfig_label]
+      rfl
+
 theorem lineOkPreConfig_compileJump_inl (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (sectionId : Nat) :
     lineOkPreConfig config
@@ -643,6 +697,41 @@ theorem stackAsmOk_asmChecksOfConfig_call_some_inl_some
       (StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) returnProgram = true ∧
         StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) handlerProgram = true) := by
   simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Bool.and_eq_true]
+
+theorem stackAsmOk_asmChecksOfConfig_call_none_inl
+    (sectionId : Nat) (handler : Option (FlattenProg width × Nat × Nat)) :
+    StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+      (.call none (.inl sectionId) handler : FlattenProg width) = true := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig]
+
+theorem stackAsmOk_asmChecksOfConfig_call_none_inr
+    (register : Nat) (handler : Option (FlattenProg width × Nat × Nat)) :
+    StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+      (.call none (.inr register) handler : FlattenProg width) =
+      Flapjack.Compiler.Encoders.Asm.asmRegOk config register := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Flapjack.Compiler.Encoders.Asm.asmRegOk]
+
+theorem stackAsmOk_asmChecksOfConfig_call_some_inr_none
+    (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel register : Nat) :
+    StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+      (.call (some (returnProgram, linkRegister, returnSection, returnLabel))
+        (.inr register) none : FlattenProg width) =
+      (Flapjack.Compiler.Encoders.Asm.asmRegOk config register &&
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) returnProgram) := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Flapjack.Compiler.Encoders.Asm.asmRegOk]
+
+theorem stackAsmOk_asmChecksOfConfig_call_some_inr_some
+    (returnProgram : FlattenProg width) (linkRegister returnSection returnLabel register : Nat)
+    (handlerProgram : FlattenProg width) (handlerSection handlerLabel : Nat) :
+    StackProps.stackAsmOk (StackProps.asmChecksOfConfig config)
+      (.call (some (returnProgram, linkRegister, returnSection, returnLabel))
+        (.inr register) (some (handlerProgram, handlerSection, handlerLabel)) :
+          FlattenProg width) =
+      (Flapjack.Compiler.Encoders.Asm.asmRegOk config register &&
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) returnProgram &&
+        StackProps.stackAsmOk (StackProps.asmChecksOfConfig config) handlerProgram) := by
+  simp [StackProps.stackAsmOk, StackProps.asmChecksOfConfig, Flapjack.Compiler.Encoders.Asm.asmRegOk,
+    Bool.and_assoc]
 
 end StackAsmOkBridge
 

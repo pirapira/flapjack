@@ -28,6 +28,12 @@ They evaluate the condition from the complete source state before invoking
 the selected total branch callback. The oracle includes a condition that
 successfully evaluates to `RStruct []` as well as an unbound local and a failed
 load; each produces `SOME Error` without changing the state.
+
+The recursive sequence-fragment checks below pair with
+`scripts/hol-probes/pan_sem_seq_e2e_probe.out` (`panSemScript.sml:615-618`):
+two `Skip`s, first-command `Break`/`Continue`, and `Tick` followed by `Skip`.
+The fragment evaluator is structural on those source syntax forms and returns
+HOL's result option with the complete source state.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -237,6 +243,36 @@ def seqContinueGuard : Bool :=
   | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
+def totalSeqFragmentState : PanSemState Word64 (FfiState Unit) :=
+  { totalState 5 with
+    locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 3)) }
+
+def totalSeqFragmentNormal : PanSemSeqFragment Word64 :=
+  .seq (.leaf .skip) (.leaf .skip)
+
+def totalSeqFragmentBreak : PanSemSeqFragment Word64 :=
+  .seq (.leaf .break) (.leaf .skip)
+
+def totalSeqFragmentContinue : PanSemSeqFragment Word64 :=
+  .seq (.leaf .continue) (.leaf .skip)
+
+def totalSeqFragmentTick : PanSemSeqFragment Word64 :=
+  .seq (.leaf .tick) (.leaf .skip)
+
+def totalSeqFragmentGuard : Bool :=
+  (match panSemEvaluateSeqFragment totalSeqFragmentNormal totalSeqFragmentState with
+   | (none, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentBreak totalSeqFragmentState with
+   | (some .break, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentContinue totalSeqFragmentState with
+   | (some .continue, state) => state.clock == 5 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateSeqFragment totalSeqFragmentTick totalSeqFragmentState with
+   | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false)
+
 /-- A state whose global `g` is bound, for the global-assignment case. -/
 def totalAssignState : PanSemState Word64 (FfiState Unit) :=
   { totalState 5 with
@@ -270,7 +306,8 @@ def totalGuard : Bool :=
   skipGuard && tickSuccGuard && tickZeroGuard && totalSkipClauseGuard &&
     totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
     totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
-    seqContinueGuard && seqTickGuard && totalIfNonzeroGuard && totalIfZeroGuard &&
+    seqContinueGuard && seqTickGuard && totalSeqFragmentGuard &&
+    totalIfNonzeroGuard && totalIfZeroGuard &&
     totalIfMissingGuard && totalIfExpressionNonzeroGuard && totalIfExpressionZeroGuard &&
     totalIfExpressionNonwordGuard && totalIfExpressionNonwordValueGuard &&
     totalIfExpressionLoadFailureGuard &&

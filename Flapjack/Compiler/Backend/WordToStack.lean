@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Misc.AppList
 
 /-!
 # Faithful Cake Word-to-Stack bitmap helpers
@@ -6,7 +7,8 @@ import Flapjack.HolRef
 Lean counterpart of `cakeml/compiler/backend/word_to_stackScript.sml`, the
 Word-to-Stack pass of the CakeML RISC-V backend.  This module currently ports
 the pure bitmap prerequisites `bits_to_word`, `word_list`, `chunk_to_bits`,
-`chunk_to_bitmap` and `const_words_to_bitmap`, which the pass uses to build the
+`chunk_to_bitmap`, `const_words_to_bitmap` and `insert_bitmap`, which the pass
+uses to build the
 GC/liveness bitmaps consumed by `compile_word_to_stack` and, eventually, by the
 Word-to-Stack `compile_semantics` theorem
 (`word_to_stackProofScript.sml:10709`).
@@ -184,5 +186,24 @@ theorem writeBitmapHOL_domain_insensitive {width : Nat} [NeZero width]
     exact decide_eq_decide.mpr (hmap x)
   simp only [writeBitmapHOL]
   rw [hlist]
+
+/-- HOL `insert_bitmap_def` (`word_to_stackScript.sml:246`):
+    `insert_bitmap ws (data,data_len) = let l = LENGTH ws in
+       ((Append data (List ws), data_len + l), data_len)`.
+
+    `insert_bitmap` threads the `app_list`/`num` pair built by `write_bitmap`
+    (`:256`) and is used by the `comp` `StoreConsts` clause (`:532`).
+
+    HOL is fully polymorphic in the word element type `'a`, and `insert_bitmap`
+    uses no word operation (`Append`/`List` are the `misc$app_list`
+    constructors; `LENGTH`/`+` are list/nat), so there is no `dimindex(:'a)` to
+    specialise and the generic-`α` port below is the exact HOL body.  This is
+    the same carrier choice as the reviewed `app_list`/`append_aux`/`append`
+    tags in `Flapjack.Misc.AppList`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "insert_bitmap_def"]
+def insertBitmap {α : Type} (ws : List α) (bitmaps : AppList α × Nat) :
+    (AppList α × Nat) × Nat :=
+  let l := ws.length
+  ((AppList.append bitmaps.1 (AppList.list ws), bitmaps.2 + l), bitmaps.2)
 
 end Flapjack.Compiler.Backend.WordToStack

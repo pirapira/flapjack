@@ -380,6 +380,34 @@ def stores [BEq α] [OfNat α 0] [Add α]
       let destination := if offset == 0 then address else .op .add [address, .const offset]
       .store destination value :: stores address values (offset + stride) stride
 
+/-- Exact width-indexed port of HOL `crepLang$stores_def`
+    (`cakeml/pancake/crepLangScript.sml:95-100`): HOL's address/offset are
+    `'a word` and the stride is the fixed `byte$bytes_in_word`
+    (`BitVec.ofNat width (width / 8)`).  Clause-for-clause identical to the
+    generic `stores` once the stride is fixed. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "stores_def"]
+def storesW {width : Nat} (address : CrepExp (BitVec width))
+    (values : List (CrepExp (BitVec width))) (offset : BitVec width) :
+    List (CrepProg (BitVec width)) :=
+  match values with
+  | [] => []
+  | value :: values =>
+      let destination := if offset == 0 then address else .op .add [address, .const offset]
+      .store destination value ::
+        storesW address values (offset + BitVec.ofNat width (width / 8))
+
+/-- Untagged bridge showing the generic stride-parametric `stores` (the
+    executed helper; production passes `CrepBytesInWord.bytesInWord`) is the
+    exact width-indexed `storesW` when the stride is the machine byte width. -/
+theorem storesW_eq_stores {width : Nat} (address : CrepExp (BitVec width))
+    (values : List (CrepExp (BitVec width))) (offset : BitVec width) :
+    storesW address values offset =
+      stores address values offset (BitVec.ofNat width (width / 8)) := by
+  induction values generalizing offset with
+  | nil => rfl
+  | cons value values ih => simp [storesW, stores, ih]
+
+
 /- FLAPJACK-SPECIFIC (not an exact HOL port): this helper is generic over
     `CrepProg α`/`CrepExp α`, while HOL `crepLang$prog`/`exp` are indexed by
     the word length (`'a word`). The exact width-indexed tag is on the

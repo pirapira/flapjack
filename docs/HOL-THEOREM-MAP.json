@@ -8334,5 +8334,13 @@
     "lean_name": "crepExpsW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against exps_def in crepLangScript.sml; HOL prog/exp are indexed by the word length, so the exact tag is on the width-indexed wrapper over CrepProg/CrepExp (BitVec width); the generic crepLang helper remains untagged Flapjack infrastructure; no NeZero needed since the word value is never inspected; parity tests and HOL probes as cited)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "stores_def",
+    "lean_path": "Flapjack/Pancake/CrepLang.lean",
+    "lean_name": "storesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against stores_def at crepLangScript.sml:95-100; HOL address/offset are 'a word and the stride is the fixed byte$bytes_in_word (BitVec.ofNat width (width/8) here); clause-for-clause identical to the untagged stride-parametric stores, with the untagged bridge storesW_eq_stores; direct HOL-EVAL rows empty/zero_two/nonzero_two in scripts/hol-probes/crep_stores_probe.out reproduced by guards in Flapjack/Test/CrepeStoresParity.lean)"
   }
 ]

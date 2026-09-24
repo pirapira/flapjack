@@ -98,9 +98,7 @@ def evaluateNonClockedCallBadReturnShape :=
 def observeNonClockedCallBadReturnShape : Bool :=
   match evaluateNonClockedCallBadReturnShape with
   | some (.error locals _ _ _, _) =>
-      match locals "x" with
-      | some (.word value) => value == BitVec.ofNat 64 4
-      | _ => false
+      (locals "x").isNone
   | _ => false
 
 private abbrev Word64 := Word 64

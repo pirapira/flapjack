@@ -312,6 +312,9 @@ run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_pr
 run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_probe.out \
   ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinators_probe.out \
+  lc_empty wss_two "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

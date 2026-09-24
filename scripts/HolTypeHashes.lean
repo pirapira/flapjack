@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.AppList

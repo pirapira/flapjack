@@ -24,6 +24,97 @@ structure WordColourStateRelation (colour : Nat → Nat) [NeZero width]
     readRegister source ⟨name, hname⟩ =
       readRegister target ⟨colour name, hcolour⟩
 
+/-- The HOL `strong_locals_rel` relation is scoped to the variables live at a
+    program point. This small RISC-V state relation records the same scoping:
+    dead variables may share a colour with live variables. -/
+structure WordColourStateRelationOn (colour : Nat → Nat) (live : List Nat)
+    [NeZero width] (source target : State width) : Prop where
+  pc : source.pc = target.pc
+  memory : source.memory = target.memory
+  privilege : source.privilege = target.privilege
+  mode : source.mode = target.mode
+  register : ∀ (name : Nat) (_ : name ∈ live) (hname : name < 32)
+      (hcolour : colour name < 32),
+    readRegister source ⟨name, hname⟩ =
+      readRegister target ⟨colour name, hcolour⟩
+
+theorem wordColourStateRelationOn_nextPc
+    (colour : Nat → Nat) (live : List Nat)
+    (source target : State width) [NeZero width]
+    (hrelation : WordColourStateRelationOn colour live source target) :
+    WordColourStateRelationOn colour live
+      {source with pc := nextPc source} {target with pc := nextPc target} := by
+  constructor
+  · simp [nextPc, hrelation.pc]
+  · exact hrelation.memory
+  · exact hrelation.privilege
+  · exact hrelation.mode
+  · exact hrelation.register
+
+theorem wordColourStateRelationOn_writeRegister
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (live : List Nat) (hrelation : WordColourStateRelationOn colour live source target)
+    (name : Nat) (hname : name < 32)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ live → current ≠ name
+      → colour current ≠ colour name)
+    (value targetValue : Word width) (hvalue : value = targetValue) :
+    WordColourStateRelationOn colour live
+      (writeRegister source ⟨name, hname⟩ value)
+      (writeRegister target ⟨colour name, valid name hname⟩ targetValue) := by
+  by_cases hzero : name = 0
+  · have hcolourZero : colour name = 0 := by simpa [hzero] using colourZero
+    simpa [writeRegister, hzero, hcolourZero, colourZero] using hrelation
+  · have hsourceNonzero : (⟨name, hname⟩ : Fin 32) ≠ 0 := by
+      intro h
+      exact hzero (congrArg Fin.val h)
+    have hcolourNonzero' : colour name ≠ 0 := hcolourNonzero hzero
+    have htargetNonzero :
+        (⟨colour name, valid name hname⟩ : Fin 32) ≠ 0 := by
+      intro h
+      exact hcolourNonzero' (congrArg Fin.val h)
+    constructor
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.pc
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.memory
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.privilege
+    · simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false]
+      exact hrelation.mode
+    · intro current hcurrent hcurrentValid hcurrentColourValid
+      by_cases hsame : current = name
+      · subst current
+        have hsourceEq :
+            (⟨name, hcurrentValid⟩ : Fin 32) = ⟨name, hname⟩ := by
+          apply Fin.ext
+          rfl
+        have htargetEq :
+            (⟨colour name, hcurrentColourValid⟩ : Fin 32) =
+              ⟨colour name, valid name hname⟩ := by
+          apply Fin.ext
+          rfl
+        simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false,
+          readRegister]
+        simp only [hsourceEq, htargetEq, if_true]
+        exact hvalue
+      · have htargetSame :
+            (⟨colour current, hcurrentColourValid⟩ : Fin 32) ≠
+              (⟨colour name, valid name hname⟩ : Fin 32) := by
+          intro h
+          apply hnoAlias current hcurrent hsame
+          exact congrArg Fin.val h
+        have hsourceCurrent :
+            (⟨current, hcurrentValid⟩ : Fin 32) ≠ ⟨name, hname⟩ := by
+          intro h
+          exact hsame (congrArg Fin.val h)
+        simp only [writeRegister, hsourceNonzero, htargetNonzero, if_false,
+          readRegister]
+        rw [if_neg hsourceCurrent, if_neg htargetSame]
+        exact hrelation.register current hcurrent hcurrentValid hcurrentColourValid
+
 theorem wordColourStateRelation_nextPc
     (colour : Nat → Nat) (_valid : wordColourValid colour)
     (source target : State width) [NeZero width]
@@ -159,6 +250,72 @@ theorem evalWordProg_assignVar_applyColour
   exact ⟨_, _, hsourceEval, htargetEval,
       wordColourStateRelation_executeAddi colour valid injective colourZero
       source target hrelation name sourceName hname hsource⟩
+
+/-! This assignment case needs only a live-set relation and a local no-clash
+    condition. In particular, the source and destination may have the same
+    colour because the source is read before the destination is written.
+
+    Keep this untagged: HOL `word_allocProof$evaluate_apply_colour` quantifies
+    over every Word program, uses `word_state_eq_rel` and
+    `strong_locals_rel f (domain (get_live prog live lt))`, and existentially
+    chooses the source permutation. This Lean support theorem covers only one
+    `assign` over the executable RISC-V `State`, with explicit `liveAfter`, a
+    destination nonzero-colour premise, and a caller-supplied no-alias premise;
+    it does not model HOL's permutation or derive liveness/clashes from
+    `colouring_ok`. -/
+theorem evalWordProg_assignVar_applyColour_live
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (colourZero : colour 0 = 0)
+    (source target : State width) [NeZero width]
+    (liveAfter : List Nat)
+    (name sourceName : Nat) (hname : name < 32) (hsource : sourceName < 32)
+    (hrelation : WordColourStateRelationOn colour (sourceName :: liveAfter)
+      source target)
+    (hcolourNonzero : name ≠ 0 → colour name ≠ 0)
+    (hnoAlias : ∀ current, current ∈ liveAfter → current ≠ name
+      → colour current ≠ colour name) :
+    ∃ source' target',
+      evalWordProg source (.assign name (.var sourceName)) = some source' ∧
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) = some target' ∧
+      WordColourStateRelationOn colour liveAfter source' target' := by
+  have hsourceRelation := hrelation.register sourceName (by simp) hsource
+    (valid sourceName hsource)
+  have hliveRelation : WordColourStateRelationOn colour liveAfter source target := by
+    refine ⟨hrelation.pc, hrelation.memory, hrelation.privilege,
+      hrelation.mode, ?_⟩
+    intro current hcurrent hcurrentValid hcurrentColourValid
+    exact hrelation.register current (by simp [hcurrent]) hcurrentValid
+      hcurrentColourValid
+  have hnext := wordColourStateRelationOn_nextPc colour liveAfter source target
+    hliveRelation
+  have hvalue :
+      readRegister source ⟨sourceName, hsource⟩ + 0 =
+        readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0 := by
+    rw [hsourceRelation]
+  have hsourceEval :
+      evalWordProg source (.assign name (.var sourceName)) =
+        some (execute source (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hname, hsource, executeInstructions]
+  have htargetEval :
+      evalWordProg target
+        (wordApplyColour colour (.assign name (.var sourceName))) =
+          some (execute target
+            (.addi ⟨colour name, valid name hname⟩
+              ⟨colour sourceName, valid sourceName hsource⟩ 0)) := by
+    rw [wordApplyColour_assign]
+    simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, valid name hname, valid sourceName hsource,
+      executeInstructions]
+  have hstate := wordColourStateRelationOn_writeRegister colour valid
+    colourZero {source with pc := nextPc source} {target with pc := nextPc target}
+    liveAfter hnext name hname hcolourNonzero hnoAlias
+    (readRegister source ⟨sourceName, hsource⟩ + 0)
+    (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0)
+    hvalue
+  exact ⟨_, _, hsourceEval, htargetEval, by
+    simpa [execute, colourZero] using hstate⟩
 
 theorem evalWordProg_assignConst_applyColour
     (colour : Nat → Nat) (valid : wordColourValid colour)

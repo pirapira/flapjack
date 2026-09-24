@@ -6878,5 +6878,37 @@
     "lean_name": "panToCrepMakeVmapHOL_eq_ctxtFcVars",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific bridge for HOL mk_ctxt_code_imp_code_rel (HOL discharges inside gvs[ctxt_fc_def, make_vmap_def]); direct probe scripts/hol-probes/crep_vmap_ctxtfc_probe.out."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "FLOOKUP_FUPDATE_LIST_reverse_eq_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific finite-map support: FLOOKUP after FUPDATE_LIST of a reversed association list equals List.lookup on the original list (first occurrence wins), matching HOL alist_to_fmap/ALOOKUP. Not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "lookup_map_preserveFst",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific list fact: a key-preserving projection commutes with List.lookup (HOL ALOOKUP_MAP analogue used inside mk_ctxt_code_imp_code_rel). Not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "makeFuncsHOL_lookup_of_lookup",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific lookup link for HOL make_funcs: a source function entry is visible in the make_funcs finite map with its parameter list and return shape. HOL discharges this inside mk_ctxt_code_imp_code_rel; not a standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "alookupCompileToCrepCodeGeneral",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Parameter-general companion of the tagged alookupCompileToCrepCode: a source entry with arbitrary parameters compiles to the entry with crep_vars slots and comp_func body. HOL discharges it inside mk_ctxt_code_imp_code_rel; not a standalone HOL declaration."
   }
 ]

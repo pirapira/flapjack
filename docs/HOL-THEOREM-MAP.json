@@ -7318,5 +7318,53 @@
     "lean_name": "distinctLists_eq_true_iff",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack helper: characterises distinctLists as set-disjointness (no HOL declaration)."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "labels_rel_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "labels_rel_refl",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel_refl",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "labels_rel_APPEND",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel_append",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "labels_rel_CONS",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel_cons",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "labels_rel_TRANS",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel_trans",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "PERM_IMP_labels_rel",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "labelsRel_of_perm",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

@@ -1,0 +1,5 @@
+dec_deg_in_bounds_result=M_success ()
+dec_deg_in_bounds_degrees=[2]
+dec_deg_out_of_bounds_result=M_failure Subscript
+degrees_sub_out_of_bounds_result=M_failure Subscript
+update_degrees_out_of_bounds_result=M_failure Subscript

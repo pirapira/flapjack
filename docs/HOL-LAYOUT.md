@@ -13,9 +13,24 @@ are present. `pending_statement_review` and
 claims of HOL correspondence. `documented_mismatch` records a known source
 candidate whose Lean analogue remains untagged because its statement differs;
 the mismatch must be explained beside the Lean declaration. The inventory
+uses `reviewed_list_as_array` when the HOL list fields are represented by Lean
+arrays. For each qualified field, the reference checker requires a same-module
+structure field and a `holListArrayWitness_<field>` theorem relating that field
+to its HOL list with `RepresentsHOLNodeList`, without assuming that relation in
+the witness premises. This checks witness shape and Lean kernel acceptance; it
+does not establish cross-language equivalence by itself. Ordinary exact tags retain
+`reviewed_exact`. The inventory
 recognizes `theorem` and `lemma` declarations only; `#check` commands and
 comments do not count as theorem entries or tests. Correctness claims are described in
 [`SOUNDNESS.md`](SOUNDNESS.md).
+
+The qualifier covers only the named representation fields; evaluator,
+state-transition, error, hypothesis, and conclusion details must still match
+HOL. A bounded `CakeNodeMap`/HOL-list relation is illustrated by
+`RepresentsHOLNodeList`, `ofList_representsHOLNodeList`, and
+`set_representsHOLNodeList` in `Flapjack/RiscV/CakeRegAlloc.lean`. See
+[`AGENTS.md`](../AGENTS.md#qualify-only-named-list-to-array-state-fields) for
+the review rule and the `dec_deg` out-of-range mismatch example.
 
 | HOL script | Lean counterpart |
 | --- | --- |

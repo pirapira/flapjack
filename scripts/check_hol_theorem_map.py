@@ -31,6 +31,7 @@ THEOREM_RE = re.compile(
 )
 VALID_STATUSES = {
     "reviewed_exact",
+    "reviewed_list_as_array",
     "pending_statement_review",
     "documented_mismatch",
     "no_hol_reference_pending_classification",
@@ -122,19 +123,21 @@ def proof_theorem_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
     return declarations
 
 
-def tagged_declarations(root: Path = ROOT) -> dict[tuple[str, str], tuple[str, str]]:
+def tagged_declarations(
+    root: Path = ROOT,
+) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...]]]:
     """Return Lean file/name to HOL file/name for every active ``@[hol]``."""
-    tagged: dict[tuple[str, str], tuple[str, str]] = {}
+    tagged: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
     for path in REFS["lean_files"]():
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
-        for line, hol_path, hol_name, _hol_line in HOL_ATTRIBUTE_SITES(lines):
+        for line, hol_path, hol_name, _hol_line, fields in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
-            value = (hol_path, hol_name)
+            value = (hol_path, hol_name, fields)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -145,8 +148,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     """Build a review inventory template without claiming statement review."""
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
-    for (lean_path, lean_name), (hol_path, hol_name) in tagged.items():
-        inventory[(lean_path, lean_name)] = {
+    for (lean_path, lean_name), (hol_path, hol_name, fields) in tagged.items():
+        entry = {
             "hol_path": hol_path,
             "hol_name": hol_name,
             "lean_path": lean_path,
@@ -154,6 +157,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             "statement_status": "pending_statement_review",
             "reviewer": "Codex (reference inventory)",
         }
+        if fields:
+            entry["list_as_array"] = list(fields)
+        inventory[(lean_path, lean_name)] = entry
 
     for lean_path, lean_name in proof_theorem_declarations(root):
         inventory.setdefault(
@@ -237,7 +243,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
 def validate_inventory(
     records: list[dict[str, Any]],
     proof_declarations: set[tuple[str, str]],
-    tagged: dict[tuple[str, str], tuple[str, str]],
+    tagged: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]],
 ) -> list[str]:
     errors: list[str] = []
     by_key: dict[tuple[str, str], dict[str, Any]] = {}
@@ -259,6 +265,22 @@ def validate_inventory(
             errors.append(f"{key[0]}:{key[1]}: reviewer metadata is required")
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
+        tag = tagged.get(key)
+        tag_fields = tag[2] if tag is not None and len(tag) > 2 else ()
+        manifest_fields = tuple(record.get("list_as_array", ()))
+        if manifest_fields != tag_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
+            )
+        if tag_fields and status == "reviewed_exact":
+            errors.append(
+                f"{key[0]}:{key[1]}: qualified @[hol] tag cannot have reviewed_exact status; "
+                "use reviewed_list_as_array after source comparison"
+            )
+        if not tag_fields and status == "reviewed_list_as_array":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_list_as_array needs a qualified @[hol] tag"
+            )
         if (hol_path is None) != (hol_name is None):
             errors.append(f"{key[0]}:{key[1]}: HOL path and name must both be set or null")
         elif status == "documented_mismatch":
@@ -271,7 +293,7 @@ def validate_inventory(
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
-            elif tagged.get(key) != (hol_path, hol_name):
+            elif tag is None or tag[:2] != (hol_path, hol_name):
                 errors.append(
                     f"{key[0]}:{key[1]}: manifest HOL reference does not match its @[hol] tag"
                 )

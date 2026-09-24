@@ -11,7 +11,7 @@ against the direct HOL EVAL oracle in
 namespace Flapjack.Test.LoopLangProgParity
 
 open Flapjack
-open Flapjack.Compiler.Backend.MlString
+open Flapjack.Basis.Pure.MlString
 
 private abbrev W := BitVec 8
 

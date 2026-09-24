@@ -1,5 +1,5 @@
 import Flapjack.Pancake.CrepLang
-import Flapjack.Compiler.Backend.MlString
+import Flapjack.Basis.Pure.MlString
 import Flapjack.FiniteMap.Basic
 
 /-!
@@ -103,7 +103,7 @@ inductive HolLoopProg (width : Nat) [NeZero width] where
   | call (returns : Option (List Nat × FiniteMap Nat Unit)) (target : Option Nat)
       (arguments : List Nat)
       (handler : Option (Nat × HolLoopProg width × HolLoopProg width × FiniteMap Nat Unit))
-  | ffi (function : Flapjack.Compiler.Backend.MlString.MlString)
+  | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
       (configuration configurationLength array arrayLength : Nat)
       (live : FiniteMap Nat Unit)
 

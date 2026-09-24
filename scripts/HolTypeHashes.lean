@@ -3,6 +3,7 @@ import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps
+import Flapjack.Compiler.Backend.StackNames
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.AppList
 import Flapjack.Pancake.CrepInline.Pass

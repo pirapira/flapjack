@@ -72,7 +72,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         }
         generic_key = (
             "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
-            "genlistVmaxDistinctListsCompiledExpsW",
+            "genlistVmaxDistinctListsCompiledExps",
         )
         generic = inventory[generic_key]
         self.assertIsNone(generic["hol_name"])

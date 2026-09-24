@@ -139,18 +139,74 @@ def annotGuard : Bool :=
   let result := panSemTotalAnnotClause stepsState "tag" "body"
   isNoneResult result.1 && wordAt result.2.locals "x" 7
 
+/-- A store-enabled variant of `stepsState` (all addresses in the domain). -/
+def storeState : PanSemState Word64 (FfiState Unit) :=
+  { stepsState with memaddrs := fun _ => true }
+
+/-- A store-enabled variant with a pre-existing word cell at address 0, needed by
+    the byte/32-bit stores. -/
+def store32State : PanSemState Word64 (FfiState Unit) :=
+  { storeState with
+    memory := fun address =>
+      if address == BitVec.ofNat 64 0 then some (.word (BitVec.ofNat 64 0)) else none }
+
+def memoryWordAt (memory : Word64 → Option (PanValue Word64)) (address expected : Nat) : Bool :=
+  match memory (BitVec.ofNat 64 address) with
+  | some (.word word) => word == BitVec.ofNat 64 expected
+  | _ => false
+
+/-- `Store` of a word value at a word address stores and completes normally. -/
+def storeGuard : Bool :=
+  let result := panSemTotalStoreClause storeState (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 42))
+  isNoneResult result.1 && memoryWordAt result.2.memory 0 42
+
+/-- `Store` with a non-word destination is `SOME Error`. -/
+def storeNonWordGuard : Bool :=
+  isErrorResult (panSemTotalStoreClause storeState (.rStruct [])
+    (.const (BitVec.ofNat 64 42))).1
+
+/-- `Store` whose destination expression fails is `SOME Error`. -/
+def storeErrorGuard : Bool :=
+  isErrorResult (panSemTotalStoreClause stepsState (.var .local "missing")
+    (.const (BitVec.ofNat 64 42))).1
+
+/-- `Store32` of a word value at an aligned address completes normally. -/
+def store32Guard : Bool :=
+  let result := panSemTotalStore32Clause store32State (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 0x11223344))
+  isNoneResult result.1 && memoryWordAt result.2.memory 0 0x11223344
+
+/-- `Store32` with no word cell at the address is `SOME Error`. -/
+def store32ErrorGuard : Bool :=
+  isErrorResult (panSemTotalStore32Clause storeState (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 3))).1
+
+/-- `StoreByte` of a word value at an address with a word cell completes normally. -/
+def storeByteGuard : Bool :=
+  let result := panSemTotalStoreByteClause store32State (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 0xAB))
+  isNoneResult result.1 && memoryWordAt result.2.memory 0 0xAB
+
+/-- `StoreByte` with no word cell at the address is `SOME Error`. -/
+def storeByteErrorGuard : Bool :=
+  isErrorResult (panSemTotalStoreByteClause storeState (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 0xAB))).1
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnErrorGuard &&
     raiseGuard && exprStepErrorGuard && exprStepSomeGuard &&
     primitiveOkGuard && primitiveShapeMismatchGuard && primitivePrimNoneGuard &&
-    primitiveArgErrorGuard && exprListStepGuard && annotGuard
+    primitiveArgErrorGuard && exprListStepGuard && annotGuard &&
+    storeGuard && storeNonWordGuard && storeErrorGuard &&
+    store32Guard && store32ErrorGuard && storeByteGuard && storeByteErrorGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

@@ -241,6 +241,7 @@ import Flapjack.Test.StackRemoveInitParity
 import Flapjack.Test.WordLocWParity
 import Flapjack.Test.StackRemoveHelpersParity
 import Flapjack.Test.LoopSemStateParity
+import Flapjack.Test.MlStringCodecParity
 import Flapjack.Test.StackLangInstOverloadsParity
 import Flapjack.Test.RiscvConfigParity
 import Flapjack.Test.MiscAppListParity
@@ -868,6 +869,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.WordLocWParity.runChecks,
     Flapjack.Test.StackRemoveHelpersParity.runChecks,
     Flapjack.Test.LoopSemStateParity.runChecks,
+    Flapjack.Test.MlStringCodecParity.runChecks,
     Flapjack.Test.StackLangInstOverloadsParity.runChecks,
     Flapjack.Test.RiscvConfigParity.runChecks,
     Flapjack.Test.MiscAppListParity.runChecks,

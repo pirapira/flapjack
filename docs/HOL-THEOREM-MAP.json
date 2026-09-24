@@ -341,7 +341,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstCase",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact Const constructor case: original success premise, arbitrary code-map update, simp_exp result, and Option word_lab equality; the constructor equations require no word-operation or memory correspondence"
+    "reviewer": "Exact Const case over evalCrepHolExpWordLab and the full CrepHolState code-map update; it preserves HOL's success premise and Option word_lab equality and reduces by constructor equations"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -349,7 +349,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1VarCase",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact Var constructor case: HOL word_lab is the single Word constructor (panSemScript.sml:17), matching PanWordLab; panTheWord rewraps identically and mapc f changes only code"
+    "reviewer": "Exact Var case over evalCrepHolExpWordLab/full CrepHolState; HOL word_lab is the single Word constructor (panSemScript.sml:17), PanWordLab matches it, and mapc f changes only code"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -357,7 +357,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobCase",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact LoadGlob constructor case: HOL word_lab is the single Word constructor (panSemScript.sml:17), matching PanWordLab; panTheWord rewraps identically and mapc f changes only code"
+    "reviewer": "Exact LoadGlob case over evalCrepHolExpWordLab/full CrepHolState; HOL word_lab is the single Word constructor (panSemScript.sml:17), PanWordLab matches it, and mapc f changes only code"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -365,7 +365,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1BaseAddrCase",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact BaseAddr constructor case: the expression and state address are unchanged by simp_exp and mapc f"
+    "reviewer": "Exact BaseAddr case over evalCrepHolExpWordLab/full CrepHolState; the expression and state address are unchanged by simp_exp and mapc f"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -373,7 +373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrCase",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact TopAddr constructor case: the expression and state address are unchanged by simp_exp and mapc f"
+    "reviewer": "Exact TopAddr case over evalCrepHolExpWordLab/full CrepHolState; the expression and state address are unchanged by simp_exp and mapc f"
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

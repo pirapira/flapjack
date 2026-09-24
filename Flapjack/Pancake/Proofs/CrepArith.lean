@@ -2024,24 +2024,24 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceRuntime {ι : Type} {σ : Type}
     `SOME (Word value)`, so it requires no evaluator correspondence beyond
     the defining `Const` equations. It is one constructor case, not the full
     recursive theorem. -/
+def crepArithHolMapCode {n : Nat} {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) :
+    CrepHolState (RiscV.Word n) σ :=
+  { state with code := fun name => (state.code name).map f }
+
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
-theorem crepSimpExpCorrect1ConstCase {ι : Type} {σ : Type}
-    [dimension : HolFiniteDimension ι]
-    (f : (List Nat × CrepProg (ι → Bool)) →
-      (List Nat × CrepProg (ι → Bool)))
-    (state : CrepHolState (ι → Bool) σ) (value : ι → Bool)
-    (_result : PanWordLab (ι → Bool))
-    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.const value) ≠ none) :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
-        dimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        (.const value))).map PanWordLab.word =
-    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.const value)).map PanWordLab.word := by
-  simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
+theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (value : RiscV.Word n)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.const value) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.const value)) =
+    evalCrepHolExpWordLab state (.const value) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11]
 
 /-- The `Var` case of CakeML's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
@@ -2049,98 +2049,66 @@ theorem crepSimpExpCorrect1ConstCase {ι : Type} {σ : Type}
     local cell with `panTheWord` and wrapping it again is identity. `mapc f`
     changes only code. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
-theorem crepSimpExpCorrect1VarCase {ι : Type} {σ : Type}
-    [dimension : HolFiniteDimension ι]
-    (f : (List Nat × CrepProg (ι → Bool)) →
-      (List Nat × CrepProg (ι → Bool)))
-    (state : CrepHolState (ι → Bool) σ) (name : Nat)
-    (_result : PanWordLab (ι → Bool))
-    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.var name) ≠ none) :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
-        dimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        (.var name))).map PanWordLab.word =
-    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.var name)).map PanWordLab.word := by
-  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
-    CrepHolState.toHolFiniteWordSourceRuntime,
-    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+theorem crepSimpExpCorrect1VarCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (name : Nat)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.var name) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.var name)) =
+    evalCrepHolExpWordLab state (.var name) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
 
 /-- The `LoadGlob` case of CakeML's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). HOL `word_lab` has only the `Word`
     constructor (`panSemScript.sml:17`), matching `PanWordLab`; the global
     cell projection and rewrapping is identity. `mapc f` changes only code. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
-theorem crepSimpExpCorrect1LoadGlobCase {ι : Type} {σ : Type}
-    [dimension : HolFiniteDimension ι]
-    (f : (List Nat × CrepProg (ι → Bool)) →
-      (List Nat × CrepProg (ι → Bool)))
-    (state : CrepHolState (ι → Bool) σ) (address : Nat)
-    (_result : PanWordLab (ι → Bool))
-    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.loadGlob address) ≠ none) :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
-        dimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        (.loadGlob address))).map PanWordLab.word =
-    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      (.loadGlob address)).map PanWordLab.word := by
-  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
-    CrepHolState.toHolFiniteWordSourceRuntime,
-    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+theorem crepSimpExpCorrect1LoadGlobCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (address : BitVec 5)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.loadGlob address) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.loadGlob address)) =
+    evalCrepHolExpWordLab state (.loadGlob address) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
 
 /-- The `BaseAddr` constructor case of CakeML's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). It retains the success premise and full
     wrapped result; `mapc f` leaves the base address unchanged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
-theorem crepSimpExpCorrect1BaseAddrCase {ι : Type} {σ : Type}
-    [dimension : HolFiniteDimension ι]
-    (f : (List Nat × CrepProg (ι → Bool)) →
-      (List Nat × CrepProg (ι → Bool)))
-    (state : CrepHolState (ι → Bool) σ)
-    (_result : PanWordLab (ι → Bool))
-    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      .baseAddr ≠ none) :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
-        dimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        .baseAddr)).map PanWordLab.word =
-    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      .baseAddr).map PanWordLab.word := by
-  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
-    CrepHolState.toHolFiniteWordSourceRuntime,
-    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+theorem crepSimpExpCorrect1BaseAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .baseAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .baseAddr) =
+    evalCrepHolExpWordLab state .baseAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
 
 /-- The `TopAddr` constructor case of CakeML's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). It retains the success premise and full
     wrapped result; `mapc f` leaves the top address unchanged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
-theorem crepSimpExpCorrect1TopAddrCase {ι : Type} {σ : Type}
-    [dimension : HolFiniteDimension ι]
-    (f : (List Nat × CrepProg (ι → Bool)) →
-      (List Nat × CrepProg (ι → Bool)))
-    (state : CrepHolState (ι → Bool) σ)
-    (_result : PanWordLab (ι → Bool))
-    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      .topAddr ≠ none) :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
-        dimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
-        .topAddr)).map PanWordLab.word =
-    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
-      .topAddr).map PanWordLab.word := by
-  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
-    CrepHolState.toHolFiniteWordSourceRuntime,
-    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+theorem crepSimpExpCorrect1TopAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .topAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .topAddr) =
+    evalCrepHolExpWordLab state .topAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
 
 /-- Successful-result form of the all-width source-runtime support, following
     HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
@@ -2443,13 +2411,6 @@ theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
     width operations through the RISC-V model. The exact arbitrary HOL word
     carrier theorem remains open. The all-constructor production evaluator
     correspondence is proved in `CrepSem.Eval`. -/
-def crepArithHolMapCode {n : Nat} {σ : Type}
-    (f : (List Nat × CrepProg (RiscV.Word n)) →
-      (List Nat × CrepProg (RiscV.Word n)))
-    (state : CrepHolState (RiscV.Word n) σ) :
-    CrepHolState (RiscV.Word n) σ :=
-  { state with code := fun name => (state.code name).map f }
-
 theorem crepArithHolMapCode_target [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))

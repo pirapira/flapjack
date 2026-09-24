@@ -200,79 +200,6 @@ def boolDimensionHolState : CrepHolState (Bool → Bool) Unit where
       some boolDimensionWord
 
 example :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
-        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
-        (.const boolDimensionWord))).map PanWordLab.word =
-    (evalCrepRuntimeExp
-      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
-      (.const boolDimensionWord)).map PanWordLab.word := by
-  exact crepSimpExpCorrect1ConstCase (fun entry => entry)
-    boolDimensionHolState boolDimensionWord (.word boolDimensionWord)
-    (by simp [evalCrepRuntimeExp])
-
-example :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
-        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
-        (.var 0))).map PanWordLab.word =
-    (evalCrepRuntimeExp
-      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
-      (.var 0)).map PanWordLab.word :=
-  crepSimpExpCorrect1VarCase (fun entry => entry) boolDimensionHolState 0
-    (.word boolDimensionWord) (by
-      simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
-        CrepHolState.toHolFiniteWordRuntime, boolDimensionHolState])
-
-example :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
-        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
-        (.loadGlob 0))).map PanWordLab.word =
-    (evalCrepRuntimeExp
-      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
-      (.loadGlob 0)).map PanWordLab.word :=
-  crepSimpExpCorrect1LoadGlobCase (fun entry => entry)
-    boolDimensionHolState 0 (.word boolDimensionWord)
-    (by
-      simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
-        CrepHolState.toHolFiniteWordRuntime, boolDimensionHolState])
-
-example :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
-        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
-        .baseAddr)).map PanWordLab.word =
-    (evalCrepRuntimeExp
-      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
-      .baseAddr).map PanWordLab.word :=
-  crepSimpExpCorrect1BaseAddrCase (fun entry => entry)
-    boolDimensionHolState (.word boolDimensionWord)
-    (by simp [evalCrepRuntimeExp])
-
-example :
-    (evalCrepRuntimeExp
-      ((crepArithHolFiniteDimensionMapCode (fun entry => entry)
-        boolDimensionHolState).toHolFiniteWordSourceRuntime boolWordDimension)
-      (crepSimpExp
-        (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
-        .topAddr)).map PanWordLab.word =
-    (evalCrepRuntimeExp
-      (boolDimensionHolState.toHolFiniteWordSourceRuntime boolWordDimension)
-      .topAddr).map PanWordLab.word :=
-  crepSimpExpCorrect1TopAddrCase (fun entry => entry)
-    boolDimensionHolState (.word boolDimensionWord)
-    (by simp [evalCrepRuntimeExp])
-
-example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.var 0) =
       evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.var 0) :=
@@ -724,6 +651,49 @@ def holState8 : CrepHolState (RiscV.Word 8) Unit :=
     ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 0 }
+
+def holState8WithGlobal : CrepHolState (RiscV.Word 8) Unit :=
+  { holState8 with globals := fun _ => some (.word (word8 9)) }
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.const (word8 4))) =
+    evalCrepHolExpWordLab holState8 (.const (word8 4)) :=
+  crepSimpExpCorrect1ConstCase (fun entry => entry) holState8 (word8 4)
+    (.word (word8 4)) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) (.var 2)) =
+    evalCrepHolExpWordLab holState8 (.var 2) :=
+  crepSimpExpCorrect1VarCase (fun entry => entry) holState8 2
+    (.word (word8 7)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8,
+        updateCrepRuntimeLocal, panTheWord])
+
+example :
+    evalCrepHolExpWordLab
+        (crepArithHolMapCode (fun entry => entry) holState8WithGlobal)
+        (crepSimpExp (BitVec.ofNat 8) (.loadGlob 0)) =
+      evalCrepHolExpWordLab holState8WithGlobal (.loadGlob 0) :=
+  crepSimpExpCorrect1LoadGlobCase (fun entry => entry) holState8WithGlobal 0
+    (.word (word8 9)) (by
+      simp [evalCrepHolExpWordLab, evalCrepHolExp, holState8WithGlobal,
+        holState8, panTheWord])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .baseAddr) =
+    evalCrepHolExpWordLab holState8 .baseAddr :=
+  crepSimpExpCorrect1BaseAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+
+example :
+    evalCrepHolExpWordLab (crepArithHolMapCode (fun entry => entry) holState8)
+      (crepSimpExp (BitVec.ofNat 8) .topAddr) =
+    evalCrepHolExpWordLab holState8 .topAddr :=
+  crepSimpExpCorrect1TopAddrCase (fun entry => entry) holState8
+    (.word 0) (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
 
 def holExpression8 : CrepExp (RiscV.Word 8) :=
   .crepOp .mul [.var 2, .const (word8 8)]

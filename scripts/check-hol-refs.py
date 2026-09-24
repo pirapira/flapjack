@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LEAN_DIRS = [ROOT / "Flapjack", ROOT / "Flapjack.lean"]
 
 ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"(?:\s+(\d+))?')
+QUALIFIER_RE = re.compile(r'\(\s*list_as_array\s*:=\s*\[([^]]*)\]\s*\)')
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
     r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
@@ -127,9 +128,133 @@ def hol_attribute_sites(lines: list[str]):
         attribute = " ".join(chunks)
         if "hol " in attribute:
             for hol_path, hol_name, hol_line in ATTR_RE.findall(attribute):
-                yield start, hol_path, hol_name, int(hol_line) if hol_line else None
+                qualifier = QUALIFIER_RE.search(attribute)
+                fields = tuple(
+                    field.strip()
+                    for field in qualifier.group(1).split(",")
+                ) if qualifier else ()
+                yield start, hol_path, hol_name, int(hol_line) if hol_line else None, fields
         start = None
         chunks = []
+
+
+def strip_lean_comments(text: str) -> str:
+    """Remove nested Lean comments while preserving strings and line breaks."""
+    result: list[str] = []
+    index = 0
+    depth = 0
+    in_string = False
+    escaped = False
+    line_comment = False
+    while index < len(text):
+        if line_comment:
+            if text[index] == "\n":
+                line_comment = False
+                result.append("\n")
+            else:
+                result.append(" ")
+            index += 1
+        elif depth:
+            if text.startswith("/-", index):
+                depth += 1
+                result.extend((" ", " "))
+                index += 2
+            elif text.startswith("-/", index):
+                depth -= 1
+                result.extend((" ", " "))
+                index += 2
+            else:
+                result.append("\n" if text[index] == "\n" else " ")
+                index += 1
+        elif in_string:
+            char = text[index]
+            result.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+        elif text.startswith("/-", index):
+            depth = 1
+            result.extend((" ", " "))
+            index += 2
+        elif text.startswith("--", index):
+            line_comment = True
+            result.extend((" ", " "))
+            index += 2
+        else:
+            char = text[index]
+            result.append(char)
+            if char == '"':
+                in_string = True
+            index += 1
+    return "".join(result)
+
+
+def structure_fields(lines: list[str]) -> set[str]:
+    """Collect field names declared by structures in one Lean module."""
+    fields: set[str] = set()
+    structure_indent: int | None = None
+    for line in strip_lean_comments("\n".join(lines)).splitlines():
+        structure = re.match(r"^(\s*)structure\s+[A-Za-z0-9_'.]+.*\bwhere\s*$", line)
+        if structure:
+            structure_indent = len(structure.group(1))
+            continue
+        if structure_indent is None:
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= structure_indent:
+            structure_indent = None
+            continue
+        field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:", line)
+        if field:
+            fields.add(field.group(1))
+    return fields
+
+
+def has_list_array_witness(lines: list[str], field: str) -> bool:
+    """Require a same-module, kernel-checked representation theorem for a field.
+
+    The witness convention is `holListArrayWitness_<field>` and its theorem
+    type must mention both `RepresentsHOLNodeList` and the qualified state field.
+    Lake checks the theorem when it builds the tagged module.
+    """
+    source = strip_lean_comments("\n".join(lines))
+    pattern = re.compile(
+        rf"^\s*(?:@[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
+        rf"(?:theorem|lemma)\s+holListArrayWitness_{re.escape(field)}\b"
+        rf"(?P<type>[\s\S]*?):=",
+        re.M,
+    )
+    for match in pattern.finditer(source):
+        statement = match.group("type")
+        if "RepresentsHOLNodeList" in statement and re.search(
+            rf"\.\s*{re.escape(field)}\b", statement
+        ):
+            return True
+    return False
+
+
+def list_as_array_errors(lines: list[str], fields: tuple[str, ...], module: str) -> list[str]:
+    """Validate qualified fields against local state declarations and witnesses."""
+    errors: list[str] = []
+    declared_fields = structure_fields(lines)
+    for field in fields:
+        if field not in declared_fields:
+            errors.append(
+                f"list_as_array field `{field}` is not a field of a Lean structure "
+                f"declared in {module}"
+            )
+        if not has_list_array_witness(lines, field):
+            errors.append(
+                f"list_as_array field `{field}` has no same-module checked witness "
+                f"`holListArrayWitness_{field}`"
+            )
+    return errors
 
 
 def hol_declaration_lines(
@@ -188,7 +313,7 @@ def main(argv: list[str]) -> int:
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         module = module_name(lean_path)
         module_reported = False
-        for number, hol_path, hol_name, hol_line in hol_attribute_sites(lines):
+        for number, hol_path, hol_name, hol_line, fields in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -197,6 +322,11 @@ def main(argv: list[str]) -> int:
                     f"{rel}: module {module} carries @[hol] but is not imported "
                     f"(transitively) from Flapjack.lean, so `lake build Flapjack` "
                     f"never checks it; add the import to Flapjack.lean"
+                )
+            if fields:
+                errors.extend(
+                    f"{where}: {error}"
+                    for error in list_as_array_errors(lines, fields, rel)
                 )
             target = ROOT / hol_path
             if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):

@@ -43,7 +43,10 @@ structure HolRef where
   line? : Option Nat := none
   /-- HOL list fields represented by arrays in this Lean port.  An empty array
       denotes an exact port; qualified ports require a checked representation
-      lemma before the tag may be applied. -/
+      lemma before the tag may be applied. Each named field must be declared in
+      a same-module structure and have a checked theorem named
+      `holListArrayWitness_<field>` whose conclusion relates that field to a HOL
+      list through `RepresentsHOLNodeList`. -/
   listAsArray : Array String := #[]
   deriving Inhabited, Repr, BEq
 

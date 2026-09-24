@@ -2630,6 +2630,68 @@ theorem compileArgsHOL_eval_flatten_of_each
             hcompiledHead hcompiledTail
           simpa [compileArgsHOL, List.flatMap_cons] using happend
 
+/-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
+the `compile_args` evaluator boundary. The target evaluation premise consumed
+by the list induction is projected from the expression IH itself; callers do
+not assume target evaluation separately. -/
+theorem compileArgsHOL_eval_flatten_of_compileExpRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsource : evalPanSemStateExps source expressions = some values)
+    (heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have heachEval : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+        some (panValueFlatten value) := by
+    intro expression hmem value heval
+    exact (heach expression hmem value heval hstate hcode hlocals
+      (hlocalized expression hmem)).1
+  simpa [compilerContext] using
+    compileArgsHOL_eval_flatten_of_each compilerContext source target expressions
+      values hsource heachEval
+
 private theorem mapM_panTheWord_of_wordLab
     (locals : Nat → Option (PanWordLab (RiscV.Word 64)))
     (slots : List Nat) (words : List (RiscV.Word 64))
@@ -2750,6 +2812,37 @@ theorem compileExpHOL_local_case_of_relations
     rw [hcompiled]
     exact hwf
   exact ⟨htargetEval, hlength, by rw [hcompiled], hwfCompiled⟩
+
+/-! A concrete `compile_args` use of the Local constructor case. This handles
+argument lists consisting of local variables, deriving the complete expression
+relation from `locals_rel` and then lifting it through the actual compiler
+argument list. -/
+theorem compileArgsHOL_localCases_eval_flatten
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocal : ∀ expression, expression ∈ expressions →
+      ∃ name, expression = .var .local name)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    evalCrepRuntimeExps target
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some (values.flatMap panValueFlatten) := by
+  apply compileArgsHOL_eval_flatten_of_compileExpRel context source target
+    expressions values hstate hcode hlocals ?_ hsource ?_
+  · intro expression hmem
+    obtain ⟨name, rfl⟩ := hlocal expression hmem
+    simp [expGlobalVars]
+  · intro expression hmem value heval stateRel' codeRel' localsRel' hlocalized
+    obtain ⟨name, rfl⟩ := hlocal expression hmem
+    exact compileExpHOL_local_case_of_relations context source target name value
+      stateRel' codeRel' localsRel' hlocalized heval
 
 /-! `mapM` success is preserved by truncating both its input and output at the
 same position. This supports `comp_field` projections of flattened locals. -/
@@ -4567,6 +4660,95 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
   exact ⟨targetLocals, by simpa [compilerContext] using harguments, hlookup,
     htargetMap⟩
 
+/-! Compose a full HOL-shaped expression IH with the real source/target code
+maps at Call argument lookup. The flattened target words are obtained by the
+`compile_args` induction above, then `code_rel` supplies production
+`lookupCrepRuntimeCode`; the remaining Call body IHs are still separate. -/
+theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsource : evalPanSemStateExps source expressions = some values)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hargumentLength :
+      Shape.shapeSize (.comb (parameters.map Prod.snd)) =
+        (values.flatMap panValueFlatten).length)
+    (heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    ∃ targetLocals : Nat → Option (PanWordLab (RiscV.Word 64)),
+      evalCrepRuntimeExps target
+        (compileArgsHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expressions) = some (values.flatMap panValueFlatten) ∧
+      lookupCrepRuntimeCode function (values.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) ∧
+      targetLocals = tlcWordLab
+        (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
+  have harguments := compileArgsHOL_eval_flatten_of_compileExpRel context source
+    target expressions values hstate hcode hlocals hlocalized hsource heach
+  obtain ⟨targetLocals, hlookup, htargetFold⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel context source target function parameters
+      sourceBody returnShape (values.flatMap panValueFlatten) hcode hentry
+      hargumentLength
+  have htargetMap : targetLocals = tlcWordLab
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
+    calc
+      targetLocals = ((List.range
+          (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+          (values.flatMap panValueFlatten)).foldl
+            (fun locals (slot, word) => updateCrepRuntimeLocal locals slot (.word word))
+            (FEMPTY : Nat → Option (PanWordLab (RiscV.Word 64))) := htargetFold
+      _ = FUPDATE_LIST FEMPTY
+          ((List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).zip
+            ((values.flatMap panValueFlatten).map PanWordLab.word)) :=
+        crepRuntimeLocals_zip_eq_fupdateList
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+          (values.flatMap panValueFlatten) FEMPTY
+      _ = tlcWordLab
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := rfl
+  exact ⟨targetLocals, harguments, hlookup, htargetMap⟩
+
 /-! Derive the actual Call-entry `locals_rel` premise from the successful
 state-owned source lookup and the production target code lookup. The source
 lookup exposes its real `bindPanValueParameters` result; the target lookup
@@ -4632,6 +4814,119 @@ theorem lookupCrepRuntimeCode_callEntryLocalsRel
     hmatchEmpty
   have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
     target.locals expressions arguments hsourceArgs hstateForWf hlocals
+  have hwf : ∀ value, value ∈ arguments →
+      isWfShape [] (panSemShapeOf value) = true := by
+    intro value hmem
+    obtain ⟨index, hindex, hvalue⟩ := List.mem_iff_getElem.mp hmem
+    have hget : arguments[index]? = some value := by
+      rw [List.getElem?_eq_getElem hindex, hvalue]
+    have hvalueWf := panValueIsWfValues_getElem? hvaluesWf hget
+    have hshapeWf := panValueIsWf_isWfShape_panValueShape [] value hvalueWf
+    simpa [panSemShapeOf_eq_panValueShape_nil] using hshapeWf
+  have hslots :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).Nodup :=
+    List.nodup_range
+  have hslotsLength :
+      (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))).length =
+        (arguments.flatMap panValueFlatten).length := by
+    simpa using hargumentLength
+  have hlocalsRel := bindPanValueParametersLocalsRelOfPanSem context parameters
+    arguments (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))
+    sourceCalleeLocals hnames hparameterLength hshapeMap hslots hslotsLength hwf hbind
+  refine ⟨targetCalleeLocals, htargetLookup, ?_⟩
+  simpa [htargetMap] using hlocalsRel
+
+/-! Full-expression-IH variant of the actual Call-entry relation boundary.
+It composes the arbitrary `compile_exp_val_rel`-shaped argument IH with the
+state-owned source Call lookup and production target code lookup, then proves
+the callee `locals_rel` for the real bound source locals and target slot map.
+The Call body and handler recursive IHs remain separate. -/
+theorem lookupCrepRuntimeCode_callEntryLocalsRel_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (function : String)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals))
+    (heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten value) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] value = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    ∃ targetCalleeLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) target.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+            (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetCalleeLocals) ∧
+      localsRel
+        (ctxtFc context.funcs context.eids (parameters.map Prod.fst)
+          (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceCalleeLocals targetCalleeLocals := by
+  have hmatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
+    source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  obtain ⟨hnames, hbind⟩ := bindPanValueParameters_of_lookup_success
+    source.structs source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  have hvaluesWf := evalPanSemStateExpsWfShapeOfStateRel source target context
+    target.locals expressions arguments hsourceArgs hstate hlocals
+  have hstateForLookup := hstate
+  obtain ⟨_, _, _, hstructs, _, _, _, _, _, _⟩ := hstate
+  have hmatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
+    simpa [hstructs] using hmatch
+  have hargumentLength := panSemCodeArgumentsMatch_flattenLength parameters arguments
+    hmatchEmpty hvaluesWf
+  obtain ⟨targetCalleeLocals, _harguments, htargetLookup, htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source target
+      function parameters sourceBody returnShape expressions arguments hstateForLookup hcode
+      hlocals hlocalized hsourceArgs hentry hargumentLength heach
+  have hshapeMapRaw := panSemCodeArgumentsMatch_shapeMapEq [] parameters arguments
+    hmatchEmpty
+  have hshapeMap : parameters.map Prod.snd = arguments.map panSemShapeOf := by
+    calc
+      parameters.map Prod.snd = arguments.map (panValueShape []) := hshapeMapRaw
+      _ = arguments.map panSemShapeOf :=
+        (panSemShapeOfMapPanValueShapeNil arguments).symm
+  have hparameterLength := panSemCodeArgumentsMatch_length [] parameters arguments
+    hmatchEmpty
   have hwf : ∀ value, value ∈ arguments →
       isWfShape [] (panSemShapeOf value) = true := by
     intro value hmem
@@ -5086,6 +5381,154 @@ theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofCodeRelArgs_relati
     hcallCode
     hlocals hsupported hsourceArgs hentry hargumentLength hinfoValid hclock hmatch
     hcalleeIH (by simpa [crepRuntimeCallerState] using hpayload) hhandlerBody
+
+/-! Full-expression-IH variant of the actual target Call_Ret_Exception
+dispatcher for a one-word payload. `compile_args` evaluation and the target
+callee lookup are both derived from the four-conclusion expression IH, after
+which the real `exp_hdl` state relation feeds the handler-body IH. The source
+Call result and complete `pc_compile_correct` case remain open. -/
+theorem evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (handler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (primitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
+    (caller : CrepRuntimeState (RiscV.Word 64) σ)
+    (function handlerVariable : String) (slot : Nat)
+    (old : PanValue (RiscV.Word 64))
+    (destinations : List Nat) (caught exceptionCode value : RiscV.Word 64)
+    (parameters : List (String × Shape))
+    (sourceBody : Prog (RiscV.Word 64)) (returnShape : Shape)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (arguments : List (PanValue (RiscV.Word 64)))
+    (sourceCalleeLocals : String → Option (PanValue (RiscV.Word 64)))
+    (handlerBody : CrepProg (RiscV.Word 64))
+    (calleeState : CrepRuntimeState (RiscV.Word 64) σ)
+    (handlerResult : CrepRuntimeStep (RiscV.Word 64) σ FfiFinalEvent)
+    (hinitialState : stateRel source caller)
+    (hcallCode : codeRel context (panSemCodeAsLookup source.code) caller.code)
+    (hcalleeState : stateRel sourceAfterCallee calleeState)
+    (hcalleeCode : codeRel context (panSemCodeAsLookup sourceAfterCallee.code)
+      calleeState.code)
+    (hexcp : excpRel context.eids sourceAfterCallee.exceptionShapes)
+    (hlocals : localsRel context source.locals caller.locals)
+    (hsource : FLOOKUP source.locals handlerVariable = some old)
+    (hvariable : FLOOKUP context.vars handlerVariable =
+      some (Shape.one, [slot]))
+    (hslot : ∃ current, caller.locals slot = some current)
+    (hglobal : calleeState.globals (0 : BitVec 5) = some (.word value))
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
+    (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
+    (hentry : panSemCodeLookup source.code function =
+      some (parameters, sourceBody, returnShape))
+    (hsourceCall : lookupPanSemCodeCall source.structs source.code function arguments =
+      some (sourceBody, returnShape, sourceCalleeLocals))
+    (hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
+    (hclock : caller.clock ≠ 0)
+    (hmatch : (caught == exceptionCode) = true)
+    (hcalleeIH : ∀ targetLocals,
+      lookupCrepRuntimeCode function (arguments.flatMap panValueFlatten) caller.code =
+        some (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody, targetLocals) →
+      evalCrepRuntimeProg handler primitive 4
+        (decCrepClock { caller with locals := targetLocals })
+        (compileCodeRelProg
+          (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+          sourceBody) = some (.raised exceptionCode, calleeState))
+    (hhandlerIH : ∀ targetPost,
+      evalCrepRuntimeProg handler primitive 3
+        (crepRuntimeCallerState caller calleeState)
+        (expHdlFiniteMap context.vars handlerVariable) = some (.normal, targetPost) →
+      stateRel
+        { sourceAfterCallee with
+          locals := updatePanValueMap source.locals handlerVariable (.word value) }
+        targetPost →
+      codeRel context (panSemCodeAsLookup sourceAfterCallee.code) targetPost.code →
+      excpRel context.eids sourceAfterCallee.exceptionShapes →
+      localsRel context
+        (updatePanValueMap source.locals handlerVariable (.word value)) targetPost.locals →
+      evalCrepRuntimeProg handler primitive 3
+        (fixCrepRuntimeClock (ε := FfiFinalEvent)
+          (crepRuntimeCallerState caller calleeState) (.normal, targetPost)).2
+        handlerBody = some handlerResult)
+    (heach : ∀ expression, expression ∈ expressions → ∀ expressionValue,
+      evalPanSemStateExp source expression = some expressionValue →
+      stateRel source caller →
+      codeRel context (panSemCodeAsLookup source.code) caller.code →
+      localsRel context source.locals caller.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps caller
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten expressionValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] expressionValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true) :
+    evalCrepRuntimeCall handler primitive 5 caller
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) function
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions) = some handlerResult := by
+  obtain ⟨targetPost, hpayload, hpayloadState, hpayloadCode,
+      hpayloadExcp, hpayloadLocals⟩ :=
+    crepRuntimeExpHdlOneWord_handlerPrestateRelations context handler primitive
+      sourceAfterCallee source.locals caller calleeState handlerVariable slot
+      old value hcalleeState hcalleeCode hexcp hlocals hsource hvariable hslot hglobal
+  have hhandlerBody := hhandlerIH targetPost hpayload hpayloadState hpayloadCode
+    hpayloadExcp hpayloadLocals
+  have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
+    source.code function parameters arguments sourceBody returnShape
+    sourceCalleeLocals hentry hsourceCall
+  have hwfArguments := evalPanSemStateExpsWfShapeOfStateRel source caller context
+    caller.locals expressions arguments hsourceArgs hinitialState hlocals
+  have hstructs := stateRel_structs source caller hinitialState
+  have hsourceArgsMatchEmpty : panSemCodeArgumentsMatch [] parameters arguments = true := by
+    simpa [hstructs] using hsourceArgsMatch
+  have hargumentLength := panSemCodeArgumentsMatch_flattenLength parameters arguments
+    hsourceArgsMatchEmpty hwfArguments
+  obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source caller
+      function parameters sourceBody returnShape expressions arguments hinitialState
+      hcallCode hlocals hlocalized hsourceArgs hentry hargumentLength heach
+  exact evalCrepRuntimeCall_catchesRaisedOneWordHandlerBody context handler
+      primitive caller destinations caught exceptionCode function handlerVariable
+      (compileArgsHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        expressions)
+      (arguments.flatMap panValueFlatten)
+      (compileCodeRelProg
+        (ctxtFc context.funcs context.eids
+          (parameters.map Prod.fst) (parameters.map Prod.snd)
+          (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+        sourceBody)
+      handlerBody targetLocals calleeState targetPost handlerResult 3 harguments hlookup
+      hinfoValid hclock hmatch (hcalleeIH targetLocals hlookup)
+      (by simpa [crepRuntimeCallerState] using hpayload) hhandlerBody
 
 /-! Preserve the handler-body post-state IH through the production target Call
 dispatcher. `sourcePost` is the source state supplied by that IH (in a full

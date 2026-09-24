@@ -9,3 +9,5 @@ tgt_mmap=SOME [Word 5w; Word 7w]
 mmap_hetero=T
 mmap_eq=T
 skip_eval=T
+break_eval=T
+continue_eval=T

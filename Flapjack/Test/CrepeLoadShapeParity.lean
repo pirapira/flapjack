@@ -32,6 +32,22 @@ def isNonzeroTwo : List (CrepExp Nat) → Bool
       first == 7 && firstOffset == 4 && second == 7 && secondOffset == 8
   | _ => false
 
+/-- Width-indexed `load_shape_def` wrapper (bead `flapjack-pxn.18.4.3.86`),
+    reproducing the same `crep_load_shape_probe.out` rows at `BitVec 32`
+    (machine byte width 4). -/
+def isZeroTwoW : List (CrepExp (BitVec 32)) → Bool
+  | [.load (.const first),
+     .load (.op .add [.const second, .const offset])] =>
+      first == 7 && second == 7 && offset == 4
+  | _ => false
+
+example : loadShapeBytesW (width := 32) (0 : BitVec 32) 1 (.const (7 : BitVec 32)) =
+    [.load (.const (7 : BitVec 32))] := rfl
+
+example : isZeroTwoW
+    (loadShapeBytesW (width := 32) (0 : BitVec 32) 2 (.const (7 : BitVec 32))) = true :=
+  rfl
+
 def parityGuard : Bool :=
   (loadShape 0 4 0 probeValue).isEmpty &&
   isZeroOne (loadShape 0 4 1 probeValue) &&

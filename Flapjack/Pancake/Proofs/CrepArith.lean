@@ -2049,15 +2049,17 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEval {ι : Type} {σ : Type}
     simplifier result. The implicit `HolFiniteDimension` instance represents
     HOL's implicit `finite_index` evidence, so this theorem quantifies over an
     arbitrary finite word index type rather than a fixed `Fin width`. Its
-    successful-evaluation premise, code-map update, `simp_exp` image, and full
-    optional `word_lab` result follow `simp_exp_correct1`. It remains untagged:
-    the explicit source evaluator is not yet identified theoremically with
-    HOL's native `crepSem$eval` equations and word-operation instances. -/
+    unused `v` binder is retained to match HOL's `! s exp v` quantifier shape;
+    its successful-evaluation premise, code-map update, `simp_exp` image, and
+    full optional `word_lab` result follow `simp_exp_correct1`. It remains
+    untagged: the explicit source evaluator is not yet identified theoremically
+    with HOL's native `crepSem$eval` equations and word-operation instances. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) →
       (List Nat × CrepProg (ι → Bool)))
     (state : CrepHolState (ι → Bool) σ) (expression : CrepExp (ι → Bool))
+    (_v : PanWordLab (ι → Bool))
     (h : (evalCrepHolFiniteWordSourceExp dimension state expression).map
       PanWordLab.word ≠ none) :
     (evalCrepHolFiniteWordSourceExp dimension
@@ -2095,9 +2097,10 @@ theorem crepSimpExpCorrectHolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
         (crepSimpExp
           (fun n => bitVecToHolWord dimension
             (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word =
-        (evalCrepHolFiniteWordSourceExp dimension state expression).map
-          PanWordLab.word :=
-            crepSimpExpCorrect1HolFiniteWordSourceEvalClass f state expression hSuccess
+            (evalCrepHolFiniteWordSourceExp dimension state expression).map
+              PanWordLab.word :=
+            crepSimpExpCorrect1HolFiniteWordSourceEvalClass
+              f state expression value hSuccess
     _ = some value := h
 
 /-- Full `word_lab` result form of the source-evaluator preservation theorem.

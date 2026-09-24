@@ -3628,6 +3628,64 @@ theorem compileExpHOL_const_ofHOLIH
   simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
     panValueShape, isWfShape] at hsource' ⊢
 
+/-! The Local constructor base case for the four-part localized-expression
+relation. `locals_rel` supplies the source value's flattened target slots;
+their count and value shape establish the compiler's shape conclusions. -/
+theorem compileExpHOL_local_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (value : PanValue (RiscV.Word 64))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : expGlobalVars (.var .local name : Exp (RiscV.Word 64)) = [])
+    (hsourceEval : evalPanSemStateExp source (.var .local name) = some value) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.var .local name)).1 =
+          some (panValueFlatten value) ∧
+      (compileExpHOL compilerContext (.var .local name)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.var .local name)).2 ∧
+      panValueShape [] value =
+        (compileExpHOL compilerContext (.var .local name)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.var .local name)).2 = true := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hsource : FLOOKUP source.locals name = some value := by
+    simpa [evalPanSemStateExp, evalPanValueExp, FLOOKUP] using hsourceEval
+  obtain ⟨slots, hcontext, hslotsLength, _htargetWords, hvalueWf⟩ :=
+    localsRelLookupCtxt context source.locals target.locals name value hlocals hsource
+  have heval : evalCrepRuntimeExps target
+      (compileExpHOL compilerContext (.var .local name)).1 =
+        some (panValueFlatten value) := by
+    simpa [compilerContext] using
+      compileExpHOL_local_eval_flatten context source target name value
+        hlocals hsourceEval
+  have hcompiled : compileExpHOL compilerContext
+      (.var .local name : Exp (RiscV.Word 64)) =
+      (slots.map CrepExp.var, panValueShape [] value) := by
+    simp [compilerContext, compileExpHOL, hcontext]
+  have hflatLength := panValueFlatten_length_eq_shapeSize value hvalueWf
+  have hlen : (compileExpHOL compilerContext (.var .local name)).1.length =
+      Shape.shapeSize (compileExpHOL compilerContext (.var .local name)).2 := by
+    rw [hcompiled]
+    simpa [List.length_map] using hslotsLength.trans hflatLength
+  have hshape : panValueShape [] value =
+      (compileExpHOL compilerContext (.var .local name)).2 := by
+    rw [hcompiled]
+  have hwf : isWfShape []
+      (compileExpHOL compilerContext (.var .local name)).2 = true := by
+    rw [hcompiled]
+    exact hvalueWf
+  have _ := hstate
+  have _ := hcode
+  have _ := hlocalized
+  exact ⟨heval, hlen, hshape, hwf⟩
+
 /-! Full localized-expression IH cases for the two address leaves and the
     fixed RV64 word-size leaf. These support general Call-argument induction;
     they are Flapjack-only constructor proofs, not standalone HOL theorem
@@ -3853,6 +3911,79 @@ theorem compileArgsHOL_constOrLocal_eval_flatten
   simpa [compilerContext] using
     compileArgsHOL_eval_flatten_of_each compilerContext source target expressions values
       hsource heach
+
+/-! Four-conclusion localized Call-argument induction for lists of Const and
+Local expressions. This composes the per-expression shape and well-formedness
+facts needed by the recursive Call argument IH. -/
+theorem compileArgsHOL_constOrLocal_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (expressions : List (Exp (RiscV.Word 64)))
+    (values : List (PanValue (RiscV.Word 64)))
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hsupported : ∀ expression, expression ∈ expressions →
+      compileArgConstOrLocal expression)
+    (hsource : evalPanSemStateExps source expressions = some values) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target (compileArgsHOL compilerContext expressions) =
+        some (values.flatMap panValueFlatten) ∧
+      (∀ expression, expression ∈ expressions → ∀ value,
+        evalPanSemStateExp source expression = some value →
+        expGlobalVars expression = [] →
+        evalCrepRuntimeExps target
+            (compileExpHOL compilerContext expression).1 =
+              some (panValueFlatten value) ∧
+          (compileExpHOL compilerContext expression).1.length =
+            Shape.shapeSize (compileExpHOL compilerContext expression).2 ∧
+          panValueShape [] value = (compileExpHOL compilerContext expression).2 ∧
+          isWfShape [] (compileExpHOL compilerContext expression).2 = true) := by
+  let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+    { vars := context.vars, funcs := context.funcs,
+      eids := context.eids, vmax := context.vmax }
+  have hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [] := by
+    intro expression hmem
+    cases hsupported expression hmem <;> simp [expGlobalVars]
+  have heach : ∀ expression, expression ∈ expressions → ∀ value,
+      evalPanSemStateExp source expression = some value →
+      stateRel source target →
+      codeRel context (panSemCodeAsLookup source.code) target.code →
+      localsRel context source.locals target.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps target (compileExpHOL compilerContext expression).1 =
+          some (panValueFlatten value) ∧
+        (compileExpHOL compilerContext expression).1.length =
+          Shape.shapeSize (compileExpHOL compilerContext expression).2 ∧
+        panValueShape [] value = (compileExpHOL compilerContext expression).2 ∧
+        isWfShape [] (compileExpHOL compilerContext expression).2 = true := by
+    intro expression hmem value heval hstate' hcode' hlocals' hlocalized'
+    cases hsupported expression hmem with
+    | const word =>
+        have hword : value = .word word := by
+          have hword' : PanValue.word word = value := by
+            simpa [evalPanSemStateExp, evalPanValueExp] using heval
+          exact hword'.symm
+        subst value
+        simpa [compilerContext, panValueFlatten] using
+          compileExpHOL_const_ofHOLIH context source target word
+            hstate' hcode' hlocals' hlocalized' heval
+    | localVar name =>
+        simpa [compilerContext] using
+          compileExpHOL_local_ofHOLIH context source target name value
+            hstate' hcode' hlocals' hlocalized' heval
+  have hcompiled := compileArgsHOL_eval_flatten_of_compileExpRel
+    context source target expressions values hstate hcode hlocals hlocalized
+    hsource heach
+  refine ⟨?_, ?_⟩
+  · simpa [compilerContext] using hcompiled
+  · intro expression hmem value heval hlocalized'
+    simpa [compilerContext] using
+      heach expression hmem value heval hstate hcode hlocals hlocalized'
 
 /-! One additional `compile_exp_val_rel` constructor: an `RStruct` whose
 fields are each constants or local variables. Its nested argument list is

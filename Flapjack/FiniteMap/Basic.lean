@@ -1,3 +1,4 @@
+
 /-!
 Primitive HOL4/CakeML finite-map interface.
 
@@ -139,5 +140,11 @@ theorem FUPDATE_FUPDATE_LIST_commutes [BEq α] [LawfulBEq α]
     rw [FUPDATE_LIST_cons (f := f) (entry := entry) (entries := entries)]
     rw [ih (FUPDATE f entry) htail]
     rw [FUPDATE_comm f entry.1 entry.2 k v hk]
+
+
+/-- Flapjack representation of HOL4's `\\` (domain subtraction) on finite
+maps: `FDOMSUB f key` removes `key` from the domain of `f`. -/
+def FDOMSUB [BEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
+  fun k => if key == k then none else f k
 
 end Flapjack

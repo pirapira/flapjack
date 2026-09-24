@@ -6430,5 +6430,13 @@
     "lean_name": "emptyCrepHolLocals",
     "statement_status": "reviewed_exact",
     "reviewer": "Ports empty_locals s = s with locals := FEMPTY (crepSemScript.sml:71) over CrepHolState. Direct oracle rows empty_locals_none/empty_locals_fields_preserved; Lean guards."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_cmp_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RISC-V-specialized Cmp constructor case for the full compile_exp_val_rel induction hypotheses. It consumes full left/right relation hypotheses and proves evaluation, length, shape, and well-formedness, but has a canonical-target premise and is not a standalone HOL declaration or complete expression induction; no @[hol] tag claimed. The matching direct compile_exp Cmp output is covered by the cmp_shift row in scripts/hol-probes/compile_exp_probe.out and CompileExpParity.holCmpShiftOK."
   }
 ]

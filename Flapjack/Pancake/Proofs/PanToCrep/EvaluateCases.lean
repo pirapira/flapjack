@@ -3274,6 +3274,48 @@ theorem compileExpHOL_const_eval_flatten
   subst sourceValue
   simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp, panValueFlatten]
 
+/-! The Const constructor base case for the four-part localized-expression
+relation used by Call argument induction. This helper is Flapjack proof
+infrastructure; it is not tagged as a standalone HOL theorem. -/
+theorem compileExpHOL_const_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (value : RiscV.Word 64)
+    (hstate : stateRel source target)
+    (hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (hlocals : localsRel context source.locals target.locals)
+    (hlocalized : expGlobalVars (.const value) = [])
+    (hsource : evalPanSemStateExp source (.const value) = some (.word value)) :
+    evalCrepRuntimeExps target
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          (.const value)).1 = some [value] ∧
+      (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.const value)).1.length = Shape.shapeSize
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            (.const value)).2 ∧
+      panValueShape [] (.word value) = (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.const value)).2 ∧
+      isWfShape [] (compileExpHOL
+        { vars := context.vars, funcs := context.funcs,
+          eids := context.eids, vmax := context.vmax }
+        (.const value)).2 = true := by
+  have _ := hstate
+  have _ := hcode
+  have _ := hlocals
+  have _ := hlocalized
+  have hsource' := hsource
+  simp [compileExpHOL, evalCrepRuntimeExps, evalCrepRuntimeExp,
+    panValueShape, isWfShape] at hsource' ⊢
+
 inductive compileArgConstOrLocal : Exp (RiscV.Word 64) → Prop where
   | const (value : RiscV.Word 64) : compileArgConstOrLocal (.const value)
   | localVar (name : String) : compileArgConstOrLocal (.var .local name)

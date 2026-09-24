@@ -39,12 +39,71 @@ class HolTypeHashesTest(unittest.TestCase):
             MODULE.check_lock(old, new)
         self.assertEqual(
             old["records"][0]["sha256"],
-            hashlib.sha256(self.export[0]["type_expr"].encode()).hexdigest(),
+            hashlib.sha256(MODULE.reviewed_payload(self.export[0]).encode()).hexdigest(),
         )
 
     def test_reviewer_status_controls_lock_membership(self):
         pending = [{**self.manifest[0], "statement_status": "pending_statement_review"}]
         self.assertEqual(MODULE.lock_records(pending, self.export), [])
+
+    def test_definition_body_change_changes_review_lock(self):
+        definition_export = [{
+            **self.export[0],
+            "value_expr": "Lean.Expr.const `True []",
+        }]
+        old = MODULE.expected_lock(self.manifest, definition_export, "leanprover/lean4:v4")
+        changed = [{**definition_export[0], "value_expr": "Lean.Expr.const `False []"}]
+        new = MODULE.expected_lock(self.manifest, changed, "leanprover/lean4:v4")
+        self.assertNotEqual(old, new)
+        with self.assertRaisesRegex(ValueError, "reviewed Lean type lock differs"):
+            MODULE.check_lock(old, new)
+
+    def test_body_presence_changes_review_lock(self):
+        with_body = MODULE.expected_lock(
+            self.manifest, [{**self.export[0], "value_expr": "Lean.Expr.const `True []"}],
+            "leanprover/lean4:v4",
+        )
+        without_body = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
+        self.assertNotEqual(with_body, without_body)
+
+    def test_reviewed_payload_covers_only_type_and_body(self):
+        item = {**self.export[0], "value_expr": "Lean.Expr.const `True []"}
+        self.assertEqual(
+            MODULE.reviewed_payload(item),
+            "Lean.Expr.const `True []\x00Lean.Expr.const `True []",
+        )
+        self.assertEqual(
+            MODULE.reviewed_payload(self.export[0]),
+            "Lean.Expr.const `True []",
+        )
+
+    def test_theorem_type_only_hash_is_stable(self):
+        # A declaration without a body must hash exactly its type, so the
+        # original theorem hashes are unchanged by the body-hash extension.
+        lock = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
+        self.assertEqual(
+            lock["records"][0]["sha256"],
+            hashlib.sha256(self.export[0]["type_expr"].encode()).hexdigest(),
+        )
+
+    def test_unknown_export_field_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "invalid fields"):
+            MODULE.validate_export_record(
+                {"lean_name": "n", "hol_path": "p", "hol_name": "h",
+                 "type_expr": "t", "extra": "x"},
+                1,
+            )
+
+    def test_missing_required_field_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, "invalid fields"):
+            MODULE.validate_export_record(
+                {"lean_name": "n", "hol_path": "p", "type_expr": "t"}, 1
+            )
+
+    def test_valid_export_record_with_body(self):
+        record = {"lean_name": "n", "hol_path": "p", "hol_name": "h",
+                  "type_expr": "t", "value_expr": "v"}
+        self.assertEqual(MODULE.validate_export_record(record, 1), record)
 
     def test_ambiguous_reference_fails_closed(self):
         duplicate = [{**self.export[0], "lean_name": "Other.exampleCorrect"}]

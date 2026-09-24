@@ -6211,6 +6211,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgsHOL_constLocalAddressOrStruct_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized Call-argument IH for Const/Local/address leaves and one-level RStructs over those leaves. It derives target argument evaluation and per-expression shape facts; arbitrary nested structs and other constructors remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileExpListHOL_flatMap_eq_compileArgsHOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only equation identifying compiled expression-list concatenation with compile_args output; used to compose the RStruct constructor case."
@@ -6342,6 +6350,78 @@
     "lean_name": "distinct_lists_simp_cons",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_commutes",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_commutes",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Boolean equality of distinct_lists rendered as a biconditional on ListDisjoint, consistent with the Prop rendering of distinct_lists)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_append_intro",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_append_intro",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "distinct_lists_append_right_elim",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "distinct_lists_append_right_elim",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "map_append_eq_drop",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "map_append_eq_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_mem_func",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_mem_func",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_mem_defined",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_mem_defined",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_length_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_length_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_opt_map",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_opt_map",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "set_eq_membership",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "set_eq_membership",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -6899,9 +6979,9 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOfHOLIH",
+    "lean_name": "lookupCrepRuntimeCode_callEntryLocalsRel_constLocalAddressOrStructOfHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local and the three fixed RISC-V address leaves. It derives the expression IHs from state_rel and proves production target code lookup plus callee locals_rel; other argument constructors and recursive Call body/handler composition remain open."
+    "reviewer": "Flapjack-only actual Call-entry specialization for Const/Local/address leaves and one-level RStructs over them. It derives the expression IHs and proves production target code lookup plus callee locals_rel; arbitrary nested expression constructors and recursive Call body/handler composition remain open."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -6982,6 +7062,38 @@
     "lean_name": "compileExpHOL_local_ofHOLIH",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Local base case for the localized four-part expression relation used toward Call argument induction. It derives target evaluation, length, source shape, and shape well-formedness from locals_rel; the full HOL expression and Call theorems remain open, with no @[hol] tag claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_constLocalAddressOrStruct_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full expression IH for Const/Local/address leaves and a one-level RStruct built from them. It composes the HOL-shaped RStruct constructor proof with leaf IHs; general nested expressions remain open and no HOL tag is claimed."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgConstLocalAddress_localized",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper proving the supported Const/Local/address argument grammar has no global variables."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileArgConstLocalAddressOrStruct_localized",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper proving the supported Const/Local/address and one-level RStruct argument grammar has no global variables."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_constLocalAddress_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only single-expression adapter extracting the full four-part Call argument IH from the Const/Local/address list proof."
   },
   {
     "hol_path": null,

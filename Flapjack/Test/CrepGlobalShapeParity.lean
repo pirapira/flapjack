@@ -165,4 +165,44 @@ example :
     some (.word 7) &&
   FLOOKUP (setCrepRuntimeGlobals (4 : BitVec 5) (.word 22) directUpdateState).locals 9 == none
 
+/- HOL `crep_fix_clock_probe`: `fix_clock` (crepSemScript.sml:150-152) keeps the
+   result, clamps the clock to the smaller of old/new, and preserves locals.
+   These checks use the 11-field `CrepHolState`; they do not claim a whole
+   program evaluator. -/
+def holBase : CrepHolState Nat Unit := directUpdateState.toHolState
+
+-- fix_clock_clamps: old clock 5, new clock 9 -> 5.
+example :
+    (fixCrepHolClock { holBase with clock := 5 }
+      ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), { holBase with clock := 9 })).2.clock = 5 := by
+  simp [fixCrepHolClock]
+
+-- fix_clock_keeps_lower: old clock 5, new clock 3 -> 3.
+example :
+    (fixCrepHolClock { holBase with clock := 5 }
+      ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), { holBase with clock := 3 })).2.clock = 3 := by
+  simp [fixCrepHolClock]
+
+-- Result preserved.
+example :
+    (fixCrepHolClock holBase ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), holBase)).1 =
+      (CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit) := rfl
+
+-- Locals preserved.
+example :
+    (fixCrepHolClock holBase ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), holBase)).2.locals =
+      holBase.locals := rfl
+
+-- `fix_clock_IMP_LESS_EQ` bound.
+example :
+    (fixCrepHolClock { holBase with clock := 5 }
+      ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), { holBase with clock := 9 })).2.clock ≤ 5 :=
+  fixCrepHolClock_clock_le { holBase with clock := 5 } (CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit)
+    { holBase with clock := 9 }
+
+#guard (fixCrepHolClock { holBase with clock := 5 }
+          ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), { holBase with clock := 9 })).2.clock == 5 &&
+        (fixCrepHolClock { holBase with clock := 5 }
+          ((CrepRuntimeResult.normal : CrepRuntimeResult Nat Unit), { holBase with clock := 3 })).2.clock == 3
+
 end Flapjack.Test.CrepGlobalShapeParity

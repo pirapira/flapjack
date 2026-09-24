@@ -324,6 +324,31 @@ inductive CrepRuntimeResult (α ε : Type u) where
 abbrev CrepRuntimeStep (α σ ε : Type u) :=
   CrepRuntimeResult α ε × CrepRuntimeState α σ
 
+/-- HOL `crepSem$fix_clock_def` (crepSemScript.sml:150-152) on the 11-field
+    Crep state: keep the result and clamp the returned clock to the smaller of
+    the old and new clocks.  This is the clock-clamping component used by the
+    faithful `Seq`/`While`/`Call` clauses of `evaluate_def`. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+def fixCrepHolClock (oldState : CrepHolState α σ)
+    (step : CrepRuntimeResult α ε × CrepHolState α σ) :
+    CrepRuntimeResult α ε × CrepHolState α σ :=
+  (step.1,
+    { step.2 with
+      clock :=
+        if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- The clock bound `fix_clock_IMP_LESS_EQ` (crepSemScript.sml:155-157): the
+    clamped clock never exceeds the old state's clock.  Untagged here because
+    the Lean statement takes the argument pair apart with explicit `result` /
+    `newState` binders, whereas HOL destructures the pair in the hypothesis. -/
+theorem fixCrepHolClock_clock_le (oldState : CrepHolState α σ)
+    (result : CrepRuntimeResult α ε) (newState : CrepHolState α σ) :
+    (fixCrepHolClock oldState (result, newState)).2.clock ≤ oldState.clock := by
+  by_cases hlt : oldState.clock < newState.clock
+  · simp [fixCrepHolClock, hlt]
+  · simp only [fixCrepHolClock, hlt, if_false]
+    exact Nat.le_of_not_lt hlt
+
 def crepRuntimeMemWidth : CrepMemOp → Nat
   | .load | .store => 0
   | .load8 | .store8 => 1

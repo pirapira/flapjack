@@ -72,6 +72,14 @@
     "reviewer": "Codex (compared source word_op cases, fold identities, and binary Sub arity)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "word_sh_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "wordShiftHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared nonzero width-bound guard and all Lsl/Lsr/Asr/Ror cases against source)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "flatten_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
@@ -317,7 +325,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProg",
     "statement_status": "documented_mismatch",
-    "reviewer": "Flapjack helper is generic over arbitrary alpha; HOL local lookup_code at line 162 is word-valued. Exact width-indexed port remains open in bead flapjack-pxn.18.5.4.4. The generic lemma is intentionally untagged."
+    "reviewer": "Flapjack helper is generic over arbitrary alpha; HOL local lookup_code at line 162 is word-valued. The exact word-width specialization is separately tagged as crepArithLookupCodeSimpProgW. This generic support lemma is intentionally untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "lookup_code",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepArithLookupCodeSimpProgW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact width-indexed statement port of crep_arithProofScript.sml:162-168: both sides use the production HOL-shaped lookupCrepHolCodeW; the code carrier stores word-valued crepLang programs, and the equation is the source FMAP_MAP2/OPTION_MAP (simp_prog ## I) commute law. Verified the Lean declaration has no extra algebraic typeclass premise (only the implicit NeZero width needed to model HOL's nonempty word index); proof specializes the separately untagged generic helper. Direct HOL probe and paired Lean fixture cover successful lookup and failure cases."
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",

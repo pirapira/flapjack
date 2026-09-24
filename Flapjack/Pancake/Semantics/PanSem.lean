@@ -388,6 +388,36 @@ theorem panSemCodeEvaluateFuel_call_delegates
   rw [hk]
   simp only [evalPanValueFfiClockCodeProg, Nat.add_sub_cancel]
 
+/-- The production canonical fuel of a `Call` is at least two, so the two
+    dispatch steps (the `Call` case and the state-owned call clause) always
+    leave a nonnegative body budget. -/
+theorem panSemCodeEvaluateFuel_call_two_le
+    (state : PanSemState α ffi)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) :
+    2 ≤ panSemCodeEvaluateFuel state (.call info function arguments) := by
+  have hclock : 1 ≤ state.clock + 1 := Nat.succ_le_succ (Nat.zero_le _)
+  have hbody : 1 ≤ max (panSemProgFuel (.call info function arguments))
+      (panSemCodeBodyFuel state.code) + 1 :=
+    Nat.succ_le_succ (Nat.zero_le _)
+  have hmul := Nat.mul_le_mul hclock hbody
+  simp only [panSemCodeEvaluateFuel]
+  omega
+
+/-- The state-owned call clause runs at canonical fuel minus one, which is one
+    more than the body budget `canonical - 2`, so the callee and handler bodies
+    recurse at exactly that budget. -/
+theorem panSemCodeEvaluateFuel_call_sub_one_eq
+    (state : PanSemState α ffi)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) :
+    panSemCodeEvaluateFuel state (.call info function arguments) - 1 =
+      (panSemCodeEvaluateFuel state (.call info function arguments) - 2) + 1 := by
+  have htwo := panSemCodeEvaluateFuel_call_two_le state info function arguments
+  omega
+
 /-- A continuation/body program of a `DecCall` has canonical fuel within the
     canonical DecCall fuel after the dispatch steps. -/
 theorem panSemCodeEvaluateFuel_decCall_body_le

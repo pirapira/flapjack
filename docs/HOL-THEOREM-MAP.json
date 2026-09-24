@@ -6712,6 +6712,22 @@
     "reviewer": "Flapjack-only full localized-expression case for NField. It derives contradiction from stateRel's empty source struct table and PanSem lookupInfo semantics; it does not claim the target compiler's fallback is a semantic translation or port standalone HOL theorem text."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadOne_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH case for Load One at fixed RV64 width. It consumes the address full IH and uses stateRel to relate the source word-cell load to production Crep Load; arbitrary shapes remain unproved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_loadOne_const_stateRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned Load One at a constant address with production target Crep Load under stateRel; a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "el_compile_prog_el_prog_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -6768,12 +6784,20 @@
     "reviewer": "Exact port of HOL comp_func_def (pan_to_crepScript.sml:337): build make_vmap from the parameter shapes, take vmax = size_of_shape (Comb (MAP SND params)) - 1, and compile the body in the mk_ctxt context carrying the caller's function and exception maps. panToCrepCompFuncRiscV_eq_compFuncHOL proves the record-context adapter panToCrepCompFuncRiscV equals compFuncHOL at context.funcs/context.eids. Unfolded by HOL mk_ctxt_code_imp_code_rel."
   },
   {
+    "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml",
+    "hol_name": "word_extract_6",
+    "lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean",
+    "lean_name": "wordExtract6OfLt64",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact BitVec translation of riscv_targetProofScript.sml:505-510: HOL unsigned word64 <+ 64w is word.toNat < 64; the low slice (5 >< 0) is BitVec.extractLsb' 0 6; and HOL w2w to word6 retains the low bits as BitVec.setWidth 6. The premise is retained. Direct HOL boundary oracle scripts/hol-probes/riscv_word_extract_6_probe.out and Lean zero/63 guards in Flapjack/Test/RiscVWordExtract6Parity.lean."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "get_eids_imp_excp_rel",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "getEidsFromDeclsImpExcpRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL get_eids_imp_excp_rel (pan_to_crepProofScript.sml:4656): given sizeOfEids pc < 2^width and FDOM seids = FDOM (get_eids_from_decls pc), conclude excp_rel (get_eids_from_decls pc) seids. excp_rel's domain conjunct is the hypothesis; the injectivity conjunct is proved by extracting an aligned source zip index for each code lookup (membership via flookupFupdateList_mem_or_base + mem_zip_getElem?), showing each code equals BitVec.ofNat width of that index, using BitVec injectivity below 2^width (bitVecOfNat_inj) to identify the indices, then identifying the exception names. Direct HOL probe scripts/hol-probes/crep_get_eids_probe.out (rows eids_present, eids_second, eids_absent, eids_codes_distinct) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS)."
+    "reviewer": "Exact port of HOL get_eids_imp_excp_rel (pan_to_crepProofScript.sml:4656): given sizeOfEids pc < 2^width and FDOM seids = FDOM (get_eids_from_decls pc), conclude excp_rel (get_eids_from_decls pc) seids. Direct HOL probe scripts/hol-probes/crep_get_eids_probe.out and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS). Lean name differs to avoid the untagged InfoMap-based analogue in PanToCrepExceptionRelation.lean."
   },
   {
     "hol_path": null,
@@ -6781,7 +6805,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "mem_zip_getElem?",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific list support (HOL MEM_ZIP analogue): membership in a zip yields aligned indices with l[i]? = some value. No HOL original declaration."
+    "reviewer": "Flapjack-specific list support (HOL MEM_ZIP analogue). No HOL original declaration."
   },
   {
     "hol_path": null,
@@ -6789,7 +6813,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "exceptionEntries_length_le_sizeOfEids",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific support lemma bounding the exception table length by sizeOfEids. No HOL original declaration."
+    "reviewer": "Flapjack-specific support bounding exception-table length by sizeOfEids. No HOL original declaration."
   },
   {
     "hol_path": null,
@@ -6797,7 +6821,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "bitVecOfNat_inj",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific support: BitVec.ofNat width is injective below 2^width (HOL's LESS_MOD step). No HOL original declaration."
+    "reviewer": "Flapjack-specific support: BitVec.ofNat width injective below 2^width. No HOL original declaration."
   },
   {
     "hol_path": null,
@@ -6805,7 +6829,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "panToCrepGetEidsFromDeclsHOL_eq",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific unfolding of the tagged get_eids_from_decls port into its zip/FUPDATE_LIST form. No HOL original declaration."
+    "reviewer": "Flapjack-specific unfolding of the tagged get_eids_from_decls port. No HOL original declaration."
   },
   {
     "hol_path": null,
@@ -6813,6 +6837,6 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "panToCrepGetEidsFromDeclsHOL_lookup_mem",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific inverse lookup fact for the get_eids_from_decls port (ALOOKUP_MEM analogue). No HOL original declaration."
+    "reviewer": "Flapjack-specific inverse lookup fact for the get_eids_from_decls port. No HOL original declaration."
   }
 ]

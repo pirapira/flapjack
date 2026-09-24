@@ -7822,6 +7822,22 @@
     "lean_name": "compileCodeRelProg_eq_compileProgRiscV",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the tagged compile_def compiler (compileProgRiscV) on the bridged context for every proof context; makes the code_rel_def tag truthful for arbitrary ctxt_fc contexts."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "code_rel_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (width-indexed exact proof boundary for HOL code_rel_def; compiler expression is the tagged compileProgRiscV at BitVec width via nextContext.toHOLContext, and codeRelW width = codeRel at BitVec width by Iff.rfl; codeRel itself stays untagged because it is generic in alpha)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "codeRelW_iff_codeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-only bridge: the width-indexed codeRelW is definitionally the generic codeRel at BitVec width)"
   }
 ,
   {

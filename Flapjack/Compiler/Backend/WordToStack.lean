@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Misc.AppList
 
 /-!
 # Faithful Cake Word-to-Stack bitmap helpers
@@ -6,9 +7,14 @@ import Flapjack.HolRef
 Lean counterpart of `cakeml/compiler/backend/word_to_stackScript.sml`, the
 Word-to-Stack pass of the CakeML RISC-V backend.  This module currently ports
 the pure bitmap prerequisites `bits_to_word`, `word_list`, `chunk_to_bits`,
-`chunk_to_bitmap` and `const_words_to_bitmap`, which the pass uses to build the
-GC/liveness bitmaps consumed by `compile_word_to_stack` and, eventually, by the
-Word-to-Stack `compile_semantics` theorem
+`chunk_to_bitmap`, `const_words_to_bitmap` and `insert_bitmap`, which the pass
+uses to build the
+GC/liveness bitmaps consumed by `compile_word_to_stack`, together with the pure
+stack-slot arithmetic helpers `num_stack_ret`, `skip_free`, `stack_arg_count`
+and `stack_free` used by the return/argument path of `comp`, plus the
+perf/handler-slot constants `perf_rsp`, `perf_rbp` and `handler_slots` used by
+the exception-handler sizing path (`raise_stub`/`PushHandler`/`copy_ret`);
+eventually these feed the Word-to-Stack `compile_semantics` theorem
 (`word_to_stackProofScript.sml:10709`).
 
 HOL's `bits_to_word` is polymorphic over the word carrier (`'a word`) and has
@@ -126,7 +132,178 @@ def constWordsToBitmapW {width : Nat} [NeZero width]
     let h := ws.take (width - 1)
     let t := ws.drop (width - 1)
     chunkToBitmapW h ++ constWordsToBitmapW t (ws_len - (width - 1))
-termination_by ws_len
-decreasing_by omega
+  termination_by ws_len
+  decreasing_by omega
+
+/-- Order-insensitive Lean model of HOL `write_bitmap_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:240`):
+
+```
+(write_bitmap live k f'):'a word list =
+  let names = MAP (\(r,y). (f' - 1) - (r DIV 2 - k)) (toAList live) in
+    word_list (GENLIST (\x. MEM x names) f' ++ [T]) (dimindex (:'a) - 1)
+```
+
+UNTAGGED.  HOL's `live` is a `num_set` (`unit spt`), whose finite-map carrier
+and `toAList` ordering live in `HOL/src/finite_maps/sptreeScript.sml`, outside
+the CakeML tree: `scripts/check-hol-refs.py` rejects `@[hol]` paths that are not
+under `cakeml/`, and `docs/NUM-SET-AUDIT.md` models `num_set` as an
+order-insensitive domain because the passes observe `toAList` only through
+`MEM`/`EVERY`.  `write_bitmap` reads `toAList live` only through `MEM` of the
+mapped names, so its value depends solely on the domain of `live`; this model
+takes that domain directly as a `List Nat`.  The kernel-checked
+`writeBitmapHOL_domain_insensitive` records exactly that insensitivity.  This is
+a documented carrier mismatch, not an exact port: the definition is deliberately
+**not** marked `@[hol]`.
+
+The direct HOL `EVAL` evidence is checked in at
+`scripts/hol-probes/word_to_stack_write_bitmap_probe.out`; the Lean parity
+fixture is `Flapjack.Test.WordToStackBitsParity`. -/
+def writeBitmapHOL {width : Nat} [NeZero width]
+    (live : List Nat) (k f' : Nat) : List (BitVec width) :=
+  let names := live.map (fun r => (f' - 1) - (r / 2 - k))
+  wordListW ((List.range f').map (fun x => decide (x ∈ names)) ++ [true]) (width - 1)
+
+/-- `writeBitmapHOL` depends only on the domain of `live`: any two lists with the
+    same membership define the same bitmap.  This is the observable half of the
+    HOL `num_set`/`toAList` carrier that `write_bitmap` uses. -/
+theorem writeBitmapHOL_domain_insensitive {width : Nat} [NeZero width]
+    (live₁ live₂ : List Nat) (k f' : Nat)
+    (h : ∀ r, r ∈ live₁ ↔ r ∈ live₂) :
+    writeBitmapHOL (width := width) live₁ k f' =
+      writeBitmapHOL (width := width) live₂ k f' := by
+  have hmap : ∀ x, x ∈ live₁.map (fun r => (f' - 1) - (r / 2 - k)) ↔
+      x ∈ live₂.map (fun r => (f' - 1) - (r / 2 - k)) := by
+    intro x
+    simp only [List.mem_map]
+    constructor
+    · rintro ⟨r, hr, rfl⟩
+      exact ⟨r, (h r).mp hr, rfl⟩
+    · rintro ⟨r, hr, rfl⟩
+      exact ⟨r, (h r).mpr hr, rfl⟩
+  have hlist : (List.range f').map
+        (fun x => decide (x ∈ live₁.map (fun r => (f' - 1) - (r / 2 - k)))) =
+      (List.range f').map
+        (fun x => decide (x ∈ live₂.map (fun r => (f' - 1) - (r / 2 - k)))) := by
+    apply List.map_congr_left
+    intro x _
+    exact decide_eq_decide.mpr (hmap x)
+  simp only [writeBitmapHOL]
+  rw [hlist]
+
+/-- HOL `insert_bitmap_def` (`word_to_stackScript.sml:246`):
+    `insert_bitmap ws (data,data_len) = let l = LENGTH ws in
+       ((Append data (List ws), data_len + l), data_len)`.
+
+    `insert_bitmap` threads the `app_list`/`num` pair built by `write_bitmap`
+    (`:256`) and is used by the `comp` `StoreConsts` clause (`:532`).
+
+    HOL is fully polymorphic in the word element type `'a`, and `insert_bitmap`
+    uses no word operation (`Append`/`List` are the `misc$app_list`
+    constructors; `LENGTH`/`+` are list/nat), so there is no `dimindex(:'a)` to
+    specialise and the generic-`α` port below is the exact HOL body.  This is
+    the same carrier choice as the reviewed `app_list`/`append_aux`/`append`
+    tags in `Flapjack.Misc.AppList`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "insert_bitmap_def"]
+def insertBitmap {α : Type} (ws : List α) (bitmaps : AppList α × Nat) :
+    (AppList α × Nat) × Nat :=
+  let l := ws.length
+  ((AppList.append bitmaps.1 (AppList.list ws), bitmaps.2 + l), bitmaps.2)
+
+/-- Exact port of HOL `num_stack_ret_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:417`):
+
+```
+num_stack_ret k vs = LENGTH vs + 1 - k
+```
+
+    Number of stack slots holding the multi-arg return value.  HOL is
+    polymorphic in the value type (`vs` is only measured by `LENGTH`, which is
+    the list length), and the subtraction is HOL `num` truncation, exactly
+    Lean `Nat` subtraction, so the generic-`α` body below is the exact HOL
+    statement with no side condition. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "num_stack_ret_def"]
+def numStackRet {α : Type} (k : Nat) (vs : List α) : Nat := vs.length + 1 - k
+
+/-- Exact port of HOL `skip_free_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:423`):
+
+```
+skip_free (k,f,f') vs = f - num_stack_ret k vs
+```
+
+    Number of slots the callee frees.  The `(k,f,f')` is a HOL `num # num # num`
+    triple; `f'` is unused here, matching HOL.  Pure `num` arithmetic, so the
+    generic-`α` body is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "skip_free_def"]
+def skipFree {α : Type} (k f _f' : Nat) (vs : List α) : Nat := f - numStackRet k vs
+
+/-- Exact port of HOL `stack_arg_count_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:274`):
+
+```
+stack_arg_count dest arg_count k =
+  case dest of
+  | INL _ => (arg_count - k:num)
+  | INR _ => ((arg_count - 1) - k:num)
+```
+
+    HOL's `dest` is a `('a, 'b) sum` (the call-target position or register);
+    only the constructor is inspected.  The faithful Lean carrier is
+    `Sum α β` with the same two `num` results, so the generic body is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_arg_count_def"]
+def stackArgCount {α β : Type} (dest : Sum α β) (arg_count k : Nat) : Nat :=
+  match dest with
+  | .inl _ => arg_count - k
+  | .inr _ => (arg_count - 1) - k
+
+/-- Exact port of HOL `stack_free_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:281`):
+
+```
+stack_free dest arg_count (k,f,f') = f - stack_arg_count dest arg_count k
+```
+
+    Pure `num` arithmetic on top of `stackArgCount`; `f'` is unused, matching
+    HOL.  Generic in the `sum` carriers, so exact with no side condition. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "stack_free_def"]
+def stackFree {α β : Type} (dest : Sum α β) (arg_count k f _f' : Nat) : Nat :=
+  f - stackArgCount dest arg_count k
+
+/-- Exact port of HOL `perf_rsp_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:310`):
+
+```
+perf_rsp = 14n
+```
+
+    The x64 `RSP` register number used by the unverified perf-mode
+    instrumentation; a pure `num`, no `dimindex`, so the port is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_rsp_def"]
+def perfRsp : Nat := 14
+
+/-- Exact port of HOL `perf_rbp_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:315`):
+
+```
+perf_rbp = 15n
+```
+
+    The x64 `RBP` register number used by the unverified perf-mode
+    instrumentation; a pure `num`, no `dimindex`, so the port is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_rbp_def"]
+def perfRbp : Nat := 15
+
+/-- Exact port of HOL `handler_slots_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:346`):
+
+```
+handler_slots perf = if perf then 5n else 3n
+```
+
+    Pure `bool`/`num`; sizes the exception-handler stack slots used by
+    `raise_stub`/`PushHandler`/`StackHandlerArgs`/`copy_ret`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "handler_slots_def"]
+def handlerSlots (perf : Bool) : Nat := if perf then 5 else 3
 
 end Flapjack.Compiler.Backend.WordToStack

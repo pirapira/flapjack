@@ -1,0 +1,5 @@
+ib_empty=((Append Nil (List []),0),0)
+ib_flat=((Append (List [9; 8]) (List [1; 2; 3]),8),5)
+ib_nested=((Append (Append (List [1]) (List [2])) (List [4]),8),7)
+ib_data_len=5
+ib_new_len=8

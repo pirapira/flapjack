@@ -7227,9 +7227,9 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "crep_op_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "crepOpCrep",
+    "lean_name": "crepOpCrepWord",
     "statement_status": "reviewed_exact",
-    "reviewer": "Generic carrier encoding of crepSem$crep_op_def: CrepOp has only Mul, and for any word-value carrier α with its multiplication operation, exactly [w1,w2] returns SOME (w1*w2), with every other list returning NONE. Direct original HOL-EVAL rows are mirrored by Lean guards; production evalCrepRuntimeExp calls crepOpCrep directly."
+    "reviewer": "Width-indexed BitVec word port for every positive width: Mul on exactly two words returns their product and every other operator/arity returns none, matching crepSem$crep_op_def. The generic arbitrary-alpha production helper is untagged and definitionally equal on BitVec carriers."
   },
   {
     "hol_path": null,

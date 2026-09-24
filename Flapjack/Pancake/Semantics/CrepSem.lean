@@ -228,21 +228,39 @@ def resVar [BEq α] [LawfulBEq α] (f : FiniteMap α β) (entry : α × Option �
   | none => FDOMSUB f entry.1
   | some v => FUPDATE f (entry.1, v)
 
-/-! HOL crep_op has exactly one operator constructor, Mul. Lean's Mul α
-is the carrier operation corresponding to HOL word multiplication. -/
-/-- Exact generic counterpart of CakeML's `crepSem$crep_op_def`
-    (`crepSemScript.sml:85-88`): Mul on exactly two words succeeds with their
-    product; every operator/arity combination not covered by HOL returns none.
-    The arbitrary α is the word-value carrier and `[Mul α]` supplies its HOL
-    multiplication operation. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
+/-! HOL crep_op has exactly one operator constructor, Mul. This generic helper
+is Flapjack production support; the exact word-typed HOL counterpart below is
+specialized to every positive BitVec width. -/
+/-- Generic production helper for Crep multiplication. This is intentionally
+    untagged: HOL `crep_op_def` accepts `'a word`, whereas arbitrary `α` is not
+    constrained to be a word carrier. -/
 def crepOpCrep [Mul α] : CrepOp → List α → Option α
   | .mul, [left, right] => some (left * right)
   | _, _ => none
 
-/-- Compatibility name retained for existing target-adapter clients; the body
-is the reviewed generic HOL definition above. Production evaluation calls
-`crepOpCrep` directly. -/
+/-- Exact width-parametric Lean counterpart of CakeML's
+    `crepSem$crep_op_def` (`crepSemScript.sml:85-88`). For each positive word
+    width, Mul on exactly two words succeeds with their product; every other
+    operator/arity combination returns none, matching the HOL definition. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "crep_op_def"]
+def crepOpCrepWord {width : Nat} [NeZero width] :
+    CrepOp → List (BitVec width) → Option (BitVec width)
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
+/-- The exact word-width port is definitionally the generic production helper
+    when its carrier is a BitVec. -/
+theorem crepOpCrepWord_eq_generic {width : Nat} [NeZero width]
+    (operator : CrepOp) (arguments : List (BitVec width)) :
+    crepOpCrepWord operator arguments = crepOpCrep operator arguments := by
+  cases operator with
+  | mul => cases arguments with
+      | nil => rfl
+      | cons left rest => cases rest with
+          | nil => rfl
+          | cons right tail => cases tail <;> rfl
+
+/-- Compatibility name retained for existing target-adapter clients. -/
 def crepOpValue [Mul α] : CrepOp → List α → Option α := crepOpCrep
 
 /-- Compatibility equation for target-adapter clients of the generic operator. -/

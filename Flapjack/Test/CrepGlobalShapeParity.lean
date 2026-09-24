@@ -447,36 +447,39 @@ example : crepRuntimeLoad globalState (8 : Nat) =
 #guard (memLoadCrepHol (8 : Nat) memLoadBase == some (.word 7)) &&
   (memLoadCrepHol (9 : Nat) memLoadBase).isNone
 
-/-- Direct observations of the generic tagged HOL `crep_op_def` port
-    `crepOpCrep`, matching `scripts/hol-probes/crep_op_probe.out`:
+/-- Direct observations of the width-indexed tagged HOL `crep_op_def` port
+    `crepOpCrepWord`, matching `scripts/hol-probes/crep_op_probe.out`:
     `op_mul_two=SOME 21w`, `op_mul_one/op_mul_three/op_mul_empty=NONE`. -/
-example : crepOpCrep .mul [(7 : BitVec 64), 3] = some 21 := by rfl
+example : crepOpCrepWord (width := 64) .mul [(7 : BitVec 64), 3] = some 21 := by rfl
 
-example : crepOpCrep .mul [(7 : BitVec 64)] = none := by rfl
+example : crepOpCrepWord (width := 64) .mul [(7 : BitVec 64)] = none := by rfl
 
-example : crepOpCrep .mul [(7 : BitVec 64), 3, 1] = none := by rfl
+example : crepOpCrepWord (width := 64) .mul [(7 : BitVec 64), 3, 1] = none := by rfl
 
-example : crepOpCrep .mul ([] : List (BitVec 64)) = none := by rfl
+example : crepOpCrepWord (width := 64) .mul ([] : List (BitVec 64)) = none := by rfl
 
-/-! The same source definition is carrier-polymorphic; it does not require a
-BitVec width or a finite-index representation. -/
-example : crepOpCrep .mul [(7 : BitVec 8), 3] = some 21 := by rfl
+example : crepOpCrepWord (width := 8) .mul [(7 : BitVec 8), 3] = some 21 := by rfl
 
-/-- The compatibility helper is a direct alias of the tagged generic port. -/
+/-! The generic production helper agrees definitionally with the exact
+width-indexed HOL port on BitVec operands. -/
+example : crepOpCrep .mul [(7 : BitVec 64), 3] =
+    crepOpCrepWord (width := 64) .mul [(7 : BitVec 64), 3] := by rfl
+
+/-- The compatibility helper is a direct alias of the generic production helper. -/
 example : crepOpCrep .mul [(7 : BitVec 64), 3] = crepOpValue .mul [(7 : BitVec 64), 3] := by
   rw [crepOpCrep_eq_crepOpValue]
 
-/-- The production `.crepOp` evaluator clause is the HOL `OPT_MMAP`-then-`crep_op`
-    shape: the evaluated operand list is passed to the tagged `crepOpCrep`. -/
+/-- Production `.crepOp` evaluation uses the generic helper, which is the exact
+    width-indexed HOL port on BitVec operands. -/
 example :
     evalCrepRuntimeExp globalState (.crepOp .mul [.const (7 : Nat), .const 3]) =
       some 21 := by
   simp [evalCrepRuntimeExp, crepOpCrep]
 
-#guard (crepOpCrep .mul [(7 : BitVec 64), 3] == some 21) &&
-  (crepOpCrep .mul [(7 : BitVec 64)]).isNone &&
-  (crepOpCrep .mul [(7 : BitVec 64), 3, 1]).isNone &&
-  (crepOpCrep .mul ([] : List (BitVec 64))).isNone
+#guard (crepOpCrepWord (width := 64) .mul [(7 : BitVec 64), 3] == some 21) &&
+  (crepOpCrepWord (width := 64) .mul [(7 : BitVec 64)]).isNone &&
+  (crepOpCrepWord (width := 64) .mul [(7 : BitVec 64), 3, 1]).isNone &&
+  (crepOpCrepWord (width := 64) .mul ([] : List (BitVec 64))).isNone
 
 /-- Canonical RISC-V 64 runtime state used for the executed `.crepOp` path. -/
 def bv64State : CrepRuntimeState (RiscV.Word 64) Unit :=
@@ -486,7 +489,7 @@ def bv64State : CrepRuntimeState (RiscV.Word 64) Unit :=
      ffi := natCrepRuntimeFfiState, baseAddress := 0, topAddress := 0 } :
     CrepHolState (RiscV.Word 64) Unit).toRuntime
 
-/-- Canonical RV64 execution uses the tagged generic Crep operation directly. -/
+/-- Canonical RV64 execution uses the generic production helper. -/
 example :
     evalCrepRuntimeExp bv64State
         (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
@@ -497,8 +500,8 @@ example :
 #guard evalCrepRuntimeExp bv64State
     (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
 
-/-- The actual generic executed `.crepOp` branch calls the tagged operation
-    after evaluating operands, with no RV64-only adapter. -/
+/-- The actual generic executed `.crepOp` branch calls the untagged production
+    helper after evaluating operands. -/
 example :
     evalCrepRuntimeExp bv64State
         (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =

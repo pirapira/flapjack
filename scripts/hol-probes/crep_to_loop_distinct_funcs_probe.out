@@ -1,0 +1,3 @@
+distinct_funcs_sep=T
+distinct_funcs_collision=F
+distinct_funcs_absent=T

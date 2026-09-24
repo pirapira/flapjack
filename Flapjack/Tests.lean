@@ -88,6 +88,7 @@ import Flapjack.Test.SpillRelation
 import Flapjack.Test.LocationMoveRelation
 import Flapjack.Test.StackParallelMoveRelation
 import Flapjack.Test.CakeStackAlloc
+import Flapjack.Test.StackToLab
 import Flapjack.Test.StackFunctionEntryRelation
 import Flapjack.Test.StackFunctionSpillRelation
 import Flapjack.Test.StackParallelMoveAcyclic

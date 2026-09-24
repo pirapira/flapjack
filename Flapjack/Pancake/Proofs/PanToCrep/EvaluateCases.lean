@@ -8445,10 +8445,10 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgs
             eids := context.eids, vmax := context.vmax }
           expressions) = some (values.flatMap panValueFlatten) ∧
       lookupCrepRuntimeCode function (values.flatMap panValueFlatten) target.code =
-        some (compileCodeRelProg
-          (ctxtFc context.funcs context.eids
+        some (compileProgRiscV
+          (PanToCrepProofContext.toHOLContext (ctxtFc context.funcs context.eids
             (parameters.map Prod.fst) (parameters.map Prod.snd)
-            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))))
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))))
           sourceBody, targetLocals) ∧
       targetLocals = tlcWordLab
         (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := by
@@ -8567,7 +8567,15 @@ theorem lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH
           (values.flatMap panValueFlatten) FEMPTY
       _ = tlcWordLab
           (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd)))) values := rfl
-  exact ⟨targetLocals, harguments, hlookup, htargetMap⟩
+  have hlookupExact :
+      lookupCrepRuntimeCode function (values.flatMap panValueFlatten) target.code =
+        some (compileProgRiscV
+          (PanToCrepProofContext.toHOLContext (ctxtFc context.funcs context.eids
+            (parameters.map Prod.fst) (parameters.map Prod.snd)
+            (List.range (Shape.shapeSize (.comb (parameters.map Prod.snd))))))
+          sourceBody, targetLocals) := by
+    simpa [compileCodeRelProg_eq_compileProgRiscV] using hlookup
+  exact ⟨targetLocals, harguments, hlookupExact, htargetMap⟩
 
 /-! Derive the actual Call-entry `locals_rel` premise from the successful
 state-owned source lookup and the production target code lookup. The source

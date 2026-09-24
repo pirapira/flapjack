@@ -19,6 +19,7 @@ names.
 namespace Flapjack
 
 /-- HOL `app_list = List ('a list) | Append app_list app_list | Nil`. -/
+@[hol "cakeml/misc/miscScript.sml" "app_list"]
 inductive AppList (α : Type) where
   /-- HOL `List ('a list)`. -/
   | list (values : List α) : AppList α

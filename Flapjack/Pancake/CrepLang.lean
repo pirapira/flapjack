@@ -68,6 +68,7 @@ inductive CrepProg (α : Type u) where
 
 /-! Faithful port of `crepLang$assigned_free_vars` from
     `cakeml/pancake/crepLangScript.sml:149-162`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "assigned_free_vars_def"]
 def crepAssignedFreeVars : CrepProg α → List Nat
   | .skip => []
   | .dec name _ body =>
@@ -89,6 +90,7 @@ decreasing_by
 
 /-! Faithful port of `crepLang$assigned_vars` from
     `cakeml/pancake/crepLangScript.sml:164-176`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "assigned_vars_def"]
 def crepAssignedVars : CrepProg α → List Nat
   | .skip => []
   | .dec name _ body => name :: crepAssignedVars body
@@ -107,6 +109,7 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+@[hol "cakeml/pancake/crepLangScript.sml" "var_cexp_def"]
 def crepExpVars : CrepExp α → List Nat
   | .const _ => []
   | .var name => [name]
@@ -129,6 +132,7 @@ where
 
     The result preserves expression nodes while recursively flattening the
     expression lists of `Op` and `Crepop`, matching HOL's `FLAT (MAP exps)`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "exps_def"]
 def crepExps : CrepExp α → List (CrepExp α)
   | expression@(.const _) => [expression]
   | expression@(.var _) => [expression]
@@ -298,6 +302,7 @@ theorem crepExpVars_of_mem_loadShape [BEq α] [OfNat α 0] [Add α]
         · simp [hzero, crepExpVars, crepExpVars.crepExpVarsList]
       · exact ih (address + stride) h
 
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]
 def crepNestedSeq : List (CrepProg α) → CrepProg α
   | [] => .skip
   | statement :: statements => .seq statement (crepNestedSeq statements)
@@ -346,6 +351,12 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! UNTAGGED (documented mismatch with `crepLang$stores_def`,
+    `cakeml/pancake/crepLangScript.sml:95-100`): HOL fixes the stride to
+    `byte$bytes_in_word` (derived from the word length), whereas this helper
+    takes `stride` as an explicit argument so it can serve several callers
+    (`crepAssigned*_nestedSeq_stores`).  A width-indexed `stores` with the fixed
+    stride is the exact counterpart once the stride is tied to the word type. -/
 def stores [BEq α] [OfNat α 0] [Add α]
     (address : CrepExp α) : List (CrepExp α) → α → α → List (CrepProg α)
   | [], _, _ => []
@@ -353,6 +364,7 @@ def stores [BEq α] [OfNat α 0] [Add α]
       let destination := if offset == 0 then address else .op .add [address, .const offset]
       .store destination value :: stores address values (offset + stride) stride
 
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_decs_def"]
 def nestedDecs : List Nat → List (CrepExp α) → CrepProg α → CrepProg α
   | [], [], body => body
   | name :: names, value :: values, body => .dec name value (nestedDecs names values body)

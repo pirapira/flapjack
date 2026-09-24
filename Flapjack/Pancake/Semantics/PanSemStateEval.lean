@@ -619,4 +619,59 @@ theorem panValueFlatOffset_eq_widen (address : RiscV.Word 64) (n : Nat) :
       simp only [BitVec.ofNat_add, BitVec.mul_add, BitVec.mul_one]
       ac_rfl
 
+/-! ### Fuel sufficiency for the structured `.load` adapter (flapjack-pxn.18.3.6.9.2.2.1)
+
+The production flattening load passes the same fuel to each sub-shape; these
+untagged Nat bounds show the freezer's initial fuel
+`panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1` suffices for
+every nested `Comb`/`Named` field. They are the remaining prerequisites for the
+`Comb`/`Named` widening adapter to the tagged exact `panMemLoadHOL`. -/
+
+theorem panValueFlatShapeFuel_le_listFuel {shape : Shape} {shapes : List Shape}
+    (h : shape ∈ shapes) :
+    panValueFlatShapeFuel shape ≤ panValueFlatShapeFuel.panValueFlatShapeListFuel shapes := by
+  induction shapes with
+  | nil => simp at h
+  | cons head tail ih =>
+      rcases List.mem_cons.mp h with hhead | htail
+      · subst hhead
+        simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel]
+        omega
+      · have hih := ih htail
+        simp only [panValueFlatShapeFuel.panValueFlatShapeListFuel]
+        omega
+
+theorem panValueFlatFieldsFuel_shapeFuel_le {field : FieldName × Shape}
+    {fields : List (FieldName × Shape)} (h : field ∈ fields) :
+    panValueFlatShapeFuel field.2 ≤ panValueFlatFieldsFuel fields := by
+  induction fields with
+  | nil => simp at h
+  | cons head tail ih =>
+      rcases List.mem_cons.mp h with hhead | htail
+      · subst hhead
+        simp only [panValueFlatFieldsFuel]
+        omega
+      · have hih := ih htail
+        simp only [panValueFlatFieldsFuel]
+        omega
+
+theorem panValueFlatContextFuel_lookupInfoWithRest_le [BEq String] (name : String)
+    (structs : StructContext) (info : StructInfo) (rest : StructContext)
+    (h : lookupInfoWithRest name structs = some (info, rest)) :
+    panValueFlatFieldsFuel info.fields + panValueFlatContextFuel rest ≤
+      panValueFlatContextFuel structs := by
+  induction structs with
+  | nil => simp [lookupInfoWithRest] at h
+  | cons entry tail ih =>
+      obtain ⟨candidate, value⟩ := entry
+      by_cases hc : candidate == name
+      · simp [lookupInfoWithRest, hc] at h
+        obtain ⟨hinfo, hrest⟩ := h
+        subst hinfo; subst hrest
+        simp [panValueFlatContextFuel]
+      · simp only [lookupInfoWithRest, hc] at h
+        have hih := ih h
+        simp only [panValueFlatContextFuel]
+        omega
+
 end Flapjack

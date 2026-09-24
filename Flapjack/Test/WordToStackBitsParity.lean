@@ -170,4 +170,42 @@ example : writeBitmapHOL (width := 8) [0, 1, 2] 0 8 =
   writeBitmapHOL_domain_insensitive [0, 1, 2] [2, 0, 1] 0 8
     (by intro r; simp only [List.mem_cons, List.not_mem_nil, or_false]; omega)
 
+/-!
+## `insert_bitmap` oracle parity
+
+`Flapjack.Compiler.Backend.WordToStack.insertBitmap` is the exact generic-`α`
+port of HOL `insert_bitmap_def` (`word_to_stackScript.sml:246-250`).  The HOL
+definition uses no word operation, so the `app_list`/`num` result is compared
+structurally here.  Rows from the direct HOL `EVAL` probe
+`scripts/hol-probes/word_to_stack_insert_bitmap_probe.out`:
+
+```
+ib_empty=((Append Nil (List []),0),0)
+ib_flat=((Append (List [9; 8]) (List [1; 2; 3]),8),5)
+ib_nested=((Append (Append (List [1]) (List [2])) (List [4]),8),7)
+ib_data_len=5   ib_new_len=8
+```
+-/
+
+def insertBitmapParityGuard : Bool :=
+  (match insertBitmap (α := Nat) ([] : List Nat) (AppList.nil, 0) with
+   | ((AppList.append AppList.nil (AppList.list []), 0), 0) => true
+   | _ => false) &&
+  (match insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5) with
+   | ((AppList.append (AppList.list [9, 8]) (AppList.list [1, 2, 3]), 8), 5) => true
+   | _ => false) &&
+  (match insertBitmap (α := Nat) [4]
+        (AppList.append (AppList.list [1]) (AppList.list [2]), 7) with
+   | ((AppList.append (AppList.append (AppList.list [1]) (AppList.list [2]))
+          (AppList.list [4]), 8), 7) => true
+   | _ => false) &&
+  ((insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5)).2 == 5) &&
+  ((insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5)).1.2 == 8)
+
+#eval insertBitmapParityGuard
+#guard insertBitmapParityGuard
+
+example : insertBitmap (α := Nat) [1, 2, 3] (AppList.list [9, 8], 5) =
+    ((AppList.append (AppList.list [9, 8]) (AppList.list [1, 2, 3]), 8), 5) := rfl
+
 end Flapjack.Test.WordToStackBitsParity

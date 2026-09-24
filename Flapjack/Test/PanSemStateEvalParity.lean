@@ -329,6 +329,13 @@ private abbrev dom4All : RiscV.Word 4 → Prop := fun _ => True
 #guard panMemLoadByteHOL (width := 4) mem4Nonzero dom4All true 1 ==
   some (UInt8.ofNat 11)
 
+/- Direct HOL mem_load_32 rows distinguish the little-endian 0,0,0,0 MOD 0
+   byte indices from the big-endian saturating subtraction case. -/
+#guard panMemLoad32HOL (width := 4) mem4Nonzero dom4All false 0 ==
+  some (BitVec.ofNat 32 11)
+#guard panMemLoad32HOL (width := 4) mem4Nonzero dom4All true 0 ==
+  some (BitVec.ofNat 32 0x0B0B0B0B)
+
 /-! ### Executed-path widening adapter (flapjack-pxn.18.3.6.9.2) -/
 
 /-- The executed `readByte` on the source state agrees with the tagged exact

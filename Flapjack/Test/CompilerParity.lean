@@ -242,6 +242,7 @@ import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVArtifactParity
+import Flapjack.Test.RiscVWordExtract6Parity
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
@@ -809,6 +810,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeStackReseatParity.runChecks,
     Flapjack.Test.RiscVMemOpParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
+    Flapjack.Test.RiscVWordExtract6Parity.runChecks,
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,

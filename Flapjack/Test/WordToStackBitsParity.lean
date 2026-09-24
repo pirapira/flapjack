@@ -67,7 +67,7 @@ def wordListParityGuard : Bool :=
 #guard wordListParityGuard
 
 example : wordListW (width := 64) [true, false, true, true] 2 =
-    ([5, 3] : List (BitVec 64)) := by native_decide
+    ([5, 3] : List (BitVec 64)) := by decide +kernel
 
 /-! ## `chunk_to_bits` parity
 
@@ -94,7 +94,7 @@ def chunkToBitsParityGuard : Bool :=
 #guard chunkToBitsParityGuard
 
 example : chunkToBitsW (width := 64) [(true, (0 : BitVec 64)), (false, 9)] =
-    chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by native_decide
+    chunkToBitsW (width := 64) [(true, 0), (false, 0)] := by decide
 
 /-! ## `chunk_to_bitmap` / `const_words_to_bitmap` parity
 
@@ -134,7 +134,7 @@ def chunkToBitmapParityGuard : Bool :=
 
 example : constWordsToBitmapW (width := 8)
     [(true, 1), (false, 2), (true, 3), (false, 4), (true, 5), (false, 6), (true, 7), (false, 8)] 8 =
-    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by native_decide
+    ([213, 1, 2, 3, 4, 5, 6, 7, 2, 8] : List (BitVec 8)) := by decide +kernel
 
 /-! ## `write_bitmap` oracle parity (untagged model)
 

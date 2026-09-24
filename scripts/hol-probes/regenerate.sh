@@ -265,6 +265,12 @@ run_probe crep_to_loop_locals_rel_probeScript.sml crep_to_loop_locals_rel_probe.
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
+  mk_ctxt_vars make_vmap_empty_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
+  mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_helpers_probeScript.sml crep_to_loop_helpers_probe.out \
   gen_temps_3 rt_vars_absent "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake"
@@ -875,7 +881,8 @@ run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
-  zero highest_shift_conclusion "$cake_dir/pancake/crep_arithScript.sml"
+  zero highest_shift_conclusion bound_eight \
+  "$cake_dir/pancake/crep_arithScript.sml"
 run_probe hol_fcp_index_n2w_probeScript.sml hol_fcp_index_n2w_probe.out \
   n2w_zero_word bit_high6 "$hol_dir/src/n-bit/wordsScript.sml" \
   "$hol_dir/src/n-bit"

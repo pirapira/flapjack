@@ -10,3 +10,6 @@ six=NONE
 max=NONE
 eight_shift_conclusion=8w
 highest_shift_conclusion=128w
+bound_one_start3=T
+bound_four_start4=T
+bound_eight=T

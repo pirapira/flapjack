@@ -39,3 +39,12 @@ val _ = print_eval "eight_shift_conclusion"
   ``word_lsl (1w : 8 word) 3n``;
 val _ = print_eval "highest_shift_conclusion"
   ``word_lsl (1w : 8 word) 7n``;
+val _ = print_eval "bound_one_start3"
+  ``(crep_arith$dest_2exp 3n (1w : 8 word) = SOME 3n ==>
+      3n <= 3n + w2n (word_log2 (1w : 8 word)))``;
+val _ = print_eval "bound_four_start4"
+  ``(crep_arith$dest_2exp 4n (4w : 8 word) = SOME 6n ==>
+      6n <= 4n + w2n (word_log2 (4w : 8 word)))``;
+val _ = print_eval "bound_eight"
+  ``(crep_arith$dest_2exp 0n (8w : 8 word) = SOME 3n ==>
+      3n <= 0n + w2n (word_log2 (8w : 8 word)))``;

@@ -8,6 +8,12 @@ open Flapjack.RiscV
     (`crep_arithScript.sml:15`). -/
 def word (value : Nat) : RiscV.Word 8 := BitVec.ofNat 8 value
 
+@[instance_reducible] def finiteWordDimension8 : HolFiniteDimension (Fin 8) :=
+  inferInstance
+
+def finiteWord8 (value : Nat) : Fin 8 → Bool :=
+  bitVecToHolWord finiteWordDimension8 (word value)
+
 def parityGuard : Bool :=
   crepDest2Exp 0 (word 0) == none &&
   crepDest2Exp 3 (word 1) == some 3 &&
@@ -53,5 +59,19 @@ example : 3 ≤ 0 + (BitVec.ofNat 8 (Nat.log2 (word 8).toNat)).toNat :=
 example : 6 ≤ 4 + (BitVec.ofNat 8 (Nat.log2 (word 4).toNat)).toNat :=
   crepDest2ExpBound 4 (word 4) 6
     (by decide +kernel)
+
+example : 6 ≤ 4 + (holWordToBitVec finiteWordDimension8
+    (bitVecToHolWord finiteWordDimension8
+      (BitVec.ofNat 8 (Nat.log2
+        (holWordToBitVec finiteWordDimension8 (finiteWord8 4)).toNat)))).toNat :=
+  crepDest2ExpHolFiniteDimensionBoundSupport finiteWordDimension8 4
+    (finiteWord8 4) 6 (by decide +kernel)
+
+example : 3 ≤ 3 + (holWordToBitVec finiteWordDimension8
+    (bitVecToHolWord finiteWordDimension8
+      (BitVec.ofNat 8 (Nat.log2
+        (holWordToBitVec finiteWordDimension8 (finiteWord8 1)).toNat)))).toNat :=
+  crepDest2ExpHolFiniteDimensionBoundSupport finiteWordDimension8 3
+    (finiteWord8 1) 3 (by decide +kernel)
 
 end Flapjack.Test.CrepeDest2ExpParity

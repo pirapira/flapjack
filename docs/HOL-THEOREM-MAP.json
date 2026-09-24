@@ -296,6 +296,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_const_def",
+    "lean_path": "Flapjack/Pancake/CrepArith.lean",
+    "lean_name": "crepDestConstHolWord",
+    "statement_status": "reviewed_exact",
+    "reviewer": "The tagged definition is restricted to CrepExp (Fin width → Bool) with NeZero width, so the payload is a positive-width finite word rather than an arbitrary carrier. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The arbitrary-alpha production helper remains untagged and is definitionally equal on this carrier."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -309,7 +317,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Boolean-function word carrier ι → Bool with HolFiniteDimension, which encodes the finite, nonempty enumeration corresponding to HOL finite_index. Same polymorphic word-typed shape and no extra operation premises; successful dest_const premise and Const conclusion match source."
+    "reviewer": "Width-specialized positive finite word carrier Fin width → Bool with NeZero width. Successful dest_const premise and Const conclusion match the HOL theorem; arbitrary-alpha support remains untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -334,6 +342,14 @@
     "lean_name": "crepDest2ExpBound",
     "statement_status": "documented_mismatch",
     "reviewer": "Width-parametric BitVec support only; HOL quantifies over polymorphic 'a word with implicit dimindex, and the Lean theorem has not been related to HOL's finite_index carrier. Do not tag until that carrier identification is proved. The local note records the exact gap."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_2exp_bound",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimensionBoundSupport",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All explicit HolFiniteDimension word carriers with the w2n(word_log2 word) quantity encoded via holWordToBitVec, Nat.log2, and bitVecToHolWord. Kept untagged until these explicit enumeration and word_log2 interpretations are proved identical to HOL's implicit finite_index carrier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -8526,5 +8542,29 @@
     "lean_name": "findLabHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "mk_ctxt_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "mkCtxtHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against mk_ctxt_def at crep_to_loopScript.sml:221; constructs the finite-map context record with the same four fields target/vars/funcs/vmax; direct HOL-EVAL rows mk_ctxt_vars/mk_ctxt_funcs/mk_ctxt_vmax/mk_ctxt_target=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "make_vmap_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "makeVmapHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against make_vmap_def at crep_to_loopScript.sml:230; HOL FEMPTY |++ ZIP (params, GENLIST I (LENGTH params)) rendered as FUPDATE_LIST FEMPTY (params.zip (List.range params.length)); direct HOL-EVAL rows make_vmap_single_hit/make_vmap_two_second/make_vmap_empty_miss=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "hol_name": "make_funcs_def",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "crepToLoopMakeFuncsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against make_funcs_def at crep_to_loopScript.sml:247; HOL fnames=MAP FST prog, fnums=GENLIST (n. n + first_name) (LENGTH prog), lens=MAP (LENGTH o FST o SND) prog, fs=MAP2 pairs, alist_to_fmap rendered as FUPDATE_LIST FEMPTY entries.reverse with first-inserted-binding-wins; carriers alpha/beta/gamma kept polymorphic as in HOL; first_name is the tagged firstLoopName; direct HOL-EVAL rows mkf_f/mkf_g/mkf_absent/mkf_dup_first=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   }
 ]

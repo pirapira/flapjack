@@ -38,6 +38,10 @@ val baseState = ``(^s with <| clock := 5;
   memaddrs := {};
   sh_memaddrs := {} |>)``;
 
+val baseStateNonword = ``(^baseState with
+  locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word))
+            |+ (strlit "y", RStruct []))``;
+
 val thenAssign = ``panLang$Assign Local (strlit "x") (panLang$Const (9w:8 word))``;
 
 val _ = print_eval "if_true_result"
@@ -67,6 +71,14 @@ val _ = print_eval "if_nonword_locals"
   ``FLOOKUP (SND (panSem$evaluate
       (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip, ^baseState))).locals
       (strlit "x")``;
+val _ = print_eval "if_nonword_value_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "y")) ^thenAssign panLang$Skip,
+        ^baseStateNonword))``;
+val _ = print_eval "if_nonword_value_locals"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "y")) ^thenAssign panLang$Skip,
+        ^baseStateNonword))).locals (strlit "x")``;
 val _ = print_eval "if_fail_result"
   ``FST (panSem$evaluate
       (panLang$If (panLang$Load panLang$One (panLang$Const (0w:8 word))) ^thenAssign panLang$Skip,

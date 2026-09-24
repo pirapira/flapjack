@@ -576,4 +576,47 @@ theorem panValueFlatLoad_one_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
       | nStruct nm fs =>
           cases hd : state.memaddrs address <;> simp [hmem, panValueWordDefined]
 
+/-! ### Structured `.load` fuel/offset helpers (flapjack-pxn.18.3.6.9.2.2/.2.2.1)
+
+These untagged helpers connect the production fuel-indexed flattening load to the
+tagged exact `panMemLoadHOL`: the production context-size agrees with the exact
+`sizeOfShWithCtxt` over `StructContext.toHOL`, and the production offset
+`panValueFlatOffset` agrees with the exact `address + bytes_in_word * n` step.
+They are prerequisites for the remaining `Comb`/`Named` widening adapter
+(`flapjack-pxn.18.3.6.9.2.2.1`). -/
+
+theorem panValueFlatSizeFoldl_eq_sizeOfShWithCtxt (structs : StructContext) (shapes : List Shape)
+    (acc : Nat)
+    (h : ∀ shape ∈ shapes, shapeSizeWithContext structs shape = sizeOfShWithCtxt structs.toHOL shape) :
+    shapes.foldl (fun total shape => total + shapeSizeWithContext structs shape) acc =
+      shapes.foldl (fun total shape => total + sizeOfShWithCtxt structs.toHOL shape) acc := by
+  induction shapes generalizing acc with
+  | nil => rfl
+  | cons s ss ih =>
+      simp only [List.foldl_cons]
+      rw [h s List.mem_cons_self]
+      exact ih (acc + sizeOfShWithCtxt structs.toHOL s) (fun x hx => h x (List.mem_cons_of_mem s hx))
+
+theorem panValueFlatShapeSize_eq_sizeOfShWithCtxt (structs : StructContext) (shape : Shape) :
+    shapeSizeWithContext structs shape = sizeOfShWithCtxt structs.toHOL shape := by
+  induction shape using shapeSizeWithContext.induct with
+  | case1 => simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+  | case2 shapes ih =>
+      simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+      exact panValueFlatSizeFoldl_eq_sizeOfShWithCtxt structs shapes 0 ih
+  | case3 name =>
+      simp only [shapeSizeWithContext, sizeOfShWithCtxt]
+      rw [lookupInfo_toHOL]
+      cases lookupInfo name structs <;> rfl
+
+theorem panValueFlatOffset_eq_widen (address : RiscV.Word 64) (n : Nat) :
+    panValueFlatOffset (8 : RiscV.Word 64) address n =
+      address + BitVec.ofNat 64 8 * BitVec.ofNat 64 n := by
+  induction n generalizing address with
+  | zero => simp [panValueFlatOffset]
+  | succ n ih =>
+      rw [panValueFlatOffset, ih]
+      simp only [BitVec.ofNat_add, BitVec.mul_add, BitVec.mul_one]
+      ac_rfl
+
 end Flapjack

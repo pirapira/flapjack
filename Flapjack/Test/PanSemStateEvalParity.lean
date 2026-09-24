@@ -374,4 +374,14 @@ example :
       (some (panSemBitVec64MemoryAccess littleEndianState)))
     sourceMemoryWord
 
+/- The production context-size agrees with the exact HOL context-size. -/
+example : shapeSizeWithContext ([] : StructContext) Shape.one =
+    sizeOfShWithCtxt (StructContext.toHOL ([] : StructContext)) Shape.one :=
+  panValueFlatShapeSize_eq_sizeOfShWithCtxt ([] : StructContext) Shape.one
+
+/- The production offset agrees with the exact `address + bytes_in_word * n`. -/
+example : panValueFlatOffset (8 : RiscV.Word 64) (16 : RiscV.Word 64) 3 =
+    (16 : RiscV.Word 64) + BitVec.ofNat 64 8 * BitVec.ofNat 64 3 :=
+  panValueFlatOffset_eq_widen 16 3
+
 end Flapjack.Test.PanSemStateEvalParity

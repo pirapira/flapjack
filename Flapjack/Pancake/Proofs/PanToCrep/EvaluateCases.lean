@@ -1450,13 +1450,9 @@ theorem panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
     (hexceptionShape : ∃ shape,
       state.exceptionShapes exception = some shape ∧
       panShapeMatches (panValueShape state.structs exceptionValue) shape = true)
-    (hexceptionValid : panValueExceptionValid state.structs none exception
-      exceptionValue = true)
     (hpayload : panValuePayloadWithinLimit state.structs exceptionValue = true)
     (hhandlerAssignment : panValueAssignmentValid state.structs state.locals
       (fun _ => none) .local handlerVariable exceptionValue = true)
-    (hhandlerContract : panValueHandlerValid state.structs none state.locals
-      handlerVariable exceptionValue = true)
     (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
       state.structs state.code state.exceptionShapes state.baseAddress
       state.topAddress panSemBitVec64BytesInWord fuel
@@ -1484,8 +1480,8 @@ theorem panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
     exceptionValue calleeClock
     (memoryAccess := some (panSemBitVec64MemoryAccess state)) (contracts := none)
     (memoryHandler := none) handlerResult harguments' hcallee hclock
-    calleeRaisedLocals hcalleeBody hexceptionShape hexceptionValid hpayload
-    hhandlerAssignment hhandlerContract hhandlerBody
+    calleeRaisedLocals hcalleeBody hexceptionShape (by simp) hpayload
+    hhandlerAssignment (by simp) hhandlerBody
 
 /-! Lift the source-side raised-handler IH composition to the production
 RISC-V `PanSemState` evaluator. The explicit fuel equation ties the local
@@ -1527,13 +1523,9 @@ theorem panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     (hexceptionShape : ∃ shape,
       state.exceptionShapes exception = some shape ∧
       panShapeMatches (panValueShape state.structs exceptionValue) shape = true)
-    (hexceptionValid : panValueExceptionValid state.structs none exception
-      exceptionValue = true)
     (hpayload : panValuePayloadWithinLimit state.structs exceptionValue = true)
     (hhandlerAssignment : panValueAssignmentValid state.structs state.locals
       (fun _ => none) .local handlerVariable exceptionValue = true)
-    (hhandlerContract : panValueHandlerValid state.structs none state.locals
-      handlerVariable exceptionValue = true)
     (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
       state.structs state.code state.exceptionShapes state.baseAddress
       state.topAddress panSemBitVec64BytesInWord fuel
@@ -1551,7 +1543,7 @@ theorem panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     arguments values returnShape body calleeLocals calleeRaisedLocals
     calleeGlobals calleeMemory calleeFfi exceptionValue calleeClock handlerProgram
     handlerResult harguments hcallee hclock hcalleeBody hexceptionShape
-    hexceptionValid hpayload hhandlerAssignment hhandlerContract hhandlerBody
+    hpayload hhandlerAssignment hhandlerBody
   refine ⟨?_, panSemCodeStateAfter_preserves_code state handlerResult⟩
   change panSemEvaluateCodeStateWithMemoryModel context primitive handler
     panSemBitVec64WordModel panSemBitVec64BytesInWord state
@@ -9875,13 +9867,9 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
         sourceException payload), calleeClock))
-    (hsourceExceptionValid : panValueExceptionValid source.structs none
-      sourceException payload = true)
     (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
     (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
       (fun _ => none) .local handlerVariable payload = true)
-    (hsourceHandlerContract : panValueHandlerValid source.structs none source.locals
-      handlerVariable payload = true)
     (hsourceHandlerBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord
@@ -10087,8 +10075,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi payload calleeClock
     handlerProgram sourceResult hsourceFuel hsourceArgs hsourceCall hsourceClock
     hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceShapeMatch⟩
-    hsourceExceptionValid hsourcePayloadWithinLimit hsourceHandlerAssignment
-    hsourceHandlerContract hsourceHandlerBody
+    hsourcePayloadWithinLimit hsourceHandlerAssignment hsourceHandlerBody
   have hsourceCallRun := hsourceRun.1
   have hargumentLength := by
     have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
@@ -10316,13 +10303,9 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (hsourceExceptionShape : ∃ shape,
       source.exceptionShapes sourceException = some shape ∧
       panShapeMatches (panValueShape source.structs (.word value)) shape = true)
-    (hsourceExceptionValid : panValueExceptionValid source.structs none sourceException
-      (.word value) = true)
     (hsourcePayload : panValuePayloadWithinLimit source.structs (.word value) = true)
     (hsourceHandlerAssignment : panValueAssignmentValid source.structs source.locals
       (fun _ => none) .local handlerVariable (.word value) = true)
-    (hsourceHandlerContract : panValueHandlerValid source.structs none source.locals
-      handlerVariable (.word value) = true)
     (hsourceHandlerBodyRun : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord fuel
@@ -10504,8 +10487,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
         handlerVariable sourceExpressions arguments returnShape sourceBody calleeLocals
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi (.word value) calleeClock
     sourceHandlerBody sourceResult hfuel hsourceArguments hsourceCallee hsourceClock
-    hsourceCalleeBody hsourceExceptionShape hsourceExceptionValid hsourcePayload
-    hsourceHandlerAssignment hsourceHandlerContract hsourceHandlerBodyRun
+    hsourceCalleeBody hsourceExceptionShape hsourcePayload hsourceHandlerAssignment
+    hsourceHandlerBodyRun
   subst sourceAfterCallee
   let sourceAfterCallee :=
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }

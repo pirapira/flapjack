@@ -21,16 +21,49 @@ inductive LoopExp (α : Type u) where
   | topAddr
   deriving Repr
 
+/-- Faithful Cake `loopLang$exp` over a fixed word width. HOL's generic `'a word`
+carrier is instantiated at `BitVec width`, and unlike the executable `LoopExp`
+there are no extra `crepOp`/`cmp` cases. -/
+@[hol "cakeml/pancake/loopLangScript.sml" "exp"]
+inductive HolLoopExp (width : Nat) [NeZero width] where
+  | const (value : BitVec width)
+  | var (name : Nat)
+  | lookup (address : BitVec 5)
+  | load (address : HolLoopExp width)
+  | op (operator : BinOp) (args : List (HolLoopExp width))
+  | shift (operator : Shift) (left right : HolLoopExp width)
+  | baseAddr
+  | topAddr
+  deriving Repr
+
+/-- Executable `LoopExp` view of a faithful `HolLoopExp`. Every HOL constructor
+has a direct executable counterpart; the executable language has additional
+constructors that are not part of HOL `loopLang$exp`. -/
+def holLoopExpToExecutable {width : Nat} [NeZero width] :
+    HolLoopExp width → LoopExp (BitVec width)
+  | .const value => .const value
+  | .var name => .var name
+  | .lookup address => .lookup address
+  | .load address => .load (holLoopExpToExecutable address)
+  | .op operator args => .op operator (args.map holLoopExpToExecutable)
+  | .shift operator left right =>
+      .shift operator (holLoopExpToExecutable left) (holLoopExpToExecutable right)
+  | .baseAddr => .baseAddr
+  | .topAddr => .topAddr
+
 inductive RegImm (α : Type u) where
   | imm (value : α)
   | reg (name : Nat)
   deriving Repr
 
+/-- Faithful Cake `loopLang$loop_arith`; constructor and field shapes match this
+executable `LoopArith` name for name (HOL uses `LLongMul`/`LLongDiv`/`LDiv`). -/
+@[hol "cakeml/pancake/loopLangScript.sml" "loop_arith"]
 inductive LoopArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | div (destination dividend divisor : Nat)
-  deriving Repr
+  deriving Repr, DecidableEq
 
 inductive LoopProg (α : Type u) where
   | skip

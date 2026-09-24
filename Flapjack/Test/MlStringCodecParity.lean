@@ -28,6 +28,15 @@ example (m : MlString) : ofString (toStringOfBytes m) = m := ofString_toStringOf
 
 example : toStringOfBytes (ofString "AB") = "AB" := rfl
 
+/-- Explicit non-byte behavior: for arbitrary Lean strings the codec records the
+low-byte projection rather than a silent identity. -/
+example (s : String) :
+    (ofString s).explode.map BitVec.toNat = s.toList.map (fun c => c.toNat % 256) :=
+  explode_map_toNat_ofString s
+
+example (c : Char) : (BitVec.ofNat 8 c.toNat).toNat = c.toNat % 256 :=
+  ofString_char_toNat_mod c
+
 def runChecks : IO Bool := do
   IO.println "PASS Lean String <-> exact mlstring byte codec round trips"
   pure codecGuard

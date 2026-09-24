@@ -7438,5 +7438,13 @@
     "lean_name": "labelsRel_of_perm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "extract_labels_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "extractLabels",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

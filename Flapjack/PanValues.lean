@@ -12,10 +12,17 @@ matches the value/shape checks in CakeML's `panSem` evaluator.
 
 namespace Flapjack
 
-/-! CakeML's `word_lab` wrapper is currently a one-constructor type.  Keeping
-    it explicit makes the four small `panSem` helper definitions faithful even
-    though the executable `PanValue.word` constructor stores the payload
-    directly. -/
+/-! `PanWordLab` is the exact Lean counterpart of CakeML's one-constructor
+    `word_lab` datatype (`cakeml/pancake/semantics/panSemScript.sml:17`,
+    `word_lab = Word ('a word)`): one constructor with a single payload of the
+    word type.  `panIsWord`/`panTheWord` are the exact counterparts of HOL
+    `isWord_def` (`:26`) and `theWord_def` (`:30`).
+
+    The `@[hol ...]` tag is intentionally NOT attached here: the counterpart
+    file for `panSemScript.sml` is `Flapjack/Pancake/Semantics/PanSem.lean`
+    (see `docs/HOL-LAYOUT.md`), and this datatype is defined in
+    `Flapjack/PanValues.lean`.  An exact-tagged port (or a checked relocation)
+    is tracked by bead `flapjack-pxn.18.3.6.8`. -/
 inductive PanWordLab (α : Type u) where
   | word (value : α)
   deriving BEq, DecidableEq, Repr
@@ -26,6 +33,17 @@ def panIsWord : PanWordLab α → Bool
 def panTheWord : PanWordLab α → α
   | .word value => value
 
+/-! `PanValue` is the executable counterpart of CakeML's three-constructor
+    value datatype `v` (`cakeml/pancake/semantics/panSemScript.sml:22`,
+    `v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`),
+    NOT of `word_lab` (which is the one-constructor wrapper above).
+
+    It is NOT statement-exact: `v`'s `Val` constructor stores an `'a word_lab`
+    while `PanValue.word` stores the word payload `α` directly.  Constructor
+    arities (1/1/2) and the `RStruct`/`NStruct` field types agree, but the
+    first constructor's field type differs, so no exact `@[hol ... "v"]`
+    (Datatype) tag is attached.  A faithful port is tracked by bead
+    `flapjack-pxn.18.3.6.8`. -/
 inductive PanValue (α : Type u) where
   | word (value : α)
   | rStruct (fields : List (PanValue α))
@@ -38,7 +56,8 @@ def panIsValWord : PanValue α → Bool
 
 /- `theValWord` is only defined by CakeML on a word value.  The `Option`
    result records that definedness instead of introducing an arbitrary value
-   for structured inputs. -/
+   for structured inputs; this totalized `Option α` version is therefore not
+   statement-exact against the partial HOL `theValWord_def` (`:34`). -/
 def panTheValWord : PanValue α → Option α
   | .word value => some value
   | .rStruct _ | .nStruct _ _ => none
@@ -1239,6 +1258,32 @@ def panValueWordProjection : PanValue α → Option α
     (fields : List (FieldName × PanValue α)) :
     panValueWordProjection (.nStruct name fields) = none := rfl
 
+/-- Executable Pancake source-expression evaluator.
+
+This is the source-shaped recursion used by the production semantics, but it is
+NOT a statement-exact port of HOL `panSemScript.sml:209 eval_def`
+(resp. the identical `pan_itreeSemScript.sml:79`).  Cluster-by-cluster:
+
+* `Const`, `Var Local`, `Var Global`, `RStruct`, `RField`, `BaseAddr`,
+  `TopAddr`, `BytesInWord` follow the HOL clauses; the bounded index lookup
+  `fields[index]?` matches HOL's `if index < LENGTH vs then EL index vs` and
+  the HOL rows in `scripts/hol-probes/pan_eval_probe.out` are checked in
+  `Flapjack/Test/PanEvalParity.lean`.
+* `NStruct` / `NField` use the production `lookupInfo` first-match and the
+  helper `panValueFieldsHaveShapes` rather than HOL's `ALOOKUP` with HOL `=`,
+  `UNZIP`, the `field_names' = field_names` test, and the
+  `EVERY (λ(s,v). s = shape_of v)` check.
+* `Load` / `Load32` / `LoadByte` / `Op` do not read memory through the HOL
+  state's `memaddrs`, endianness, and byte width; the default (`memoryAccess =
+  none`) reads `memory` directly, and the `.load` case uses `panValueFlatLoad`.
+  This is the gap also recorded in `Flapjack/Pancake/Semantics/PanSem/Total.lean`.
+* The Lean signature takes `structs locals globals memory baseAddress
+  topAddress bytesInWord` (a projection of the HOL state) and an extra
+  `memoryAccess` parameter, and `PanValue` stores the raw word in `.word` rather
+  than HOL's `Val (Word w)`.
+
+The faithful HOL-shaped expression evaluator, including the state projection and
+the memory-codec clauses, is tracked by bead `flapjack-pxn.18.3.6.9`. -/
 def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]

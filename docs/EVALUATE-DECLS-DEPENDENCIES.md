@@ -26,7 +26,7 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 
 | Dependency | Lean (file:line) | HOL counterpart | Classification | Bead |
 | --- | --- | --- | --- | --- |
-| `evalPanValueExp` | `Flapjack/PanValues.lean:1242` | `eval_def` (`panSemScript.sml:209`) | **unreviewed / possible mismatch** (no clause-by-clause evidence for the `NStruct`, memory/domain, or word-operation cases) | `.18.3.6.2` |
+| `evalPanValueExp` | `Flapjack/PanValues.lean:1261` | `eval_def` (`panSemScript.sml:209`) | **reviewed, not exact** (cluster review: `Const`/`Var Local`/`Var Global`/`RStruct`/`RField`/`BaseAddr`/`TopAddr`/`BytesInWord` follow `eval_def` — direct HOL rows in `pan_eval_probe.out`, checked in `Test/PanEvalParity.lean`; `NStruct`/`NField` use `lookupInfo`+`panValueFieldsHaveShapes` not `ALOOKUP`/`UNZIP`/`EVERY`; `Load`/`Load32`/`LoadByte`/`Op` do not use the state's `memaddrs`/`be`/byte width; signature projects the HOL state and adds `memoryAccess`) | `.18.3.6.2` → exact port `.18.3.6.9` |
 | `isWfShape` | `Flapjack/Pancake/PanStatic.lean:142` | `is_wf_shape_def` (`panLangScript.sml:139`) | **reviewed, not exact** (clauses align: `One`/`Comb`=EVERY/`Named`=presence; but `StructInfo` has an extra `shapedFields` field vs HOL `struct_info`, and `Named` uses `lookupInfo`'s canonical String `==` rather than HOL `ALOOKUP` with `=`). Direct HOL oracle: `pan_lang_wf_shape_probe` | `.18.3.6.7` (+ carrier `.18.3.5.5`) |
 | `panValueShape` | `Flapjack/PanValues.lean:491` | `shape_of_def` (`panSemScript.sml:80`) | **mismatch**: unused `context` parameter; duplicate of the tagged `panSemShapeOf` (`PanSem.lean:36`) | `.18.3.6.4` |
 | `panShapeMatches` | `Flapjack/PanValues.lean:1039` | HOL `=` on `Shape` (`sh = shape_of res`) | **representation**: structural `Bool` using `==` for `Named` | `.18.3.6.4` |
@@ -37,13 +37,16 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 | `Shape` | `Flapjack/Pancake/PanLang.lean:21` | `panLang$shape` datatype | datatype | existing `.18.3.5.2` |
 | `Exp` (inside `.decl`) | `Flapjack/Pancake/PanLang.lean:135` | `panLang$exp` datatype | datatype | existing `.18.3.5.3` |
 | `Prog` (inside `.function`) | `Flapjack/Pancake/PanLang.lean` | `panLang$prog` datatype | datatype | existing `.18.3.5.4` |
-| `PanValue` | `Flapjack/PanValues.lean:29` | `word_lab` datatype | datatype | `.18.3.6.6` |
+| `PanWordLab` | `Flapjack/PanValues.lean:19` | `word_lab` datatype (`panSemScript.sml:17`) | **exact** in content (one constructor, payload `α` vs `'a word`); untagged only because the counterpart file is `Semantics/PanSem.lean`, not `PanValues.lean` | `.18.3.6.8` |
+| `PanValue` | `Flapjack/PanValues.lean:29` | `v` datatype (`panSemScript.sml:22`), NOT `word_lab` | **reviewed, not exact**: arities 1/1/2 match, but HOL `Val ('a word_lab)` wraps a `word_lab` while `PanValue.word` stores `α` directly; `RStruct`/`NStruct` fields match | `.18.3.6.8` |
 | `PanSemDeclarationState` | `Flapjack/Pancake/Semantics/PanSem.lean:86` | `panSem$state` record | representation: production record split (runtime/base, `code`/`eshapes` maps) | note (below) |
 | `PanSemFunctionEntry` | `Flapjack/Pancake/Semantics/PanSem.lean:74` | `(params,(body,return))` tuple in the `code` map | representation: named record vs tuple | note (below) |
 
 ## One-layer frontier of HOL-defined calls
 
-- `eval_def` (`panSemScript.sml:209`) — untagged in Lean (`.18.3.6.2`). It calls:
+- `eval_def` (`panSemScript.sml:209`) — reviewed in `.18.3.6.2`, not
+  statement-exact (memory/struct clusters and the state projection differ; exact
+  port `.18.3.6.9`). It calls:
   `OPT_MMAP` (Lean carrier `List.mapM`; tagged `optMmapEqSome` in
   `Flapjack/Pancake/Semantics/PanCommonProps.lean`), `shape_of` (tagged
   `panSemShapeOf`), `ALOOKUP` (`lookupInfo`, `.18.3.6.5`), `UNZIP`, `EVERY`,
@@ -78,12 +81,14 @@ and the `ExnDecl` case rejects a duplicate exception and checks the shape.
 
 ## Child beads (parent `flapjack-pxn.18.3.6`)
 
-- `.18.3.6.2` — review the production expression evaluator against HOL `eval_def`; tag only if review establishes exactness.
+- `.18.3.6.2` — cluster review of the production expression evaluator against HOL `eval_def`: pure/value clusters match (direct HOL rows), memory (`Load`/`Load32`/`LoadByte`) and struct (`NStruct`/`NField`) plus `Op` clusters and the state projection differ, so no exact tag; faithful port tracked by `.18.3.6.9`.
+- `.18.3.6.9` — port the exact HOL-shaped `eval_def` expression evaluator (HOL state projection, `ALOOKUP`/`UNZIP`/`EVERY` struct clauses, and the `memaddrs`/`be`/byte-width memory codec) so an exact tag can be attached.
 - `.18.3.6.3` — reviewed the production `Shape` predicate against HOL `is_wf_shape_def`: clauses align, but not statement-exact (carrier/equality); exact port tracked by `.18.3.6.7`.
 - `.18.3.6.7` — port the exact HOL-shaped `is_wf_shape_def` Shape-level predicate over `StructContextHOL`.
 - `.18.3.6.4` — align `evaluateDecls` shape comparison with tagged `panSemShapeOf` / HOL shape equality.
 - `.18.3.6.5` — review finite-map lookup/update helpers (`lookupInfo`, `panSemDeclUpdateGlobal`, `panSemDeclUpdateInfo`).
-- `.18.3.6.6` — review/tag the `word_lab` value datatype (`PanValue`).
+- `.18.3.6.6` — reviewed the value datatype: `PanValue` corresponds to HOL `v` (not `word_lab`) and is not statement-exact (first constructor stores `α` rather than `'a word_lab`); `PanWordLab` is the exact `word_lab` counterpart but is untagged for placement reasons; exact port tracked by `.18.3.6.8`.
+- `.18.3.6.8` — port the exact HOL `word_lab`/`v` datatypes (or prove a representation equivalence) so an exact Datatype tag can be attached in a `panSemScript.sml` counterpart file.
 
 Datatype reviews for `Decl`, `Shape`, `Exp`, `prog` are owned by the existing
 `flapjack-pxn.18.3.5.2`–`.18.3.5.5` beads.

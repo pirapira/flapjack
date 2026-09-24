@@ -161,6 +161,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_wf_shape_def",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "isWfShapeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL is_wf_shape One/Comb/Named clauses match, ALOOKUP rendered as first-match lookupInfo at the concrete String BEq instance (String is the key type, so no extra LawfulBEq parameter is quantified) and isSome as <> NONE; context is HOL-shaped StructContextHOL over struct_info fields/size; production isWfShape related by isWfShapeHOL_toHOL; direct HOL rows in scripts/hol-probes/pan_lang_wf_shape_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "functions_def",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "functionEntries",

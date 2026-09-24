@@ -6,8 +6,13 @@ import Flapjack.PanValues
 Source reference:
 `cakeml/pancake/semantics/pan_itreeSemScript.sml:79-158`.
 This source-shaped context supplies the bstate projections used by `eval_def`;
-the executable expression recursion is delegated to the existing exact
-`evalPanValueExp` implementation, including optional memory access handling.
+the executable expression recursion is delegated to the production
+`evalPanValueExp`.  That recursion is only cluster-faithful: constants, local
+and global variables, `RStruct`/`RField`, and the address/word-size leaves match
+`eval_def`, but `NStruct`/`NField` use `lookupInfo`/`panValueFieldsHaveShapes`
+and the `Load`/`Load32`/`LoadByte`/`Op` clusters do not read memory through the
+HOL state's `memaddrs`, endianness, and byte width (see the `evalPanValueExp`
+docstring and bead `flapjack-pxn.18.3.6.9` for the faithful port).
 -/
 
 namespace Flapjack

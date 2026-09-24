@@ -1050,3 +1050,10 @@ run_probe word_convs_inst_preds_probeScript.sml word_convs_inst_preds_probe.out 
   dtr_binop_same ei_alloc \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The flat-exp probe observes the expression-shape restrictions of
+# `flat_exp_conventions` and its descent through composition and `Call`.
+run_probe word_convs_flat_exp_probeScript.sml word_convs_flat_exp_probe.out \
+  fl_assign fl_inst \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

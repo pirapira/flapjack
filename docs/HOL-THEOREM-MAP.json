@@ -7518,5 +7518,13 @@
     "lean_name": "everyInst",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "flat_exp_conventions_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "flatExpConventions",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

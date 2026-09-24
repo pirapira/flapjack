@@ -1,0 +1,17 @@
+fl_assign=F
+fl_store=F
+fl_set_var=T
+fl_set_op=F
+fl_share_var=T
+fl_share_add=T
+fl_share_const=F
+fl_seq_bad=F
+fl_seq_ok=T
+fl_call_none=T
+fl_call_handler_bad=F
+fl_call_ret_bad=F
+fl_call_both_ok=T
+fl_loop=T
+fl_if_bad=F
+fl_must_terminate=T
+fl_inst=T

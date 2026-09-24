@@ -152,4 +152,34 @@ def everyInst {width : Nat} (P : WordLangInst (BitVec width) → Bool) :
             | some (_, handlerProg, _, _) => everyInst P handlerProg
   | _ => true
 
+/-- HOL `wordConvs$flat_exp_conventions` (`wordConvsScript.sml:179-205`):
+whether a program keeps all expressions flat.  Top-level expressions are
+forbidden in `Assign` and `Store`, allowed only as `Var` in `Set`, and in
+`ShareInst` allowed only as `Var` or `Op Add [Var r; Const c]`.  Descends
+through `Seq`, `Loop`, `If`, `MustTerminate` and both `Call` bodies (the
+return and handler cases are both required, so a `Call` with no return
+metadata but a non-flat handler is rejected). -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "flat_exp_conventions_def"]
+def flatExpConventions {width : Nat} : WordLangProg (BitVec width) → Bool
+  | .assign _ _ => false
+  | .store _ _ => false
+  | .set _ (.var _) => true
+  | .set _ _ => false
+  | .shareInst _ _ (.var _) => true
+  | .shareInst _ _ (.op .add [.var _, .const _]) => true
+  | .shareInst _ _ _ => false
+  | .seq first second => flatExpConventions first && flatExpConventions second
+  | .loop _ body _ => flatExpConventions body
+  | .ite _ _ _ thenBranch elseBranch =>
+      flatExpConventions thenBranch && flatExpConventions elseBranch
+  | .mustTerminate body => flatExpConventions body
+  | .call returns _ _ handler =>
+      (match returns with
+        | none => true
+        | some (_, _, returnHandler, _, _) => flatExpConventions returnHandler) &&
+        (match handler with
+          | none => true
+          | some (_, handlerProg, _, _) => flatExpConventions handlerProg)
+  | _ => true
+
 end Flapjack

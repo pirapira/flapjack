@@ -966,6 +966,48 @@ theorem crepEvalMulConstHolFiniteWordSource {ι : Type} {σ : Type}
     (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
     expression constant value rfl hShift h
 
+/-- Finite-dimension source-evaluator form of HOL `eval_mul_const`. It has
+    the source evaluator's complete `Option (word_lab word)` premise and
+    conclusion, and is proved by the production evaluator bridge above. It
+    remains untagged because the explicit `HolFiniteDimension` and
+    `CrepHolState` encodings have not yet been reviewed as exact representations
+    of HOL's implicit finite-index word type and state. -/
+theorem crepEvalMulConstHolFiniteWordSourceEval {ι : Type} {σ : Type}
+    (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expression : CrepExp (ι → Bool)) (constant value : ι → Bool)
+    (h : (evalCrepHolFiniteWordSourceExp dimension state expression).map
+      PanWordLab.word = some (.word value)) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression constant)).map
+      PanWordLab.word = some (.word (value * constant)) := by
+  letI : HolFiniteDimension ι := dimension
+  have wordInjective : Function.Injective
+      (PanWordLab.word : (ι → Bool) → PanWordLab (ι → Bool)) := by
+    intro left right hEq
+    cases hEq
+    rfl
+  have hRaw : evalCrepHolFiniteWordSourceExp dimension state expression =
+      some value := by
+    apply Option.map_injective wordInjective
+    simpa using h
+  have hRuntime : evalCrepRuntimeExp
+      (state.toHolFiniteWordSourceRuntime dimension) expression = some value := by
+    rw [evalCrepRuntimeExp_sourceWord_eq dimension]
+    exact hRaw
+  have hResult := crepEvalMulConstHolFiniteWordSource dimension state
+    expression constant value hRuntime
+  have hSourceResult : evalCrepHolFiniteWordSourceExp dimension state
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression constant) =
+      some (value * constant) := by
+    rw [← evalCrepRuntimeExp_sourceWord_eq dimension state]
+    exact hResult
+  simpa using congrArg (Option.map PanWordLab.word) hSourceResult
+
 /-- Flapjack support for HOL `eval_mul_const`, deliberately untagged. HOL's
     statement is `crepSem$eval s exp = SOME (Word w) ->
     crepSem$eval s (mul_const exp c) = SOME (Word (w * c))`, over its

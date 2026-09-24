@@ -432,6 +432,14 @@
     "reviewer": "Flapjack-only eval_mul_const support for the source-shaped finite-word runtime. It retains the explicit HolFiniteDimension carrier and is untagged pending exact evaluator correspondence."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepEvalMulConstHolFiniteWordSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-evaluator theorem with HOL's successful Word premise and complete Option word_lab result for every explicit finite dimension. It remains untagged until the finite-index and CrepHolState encodings are reviewed as exact representations of the implicit HOL word dimension and crepSem state."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

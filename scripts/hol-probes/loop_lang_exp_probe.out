@@ -1,0 +1,10 @@
+exp_const=Const 7w
+exp_var=Var 3
+exp_lookup=Lookup 1w
+exp_load=Load (Var 3)
+exp_op=Op Add [Var 1; Const 2w]
+exp_shift=Shift Lsl (Var 1) (Const 2w)
+exp_base=BaseAddr
+arith_longmul=LLongMul 1 2 3 4
+arith_longdiv=LLongDiv 1 2 3 4 5
+arith_div=LDiv 1 2 3

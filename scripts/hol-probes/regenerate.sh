@@ -112,6 +112,7 @@ run_probe pan_structs_compile_correct_probeScript.sml pan_structs_compile_correc
 run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_exp_correct_probe.out \
   compile_exp_correct_local_var compile_exp_correct_global_var compile_exp_correct_const \
   compile_exp_correct_mmap_nonempty compile_exp_correct_rstruct \
+  compile_exp_correct_rstruct_eval \
   compile_exp_correct_nstruct compile_exp_correct_nfield \
   compile_exp_correct_rfield compile_exp_correct_op compile_exp_correct_load \
   compile_exp_correct_load_out_of_domain \

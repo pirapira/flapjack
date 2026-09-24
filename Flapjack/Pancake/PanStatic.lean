@@ -147,7 +147,7 @@ Clause-by-clause relation between the exact HOL-shaped `is_wf_shape` port
     the cache-augmented `StructContext`, through the context projection
     `StructContext.toHOL`. Both predicates agree on every shape. -/
 mutual
-  theorem isWfShapeHOL_toHOL [LawfulBEq String] (context : StructContext) :
+  theorem isWfShapeHOL_toHOL (context : StructContext) :
       ∀ (shape : Shape), isWfShapeHOL context.toHOL shape = isWfShape context shape
     | .one => by simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
     | .comb shapes => by
@@ -157,7 +157,7 @@ mutual
         simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
         exact lookupInfo_toHOL_isSome name context
 
-  theorem isWfShapeListHOL_toHOL [LawfulBEq String] (context : StructContext) :
+  theorem isWfShapeListHOL_toHOL (context : StructContext) :
       ∀ (shapes : List Shape),
         isWfShapeListHOL context.toHOL shapes = isWfShape.isWfShapeList context shapes
     | [] => by simp only [isWfShapeListHOL.eq_def, isWfShape.isWfShapeList.eq_def]

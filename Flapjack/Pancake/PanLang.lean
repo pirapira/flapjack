@@ -80,19 +80,20 @@ Exact executable port of HOL `panLang$is_wf_shape`
     `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered
     with the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart)
     and `isSome` as the Bool rendering of `<> NONE`. The context is the
-    HOL-shaped `StructContextHOL`, and under `[LawfulBEq String]` the `==` test
-    reflects HOL's `=`. The direct original-HOL rows are pinned in
+    HOL-shaped `StructContextHOL`; the key type is fixed to `String` so the
+    concrete `BEq String` instance is used, matching HOL's `=`. The direct
+    original-HOL rows are pinned in
     `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
 mutual
   @[hol "cakeml/pancake/panLangScript.sml" "is_wf_shape_def"]
-  def isWfShapeHOL [LawfulBEq String] (context : StructContextHOL) : Shape → Bool
+  def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
     | .one => true
     | .comb shapes => isWfShapeListHOL context shapes
     | .named name => (lookupInfo name context).isSome
   termination_by shape => sizeOf shape
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-  def isWfShapeListHOL [LawfulBEq String] (context : StructContextHOL) :
+  def isWfShapeListHOL (context : StructContextHOL) :
       List Shape → Bool
     | [] => true
     | shape :: shapes => isWfShapeHOL context shape && isWfShapeListHOL context shapes

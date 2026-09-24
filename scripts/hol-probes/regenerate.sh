@@ -216,12 +216,12 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
   fold_flookup_eq flookup_absent "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
-  flookup_f inline_arg_call "$cake_dir/pancake/crep_inlineScript.sml" \
+  flookup_f skip_identity "$cake_dir/pancake/crep_inlineScript.sml" \
   "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
 run_probe crep_inline_eval_probeScript.sml crep_inline_eval_probe.out \
-  src_main_is_call mmap_eq "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  src_main_is_call skip_eval "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"

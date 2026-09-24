@@ -77,29 +77,29 @@ def allClauseSummaries : List (Nat × Bool × Nat) :=
 -- These samples pin exact output constructors as well as the summary table.
 example : flattenAt false (.ite 1 2 3 .skip .tick) ==
   ([.labAsm (.jumpCmp 1 2 3 (.lab 3 2)) (BitVec.ofNat 64 0) [] 0,
-    .asm (.asmi 90) [] 0, .label 3 2 0], false, 3) := by native_decide
+    .asm (.asmi 90) [] 0, .label 3 2 0], false, 3) := by decide +kernel
 
 example : flattenAt false (.call none (.inl 11) none) ==
-  ([.labAsm (.jump (.lab 11 0)) (BitVec.ofNat 64 0) [] 0], true, 2) := by native_decide
+  ([.labAsm (.jump (.lab 11 0)) (BitVec.ofNat 64 0) [] 0], true, 2) := by decide +kernel
 
 example : flattenAt false (.break 1) 2 [] [4, 9] ==
-  ([.labAsm (.jump (.lab 3 9)) (BitVec.ofNat 64 0) [] 0], true, 2) := by native_decide
+  ([.labAsm (.jump (.lab 3 9)) (BitVec.ofNat 64 0) [] 0], true, 2) := by decide +kernel
 
 -- `prog_to_section` chooses label 1 for a non-Seq root and the final `next`
 -- label for a Seq root, after `next_lab` seeds flattening.
 example : progToSection probeOps (BitVec.ofNat 64 0) 3 (.skip : ProbeProg) ==
-    { sectionId := 3, lines := [.label 3 1 0] } := by native_decide
+    { sectionId := 3, lines := [.label 3 1 0] } := by decide +kernel
 
 example : progToSection probeOps (BitVec.ofNat 64 0) 3
     (.seq .tick (.inst 4) : ProbeProg) ==
     { sectionId := 3, lines := [.asm (.asmi 90) [] 0, .label 3 1 0,
-      .asm (.asmi 4) [] 0, .label 3 2 0] } := by native_decide
+      .asm (.asmi 4) [] 0, .label 3 2 0] } := by decide +kernel
 
 example : progToSection probeOps (BitVec.ofNat 64 0) 3
     (.ite 1 1 2 .tick .tick : ProbeProg) ==
     { sectionId := 3, lines :=
       [.labAsm (.jumpCmp 1 1 2 (.lab 3 2)) (BitVec.ofNat 64 0) [] 0,
        .asm (.asmi 90) [] 0, .labAsm (.jump (.lab 3 3)) (BitVec.ofNat 64 0) [] 0,
-       .label 3 2 0, .asm (.asmi 90) [] 0, .label 3 3 0, .label 3 1 0] } := by native_decide
+       .label 3 2 0, .asm (.asmi 90) [] 0, .label 3 3 0, .label 3 1 0] } := by decide +kernel
 
 end Flapjack.Test.StackToLab

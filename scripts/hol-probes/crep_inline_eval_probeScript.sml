@@ -80,3 +80,7 @@ val _ = print_eval "mmap_hetero"
       SOME [Word (5w:64 word); Word (7w:64 word)] => T | _ => F``;
 val _ = print_eval "mmap_eq"
   ``OPT_MMAP (eval ^s) ^es = OPT_MMAP (eval ^t) ^es``;
+
+(* Skip evaluation is the identity on the state, matching HOL `evaluate_def`. *)
+val _ = print_eval "skip_eval"
+  ``evaluate ((Skip) : 64 crepLang$prog, ^s) = (NONE, ^s)``;

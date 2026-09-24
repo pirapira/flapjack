@@ -67,3 +67,6 @@ val inl_fs_arg =
 val _ = print_eval "inline_arg_call"
   ``inline_prog ^inl_fs_arg
       ((Call NONE «f» [Const (5w:8 word)]) : 8 crepLang$prog)``;
+(* Skip is left unchanged by the inline pass. *)
+val _ = print_eval "skip_identity"
+  ``inline_prog ^inl_fs ((Skip) : 8 crepLang$prog) = ((Skip) : 8 crepLang$prog)``;

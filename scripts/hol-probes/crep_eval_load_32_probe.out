@@ -1,0 +1,5 @@
+eval_load32_le_addr8=SOME (Word 0x55667788w)
+eval_load32_le_addr12=SOME (Word 0x11223344w)
+eval_load32_le_unaligned=NONE
+eval_load32_le_outside_domain=NONE
+eval_load32_be_addr8=SOME (Word 0x11223344w)

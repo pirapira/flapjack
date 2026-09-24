@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Proofs.CrepInline
+import Flapjack.Test.CrepGlobalShapeParity
 
 namespace Flapjack.Test.CrepInlineRelParity
 
@@ -347,6 +348,71 @@ def inlineMmapTransferGuard : Bool :=
 
 #guard inlineMmapTransferGuard
 
+/-! ## `inline_prog_correct` Skip constructor case
+
+The HOL `inline_prog_correct` Skip case: a source run of `Skip` ends in the same
+state, `inline_prog` maps `Skip` to `Skip`, and the target run exists and
+preserves the input relations.  We exercise it over the production fuel-bounded
+evaluator `evalCrepRuntimeResult`; the theorem is untagged because that
+evaluator is fuel-cutoff based rather than HOL's clock-based `evaluate`. -/
+
+/-- The empty inline map relates the (vacuous) code of `globalState` to itself. -/
+theorem skipCodeInlRel :
+    crepInlineRuntimeCodeInlRel CrepInlineFmap.empty
+      Flapjack.Test.CrepGlobalShapeParity.globalState
+      Flapjack.Test.CrepGlobalShapeParity.globalState := by
+  apply crepInlineCodeInlRel_of_code
+  intro fname args prog hcode
+  simp [CrepRuntimeState.toHolState, Flapjack.Test.CrepGlobalShapeParity.globalState,
+    FEMPTY] at hcode
+
+/-- The Skip fixture is `state_rel_code` to itself. -/
+theorem skipStateRel :
+    crepInlineRuntimeStateRelCode Flapjack.Test.CrepGlobalShapeParity.globalState
+      Flapjack.Test.CrepGlobalShapeParity.globalState :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The Skip fixture is `locals_strong_rel` to itself. -/
+theorem skipLocalsStrong :
+    crepInlineRuntimeLocalsStrongRel Flapjack.Test.CrepGlobalShapeParity.globalState
+      Flapjack.Test.CrepGlobalShapeParity.globalState := rfl
+
+/-- Skip-case transfer: the target run is *derived* (existential) and preserves
+    all postrelations, rather than being assumed. -/
+example :
+    ∃ t',
+      evalCrepRuntimeResult Flapjack.Test.CrepGlobalShapeParity.runtimeHandler
+          Flapjack.Test.CrepGlobalShapeParity.noPrimitive 1
+          Flapjack.Test.CrepGlobalShapeParity.globalState
+          (crepInlineProgFmap CrepInlineFmap.empty CrepProg.skip) =
+        some (CrepRuntimeResult.normal, t') ∧
+      crepInlineRuntimeStateRelCode Flapjack.Test.CrepGlobalShapeParity.globalState
+        t' ∧
+      crepInlineRuntimeLocalsStrongRel Flapjack.Test.CrepGlobalShapeParity.globalState
+        t' ∧
+      crepInlineRuntimeCodeInlRel CrepInlineFmap.empty
+        Flapjack.Test.CrepGlobalShapeParity.globalState t' :=
+  crepInlineRuntimeSkip Flapjack.Test.CrepGlobalShapeParity.runtimeHandler
+    Flapjack.Test.CrepGlobalShapeParity.noPrimitive 0
+    Flapjack.Test.CrepGlobalShapeParity.globalState
+    Flapjack.Test.CrepGlobalShapeParity.globalState
+    Flapjack.Test.CrepGlobalShapeParity.globalState CrepInlineFmap.empty
+    (evalCrepRuntimeResult_skip Flapjack.Test.CrepGlobalShapeParity.runtimeHandler
+      Flapjack.Test.CrepGlobalShapeParity.noPrimitive 0
+      Flapjack.Test.CrepGlobalShapeParity.globalState)
+    skipStateRel skipLocalsStrong skipCodeInlRel
+
+/-- The inline transform leaves `Skip` unchanged. -/
+example : crepInlineProgFmap CrepInlineFmap.empty CrepProg.skip = CrepProg.skip :=
+  crepInlineProgFmap_skip CrepInlineFmap.empty
+
+def inlineSkipGuard : Bool :=
+  (evalCrepRuntimeResult Flapjack.Test.CrepGlobalShapeParity.runtimeHandler
+    Flapjack.Test.CrepGlobalShapeParity.noPrimitive 1
+    Flapjack.Test.CrepGlobalShapeParity.globalState CrepProg.skip).isSome
+
+#guard inlineSkipGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -385,6 +451,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline opt_mmap_eval_code_inl heterogeneous list transfer"
       pure false
-  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk)
+  let inlineSkipOk ←
+    if inlineSkipGuard then
+      IO.println "PASS crep_inline inline_prog_correct Skip case"
+      pure true
+    else
+      IO.println "FAIL crep_inline inline_prog_correct Skip case"
+      pure false
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk)
 
 end Flapjack.Test.CrepInlineRelParity

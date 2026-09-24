@@ -496,6 +496,13 @@ theorem crepInlineProgFmap_congr [BEq FunName] [LawfulBEq FunName]
   intro prog
   exact key fs prog gs h.symm
 
+/-- The `Skip` clause of HOL `inline_prog` (`crep_inlineScript.sml:203`): the
+    inline pass leaves `Skip` unchanged. -/
+theorem crepInlineProgFmap_skip [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (inlFs : CrepInlineFmap α) :
+    crepInlineProgFmap inlFs .skip = .skip := by
+  simp only [crepInlineProgFmap]
+
 /-! ## Clause form of `crepInlineProgFmap`
 
 These seven theorems unfold `crepInlineProgFmap` on each program constructor,

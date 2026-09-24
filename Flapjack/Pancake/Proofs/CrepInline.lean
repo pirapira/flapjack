@@ -381,4 +381,55 @@ theorem crepInlineOptMmapEvalCodeInl [NeZero width] [BEq FunName] [LawfulBEq Fun
   rw [← crepOptMmapEvalCongr s t es hpoint]
   exact heval
 
+/-! ## Runtime `inline_prog_correct` Skip case
+
+CakeML's `inline_prog_correct` (`crep_inlineProofScript.sml:2301`) is stated over
+the clock-based `crepSem$evaluate`.  Lean currently has no port of that
+evaluator over the 11-field `CrepHolState`; the closest production evaluator is
+the fuel-bounded `evalCrepRuntimeResult` over the 14-field `CrepRuntimeState`.
+The relations below are runtime projections of the reviewed `CrepHolState`
+relations, and `crepInlineRuntimeSkip` proves the Skip constructor case: from a
+source run it derives an existential target run and the post-state relations,
+never assuming the target run.  Untagged, because the fuel-bounded evaluator is
+not HOL's clock-based `evaluate`. -/
+
+abbrev crepInlineRuntimeStateRelCode (s t : CrepRuntimeState α σ) : Prop :=
+  crepInlineStateRelCode s.toHolState t.toHolState
+
+abbrev crepInlineRuntimeLocalsStrongRel (s t : CrepRuntimeState α σ) : Prop :=
+  s.locals = t.locals
+
+abbrev crepInlineRuntimeCodeInlRel [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1]
+    (inlFs : CrepInlineFmap α) (s t : CrepRuntimeState α σ) : Prop :=
+  crepInlineCodeInlRel inlFs s.toHolState t.toHolState
+
+theorem crepInlineRuntimeSkip
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [BEq FunName] [LawfulBEq FunName]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α) (fuel : Nat)
+    (s s' : CrepRuntimeState α σ) (t : CrepRuntimeState α σ)
+    (inlFs : CrepInlineFmap α)
+    (hsource : evalCrepRuntimeResult handler primitive (fuel + 1) s .skip =
+      some (CrepRuntimeResult.normal, s'))
+    (hstate : crepInlineRuntimeStateRelCode s t)
+    (hlocals : crepInlineRuntimeLocalsStrongRel s t)
+    (hcode : crepInlineRuntimeCodeInlRel inlFs s t) :
+    ∃ t',
+      evalCrepRuntimeResult handler primitive (fuel + 1) t
+          (crepInlineProgFmap inlFs .skip) = some (CrepRuntimeResult.normal, t') ∧
+      crepInlineRuntimeStateRelCode s' t' ∧
+      crepInlineRuntimeLocalsStrongRel s' t' ∧
+      crepInlineRuntimeCodeInlRel inlFs s' t' := by
+  have hskip := evalCrepRuntimeResult_skip handler primitive fuel s
+  have hs' : s' = s := by
+    have hq := hsource.symm.trans hskip
+    exact congrArg Prod.snd (Option.some.inj hq)
+  rw [hs', crepInlineProgFmap_skip inlFs]
+  exact ⟨t, evalCrepRuntimeResult_skip handler primitive fuel t, hstate, hlocals, hcode⟩
+
 end Flapjack

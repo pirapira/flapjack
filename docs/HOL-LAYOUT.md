@@ -34,6 +34,15 @@ for the review rule.
 | `panLangScript.sml` | `Flapjack/Pancake/PanLang.lean` |
 | `compiler/backend/wordLangScript.sml` | `Flapjack/Pancake/WordLang.lean` |
 | `compiler/backend/semantics/wordConvsScript.sml` | `Flapjack/Pancake/WordConvs.lean` |
+| `compiler/backend/stackLangScript.sml` | `Flapjack/Compiler/Backend/StackLang.lean` (generic HOL `store_name` and `prog` syntax) |
+| `compiler/backend/semantics/stackPropsScript.sml` | `Flapjack/Compiler/Backend/StackProps.lean` (recursive `stack_asm_ok` clauses and `addr_ok`, linked to the `asm_config` predicates) |
+| `compiler/encoders/asm/asmScript.sml` | `Flapjack/Compiler/Encoders/Asm.lean` (asm_config validity predicates: `reg_ok`, `fp_reg_ok`, `reg_imm_ok`, `offset_ok`, `arith_ok`, `fp_ok`, `cmp_ok`, `inst_ok`) |
+| `compiler/backend/labLangScript.sml` | `Flapjack/Compiler/Backend/LabLang.lean` (generic HOL `lab`, `line`, and `sec` syntax) |
+| `compiler/backend/lab_to_targetScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`cbw_to_asm` carrier boundary only; target encoding remains open) |
+| `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
+| `compiler/backend/semantics/labPropsScript.sml` | `Flapjack/Compiler/Backend/LabProps.lean` (`line_ok_pre`, `sec_ok_pre`, and `all_enc_ok_pre`; asm/config carrier bridge remains explicit) |
+| `compiler/backend/stack_allocScript.sml` | `Flapjack/Compiler/Backend/StackAlloc.lean` (`next_lab`; executable pass counterpart remains `Flapjack/StackAlloc.lean`) |
+| `compiler/backend/stack_to_labScript.sml` | `Flapjack/Compiler/Backend/StackToLab.lean` (`flatten` and `prog_to_section`; `compile` remains open) |
 | `panStaticScript.sml` | `Flapjack/Pancake/PanStatic.lean` |
 | `pan_simpScript.sml` | `Flapjack/Pancake/PanSimp.lean` |
 | `pan_structsScript.sml` | `Flapjack/Pancake/PanStructs.lean` |
@@ -53,7 +62,7 @@ for the review rule.
 | `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/PanValueFfiClockSemantics.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSem/Primop.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
 | `semantics/panPropsScript.sml` | `Flapjack/Pancake/Semantics/PanProps.lean` |
-| `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean`, `CrepSem/Primop.lean` |
+| `semantics/crepSemScript.sml` | `Flapjack/Pancake/Semantics/CrepSem.lean`, `CrepSem/Eval.lean`, `CrepSem/TotalEval.lean`, `CrepSem/Primop.lean` |
 | `semantics/crepPropsScript.sml` | `Flapjack/Pancake/Semantics/CrepProps.lean` |
 | `semantics/loopSemScript.sml` | `Flapjack/Pancake/Semantics/LoopSem.lean` |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
@@ -65,3 +74,4 @@ has been established. For declaration-level provenance, use
 `scripts/next-hol-port.py`. Track individual gaps and progress in
 [GitHub issues](https://github.com/pirapira/flapjack/issues), not in this
 layout guide.
+| compiler/backend/reg_alloc/reg_allocScript.sml | Flapjack/Compiler/Backend/RegAlloc.lean |

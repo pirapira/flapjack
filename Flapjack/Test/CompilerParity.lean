@@ -24,6 +24,7 @@ import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity
+import Flapjack.Test.CrepSemTotalClockLeavesParity
 import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -207,9 +208,30 @@ import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
+import Flapjack.Test.PanSemDecErrorExactParity
+import Flapjack.Test.PanSemPrimitiveErrorExactParity
+import Flapjack.Test.PanSemAssignErrorExactParity
+import Flapjack.Test.PanSemStoreErrorExactParity
+import Flapjack.Test.PanSemStore32ErrorExactParity
+import Flapjack.Test.PanSemIteErrorExactParity
+import Flapjack.Test.PanSemFuelDecompositionParity
 import Flapjack.Test.CrepReplicateConstParity
 import Flapjack.Test.WordConvsLabelsRelParity
 import Flapjack.Test.WordLangExtractLabelsParity
+import Flapjack.Test.WordLangInstPredsParity
+import Flapjack.Test.WordLangFlatExpParity
+import Flapjack.Test.WordLangInstOkLessParity
+import Flapjack.Test.WordLangFullInstOkLessParity
+import Flapjack.Test.WordLangCallArgParity
+import Flapjack.Test.RegAllocVarParity
+import Flapjack.Test.WordLangNotCreatedParity
+import Flapjack.Test.WordLangEveryVarParity
+import Flapjack.Test.WordLangGoodHandlersParity
+import Flapjack.Test.NumSetAuditParity
+import Flapjack.Test.WordLangEveryNameParity
+import Flapjack.Test.WordLangAllocConventionsParity
+import Flapjack.Test.LabPropsLineOkPreParity
+import Flapjack.Test.AsmConfigChecksParity
 import Flapjack.Test.PanSemDecCallErrorParity
 import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.ParserTryDefaultParity
@@ -697,6 +719,7 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsCompileDecsThreadingParity.runChecks,
     Flapjack.Test.PanGlobalsAlookupMapParity.runChecks,
     Flapjack.Test.PanLangFunctionsParity.runChecks,
+    Flapjack.Test.PanLangWfShapeParity.runChecks,
     Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
     Flapjack.Test.LoopCallParity.runChecks,
@@ -797,9 +820,30 @@ def main : IO Unit := do
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
+Flapjack.Test.PanSemDecErrorExactParity.runChecks,
+Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,
+Flapjack.Test.PanSemAssignErrorExactParity.runChecks,
+Flapjack.Test.PanSemStoreErrorExactParity.runChecks,
+Flapjack.Test.PanSemStore32ErrorExactParity.runChecks,
+Flapjack.Test.PanSemIteErrorExactParity.runChecks,
+Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepReplicateConstParity.runChecks,
     Flapjack.Test.WordConvsLabelsRelParity.runChecks,
     Flapjack.Test.WordLangExtractLabelsParity.runChecks,
+    Flapjack.Test.WordLangInstPredsParity.runChecks,
+    Flapjack.Test.WordLangFlatExpParity.runChecks,
+    Flapjack.Test.WordLangInstOkLessParity.runChecks,
+    Flapjack.Test.WordLangFullInstOkLessParity.runChecks,
+    Flapjack.Test.WordLangCallArgParity.runChecks,
+    Flapjack.Test.RegAllocVarParity.runChecks,
+    Flapjack.Test.WordLangNotCreatedParity.runChecks,
+    Flapjack.Test.WordLangEveryVarParity.runChecks,
+    Flapjack.Test.WordLangGoodHandlersParity.runChecks,
+    Flapjack.Test.NumSetAuditParity.runChecks,
+    Flapjack.Test.WordLangEveryNameParity.runChecks,
+    Flapjack.Test.WordLangAllocConventionsParity.runChecks,
+    Flapjack.Test.LabPropsLineOkPreParity.runChecks,
+    Flapjack.Test.AsmConfigChecksParity.runChecks,
     Flapjack.Test.PanSemDecCallErrorParity.runChecks,
     Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
@@ -853,7 +897,8 @@ Flapjack.Test.PanSemCallErrorExactParity.runChecks,
     Flapjack.Test.SptreeOrderParity.runChecks,
     Flapjack.Test.CrepLocalsWordLabParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
-    Flapjack.Test.CrepFuelCutoffParity.runChecks
+    Flapjack.Test.CrepFuelCutoffParity.runChecks,
+    Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

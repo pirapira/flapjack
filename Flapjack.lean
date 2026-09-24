@@ -178,6 +178,7 @@ import Flapjack.Pancake.LoopLang
 import Flapjack.NatDedup
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.CrepToLoop.Optimise
+import Flapjack.Pancake.CrepToLoop.StateRel
 import Flapjack.Pancake.LoopLive
 /- The context-aware Crep-to-Loop correctness file is being updated alongside
    the faithful `findLoopVar` lowering and is intentionally not in this
@@ -185,6 +186,11 @@ import Flapjack.Pancake.LoopLive
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
+import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Compiler.Backend.RegAlloc
+import Flapjack.Compiler.Backend.LabLang
+import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.StackAlloc.Machine

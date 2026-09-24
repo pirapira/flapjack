@@ -1829,18 +1829,18 @@ theorem localRelLeZipUpdatePreserved
 
 /-! `localsRelUpdateExistingValue` proves the local-map relation after a
 shape-preserving source update, using the slots recorded in `context.vars`.
-The target runtime `exp_hdl` writes and their `locals_rel` updates are proved
-for arbitrary flattened payload widths by
-`EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
-`crepRuntimeExpHdlFiniteMapWords_localsRel`. The one-word execution is also
-stated directly as `EvaluateCases.crepRuntimeExpHdlOneWord`, with
-`crepRuntimeExpHdlOneWord_localsRel` giving its local-map result. The
-corresponding actual-state matching-handler prestate composition is available in
-`crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations` as untagged
-induction support. This lemma supplies the source-to-target map-update
-relation used by those proofs. The general HOL `Call_Ret_Exception`
-simulation remains open because the recursive callee and handler induction
-hypotheses have not yet been composed into the source/target Call case. -/
+The target runtime `exp_hdl` execution for a one-word payload is already proved
+by `EvaluateCases.crepRuntimeExpHdlOneWord`; its
+`crepRuntimeExpHdlOneWord_localsRel` companion proves the `locals_rel`
+postcondition. The one-word target evaluator is therefore not a remaining
+proof step. The corresponding arbitrary-width flattened execution and
+local relation are `EvaluateCases.crepRuntimeExpHdlFiniteMapWords` and
+`crepRuntimeExpHdlFiniteMapWords_localsRel`. The actual state and relation
+setup for a matching handler is available as untagged induction support in
+`crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations`. This lemma supplies
+the source-to-target map-update relation used by those proofs. The remaining
+gap is composing the recursive callee and handler induction hypotheses into
+the full source/target HOL `Call_Ret_Exception` case. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -1984,16 +1984,49 @@ def compileCodeRelProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       vmax := context.vmax }
     program
 
-/-! HOL-shaped `code_rel_def` relation (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`).
-    It quantifies over every source code entry, requires localisation and the
-    exact parameter/return-shape lookup in `ctxt.funcs`, derives parameter
-    slots from `GENLIST I (size_of_shape (Comb shs))`, constructs the target
-    context with `ctxt_fc`, and relates that entry to its compiled body.
 
-    Its compiler conclusion routes to `compileProgHOL`, whose context is the
-    original finite-map record. The `compile_def` tag is on the production
-    wrapper `compileProgRiscV`, not on this helper. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+/-- Bridge from the proof-side finite-map context to the HOL finite-map
+    compiler context; the two records have the same four fields. -/
+def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
+    PanToCrepHOLContext α :=
+  { vars := context.vars, funcs := context.funcs, eids := context.eids,
+    vmax := context.vmax }
+
+/-- `compileProgRiscV` is the tagged HOL `compile_def` compiler applied to a
+    `PanToCrepHOLContext`; it is definitionally the generic `compileProgHOL`
+    on the same context. -/
+theorem compileProgRiscV_eq_compileProgHOL
+    (context : PanToCrepHOLContext (BitVec width))
+    (program : Prog (BitVec width)) :
+    compileProgRiscV context program = compileProgHOL context program := rfl
+
+/-- The proof-side compiler expression `compileCodeRelProg` is exactly the
+    tagged HOL `compile_def` compiler (`compileProgRiscV`) on the bridged
+    context, for EVERY proof context, not only declaration-derived ones. -/
+theorem compileCodeRelProg_eq_compileProgRiscV
+    (context : PanToCrepProofContext (BitVec width))
+    (program : Prog (BitVec width)) :
+    compileCodeRelProg context program =
+      compileProgRiscV context.toHOLContext program := rfl
+
+/-! Flapjack's code relation, shaped after HOL `code_rel_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`). It quantifies over
+    every source code entry, requires localisation and the exact
+    parameter/return-shape lookup in `ctxt.funcs`, derives parameter slots
+    from `GENLIST I (size_of_shape (Comb shs))`, and constructs the target
+    context with `ctxt_fc`.
+
+    This declaration is intentionally untagged: it is generic in the word
+    element type `α`, while the tagged `compile_def` port is the RISC-V
+    specialization `compileProgRiscV`. The bridge
+    `compileCodeRelProg_eq_compileProgRiscV` (with
+    `compileProgRiscV_eq_compileProgHOL`) proves that `compileCodeRelProg` is
+    definitionally the tagged compiler for EVERY proof context at `BitVec
+    width`, not only declaration-derived ones, so the only remaining gap to an
+    exact HOL `code_rel_def` tag is the width-indexing of this relation
+    (tracked in the Exp/word-indexing migration beads) - not the compiler
+    expression. -/
+
 def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)
@@ -2010,6 +2043,39 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       let nextContext := ctxtFc context.funcs context.eids variables shapes names
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
+
+/-- Width-indexed proof-side `code_rel` interface: the HOL reference is
+    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
+    so this width-indexed form makes the compiler expression the tagged
+    `compileProgRiscV` (`compile_def`) boundary. The generic `codeRel` is its
+    `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+def codeRelW (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) : Prop :=
+  ∀ function variableShapes program returnShape,
+    FLOOKUP sourceCode function = some (variableShapes, program, returnShape) →
+      localisedProg program ∧
+      FLOOKUP context.funcs function = some (variableShapes, returnShape) ∧
+      let variables := variableShapes.map Prod.fst
+      let shapes := variableShapes.map Prod.snd
+      let names := List.range (Shape.shapeSize (.comb shapes))
+      let nextContext := ctxtFc context.funcs context.eids variables shapes names
+      FLOOKUP targetCode function = some
+        (names, compileProgRiscV nextContext.toHOLContext program)
+
+/-- The width-indexed relation is the generic `codeRel` instantiated at
+    `BitVec width`, definitionally via the rfl compiler bridges. -/
+theorem codeRelW_iff_codeRel (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) :
+    codeRelW width context sourceCode targetCode ↔
+      codeRel context sourceCode targetCode :=
+  Iff.rfl
 
 /-- Exact port of HOL `compile_exp_not_mem_load_glob`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013`). The finite-map
@@ -2337,6 +2403,37 @@ theorem mkCtxtCodeImpCodeRel
       hsource]
     rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
     rfl
+
+/-- Consumption adapter: a width-indexed `codeRelW` hypothesis is the generic
+    `codeRel` at `BitVec width` (`codeRelW_iff_codeRel`), so the existing
+    generic `codeRel` helper lemmas apply unchanged when the full correctness
+    theorem is stated with `codeRelW`. -/
+theorem codeRel_of_codeRelW (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width)))
+    (h : codeRelW width context sourceCode targetCode) :
+    codeRel context sourceCode targetCode :=
+  (codeRelW_iff_codeRel width context sourceCode targetCode).mp h
+
+/-- The `mk_ctxt` initial-context code relation in the width-indexed exact HOL
+    `code_rel_def` form (`codeRelW`), derived from the existing tagged
+    `mk_ctxt_code_imp_code_rel` port via `codeRelW_iff_codeRel`. This is the
+    relation used at the start of the full `pc_compile_correct` statement. -/
+theorem mkCtxtCodeImpCodeRelW (declarations : List (Decl (BitVec width)))
+    (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
+    (hlocalised : ∀ entry ∈ functionEntries declarations,
+      localisedProg entry.2.2.1) :
+    codeRelW width
+      { vars := (FEMPTY : FiniteMap String (Shape × List Nat))
+        funcs := functionInfosHOL declarations
+        eids := panToCrepGetEidsFromDeclsHOL declarations
+        vmax := 0 }
+      (FUPDATE_LIST FEMPTY (functionEntries declarations).reverse)
+      (FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse) :=
+  (codeRelW_iff_codeRel width _ _ _).mpr
+    (mkCtxtCodeImpCodeRel declarations _hdistinct hlocalised)
 
 /-- Exact port of HOL `el_compile_prog_el_prog_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled

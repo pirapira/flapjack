@@ -262,14 +262,36 @@ theorem flookup_setCrepRuntimeGlobals_locals {α σ : Type}
     FLOOKUP (setCrepRuntimeGlobals gv w s).locals n = FLOOKUP s.locals n :=
   rfl
 
-/-- Exact HOL-shaped port of Cake `crepProps$FLOOKUP_set_globals`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:297`) over the 11-field
-    `CrepHolState`: `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
-    The globals update is the tagged `setCrepHolGlobals` (`set_globals_def`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+/-- Generic-`α` form of `crepProps$FLOOKUP_set_globals`, deliberately
+    UNTAGGED because HOL's statement is word-length indexed; the exact
+    width-indexed counterpart is `flookup_setCrepHolGlobals_localsW` below.
+    `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`
+    (crepPropsScript.sml:297). -/
 theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     (gv : BitVec 5) (w : PanWordLab α) (s : CrepHolState α σ) (n : Nat) :
     FLOOKUP (setCrepHolGlobals gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
+
+/-- Exact width-indexed HOL-shaped port of Cake `crepProps$FLOOKUP_set_globals`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:297`) over the
+    word-length-indexed carrier `CrepHolState (BitVec width) σ` (HOL's
+    `'a crepSem$state` at `'a := BitVec width`):
+    `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`.
+    The globals update is the tagged width-indexed `setCrepHolGlobalsW`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "FLOOKUP_set_globals"]
+theorem flookup_setCrepHolGlobals_localsW {width : Nat} {σ : Type}
+    (gv : BitVec 5) (w : PanWordLab (BitVec width))
+    (s : CrepHolState (BitVec width) σ) (n : Nat) :
+    FLOOKUP (setCrepHolGlobalsW gv w s).locals n = FLOOKUP s.locals n :=
+  rfl
+
+/-- Kernel-checked bridge: the width-indexed exact `FLOOKUP_set_globals`
+    counterpart agrees with the generic production statement at `BitVec width`. -/
+theorem flookup_setCrepHolGlobals_localsW_eq_generic {width : Nat} {σ : Type}
+    (gv : BitVec 5) (w : PanWordLab (BitVec width))
+    (s : CrepHolState (BitVec width) σ) (n : Nat) :
+    FLOOKUP (setCrepHolGlobalsW gv w s).locals n =
+      FLOOKUP (setCrepHolGlobals gv w s).locals n :=
   rfl
 
 /-! Membership equations for `crepAssignedFreeVars`, exposing Cake's
@@ -335,5 +357,41 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     (hlen : xs.length = ys.length) (hx : x ∉ xs) :
     FLOOKUP ((xs.zip ys).foldl resVar fm) x = FLOOKUP fm x :=
   FLOOKUP_foldl_resVar_zip_not_mem xs ys fm x hlen hx
+
+/-- Exact HOL-shaped port of Cake `crepProps$dec_clock_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:267`): decrementing the clock
+    leaves every other field of the 11-field state unchanged. The clock
+    decrement is the tagged `decCrepHolClock` (`dec_clock_def`). -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "dec_clock_simp"]
+theorem decCrepHolClock_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
+    (decCrepHolClock s).locals = s.locals ∧
+      (decCrepHolClock s).globals = s.globals ∧
+      (decCrepHolClock s).code = s.code ∧
+      (decCrepHolClock s).memory = s.memory ∧
+      (decCrepHolClock s).memaddrs = s.memaddrs ∧
+      (decCrepHolClock s).shMemaddrs = s.shMemaddrs ∧
+      (decCrepHolClock s).bigEndian = s.bigEndian ∧
+      (decCrepHolClock s).ffi = s.ffi ∧
+      (decCrepHolClock s).baseAddress = s.baseAddress ∧
+      (decCrepHolClock s).topAddress = s.topAddress := by
+  simp [decCrepHolClock]
+
+/-- Exact HOL-shaped port of Cake `crepProps$empty_locals_simp`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:282`): clearing the locals
+    leaves every other field of the 11-field state unchanged. The locals clear
+    is the tagged `emptyCrepHolLocals` (`empty_locals_def`). -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "empty_locals_simp"]
+theorem emptyCrepHolLocals_simp {width : Nat} {σ : Type} (s : CrepHolState (BitVec width) σ) :
+    (emptyCrepHolLocals s).globals = s.globals ∧
+      (emptyCrepHolLocals s).code = s.code ∧
+      (emptyCrepHolLocals s).memory = s.memory ∧
+      (emptyCrepHolLocals s).memaddrs = s.memaddrs ∧
+      (emptyCrepHolLocals s).shMemaddrs = s.shMemaddrs ∧
+      (emptyCrepHolLocals s).clock = s.clock ∧
+      (emptyCrepHolLocals s).bigEndian = s.bigEndian ∧
+      (emptyCrepHolLocals s).ffi = s.ffi ∧
+      (emptyCrepHolLocals s).baseAddress = s.baseAddress ∧
+      (emptyCrepHolLocals s).topAddress = s.topAddress := by
+  simp [emptyCrepHolLocals]
 
 end Flapjack

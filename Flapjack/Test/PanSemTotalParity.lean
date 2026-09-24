@@ -2,19 +2,23 @@ import Flapjack.Pancake.Semantics.PanSem.Total
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
-# Parity for the HOL-shaped total `evaluate` base cases
+# Parity for the total PanSem clock-leaf evaluator
 
 The source oracles are `scripts/hol-probes/pan_sem_skip_e2e_probe.out`
 (`skip_result=NONE`, `skip_clock=5`, `skip_locals_preserved=SOME (ValWord 7w)`)
 and `scripts/hol-probes/pan_sem_tick_e2e_probe.out` (`tick_zero_result=SOME
 TimeOut`, `tick_zero_clock=0`, `tick_zero_locals_cleared=NONE`,
 `tick_succ_result=NONE`, `tick_succ_clock=4`, `tick_succ_locals_preserved=SOME
-(ValWord 7w)`).
+(ValWord 7w)`), plus `scripts/hol-probes/pan_sem_break_continue_e2e_probe.out`
+(`break_result=SOME Break`, `continue_result=SOME Continue`, and both preserve
+the clock and local binding).
 
 This pins the executed source evaluator's `(result, state)` projection against
 the total HOL-shaped base cases:
 
 * `Skip` completes normally with the state carried verbatim;
+* `Break` and `Continue` return their respective results with the state carried
+  verbatim;
 * `Tick` at clock zero is a timeout with cleared locals;
 * `Tick` above clock zero decrements the clock and preserves the locals.
 -/
@@ -65,6 +69,33 @@ def tickSuccGuard : Bool :=
 def tickZeroGuard : Bool :=
   match totalEvaluate (totalState 0) (.tick : Prog Word64) with
   | some (.timeout, state) => state.clock == 0 && (state.locals "x").isNone
+  | _ => false
+
+/-- These check the total clauses directly. Their result is a `(result,state)`
+    pair, with no evaluator `Option` or fuel layer. -/
+def totalSkipClauseGuard : Bool :=
+  match panSemEvaluateClockLeaf .skip (totalState 5) with
+  | (none, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalBreakClauseGuard : Bool :=
+  match panSemEvaluateClockLeaf .break (totalState 5) with
+  | (some .break, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalContinueClauseGuard : Bool :=
+  match panSemEvaluateClockLeaf .continue (totalState 5) with
+  | (some .continue, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalTickClauseGuard : Bool :=
+  match panSemEvaluateClockLeaf .tick (totalState 5) with
+  | (none, state) => state.clock == 4 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def totalTickZeroClauseGuard : Bool :=
+  match panSemEvaluateClockLeaf .tick (totalState 0) with
+  | (some .timeOut, state) => state.clock == 0 && (state.locals "x").isNone
   | _ => false
 
 /-- The compositional HOL `Seq` step applied to base-case first-command results
@@ -142,11 +173,38 @@ def assignMissingGuard : Bool :=
   | _ => false
 
 def totalGuard : Bool :=
-  skipGuard && tickSuccGuard && tickZeroGuard && seqNormalGuard && seqBreakGuard &&
+  skipGuard && tickSuccGuard && tickZeroGuard && totalSkipClauseGuard &&
+    totalBreakClauseGuard && totalContinueClauseGuard && totalTickClauseGuard &&
+    totalTickZeroClauseGuard && seqNormalGuard && seqBreakGuard &&
     seqContinueGuard && seqTickGuard && assignLocalGuard && assignGlobalGuard &&
     assignFreshGuard && assignMissingGuard
 
 #guard totalGuard
+
+example :
+    panSemEvaluateClockLeaf .skip (totalState 5) =
+      (none, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .break (totalState 5) =
+      (some .break, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .continue (totalState 5) =
+      (some .continue, totalState 5) := by
+  rfl
+
+example :
+    panSemEvaluateClockLeaf .tick (totalState 0) =
+      (some .timeOut, { totalState 0 with locals := fun _ => none }) := by
+  simp [panSemEvaluateClockLeaf, totalState]
+
+example :
+    panSemEvaluateClockLeaf .tick (totalState 5) =
+      (none, { totalState 5 with clock := 4 }) := by
+  simp [panSemEvaluateClockLeaf, totalState]
 
 example :
     (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
@@ -176,6 +234,20 @@ example :
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
 
 example :
+    (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+        statefulTestHandler (BitVec.ofNat 64 8) (totalState 5) (.break : Prog Word64)).map
+        panSemTotalOfExecuted = some (panSemEvaluateBreak (totalState 5)) :=
+  panSemEvaluateCodeStateWithPostState_break_total statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
+
+example :
+    (panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+        statefulTestHandler (BitVec.ofNat 64 8) (totalState 5) (.continue : Prog Word64)).map
+        panSemTotalOfExecuted = some (panSemEvaluateContinue (totalState 5)) :=
+  panSemEvaluateCodeStateWithPostState_continue_total statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
+
+example :
     panSemTotalAssignStep (totalState 5) .local "x" (some (.word (BitVec.ofNat 64 9))) =
       (.normal,
         { totalState 5 with
@@ -189,6 +261,18 @@ example :
   panSemTotalAssignStep_none (totalState 5) .local "x"
 
 def runChecks : IO Bool := do
+  if totalSkipClauseGuard then
+    IO.println "PASS total panSem Skip clause returns NONE and the same source state"
+  else IO.println "FAIL total panSem Skip clause returns NONE and the same source state"
+  if totalBreakClauseGuard then
+    IO.println "PASS total panSem Break clause returns SOME Break and the same source state"
+  else IO.println "FAIL total panSem Break clause returns SOME Break and the same source state"
+  if totalContinueClauseGuard then
+    IO.println "PASS total panSem Continue clause returns SOME Continue and the same source state"
+  else IO.println "FAIL total panSem Continue clause returns SOME Continue and the same source state"
+  if totalTickClauseGuard && totalTickZeroClauseGuard then
+    IO.println "PASS total panSem Tick clauses match the clock branches"
+  else IO.println "FAIL total panSem Tick clauses match the clock branches"
   if skipGuard then
     IO.println "PASS panSem total Skip carries the state verbatim"
   else IO.println "FAIL panSem total Skip carries the state verbatim"

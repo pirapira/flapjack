@@ -12,10 +12,17 @@ matches the value/shape checks in CakeML's `panSem` evaluator.
 
 namespace Flapjack
 
-/-! CakeML's `word_lab` wrapper is currently a one-constructor type.  Keeping
-    it explicit makes the four small `panSem` helper definitions faithful even
-    though the executable `PanValue.word` constructor stores the payload
-    directly. -/
+/-! `PanWordLab` is the exact Lean counterpart of CakeML's one-constructor
+    `word_lab` datatype (`cakeml/pancake/semantics/panSemScript.sml:17`,
+    `word_lab = Word ('a word)`): one constructor with a single payload of the
+    word type.  `panIsWord`/`panTheWord` are the exact counterparts of HOL
+    `isWord_def` (`:26`) and `theWord_def` (`:30`).
+
+    The `@[hol ...]` tag is intentionally NOT attached here: the counterpart
+    file for `panSemScript.sml` is `Flapjack/Pancake/Semantics/PanSem.lean`
+    (see `docs/HOL-LAYOUT.md`), and this datatype is defined in
+    `Flapjack/PanValues.lean`.  An exact-tagged port (or a checked relocation)
+    is tracked by bead `flapjack-pxn.18.3.6.8`. -/
 inductive PanWordLab (α : Type u) where
   | word (value : α)
   deriving BEq, DecidableEq, Repr
@@ -26,6 +33,17 @@ def panIsWord : PanWordLab α → Bool
 def panTheWord : PanWordLab α → α
   | .word value => value
 
+/-! `PanValue` is the executable counterpart of CakeML's three-constructor
+    value datatype `v` (`cakeml/pancake/semantics/panSemScript.sml:22`,
+    `v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`),
+    NOT of `word_lab` (which is the one-constructor wrapper above).
+
+    It is NOT statement-exact: `v`'s `Val` constructor stores an `'a word_lab`
+    while `PanValue.word` stores the word payload `α` directly.  Constructor
+    arities (1/1/2) and the `RStruct`/`NStruct` field types agree, but the
+    first constructor's field type differs, so no exact `@[hol ... "v"]`
+    (Datatype) tag is attached.  A faithful port is tracked by bead
+    `flapjack-pxn.18.3.6.8`. -/
 inductive PanValue (α : Type u) where
   | word (value : α)
   | rStruct (fields : List (PanValue α))
@@ -38,7 +56,8 @@ def panIsValWord : PanValue α → Bool
 
 /- `theValWord` is only defined by CakeML on a word value.  The `Option`
    result records that definedness instead of introducing an arbitrary value
-   for structured inputs. -/
+   for structured inputs; this totalized `Option α` version is therefore not
+   statement-exact against the partial HOL `theValWord_def` (`:34`). -/
 def panTheValWord : PanValue α → Option α
   | .word value => some value
   | .rStruct _ | .nStruct _ _ => none
@@ -1052,6 +1071,38 @@ where
     decreasing_by
       all_goals first | decreasing_trivial
 
+mutual
+  theorem panShapeMatches_comm : (left right : Shape) →
+      panShapeMatches left right = panShapeMatches right left
+    | .one, .one => by simp only [panShapeMatches]
+    | .named left, .named right => by
+        simp only [panShapeMatches]
+        by_cases h : left = right
+        · rw [beq_iff_eq.mpr h, beq_iff_eq.mpr h.symm]
+        · rw [beq_eq_false_iff_ne.mpr h,
+              beq_eq_false_iff_ne.mpr (fun hh => h hh.symm)]
+    | .comb left, .comb right => by
+        simp only [panShapeMatches]
+        exact panShapeListMatches_comm left right
+    | .one, .named _ => by simp only [panShapeMatches]
+    | .one, .comb _ => by simp only [panShapeMatches]
+    | .named _, .one => by simp only [panShapeMatches]
+    | .named _, .comb _ => by simp only [panShapeMatches]
+    | .comb _, .one => by simp only [panShapeMatches]
+    | .comb _, .named _ => by simp only [panShapeMatches]
+
+  theorem panShapeListMatches_comm : (left right : List Shape) →
+      panShapeMatches.panShapeListMatches left right =
+        panShapeMatches.panShapeListMatches right left
+    | [], [] => by simp only [panShapeMatches.panShapeListMatches]
+    | left :: leftRest, right :: rightRest => by
+        simp only [panShapeMatches.panShapeListMatches]
+        rw [panShapeMatches_comm left right,
+          panShapeListMatches_comm leftRest rightRest]
+    | [], _ :: _ => by simp only [panShapeMatches.panShapeListMatches]
+    | _ :: _, [] => by simp only [panShapeMatches.panShapeListMatches]
+end
+
 /-! Declaration-level contracts used by the call-aware evaluators.  The
     optional wrapper keeps the original hand-built evaluator API useful for
     small compatibility fixtures while allowing declaration-driven execution
@@ -1219,6 +1270,56 @@ def panValueFieldsHaveShapes (context : StructContext) :
         panValueFieldsHaveShapes context expected actual
   | _, _ => false
 
+/-- Literal HOL-shaped rendering of the `NStruct` field check in
+    `cakeml/pancake/semantics/panSemScript.sml:209 eval_def`: the context
+    field-name list must equal the value field-name list in order
+    (`MAP FST info.fields = MAP FST fields`) and every context field shape must
+    match the shape of the corresponding value
+    (`EVERY (λ(s,v). s = shape_of v)
+       (ZIP (MAP SND info.fields, field_vals))`, computing the value shape
+    inside the predicate as HOL's `λ` does).
+    `panValueShape` is the context-free twin of HOL `shape_of`
+    (`Flapjack.Pancake.Semantics.panSemShapeOf`, the tagged exact port) and
+    `panShapeMatches` is the Bool rendering of structural `=` on `Shape`; the
+    comparison keeps the context shape on the left, as HOL's `λs v. s = shape_of v`
+    does. -/
+def panValueFieldsExactHOL (context : StructContext)
+    (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue α)) : Bool :=
+  (expected.map Prod.fst == actual.map Prod.fst) &&
+    List.all
+      ((expected.map Prod.snd).zip (actual.map Prod.snd))
+      (fun pair => panShapeMatches pair.1 (panValueShape context pair.2))
+
+/-- The literal HOL-shaped `NStruct` field check agrees with the production
+    helper on every input (`Bool.and` is commutative and associative). -/
+theorem panValueFieldsExactHOL_eq_haveShapes (context : StructContext)
+    (expected : List (FieldName × Shape))
+    (actual : List (FieldName × PanValue α)) :
+    panValueFieldsExactHOL context expected actual =
+      panValueFieldsHaveShapes context expected actual := by
+  induction expected generalizing actual with
+  | nil =>
+      cases actual with
+      | nil => rfl
+      | cons actualHead actualTail => rfl
+  | cons head tail ih =>
+      obtain ⟨expectedName, expectedShape⟩ := head
+      cases actual with
+      | nil => rfl
+      | cons actualHead actualTail =>
+          obtain ⟨actualName, actualValue⟩ := actualHead
+          simp only [panValueFieldsHaveShapes, panValueFieldsExactHOL, List.map_cons,
+            List.zip_cons_cons, List.all_cons, List.cons_beq_cons]
+          rw [panShapeMatches_comm expectedShape (panValueShape context actualValue)]
+          have htail :
+              (List.map Prod.fst tail == List.map Prod.fst actualTail &&
+                  ((List.map Prod.snd tail).zip (List.map Prod.snd actualTail)).all
+                    fun pair => panShapeMatches pair.fst (panValueShape context pair.snd)) =
+                panValueFieldsHaveShapes context tail actualTail := ih actualTail
+          rw [← htail]
+          simp only [Bool.and_assoc, Bool.and_left_comm]
+
 def lookupPanValueField (name : FieldName) :
     List (FieldName × PanValue α) → Option (PanValue α)
   | [] => none
@@ -1239,6 +1340,35 @@ def panValueWordProjection : PanValue α → Option α
     (fields : List (FieldName × PanValue α)) :
     panValueWordProjection (.nStruct name fields) = none := rfl
 
+/-- Executable Pancake source-expression evaluator.
+
+This is the source-shaped recursion used by the production semantics, but it is
+NOT a statement-exact port of HOL `panSemScript.sml:209 eval_def`
+(resp. the identical `pan_itreeSemScript.sml:79`).  Cluster-by-cluster:
+
+* `Const`, `Var Local`, `Var Global`, `RStruct`, `RField`, `BaseAddr`,
+  `TopAddr`, `BytesInWord` follow the HOL clauses; the bounded index lookup
+  `fields[index]?` matches HOL's `if index < LENGTH vs then EL index vs` and
+  the HOL rows in `scripts/hol-probes/pan_eval_probe.out` are checked in
+  `Flapjack/Test/PanEvalParity.lean`.
+* `NStruct` / `NField` use the production `lookupInfo` first-match.  The
+  `NStruct` field check is the literal HOL form (`panValueFieldsExactHOL`:
+  `MAP FST info.fields = MAP FST fields` and `EVERY (λ(s,v). s = shape_of v)
+  (ZIP (MAP SND info.fields, values))`, with the value shape computed inside the
+  predicate as in HOL), proved equal to the
+  legacy pairwise helper `panValueFieldsHaveShapes`; HOL's `ALOOKUP` with HOL
+  `=` is still rendered by `lookupInfo` at the concrete `String` instance.
+* `Load` / `Load32` / `LoadByte` / `Op` do not read memory through the HOL
+  state's `memaddrs`, endianness, and byte width; the default (`memoryAccess =
+  none`) reads `memory` directly, and the `.load` case uses `panValueFlatLoad`.
+  This is the gap also recorded in `Flapjack/Pancake/Semantics/PanSem/Total.lean`.
+* The Lean signature takes `structs locals globals memory baseAddress
+  topAddress bytesInWord` (a projection of the HOL state) and an extra
+  `memoryAccess` parameter, and `PanValue` stores the raw word in `.word` rather
+  than HOL's `Val (Word w)`.
+
+The faithful HOL-shaped expression evaluator, including the state projection and
+the memory-codec clauses, is tracked by bead `flapjack-pxn.18.3.6.9`. -/
 def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -1265,7 +1395,7 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let info ← lookupInfo name structs
       let values ← evalPanValueFields structs locals globals memory
         baseAddress topAddress bytesInWord fields (memoryAccess := memoryAccess)
-      if panValueFieldsHaveShapes structs info.fields values then
+      if panValueFieldsExactHOL structs info.fields values then
         pure (.nStruct name values)
       else none
   | .nField name expression, memoryAccess => do
@@ -1721,7 +1851,7 @@ theorem evalPanValueExp_isWfShape [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
           | none => simp [evalPanValueExp, hinfo, hfields] at h
           | some fieldValues =>
               by_cases hshapes :
-                  panValueFieldsHaveShapes structs info.fields fieldValues = true
+                  panValueFieldsExactHOL structs info.fields fieldValues = true
               · simp [evalPanValueExp, hinfo, hfields, hshapes] at h
                 subst h
                 simp only [panValueIsWf, Bool.and_eq_true]
@@ -2149,7 +2279,7 @@ theorem evalPanValueExp_isSome_local
               memory baseAddress topAddress bytesInWord fields memoryAccess with
           | none => simp [evalPanValueExp, hinfo, hfields] at hvalue
           | some fieldValues =>
-              by_cases hshapes : panValueFieldsHaveShapes structs info.fields fieldValues = true
+              by_cases hshapes : panValueFieldsExactHOL structs info.fields fieldValues = true
               · simp [evalPanValueExp, hinfo, hfields, hshapes] at hvalue
                 subst hvalue
                 simp only [expLocalVars] at hmem
@@ -2376,7 +2506,7 @@ mutual
         let values ← evalPanValueFieldsFull structs locals globals memory
           baseAddress topAddress bytesInWord fields
           (memoryAccess := memoryAccess)
-        if panValueFieldsHaveShapes structs info.fields values then
+        if panValueFieldsExactHOL structs info.fields values then
           pure (.nStruct name values)
         else none
     | .nField name expression, memoryAccess => do

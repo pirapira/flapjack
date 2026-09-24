@@ -1,8 +1,9 @@
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanProps
 
 /-!
-Parity checks for the exact port of HOL `fm_empty_zip_alist` in
-`Flapjack/Pancake/Semantics/PanCommonProps.lean`.
+Parity checks for the exact ports of HOL `fm_empty_zip_alist` and
+`fm_empty_zip_flookup` in `Flapjack/Pancake/Semantics/PanCommonProps.lean`.
 
 Direct HOL-EVAL rows in `scripts/hol-probes/fm_empty_zip_alist_probe.out`:
 
@@ -10,6 +11,7 @@ Direct HOL-EVAL rows in `scripts/hol-probes/fm_empty_zip_alist_probe.out`:
 fold_flookup_eq=T
 flookup_first=SOME 20
 flookup_absent=NONE
+zip_lookup_witness=T
 ```
 -/
 
@@ -35,6 +37,21 @@ theorem foldFlookupEq :
 example : FUPDATE_LIST FEMPTY (xs.zip ys) = alistToFmap (xs.zip ys) :=
   fmEmptyZipAlist xs ys xsLength xsNodup
 
+/-- The duplicate-free zip lookup exposes the common index (HOL
+    `fm_empty_zip_flookup`). -/
+theorem zipLookupWitness :
+    ∃ (n : Nat) (hn : n < xs.length),
+      (xs.zip ys)[n]'(by rw [List.length_zip]; exact Nat.lt_min.mpr ⟨hn, xsLength ▸ hn⟩) =
+        (3, 30) :=
+  fmEmptyZipFlookup xs ys 3 30 xsLength xsNodup (by decide)
+
+/-- Bool guard for the lookup-witness oracle row `zip_lookup_witness=T`. -/
+def zipFlookupGuard : Bool :=
+  (FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) 3 == some 30) &&
+  ((xs.zip ys)[2]? == some (3, 30))
+
+#guard zipFlookupGuard
+
 /-- Fold/fmap equality restricted to the concrete oracle lookups. -/
 def parityGuard : Bool :=
   (FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) 2 == some 20) &&
@@ -45,6 +62,46 @@ def parityGuard : Bool :=
 #guard parityGuard
 
 #eval parityGuard
+
+/-! ### HOL `all_distinct_flookup_all_distinct` / `no_overlap_flookup_distinct` -/
+
+/-- Direct HOL-EVAL rows in `scripts/hol-probes/pan_common_props_no_overlap_probe.out`. -/
+example (fm : FiniteMap String (Shape × List Nat)) (x : String) (y : Shape)
+    (zs : List Nat) (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) :
+    zs.Nodup :=
+  allDistinctFlookupAllDistinct fm x y zs hno hlookup
+
+example (fm : FiniteMap String (Shape × List Nat)) (x y : String) (a b : Shape)
+    (xs ys : List Nat) (hno : noOverlap fm) (hxy : x ≠ y)
+    (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
+    distinctLists xs ys = true :=
+  noOverlapFlookupDistinct fm x y a b xs ys hno hxy hx hy
+
+/-- The concrete context used by the HOL oracle: `x ↦ [1,2]`, `y ↦ [3,4]`. -/
+def noOverlapFm : FiniteMap String (Shape × List Nat) :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap String (Shape × List Nat))
+    ("x", (Shape.one, [1, 2]))) ("y", (Shape.one, [3, 4]))
+
+theorem noOverlapFm_x : FLOOKUP noOverlapFm "x" = some (Shape.one, [1, 2]) := by
+  simp only [noOverlapFm, FLOOKUP, FUPDATE]
+  rw [if_neg (by decide), if_pos (by decide)]
+
+theorem noOverlapFm_x_nodup : ([1, 2] : List Nat).Nodup := by decide
+
+/-- Disjointness of the two distinct variables' slots (`HOL slots_disjoint=T`). -/
+def slotsDisjointGuard : Bool :=
+  !(distinctLists [1, 2] [3, 4]) == false && distinctLists [1, 2] [3, 4]
+
+#guard slotsDisjointGuard
+
+/-- HOL `fm_empty_zip_flookup_el` oracle row `nested_zip_lookup=T`. -/
+theorem nestedZipLookupEl :
+    FLOOKUP (FUPDATE_LIST FEMPTY ([1, 2, 3].zip ([10, 20, 30].zip [100, 200, 300]))) 2 =
+      some (20, 200) := by
+  rw [fmEmptyZipFlookupEl [1, 2, 3] [10, 20, 30] [100, 200, 300] 1 2
+    (by decide) (by decide) (by decide) (by decide) (by decide)]
+  decide
+
 
 /-- Exact HOL `MAX_LIST_add_not_mem` port: `maxList xs + 1` is never in `xs`. -/
 theorem maxListAddNotMem : maxList xs + 1 ∉ xs :=
@@ -59,10 +116,46 @@ def maxListGuard : Bool :=
 
 #guard maxListGuard
 
+/-- HOL `all_distinct_alist_no_overlap` oracle rows (`alist_*` in
+    `scripts/hol-probes/pan_props_alist_probe.out`). -/
+theorem alistNoOverlapExample :
+    noOverlap (alistToFmap
+      (["a", "b"].zip ([Shape.one, Shape.one].zip
+        (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "b"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+/-- HOL `all_distinct_alist_ctxt_max` oracle rows (`ctxt_*` in
+    `scripts/hol-probes/pan_props_alist_ctxt_max_probe.out`). -/
+theorem alistCtxtMaxExample :
+    ctxtMax (maxList [0, 1]) (alistToFmap
+      (["a", "b"].zip ([Shape.one, Shape.one].zip
+        (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistCtxtMax [Shape.one, Shape.one] [0, 1] ["a", "b"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+/-- Duplicate keys distinguish HOL's first-binding-wins `alist_to_fmap` from
+    the last-binding-wins `FUPDATE_LIST`; the HOL-shaped theorems need no
+    `Nodup` assumption on the key list. -/
+example : noOverlap (alistToFmap
+    (["a", "a"].zip ([Shape.one, Shape.one].zip
+      (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistNoOverlap [Shape.one, Shape.one] [0, 1] ["a", "a"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+example : ctxtMax (maxList [0, 1]) (alistToFmap
+    (["a", "a"].zip ([Shape.one, Shape.one].zip
+      (withShape [Shape.one, Shape.one] [0, 1])))) :=
+  allDistinctAlistCtxtMax [Shape.one, Shape.one] [0, 1] ["a", "a"]
+    (by decide) (by simp [Shape.shapeSize]) (by decide)
+
+#guard ((alistToFmap [("a", 1), ("a", 2)] : FiniteMap String Nat) "a" == some 1)
+#guard ((FUPDATE_LIST FEMPTY [("a", 1), ("a", 2)] : FiniteMap String Nat) "a" == some 2)
+
 def runChecks : IO Bool := do
-  let ok := parityGuard && maxListGuard
-  IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality matches HOL"
-    else "FAIL Crep fm_empty_zip_alist fold/alist equality matches HOL")
+  let ok := parityGuard && zipFlookupGuard && maxListGuard
+  IO.println (if ok then "PASS Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL"
+    else "FAIL Crep fm_empty_zip_alist fold/alist equality and fm_empty_zip_flookup witness match HOL")
   return ok
 
 end Flapjack.Test.FmEmptyZipAlistParity

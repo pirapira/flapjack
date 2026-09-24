@@ -32,20 +32,6 @@ structure StructInfo where
 abbrev StructContext := List (StructName × StructInfo)
 abbrev InfoMap (α : Type u) := List (String × α)
 
-/-- HOL-shaped `struct_info` (`cakeml/pancake/panLangScript.sml:121`), the value
-    component of the contexts that `pan_structsProof$v_flds_ok` and
-    `panProps$is_wf_shape_v` range over (via `ALOOKUP`). It carries exactly the
-    HOL fields `fields` and `size`, without the production
-    `StructInfo.shapedFields` cache that has no HOL counterpart. -/
-structure StructInfoHOL where
-  fields : List (FieldName × Shape)
-  size : Nat
-  deriving Repr
-
-/-- HOL-shaped struct context: the association list `(stcname # struct_info)
-    list` used by `v_flds_ok`/`is_wf_shape_v` and `ALOOKUP`. -/
-abbrev StructContextHOL := List (StructName × StructInfoHOL)
-
 /-- Projection of the production cache-augmented `StructContext` onto the
     HOL-shaped `StructContextHOL`, keeping the HOL `struct_info` fields `fields`
     and `size` and dropping the production-only `StructInfo.shapedFields`
@@ -55,16 +41,6 @@ abbrev StructContextHOL := List (StructName × StructInfoHOL)
     projection preserves shadowing of duplicate struct names. -/
 def StructContext.toHOL (context : StructContext) : StructContextHOL :=
   context.map (fun entry => (entry.1, { fields := entry.2.fields, size := entry.2.size }))
-
-/-- Key-polymorphic first-match association-list lookup: the Lean counterpart
-    of HOL `alist$ALOOKUP`.  The association list may use any key type with
-    `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
-    the exact `ALOOKUP` operation (the production `InfoMap` is the
-    `κ = String` instance). -/
-def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
-  | [] => none
-  | (candidate, value) :: entries =>
-      if candidate == key then some value else lookupInfo key entries
 
 /-- Lookup commutes with the `StructContext.toHOL` projection: the projected
     context yields the same first-match entry, with its `struct_info` viewed
@@ -139,6 +115,16 @@ def lookupInfoWithRest [BEq String] (name : String) : StructContext →
       if candidate == name then some (info, context)
       else lookupInfoWithRest name context
 
+/-- Production shape well-formedness: `Named nm` succeeds iff `nm` occurs in the
+    context. This is the executable counterpart of HOL `is_wf_shape`
+    (`cakeml/pancake/panLangScript.sml:139`), but it is **not statement-exact**:
+    `StructInfo` carries an extra `shapedFields` field absent from HOL
+    `struct_info`, and `Named` consults `lookupInfo` (canonical String `==`)
+    rather than HOL `ALOOKUP` with `=`. The exact HOL-shaped port is
+    `isWfShapeHOL` over `StructContextHOL` (in `PanLang.lean`), and
+    `isWfShapeHOL_toHOL` below proves the two agree through
+    `StructContext.toHOL`. Direct HOL oracle rows are in
+    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
 def isWfShape (context : StructContext) : Shape → Bool
   | .one => true
   | .comb shapes => isWfShapeList context shapes
@@ -154,6 +140,32 @@ where
   termination_by shapes => sizeOf shapes
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-
+Clause-by-clause relation between the exact HOL-shaped `is_wf_shape` port
+    `isWfShapeHOL` over `StructContextHOL` and the production `isWfShape` over
+    the cache-augmented `StructContext`, through the context projection
+    `StructContext.toHOL`. Both predicates agree on every shape. -/
+mutual
+  theorem isWfShapeHOL_toHOL (context : StructContext) :
+      ∀ (shape : Shape), isWfShapeHOL context.toHOL shape = isWfShape context shape
+    | .one => by simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
+    | .comb shapes => by
+        simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
+        exact isWfShapeListHOL_toHOL context shapes
+    | .named name => by
+        simp only [isWfShapeHOL.eq_def, isWfShape.eq_def]
+        exact lookupInfo_toHOL_isSome name context
+
+  theorem isWfShapeListHOL_toHOL (context : StructContext) :
+      ∀ (shapes : List Shape),
+        isWfShapeListHOL context.toHOL shapes = isWfShape.isWfShapeList context shapes
+    | [] => by simp only [isWfShapeListHOL.eq_def, isWfShape.isWfShapeList.eq_def]
+    | shape :: shapes => by
+        rw [isWfShapeListHOL.eq_def, isWfShape.isWfShapeList.eq_def]
+        simp only []
+        rw [isWfShapeHOL_toHOL context shape, isWfShapeListHOL_toHOL context shapes]
+end
 
 def isWfFields (context : StructContext) : List (FieldName × Shape) → Bool
   | [] => true

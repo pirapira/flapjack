@@ -1,6 +1,8 @@
 """Regression checks for the HOL-reference scanner."""
 
+import os
 import runpy
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -114,6 +116,54 @@ class HolAttributeSitesTest(unittest.TestCase):
         self.assertIsNone(REF_ERROR(path, "locals_rel_wf_shape", 2345, cache))
         self.assertIsNone(REF_ERROR(path, "locals_rel_wf_shape", 3008, cache))
         self.assertIn("not at line", REF_ERROR(path, "locals_rel_wf_shape", 2346, cache))
+
+
+DECL = CHECKER["hol_declaration_lines"]
+
+
+class HolDatatypeDeclarationsTest(unittest.TestCase):
+    def _write_sml(self, text):
+        handle = tempfile.NamedTemporaryFile(
+            "w", suffix=".sml", delete=False, encoding="utf-8"
+        )
+        handle.write(text)
+        handle.close()
+        self.addCleanup(lambda: os.unlink(handle.name))
+        return Path(handle.name)
+
+    def test_datatype_block_type_name_is_indexed(self):
+        path = self._write_sml(
+            "Datatype:\n  shape = One\n        | Comb (shape list)\nEnd\n"
+        )
+        self.assertEqual(DECL(path, {})["shape"], [2])
+
+    def test_panlang_shape_is_resolvable(self):
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "cakeml/pancake/panLangScript.sml"
+        )
+        cache = {}
+        self.assertIsNone(REF_ERROR(path, "shape", None, cache))
+        self.assertIn("declares no", REF_ERROR(path, "no_such_type", None, cache))
+        self.assertIn("not at line", REF_ERROR(path, "shape", 1, cache))
+
+    def test_repeated_datatype_name_requires_line(self):
+        path = self._write_sml(
+            "Datatype:\n  foo = A\nEnd\nDatatype:\n  foo = B\nEnd\n"
+        )
+        cache = {}
+        self.assertEqual(DECL(path, cache)["foo"], [2, 5])
+        self.assertIn("multiple lines", REF_ERROR(path, "foo", None, cache))
+        self.assertIsNone(REF_ERROR(path, "foo", 2, cache))
+        self.assertIsNone(REF_ERROR(path, "foo", 5, cache))
+
+    def test_record_field_is_not_a_datatype_name(self):
+        path = self._write_sml(
+            "Datatype:\n  expr = Rec <| field : num |>\nEnd\n"
+        )
+        names = DECL(path, {})
+        self.assertEqual(names["expr"], [2])
+        self.assertNotIn("field", names)
 
 
 if __name__ == "__main__":

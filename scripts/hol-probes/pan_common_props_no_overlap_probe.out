@@ -1,0 +1,5 @@
+slot_nodup_x=T
+slot_nodup_y=T
+slots_disjoint=T
+distinct_lists_self=T
+nested_zip_lookup=T

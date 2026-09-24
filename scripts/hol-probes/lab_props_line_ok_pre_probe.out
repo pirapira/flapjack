@@ -1,0 +1,9 @@
+line_ok_asm_skip=T
+line_ok_asm_cbw=T
+line_ok_label=T
+line_ok_labasm_halt=T
+line_ok_asm_badreg=F
+all_enc_ok_one_ok=T
+all_enc_ok_one_bad=F
+cbw_to_asm_store8=Inst (Mem Store8 2 (Addr 1 0w))
+cbw_to_asm_sharemem=Inst (Mem Load 4 (Addr 5 0w))

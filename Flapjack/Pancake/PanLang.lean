@@ -18,6 +18,10 @@ abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
 
+/-- Exact port of Cake's `shape` datatype (`cakeml/pancake/panLangScript.sml:35`):
+constructor arities `0/1/1` and field types `shape list` / `stcname` (modelled by `List Shape` /
+`StructName`) match, as does the HOL Bool-valued equality used on shapes. -/
+@[hol "cakeml/pancake/panLangScript.sml" "shape"]
 inductive Shape where
   | one
   | comb (fields : List Shape)
@@ -47,6 +51,56 @@ def shapeToString : Shape → String
 
 end Shape
 
+/-- Exact port of Cake's `struct_info` datatype (`cakeml/pancake/panLangScript.sml:121`):
+field types `(fldname # shape) list` (`List (FieldName × Shape)`) and `num` (`Nat`) match,
+without the production-only `StructInfo.shapedFields` cache. -/
+structure StructInfoHOL where
+  fields : List (FieldName × Shape)
+  size : Nat
+  deriving Repr
+
+/-- HOL-shaped struct context: the association list `(stcname # struct_info) list`
+(`(StructName × StructInfoHOL) list`) that `is_wf_shape` ranges over via `ALOOKUP`. -/
+abbrev StructContextHOL := List (StructName × StructInfoHOL)
+
+/-- Key-polymorphic first-match association-list lookup: the Lean counterpart
+    of HOL `alist$ALOOKUP`. The association list may use any key type with
+    `BEq`; under `[LawfulBEq κ]` the `==` test reflects HOL's `=`, so this is
+    the exact `ALOOKUP` operation (the production `InfoMap` is the
+    `κ = String` instance). -/
+def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
+  | [] => none
+  | (candidate, value) :: entries =>
+      if candidate == key then some value else lookupInfo key entries
+
+/-
+Exact executable port of HOL `panLang$is_wf_shape`
+    (`cakeml/pancake/panLangScript.sml:139`). The HOL clauses are reproduced
+    literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
+    `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered
+    with the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart)
+    and `isSome` as the Bool rendering of `<> NONE`. The context is the
+    HOL-shaped `StructContextHOL`; the key type is fixed to `String` so the
+    concrete `BEq String` instance is used, matching HOL's `=`. The direct
+    original-HOL rows are pinned in
+    `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+mutual
+  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_shape_def"]
+  def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
+    | .one => true
+    | .comb shapes => isWfShapeListHOL context shapes
+    | .named name => (lookupInfo name context).isSome
+  termination_by shape => sizeOf shape
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def isWfShapeListHOL (context : StructContextHOL) :
+      List Shape → Bool
+    | [] => true
+    | shape :: shapes => isWfShapeHOL context shape && isWfShapeListHOL context shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
 inductive BinOp where
   | add
   | sub
@@ -64,6 +118,9 @@ def binopToString : BinOp → String
   | .or => "Or"
   | .xor => "Xor"
 
+/-- Exact port of Cake's `panop` datatype (`cakeml/pancake/panLangScript.sml:41`):
+the single nullary constructor `Mul` matches. -/
+@[hol "cakeml/pancake/panLangScript.sml" "panop"]
 inductive PanOp where
   | mul
   deriving DecidableEq, Repr
@@ -121,6 +178,9 @@ class ArithmeticShiftRight (α : Type u) where
 class RotateRightOp (α : Type u) where
   rotateRight : α → α → α
 
+/-- Exact port of Cake's `varkind` datatype (`cakeml/pancake/panLangScript.sml:45`):
+the two nullary constructors `Local`/`Global` match. -/
+@[hol "cakeml/pancake/panLangScript.sml" "varkind"]
 inductive VarKind where
   | local
   | global
@@ -151,6 +211,9 @@ inductive Exp (α : Type u) where
   | bytesInWord
   deriving Repr
 
+/-- Exact port of Cake's `opsize` datatype (`cakeml/pancake/panLangScript.sml:49`):
+the four nullary constructors `Op8`/`OpW`/`Op32`/`Op16` match in order. -/
+@[hol "cakeml/pancake/panLangScript.sml" "opsize"]
 inductive OpSize where
   | op8
   | opW
@@ -158,6 +221,9 @@ inductive OpSize where
   | op16
   deriving DecidableEq, Repr
 
+/-- Exact port of Cake's `primop` datatype (`cakeml/pancake/panLangScript.sml:72`):
+the single nullary constructor `AddCarry` matches. -/
+@[hol "cakeml/pancake/panLangScript.sml" "primop"]
 inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr
@@ -182,6 +248,13 @@ instance natPanShiftWidth : PanShiftWidth Nat where
   width := 64
   amount := id
 
+/-- Lean's executable `Prog` follows the constructor layout of HOL
+    `panLang$prog` (`cakeml/pancake/panLangScript.sml:82-100`), including the
+    recursive program positions and nested `Call` metadata. It is not an exact
+    port: its expression payloads use the generic `Exp α`, whose `Const` case
+    contains `α`, while HOL `Const` is indexed by the target word type. Keep
+    this useful generic syntax untagged until an exact word-indexed expression
+    interface is available. -/
 inductive Prog (α : Type u) where
   | skip
   | dec (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)
@@ -208,6 +281,10 @@ inductive Prog (α : Type u) where
   | annot (tag text : String)
   deriving Repr
 
+/-- Lean's `FunDecl` has the HOL field layout
+    (`cakeml/pancake/panLangScript.sml:102-109`), but is not an exact port:
+    `body` uses generic `Prog α` and therefore inherits the mismatch between
+    generic `Exp α.Const` and HOL's word-indexed `Const`. Keep it untagged. -/
 structure FunDecl (α : Type u) where
   name : FunName
   inline : Bool
@@ -217,6 +294,11 @@ structure FunDecl (α : Type u) where
   returnShape : Shape
   deriving Repr
 
+/-- Lean's `Decl` follows the constructor layout of HOL `panLang$decl`
+    (`cakeml/pancake/panLangScript.sml:112-116`), but is not an exact port:
+    function bodies use generic `FunDecl α` and value declarations contain
+    generic `Exp α`, inheriting the mismatch between generic `Exp α.Const` and
+    HOL's word-indexed `Const`. Keep it untagged. -/
 inductive Decl (α : Type u) where
   | function (declaration : FunDecl α)
   | decl (shape : Shape) (name : DeclarationName) (value : Exp α)

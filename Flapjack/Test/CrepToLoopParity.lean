@@ -1,4 +1,5 @@
 import Flapjack.Pancake.CrepToLoop
+import Flapjack.Pancake.CrepToLoop.StateRel
 
 /-!
 Direct parity for `crep_to_loop$compile` (`crep_to_loopScript.sml:120`).
@@ -306,5 +307,63 @@ def runChecks : IO Bool := do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"
     all := all && result
   pure all
+
+/-- HOL `crep_to_loopProofScript.sml` `state_rel_intro`: the Crepe-to-Loop
+    state relation unfolds to the seven-field conjunction, matching the direct
+    HOL-EVAL rows in `scripts/hol-probes/crep_to_loop_state_rel_probe.out`. -/
+example (s : CrepHolState (BitVec 64) Unit) (t : LoopMachineState (BitVec 64) Unit) :
+    crepToLoopStateRel s t ↔
+      s.memaddrs = t.mdomain ∧
+        s.shMemaddrs = t.shMdomain ∧
+        s.clock = t.clock ∧
+        s.bigEndian = t.be ∧
+        s.ffi = t.ffi ∧
+        s.baseAddress = t.baseAddr ∧
+        s.topAddress = t.topAddr :=
+  crepToLoopStateRel_intro s t
+
+/-- HOL `wlab_wloc_def` (`crep_to_loopProofScript.sml:45-47`) on a word payload:
+    both datatypes use the single `word` constructor. -/
+example : wlabWloc (PanWordLab.word (7 : BitVec 64)) = LoopValue.word (7 : BitVec 64) := rfl
+
+/-- HOL `globals_rel_intro` (`crep_to_loopProofScript.sml:203-209`) is an
+    implication: from the relation, conclude the universally quantified lookup
+    agreement. -/
+example (sglobals : BitVec 5 → Option (PanWordLab (BitVec 64)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec 64)))
+    (h : crepToLoopGlobalsRel sglobals tglobals) :
+    ∀ address value, sglobals address = some value →
+        tglobals address = some (wlabWloc value) :=
+  crepToLoopGlobalsRel_intro sglobals tglobals h
+
+/-- Untagged iff form used for rewriting the relation to its unfolding. -/
+example (sglobals : BitVec 5 → Option (PanWordLab (BitVec 64)))
+    (tglobals : BitVec 5 → Option (LoopValue (BitVec 64))) :
+    crepToLoopGlobalsRel sglobals tglobals ↔
+      ∀ address value, sglobals address = some value →
+        tglobals address = some (wlabWloc value) :=
+  crepToLoopGlobalsRel_iff sglobals tglobals
+
+/-- Concrete target global map for the `globals_rel` oracle row
+    `globals_lookup_match=T` in `scripts/hol-probes/crep_to_loop_globals_rel_probe.out`. -/
+def globalsRelFixture : BitVec 5 → Option (LoopValue (BitVec 64)) :=
+  FUPDATE (FEMPTY : FiniteMap (BitVec 5) (LoopValue (BitVec 64))) (4, .word (7 : BitVec 64))
+
+/-- Reproduces the direct HOL oracle rows `globals_lookup_match=T` and
+    `globals_lookup_absent=T` (`crep_to_loop_globals_rel_probe.out`). -/
+def globalsRelGuard : Bool :=
+  (FLOOKUP (FUPDATE (FEMPTY : FiniteMap (BitVec 5) (PanWordLab (BitVec 64))) (4, PanWordLab.word (7 : BitVec 64))) 4
+      == some (PanWordLab.word (7 : BitVec 64))) &&
+    (FLOOKUP globalsRelFixture 4 == some (wlabWloc (PanWordLab.word (7 : BitVec 64)))) &&
+    (FLOOKUP globalsRelFixture 9).isNone
+
+#guard globalsRelGuard
+
+/-- HOL `state_rel_clock_add_zero` (`crep_to_loopProofScript.sml:219-223`): a
+    state relation is preserved by advancing the target clock by zero. -/
+example (s : CrepHolState (BitVec 64) Unit) (t : LoopMachineState (BitVec 64) Unit)
+    (h : crepToLoopStateRel s t) :
+    ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
+  crepToLoopStateRel_clock_add_zero s t h
 
 end Flapjack.Test.CrepToLoopParity

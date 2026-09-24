@@ -136,6 +136,30 @@ infrastructure; delete a declaration only when it is unsalvageable or itself
 implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
 
+**Qualify only named list-to-array state fields.** An unqualified tag records a
+statement reviewed as exact and has manifest status `reviewed_exact`. The
+`(list_as_array := [field, ...])` qualifier is only for specific HOL list
+fields represented by Lean arrays; it does not allow any other difference in
+the theorem statement or semantics. Review the fields against the surrounding
+HOL state relation, list lengths, index bounds, and update behavior. The
+manifest must list the same fields and use `reviewed_list_as_array` after that
+comparison; never call a qualified theorem `reviewed_exact`.
+
+Each qualified field must be a field of a structure in the same Lean module
+and have a kernel-checked theorem named `holListArrayWitness_<field>`. Its
+result type must establish `RepresentsHOLNodeList` for that field and a HOL
+list, without assuming `RepresentsHOLNodeList` in its premises. The reference
+checker enforces this shape and Lake checks the theorem proof, but those gates
+do not independently establish the cross-language correspondence. Review the
+witness and HOL/Lean theorem statements manually; the qualifier does not
+authorize changed evaluators, errors, quantified types, side conditions, or
+conclusions. If bounds or out-of-range behavior differ, leave the theorem
+untagged and document the mismatch beside it.
+
+Representation witnesses alone do not establish transition equivalence.
+Review successful updates, invalid representations, and out-of-range errors
+separately before tagging any transition theorem.
+
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
 definitions. A tagged proof-only duplicate beside a different production

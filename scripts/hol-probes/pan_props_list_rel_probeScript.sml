@@ -30,3 +30,8 @@ val _ = print_eval "size_ok"
 
 val _ = print_eval "wf_ok"
   ``EVERY is_wf_shape_v_nil ^args``;
+
+val _ = print_eval "flookup0"
+  ``FLOOKUP (FEMPTY |++ ZIP (^ns, FLAT (MAP flatten ^args)))
+      (EL 0 (EL 0 (with_shape ^sh ^ns))) =
+    SOME (EL 0 (flatten (EL 0 ^args)))``;

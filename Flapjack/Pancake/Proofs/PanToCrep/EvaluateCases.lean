@@ -4515,6 +4515,15 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
   | globalVar (name : String) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.var .global name)
+  | baseAddr :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .baseAddr
+  | topAddr :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .topAddr
+  | bytesInWord :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        .bytesInWord
   | nStruct (name : String) (fields : List (FieldName × Exp (RiscV.Word 64))) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.nStruct name fields)
@@ -4529,6 +4538,9 @@ inductive compileArgConstLocalStructAddressOrRFieldInnerIH
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
         (.load32 (.const address))
+  | loadOneConst (address : RiscV.Word 64) :
+      compileArgConstLocalStructAddressOrRFieldInnerIH context source target
+        (.load .one (.const address))
   | loadTwoConstCanonicalTarget (address : RiscV.Word 64)
       (hcanonical : target = riscvCrepWordTarget target) :
       compileArgConstLocalStructAddressOrRFieldInnerIH context source target
@@ -4806,6 +4818,39 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
       intro value heval
       have hglobals := stateRel_globals source target hstate
       simp [evalPanSemStateExp, evalPanValueExp, hglobals, FEMPTY] at heval
+  | baseAddr =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .baseAddr =
+          some (.word source.baseAddress) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word source.baseAddress :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_baseAddr_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
+  | topAddr =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .topAddr =
+          some (.word source.topAddress) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word source.topAddress :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_topAddr_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
+  | bytesInWord =>
+      intro value heval
+      have hsource : evalPanSemStateExp source .bytesInWord =
+          some (.word panSemBitVec64BytesInWord) := by
+        simp [evalPanSemStateExp, evalPanValueExp]
+      have hvalue : value = .word panSemBitVec64BytesInWord :=
+        (Option.some.inj (hsource.symm.trans heval)).symm
+      subst value
+      have hcompiled := compileExpHOL_bytesInWord_ofHOLIH context source target
+        hstate hcode hlocals (by simp [expGlobalVars]) hsource
+      simpa [panToCrepMkCtxtHOL, panValueFlatten] using hcompiled.1
   | nStruct name fields =>
       intro value heval
       have hstructs := stateRel_structs source target hstate
@@ -4849,6 +4894,28 @@ private theorem compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten
               (.load32 (.const address)) = some word := by
             simpa using heval
           simp [compileExpHOL, evalCrepRuntimeExps, panValueFlatten, htarget]
+      | rStruct fields => simp at heval
+      | nStruct name fields => simp at heval
+  | loadOneConst address =>
+      intro value heval
+      have hsourceTarget := evalPanSemStateExp_loadOne_const_stateRel
+        source target address hstate
+      rw [hsourceTarget] at heval
+      cases value with
+      | word word =>
+          have htarget : evalCrepRuntimeExp target (.load (.const address)) =
+              some word := by
+            simpa using heval
+          let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+          have hcompiled : compileExpHOL compilerContext
+              (.load .one (.const address)) =
+              ([.load (.const address)], .one) := by
+            simp [compileExpHOL, compilerContext, loadShape,
+              CrepBytesInWord.bytesInWord]
+          simp [compilerContext, hcompiled, evalCrepRuntimeExps,
+            panValueFlatten, htarget]
       | rStruct fields => simp at heval
       | nStruct name fields => simp at heval
   | loadTwoConstCanonicalTarget address hcanonical =>

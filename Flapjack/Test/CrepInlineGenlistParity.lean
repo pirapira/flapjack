@@ -53,6 +53,36 @@ def crepInlineMaxGenlistGuard : Bool :=
 
 #guard crepInlineMaxGenlistGuard
 
+/-! Oracle rows for the exact `cont_res_def` port (`crep_inline_cont_res_probe.out`). -/
+
+theorem crepInlineContRes_none :
+    contResHOL (α := Nat) (ε := Nat) none = true := rfl
+
+theorem crepInlineContRes_break :
+    contResHOL (α := Nat) (ε := Nat) (some (.broke 3)) = true := rfl
+
+theorem crepInlineContRes_continue :
+    contResHOL (α := Nat) (ε := Nat) (some (.continued 2)) = true := rfl
+
+theorem crepInlineContRes_error :
+    contResHOL (α := Nat) (ε := Nat) (some .error) = true := rfl
+
+theorem crepInlineContRes_returned :
+    contResHOL (α := Nat) (ε := Nat) (some (.returned [])) = false := rfl
+
+theorem crepInlineContRes_timeout :
+    contResHOL (α := Nat) (ε := Nat) (some .timeout) = false := rfl
+
+def crepInlineContResGuard : Bool :=
+  contResHOL (α := Nat) (ε := Nat) none &&
+    contResHOL (α := Nat) (ε := Nat) (some (.broke 3)) &&
+    contResHOL (α := Nat) (ε := Nat) (some (.continued 2)) &&
+    contResHOL (α := Nat) (ε := Nat) (some .error) &&
+    !contResHOL (α := Nat) (ε := Nat) (some (.returned [])) &&
+    !contResHOL (α := Nat) (ε := Nat) (some .timeout)
+
+#guard crepInlineContResGuard
+
 def runChecks : IO Bool := do
   let genlistOk ←
     if crepInlineGenlistIntervalGuard then
@@ -75,6 +105,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crep_inline max_list_genlist_add_suc_val"
       pure false
-  pure (genlistOk && maxListOk && maxGenlistOk)
+  let contResOk ←
+    if crepInlineContResGuard then
+      IO.println "PASS crep_inline cont_res"
+      pure true
+    else
+      IO.println "FAIL crep_inline cont_res"
+      pure false
+  pure (genlistOk && maxListOk && maxGenlistOk && contResOk)
 
 end Flapjack.Test.CrepInlineGenlistParity

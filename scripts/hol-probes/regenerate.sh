@@ -235,6 +235,9 @@ run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
+run_probe crep_inline_cont_res_probeScript.sml crep_inline_cont_res_probe.out \
+  cont_res_none cont_res_done "$cake_dir/pancake/proofs/crep_inlineProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_inline_eval_probeScript.sml crep_inline_eval_probe.out \
   src_main_is_call continue_eval "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"

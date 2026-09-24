@@ -484,6 +484,47 @@ example : (evalCrepRuntimeExp
   exact crepSimpExpCorrect1HolWordBitsSourceRuntime id
     holWordBitsState64WithLocal holWordBitsMulEight hEval
 
+/-! This also instantiates the arbitrary-index HOL-shaped source evaluator
+   theorem on the expression with direct HOL result `SOME (Word 40w)`. -/
+example :
+    (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      (crepArithHolFiniteDimensionMapCode id holWordBitsState64WithLocal)
+      (crepSimpExp
+        (fun value => bitVecToHolWord
+          (instFinHolFiniteDimension (width := 64))
+          (BitVec.ofNat 64 value)) holWordBitsMulEight)).map PanWordLab.word =
+    (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      holWordBitsState64WithLocal holWordBitsMulEight).map PanWordLab.word := by
+  have hRuntime : evalCrepRuntimeExp
+      (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight ≠ none := by
+    simp [evalCrepRuntimeExp, CrepHolState.toHolFiniteWordSourceRuntime,
+      CrepHolState.toHolFiniteWordRuntime, holWordBitsMulEight,
+      holWordBitsState64WithLocal, holWordBitsState64, holWordBits64]
+  have hRuntimeWordLab : (evalCrepRuntimeExp
+      (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight).map
+        PanWordLab.word ≠ none := by
+    cases hResult : evalCrepRuntimeExp
+        (holWordBitsState64WithLocal.toHolFiniteWordSourceRuntime
+          (instFinHolFiniteDimension (width := 64))) holWordBitsMulEight with
+    | none => exact (hRuntime hResult).elim
+    | some value => simp
+  have hSource : (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      holWordBitsState64WithLocal holWordBitsMulEight).map
+        PanWordLab.word ≠ none := by
+    rw [← congrArg (Option.map PanWordLab.word)
+      (evalCrepRuntimeExp_sourceWord_eq
+        (instFinHolFiniteDimension (width := 64))
+        holWordBitsState64WithLocal holWordBitsMulEight)]
+    exact hRuntimeWordLab
+  exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass id
+    holWordBitsState64WithLocal holWordBitsMulEight
+    (.word (holWordBits64 40)) hSource
+
 #guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime (.const holBits4) ==
   some holBits4
 #guard evalCrepRuntimeExp holWordBitsState4.toHolWordBitsRuntime

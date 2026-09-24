@@ -2,6 +2,7 @@
   "lean_toolchain": "leanprover/lean4:v4.33.1",
   "records": [
     {"lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean", "lean_name": "wordAddCarryHOL", "lean_full_name": "Flapjack.wordAddCarryHOL", "hol_path": "cakeml/compiler/backend/backend_commonScript.sml", "hol_name": "word_add_carry_def", "sha256": "a4b11a373b5a4a4b6f179c8f0b3180fc6dc5936c8b270199f11d781b1333a732"},
+    {"lean_path": "Flapjack/Pancake/CrepArith.lean", "lean_name": "crepDestConst", "lean_full_name": "Flapjack.crepDestConst", "hol_path": "cakeml/pancake/crep_arithScript.sml", "hol_name": "dest_const_def", "sha256": "ef0e210f2bc42a95011948083c53cdd4935d9b99725eb631d4b5423ac5bad724"},
     {"lean_path": "Flapjack/Pancake/CrepInline/Pass.lean", "lean_name": "compileInlTopHOL", "lean_full_name": "Flapjack.compileInlTopHOL", "hol_path": "cakeml/pancake/crep_inlineScript.sml", "hol_name": "compile_inl_top_def", "sha256": "022d4b08fd97227db63dd1f62dab2cf44df95cb7b373ff8e2b4f116397f6be8a"},
     {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "compileDecsCake", "lean_full_name": "Flapjack.compileDecsCake", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "compile_decs_def", "sha256": "d37df8228f90a8be03dc49580cb8b44887b9a76328705519abd0252e59206006"},
     {"lean_path": "Flapjack/Pancake/PanGlobals.lean", "lean_name": "compileExpCake", "lean_full_name": "Flapjack.compileExpCake", "hol_path": "cakeml/pancake/pan_globalsScript.sml", "hol_name": "compile_exp_def", "sha256": "b3d6f9745c1d53095f5af3063f32ee21d3fe01f3d9a7695f862a0f05750c2a40"},

@@ -271,8 +271,7 @@ private theorem crepSimpMul_holWordBits {width : Nat} [NeZero width]
         (by simp [simpBV, hLtarget, hRtarget])
       dsimp [simpFin, simpBV] at hsource htarget ⊢
       rw [hsource, htarget]
-      simp only [mapCrepExpWord]
-      exact congrArg CrepExp.const (holWordBitsToBitVec_mul leftConstant rightConstant)
+      simp [mapCrepExpWord, crepDestConst]
     | none =>
       have hRtargetNone : crepDestConst (simpBV
           (mapCrepExpWord holWordBitsToBitVec right)) = none := by
@@ -1297,7 +1296,7 @@ private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
           have hrightValue : rightConstant = rightValue := by
             rw [hRshape] at hright
             simpa [evalCrepRuntimeExp] using hright
-          simp [evalCrepRuntimeExp, hleftValue, hrightValue]
+          simp [evalCrepRuntimeExp, hleftValue, hrightValue, crepDestConst]
       | none =>
           have hRnotConst : ∀ value, simpExp right = .const value → False := by
             intro value heq
@@ -1330,7 +1329,7 @@ private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
             simpa [evalCrepRuntimeExp] using hright
           have hmul := mulConst state (simpExp left) rightConstant leftValue
             (by simpa [simpExp] using hleft)
-          simpa [hrightValue] using hmul
+          simpa [hrightValue, crepDestConst] using hmul
       | none =>
           have hLnotConst : ∀ value, simpExp left = .const value → False := by
             intro value heq
@@ -1613,7 +1612,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
             simpa [hLshape, evalCrepRuntimeExp] using hleft
           have hrightValue : rightConstant = rightValue := by
             simpa [hRshape, evalCrepRuntimeExp] using hright
-          simp [evalCrepRuntimeExp, hleftValue, hrightValue]
+          simp [evalCrepRuntimeExp, hleftValue, hrightValue, crepDestConst]
       | none =>
           have hRnotConst : ∀ value,
               crepSimpExp (BitVec.ofNat n) right = .const value → False := by
@@ -1627,7 +1626,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
             simpa [hLshape, evalCrepRuntimeExp] using hleft
           have hmul := crepEvalMulConstRaw state (crepSimpExp (BitVec.ofNat n) right)
             leftConstant rightValue hright
-          simpa [hleftValue, BitVec.mul_comm] using hmul
+          simpa [hleftValue, BitVec.mul_comm, crepDestConst] using hmul
   | none =>
       cases hR : crepDestConst (crepSimpExp (BitVec.ofNat n) right) with
       | some rightConstant =>
@@ -1645,7 +1644,7 @@ theorem crepSimpMulEval {n : Nat} [NeZero n] {σ : Type}
             simpa [hRshape, evalCrepRuntimeExp] using hright
           have hmul := crepEvalMulConstRaw state (crepSimpExp (BitVec.ofNat n) left)
             rightConstant leftValue (by simpa [hRshape] using hleft)
-          simpa [hrightValue] using hmul
+          simpa [hrightValue, crepDestConst] using hmul
       | none =>
           have hLnotConst : ∀ value,
               crepSimpExp (BitVec.ofNat n) left = .const value → False := by

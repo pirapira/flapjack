@@ -232,6 +232,14 @@
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_const_def",
+    "lean_path": "Flapjack/Pancake/CrepArith.lean",
+    "lean_name": "crepDestConst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (Const payload and Option result match the imported CrepExp constructor shape; direct HOL-EVAL probe paired with production simplifier checks)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

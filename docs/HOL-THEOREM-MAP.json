@@ -459,6 +459,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1ConstHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-finite-dimension Const case support with HOL's unused result binder, success premise, code-map update, and complete Option word_lab equality. It remains untagged because the explicit source evaluator/state adapter is not proved identical to native crepSem eval, even though this constructor reduces directly to the same word value."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Flapjack-specific Const case specializes HOL's polymorphic word carrier to RiscV.Word n and uses evalCrepHolExpWordLab; the exact arbitrary-word simp_exp_correct1 case remains open"

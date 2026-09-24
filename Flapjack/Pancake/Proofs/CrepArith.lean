@@ -2541,6 +2541,31 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
   exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     f state expression _v h
 
+/-- All-finite-dimension support for the Const case of HOL's local
+    simp_exp_correct1 (`crep_arithProofScript.sml:111`). It keeps the unused
+    result binder, successful-evaluation premise, arbitrary code-map update,
+    source simplifier, and complete Option word_lab equality. Both sides reduce
+    to the same word value. This remains untagged because the explicit source
+    evaluator is not yet proved identical to native HOL crepSem eval; the
+    theorem is a useful case of the all-width support, not a claimed HOL port. -/
+theorem crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ) (value : ι → Bool)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.const value) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.const value)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state (.const value) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp, crepArithHolFiniteDimensionMapCode,
+    crepSimpExp.eq_11]
+
 /-- Successful-result form of the all-finite-index source-evaluator theorem.
     This follows HOL `simp_exp_correct`'s premise and conclusion, with the
     same arbitrary code-map update and full `word_lab` value. It remains

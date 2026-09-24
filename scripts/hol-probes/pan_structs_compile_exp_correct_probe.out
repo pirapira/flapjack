@@ -13,6 +13,7 @@ compile_exp_correct_base_addr=(One,One,T,T,T)
 compile_exp_correct_top_addr=(One,One,T,T,T)
 compile_exp_correct_bytes_in_word=(One,One,T,T,T)
 compile_exp_correct_load_byte=(One,One,T,T,T)
+compile_exp_correct_load_byte_out_of_domain=NONE
 compile_exp_correct_load32_le_success=(One,One,T,T,T)
 compile_exp_correct_panop_mul=(One,One,T,T,T)
 compile_exp_correct_cmp_equal=(One,One,T,T,T)

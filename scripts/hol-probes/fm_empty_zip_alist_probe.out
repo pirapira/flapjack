@@ -1,3 +1,4 @@
 fold_flookup_eq=T
 flookup_first=SOME 20
 flookup_absent=NONE
+zip_lookup_witness=T

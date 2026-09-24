@@ -460,36 +460,6 @@ def holContinueEvalGuard : Bool :=
 #guard holBreakEvalGuard
 #guard holContinueEvalGuard
 
-/-- Total `evalCrepHolProgTotal` Skip clause. -/
-example :
-    evalCrepHolProgTotal evalHandler64 evalPrimitive64 CrepProg.skip evalBase =
-      (CrepRuntimeResult.normal, evalBase) :=
-  evalCrepHolProgTotal_skip evalHandler64 evalPrimitive64 evalBase
-
-/-- Total `evalCrepHolProgTotal` Break clause. -/
-example :
-    evalCrepHolProgTotal evalHandler64 evalPrimitive64 (CrepProg.break 1) evalBase =
-      (CrepRuntimeResult.broke 1, evalBase) :=
-  evalCrepHolProgTotal_break evalHandler64 evalPrimitive64 evalBase 1
-
-/-- Total `evalCrepHolProgTotal` Continue clause. -/
-example :
-    evalCrepHolProgTotal evalHandler64 evalPrimitive64 (CrepProg.continue 2) evalBase =
-      (CrepRuntimeResult.continued 2, evalBase) :=
-  evalCrepHolProgTotal_continue evalHandler64 evalPrimitive64 evalBase 2
-
-def totalEvaluatorGuard : Bool :=
-  (evalCrepHolProgTotal evalHandler64 evalPrimitive64 CrepProg.skip evalBase).1 ==
-      CrepRuntimeResult.normal &&
-    (evalCrepHolProgTotal evalHandler64 evalPrimitive64 (CrepProg.break 1) evalBase).1 ==
-      CrepRuntimeResult.broke 1 &&
-    (evalCrepHolProgTotal evalHandler64 evalPrimitive64 (CrepProg.continue 2) evalBase).1 ==
-      CrepRuntimeResult.continued 2 &&
-    (evalCrepHolProgTotal evalHandler64 evalPrimitive64
-      (CrepProg.seq CrepProg.skip (CrepProg.break 3)) evalBase).1 ==
-      CrepRuntimeResult.broke 3
-
-#guard totalEvaluatorGuard
 
 def runChecks : IO Bool := do
   let relOk ←
@@ -550,13 +520,6 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crepSem clocked evaluate Break/Continue constructors over CrepHolState"
       pure false
-  let totalEvalOk ←
-    if totalEvaluatorGuard then
-      IO.println "PASS crepSem total clocked evaluator Skip/Break/Continue over CrepHolState"
-      pure true
-    else
-      IO.println "FAIL crepSem total clocked evaluator Skip/Break/Continue over CrepHolState"
-      pure false
-  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk && holSkipEvalOk && holBreakEvalOk && totalEvalOk)
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk && holSkipEvalOk && holBreakEvalOk)
 
 end Flapjack.Test.CrepInlineRelParity

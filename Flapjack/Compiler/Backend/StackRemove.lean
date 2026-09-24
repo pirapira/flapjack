@@ -155,10 +155,9 @@ HOL `stackLangScript.sml:80-84` declares the `left_shift_inst`,
 `Halt`.  The Lean implementations below are stated over
 `StackCarrier.ProgW (BitVec width)`.
 
-These declarations are deliberately UNTAGGED.  HOL's `stackLang$prog` is
-parameterised by the message-string type `'a stackLang$mlstring`; our carrier
-`ProgW` still instantiates that parameter with Lean's `String`, not the HOL
-`mlstring` datatype, so `ProgW (BitVec width)` is not yet an exact HOL carrier
+These declarations are deliberately UNTAGGED. HOL's `stackLang$prog` has a
+fixed `mlstring` FFI field; our `ProgW` carrier uses Lean `String` for that
+field, so `ProgW (BitVec width)` is not yet an exact HOL carrier
 and a `@[hol]` tag on a definition using it would over-claim.  The overload
 bodies match HOL's constructors, and they are exercised by the direct HOL
 oracle and the untagged parity test.  The exact `mlstring`/program carrier and

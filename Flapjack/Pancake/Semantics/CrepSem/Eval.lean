@@ -1066,6 +1066,31 @@ def holFiniteWordSourceByteIndex {ι : Type u}
     else addressIndex % bytesPerWord
   if bigEndian then bytesPerWord - 1 - byteIndex else byteIndex
 
+/-- HOL `byte_index_def` uses `8 * (w2n address MOD bytesPerWord)` in
+    little-endian mode, and counts that slot backward in big-endian mode.
+    This equation exposes the source `w2n` through its already-proved
+    weighted-SBIT representation; the `bytesPerWord = 0` branch preserves
+    HOL's `MOD_0` behavior. -/
+theorem holFiniteWordSourceByteIndex_eq_holW2N {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address : ι → Bool)
+    (bigEndian : Bool) :
+    8 * holFiniteWordSourceByteIndex dimension address bigEndian =
+      if bigEndian then
+        8 * (dimension.width / 8 - 1 -
+          (holFiniteWordW2N dimension address % (dimension.width / 8)))
+      else
+        8 * (holFiniteWordW2N dimension address % (dimension.width / 8)) := by
+  have haddress : (holWordToBitVec dimension address).toNat =
+      holFiniteWordSBitSum dimension address := by
+    change holFiniteWordW2N dimension address = _
+    exact holFiniteWordW2N_eq_SBitSum dimension address
+  rw [holFiniteWordW2N_eq_SBitSum]
+  unfold holFiniteWordSourceByteIndex
+  rw [haddress]
+  by_cases hbytes : dimension.width / 8 = 0
+  · cases bigEndian <;> simp [hbytes]
+  · cases bigEndian <;> simp [hbytes]
+
 /-- Pointwise form of HOL `get_byte_def`: output bit `j` is source bit
     `j + 8 * byteIndex`, provided `j` belongs to the result `word8`. -/
 def holFiniteWordSourceGetByte {ι : Type u}
@@ -1125,6 +1150,19 @@ def holFiniteWordSourceAligned {ι : Type u}
     Bool :=
   let exponent := Nat.log2 alignment
   decide ((holWordToBitVec dimension address).toNat % (2 ^ exponent) = 0)
+
+/-- Source-model alignment is HOL `aligned` expressed through HOL `w2n`:
+    clearing `LOG2 alignment` low bits is divisibility by that power of two.
+    The address conversion is the weighted-SBIT sum proved for `w2n_def`. -/
+theorem holFiniteWordSourceAligned_eq_holW2N {ι : Type u}
+    (dimension : HolFiniteDimension ι) (alignment : Nat)
+    (address : ι → Bool) :
+    holFiniteWordSourceAligned dimension alignment address =
+      decide (holFiniteWordSBitSum dimension address %
+        (2 ^ Nat.log2 alignment) = 0) := by
+  change decide (holFiniteWordW2N dimension address %
+    (2 ^ Nat.log2 alignment) = 0) = _
+  rw [holFiniteWordW2N_eq_SBitSum]
 
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)

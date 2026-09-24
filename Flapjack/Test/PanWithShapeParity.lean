@@ -511,6 +511,45 @@ theorem distinctListsAppendRightElim_tagged_fixture :
     simp at hmem h
     omega)
 
+theorem optMmapLengthEq_tagged_fixture :
+    ([1, 2, 3] : List Nat).length =
+      ([10, 20, 30] : List Nat).length :=
+  opt_mmap_length_eq [1, 2, 3] (fun n => some (n * 10)) [10, 20, 30] (by decide)
+
+theorem optMmapMemFunc_tagged_fixture :
+    ∃ m, (fun n : Nat => some (n * 10)) 3 = some m :=
+  opt_mmap_mem_func [1, 2, 3] (fun n => some (n * 10)) [10, 20, 30] 3
+    (by decide) (by decide)
+
+theorem optMmapMemDefined_tagged_fixture :
+    (20 : Nat) ∈ ([10, 20, 30] : List Nat) :=
+  opt_mmap_mem_defined [1, 2, 3] (fun n => some (n * 10)) [10, 20, 30] 2 20
+    (by decide) (by decide) (by decide)
+
+theorem optMmapOptMap_tagged_fixture :
+    ([1, 2, 3] : List Nat).mapM
+        (fun n => Option.map (fun v => v + 1) (some (n * 10))) =
+      (([10, 20, 30] : List Nat).map (fun v => v + 1)) :=
+  opt_mmap_opt_map [1, 2, 3] (fun n => some (n * 10)) [10, 20, 30]
+    (fun v => v + 1) (by decide)
+
+theorem mapAppendEqDrop_tagged_fixture :
+    (([1, 2, 3] : List Nat).drop ([10, 20] : List Nat).length).map
+        (fun n => n * 10) =
+      [30] :=
+  map_append_eq_drop [1, 2, 3] [10, 20] [30] (fun n => n * 10) (by decide)
+
+theorem setEqMembership_tagged_fixture :
+    (3 : Nat) ∈ ([1, 2, 3] : List Nat) :=
+  set_eq_membership (a := [1, 2, 3]) (b := [1, 2, 3]) (x := 3) ⟨rfl, by decide⟩
+
+def optMmapTaggedGuard : Bool :=
+  (([1, 2, 3] : List Nat).mapM (fun n => some (n * 10)) == some [10, 20, 30]) &&
+    (([1, 2, 3] : List Nat).length == ([10, 20, 30] : List Nat).length)
+
+#eval optMmapTaggedGuard
+#guard optMmapTaggedGuard
+
 /-! Cake's `map_map2_fst`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3799`). -/
 
@@ -692,10 +731,13 @@ def runChecks : IO Bool := do
     checkDisjoint "pan OPT_MMAP_MEM_IMP" optMmapMemImpGuard
   let distinctListsTaggedOk ←
     checkDisjoint "pan all_distinct_take/drop tagged" distinctListsTaggedGuard
+  let optMmapTaggedOk ←
+    checkDisjoint "pan opt_mmap/list tagged cluster" optMmapTaggedGuard
   pure (results.all id && lengthOk && allDistinctOk && membershipOk && disjointOk &&
     shapeDisjointOk && nestedOk && distinctOk && distinctListsOk && zipWithShapeOk &&
     listIndexOk && foldrMaxOk && genlistOk && quadProjectionOk && quadCompOk &&
     rangeFoldrMaxOk && map3Ok && panMap2FstOk && zipWithPairFstOk && genlistAllDistinctOk &&
-    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk && distinctListsTaggedOk)
+    listRelFlattenOk && listRelFlattenFlookupOk && optMmapMemImpOk && distinctListsTaggedOk &&
+    optMmapTaggedOk)
 
 end Flapjack.Test.PanWithShapeParity

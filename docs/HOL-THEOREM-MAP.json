@@ -6368,6 +6368,54 @@
     "reviewer": "Codex (source comparison; HOL distinct_lists rendered as ListDisjoint, ALL_DISTINCT as List.Nodup; exact implication shape; direct source review of pan_commonPropsScript.sml)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "map_append_eq_drop",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "map_append_eq_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_mem_func",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_mem_func",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_mem_defined",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_mem_defined",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_length_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_length_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "opt_mmap_opt_map",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "opt_mmap_opt_map",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "set_eq_membership",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "set_eq_membership",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact pan_commonPropsScript.sml clause, OPT_MMAP rendered as List.mapM and SOME/some; set_eq_membership is the List MEM reading of HOL membership)"
+  },
+  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_exp_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",

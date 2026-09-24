@@ -227,4 +227,97 @@ theorem distinct_lists_append_right_elim {α : Type} (xs ys zs : List α)
     ListDisjoint xs ys ∧ ListDisjoint xs zs :=
   listDisjoint_append_right_elim xs ys zs h
 
+/-! ## `OPT_MMAP` rewriting facts
+
+The `OPT_MMAP` cluster of `pan_commonPropsScript.sml` is rendered over the
+Lean carrier `List.mapM` (see the tagged `opt_mmap_eq_some` above).  The
+statements below are the remaining exact clauses; the `[local]` HOL helpers
+`FUPDATE_LIST_APPLY_NOT_MEM_ZIP` are out of scope here because they involve the
+finite-map key equality. -/
+
+/-- Exact port of HOL `map_append_eq_drop`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:39`): mapping a list
+    and then dropping the length of the first appended part. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "map_append_eq_drop"]
+theorem map_append_eq_drop {α β : Type} (xs : List α) (ys zs : List β)
+    (f : α → β) (h : xs.map f = ys ++ zs) :
+    (xs.drop ys.length).map f = zs := by
+  rw [List.map_drop, h, List.drop_left]
+
+/-- Exact port of HOL `opt_mmap_mem_func`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:49`): every element of
+    a successfully mapped list has a successful image. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "opt_mmap_mem_func"]
+theorem opt_mmap_mem_func {α β : Type} (l : List α) (f : α → Option β)
+    (n : List β) (g : α) (h : l.mapM f = some n) (hg : g ∈ l) :
+    ∃ m, f g = some m := by
+  induction l generalizing n with
+  | nil => simp at hg
+  | cons x xs ih =>
+      cases hfx : f x with
+      | none => simp [List.mapM_cons, hfx] at h
+      | some value =>
+          cases htail : xs.mapM f with
+          | none => simp [List.mapM_cons, hfx, htail] at h
+          | some rest =>
+              rcases List.mem_cons.mp hg with rfl | hg'
+              · exact ⟨value, hfx⟩
+              · exact ih rest htail hg'
+
+/-- Exact port of HOL `opt_mmap_mem_defined`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:59`): a successful
+    `OPT_MMAP` contains the image of every successful element map. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "opt_mmap_mem_defined"]
+theorem opt_mmap_mem_defined {α β : Type} (l : List α) (f : α → Option β)
+    (m : List β) (e : α) (n : β) (h : l.mapM f = some m) (he : e ∈ l)
+    (hfe : f e = some n) : n ∈ m := by
+  have hmap := (optMmapEqSome l f m).mp h
+  have hmem : f e ∈ m.map some := by
+    rw [← hmap]
+    exact List.mem_map_of_mem he
+  obtain ⟨b, hb, hsome⟩ := List.mem_map.mp hmem
+  rw [hfe] at hsome
+  injection hsome with hbn
+  subst hbn
+  exact hb
+
+/-- Exact port of HOL `opt_mmap_length_eq`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:82`): a successful
+    `OPT_MMAP` preserves the list length. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "opt_mmap_length_eq"]
+theorem opt_mmap_length_eq {α β : Type} (l : List α) (f : α → Option β)
+    (n : List β) (h : l.mapM f = some n) : l.length = n.length := by
+  have hmap := (optMmapEqSome l f n).mp h
+  rw [← List.length_map (f := f), hmap, List.length_map]
+
+/-- Exact port of HOL `opt_mmap_opt_map`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:92`): mapping a
+    successful `OPT_MMAP` through a total function maps the result. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "opt_mmap_opt_map"]
+theorem opt_mmap_opt_map {α β γ : Type} (l : List α) (f : α → Option β)
+    (n : List β) (g : β → γ) (h : l.mapM f = some n) :
+    l.mapM (fun a => Option.map g (f a)) = some (n.map g) := by
+  induction l generalizing n with
+  | nil => cases n <;> simp_all
+  | cons x xs ih =>
+      cases hfx : f x with
+      | none => simp [List.mapM_cons, hfx] at h
+      | some value =>
+          cases htail : xs.mapM f with
+          | none => simp [List.mapM_cons, hfx, htail] at h
+          | some rest =>
+              have hn : value :: rest = n := by
+                simpa [List.mapM_cons, hfx, htail] using h
+              subst hn
+              simp only [List.mapM_cons, hfx, ih rest htail, List.map_cons,
+                Option.map_some]
+              rfl
+
+/-- Exact port of HOL `set_eq_membership`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:624`): membership
+    transports along an equality (the list reading of HOL `MEM`). -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "set_eq_membership"]
+theorem set_eq_membership {α : Type} {a b : List α} {x : α}
+    (h : a = b ∧ x ∈ a) : x ∈ b := h.1 ▸ h.2
+
 end Flapjack

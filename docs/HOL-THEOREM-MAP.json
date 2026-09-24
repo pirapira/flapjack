@@ -8782,5 +8782,11 @@
   "lean_name": "namesOk",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
-}
+},
+{"hol_path": "cakeml/compiler/backend/wordLangScript.sml", "hol_name": "word_loc", "lean_path": "Flapjack/Pancake/WordLang.lean", "lean_name": "WordLoc", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"},
+{"hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml", "hol_name": "is_SOME_Word_def", "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean", "lean_name": "isSomeWord", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"},
+{"hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml", "hol_name": "read_mem_def", "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean", "lean_name": "readMem", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"},
+{"hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml", "hol_name": "addresses_def", "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean", "lean_name": "addresses", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"},
+{"hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml", "hol_name": "LENGTH_read_mem", "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean", "lean_name": "length_readMem", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"},
+{"hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml", "hol_name": "IN_addresses", "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean", "lean_name": "mem_addresses", "statement_status": "pending_statement_review", "reviewer": "flapjack-deepseek (source comparison)"}
 ]

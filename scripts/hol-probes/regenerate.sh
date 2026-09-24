@@ -1324,3 +1324,11 @@ run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
   ri_reg names_ok_dup \
   "$cake_dir/compiler/backend/stack_namesScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The stack_remove make_init probe observes the state-free prerequisites used by
+# init_reduce / init_prop: is_SOME_Word, read_mem (and its LENGTH) and the
+# addresses set with its membership characterization.
+run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
+  is_word_some in_addr_out \
+  "$cake_dir/compiler/backend/proofs/stack_removeProofScript.sml" \
+  "$cake_dir/compiler/backend/proofs"

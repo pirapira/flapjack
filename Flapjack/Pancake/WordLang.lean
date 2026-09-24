@@ -350,4 +350,15 @@ def everyStackVar {width : Nat} (P : Nat -> Bool) :
   | .loop _ body _ => everyStackVar P body
   | _ => True
 
+/-! ## Word locations
+
+HOL `wordLang$word_loc = Word ('a word) | Loc num num`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Kept generic in the
+word carrier `α`, matching HOL's polymorphic `'a word`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_loc"]
+inductive WordLoc (α : Type u) where
+  | word (value : α)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
 end Flapjack

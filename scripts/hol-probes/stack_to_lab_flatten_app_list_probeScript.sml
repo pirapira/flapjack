@@ -14,4 +14,10 @@ val _ = print_eval "flatten_app_seq"
   ``append (FST (stack_to_lab$flatten T
       (stackLang$Seq stackLang$Tick (stackLang$Halt 0)) 0 0 [] []))``;
 val _ = print_eval "flatten_app_raise"
-  ``append (FST (stack_to_lab$flatten T (stackLang$Raise 3) 0 0 [] []))``;
+  ``append (FST (stack_to_lab$flatten T (stackLang$Raise 3) 0 0 [] []))``;val _ = print_eval "flatten_app_ite_skip"
+  ``append (FST (stack_to_lab$flatten T
+      (stackLang$If asm$Equal 0 (asm$Reg 1) stackLang$Skip stackLang$Skip) 0 0 [] []))``;
+val _ = print_eval "flatten_app_ite_tick"
+  ``append (FST (stack_to_lab$flatten T
+      (stackLang$If asm$Equal 0 (asm$Reg 1) stackLang$Skip
+        (stackLang$Inst (asm$Skip : 8 asm$inst))) 0 0 [] []))``;

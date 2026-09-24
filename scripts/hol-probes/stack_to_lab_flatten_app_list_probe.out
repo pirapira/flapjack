@@ -3,3 +3,6 @@ flatten_app_halt=[LabAsm Halt 0w [] 0]
 flatten_app_inst=[Asm (Asmi (Inst Skip)) [] 0]
 flatten_app_seq=[Asm (Asmi (Inst Skip)) [] 0; Label 0 1 0; LabAsm Halt 0w [] 0]
 flatten_app_raise=[Asm (Asmi (JumpReg 3)) [] 0]
+flatten_app_ite_skip=[]
+flatten_app_ite_tick=[LabAsm (JumpCmp Equal 0 (Reg 1) (Lab 0 0)) 0w [] 0;
+ Asm (Asmi (Inst Skip)) [] 0; Label 0 0 0]

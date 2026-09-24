@@ -50,12 +50,44 @@ example :
   simp [flatten, flattenOps]
 
 example :
+    (flatten (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.skip : P) : P) 0 0 [] []).1 = [] := by
+  simp [flatten, flattenOps, stackIsSkip]
+
+example :
+    (flatten (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.inst (.skip : WordLangInst W)) : P) 0 0 [] []).1 =
+      [.labAsm (.jumpCmp .equal 0 (.reg 1) (.lab 0 0)) (0 : W) [] 0,
+        .asm (.asmi (.inst .skip)) [] 0, .label 0 0 0] := by
+  simp [flatten, flattenOps, stackIsSkip]
+
+example :
+    appListFlatten (flattenApp (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.skip : P)) 0 0 [] []) =
+      flatten (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.skip : P)) 0 0 [] [] :=
+  flattenApp_ite (flattenOps (width := 8)) (0 : W) true .equal 0 (.reg 1) (.skip : P) (.skip : P)
+    0 0 [] []
+    (fun n => flattenApp_skip (flattenOps (width := 8)) (0 : W) false 0 n [] [])
+    (fun n => flattenApp_skip (flattenOps (width := 8)) (0 : W) false 0 n [] [])
+
+example :
+    appListFlatten (flattenApp (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.inst (.skip : WordLangInst W))) 0 0 [] []) =
+      flatten (flattenOps (width := 8)) (0 : W) true
+        (.ite .equal 0 (.reg 1) (.skip : P) (.inst (.skip : WordLangInst W))) 0 0 [] [] :=
+  flattenApp_ite (flattenOps (width := 8)) (0 : W) true .equal 0 (.reg 1) (.skip : P)
+    (.inst (.skip : WordLangInst W)) 0 0 [] []
+    (fun n => flattenApp_skip (flattenOps (width := 8)) (0 : W) false 0 n [] [])
+    (fun n => flattenApp_inst (flattenOps (width := 8)) (0 : W) false (.skip : WordLangInst W) 0 n [] [])
+
+example :
     appListFlatten (flattenApp (flattenOps (width := 8)) (0 : W) true (.tick : P) 0 0 [] []) =
       flatten (flattenOps (width := 8)) (0 : W) true (.tick : P) 0 0 [] [] :=
   flattenApp_tick (flattenOps (width := 8)) (0 : W) true 0 0 [] []
 
 def runChecks : IO Bool := do
-  IO.println "PASS stack_to_lab flattenApp app_list bridge matches all 5 oracle rows"
+  IO.println "PASS stack_to_lab flattenApp app_list bridge matches all 7 oracle rows"
   pure true
 
 end Flapjack.Test.StackToLabFlattenAppParity

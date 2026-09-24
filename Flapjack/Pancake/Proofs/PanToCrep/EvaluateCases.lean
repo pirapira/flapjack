@@ -8340,14 +8340,41 @@ theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
     (hslot1 : ∃ current, caller.locals slot1 = some current)
     (hglobal0 : calleeState.globals (0 : BitVec 5) = some (.word value0))
     (hglobal1 : calleeState.globals (1 : BitVec 5) = some (.word value1))
-    (hsupported : ∀ expression, expression ∈ expressions →
-      compileArgConstLocalStructAddressOrRFieldInnerIH context source caller expression)
+    (hlocalized : ∀ expression, expression ∈ expressions →
+      expGlobalVars expression = [])
     (hsourceArgs : evalPanSemStateExps source expressions = some arguments)
     (hentry : panSemCodeLookup source.code function =
       some (parameters, sourceBody, returnShape))
     (hargumentLength :
       Shape.shapeSize (.comb (parameters.map Prod.snd)) =
         (arguments.flatMap panValueFlatten).length)
+    (heach : ∀ expression, expression ∈ expressions → ∀ expressionValue,
+      evalPanSemStateExp source expression = some expressionValue →
+      stateRel source caller →
+      codeRel context (panSemCodeAsLookup source.code) caller.code →
+      localsRel context source.locals caller.locals →
+      expGlobalVars expression = [] →
+      evalCrepRuntimeExps caller
+          (compileExpHOL
+            { vars := context.vars, funcs := context.funcs,
+              eids := context.eids, vmax := context.vmax }
+            expression).1 = some (panValueFlatten expressionValue) ∧
+        (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).1.length =
+            Shape.shapeSize (compileExpHOL
+              { vars := context.vars, funcs := context.funcs,
+                eids := context.eids, vmax := context.vmax }
+              expression).2 ∧
+        panValueShape [] expressionValue = (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 ∧
+        isWfShape [] (compileExpHOL
+          { vars := context.vars, funcs := context.funcs,
+            eids := context.eids, vmax := context.vmax }
+          expression).2 = true)
     (hinfoValid : crepRuntimeCallInfoValid
       (some (destinations, some (caught,
         .seq (expHdlFiniteMap context.vars handlerVariable) handlerBody))) = true)
@@ -8401,9 +8428,9 @@ theorem evalCrepRuntimeCall_catchesRaisedTwoWordsHandlerBody_ofHOLIH
   have hhandlerBody := hhandlerIH targetPost hpayload hpayloadState hpayloadCode
     hpayloadExcp hpayloadLocals
   obtain ⟨targetLocals, harguments, hlookup, _htargetMap⟩ :=
-    lookupCrepRuntimeCode_ofCodeRel_compiledArgs context source caller
+    lookupCrepRuntimeCode_ofCodeRel_compiledArgsOfHOLIH context source caller
       function parameters sourceBody returnShape expressions arguments hinitialState
-      hcallCode hlocals hsupported hsourceArgs hentry hargumentLength
+      hcallCode hlocals hlocalized hsourceArgs hentry hargumentLength heach
   let handlerStart := crepRuntimeCallerState caller calleeState
   have hhandlerBody' : evalCrepRuntimeProg handler primitive 4
       { targetPost with clock := min handlerStart.clock targetPost.clock }

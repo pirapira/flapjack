@@ -496,6 +496,110 @@ theorem crepInlineProgFmap_congr [BEq FunName] [LawfulBEq FunName]
   intro prog
   exact key fs prog gs h.symm
 
+/-! ## Clause form of `crepInlineProgFmap`
+
+These seven theorems unfold `crepInlineProgFmap` on each program constructor,
+stating its defining equations in the clause order of HOL `inline_prog_def`
+(`cakeml/pancake/crep_inlineScript.sml:203`).  Each is a kernel-checked fact
+about `crepInlineProgFmap` itself (derived from its own equation lemmas); they
+are NOT a cross-system correspondence to HOL `inline_prog`.  In particular no
+theorem here relates the Lean helpers (`crepUnreachElim`, `crepArgLoad`,
+`crepInlineNontail`, `crepInlineTmpNames`, `crepTransformEoc`,
+`crepTransformBranch`, ...) to the corresponding HOL helpers (`unreach_elim`,
+`arg_load`, `inline_nontail`, `GENLIST`, `transform_eoc`, `transform_branch`,
+...), and no theorem here proves that the recursive call equals HOL's.
+
+The `Call` constructor is split, not one equation: `crepInlineProgFmap` has
+separate equations for `.call none`, for `.call (some (rts, none))` (with the
+`crepAllDistinct` distinct/non-distinct split), and for
+`.call (some (rts, some (w, handler)))`.  The three theorems below state one
+such Lean equation each; the `crepInlineProgFmap_call_hol` right side is the
+`.call none` equation with its Lean `FLOOKUP` (`fs.lookup`) branch, not a
+definitional identity with HOL's `case ctyp` dispatch.
+
+What *is* pinned is the carrier view: `CrepInlineFmap.lookup` is HOL `FLOOKUP`
+(`toFiniteMap`), `remove` is HOL `DOMSUB` (`toFiniteMap_remove`), `card` equals
+the domain cardinality (`card_eq_domain_cardinality`), so the termination
+measure `(fs.card, sizeOf prog)` mirrors HOL `(CARD (FDOM fs), prog_size prog)`.
+
+No `@[hol]` tag is attached: the Lean carrier is the canonical entry-list model
+rather than the fmap quotient (same `FLOOKUP` view, not the same type), the
+binders carry `[BEq FunName]` / `[LawfulBEq FunName]` where HOL uses
+propositional equality, and the recursive helper cross-system correspondence
+remains open. -/
+
+theorem crepInlineProgFmap_call_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (name : FunName)
+    (args : List (CrepExp α)) :
+    crepInlineProgFmap fs (.call none name args) =
+      (match fs.lookup name with
+       | none => .call none name args
+       | some (argsVname, body) =>
+           let inlined := (crepUnreachElim (crepInlineProgFmap (fs.remove name) body)).1
+           let tmp := crepInlineTmpNames (args.flatMap crepExpVars) argsVname
+           crepInlineTail (crepArgLoad tmp args argsVname inlined)) := by
+  simp only [crepInlineProgFmap]
+  cases h : fs.lookup name <;> rfl
+
+theorem crepInlineProgFmap_call_some_none_hol {α : Type} [BEq FunName]
+    [LawfulBEq FunName] [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α)
+    (rts : List Nat) (name : FunName) (args : List (CrepExp α)) :
+    crepInlineProgFmap fs (.call (some (rts, none)) name args) =
+      (if !crepAllDistinct rts then .call (some (rts, none)) name args
+       else match fs.lookup name with
+       | none => .call (some (rts, none)) name args
+       | some (argsVname, body) =>
+           let inlined := (crepUnreachElim (crepInlineProgFmap (fs.remove name) body)).1
+           let tmp := crepInlineTmpNames (args.flatMap crepExpVars) argsVname
+           let returnMaximum := rts.foldl max 0
+           let bodyMaximum := crepVmaxProg inlined
+           let temporaryMaximum := tmp.foldl max 0
+           let returnStart := max returnMaximum (max bodyMaximum temporaryMaximum) + 1
+           let temporaryReturns := (List.range rts.length).map (fun offset => offset + returnStart)
+           let transformed :=
+             if crepNotBranchRet inlined then .seq .tick (crepTransformEoc temporaryReturns inlined)
+             else .while (.const 1) (crepTransformBranch 0 temporaryReturns inlined)
+           crepInlineNontail transformed rts temporaryReturns tmp args argsVname) := by
+  simp only [crepInlineProgFmap]
+  cases crepAllDistinct rts with
+  | true =>
+      simp only [Bool.not_true]
+      cases h : fs.lookup name <;> rfl
+  | false => simp only [Bool.not_false, if_true]
+
+theorem crepInlineProgFmap_call_some_handler_hol {α : Type} [BEq FunName]
+    [LawfulBEq FunName] [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α)
+    (rts : List Nat) (w : α) (handler : CrepProg α) (name : FunName)
+    (args : List (CrepExp α)) :
+    crepInlineProgFmap fs (.call (some (rts, some (w, handler))) name args) =
+      .call (some (rts, some (w, crepInlineProgFmap fs handler))) name args := by
+  simp only [crepInlineProgFmap]
+
+theorem crepInlineProgFmap_dec_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (v : Nat)
+    (e : CrepExp α) (p : CrepProg α) :
+    crepInlineProgFmap fs (.dec v e p) = .dec v e (crepInlineProgFmap fs p) := by
+  simp [crepInlineProgFmap]
+
+theorem crepInlineProgFmap_seq_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (a b : CrepProg α) :
+    crepInlineProgFmap fs (.seq a b) =
+      .seq (crepInlineProgFmap fs a) (crepInlineProgFmap fs b) := by
+  simp [crepInlineProgFmap]
+
+theorem crepInlineProgFmap_ite_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (e : CrepExp α)
+    (a b : CrepProg α) :
+    crepInlineProgFmap fs (.ite e a b) =
+      .ite e (crepInlineProgFmap fs a) (crepInlineProgFmap fs b) := by
+  simp [crepInlineProgFmap]
+
+theorem crepInlineProgFmap_while_hol {α : Type} [BEq FunName] [LawfulBEq FunName]
+    [OfNat α 0] [OfNat α 1] (fs : CrepInlineFmap α) (e : CrepExp α)
+    (p : CrepProg α) :
+    crepInlineProgFmap fs (.while e p) = .while e (crepInlineProgFmap fs p) := by
+  simp [crepInlineProgFmap]
+
 def crepInlineActiveNames [BEq FunName]
     (inlineable : List (CrepInlineEntry α)) :
     Std.HashSet FunName :=

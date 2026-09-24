@@ -2196,6 +2196,29 @@ theorem crepArithLookupCodeSimpProg {α : Type}
       · simp [hlookup, hvalid]
       · simp [hlookup, hvalid]
 
+/-- Width-indexed port of the local HOL `lookup_code` theorem
+    (`crep_arithProofScript.sml:162-168`). Inferred from the source declaration,
+    `c` is a finite map from function names to `(parameter names, word-valued
+    crepLang program)`, `fname` is a function name, `args` is a list of
+    word-labeled values, and `len` is a natural number. The theorem states the
+    same `FMAP_MAP2`/`OPTION_MAP (simp_prog ## I)` commute equation. HOL words
+    are represented by `RiscV.Word width`; the positive width constraint
+    reflects HOL's nonempty finite word index. The generic helper above remains
+    untagged Flapjack infrastructure. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "lookup_code" 162]
+theorem crepArithLookupCodeSimpProgW {width : Nat} [NeZero width]
+    (code : FunName → Option (List Nat × CrepProg (RiscV.Word width)))
+    (fname : FunName) (args : List (PanWordLab (RiscV.Word width)))
+    (len : Nat) :
+    lookupCrepHolCodeW
+        (crepArithSimpCodeMap (BitVec.ofNat width) code) fname args len =
+      (lookupCrepHolCodeW code fname args len).map
+        (fun (body, locals) =>
+          (crepSimpProg (BitVec.ofNat width) body, locals)) := by
+  simpa [lookupCrepHolCodeW] using
+    (crepArithLookupCodeSimpProg
+      (fromNat := BitVec.ofNat width) code fname args len)
+
 /-- Flapjack-specific `Const` case corresponding to part of CakeML's local
     `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
     HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not

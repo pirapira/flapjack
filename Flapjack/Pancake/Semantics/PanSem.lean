@@ -1646,6 +1646,82 @@ theorem panSemEvaluateExactState_assign_error_of_invalid
       panValueAssignLocalResult, panValueAssignGlobalResult,
       evalPanValueExpCounted, heval, hinvalid]
 
+/-- HOL `panSemScript$evaluate_def` `Store` returns `SOME Error` with the
+unchanged state when the address expression fails to evaluate. -/
+theorem panSemEvaluateExactState_store_error_of_address_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (state : PanSemExactState α σ)
+    (address value : Exp α)
+    (haddress : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord address
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.store address value) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueStoreResult,
+    evalPanValueExpCounted, haddress]
+
+/-- HOL `panSemScript$evaluate_def` `Store` returns `SOME Error` with the
+unchanged state when the stored-value expression fails to evaluate. -/
+theorem panSemEvaluateExactState_store_error_of_value_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (state : PanSemExactState α σ)
+    (address value : Exp α) (addressWord : PanValue α)
+    (haddress : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord address
+      (memoryAccess := some state.memoryAccess) = some addressWord)
+    (hvalue : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.store address value) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueStoreResult,
+    evalPanValueExpCounted, haddress, hvalue]
+
+/-- HOL `panSemScript$evaluate_def` `Store` returns `SOME Error` with the
+unchanged state when the word store fails (for example outside its domain). -/
+theorem panSemEvaluateExactState_store_error_of_store_none
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (state : PanSemExactState α σ)
+    (address value : Exp α) (addressWord : α) (valueWord : PanValue α)
+    (haddress : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord address
+      (memoryAccess := some state.memoryAccess) = some (.word addressWord))
+    (hvalue : evalPanValueExp state.legacy.structs state.legacy.locals
+      state.legacy.globals state.legacy.memory state.legacy.baseAddress
+      state.legacy.topAddress state.legacy.bytesInWord value
+      (memoryAccess := some state.memoryAccess) = some valueWord)
+    (hstore : panValueStoreWithAccess state.legacy.memory state.legacy.bytesInWord
+      addressWord valueWord (some state.memoryAccess) = none) :
+    panSemEvaluateExactState context primitive handler state
+        (.store address value) =
+      some (.control (.error state.legacy.locals state.legacy.globals
+        state.legacy.memory state.legacy.ffi), state.legacy.clock) := by
+  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
+    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
+  simp [evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps, panValueStoreResult,
+    evalPanValueExpCounted, haddress, hvalue, hstore]
+
 /-! Finite-map updates for the source declaration evaluator. `InfoMap` is an
     association-list representation; putting the updated binding first and
     removing older copies gives the same lookup behavior as HOL `|+`. -/

@@ -2614,8 +2614,13 @@ theorem crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches
     simp only [Option.pure_def, Option.map_some]
   · simp [hd]
 
-/-- HOL `panSemScript.sml` `mem_store_32_def`: guarded four-byte replacement in
-the aligned cell of the total memory function. -/
+/-- RV64-lifted counterpart of HOL `panSemScript.sml` `mem_store_32_def`.  HOL
+`mem_store_32` takes a `word32` value; this definition takes an RV64 word and
+performs the same four-byte replacement through the low 32 bits (`w2w`, modelled
+by `holW2w32_64`), so it is not the exact HOL signature.  The relation between
+the two is `holGetByte64_low32_eq` (byte indices 0..3 commute with the
+truncation) and `holMemStore32_64_high_bits_ignored` (the high RV64 bits do not
+affect the resulting cell). -/
 def holMemStore32_64 (domain : PanMemoryDomain (RiscV.Word 64))
     (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
     (bigEndian : Bool) (address value : RiscV.Word 64) :

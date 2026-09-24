@@ -787,7 +787,7 @@ def storeByteMatchesGuard : Bool :=
         (fun state => state.memory 8) == some (.word (0x1122334455667777 : RiscV.Word 64))) &&
     (crepRuntimeStore holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
     (crepRuntimeStoreByte holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
-((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
+    ((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
         0x77).map (fun memory => memory 8) ==
       some (.word (0x1122334455667777 : RiscV.Word 64))) &&
     ((crepRuntimeStoreByte holStoreByteBaseState (9 : RiscV.Word 64) 0xAA).map
@@ -800,7 +800,7 @@ def storeByteMatchesGuard : Bool :=
         (fun state => state.memory 8) ==
       (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 9
         0xAA).map (fun memory => memory 8)) &&
- ((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
+    ((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
         (fun state => state.memory 8) ==
       (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
         0x77).map (fun memory => memory 8))
@@ -853,9 +853,11 @@ example :
   crepRuntimeStore32_low32_of_matches holStore32BaseState holStore32BaseState_matches
     rfl rfl 8 0xDEADBEEF11223344
 
-/-- The production 32-bit store over an arbitrary matching model agrees with HOL
-    `mem_store_32`: four-byte replacement in the aligned cell, alignment and
-    domain failure. -/
+/-- The production 32-bit store over an arbitrary matching model agrees with the
+    RV64-lifted counterpart of HOL `mem_store_32`: four-byte replacement in the
+    aligned cell, alignment and domain failure.  HOL takes a `word32`; here the
+    RV64 value is used through its low 32 bits (`w2w`), so the high bits are
+    ignored. -/
 def store32MatchesGuard : Bool :=
   ((crepRuntimeStore32 holStore32BaseState (8 : RiscV.Word 64) 0x11223344).map
       (fun state => state.memory 8) ==

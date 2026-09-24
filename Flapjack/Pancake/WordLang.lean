@@ -350,4 +350,16 @@ def everyStackVar {width : Nat} (P : Nat -> Bool) :
   | .loop _ body _ => everyStackVar P body
   | _ => True
 
+/-! ## Word locations
+
+HOL `wordLang$word_loc = Word ('a word) | Loc num num`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Deliberately UNTAGGED:
+HOL's constructor payload is the fixed-width `'a word`, so only width-indexed
+uses such as `StackRemove.isSomeWord` over `WordLoc (BitVec width)` are
+HOL-shaped. -/
+inductive WordLoc (α : Type u) where
+  | word (value : α)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
 end Flapjack

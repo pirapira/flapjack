@@ -13,3 +13,5 @@ compile_row=[(1,Halt 7); (2,Raise 4)]
 names_ok_bad=F
 names_ok_ok=T
 names_ok_dup=F
+compile_map_fst=[1; 2]
+compile_map_fst_src=[1; 2]

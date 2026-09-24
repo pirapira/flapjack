@@ -1037,4 +1037,17 @@ example : riscvByteAlignHOL (9 : RiscV.Word 64) = panByteAlignHOL (9 : RiscV.Wor
 example : riscvByteAlignHOL (17 : RiscV.Word 64) = panByteAlignHOL (17 : RiscV.Word 64) :=
   riscvByteAlignHOL_eq_panByteAlignHOL 17
 
+/-- The whole-expression capstone type-checks for the bundled relation; the codec
+fields are the remaining executable-path obligations. -/
+example
+    (rel : PanValueEvalRel holLoadState littleEndianState ([] : StructContext)
+      (fun _ => none) (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord) :
+    evalPanValueExp ([] : StructContext) (fun _ => none) (fun _ => none) littleEndianState.memory
+        0 0 panSemBitVec64BytesInWord (.load Shape.one (.const 0))
+        (memoryAccess := some (panSemBitVec64MemoryAccess littleEndianState))
+      = (evalHOL holLoadState (.load Shape.one (.const 0))).map HolValue.toPanValue :=
+  evalPanValueExp_eq_evalHOL_of_rel holLoadState littleEndianState ([] : StructContext)
+    (fun _ => none) (fun _ => none) littleEndianState.memory 0 0 panSemBitVec64BytesInWord rel
+    (.load Shape.one (.const 0))
+
 end Flapjack.Test.PanSemStateEvalParity

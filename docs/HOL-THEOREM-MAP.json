@@ -8814,5 +8814,93 @@
     "lean_name": "alookupElPairEqEl",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against alookup_el_pair_eq_el at crep_to_loopProofScript.sml:3921; HOL EL n prog = (start,[],SND(SND(EL n prog))) rendered literally as prog[n]'hn = (start,[],(prog[n]'hn).2.2) over the right-associated triple, ALOOKUP as List.lookup, ALL_DISTINCT (MAP FST prog) as (prog.map Prod.fst).Nodup; the proof delegates to the untagged PanLang counterpart getElem_eq_of_lookup_eq; direct HOL-EVAL rows ael_shape_0/ael_shape_1/ael_distinct/ael_lookup/ael_result=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
-  }
+  },
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "ri_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "riFindName",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:16-19 ri_find_name renames only the register payload (Reg r -> Reg (find_name f r)); Imm unchanged. HOL payload is an actual 'a word; Lean width-indexed at BitVec width with [NeZero width].)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "inst_find_name_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "instFindName",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:21-49 one clause per asm inst constructor with catch-all; only register fields renamed via find_name. Width-indexed at BitVec width.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progComp",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:56-99 comp pmatch quotation reproduced branch-for-branch including catch-all p => p; over the shared-word ProgW (BitVec width) carrier matching HOL's single 'a.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "prog_comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progCompEntry",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:101-103 prog_comp f (n,p) = (n, comp f p); Lean (entry.1, progComp names entry.2).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "compile_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "compile",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesScript.sml:105-107 compile f prog = MAP (prog_comp f) prog; Lean program.map (progCompEntry names).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
+  "hol_name": "MAP_FST_compile",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "map_fst_compile",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_namesProofScript.sml:268-272 MAP FST (compile f c) = MAP FST c; exact over ProgW (BitVec width).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "is_SOME_Word_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "isSomeWord",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:144-147 exhaustive two clauses (is_SOME_Word (SOME (Word w)) = T; is_SOME_Word _ = F); Lean width-indexed Option (WordLoc (BitVec width)) -> Bool matches. Generic WordLoc payload deliberately untagged (dependency bead tracks exact tagged word_loc datatype).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "read_mem_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2739-2743 read_mem two clauses using bytes_in_word; Lean BitVec width address, memory BitVec width -> WordLoc (BitVec width), same stride.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "addresses_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2745-2748 addresses two clauses; HOL sets modelled in Lean as predicates ({} and INSERT a).)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "LENGTH_read_mem",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "length_readMem",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2754-2756 LENGTH (read_mem a m n) = n.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
+  "hol_name": "IN_addresses",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "mem_addresses",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2757-2761 IN_addresses x IN addresses a n <=> ?i. i<n /\\ x = a + n2w i * bytes_in_word; Lean uses BitVec.ofNat width i * bytesInWord width.)"
+}
 ]

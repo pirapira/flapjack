@@ -2225,6 +2225,184 @@ theorem evalPanValueExp_load_eq_evalHOL_anyShape {σ ffi : Type} [LawfulBEq Stri
         | rStruct fs => simp only [Option.map_some]; rw [HolValue.toPanValue_rStruct]; simp
         | nStruct nm fs => simp only [Option.map_some]; rw [HolValue.toPanValue_nStruct]; simp
 
+ /-- Bundled hypotheses for the whole-expression production-to-`evalHOL` adapter: the
+    exact source state's `structs`/`memory`/`memaddrs` related to the production
+    `StructContext`/memory/`panValueFlatMachineDomain`, the environment/base/top/bytes
+    projections, and the executed access's `wordOp`/compare/shift/read32/readByte
+    codecs.  Untagged production-side adapter bundle. -/
+structure PanValueEvalRel {σ ffi : Type} (state : PanSemHolState 64 σ)
+    [DecidablePred state.memaddrs]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress bytesInWord : RiscV.Word 64) : Prop where
+  hstructs : state.structs = structs.toHOL
+  hmem : state.memory = panValueWordHOL memory
+  hdom : state.memaddrs = panValueFlatMachineDomain execState memory
+  hlocals : ∀ name, locals name = (state.locals name).map HolValue.toPanValue
+  hglobals : ∀ name, globals name = (state.globals name).map HolValue.toPanValue
+  hbase : baseAddress = state.baseAddr
+  htop : topAddress = state.topAddr
+  hbytes : bytesInWord = panSemBitVec64BytesInWord
+  hwordOp : ∀ (op : BinOp) (values : List (RiscV.Word 64)),
+    (panSemBitVec64MemoryAccess execState).wordOp op values = wordOpHOL op values
+  hcmp : ∀ (op : Cmp) (l r : RiscV.Word 64),
+    (panSemBitVec64MemoryAccess execState).compare op l r =
+      (if Flapjack.Compiler.Encoders.Asm.wordCmpHOL op l r then 1 else 0)
+  hshift : ∀ (op : Shift) (l r : RiscV.Word 64),
+    (panSemBitVec64MemoryAccess execState).shift op l r = wordShiftHOL op l r.toNat
+  hread32 : ∀ (word : RiscV.Word 64),
+    ((panSemBitVec64MemoryAccess execState).read32
+        (panSemBitVec64MemoryAccess execState).domain memory bytesInWord word).map PanValue.word
+      = (panMemLoad32HOL state.memory state.memaddrs state.be word).map
+          (fun value => PanValue.word (BitVec.ofNat 64 value.toNat))
+  hreadByte : ∀ (word : RiscV.Word 64),
+    ((panSemBitVec64MemoryAccess execState).readByte
+        (panSemBitVec64MemoryAccess execState).domain memory bytesInWord word).map PanValue.word
+      = (panMemLoadByteHOL state.memory state.memaddrs state.be word).map
+          (fun byte => PanValue.word (BitVec.ofNat 64 byte.toNat))
+
+ /-- Whole-expression production-to-`evalHOL` capstone assembled from every landed
+    per-clause bridge by induction on the expression, under the bundled relation
+    `PanValueEvalRel`.  The `wordOp`/compare/shift/read32/readByte codec fields are
+    genuine hypotheses: the executed RV64 compare/shift codecs are not the HOL
+    `word_cmp`/`word_sh` ones, so this is the honest complete-adapter statement.
+    Untagged. -/
+theorem evalPanValueExp_eq_evalHOL_of_rel {σ ffi : Type} [LawfulBEq String]
+    (state : PanSemHolState 64 σ) [DecidablePred state.memaddrs]
+    (execState : PanSemState (RiscV.Word 64) ffi)
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (RiscV.Word 64)))
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (baseAddress topAddress bytesInWord : RiscV.Word 64)
+    (rel : PanValueEvalRel state execState structs locals globals memory baseAddress topAddress bytesInWord) :
+    ∀ (expression : Exp (RiscV.Word 64)),
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+          expression (memoryAccess := some (panSemBitVec64MemoryAccess execState))
+        = (evalHOL state expression).map HolValue.toPanValue := by
+  have hmain : ∀ (expression : Exp (RiscV.Word 64))
+      (memoryAccess : Option (PanValueMemoryAccess (RiscV.Word 64))),
+      (memoryAccess = some (panSemBitVec64MemoryAccess execState)) →
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+          expression memoryAccess
+        = (evalHOL state expression).map HolValue.toPanValue := by
+    apply evalPanValueExp.induct
+      (motive1 := fun expressions memoryAccess =>
+        (memoryAccess = some (panSemBitVec64MemoryAccess execState)) →
+        ∀ e ∈ expressions,
+          evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+              e memoryAccess
+            = (evalHOL state e).map HolValue.toPanValue)
+      (motive2 := fun expression memoryAccess =>
+        (memoryAccess = some (panSemBitVec64MemoryAccess execState)) →
+        evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+            expression memoryAccess
+          = (evalHOL state expression).map HolValue.toPanValue)
+      (motive3 := fun fields memoryAccess =>
+        (memoryAccess = some (panSemBitVec64MemoryAccess execState)) →
+        ∀ p ∈ fields,
+          evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+              p.2 memoryAccess
+            = (evalHOL state p.2).map HolValue.toPanValue)
+    · intro memoryAccess hm e he
+      simp at he
+    · intro expression expressions memoryAccess ihHead ihTail hm e he
+      rcases List.mem_cons.mp he with rfl | he
+      · exact ihHead hm
+      · exact ihTail hm e he
+    · intro memoryAccess payload hm
+      subst hm
+      exact evalPanValueExp_const_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState)) payload
+    · intro memoryAccess name hm
+      subst hm
+      exact evalPanValueExp_var_local_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        name rel.hlocals
+    · intro memoryAccess name hm
+      subst hm
+      exact evalPanValueExp_var_global_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        name rel.hglobals
+    · intro fields memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_rStruct_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        fields (fun e he => ih rfl e he)
+    · intro index value memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_rField_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        index value (ih rfl)
+    · intro name fields memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_nStruct_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        name fields rel.hstructs (fun e he => ih rfl e he)
+    · intro name value memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_nField_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        name value rel.hstructs (ih rfl)
+    · intro shape address memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_load_eq_evalHOL_anyShape state execState memory structs locals
+        globals baseAddress topAddress bytesInWord shape address (ih rfl)
+        rel.hstructs rel.hmem rel.hdom rel.hbytes
+    · intro address memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_load32_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (panSemBitVec64MemoryAccess execState)
+        address (ih rfl) rel.hread32
+    · intro address memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_loadByte_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (panSemBitVec64MemoryAccess execState)
+        address (ih rfl) rel.hreadByte
+    · intro operator arguments memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_op_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (panSemBitVec64MemoryAccess execState)
+        operator arguments (fun e he => ih rfl e he) rel.hwordOp
+    · intro operator arguments memoryAccess ih hm
+      subst hm
+      exact evalPanValueExp_panOp_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState))
+        operator arguments (fun e he => ih rfl e he)
+    · intro operator left right memoryAccess ihLeft ihRight hm
+      subst hm
+      exact evalPanValueExp_cmp_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (panSemBitVec64MemoryAccess execState)
+        operator left right (ihLeft rfl) (ihRight rfl) rel.hcmp
+    · intro operator left right memoryAccess ihLeft ihRight hm
+      subst hm
+      exact evalPanValueExp_shift_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (panSemBitVec64MemoryAccess execState)
+        operator left right (ihLeft rfl) (ihRight rfl) rel.hshift
+    · intro memoryAccess hm
+      subst hm
+      exact evalPanValueExp_baseAddr_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState)) rel.hbase
+    · intro memoryAccess hm
+      subst hm
+      exact evalPanValueExp_topAddr_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState)) rel.htop
+    · intro memoryAccess hm
+      subst hm
+      exact evalPanValueExp_bytesInWord_eq_evalHOL state structs locals globals memory
+        baseAddress topAddress bytesInWord (some (panSemBitVec64MemoryAccess execState)) rel.hbytes
+    · intro memoryAccess hm p hp
+      simp at hp
+    · intro pair pairs tail access ihHead ihTail hm q hq
+      rcases List.mem_cons.mp hq with hqhead | hqtail
+      · subst hqhead
+        exact ihHead hm
+      · exact ihTail hm q hqtail
+  intro expression
+  exact hmain expression (some (panSemBitVec64MemoryAccess execState)) rfl
+
+
 end
 
 end Flapjack

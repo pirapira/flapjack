@@ -112,9 +112,39 @@ def seqContinueGuard : Bool :=
   | (.continued, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
   | _ => false
 
+/-- A state whose global `g` is bound, for the global-assignment case. -/
+def totalAssignState : PanSemState Word64 (FfiState Unit) :=
+  { totalState 5 with
+    globals := fun name =>
+      if name == "g" then some (.word (BitVec.ofNat 64 4)) else none }
+
+/-- The Assign step consumes an already evaluated source result (HOL's
+    `eval s src`).  These guards exercise the post-evaluation composition;
+    faithful source evaluation is a separate obligation. -/
+def assignLocalGuard : Bool :=
+  match panSemTotalAssignStep (totalState 5) .local "x" (some (.word (BitVec.ofNat 64 9))) with
+  | (.normal, state) => state.clock == 5 && isWordOption 9 (state.locals "x")
+  | _ => false
+
+def assignGlobalGuard : Bool :=
+  match panSemTotalAssignStep totalAssignState .global "g" (some (.word (BitVec.ofNat 64 9))) with
+  | (.normal, state) => state.clock == 5 && isWordOption 9 (state.globals "g")
+  | _ => false
+
+def assignFreshGuard : Bool :=
+  match panSemTotalAssignStep (totalState 5) .local "y" (some (.word (BitVec.ofNat 64 9))) with
+  | (.error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
+def assignMissingGuard : Bool :=
+  match panSemTotalAssignStep (totalState 5) .local "x" none with
+  | (.error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
+  | _ => false
+
 def totalGuard : Bool :=
   skipGuard && tickSuccGuard && tickZeroGuard && seqNormalGuard && seqBreakGuard &&
-    seqContinueGuard && seqTickGuard
+    seqContinueGuard && seqTickGuard && assignLocalGuard && assignGlobalGuard &&
+    assignFreshGuard && assignMissingGuard
 
 #guard totalGuard
 
@@ -145,6 +175,19 @@ example :
   panSemEvaluateCodeStateWithPostState_tick_total statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8) (totalState 5)
 
+example :
+    panSemTotalAssignStep (totalState 5) .local "x" (some (.word (BitVec.ofNat 64 9))) =
+      (.normal,
+        { totalState 5 with
+          locals := updatePanValueMap (totalState 5).locals "x" (.word (BitVec.ofNat 64 9)) }) :=
+  panSemTotalAssignStep_normal_local (totalState 5) "x" (.word (BitVec.ofNat 64 9))
+    (by simp [panValueAssignmentValid, panValueShape, panShapeMatches, totalState])
+
+example :
+    panSemTotalAssignStep (totalState 5) .local "x" none =
+      (.error, totalState 5) :=
+  panSemTotalAssignStep_none (totalState 5) .local "x"
+
 def runChecks : IO Bool := do
   if skipGuard then
     IO.println "PASS panSem total Skip carries the state verbatim"
@@ -167,6 +210,18 @@ def runChecks : IO Bool := do
   if seqTickGuard then
     IO.println "PASS panSem total Seq Tick clamps the clock before the second command"
   else IO.println "FAIL panSem total Seq Tick clamps the clock before the second command"
+  if assignLocalGuard then
+    IO.println "PASS panSem total Assign accepted local writes the bound value"
+  else IO.println "FAIL panSem total Assign accepted local writes the bound value"
+  if assignGlobalGuard then
+    IO.println "PASS panSem total Assign accepted global writes the bound value"
+  else IO.println "FAIL panSem total Assign accepted global writes the bound value"
+  if assignFreshGuard then
+    IO.println "PASS panSem total Assign fresh destination rejected with Error and unchanged state"
+  else IO.println "FAIL panSem total Assign fresh destination rejected with Error and unchanged state"
+  if assignMissingGuard then
+    IO.println "PASS panSem total Assign missing source rejected with Error and unchanged state"
+  else IO.println "FAIL panSem total Assign missing source rejected with Error and unchanged state"
   pure totalGuard
 
 end Flapjack.Test.PanSemTotalParity

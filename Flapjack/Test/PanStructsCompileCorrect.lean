@@ -1450,6 +1450,115 @@ example :
       emptyStructCompileContext, finiteMapRuntime, panStructConvertValue,
       panStructConvertValues, evalPanValueExpFull, structCompileExp] using hcase.2.2
 
+/-! The assembled nested-expression induction is exercised through its public
+    theorem, paired with the direct HOL `compile_exp_correct_rstruct` oracle
+    row. The adapter override makes the Lean shift contract explicit. -/
+example :
+    structOldExpShape emptyStructCompileContext (.rStruct rstructCompileCaseExpressions) =
+        panSemShapeOf rstructCompileCaseValue ∧
+    panStructValueFieldsOkBool finiteMapRuntime.structs rstructCompileCaseValue = true ∧
+    evalPanValueExpFull
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
+      (BitVec.ofNat 64 8)
+      (structCompileExp emptyStructCompileContext (.rStruct rstructCompileCaseExpressions))
+      (memoryAccess := some { finiteMapMemoryAccess with shift := evalPanShiftFull }) =
+        some (panStructConvertValue rstructCompileCaseValue) := by
+  have hsource : evalPanValueExpFull finiteMapRuntime.structs finiteMapRuntime.locals
+      finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+      finiteMapRuntime.topAddress (BitVec.ofNat 64 8)
+      (.rStruct rstructCompileCaseExpressions)
+      (memoryAccess := some { finiteMapMemoryAccess with shift := evalPanShiftFull }) =
+        some rstructCompileCaseValue := by
+    simp [evalPanValueExpFull, evalPanValueExpsFull,
+      rstructCompileCaseExpressions, rstructCompileCaseValue]
+  have hstructs : panStructContextShapeView emptyStructCompileContext.structs =
+      panStructContextShapeView finiteMapRuntime.structs := rfl
+  have hlocalsFields : panStructEveryValueFieldsOkBool finiteMapRuntime.structs
+      finiteMapRuntime.locals := by
+    intro name value hvalue
+    simp [finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool finiteMapRuntime.structs
+      finiteMapRuntime.globals := by
+    intro name value hvalue
+    simp [finiteMapRuntime] at hvalue
+  have hinfos : structInfosOk finiteMapRuntime.structs := by
+    simp [structInfosOk, finiteMapRuntime]
+  have hlocalsMap : panStructShapeMapEq emptyStructCompileContext.locals
+      finiteMapRuntime.locals := by
+    intro name
+    simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq emptyStructCompileContext.globals
+      finiteMapRuntime.globals := by
+    intro name
+    simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
+  exact panStructCompileExpCorrectFull emptyStructCompileContext finiteMapRuntime
+    (BitVec.ofNat 64 8) { finiteMapMemoryAccess with shift := evalPanShiftFull }
+    (by intro operator left right; rfl)
+    (.rStruct rstructCompileCaseExpressions) rstructCompileCaseValue hsource
+    hstructs hlocalsFields hglobalsFields hinfos hlocalsMap hglobalsMap
+
+/-! The same assembled theorem is applied to the memory-reading Load row from
+    the original HOL oracle. -/
+example :
+    structOldExpShape emptyStructCompileContext loadCompileCaseExpression =
+        panSemShapeOf loadCompileCaseValue ∧
+    panStructValueFieldsOkBool loadCompileCaseRuntime.structs loadCompileCaseValue = true ∧
+    evalPanValueExpFull
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).structs
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).locals
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).globals
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).memory
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext loadCompileCaseRuntime).topAddress
+      (BitVec.ofNat 64 1)
+      (structCompileExp emptyStructCompileContext loadCompileCaseExpression)
+      (memoryAccess := some { loadCompileCaseMemoryAccess with shift := evalPanShiftFull }) =
+        some (panStructConvertValue loadCompileCaseValue) := by
+  have hsource : evalPanValueExpFull loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.locals loadCompileCaseRuntime.globals
+      loadCompileCaseRuntime.memory loadCompileCaseRuntime.baseAddress
+      loadCompileCaseRuntime.topAddress (BitVec.ofNat 64 1)
+      loadCompileCaseExpression
+      (memoryAccess := some { loadCompileCaseMemoryAccess with shift := evalPanShiftFull }) =
+        some loadCompileCaseValue := by
+    simp [evalPanValueExpFull, loadCompileCaseExpression, loadCompileCaseValue,
+      loadCompileCaseRuntime, finiteMapRuntime, loadCompileCaseMemoryAccess,
+      panValueMemoryAccessOfModel, RiscV.panRiscVMemoryModel,
+      panValueFlatLoad, panValueFlatLoadFuel, panValueFlatLoadListFuel,
+      panValueFlatReadWord, panValueFlatOffset, panValueFlatContextFuel,
+      panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+      shapeSizeWithContext, isWfShape, isWfShape.isWfShapeList]
+  have hstructs : panStructContextShapeView emptyStructCompileContext.structs =
+      panStructContextShapeView loadCompileCaseRuntime.structs := rfl
+  have hlocalsFields : panStructEveryValueFieldsOkBool loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.locals := by
+    intro name value hvalue
+    simp [loadCompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool loadCompileCaseRuntime.structs
+      loadCompileCaseRuntime.globals := by
+    intro name value hvalue
+    simp [loadCompileCaseRuntime, finiteMapRuntime] at hvalue
+  have hinfos : structInfosOk loadCompileCaseRuntime.structs := by
+    simp [structInfosOk, loadCompileCaseRuntime, finiteMapRuntime]
+  have hlocalsMap : panStructShapeMapEq emptyStructCompileContext.locals
+      loadCompileCaseRuntime.locals := by
+    intro name
+    simp [emptyStructCompileContext, loadCompileCaseRuntime, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq emptyStructCompileContext.globals
+      loadCompileCaseRuntime.globals := by
+    intro name
+    simp [emptyStructCompileContext, loadCompileCaseRuntime, finiteMapRuntime, lookupInfo]
+  exact panStructCompileExpCorrectFull emptyStructCompileContext loadCompileCaseRuntime
+    (BitVec.ofNat 64 1) { loadCompileCaseMemoryAccess with shift := evalPanShiftFull }
+    (by intro operator left right; rfl)
+    loadCompileCaseExpression loadCompileCaseValue hsource hstructs hlocalsFields
+    hglobalsFields hinfos hlocalsMap hglobalsMap
+
 def pairCompileInfo : StructInfo where
   fields := [("left", .one), ("right", .one)]
   size := 2

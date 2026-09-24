@@ -4697,4 +4697,259 @@ theorem panStructCompileExpCorrectShiftCase
                         simp [evalPanValueExpFull, hleftIH.2.2, hrightIH.2.2,
                           haccess, hshift, panStructConvertValue]
 
+/-! This expression-induction theorem assembles the constructor cases above
+    through Lean's nested `Exp.rec`. Its public conclusions retain the three
+    roles of HOL `compile_exp_correct`. It is intentionally untagged: the
+    state uses total lookups and Bool adapters for HOL finite maps/`FEVERY`/
+    `FMAP_MAP2`, evaluator dictionaries and `bytesInWord` are explicit, and
+    the memory adapter has a Lean-specific shift-compatibility premise. -/
+theorem panStructCompileExpCorrectFull
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [OfNat α 2] [OfNat α 3] [Add α] [Mul α] [Sub α]
+    [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : StructPassContext) (state : PanSemState α ffi)
+    (bytesInWord : α) (memoryAccess : PanValueMemoryAccess α)
+    (hshiftCompatible : ∀ operator leftWord rightWord,
+      memoryAccess.shift operator leftWord rightWord =
+        evalPanShiftFull operator leftWord rightWord) :
+    ∀ expression value,
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression
+        (memoryAccess := some memoryAccess) = some value →
+      panStructContextShapeView context.structs =
+        panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf value ∧
+      panStructValueFieldsOkBool state.structs value = true ∧
+      evalPanValueExpFull (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression)
+        (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue value) := by
+  let motive : Exp α → Prop := fun expression =>
+    ∀ value,
+      evalPanValueExpFull state.structs state.locals state.globals state.memory
+        state.baseAddress state.topAddress bytesInWord expression
+        (memoryAccess := some memoryAccess) = some value →
+      panStructContextShapeView context.structs =
+        panStructContextShapeView state.structs →
+      panStructEveryValueFieldsOkBool state.structs state.locals →
+      panStructEveryValueFieldsOkBool state.structs state.globals →
+      structInfosOk state.structs →
+      panStructShapeMapEq context.locals state.locals →
+      panStructShapeMapEq context.globals state.globals →
+      structOldExpShape context expression = panSemShapeOf value ∧
+      panStructValueFieldsOkBool state.structs value = true ∧
+      evalPanValueExpFull (panStructConvertState context state).structs
+        (panStructConvertState context state).locals
+        (panStructConvertState context state).globals
+        (panStructConvertState context state).memory
+        (panStructConvertState context state).baseAddress
+        (panStructConvertState context state).topAddress bytesInWord
+        (structCompileExp context expression)
+        (memoryAccess := some memoryAccess) =
+          some (panStructConvertValue value)
+  intro expression
+  refine Exp.rec (motive_1 := motive)
+    (motive_2 := fun expressions => PanStructAll motive expressions)
+    (motive_3 := fun fields => PanStructAll motive (fields.map Prod.snd))
+    (motive_4 := fun field => motive field.2)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ expression
+  · intro constant value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectConstCase context state bytesInWord
+      (some memoryAccess) constant value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+  · intro kind name value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectVarCase context state bytesInWord
+      (some memoryAccess) name kind value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+  · intro expressions hinduction value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectRStructCase context state bytesInWord
+      memoryAccess expressions value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap hinduction
+  · intro index subexpression ih value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectRFieldCase context state bytesInWord
+      (some memoryAccess) index subexpression value heval hstructs hlocals hglobals
+      hinfos hlocalsMap hglobalsMap ih
+  · intro name fields hinduction value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectNStructCase context state bytesInWord
+      memoryAccess name fields value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap hinduction
+  · intro field subexpression ih value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectNFieldCase context state bytesInWord
+      (some memoryAccess) field subexpression value heval hstructs hlocals hglobals
+      hinfos hlocalsMap hglobalsMap ih
+  · intro shape address ih value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    have addressIH : ∀ addressValue,
+        evalPanValueExpFull state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord address
+          (memoryAccess := some memoryAccess) = some addressValue →
+        structOldExpShape context address = panSemShapeOf addressValue ∧
+        panStructValueFieldsOkBool state.structs addressValue = true ∧
+        evalPanValueExpFull (panStructConvertState context state).structs
+          (panStructConvertState context state).locals
+          (panStructConvertState context state).globals
+          (panStructConvertState context state).memory
+          (panStructConvertState context state).baseAddress
+          (panStructConvertState context state).topAddress bytesInWord
+          (structCompileExp context address) (memoryAccess := some memoryAccess) =
+            some (panStructConvertValue addressValue) := by
+      intro addressValue haddress
+      exact ih addressValue haddress hstructs hlocals hglobals hinfos
+        hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectLoadCase context state bytesInWord
+      memoryAccess shape address value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap addressIH
+  · intro address ih value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    have addressIH : ∀ addressValue,
+        evalPanValueExpFull state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord address
+          (memoryAccess := some memoryAccess) = some addressValue →
+        structOldExpShape context address = panSemShapeOf addressValue ∧
+        panStructValueFieldsOkBool state.structs addressValue = true ∧
+        evalPanValueExpFull (panStructConvertState context state).structs
+          (panStructConvertState context state).locals
+          (panStructConvertState context state).globals
+          (panStructConvertState context state).memory
+          (panStructConvertState context state).baseAddress
+          (panStructConvertState context state).topAddress bytesInWord
+          (structCompileExp context address) (memoryAccess := some memoryAccess) =
+            some (panStructConvertValue addressValue) := by
+      intro addressValue haddress
+      exact ih addressValue haddress hstructs hlocals hglobals hinfos
+        hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectLoad32Case context state bytesInWord
+      memoryAccess address value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap addressIH
+  · intro address ih value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    have addressIH : ∀ addressValue,
+        evalPanValueExpFull state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord address
+          (memoryAccess := some memoryAccess) = some addressValue →
+        structOldExpShape context address = panSemShapeOf addressValue ∧
+        panStructValueFieldsOkBool state.structs addressValue = true ∧
+        evalPanValueExpFull (panStructConvertState context state).structs
+          (panStructConvertState context state).locals
+          (panStructConvertState context state).globals
+          (panStructConvertState context state).memory
+          (panStructConvertState context state).baseAddress
+          (panStructConvertState context state).topAddress bytesInWord
+          (structCompileExp context address) (memoryAccess := some memoryAccess) =
+            some (panStructConvertValue addressValue) := by
+      intro addressValue haddress
+      exact ih addressValue haddress hstructs hlocals hglobals hinfos
+        hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectLoadByteCase context state bytesInWord
+      memoryAccess address value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap addressIH
+  · intro operator arguments hinduction value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    have ihPointwise : ∀ argument, argument ∈ arguments → ∀ subvalue,
+        evalPanValueExpFull state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord argument
+          (memoryAccess := some memoryAccess) = some subvalue →
+        panStructContextShapeView context.structs =
+          panStructContextShapeView state.structs →
+        panStructEveryValueFieldsOkBool state.structs state.locals →
+        panStructEveryValueFieldsOkBool state.structs state.globals →
+        structInfosOk state.structs →
+        panStructShapeMapEq context.locals state.locals →
+        panStructShapeMapEq context.globals state.globals →
+        structOldExpShape context argument = panSemShapeOf subvalue ∧
+        panStructValueFieldsOkBool state.structs subvalue = true ∧
+        evalPanValueExpFull (panStructConvertState context state).structs
+          (panStructConvertState context state).locals
+          (panStructConvertState context state).globals
+          (panStructConvertState context state).memory
+          (panStructConvertState context state).baseAddress
+          (panStructConvertState context state).topAddress bytesInWord
+          (structCompileExp context argument) (memoryAccess := some memoryAccess) =
+            some (panStructConvertValue subvalue) := by
+      intro argument hmem subvalue heval'
+      have ihArgument := panStructAll_mem hinduction argument hmem
+      intro hstructs' hlocals' hglobals' hinfos' hlocalsMap' hglobalsMap'
+      exact ihArgument subvalue heval' hstructs' hlocals' hglobals' hinfos'
+        hlocalsMap' hglobalsMap'
+    exact panStructCompileExpCorrectOpCase context state bytesInWord
+      memoryAccess operator arguments value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap ihPointwise
+  · intro operator arguments hinduction value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+    have ihPointwise : ∀ argument, argument ∈ arguments → ∀ subvalue,
+        evalPanValueExpFull state.structs state.locals state.globals state.memory
+          state.baseAddress state.topAddress bytesInWord argument
+          (memoryAccess := some memoryAccess) = some subvalue →
+        panStructContextShapeView context.structs =
+          panStructContextShapeView state.structs →
+        panStructEveryValueFieldsOkBool state.structs state.locals →
+        panStructEveryValueFieldsOkBool state.structs state.globals →
+        structInfosOk state.structs →
+        panStructShapeMapEq context.locals state.locals →
+        panStructShapeMapEq context.globals state.globals →
+        structOldExpShape context argument = panSemShapeOf subvalue ∧
+        panStructValueFieldsOkBool state.structs subvalue = true ∧
+        evalPanValueExpFull (panStructConvertState context state).structs
+          (panStructConvertState context state).locals
+          (panStructConvertState context state).globals
+          (panStructConvertState context state).memory
+          (panStructConvertState context state).baseAddress
+          (panStructConvertState context state).topAddress bytesInWord
+          (structCompileExp context argument) (memoryAccess := some memoryAccess) =
+            some (panStructConvertValue subvalue) := by
+      intro argument hmem subvalue heval'
+      have ihArgument := panStructAll_mem hinduction argument hmem
+      intro hstructs' hlocals' hglobals' hinfos' hlocalsMap' hglobalsMap'
+      exact ihArgument subvalue heval' hstructs' hlocals' hglobals' hinfos'
+        hlocalsMap' hglobalsMap'
+    exact panStructCompileExpCorrectPanOpCase context state bytesInWord
+      memoryAccess operator arguments value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap ihPointwise
+  · intro operator left right ihLeft ihRight value heval hstructs hlocals
+      hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectCmpCase context state bytesInWord
+      (some memoryAccess) operator left right value heval hstructs hlocals hglobals
+      hinfos hlocalsMap hglobalsMap ihLeft ihRight
+  · intro operator left right ihLeft ihRight value heval hstructs hlocals
+      hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectShiftCase context state bytesInWord
+      memoryAccess operator left right
+      (fun leftWord rightWord _ _ => hshiftCompatible operator leftWord rightWord)
+      value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+      ihLeft ihRight
+  · intro value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectBaseAddrCase context state bytesInWord
+      (some memoryAccess) value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+  · intro value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectTopAddrCase context state bytesInWord
+      (some memoryAccess) value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+  · intro value heval hstructs hlocals hglobals hinfos hlocalsMap hglobalsMap
+    exact panStructCompileExpCorrectBytesInWordCase context state bytesInWord
+      (some memoryAccess) value heval hstructs hlocals hglobals hinfos
+      hlocalsMap hglobalsMap
+  · exact PanStructAll.nil
+  · intro head tail ihHead ihTail
+    exact PanStructAll.cons ihHead ihTail
+  · exact PanStructAll.nil
+  · intro head tail ihHead ihTail
+    simpa using PanStructAll.cons ihHead ihTail
+  · intro fieldName subexpression ih
+    exact ih
+
 end Flapjack

@@ -20,14 +20,14 @@ namespace Flapjack
     the slot bound is non-negative and every slot assigned by the context map
     is at most `n`. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "ctxt_max_def"]
-def ctxtMax (n : Nat) (fm : FiniteMap String (Shape × List Nat)) : Prop :=
+def ctxtMax {α : Type} (n : Nat) (fm : FiniteMap α (Shape × List Nat)) : Prop :=
   0 ≤ n ∧ ∀ v a xs, FLOOKUP fm v = some (a, xs) → ∀ x ∈ xs, x ≤ n
 
 /-- HOL `no_overlap_def` (`cakeml/pancake/semantics/pan_commonPropsScript.sml:18`):
     every variable's slot list is duplicate-free, and variables whose slot sets
     intersect are the same variable. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_def"]
-def noOverlap (fm : FiniteMap String (Shape × List Nat)) : Prop :=
+def noOverlap {α : Type} (fm : FiniteMap α (Shape × List Nat)) : Prop :=
   (∀ x a xs, FLOOKUP fm x = some (a, xs) → xs.Nodup) ∧
     ∀ x y a b xs ys, FLOOKUP fm x = some (a, xs) → FLOOKUP fm y = some (b, ys) →
       (∃ z, z ∈ xs ∧ z ∈ ys) → x = y
@@ -88,6 +88,27 @@ theorem noOverlap_empty :
     this helper is untagged here. -/
 def alistToFmap [BEq α] (entries : List (α × β)) : FiniteMap α β :=
   entries.foldr (fun entry map => FUPDATE map entry) FEMPTY
+
+/-- A successful lookup in HOL's right-folded association-list map comes from
+    one of its entries. This does not assume that the keys are distinct. -/
+theorem flookupAlistToFmap_mem [BEq α] [LawfulBEq α]
+    (entries : List (α × β)) (key : α) (value : β)
+    (hlookup : FLOOKUP (alistToFmap entries) key = some value) :
+    ∃ entry, entry ∈ entries ∧ entry.1 = key ∧ entry.2 = value := by
+  induction entries with
+  | nil => simp [alistToFmap] at hlookup
+  | cons entry entries ih =>
+      rcases entry with ⟨entryKey, entryValue⟩
+      change FLOOKUP (FUPDATE (alistToFmap entries) (entryKey, entryValue)) key =
+        some value at hlookup
+      by_cases heq : entryKey == key
+      · have hvalue : entryValue = value := by
+          simpa [FLOOKUP_update, heq] using hlookup
+        exact ⟨(entryKey, entryValue), by simp, beq_iff_eq.mp heq, hvalue⟩
+      · have htail : FLOOKUP (alistToFmap entries) key = some value := by
+          simpa [FLOOKUP_update, heq] using hlookup
+        obtain ⟨found, hmem, hkey, hvalue⟩ := ih htail
+        exact ⟨found, by simp [hmem], hkey, hvalue⟩
 
 /-- Exact port of HOL `fm_empty_zip_alist`
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:426`): zipping two

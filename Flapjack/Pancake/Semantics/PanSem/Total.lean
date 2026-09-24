@@ -338,6 +338,48 @@ def panSemEvaluateIfClauseRiscV64 [NeZero 64]
   panSemTotalIfStep state (evalPanSemStateExp state condition)
     (evaluateProgram thenBranch) (evaluateProgram elseBranch)
 
+theorem panSemEvaluateIfClauseRiscV64_word
+    (evaluateProgram : Prog (RiscV.Word 64) →
+      PanSemState (RiscV.Word 64) (FfiState σ) →
+        Option (PanSemHOLResult (RiscV.Word 64)) ×
+          PanSemState (RiscV.Word 64) (FfiState σ))
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (condition : Exp (RiscV.Word 64))
+    (thenBranch elseBranch : Prog (RiscV.Word 64))
+    (value : RiscV.Word 64)
+    (heval : evalPanSemStateExp state condition = some (.word value)) :
+    panSemEvaluateIfClauseRiscV64 evaluateProgram state condition thenBranch elseBranch =
+      (if value = 0 then evaluateProgram elseBranch state
+       else evaluateProgram thenBranch state) := by
+  simp [panSemEvaluateIfClauseRiscV64, panSemTotalIfStep, heval]
+
+theorem panSemEvaluateIfClauseRiscV64_eval_error
+    (evaluateProgram : Prog (RiscV.Word 64) →
+      PanSemState (RiscV.Word 64) (FfiState σ) →
+        Option (PanSemHOLResult (RiscV.Word 64)) ×
+          PanSemState (RiscV.Word 64) (FfiState σ))
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (condition : Exp (RiscV.Word 64))
+    (thenBranch elseBranch : Prog (RiscV.Word 64))
+    (heval : evalPanSemStateExp state condition = none) :
+    panSemEvaluateIfClauseRiscV64 evaluateProgram state condition thenBranch elseBranch =
+      (some .error, state) := by
+  simp [panSemEvaluateIfClauseRiscV64, panSemTotalIfStep, heval]
+
+theorem panSemEvaluateIfClauseRiscV64_eval_nonword
+    (evaluateProgram : Prog (RiscV.Word 64) →
+      PanSemState (RiscV.Word 64) (FfiState σ) →
+        Option (PanSemHOLResult (RiscV.Word 64)) ×
+          PanSemState (RiscV.Word 64) (FfiState σ))
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (condition : Exp (RiscV.Word 64))
+    (thenBranch elseBranch : Prog (RiscV.Word 64))
+    (values : List (PanValue (RiscV.Word 64)))
+    (heval : evalPanSemStateExp state condition = some (.rStruct values)) :
+    panSemEvaluateIfClauseRiscV64 evaluateProgram state condition thenBranch elseBranch =
+      (some .error, state) := by
+  simp [panSemEvaluateIfClauseRiscV64, panSemTotalIfStep, heval]
+
 /-- The executed source evaluator's `Skip` projection is exactly the total
     `Skip` equation. -/
 theorem panSemEvaluateCodeStateWithPostState_skip_total

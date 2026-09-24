@@ -60,6 +60,23 @@ def allEncOkPre {Asm Memop Addr Cmp RegImm MlString Word : Type}
       (AsmWithLab Cmp RegImm MlString) Word))) : Bool :=
   sections.all (secOkPre checks)
 
+/-! Structural lemmas about the section/encoding predicates (needed by
+`compile_all_enc_ok_pre`). -/
+section EncodingAllLemmas
+
+variable {Asm Memop Addr Cmp RegImm MlString Word : Type}
+variable (checks : AsmChecks Asm Memop Addr Word)
+
+theorem allEncOkPre_cons (head : Section (Line (AsmOrCbw Asm Memop Addr)
+      (AsmWithLab Cmp RegImm MlString) Word))
+    (tail : List (Section (Line (AsmOrCbw Asm Memop Addr)
+      (AsmWithLab Cmp RegImm MlString) Word))) :
+    allEncOkPre checks (head :: tail) =
+      (secOkPre checks head && allEncOkPre checks tail) := by
+  simp [allEncOkPre]
+
+end EncodingAllLemmas
+
 /-- Concrete instantiation of the `line_ok_pre` callback record from a faithful
 `AsmConfig`, so `line_ok_pre`/`sec_ok_pre`/`all_enc_ok_pre` can be stated over
 the same configuration `c` that `stackProps$stack_asm_ok_def` consumes. This

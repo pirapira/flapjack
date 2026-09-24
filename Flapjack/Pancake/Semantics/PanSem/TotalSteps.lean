@@ -1,0 +1,274 @@
+import Flapjack.Pancake.Semantics.PanSem.Total
+
+/-!
+# HOL-shaped total statement-clause assembly steps
+
+Interface glue for the total HOL-shaped `panSem$evaluate` fragment
+(`cakeml/pancake/semantics/panSemScript.sml:556-736`).  Every expression-bearing
+constructor of HOL `evaluate` first evaluates a source expression with `eval` and
+then either continues with the value or returns `SOME Error` with the state
+unchanged.  This module packages that shared pattern once, over the complete
+production `PanSemState`, and instantiates it for the `Assign`, `Return`, and
+`Raise` clauses.  Everything here is untagged: it is assembly support for a
+future exact `evaluate_def` port, not the port itself, and it uses the RV64
+production word carrier.
+
+The expression evaluation reuses `evalPanSemStateExp`, whose executed-path
+agreement with the tagged exact `evalHOL` is proved in
+`Flapjack/Pancake/Semantics/PanSemStateEval.lean`.
+-/
+
+namespace Flapjack
+
+/-- Shared expression-evaluation glue: evaluate a source `Exp` from the complete
+    state; on a produced value hand it to the continuation, and on a failed
+    evaluation return `SOME Error` with the state unchanged (HOL's
+    `case eval s e of SOME v => ... | NONE => (SOME Error, s)` pattern). -/
+def panSemTotalExprStep [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64))
+    (onValue : PanValue (RiscV.Word 64) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  match evalPanSemStateExp state expression with
+  | some value => onValue value
+  | none => (some .error, state)
+
+@[simp] theorem panSemTotalExprStep_some [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64)) (value : PanValue (RiscV.Word 64))
+    (onValue : PanValue (RiscV.Word 64) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (heval : evalPanSemStateExp state expression = some value) :
+    panSemTotalExprStep state expression onValue = onValue value := by
+  simp [panSemTotalExprStep, heval]
+
+theorem panSemTotalExprStep_none [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64))
+    (onValue : PanValue (RiscV.Word 64) →
+      Option (PanSemHOLResult (RiscV.Word 64)) ×
+        PanSemState (RiscV.Word 64) (FfiState σ))
+    (heval : evalPanSemStateExp state expression = none) :
+    panSemTotalExprStep state expression onValue = (some .error, state) := by
+  simp [panSemTotalExprStep, heval]
+
+/-- HOL `Assign` (`panSemScript.sml:566-572`): evaluate the source, require
+    `is_valid_value`, write through `set_kvar`, and return `SOME Error` with the
+    state unchanged when the source fails or the destination is invalid.  A
+    successful assignment is HOL's normal completion (`NONE`). -/
+def panSemTotalAssignClause [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state expression (fun value =>
+    if panValueAssignmentValid state.structs state.locals state.globals kind name value then
+      (none,
+        match kind with
+        | .local => { state with locals := updatePanValueMap state.locals name value }
+        | .global => { state with globals := updatePanValueMap state.globals name value })
+    else
+      (some .error, state))
+
+@[simp] theorem panSemTotalAssignClause_none [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = none) :
+    panSemTotalAssignClause state kind name expression = (some .error, state) := by
+  simp [panSemTotalAssignClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalAssignClause_normal [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals kind name value = true) :
+    panSemTotalAssignClause state kind name expression =
+      (none,
+        match kind with
+        | .local => { state with locals := updatePanValueMap state.locals name value }
+        | .global => { state with globals := updatePanValueMap state.globals name value }) := by
+  cases kind <;> simp [panSemTotalAssignClause, panSemTotalExprStep, heval, hvalid]
+
+theorem panSemTotalAssignClause_invalid [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (kind : VarKind) (name : VarName) (expression : Exp (RiscV.Word 64))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value)
+    (hvalid : panValueAssignmentValid state.structs state.locals state.globals kind name value = false) :
+    panSemTotalAssignClause state kind name expression = (some .error, state) := by
+  simp [panSemTotalAssignClause, panSemTotalExprStep, heval, hvalid]
+
+/-- HOL `Return` (`panSemScript.sml:625-627`): evaluate the source and return
+    `SOME (Return v)` with the state unchanged, or `SOME Error` when the source
+    fails. -/
+def panSemTotalReturnClause [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state expression (fun value => (some (.returned value), state))
+
+theorem panSemTotalReturnClause_some [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64)) (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value) :
+    panSemTotalReturnClause state expression = (some (.returned value), state) := by
+  simp [panSemTotalReturnClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalReturnClause_none [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (expression : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = none) :
+    panSemTotalReturnClause state expression = (some .error, state) := by
+  simp [panSemTotalReturnClause, panSemTotalExprStep, heval]
+
+/-- HOL `Raise` (`panSemScript.sml:628-630`): evaluate the source and return
+    `SOME (Exception eid v)` with the state unchanged, or `SOME Error` when the
+    source fails. -/
+def panSemTotalRaiseClause [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  panSemTotalExprStep state expression
+    (fun value => (some (.exception exceptionId value), state))
+
+theorem panSemTotalRaiseClause_some [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
+    (value : PanValue (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = some value) :
+    panSemTotalRaiseClause state exceptionId expression =
+      (some (.exception exceptionId value), state) := by
+  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval]
+
+theorem panSemTotalRaiseClause_none [NeZero 64]
+    [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (exceptionId : ExceptionId) (expression : Exp (RiscV.Word 64))
+    (heval : evalPanSemStateExp state expression = none) :
+    panSemTotalRaiseClause state exceptionId expression = (some .error, state) := by
+  simp [panSemTotalRaiseClause, panSemTotalExprStep, heval]
+
+end Flapjack

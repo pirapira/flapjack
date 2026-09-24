@@ -8648,6 +8648,38 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `handler_slots_def` at word_to_stackScript.sml:346-348 - handler_slots perf = if perf then 5n else 3n - pure bool/num sizing of exception-handler stack slots used by raise_stub/PushHandler/StackHandlerArgs/copy_ret, with no word operation or dimindex, so the monomorphic Lean port is exact; direct HOL-EVAL rows ps_handler_slots_true=5/ps_handler_slots_false=3 in scripts/hol-probes/word_to_stack_perf_slots_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "list_Seq_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",
+    "lean_name": "listSeq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `list_Seq_def` at stackLangScript.sml:86-90 - list_Seq [] = Skip; list_Seq [x] = x; list_Seq (x::y::xs) = Seq x (list_Seq (y::xs)) - over the exact generic HOL `prog` carrier Flapjack.Compiler.Backend.StackLang.Prog. The Lean datatype is uniformly polymorphic in its seven constructor parameter families (StoreName already pins the BitVec 5 temp register), matching HOL's single-'a polymorphism, and list_Seq touches only Skip/Seq so no word operation or dimindex is involved - the generic port is therefore exact with no width indexing. Direct HOL-EVAL rows lc_empty/lc_one/lc_two/lc_three in scripts/hol-probes/stack_lang_prog_combinators_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "SeqStackFree_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "seqStackFree",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `SeqStackFree_def` at word_to_stackScript.sml:260-262 - SeqStackFree n p = if n = 0n then p else Seq (StackFree n) p - over the exact generic HOL `prog` carrier Flapjack.Compiler.Backend.StackLang.Prog. Only prog constructors and num are touched, so the generic port is exact with no width indexing; StackFree carries the num word count and no BitVec word argument. Direct HOL-EVAL rows ssf_zero/ssf_two in scripts/hol-probes/stack_lang_prog_combinators_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wStackLoad_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "wStackLoad",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wStackLoad_def` at word_to_stackScript.sml:52-54 - wStackLoad [] x = x; wStackLoad ((r,i)::ps) x = Seq (StackLoad r i) (wStackLoad ps x) - over the exact generic HOL `prog` carrier. StackLoad carries the register num r and word-index num i (no BitVec word operand), so the generic port is exact with no width indexing. Direct HOL-EVAL rows wsl_empty/wsl_two in scripts/hol-probes/stack_lang_prog_combinators_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wStackStore_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "wStackStore",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `wStackStore_def` at word_to_stackScript.sml:57-60 - wStackStore [] x = x; wStackStore ((r,i)::ps) x = Seq (wStackStore ps x) (StackStore r i) - note the reversed nesting versus wStackLoad, exactly as HOL. Over the exact generic HOL `prog` carrier; StackStore carries register/word-index nums only, so the generic port is exact with no width indexing. Direct HOL-EVAL row wss_two in scripts/hol-probes/stack_lang_prog_combinators_probe.out is reproduced by a Lean guard/kernel example in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

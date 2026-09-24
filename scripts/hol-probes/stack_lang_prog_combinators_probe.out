@@ -1,0 +1,9 @@
+lc_empty=Skip
+lc_one=Skip
+lc_two=Seq Skip (StackFree 1)
+lc_three=Seq Skip (Seq (StackFree 1) Skip)
+ssf_zero=Skip
+ssf_two=Seq (StackFree 2) Skip
+wsl_empty=Skip
+wsl_two=Seq (StackLoad 1 2) (Seq (StackLoad 3 4) Skip)
+wss_two=Seq (Seq Skip (StackStore 3 4)) (StackStore 1 2)

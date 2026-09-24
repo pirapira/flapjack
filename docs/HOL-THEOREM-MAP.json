@@ -5280,6 +5280,14 @@
     "reviewer": "Kernel-checked Op-constructor specialization over production structCompileExp/evalPanValueExp. It retains source evaluation, projected context equality, pointwise Bool field validity, struct_infos_ok, local/global shape maps, and all three compile_exp_correct conclusions in the per-argument induction hypothesis. Successful Op evaluation is shown to produce exactly two words; the proof uses the production list-evaluation bridge and verifies word filtering commutes with panStructConvertValue. It remains untagged because HOL has only the universal compile_exp_correct theorem and the Lean state/evaluator interfaces use PanSemState lookups, pointwise adapters, and explicit bytesInWord."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectPanOpCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Intentionally untagged because HOL has only universal compile_exp_correct, and production Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord, and the evalPanOp interface."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
@@ -6334,6 +6342,14 @@
     "lean_name": "fixCrepHolClock",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (clause-for-clause port of crepSemScript.sml:150-152 over the 11-field CrepHolState; direct HOL-EVAL rows fix_clock_clamps/fix_clock_keeps_lower reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
+    "lean_name": "fixCrepHolClock_IMP_LESS_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (HOL's universally quantified input-pair equality hypothesis and returned-clock bound over the 11-field CrepHolState; proof derives the bound from the exact tagged fix_clock_def)."
   },
   {
     "hol_path": null,

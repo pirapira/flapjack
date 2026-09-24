@@ -191,6 +191,106 @@ example :
     hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap haddressIH
   exact ⟨hcase.1, hcase.2.1, hload, hcase.2.2⟩
 
+/-! Recursive Panop/Mul specialization paired with the direct HOL-EVAL row
+`compile_exp_correct_panop_mul`. -/
+def panOpCompileCaseArguments : List (Exp Word64) :=
+  [.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)]
+
+def panOpCompileCaseValue : PanValue Word64 :=
+  .word (BitVec.ofNat 64 15)
+
+example :
+    structOldExpShape (α := Word64) emptyStructCompileContext
+      (.panOp .mul panOpCompileCaseArguments) = panSemShapeOf panOpCompileCaseValue ∧
+    panStructValueFieldsOkBool finiteMapRuntime.structs panOpCompileCaseValue = true ∧
+    evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+      finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
+      (.panOp .mul panOpCompileCaseArguments) = some panOpCompileCaseValue ∧
+    evalPanValueExp
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
+      (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
+      (BitVec.ofNat 64 1)
+      (structCompileExp emptyStructCompileContext (.panOp .mul panOpCompileCaseArguments)) =
+        some (panStructConvertValue panOpCompileCaseValue) := by
+  have hsource : evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+      finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+      finiteMapRuntime.topAddress (BitVec.ofNat 64 1)
+      (.panOp .mul panOpCompileCaseArguments) = some panOpCompileCaseValue := by
+    simp [evalPanValueExp, evalPanValueExp.evalPanValueExps, evalPanOp,
+      panOpCompileCaseArguments,
+      panOpCompileCaseValue, finiteMapRuntime]
+  have hlocalsFields : panStructEveryValueFieldsOkBool
+      finiteMapRuntime.structs finiteMapRuntime.locals := by
+    intro name value hvalue
+    simp [finiteMapRuntime] at hvalue
+  have hglobalsFields : panStructEveryValueFieldsOkBool
+      finiteMapRuntime.structs finiteMapRuntime.globals := by
+    intro name value hvalue
+    simp [finiteMapRuntime] at hvalue
+  have hstructInfos : structInfosOk finiteMapRuntime.structs := by
+    simp [finiteMapRuntime, structInfosOk]
+  have hlocalsMap : panStructShapeMapEq emptyStructCompileContext.locals
+      finiteMapRuntime.locals := by
+    intro name
+    simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
+  have hglobalsMap : panStructShapeMapEq emptyStructCompileContext.globals
+      finiteMapRuntime.globals := by
+    intro name
+    simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
+  have harguments : ∀ argument, argument ∈ panOpCompileCaseArguments → ∀ subvalue,
+      evalPanValueExp finiteMapRuntime.structs finiteMapRuntime.locals
+        finiteMapRuntime.globals finiteMapRuntime.memory finiteMapRuntime.baseAddress
+        finiteMapRuntime.topAddress (BitVec.ofNat 64 1) argument = some subvalue →
+      panStructContextShapeView emptyStructCompileContext.structs =
+        panStructContextShapeView finiteMapRuntime.structs →
+      panStructEveryValueFieldsOkBool finiteMapRuntime.structs finiteMapRuntime.locals →
+      panStructEveryValueFieldsOkBool finiteMapRuntime.structs finiteMapRuntime.globals →
+      structInfosOk finiteMapRuntime.structs →
+      panStructShapeMapEq emptyStructCompileContext.locals finiteMapRuntime.locals →
+      panStructShapeMapEq emptyStructCompileContext.globals finiteMapRuntime.globals →
+      structOldExpShape emptyStructCompileContext argument = panSemShapeOf subvalue ∧
+      panStructValueFieldsOkBool finiteMapRuntime.structs subvalue = true ∧
+      evalPanValueExp
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
+        (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
+        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext argument) =
+          some (panStructConvertValue subvalue) := by
+    intro argument hmem subvalue heval _ _ _ _ _ _
+    have harg : argument = .const (BitVec.ofNat 64 3) ∨
+        argument = .const (BitVec.ofNat 64 5) := by
+      simpa [panOpCompileCaseArguments] using hmem
+    rcases harg with harg | harg
+    · subst argument
+      have hword : subvalue = .word (BitVec.ofNat 64 3) := by
+        simpa [evalPanValueExp] using heval.symm
+      subst subvalue
+      exact ⟨by simp [structOldExpShape, panSemShapeOf],
+        by simp [panStructValueFieldsOkBool],
+        by simp [evalPanValueExp, panStructConvertState,
+          panStructConvertValue]⟩
+    · subst argument
+      have hword : subvalue = .word (BitVec.ofNat 64 5) := by
+        simpa [evalPanValueExp] using heval.symm
+      subst subvalue
+      exact ⟨by simp [structOldExpShape, panSemShapeOf],
+        by simp [panStructValueFieldsOkBool],
+        by simp [evalPanValueExp, panStructConvertState,
+          panStructConvertValue]⟩
+  have hcase := panStructCompileExpCorrectPanOpCase
+    emptyStructCompileContext finiteMapRuntime (BitVec.ofNat 64 1) .mul
+    panOpCompileCaseArguments panOpCompileCaseValue hsource rfl
+    hlocalsFields hglobalsFields hstructInfos hlocalsMap hglobalsMap harguments
+  exact ⟨hcase.1, hcase.2.1, hsource, hcase.2.2⟩
+
 /-! Direct Lean counterpart of the One and multiword Comb rows in
 `pan_structs_mem_load_conversion_probe.out`. The conversion proof below uses
 the same production fuel loader and the checked `size_of_compile_shape`

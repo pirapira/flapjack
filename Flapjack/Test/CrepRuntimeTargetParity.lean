@@ -738,6 +738,59 @@ def load32MatchesGuard : Bool :=
 #guard load32MatchesGuard
 #eval load32MatchesGuard
 
+/-- A memory model whose byte-alignment and byte-write hooks are literally the
+    HOL `set_byte`/in-word primitives at 64 bits, but which is otherwise not the
+    RISC-V target model. -/
+def holStoreByteModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with
+    byteAlign := fun _ address => holByteAlign64 address,
+    setByte := fun _ address byteValue cell _ => holSetByte64 address byteValue cell false }
+
+def holStoreByteBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { loadByteBaseState with memoryModel := holStoreByteModel }
+
+theorem holStoreByteBaseState_matches :
+    CrepMemoryModelStoreByteMatchesHOL64 holStoreByteBaseState.memoryModel :=
+  fun _ _ _ => ⟨rfl, rfl⟩
+
+example :
+    CrepMemoryModelStoreByteMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_storeByte_matches_HOL64 corrState
+
+example :
+    crepRuntimeStore holStoreByteBaseState (8 : RiscV.Word 64) 0x77 =
+      (holMemStore64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory 8 0x77).map
+        (fun memory => { holStoreByteBaseState with memory := memory }) :=
+  crepRuntimeStore_eq_holMemStore64 holStoreByteBaseState 8 0x77
+
+example :
+    crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77 =
+      (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
+        0x77).map (fun memory => { holStoreByteBaseState with memory := memory }) :=
+  crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches holStoreByteBaseState
+    holStoreByteBaseState_matches rfl rfl 8 0x77
+
+/-- The production word/byte stores over an arbitrary matching model agree with
+    HOL `mem_store`/`mem_store_byte`: guarded insertion, byte replacement in the
+    aligned cell, and domain failure. -/
+def storeByteMatchesGuard : Bool :=
+  ((crepRuntimeStore holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
+      (fun state => state.memory 8) == some (.word (0x77 : RiscV.Word 64))) &&
+    ((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
+        (fun state => state.memory 8) == some (.word (0x1122334455667777 : RiscV.Word 64))) &&
+    (crepRuntimeStore holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
+    (crepRuntimeStoreByte holStoreByteBaseState (16 : RiscV.Word 64) 0x55).isNone &&
+    ((holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
+        0x77).map (fun memory => memory 8) ==
+      some (.word (0x1122334455667777 : RiscV.Word 64))) &&
+((crepRuntimeStoreByte holStoreByteBaseState (8 : RiscV.Word 64) 0x77).map
+        (fun state => state.memory 8) ==
+      (holMemStoreByte64 holStoreByteBaseState.memaddrs holStoreByteBaseState.memory false 8
+        0x77).map (fun memory => memory 8))
+
+#guard storeByteMatchesGuard
+#eval storeByteMatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -795,9 +848,13 @@ def runChecks : IO Bool := do
     IO.println "PASS crep Load32 hook matches HOL mem_load_32 over arbitrary model and nested operands"
   else
     IO.println "FAIL crep Load32 hook matches HOL mem_load_32 over arbitrary model and nested operands"
+  if storeByteMatchesGuard then
+    IO.println "PASS crep Store/StoreByte hooks match HOL mem_store/mem_store_byte over arbitrary model"
+  else
+    IO.println "FAIL crep Store/StoreByte hooks match HOL mem_store/mem_store_byte over arbitrary model"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
     crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard && cmpMatchesGuard &&
-    loadByteMatchesGuard && load32MatchesGuard)
+    loadByteMatchesGuard && load32MatchesGuard && storeByteMatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

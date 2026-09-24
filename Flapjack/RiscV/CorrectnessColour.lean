@@ -395,6 +395,31 @@ theorem wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
     exact heq.symm
   simpa [hleft', hright'] using hneq.symm
 
+/-! Local checker bridge for one write's live-after conflict row. The generated
+    edge list directly connects the destination with each surviving live name,
+    so callers no longer provide a separate edge-coverage premise. This is an
+    executable list encoding of the relevant `colouring_ok` injectivity
+    obligation, not a port of HOL's recursive `colouring_ok` or
+    `evaluate_apply_colour`. -/
+def wordSingleWriteClashEdges (destination : Nat) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  liveAfter.map (fun current => (destination, current))
+
+theorem wordColouringRespectsClashes_singleWrite_map_noAlias
+    (destination : Nat) (liveAfter : List Nat) (colour : Nat → Nat)
+    (colouring : NatInfoMap Nat)
+    (hchecked : wordColouringRespectsClashes
+      (wordSingleWriteClashEdges destination liveAfter) colouring = true)
+    (hlookup : ∀ name, name = destination ∨ name ∈ liveAfter →
+      lookupNatInfo name colouring = some (colour name))
+    (current : Nat) (hcurrent : current ∈ liveAfter)
+    (hdifferent : current ≠ destination) :
+    colour current ≠ colour destination := by
+  apply wordColouringRespectsClashes_singleWrite_liveAfter_noAlias
+    colouring destination liveAfter (wordSingleWriteClashEdges destination liveAfter)
+    colour hchecked (fun name hname _ => by
+      simp [wordSingleWriteClashEdges, hname]) hlookup current hcurrent hdifferent
+
 theorem evalWordProg_assignVar_applyColour_liveClashes
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (colourZero : colour 0 = 0)

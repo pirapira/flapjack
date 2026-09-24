@@ -1203,9 +1203,9 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "cexp_heads_simp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "cexpHeadsSimp",
+    "lean_name": "cexpHeadsSimpW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "Codex (statement compared against cexp_heads_simp_def at crepPropsScript.sml:11; exact width-indexed wrapper over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic cexpHeadsSimp stays untagged with a FLAPJACK-SPECIFIC note; parity covered by CrepeSimpHeadsParity / HOL probes as cited)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -6259,9 +6259,9 @@
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepEveryExp",
+    "lean_name": "crepEveryExpW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison against every_exp_def; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
+    "reviewer": "Codex (statement compared against every_exp_def at crepPropsScript.sml:1300; exact width-indexed wrapper over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic crepEveryExp stays untagged with a FLAPJACK-SPECIFIC note; direct HOL-EVAL rows reproduced by Lean guards in Flapjack/Test/CrepEveryExpParity.lean)"
   },
   {
     "hol_path": null,

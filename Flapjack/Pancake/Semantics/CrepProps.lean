@@ -17,18 +17,32 @@ universe u
     (`cakeml/pancake/semantics/crepPropsScript.sml:11`). HOL rejects the
     argument when any inner list is empty, then maps total `HD` over the lists.
     The Lean default `.var 0` gives `headD` a total empty-list value; the guard
-    makes that value unreachable in the result. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+    makes that value unreachable in the result.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepExp α`, while
+    HOL `crepLang$exp` is indexed by the word length. The exact width-indexed
+    tag is on `cexpHeadsSimpW` below. -/
 def cexpHeadsSimp : List (List (CrepExp α)) → Option (List (CrepExp α))
   | expressions =>
       if expressions.any List.isEmpty then none
       else some (expressions.map (fun expression => expression.headD (.var 0)))
 
+/-- Exact width-indexed counterpart of HOL `cexp_heads_simp_def` over
+    `CrepExp (BitVec width)`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "cexp_heads_simp_def"]
+def cexpHeadsSimpW {width : Nat} [NeZero width]
+    (expressions : List (List (CrepExp (BitVec width)))) :
+    Option (List (CrepExp (BitVec width))) :=
+  cexpHeadsSimp expressions
+
 mutual
 /-- Faithful port of Cake `crepProps$every_exp` from
     `cakeml/pancake/semantics/crepPropsScript.sml:1300`: `every_exp P e`
-    holds when `P` holds of `e` and of every subexpression of `e`. -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+    holds when `P` holds of `e` and of every subexpression of `e`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): generic over `CrepExp α`, while
+    HOL `crepLang$exp` is indexed by the word length. The exact width-indexed
+    tag is on `crepEveryExpW` below. -/
 def crepEveryExp (predicate : CrepExp α → Bool) : CrepExp α → Bool
   | .const value => predicate (.const value)
   | .var name => predicate (.var name)
@@ -54,6 +68,14 @@ def crepEveryExpList (predicate : CrepExp α → Bool) : List (CrepExp α) → B
   | expression :: expressions =>
       crepEveryExp predicate expression && crepEveryExpList predicate expressions
 end
+
+/-- Exact width-indexed counterpart of HOL `every_exp_def` over
+    `CrepExp (BitVec width)`. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "every_exp_def"]
+def crepEveryExpW {width : Nat} [NeZero width]
+    (predicate : CrepExp (BitVec width) → Bool)
+    (expression : CrepExp (BitVec width)) : Bool :=
+  crepEveryExp predicate expression
 
 /-- HOL `map_var_cexp_eq_var`: mapping `Var` over a list and flattening each
     expression's variable list recovers the original list. -/

@@ -322,4 +322,39 @@ example (s : CrepHolState Nat Unit) (t : LoopMachineState Nat Unit) :
         s.topAddress = t.topAddr :=
   crepToLoopStateRel_intro s t
 
+/-- HOL `wlab_wloc_def` (`crep_to_loopProofScript.sml:45-47`) on a word payload:
+    both datatypes use the single `word` constructor. -/
+example : wlabWloc (PanWordLab.word (7 : Nat)) = LoopValue.word (7 : Nat) := rfl
+
+/-- HOL `globals_rel_intro` (`crep_to_loopProofScript.sml:203-209`) unfolds to
+    the universally quantified lookup implication. -/
+example (sglobals : BitVec 5 → Option (PanWordLab Nat))
+    (tglobals : BitVec 5 → Option (LoopValue Nat)) :
+    crepToLoopGlobalsRel sglobals tglobals ↔
+      ∀ address value, sglobals address = some value →
+        tglobals address = some (wlabWloc value) :=
+  crepToLoopGlobalsRel_intro sglobals tglobals
+
+/-- Concrete target global map for the `globals_rel` oracle row
+    `globals_lookup_match=T` in `scripts/hol-probes/crep_to_loop_globals_rel_probe.out`. -/
+def globalsRelFixture : BitVec 5 → Option (LoopValue Nat) :=
+  FUPDATE (FEMPTY : FiniteMap (BitVec 5) (LoopValue Nat)) (4, .word 7)
+
+/-- Reproduces the direct HOL oracle rows `globals_lookup_match=T` and
+    `globals_lookup_absent=T` (`crep_to_loop_globals_rel_probe.out`). -/
+def globalsRelGuard : Bool :=
+  (FLOOKUP (FUPDATE (FEMPTY : FiniteMap (BitVec 5) (PanWordLab Nat)) (4, PanWordLab.word 7)) 4
+      == some (PanWordLab.word 7)) &&
+    (FLOOKUP globalsRelFixture 4 == some (wlabWloc (PanWordLab.word 7))) &&
+    (FLOOKUP globalsRelFixture 9).isNone
+
+#guard globalsRelGuard
+
+/-- HOL `state_rel_clock_add_zero` (`crep_to_loopProofScript.sml:219-223`): a
+    state relation is preserved by advancing the target clock by zero. -/
+example (s : CrepHolState Nat Unit) (t : LoopMachineState Nat Unit)
+    (h : crepToLoopStateRel s t) :
+    ∃ ck, crepToLoopStateRel s { t with clock := ck + t.clock } :=
+  crepToLoopStateRel_clock_add_zero s t h
+
 end Flapjack.Test.CrepToLoopParity

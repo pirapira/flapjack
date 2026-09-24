@@ -4645,7 +4645,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "loadShapeBytes_getElem_rel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "Codex (source comparison) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4861,7 +4861,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "firstCompileProgAllDistinct",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "reviewer": "Codex (source comparison) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4869,7 +4869,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "firstCompileToCrepAllDistinct",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and production compiler projection comparison)"
+    "reviewer": "Codex (source and production compiler projection comparison) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,
@@ -7429,7 +7429,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "elCompileToCrepElProgEq",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem."
+    "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem. Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -7437,7 +7437,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "alookupCompileToCrepCode",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry)."
+    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry). Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,
@@ -7493,7 +7493,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "getEidsFromDeclsImpExcpRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL get_eids_imp_excp_rel (pan_to_crepProofScript.sml:4656): given sizeOfEids pc < 2^width and FDOM seids = FDOM (get_eids_from_decls pc), conclude excp_rel (get_eids_from_decls pc) seids. excp_rel's domain conjunct is the hypothesis; the injectivity conjunct is proved by extracting an aligned source zip index for each code lookup (membership via flookupFupdateList_mem_or_base + mem_zip_getElem?), showing each code equals BitVec.ofNat width of that index, using BitVec injectivity below 2^width (bitVecOfNat_inj) to identify the indices, then identifying the exception names. Direct HOL probe scripts/hol-probes/crep_get_eids_probe.out (rows eids_present, eids_second, eids_absent, eids_codes_distinct) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS)."
+    "reviewer": "Exact port of HOL get_eids_imp_excp_rel (pan_to_crepProofScript.sml:4656): given sizeOfEids pc < 2^width and FDOM seids = FDOM (get_eids_from_decls pc), conclude excp_rel (get_eids_from_decls pc) seids. excp_rel's domain conjunct is the hypothesis; the injectivity conjunct is proved by extracting an aligned source zip index for each code lookup (membership via flookupFupdateList_mem_or_base + mem_zip_getElem?), showing each code equals BitVec.ofNat width of that index, using BitVec injectivity below 2^width (bitVecOfNat_inj) to identify the indices, then identifying the exception names. Direct HOL probe scripts/hol-probes/crep_get_eids_probe.out (rows eids_present, eids_second, eids_absent, eids_codes_distinct) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS). Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,
@@ -7597,7 +7597,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "mkCtxtCodeImpCodeRel",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL mk_ctxt_code_imp_code_rel. Source map is FUPDATE_LIST FEMPTY (functionEntries declarations).reverse, the Lean encoding of HOL alist_to_fmap (functions pan_code) (cf. tagged functions_def/makeFuncsHOL); target is FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse (tagged compile_to_crep_def). Hypothesis EVERY (localised_prog o FST o SND o SND) becomes forall entry in functionEntries, localisedProg entry.2.2.1; ALL_DISTINCT (MAP FST ...) becomes Nodup. Lean splits HOL's single ctxt record, so the relation uses the proof-context literal (as accepted for mk_ctxt_imp_locals_rel). Uses makeFuncsHOL_lookup_of_lookup, alookupCompileToCrepCodeGeneral and panToCrepCompFuncRiscV_eq_compileCodeRelProg. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS)."
+    "reviewer": "Exact port of HOL mk_ctxt_code_imp_code_rel. Source map is FUPDATE_LIST FEMPTY (functionEntries declarations).reverse, the Lean encoding of HOL alist_to_fmap (functions pan_code) (cf. tagged functions_def/makeFuncsHOL); target is FUPDATE_LIST FEMPTY (compileToCrepHOL declarations).reverse (tagged compile_to_crep_def). Hypothesis EVERY (localised_prog o FST o SND o SND) becomes forall entry in functionEntries, localisedProg entry.2.2.1; ALL_DISTINCT (MAP FST ...) becomes Nodup. Lean splits HOL's single ctxt record, so the relation uses the proof-context literal (as accepted for mk_ctxt_imp_locals_rel). Uses makeFuncsHOL_lookup_of_lookup, alookupCompileToCrepCodeGeneral and panToCrepCompFuncRiscV_eq_compileCodeRelProg. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS). Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": null,

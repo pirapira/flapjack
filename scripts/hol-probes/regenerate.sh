@@ -1101,3 +1101,24 @@ run_probe asm_config_checks_probeScript.sml asm_config_checks_probe.out \
   aligned0 asmOkLoc \
   "$cake_dir/compiler/backend/semantics/stackPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# Direct HOL fixture for wordConvs$inst_ok_less, the weaker per-instruction
+# well-formedness predicate consumed by compile_to_word_conventions2.
+run_probe word_convs_inst_ok_less_probeScript.sml word_convs_inst_ok_less_probe.out \
+  iol_binop_imm iol_movtoreg_ok \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The full_inst_ok_less probe observes `exp_to_addr` and the lifted
+# `wordConvs$full_inst_ok_less` predicate over the backend wordLang syntax.
+run_probe word_convs_full_inst_ok_less_probeScript.sml word_convs_full_inst_ok_less_probe.out \
+  eta_var fiol_alloc \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The call_arg_convention probe observes `wordConvs$inst_arg_convention` and
+# `wordConvs$call_arg_convention` over the backend wordLang syntax.
+run_probe word_convs_call_arg_probeScript.sml word_convs_call_arg_probe.out \
+  inst_addcarry_ok call_seq_bad \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

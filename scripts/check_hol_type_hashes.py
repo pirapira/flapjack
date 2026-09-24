@@ -19,6 +19,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -126,6 +127,13 @@ def expected_lock(
 
 
 def check_lock(committed: dict[str, Any], current: dict[str, Any]) -> None:
+    names = [item["lean_full_name"] for item in committed.get("records", [])]
+    duplicates = sorted(name for name, count in Counter(names).items() if count > 1)
+    if duplicates:
+        raise ValueError(
+            "reviewed Lean type lock has duplicate declaration(s): "
+            + ", ".join(duplicates)
+        )
     if committed == current:
         return
     old = {item["lean_full_name"]: item for item in committed.get("records", [])}
@@ -134,6 +142,8 @@ def check_lock(committed: dict[str, Any], current: dict[str, Any]) -> None:
     detail = ", ".join(changed[:12]) + (" ..." if len(changed) > 12 else "")
     if committed.get("lean_toolchain") != current["lean_toolchain"]:
         detail = f"Lean toolchain changed; {detail}"
+    if not changed and not detail:
+        detail = "record order or lock metadata differs"
     raise ValueError(
         f"reviewed Lean type lock differs for {len(changed)} declaration(s): "
         f"{detail}; review the HOL/Lean statement before --update"

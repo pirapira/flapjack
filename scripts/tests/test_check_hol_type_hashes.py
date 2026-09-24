@@ -114,6 +114,12 @@ class HolTypeHashesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "found 0"):
             MODULE.lock_records(self.manifest, [])
 
+    def test_duplicate_committed_record_reports_declaration(self):
+        current = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
+        committed = {**current, "records": current["records"] * 2}
+        with self.assertRaisesRegex(ValueError, "duplicate declaration.*Flapjack.exampleCorrect"):
+            MODULE.check_lock(committed, current)
+
     def test_compact_lock_is_valid_json(self):
         lock = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
         self.assertEqual(json.loads(MODULE.render_lock(lock)), lock)

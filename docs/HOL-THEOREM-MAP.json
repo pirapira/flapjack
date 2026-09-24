@@ -8216,6 +8216,38 @@
     "reviewer": "Codex (source comparison; HOL mem_load/mem_loads/mem_load_flds clauses over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop domain; argument order follows HOL currying (sh addr dm m stcs) with no free bytes_in_word parameter - the canonical panBytesInWord width = n2w(width/8) is used internally; HOL's dropWhile Named lookup is inlined as an equivalent structural scan rendering the lexicographic (LENGTH stcs, shape_size) measure; direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "evalHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-indexed over BitVec width with [NeZero width] and [LawfulBEq String], HOL-shaped PanSemHolState, reuses tagged panMemLoadHOL/panMemLoad32HOL/panMemLoadByteHOL/wordOpHOL/wordShiftHOL/wordCmpHOL/isWfShapeHOL/panOpHOL/holShapeOf/holValueIsWord/panBytesInWord; NStruct field-name equality is propositional list equality and the field-shape check is panShapeMatches whose truth equals HOL shape equality by panShapeMatches_eq_true; direct HOL rows incl. nstruct_ok/shape_mismatch/name_mismatch/missing in scripts/hol-probes/pan_sem_state_eval_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "shape_of_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "holShapeOf",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination; [NeZero width] matching HOL positive dimindex)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "isValWord_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "holValueIsWord",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; isValWord over HolValue: ValWord -> true, all other constructors -> false, matching HOL isValWord_def; [NeZero width] matching HOL positive dimindex)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_op_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; width-indexed pan_op over BitVec width: Mul on exactly two words returns their product, every other operator/arity returns none, matching HOL pan_op_def; [NeZero width] matching HOL positive dimindex)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "mem_rel_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -8438,6 +8470,14 @@
     "lean_name": "appListAppend_thm",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (2026-09-24: Append/List/Nil conjunction and universal variables match miscScript.sml:218-224)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "bits_to_word_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "bitsToWordW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: the three HOL equations at word_to_stackScript.sml:225-229 — bits_to_word [] = 0w, true-cons = bits_to_word xs << 1 || 1w, false-cons = bits_to_word xs << 1 — are matched exactly by the BitVec width + [NeZero width] recursion; HOL is polymorphic over 'a word while the Lean faithful counterpart must fix the carrier width per the loadShapeBytes/loadShapeBytesW standard, with the untagged Flapjack.RiscV.CakeAlloc.bitsToWord kept as the executable Nat form; direct HOL-EVAL rows bits_empty=0w/bits_true=1w/bits_false=0w/bits_true_false_true=5w/bits_all_true_3=7w/bits_pattern=18w/bits_equation=T in scripts/hol-probes/word_to_stack_bits_to_word_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",

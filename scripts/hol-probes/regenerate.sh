@@ -134,6 +134,11 @@ run_probe pan_structs_compile_exp_correct_probeScript.sml pan_structs_compile_ex
   size_of_compile_shape_comb \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+run_probe semantics_props_implements_probeScript.sml semantics_props_implements_probe.out \
+  implements_prime_trans \
+  "$cake_dir/semantics/proofs/semanticsPropsScript.sml" \
+  "$cake_dir/semantics/proofs"
 run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_conversion_probe.out \
   mem_load_conversion_one mem_load_conversion_comb_multiword \
   mem_load_conversion_named_nested_struct_infos_ok \
@@ -276,6 +281,9 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
   distinct_true distinct_eq_disjoint genlist_vmax_bound genlist_vmax_hit \
   genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
   "$cake_dir/pancake"
+run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
+  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"

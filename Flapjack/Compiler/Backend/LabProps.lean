@@ -404,6 +404,30 @@ theorem flatten_loop_lines_all {Asm Memop Addr Cmp RegImm MlString Word : Type}
       simp only [List.all_cons, List.all_nil, List.all_append, ih', hlabel, hjump]
       decide
 
+theorem flatten_jumpLower_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (left right target sectionId next : Nat) (conts breaks : List Nat) :
+    ((StackToLab.flatten (flattenOps (width := width)) 0 tail
+        (.jumpLower left right target : FlattenProg width) sectionId next conts breaks).1.all
+        (lineOkPreConfig config)) = true := by
+  rw [StackToLab.flatten]
+  simp [lineOkPreConfig_labAsm]
+
+theorem flatten_ffi_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (function : String) (sectionId next : Nat) (conts breaks : List Nat) :
+    ((StackToLab.flatten (flattenOps (width := width)) 0 tail
+        (.ffi function 0 0 0 0 next : FlattenProg width) sectionId next conts breaks).1.all
+        (lineOkPreConfig config)) = true := by
+  rw [StackToLab.flatten]
+  simp [lineOkPreConfig_labAsm, lineOkPreConfig_label]
+
+theorem flatten_install_lines_all (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (tail : Bool) (sectionId next : Nat) (conts breaks : List Nat) :
+    ((StackToLab.flatten (flattenOps (width := width)) 0 tail
+        (.install 0 0 0 0 next : FlattenProg width) sectionId next conts breaks).1.all
+        (lineOkPreConfig config)) = true := by
+  rw [StackToLab.flatten]
+  simp [lineOkPreConfig_labAsm, lineOkPreConfig_label]
+
 end FlattenBaseLinesAll
 
 end Flapjack.Compiler.Backend.LabProps

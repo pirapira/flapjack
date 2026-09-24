@@ -1041,6 +1041,18 @@ def holFiniteWordSourceByteAlign {ι : Type u}
   exact bitVecToHolWord dimension
     (holByteAlignBitVec (holWordToBitVec dimension address))
 
+/-- The source memory model's `byteAlign` field is exactly HOL's
+    dimension-derived alignment after transporting the explicit finite word
+    through its BitVec encoding. In particular, it uses
+    `2 ^ log2 (width / 8)`, so this equation remains valid for dimensions
+    whose byte count is not a power of two. -/
+theorem holFiniteWordSourceByteAlign_toBitVec {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address : ι → Bool) :
+    holWordToBitVec dimension
+        (holFiniteWordSourceByteAlign dimension address) =
+      holByteAlignBitVec (holWordToBitVec dimension address) := by
+  simp [holFiniteWordSourceByteAlign, holWordToBitVec_bitVecToHolWord]
+
 /-- Byte-slot component of HOL `byte_index_def`, preserving HOL natural
     `MOD_0` when the dimension has fewer than eight bits. -/
 def holFiniteWordSourceByteIndex {ι : Type u}
@@ -1122,6 +1134,20 @@ def holFiniteWordSourceMemoryModel {ι : Type u}
     wordOp := wordOp
     compare := evalPanCmp
     shift := evalPanShiftFull }
+
+/-- The model-level form of `byte_align_def` for the source-shaped load
+    adapter. The unused byte-count argument reflects that HOL's
+    `byte_align` derives alignment from the word dimension itself. -/
+theorem holFiniteWordSourceMemoryModel_byteAlign_toBitVec {ι : Type u}
+    [dimension : HolFiniteDimension ι] (bigEndian : Bool)
+    (bytes address : ι → Bool) :
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension bigEndian).byteAlign
+          bytes address) =
+      holByteAlignBitVec (holWordToBitVec dimension address) := by
+  change holWordToBitVec dimension
+      (holFiniteWordSourceByteAlign dimension address) = _
+  exact holFiniteWordSourceByteAlign_toBitVec dimension address
 
 /-- The source-shaped finite-word model comparison agrees with the generic
     BitVec/HOL comparison after transporting the operands. -/

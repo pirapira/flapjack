@@ -1949,6 +1949,14 @@ theorem crepArithHolFiniteDimensionSourceMapCode_runtime {ι : Type}
   cases state
   rfl
 
+/-- All-dimension production-evaluator support for HOL
+    `simp_exp_correct1`. The hypothesis states successful evaluation, `f`
+    updates only the source state's code map, and the conclusion preserves the
+    full optional `word_lab` result. `HolFiniteDimension` is explicit Lean
+    evidence for a finite index carrier, with `decode` serving as its
+    `finite_index` map. This remains untagged because no theorem yet identifies
+    that adapter and its operation instances with HOL's native implicit
+    `dimindex`/`finite_index` interpretation of `crepSem$eval`. -/
 theorem crepSimpExpCorrect1HolFiniteWordSource {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : (List Nat × CrepProg (ι → Bool)) → (List Nat × CrepProg (ι → Bool)))

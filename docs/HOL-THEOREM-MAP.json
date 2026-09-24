@@ -373,7 +373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSource",
     "statement_status": "documented_mismatch",
-    "reviewer": "Source-shaped finite-word runtime preservation of the complete optional word-lab result with successful-evaluation premise and arbitrary code-map update. It remains untagged because the explicit finite-dimension enumeration and CrepHolState adapter have not been identified with HOL's implicit finite_index word carrier and crepSem state."
+    "reviewer": "All-dimension production-evaluator support has HOL's successful-evaluation premise, arbitrary code-map update, simplifier, and full Option word_lab conclusion. It remains untagged because the explicit HolFiniteDimension operation dictionary and CrepHolState runtime adapter have not been identified with HOL's implicit dimindex/finite_index interpretation of crepSem$eval."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

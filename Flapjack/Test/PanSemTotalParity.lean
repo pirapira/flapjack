@@ -1,4 +1,4 @@
-import Flapjack.Pancake.Semantics.PanSemTotal
+import Flapjack.Pancake.Semantics.PanSem.Total
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!

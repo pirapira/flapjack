@@ -19,21 +19,28 @@ returns an `Option` of a structured control result whose outcome embeds the
 state components, so its statements cannot carry an exact HOL `evaluate` tag.
 This module starts the genuinely HOL-shaped total interface:
 
-* `PanSemProgResult` mirrors the HOL `result` datatype, with `normal` standing
-  for HOL's `NONE`;
-* `panSemProgResultOfClockResult` maps the executed clocked result onto it.
+* `PanSemProgResult` is an isomorphic in-Lean encoding of HOL's
+  `result option`: `PanSemProgResult.normal` encodes HOL's `NONE`, so it is
+  equivalent to `result option` but not literally that type;
+* `panSemProgResultOfClockResult` maps the executed clocked result onto it;
+* `panSemEvaluateSkip` and `panSemEvaluateTick` are base-case infrastructure
+  for the eventual evaluator, not yet the single total recursive
+  `panSemEvaluate`.
 
 The state half is the production `PanSemState`, so the eventual total
 `panSemEvaluate` returns a `PanSemProgResult α σ × PanSemState α (FfiState σ)`
 pair with no `Option`/fuel wrapper, recursing on the HOL termination measure
-`(state.clock, program size)`.  Everything here is untagged until that total
-evaluator and its exact HOL statement are established.
+`(state.clock, program size)`.  `panSemTotalOfExecuted` is only a proved
+relation between the executed evaluator and this interface; it never defines
+total evaluation.  Everything here is untagged until that total evaluator and
+its exact HOL statement are established.
 -/
 
 namespace Flapjack
 
-/-- HOL `panSemScript.sml:68-75` `result`, with `normal` for the `NONE`
-    (normal completion) case. -/
+/-- Isomorphic in-Lean encoding of HOL `panSemScript.sml:68-75` `result option`:
+    `normal` encodes HOL `NONE` (normal completion); the other constructors
+    encode the corresponding `SOME` payloads. -/
 inductive PanSemProgResult (α : Type u) (σ : Type v) where
   | normal
   | error
@@ -117,7 +124,9 @@ def panSemProgResultOfClockResult (result : PanValueFfiClockResult α σ) :
           PanValueFfiClockResult α σ) = .finalFfi event := rfl
 
 /-- Turn an executed `(clocked result, state)` pair into the HOL-shaped
-    `(result, state)` pair. -/
+    `(result, state)` pair.  This is a proved relation between the executed
+    evaluator and the total interface only; it is not part of the definition of
+    total evaluation. -/
 def panSemTotalOfExecuted
     (pair : PanValueFfiClockResult α σ × PanSemState α (FfiState σ)) :
     PanSemProgResult α σ × PanSemState α (FfiState σ) :=
@@ -125,10 +134,12 @@ def panSemTotalOfExecuted
 
 /-! ## Base-case total equations
 
-    The first two base cases of the eventual total `panSemEvaluate`.  They
-    return the HOL `(result option # state)` shape directly (no `Option`/fuel
+    Base-case infrastructure for the eventual single total recursive
+    `panSemEvaluate`; these functions are not that evaluator yet.  They return
+    the HOL `(result option # state)` shape directly (no `Option`/fuel
     wrapper), and the theorems below relate them to the executed source
-    evaluator's `(result, state)` projection. -/
+    evaluator's `(result, state)` projection via the proved relation
+    `panSemTotalOfExecuted`. -/
 
 /-- HOL `Skip` (`cakeml/pancake/semantics/panSemScript.sml:557`):
     normal completion with the state carried verbatim. -/

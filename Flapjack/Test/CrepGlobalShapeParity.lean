@@ -486,4 +486,26 @@ example : crepOpRV64 .mul [(7 : RiscV.Word 64), 3] =
 #guard (crepOpRV64 .mul [(7 : RiscV.Word 64), 3] == some 21) &&
   ((crepOpRV64 .mul ([] : List (RiscV.Word 64))).isNone)
 
+/-- Executed width-specialized RV64 evaluator: its `.crepOp .mul` clause calls
+    the tagged `crepOpCrep 64` directly and evaluates the operands. -/
+example :
+    evalCrepRuntimeExpRV64 bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      some (21 : RiscV.Word 64) := by
+  simp only [evalCrepRuntimeExpRV64, crepOpCrep]
+  rfl
+
+/-- The width-specialized RV64 evaluator agrees with the generic production
+    evaluator on the `BitVec 64` carrier. -/
+example :
+    evalCrepRuntimeExpRV64 bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) =
+      evalCrepRuntimeExp bv64State
+        (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) :=
+  evalCrepRuntimeExpRV64_eq bv64State
+    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)])
+
+#guard evalCrepRuntimeExpRV64 bv64State
+    (.crepOp .mul [.const (7 : RiscV.Word 64), .const (3 : RiscV.Word 64)]) == some 21
+
 end Flapjack.Test.CrepGlobalShapeParity

@@ -532,6 +532,21 @@ example (value : Fin 4 → Bool) :
     (f := fun (_, entry) => entry) (holWordBitsLoadState4 value)
     (.const value) (.word value) hsuccess ih
 
+private theorem constSourceCaseIH {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool)) (value : ι → Bool) :
+    ∀ (source : CrepHolState (ι → Bool) σ) (_result : PanWordLab (ι → Bool)),
+      evalCrepHolFiniteWordSourceExpWordLab dimension source (.const value) ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (crepArithHolFiniteDimensionMapCode f source)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+          (.const value)) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension source (.const value) := by
+  intro source result h
+  exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase f source value result h
+
 example (address : BitVec 5) (value : Fin 4 → Bool) :
     evalCrepHolFiniteWordSourceExp
       (instFinHolFiniteDimension (width := 4))
@@ -673,6 +688,44 @@ def holWordBitsState64 : CrepHolState (Fin 64 → Bool) Unit where
   ffi := natCrepRuntimeFfiState
   baseAddress := holWordBits64 0
   topAddress := holWordBits64 0
+
+def holWordBitsMemoryEverywhereState64 : CrepHolState (Fin 64 → Bool) Unit :=
+  { holWordBitsState64 with memaddrs := fun _ => true }
+
+/-! Successful load cases reuse a 64-bit little-endian memory cell. The domain
+    is total here so the constructor cases exercise the byte operations without
+    adding an address-domain side condition. -/
+example :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 64))
+      (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+        holWordBitsMemoryEverywhereState64)
+      (crepSimpExp
+        (fun n => bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+          (BitVec.ofNat 64 n))
+        (.loadByte (.const (0 : Fin 64 → Bool)))) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 64)) holWordBitsMemoryEverywhereState64
+      (.loadByte (.const (0 : Fin 64 → Bool))) := by
+  have hsuccess : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 64)) holWordBitsMemoryEverywhereState64
+    (.loadByte (.const (holWordBits64 0))) ≠ none := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, crepHolEvalMemLoadByte,
+      holFiniteWordSourceMemoryModel, holFiniteWordSourceByteAlign,
+      holByteAlignBitVec,
+      holWordBitsMemoryEverywhereState64, holWordBitsState64, holWordBits64]
+  exact crepSimpExpCorrect1LoadByteHolFiniteWordSourceCase
+    (f := fun (_, entry) => entry) (state := holWordBitsMemoryEverywhereState64)
+    (.const (0 : Fin 64 → Bool)) (.word (holWordBits64 1)) hsuccess
+    (constSourceCaseIH (fun (_, entry) => entry) (0 : Fin 64 → Bool))
+
+#guard evalCrepHolFiniteWordSourceExp
+    (instFinHolFiniteDimension (width := 64)) holWordBitsMemoryEverywhereState64
+    (.load32 (.const (0 : Fin 64 → Bool))) == some (holWordBits64 0x04030201)
+#guard evalCrepHolFiniteWordSourceExp
+    (instFinHolFiniteDimension (width := 64)) holWordBitsMemoryEverywhereState64
+    (.loadByte (.const (0 : Fin 64 → Bool))) == some (holWordBits64 1)
 
 def holWordBitsState64WithLocal : CrepHolState (Fin 64 → Bool) Unit :=
   { holWordBitsState64 with

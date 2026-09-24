@@ -416,9 +416,13 @@ def findVarHOL (ctxt : CrepToLoopFiniteMapContext) (v : Nat) : Nat :=
   | some n => n
   | none => 0
 
-/-- Exact port of HOL `find_lab_def`
-    (`cakeml/pancake/crep_to_loopScript.sml:27-32`). -/
-@[hol "cakeml/pancake/crep_to_loopScript.sml" "find_lab_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): `find_lab_def`
+   (`cakeml/pancake/crep_to_loopScript.sml:27-32`) keys `ctxt.funcs` by HOL
+   `funname = mlstring`, while `CrepToLoopFiniteMapContext.funcs` is a
+   `FiniteMap FunName (Nat × Nat)` with `FunName = String`; the key carrier
+   differs even though the lookup shape matches. The exact counterpart needs an
+   MlString-keyed loop-context carrier (dependency `flapjack-pxn.18.3.5.8` /
+   the downstream MlString audit), so no `@[hol]` tag is attached yet. -/
 def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
   match FLOOKUP ctxt.funcs f with
   | some (n, _) => n
@@ -430,9 +434,13 @@ def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
 context. Over `CrepToLoopFiniteMapContext` (whose `vars`/`funcs` are the same
 HOL finite maps) they need no width parameter. -/
 
-/-- Exact port of HOL `mk_ctxt_def`
-    (`cakeml/pancake/crep_to_loopScript.sml:221-228`). -/
-@[hol "cakeml/pancake/crep_to_loopScript.sml" "mk_ctxt_def"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port): `mk_ctxt_def`
+   (`cakeml/pancake/crep_to_loopScript.sml:221-228`) takes `funcs` keyed by HOL
+   `funname = mlstring`, while `CrepToLoopFiniteMapContext.funcs` is keyed by
+   `FunName = String`; the record shape matches but the key carrier differs. The
+   exact counterpart needs the MlString-keyed loop-context carrier (dependency
+   `flapjack-pxn.18.3.5.8` / the downstream MlString audit), so no `@[hol]` tag
+   is attached yet. -/
 def mkCtxtHOL (target : Compiler.Encoders.Asm.AsmArchitecture) (vmap : FiniteMap Nat Nat)
     (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
     CrepToLoopFiniteMapContext :=

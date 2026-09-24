@@ -129,6 +129,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "ProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype prog = Skip | Dec varname shape ('a exp) prog | Assign varkind varname ('a exp) | Primitive varname primop ('a exp list) | Store | Store32 | StoreByte ('a exp) ('a exp) | Seq prog prog | If ('a exp) prog prog | While ('a exp) prog | Break | Continue | Call (((varkind # varname) option # ((eid # varname # prog) option)) option) funname (('a exp) list) | DecCall varname shape funname (('a exp) list) prog | ExtCall funname ('a exp) ('a exp) ('a exp) ('a exp) | Raise eid ('a exp) | Return ('a exp) | ShMemLoad opsize varkind varname ('a exp) | ShMemStore opsize ('a exp) ('a exp) | Tick | Annot mlstring mlstring (panLangScript.sml:78-100) vs ProgHOL {width} [NeZero width] with 21 constructors in the same order: skip; dec(MlS)(ShapeHOL)(ExpHOL)(ProgHOL); assign(VarKind)(MlS)(ExpHOL); primitive(MlS)(PrimOp)(List ExpHOL); store/store32/storeByte(ExpHOL x ExpHOL); seq(ProgHOL x ProgHOL); ite(ExpHOL)(ProgHOL x ProgHOL); while(ExpHOL)(ProgHOL); break; continue; call(Option (Option (VarKind x MlS) x Option (MlS x MlS x ProgHOL)))(MlS)(List ExpHOL); decCall(MlS)(ShapeHOL)(MlS)(List ExpHOL)(ProgHOL); extCall(MlS)(ExpHOL x ExpHOL x ExpHOL x ExpHOL); raise(MlS)(ExpHOL); return(ExpHOL); shMemLoad(OpSize)(VarKind)(MlS)(ExpHOL); shMemStore(OpSize)(ExpHOL x ExpHOL); tick; annot(MlS x MlS); arities and field types match with varname/funname/eid = MlS (exact mlstring carrier) and exp over ExpHOL width. Production Flapjack.Prog is generic over String identifiers and is untagged; kernel codec progToHOL/progOfHOL with total progToHOL_progOfHOL and byte-ranged ProgByteRanged side condition for progOfHOL_progToHOL; direct HOL oracle scripts/hol-probes/pan_lang_prog_probe.out reproduced by Flapjack/Test/PanLangProgHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "panop",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "PanOp",
@@ -8849,22 +8857,6 @@
   },
   {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
-    "hol_name": "find_lab_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "findLabHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port over the exact finite-map context carrier CrepToLoopFiniteMapContext (vars : FiniteMap Nat Nat, funcs : FiniteMap FunName (Nat × Nat)), matching HOL crep_to_loop$context fields (crepLang$varname = num, crepLang$funname = mlstring); default 0 on lookup miss; word-length independent so no width-indexing. Direct HOL oracle rows find_var_hit/find_var_miss/find_lab_hit/find_lab_miss in scripts/hol-probes/crep_to_loop_context_defs_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean."
-  },
-  {
-    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
-    "hol_name": "mk_ctxt_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "mkCtxtHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against mk_ctxt_def at crep_to_loopScript.sml:221; constructs the finite-map context record with the same four fields target/vars/funcs/vmax; direct HOL-EVAL rows mk_ctxt_vars/mk_ctxt_funcs/mk_ctxt_vmax/mk_ctxt_target=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "make_vmap_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "makeVmapHOL",
@@ -9110,5 +9102,21 @@
     "lean_name": "allDistinctCtxtLookupAllDistinct",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against all_distinct_ctxt_lookup_all_distinct at crep_to_loopProofScript.sml:3345; HOL ALL_DISTINCT rendered as List.Nodup, distinct_vars as crepToLoopDistinctVars (distinct_vars_def) and rt_vars as rtVars (rt_vars_def) over the finite-map context carrier CrepToLoopFiniteMapContext.vars; direct HOL-EVAL rows acd_distinct/acd_single/acd_missing=T in scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
-  }
+  },
+{
+  "hol_path": "cakeml/misc/miscScript.sml",
+  "hol_name": "num_set",
+  "lean_path": "Flapjack/Misc/Sptree.lean",
+  "lean_name": "NumSet",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/loopLangScript.sml",
+  "hol_name": "prog",
+  "lean_path": "Flapjack/Pancake/LoopLang.lean",
+  "lean_name": "HolLoopProg",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

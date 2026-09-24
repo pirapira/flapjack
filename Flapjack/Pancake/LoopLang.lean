@@ -1,6 +1,7 @@
 import Flapjack.Pancake.CrepLang
 import Flapjack.Basis.Pure.MlString
 import Flapjack.FiniteMap.Basic
+import Flapjack.Misc.Sptree
 
 /-!
 The Loop intermediate language used after Crepe lowering. The constructors
@@ -67,20 +68,16 @@ inductive LoopArith where
   | div (destination dividend divisor : Nat)
   deriving Repr, DecidableEq
 
-/-- **Untagged approximation** of Cake `loopLang$prog` over a fixed word width.
-Not claimed as an exact HOL port: the `num_set` fields use `FiniteMap Nat Unit`,
-whereas HOL `num_set` is `unit spt` (`miscScript.sml:787`); a finite map is an
-unrestricted function and loses the `sptree` well-formedness/structure, so only
-order-insensitive domain predicates bridge across (`docs/NUM-SET-AUDIT.md`), and
-a datatype tag would over-claim. The exact `spt`-backed carrier is tracked by
-bead `flapjack-pxn.18.5.17.1.1.1`. The other carriers here are faithful: word
-width is fixed at `BitVec width`, `shMem` uses `CrepMemOp`, whose eight
-constructors (`load/load8/load16/load32/store/store8/store16/store32`) match
-`asm$memop` (`asmScript.sml:125-128`) name for name, and the FFI name is the
-exact `MlString` carrier rather than the executable `FunName = String`. The
-executable `LoopProg` is itself a one-parameter superset (`LoopExp` adds
-`crepOp`/`cmp`; FFI names are `String`), so the executable/faithful bridge is
-also tracked by bead `flapjack-pxn.18.5.17.1.1`. -/
+/-- Faithful Cake `loopLang$prog` over a fixed word width. HOL's generic `'a word`
+carrier is instantiated at `BitVec width`, `num_set` fields use the exact
+`spt`-backed `NumSet` (`miscScript.sml:787`, `unit spt`), `shMem` uses
+`CrepMemOp`, whose eight constructors (`load/load8/load16/load32/store/store8/
+store16/store32`) match `asm$memop` (`asmScript.sml:125-128`) name for name, and
+the FFI name is the exact `MlString` carrier rather than the executable
+`FunName = String`. The executable `LoopProg` is a one-parameter superset
+(`LoopExp` adds `crepOp`/`cmp`; FFI names are `String`), so the
+executable/faithful bridge is tracked by bead `flapjack-pxn.18.5.17.1.1`. -/
+@[hol "cakeml/pancake/loopLangScript.sml" "prog"]
 inductive HolLoopProg (width : Nat) [NeZero width] where
   | skip
   | assign (name : Nat) (value : HolLoopExp width)
@@ -94,8 +91,8 @@ inductive HolLoopProg (width : Nat) [NeZero width] where
   | storeByte (address value : Nat)
   | seq (first second : HolLoopProg width)
   | ite (operator : Cmp) (condition : Nat) (right : RegImm (BitVec width))
-      (thenBranch elseBranch : HolLoopProg width) (live : FiniteMap Nat Unit)
-  | loop (liveIn : FiniteMap Nat Unit) (body : HolLoopProg width) (liveOut : FiniteMap Nat Unit)
+      (thenBranch elseBranch : HolLoopProg width) (live : NumSet)
+  | loop (liveIn : NumSet) (body : HolLoopProg width) (liveOut : NumSet)
   | break (label : Nat)
   | continue (label : Nat)
   | raise (exception : Nat)
@@ -105,12 +102,12 @@ inductive HolLoopProg (width : Nat) [NeZero width] where
   | mark (body : HolLoopProg width)
   | fail
   | locValue (destination source : Nat)
-  | call (returns : Option (List Nat × FiniteMap Nat Unit)) (target : Option Nat)
+  | call (returns : Option (List Nat × NumSet)) (target : Option Nat)
       (arguments : List Nat)
-      (handler : Option (Nat × HolLoopProg width × HolLoopProg width × FiniteMap Nat Unit))
+      (handler : Option (Nat × HolLoopProg width × HolLoopProg width × NumSet))
   | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
       (configuration configurationLength array arrayLength : Nat)
-      (live : FiniteMap Nat Unit)
+      (live : NumSet)
 
 inductive LoopProg (α : Type u) where
   | skip

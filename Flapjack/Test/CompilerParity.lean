@@ -246,6 +246,7 @@ import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVWordExtract6Parity
 import Flapjack.Test.RiscVEncodeLengthParity
+import Flapjack.Test.WordColourLivenessParity
 import Flapjack.Test.RiscVMemOpParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
@@ -817,6 +818,7 @@ Flapjack.Test.PanSemCallErrorExactParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
     Flapjack.Test.RiscVWordExtract6Parity.runChecks,
     Flapjack.Test.RiscVEncodeLengthParity.runChecks,
+    Flapjack.Test.WordColourLivenessParity.runChecks,
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,

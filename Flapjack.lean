@@ -204,6 +204,7 @@ import Flapjack.Compiler.Backend.MlStringBridge
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList
+import Flapjack.Misc.Sptree
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.LabSem
 import Flapjack.Compiler.Backend.LabProps

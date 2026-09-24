@@ -745,5 +745,61 @@ theorem panSemTotalDecClause_shapeError [BEq String] [LawfulBEq String] (state :
     panSemTotalDecClause state name shape expression body = (some .error, state) := by
   simp [panSemTotalDecClause, panSemTotalExprStep, heval, hshape]
 
+/-- Partial assembly of the total HOL `panSem$evaluate` (`panSemScript.sml:557-655`)
+    over the complete source state: dispatches the statement clauses that have
+    already been assembled in this module (clock leaves `Skip`/`Break`/`Continue`/
+    `Tick`, `Assign`, `Dec` with its continuation, `Primitive`, `Store`,
+    `Store32`, `StoreByte`, `Raise`, `Return`, `Annot`).
+
+    Clauses that are not yet assembled (`Seq`, `If`, `While`, `Call`, `DecCall`,
+    `ExtCall`, `ShMemLoad`, `ShMemStore`) fall back to `SOME Error` with the
+    state unchanged; this declaration is therefore not the full evaluator and is
+    not tagged as HOL's `evaluate_def`.  It is the assembly step tracked by
+    `flapjack-pxn.18.4.3.77.2`. -/
+def panSemTotalEvaluatePartial [NeZero 64] [BEq (RiscV.Word 64)]
+    [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
+    [OfNat (RiscV.Word 64) 2] [OfNat (RiscV.Word 64) 3]
+    [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)] [Sub (RiscV.Word 64)]
+    [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)] [BEq String] [LawfulBEq String]
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (program : Prog (RiscV.Word 64)) :
+    Option (PanSemHOLResult (RiscV.Word 64)) ×
+      PanSemState (RiscV.Word 64) (FfiState σ) :=
+  match program with
+  | .skip => panSemEvaluateClockLeaf .skip state
+  | .break => panSemEvaluateClockLeaf .break state
+  | .continue => panSemEvaluateClockLeaf .continue state
+  | .tick => panSemEvaluateClockLeaf .tick state
+  | .assign kind name value => panSemTotalAssignClause state kind name value
+  | .dec name shape value body =>
+      panSemTotalDecClause state name shape value
+        (fun next => panSemTotalEvaluatePartial primitive next body)
+  | .primitive name operator arguments =>
+      panSemTotalPrimitiveClause state name operator arguments primitive
+  | .store address value => panSemTotalStoreClause state address value
+  | .store32 address value => panSemTotalStore32Clause state address value
+  | .storeByte address value => panSemTotalStoreByteClause state address value
+  | .raise exception value => panSemTotalRaiseClause state exception value
+  | .return value => panSemTotalReturnClause state value
+  | .annot tag text => panSemTotalAnnotClause state tag text
+  | .seq _ _ => (some .error, state)
+  | .ite _ _ _ => (some .error, state)
+  | .while _ _ => (some .error, state)
+  | .call _ _ _ => (some .error, state)
+  | .decCall _ _ _ _ _ => (some .error, state)
+  | .extCall _ _ _ _ _ => (some .error, state)
+  | .shMemLoad _ _ _ _ => (some .error, state)
+  | .shMemStore _ _ _ => (some .error, state)
+termination_by sizeOf program
+decreasing_by
+  all_goals
+    simp_wf
+    omega
 
 end Flapjack

@@ -2043,6 +2043,39 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       FLOOKUP targetCode function = some
         (names, compileCodeRelProg nextContext program)
 
+/-- Width-indexed proof-side `code_rel` interface: the HOL reference is
+    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
+    so this width-indexed form makes the compiler expression the tagged
+    `compileProgRiscV` (`compile_def`) boundary. The generic `codeRel` is its
+    `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+def codeRelW (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) : Prop :=
+  ∀ function variableShapes program returnShape,
+    FLOOKUP sourceCode function = some (variableShapes, program, returnShape) →
+      localisedProg program ∧
+      FLOOKUP context.funcs function = some (variableShapes, returnShape) ∧
+      let variables := variableShapes.map Prod.fst
+      let shapes := variableShapes.map Prod.snd
+      let names := List.range (Shape.shapeSize (.comb shapes))
+      let nextContext := ctxtFc context.funcs context.eids variables shapes names
+      FLOOKUP targetCode function = some
+        (names, compileProgRiscV nextContext.toHOLContext program)
+
+/-- The width-indexed relation is the generic `codeRel` instantiated at
+    `BitVec width`, definitionally via the rfl compiler bridges. -/
+theorem codeRelW_iff_codeRel (width : Nat)
+    (context : PanToCrepProofContext (BitVec width))
+    (sourceCode : FiniteMap FunName
+      (List (VarName × Shape) × Prog (BitVec width) × Shape))
+    (targetCode : FiniteMap FunName (List Nat × CrepProg (BitVec width))) :
+    codeRelW width context sourceCode targetCode ↔
+      codeRel context sourceCode targetCode :=
+  Iff.rfl
+
 /-- Exact port of HOL `compile_exp_not_mem_load_glob`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013`). The finite-map
     context fields are passed unchanged to `compileExpHOL`; the source code

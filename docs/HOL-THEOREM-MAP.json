@@ -468,24 +468,24 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1ConstHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact Const constructor case of local simp_exp_correct1. HolFiniteDimension encodes the implicit finite-index word dictionary; this case reduces only through the matching eval_def Const clause and preserves the unused result binder, success premise, code-map update, and full Option word_lab equality. The assembling simp_exp_correct1 theorem and all other evaluator cases remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Const support case over evalCrepHolFiniteWordSourceExpWordLab; that source-model evaluator is not yet proved equal to HOL crepSem$eval over an exact HOL state carrier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1VarHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact Var constructor case of local simp_exp_correct1. HOL eval_def is FLOOKUP s.locals v; Lean's explicit partial-function locals and PanWordLab.word projection/reconstruction give the same lookup equation. The unused result binder, success premise, code-map update, and full Option word_lab equality match this constructor case. Other evaluator cases and the assembled theorem remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Var support case over evalCrepHolFiniteWordSourceExpWordLab; exact HOL evaluator and state-carrier correspondence remains open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact recursive Load constructor case of local simp_exp_correct1. Its sole IH is the same successful-address preservation result for arbitrary states and result binders. HOL eval_def then applies mem_load, corresponding to the source evaluator's memaddrs-gated memory lookup. No target-specific operation premise is present; byte/32-bit loads and the assembled theorem remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged recursive Load support case over the unverified source-model evaluator; exact HOL mem_load/eval and state-carrier correspondence remains open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -508,24 +508,24 @@
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadGlobHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact LoadGlob constructor case of local simp_exp_correct1. HOL eval_def uses FLOOKUP s.globals gadr; Lean uses the same BitVec 5-keyed lookup and the code-only update preserves globals. The unused result binder, success premise, and full Option word_lab equality match this constructor case. Other cases and the assembled theorem remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged LoadGlob support case over evalCrepHolFiniteWordSourceExpWordLab; exact HOL evaluator/state correspondence remains open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1BaseAddrHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact BaseAddr constructor case of local simp_exp_correct1. Both HOL eval_def and the Lean source evaluator return the base address field; the unused result binder, success premise, code-only update, and full Option word_lab equality match this case. Other cases and the assembled theorem remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged BaseAddr support case over the unverified source-model evaluator; exact HOL evaluator/state correspondence remains open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact TopAddr constructor case of local simp_exp_correct1. Both HOL eval_def and the Lean source evaluator return the top address field; the unused result binder, success premise, code-only update, and full Option word_lab equality match this case. Other cases and the assembled theorem remain open."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged TopAddr support case over the unverified source-model evaluator; exact HOL evaluator/state correspondence remains open."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

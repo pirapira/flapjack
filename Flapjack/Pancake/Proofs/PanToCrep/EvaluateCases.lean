@@ -3509,6 +3509,36 @@ theorem compileExpHOL_bytesInWord_ofHOLIH
     These full-IH cases discharge that source-inaccessible part of the
     expression induction; they do not claim named structures are supported by
     the target compiler. -/
+/-! Under HOL `state_rel`, the source globals map is empty. Consequently the
+Global Var constructor cannot have a successful source evaluation; the
+compiler's `Const 0w` fallback is not claimed as a semantic translation. This
+is the full-IH Global case, not a standalone HOL theorem port. -/
+theorem compileExpHOL_global_ofHOLIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (name : String) (value : PanValue (RiscV.Word 64))
+    (hstate : stateRel source target)
+    (_hcode : codeRel context (panSemCodeAsLookup source.code) target.code)
+    (_hlocals : localsRel context source.locals target.locals)
+    (_hlocalized : expGlobalVars (.var .global name : Exp (RiscV.Word 64)) = [])
+    (hsource : evalPanSemStateExp source (.var .global name) = some value) :
+    let compilerContext : PanToCrepHOLContext (RiscV.Word 64) :=
+      { vars := context.vars, funcs := context.funcs,
+        eids := context.eids, vmax := context.vmax }
+    evalCrepRuntimeExps target
+        (compileExpHOL compilerContext (.var .global name)).1 =
+          some (panValueFlatten value) ∧
+      (compileExpHOL compilerContext (.var .global name)).1.length =
+        Shape.shapeSize (compileExpHOL compilerContext (.var .global name)).2 ∧
+      panValueShape [] value =
+        (compileExpHOL compilerContext (.var .global name)).2 ∧
+      isWfShape [] (compileExpHOL compilerContext (.var .global name)).2 = true := by
+  have hglobals := stateRel_globals source target hstate
+  have hfalse : False := by
+    simp [evalPanSemStateExp, evalPanValueExp, hglobals, FEMPTY] at hsource
+  exact False.elim hfalse
+
 theorem compileExpHOL_nStruct_ofHOLIH
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

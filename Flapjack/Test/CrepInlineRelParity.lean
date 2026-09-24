@@ -433,6 +433,33 @@ def holSkipEvalGuard : Bool :=
 
 #guard holSkipEvalGuard
 
+/-- Clocked evaluator `Break` equation over the 11-field `CrepHolState`,
+    matching HOL `crepSem$evaluate (Break n,s) = (SOME (Break n),s)`. -/
+example :
+    evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+        (CrepProg.break 1) =
+      some (CrepRuntimeResult.broke 1, evalBase) :=
+  evalCrepHolProg_break evalHandler64 evalPrimitive64 evalBase 1
+
+/-- Clocked evaluator `Continue` equation over the 11-field `CrepHolState`,
+    matching HOL `crepSem$evaluate (Continue n,s) = (SOME (Continue n),s)`. -/
+example :
+    evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+        (CrepProg.continue 2) =
+      some (CrepRuntimeResult.continued 2, evalBase) :=
+  evalCrepHolProg_continue evalHandler64 evalPrimitive64 evalBase 2
+
+def holBreakEvalGuard : Bool :=
+  (evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+    (CrepProg.break 1)).isSome
+
+def holContinueEvalGuard : Bool :=
+  (evalCrepHolProg (evalBase.clock + 1) evalHandler64 evalPrimitive64 evalBase
+    (CrepProg.continue 2)).isSome
+
+#guard holBreakEvalGuard
+#guard holContinueEvalGuard
+
 def runChecks : IO Bool := do
   let relOk ←
     if baseStateGuard then
@@ -485,6 +512,13 @@ def runChecks : IO Bool := do
     else
       IO.println "FAIL crepSem clocked evaluate Skip constructor over CrepHolState"
       pure false
-  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk && holSkipEvalOk)
+  let holBreakEvalOk ←
+    if holBreakEvalGuard && holContinueEvalGuard then
+      IO.println "PASS crepSem clocked evaluate Break/Continue constructors over CrepHolState"
+      pure true
+    else
+      IO.println "FAIL crepSem clocked evaluate Break/Continue constructors over CrepHolState"
+      pure false
+  pure (relOk && codeInlOk && evalOk && inlineEvalOk && inlineMmapOk && inlineSkipOk && holSkipEvalOk && holBreakEvalOk)
 
 end Flapjack.Test.CrepInlineRelParity

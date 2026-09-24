@@ -2575,4 +2575,29 @@ theorem evalCrepHolProg_skip [NeZero width]
   rw [evalCrepRuntimeResult_skip handler primitive state.clock]
   simp only [Option.map_some, CrepHolState.toHolState_toRuntime]
 
+/-- Exact `Break` constructor equation of HOL `evaluate_def`:
+    `evaluate (Break n, s)` returns `(SOME (Break n), s)` with the state
+    unchanged.  Declaration-local mismatch note: same budget and fixed-width
+    caveats as `evalCrepHolProg_skip`; only this constructor is proved. -/
+theorem evalCrepHolProg_break [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) (label : Nat) :
+    evalCrepHolProg (state.clock + 1) handler primitive state (.break label) =
+      some (.broke label, state) := by
+  unfold evalCrepHolProg
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, CrepHolState.toHolState_toRuntime]
+
+/-- Exact `Continue` constructor equation of HOL `evaluate_def`:
+    `evaluate (Continue n, s)` returns `(SOME (Continue n), s)` with the state
+    unchanged.  Same declaration-local mismatch caveats as the `Break` case. -/
+theorem evalCrepHolProg_continue [NeZero width]
+    (handler : CrepRuntimeFfiHandler (RiscV.Word width) σ ε)
+    (primitive : CrepPrimitiveHandler (RiscV.Word width))
+    (state : CrepHolState (RiscV.Word width) σ) (label : Nat) :
+    evalCrepHolProg (state.clock + 1) handler primitive state (.continue label) =
+      some (.continued label, state) := by
+  unfold evalCrepHolProg
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, CrepHolState.toHolState_toRuntime]
+
 end Flapjack

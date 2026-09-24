@@ -362,4 +362,36 @@ inductive WordLoc (α : Type u) where
   | loc (block offset : Nat)
   deriving Repr, DecidableEq
 
+/-- Exact width-indexed port of HOL `wordLang$word_loc`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`
+`word_loc = Word ('a word) | Loc num num`).  The payload is the fixed-width
+`BitVec width`, matching HOL's `'a word`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_loc"]
+inductive WordLocW (width : Nat) where
+  | word (value : BitVec width)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
+/-- Untagged bridge: the exact width-indexed carrier maps onto the generic
+`WordLoc` instantiated at `BitVec width`. -/
+def wordLocWToGeneric {width : Nat} : WordLocW width → WordLoc (BitVec width)
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge: the generic `WordLoc (BitVec width)` is the exact
+width-indexed carrier. -/
+def wordLocWOfGeneric {width : Nat} : WordLoc (BitVec width) → WordLocW width
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWOfGeneric_toGeneric {width : Nat} (location : WordLocW width) :
+    wordLocWOfGeneric (wordLocWToGeneric location) = location := by
+  cases location <;> rfl
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWToGeneric_ofGeneric {width : Nat} (location : WordLoc (BitVec width)) :
+    wordLocWToGeneric (wordLocWOfGeneric location) = location := by
+  cases location <;> rfl
+
 end Flapjack

@@ -8894,5 +8894,13 @@
   "lean_name": "mem_addresses",
   "statement_status": "reviewed_exact",
   "reviewer": "flapjack-deepseek (stack_removeProofScript.sml:2757-2761 IN_addresses x IN addresses a n <=> ?i. i<n /\\ x = a + n2w i * bytes_in_word; Lean uses BitVec.ofNat width i * bytesInWord width.)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+  "hol_name": "word_loc",
+  "lean_path": "Flapjack/Pancake/WordLang.lean",
+  "lean_name": "WordLocW",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

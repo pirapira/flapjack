@@ -1357,3 +1357,10 @@ run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
   is_word_some in_addr_out \
   "$cake_dir/compiler/backend/proofs/stack_removeProofScript.sml" \
   "$cake_dir/compiler/backend/proofs"
+
+# The word_loc probe pins the exact width-indexed HOL stackLang word_loc
+# datatype (Word ('a word) | Loc num num) used by StackRemove.
+run_probe word_lang_word_loc_probeScript.sml word_lang_word_loc_probe.out \
+  wl_word wl_match \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"

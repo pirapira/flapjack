@@ -1373,3 +1373,11 @@ run_probe word_lang_word_loc_probeScript.sml word_lang_word_loc_probe.out \
   wl_word wl_match \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The mlstring carrier probe pins the exact HOL `mlstring = implode string`
+# datatype (string = char list, char the 256-element type) needed by the
+# stackLang/stack_names program FFI field.
+run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
+  ml_strlen ml_concat_len \
+  "$cake_dir/basis/pure/mlstringScript.sml" \
+  "$cake_dir/basis/pure"

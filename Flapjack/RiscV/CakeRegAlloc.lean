@@ -1089,10 +1089,16 @@ def cakeDecDegStep (v : Nat) (state : CakeRaState) : Except CakeRaFailure CakeRa
   else
     .error .subscript
 
-/-! The allocator pipeline is pure, so it latches a failed monadic degree
-    update in the state and rejects the overall colouring result. Subsequent
-    degree updates preserve the first failure. On valid dense states this path
-    reduces to the same single `Array.set!` update as `CakeNodeMap.set`. -/
+/-! This is deliberately not tagged as HOL `dec_deg_def`: HOL's `dec_deg`
+    (`reg_allocScript.sml:252-257`) returns a state-monad result/state pair,
+    including `M_failure Subscript`, whereas this allocator pipeline is pure
+    and records failure in `CakeRaState.failure`. `cakeDecDegStep` exposes an
+    `Except CakeRaFailure CakeRaState` result and distinguishes an in-range
+    missing option slot (`.missingDegreeSlot`), which has no HOL list analogue.
+    The pipeline latches a failed update and rejects the overall colouring
+    result; subsequent updates preserve the first failure. On valid dense
+    states the successful path reduces to the same single `Array.set!` update
+    as `CakeNodeMap.set`. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
   match state.failure with
   | some _ => state

@@ -107,4 +107,59 @@ theorem crepToLoopStateRel_clock_add_zero {width : Nat} {σ : Type}
     rw [crepToLoopStateRel] at h ⊢
     simpa using h⟩
 
+/-- Exact port of HOL `mem_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:49-52`):
+    `mem_rel smem tmem dom <=> !ad. ad IN dom ==> wlab_wloc (smem ad) = tmem ad`.
+
+    HOL's `loopSem$state.memory` is TOTAL (`'a word → 'a word_loc`) and the
+    crep side is already total (`crepSem$state.memory : 'a word → 'a word_lab`),
+    so the relation is stated over total memories. `LoopMachineState.memory` is
+    Option-valued, so production instantiates the target memory through the
+    total view `loopMemoryTotal default t` below; `mem_rel` only constrains
+    addresses in `dom`, where the view agrees with the `some`-defined field.
+    HOL's `ad IN dom` is the set-as-predicate rendering `dom ad = true`, matching
+    the `mdomain`/`shMdomain` fields. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_rel_def"]
+def crepToLoopMemRel {width : Nat}
+    (smem : BitVec width → PanWordLab (BitVec width))
+    (tmem : BitVec width → LoopValue (BitVec width))
+    (dom : BitVec width → Bool) : Prop :=
+  ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad
+
+/-- Exact port of HOL `mem_rel_intro`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:203-209`), which is an
+    implication: assuming `mem_rel`, unpack the pointwise lookup equation. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_rel_intro"]
+theorem crepToLoopMemRel_intro {width : Nat}
+    (smem : BitVec width → PanWordLab (BitVec width))
+    (tmem : BitVec width → LoopValue (BitVec width))
+    (dom : BitVec width → Bool)
+    (h : crepToLoopMemRel smem tmem dom) :
+    ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  fun ad hd => h ad hd
+
+/-- Untagged iff form of `crepToLoopMemRel`, kept for rewriting. -/
+theorem crepToLoopMemRel_iff {width : Nat}
+    (smem : BitVec width → PanWordLab (BitVec width))
+    (tmem : BitVec width → LoopValue (BitVec width))
+    (dom : BitVec width → Bool) :
+    crepToLoopMemRel smem tmem dom ↔
+      ∀ ad, dom ad = true → wlabWloc (smem ad) = tmem ad :=
+  Iff.rfl
+
+/-- Total view of the Option-valued `LoopMachineState.memory`, giving the total
+    target memory that HOL's `loopSem$state.memory` has. Since `mem_rel` only
+    constrains addresses in its `dom`, the `default` value at unset addresses is
+    irrelevant. -/
+def loopMemoryTotal {W F : Type} (default : LoopValue W)
+    (t : LoopMachineState W F) : W → LoopValue W :=
+  fun ad => (t.memory ad).getD default
+
+/-- Kernel-checked total-view bridge: at a defined address the total view agrees
+    with the Option-valued `LoopMachineState.memory` field. -/
+theorem loopMemoryTotal_eq_some {W F : Type} (default : LoopValue W)
+    (t : LoopMachineState W F) (ad : W) (v : LoopValue W)
+    (h : t.memory ad = some v) : loopMemoryTotal default t ad = v := by
+  simp [loopMemoryTotal, h]
+
 end Flapjack

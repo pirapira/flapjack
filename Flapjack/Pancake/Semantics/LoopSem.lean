@@ -826,20 +826,35 @@ def loopMachineFfiHook (function : FunName)
 
 /-! ## Exact HOL `loopSem.get_var_imm_def` over the width-indexed machine state
 
-HOL `get_var_imm_def` (`cakeml/pancake/semantics/loopSemScript.sml:165`) reads a
-register operand from the machine state's local map and returns an immediate
-operand directly, at `'a word_loc` values. The generic `getVarImm`
-(`Flapjack/LoopGetVarImm.lean`) is word-carrier polymorphic, so the exact
-width-indexed counterpart is tagged here, in the `loopSemScript.sml` counterpart
-module. -/
+HOL `get_var_imm_def` (`cakeml/pancake/semantics/loopSemScript.sml:165-167`) is
+the two-clause `get_var_imm (Reg n) s = sptree$lookup n s.locals` /
+`get_var_imm (Imm w) s = SOME (Word w)` at `'a word_loc` values, with the
+operand argument FIRST and the state second. The tagged signature below keeps
+that HOL argument order; the production executable helper `getVarImm`
+(`Flapjack/LoopGetVarImm.lean`) is word-carrier polymorphic and state-first, so
+it stays untagged and the rfl bridge maps between the two orders.
+
+Representation note: HOL `s.locals` is an `sptree$num_map` while
+`LoopMachineState.locals : Nat → Option (LoopValue W)` renders it extensionally
+as a function; the other machine-state fields are not read by `get_var_imm`, so
+this declaration tags only the operand/`locals` boundary, not the whole state
+carrier. -/
 @[hol "cakeml/pancake/semantics/loopSemScript.sml" "get_var_imm_def"]
 def getVarImmHOL {width : Nat} [NeZero width]
-    (state : LoopMachineState (BitVec width) F) (operand : RegImm (BitVec width)) :
+    (operand : RegImm (BitVec width)) (state : LoopMachineState (BitVec width) F) :
     Option (LoopValue (BitVec width)) :=
   getVarImm state operand
 
+@[simp] theorem getVarImmHOL_reg {width : Nat} [NeZero width]
+    (name : Nat) (state : LoopMachineState (BitVec width) F) :
+    getVarImmHOL (.reg name) state = state.locals name := rfl
+
+@[simp] theorem getVarImmHOL_imm {width : Nat} [NeZero width]
+    (value : BitVec width) (state : LoopMachineState (BitVec width) F) :
+    getVarImmHOL (.imm value) state = some (.word value) := rfl
+
 theorem getVarImmHOL_eq_getVarImm {width : Nat} [NeZero width]
-    (state : LoopMachineState (BitVec width) F) (operand : RegImm (BitVec width)) :
-    getVarImmHOL state operand = getVarImm state operand := rfl
+    (operand : RegImm (BitVec width)) (state : LoopMachineState (BitVec width) F) :
+    getVarImmHOL operand state = getVarImm state operand := rfl
 
 end Flapjack

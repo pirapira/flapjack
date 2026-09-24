@@ -40,13 +40,16 @@ def originalRegLoc : Option LoopWordLoc := some (.loc 9 0)
 #guard getVarImm probeState (.reg 3) == originalRegLoc
 
 /-- The width-indexed exact HOL counterpart of `get_var_imm_def` agrees with
-    the generic executable helper. -/
+    the generic executable helper (HOL argument order: operand first). -/
 example (state : LoopMachineState (BitVec 64)) (operand : RegImm (BitVec 64)) :
-    getVarImmHOL state operand = getVarImm state operand :=
-  getVarImmHOL_eq_getVarImm state operand
+    getVarImmHOL operand state = getVarImm state operand :=
+  getVarImmHOL_eq_getVarImm operand state
 
 example (state : LoopMachineState (BitVec 64)) :
-    getVarImmHOL state (.imm (7 : BitVec 64)) = some (.word 7) := rfl
+    getVarImmHOL (.imm (7 : BitVec 64)) state = some (.word 7) := rfl
+
+example (state : LoopMachineState (BitVec 64)) (name : Nat) :
+    getVarImmHOL (.reg name) state = state.locals name := rfl
 
 def runChecks : IO Bool := do
   let checks :=

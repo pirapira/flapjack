@@ -8989,6 +8989,6 @@
     "lean_path": "Flapjack/Pancake/Semantics/LoopSem.lean",
     "lean_name": "getVarImmHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against loopSemScript.sml:165-167: Reg -> sptree$lookup n s.locals and Imm w -> SOME (Word w); carrier width-indexed to LoopMachineState (BitVec width) F with [NeZero width] because HOL word_loc is word-length indexed; the polymorphic getVarImm in Flapjack/LoopGetVarImm.lean stays untagged; direct oracle scripts/hol-probes/loop_sem_get_var_imm_probe.out reproduced by Flapjack/Test/LoopGetVarImmParity.lean)"
+    "reviewer": "Codex (statement compared against loopSemScript.sml:165-167: get_var_imm (Reg n) s = sptree$lookup n s.locals and get_var_imm (Imm w) s = SOME (Word w), operand FIRST and state second (HOL order preserved by the tagged signature); carrier width-indexed to LoopMachineState (BitVec width) F with [NeZero width] because HOL word_loc is word-length indexed; HOL s.locals is an sptree$num_map rendered extensionally as LoopMachineState.locals : Nat -> Option (LoopValue W) and the other machine-state fields are unused, so only the operand/locals boundary is tagged, not the whole state carrier; the polymorphic state-first getVarImm in Flapjack/LoopGetVarImm.lean stays untagged and the rfl bridge maps the two argument orders; direct oracle scripts/hol-probes/loop_sem_get_var_imm_probe.out reproduced by Flapjack/Test/LoopGetVarImmParity.lean)"
   }
 ]

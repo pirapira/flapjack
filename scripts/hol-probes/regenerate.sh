@@ -1449,3 +1449,10 @@ run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
   exp_const arith_div \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
+
+# The loopLang prog probe observes the exact HOL program constructor shapes
+# (word width fixed at 8) over the accepted `unit spt` num_set model.
+run_probe loop_lang_prog_probeScript.sml loop_lang_prog_probe.out \
+  prog_skip prog_ffi \
+  "$cake_dir/pancake/loopLangScript.sml" \
+  "$cake_dir/pancake"

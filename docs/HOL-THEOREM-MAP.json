@@ -9068,16 +9068,16 @@
     "hol_name": "exp",
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "HolLoopExp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean source comparison: 8 exp ctors Const/Var/Lookup/Load/Op/Shift/BaseAddr/TopAddr at fixed BitVec width; HOL binop Add/Sub/And/Or/Xor and Shift Lsl/Lsr/Asr/Ror)"
   },
   {
     "hol_path": "cakeml/pancake/loopLangScript.sml",
     "hol_name": "loop_arith",
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "LoopArith",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (HOL/Lean source comparison: 3 arith ctors and field shapes match LLongMul/LLongDiv/LDiv)"
   },
   {
     "hol_path": null,

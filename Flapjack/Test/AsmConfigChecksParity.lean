@@ -1,4 +1,6 @@
 import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackProgW
 
 /-!
 Kernel-checked parity guards for the assembler configuration validity
@@ -175,5 +177,74 @@ def runChecks : IO Bool := do
   else
     IO.println "FAIL asm validity over the full carrier"
   pure asmConfigGuard
+
+/-! ## Exact asm payload carriers (`reg_imm`/`addr`/`inst`)
+
+Parity for the width-indexed exact carriers in
+`Flapjack/Compiler/Encoders/Asm.lean` against the direct HOL oracle
+`scripts/hol-probes/asm_inst_fragment_probe.out` (bead
+`flapjack-pxn.18.5.15.3.11.1`).  The oracle reads the HOL `reg_imm`/`addr`/
+`inst` constructors at the numeral word type `64`; the guards below read the
+Lean mirror at `width = 64`. -/
+
+private def w64 (n : Nat) : BitVec 64 := BitVec.ofNat 64 n
+
+private def regImmTag {width : Nat} : HolRegImm width → Nat
+  | .reg name => name
+  | .imm value => value.toNat
+
+private def addrBase {width : Nat} : HolAddr width → Nat
+  | .addr base _ => base
+
+private def addrOff {width : Nat} : HolAddr width → Nat
+  | .addr _ offset => offset.toNat
+
+private def instSkip {width : Nat} : HolInst width → Nat
+  | .skip => 1
+  | _ => 0
+
+private def instConstReg {width : Nat} : HolInst width → Nat
+  | .const register _ => register
+  | _ => 0
+
+private def instConstVal {width : Nat} : HolInst width → Nat
+  | .const _ value => value.toNat
+  | _ => 0
+
+private def instMemReg {width : Nat} : HolInst width → Nat
+  | .mem _ register _ => register
+  | _ => 0
+
+private def instMemBase {width : Nat} : HolInst width → Nat
+  | .mem _ _ address => addrBase address
+  | _ => 0
+
+private def asmFragmentGuard : Bool :=
+  regImmTag (.reg 3 : HolRegImm 64) == 3 &&
+  regImmTag (.imm (w64 5) : HolRegImm 64) == 5 &&
+  addrBase (.addr 3 (w64 5) : HolAddr 64) == 3 &&
+  addrOff (.addr 3 (w64 5) : HolAddr 64) == 5 &&
+  instSkip (.skip : HolInst 64) == 1 &&
+  instConstReg (.const 2 (w64 7) : HolInst 64) == 2 &&
+  instConstVal (.const 2 (w64 7) : HolInst 64) == 7 &&
+  instMemReg (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64) == 2 &&
+  instMemBase (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64) == 3
+
+#guard asmFragmentGuard
+
+example :
+    HolRegImm.ofWordRegImm (HolRegImm.toWordRegImm (.reg 3 : HolRegImm 64)) =
+      .reg 3 := rfl
+
+example :
+    HolAddr.ofWordLangAddr (HolAddr.toWordLangAddr (.addr 3 (w64 5))) =
+      .addr 3 (w64 5) := rfl
+
+example :
+    HolInst.ofWordLangInst
+        (HolInst.toWordLangInst (.mem .load 2 (.addr 3 (w64 5)) : HolInst 64)) =
+      .mem .load 2 (.addr 3 (w64 5)) := rfl
+
+example : Flapjack.Compiler.Backend.StackLang.ProgW 64 := .skip
 
 end Flapjack.Test.AsmConfigChecksParity

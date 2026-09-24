@@ -8664,6 +8664,30 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `store_name` at stackLangScript.sml:18-25 - NextFree | EndOfHeap | TriggerGC | HeapLength | ProgStart | BitmapBase | CurrHeap | OtherHeap | AllocSize | Globals | GlobReal | Handler | GenStart | CodeBuffer | CodeBufferEnd | BitmapBuffer | BitmapBufferEnd | Temp (5 word). store_name is monomorphic in HOL and its only payload is the fixed 5-bit Temp field, so the Lean inductive with the same 17 nullary constructors plus Temp (BitVec 5) is shape-exact with no side condition. Direct HOL-EVAL rows sn_count=18 (every constructor name), sn_temp_w2n=3, sn_temp_word_bits=31 in scripts/hol-probes/stack_lang_store_name_probe.out are reproduced by Lean constructor checks in Flapjack/Test/WordToStackBitsParity.lean. NOTE: the separate HOL `prog` datatype is NOT yet exact in Lean - it is parameterised by a single shared 'a whereas the Lean Prog carrier has seven independent type parameters - so Prog stays untagged; see flapjack-pxn.18.5.15.3.11)"
   },
   {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "reg_imm",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "HolRegImm",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `reg_imm` at asmScript.sml:74-76 - Reg reg | Imm ('a imm) with imm = 'a word. HOL is indexed by the word dimension 'a, so the width-indexed Lean HolRegImm width (reg Nat | imm (BitVec width)) matches constructor-for-constructor with reg = num and the Imm payload the width word; it backs stackLang prog's If. Kernel isomorphisms HolRegImm.toWordRegImm/ofWordRegImm with roundtrip lemmas connect it to the production generic WordRegImm. Direct HOL-EVAL rows ar_reg=3/ar_imm=5 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/AsmConfigChecksParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "addr",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "HolAddr",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `addr` at asmScript.sml:121-123 - Addr reg ('a word). The width-indexed Lean HolAddr width (addr Nat (BitVec width)) matches with base = num and the offset the width word; it backs stackLang prog's ShMemOp. Kernel isomorphisms HolAddr.toWordLangAddr/ofWordLangAddr with roundtrip lemmas connect it to the production generic WordLangAddr. Direct HOL-EVAL rows aa_base=3/aa_off=5 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/AsmConfigChecksParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
+    "hol_name": "inst",
+    "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
+    "lean_name": "HolInst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: exact Datatype port of HOL `inst` at asmScript.sml:130-136 - Skip | Const reg ('a word) | Arith ('a arith) | Mem memop reg ('a addr) | FP fp. The width-indexed Lean HolInst width matches constructor-for-constructor: Skip; Const Nat (BitVec width); Arith (WordLangArith (BitVec width)) with the already-faithful monomorphic arith mirror; Mem WordMemOp Nat (HolAddr width) with the exact addr mirror; FP WordLangFp. It is the payload of stackLang prog's Inst. Kernel isomorphisms HolInst.toWordLangInst/ofWordLangInst with roundtrip lemmas connect it to the production generic WordLangInst. Direct HOL-EVAL rows ai_skip=1/ai_const_reg=2/ai_const_val=7/ai_mem_reg=2/ai_mem_base=3 at the numeral word type 64 in scripts/hol-probes/asm_inst_fragment_probe.out are reproduced by Lean guards/kernel examples in Flapjack/Test/AsmConfigChecksParity.lean)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
     "hol_name": "SeqStackFree_def",
     "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",

@@ -1,0 +1,9 @@
+ar_reg=3
+ar_imm=5
+aa_base=3
+aa_off=5
+ai_skip=1
+ai_const_reg=2
+ai_const_val=7
+ai_mem_reg=2
+ai_mem_base=3

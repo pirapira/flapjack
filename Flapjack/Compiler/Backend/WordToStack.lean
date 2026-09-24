@@ -310,8 +310,6 @@ handler_slots perf = if perf then 5n else 3n
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "handler_slots_def"]
 def handlerSlots (perf : Bool) : Nat := if perf then 5 else 3
 
-open Flapjack.Compiler.Backend.StackLang (Prog)
-
 /-- Exact port of HOL `SeqStackFree_def`
     (`cakeml/compiler/backend/word_to_stackScript.sml:260`):
 
@@ -326,8 +324,8 @@ SeqStackFree n p = if n = 0 then p else Seq (StackFree n) p
     and uses none of the word-indexed constructors. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "SeqStackFree_def"]
 def seqStackFree {Inst Cmp RegImm Binop Memop Addr MlString : Type}
-    (n : Nat) (p : Prog Inst Cmp RegImm Binop Memop Addr MlString) :
-    Prog Inst Cmp RegImm Binop Memop Addr MlString :=
+    (n : Nat) (p : Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString) :
+    Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString :=
   if n = 0 then p else .seq (.stackFree n) p
 
 /-- Exact port of HOL `wStackLoad_def`
@@ -344,8 +342,8 @@ def seqStackFree {Inst Cmp RegImm Binop Memop Addr MlString : Type}
     definition is correspondingly polymorphic in the carrier's type parameters. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackLoad_def"]
 def wStackLoad {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
-    List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
-      Prog Inst Cmp RegImm Binop Memop Addr MlString
+    List (Nat × Nat) → Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString →
+      Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString
   | [], x => x
   | (r, i) :: ps, x => .seq (.stackLoad r i) (wStackLoad ps x)
 
@@ -363,8 +361,8 @@ def wStackLoad {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
     definition is correspondingly polymorphic in the carrier's type parameters. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wStackStore_def"]
 def wStackStore {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
-    List (Nat × Nat) → Prog Inst Cmp RegImm Binop Memop Addr MlString →
-      Prog Inst Cmp RegImm Binop Memop Addr MlString
+    List (Nat × Nat) → Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString →
+      Flapjack.Compiler.Backend.StackLang.Prog Inst Cmp RegImm Binop Memop Addr MlString
   | [], x => x
   | (r, i) :: ps, x => .seq (wStackStore ps x) (.stackStore r i)
 

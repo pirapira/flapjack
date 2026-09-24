@@ -6750,5 +6750,21 @@
     "lean_name": "evalPanValueFieldsFull_names",
     "statement_status": "documented_mismatch",
     "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_funcs_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "makeFuncsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port of HOL make_funcs_def (pan_to_crepScript.sml:366): pair each function entry's name with its parameter list and return shape, then build the finite map with alist_to_fmap (first duplicate name wins), rendered as FUPDATE_LIST FEMPTY over the reversed association list. functionInfosHOL_eq_makeFuncsHOL proves the declaration-list adapter functionInfosHOL equals makeFuncsHOL (functionEntries declarations). Direct HOL probe scripts/hol-probes/crep_make_funcs_probe.out (rows make_funcs_empty_params, make_funcs_param_entry, make_funcs_absent, make_funcs_duplicate_first_wins) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. Unfolded by HOL mk_ctxt_code_imp_code_rel."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "comp_func_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "compFuncHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port of HOL comp_func_def (pan_to_crepScript.sml:337): build make_vmap from the parameter shapes, take vmax = size_of_shape (Comb (MAP SND params)) - 1, and compile the body in the mk_ctxt context carrying the caller's function and exception maps. panToCrepCompFuncRiscV_eq_compFuncHOL proves the record-context adapter panToCrepCompFuncRiscV equals compFuncHOL at context.funcs/context.eids. Unfolded by HOL mk_ctxt_code_imp_code_rel."
   }
 ]

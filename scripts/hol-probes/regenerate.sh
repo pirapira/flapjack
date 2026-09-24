@@ -1136,3 +1136,10 @@ run_probe word_convs_not_created_probeScript.sml word_convs_not_created_probe.ou
   nac_skip nac_install_empty \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The every_var family probe observes the wordLang expression/immediate/
+# instruction revisors on even/odd registers and the width-dependent FP moves.
+run_probe word_lang_every_var_probeScript.sml word_lang_every_var_probe.out \
+  evar_var einst_skip \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

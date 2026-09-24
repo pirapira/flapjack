@@ -121,8 +121,10 @@ elaborated Lean type of each `reviewed_exact` entry in
 `docs/HOL-THEOREM-MAP.json`. CI runs `scripts/check_hol_type_hashes.py` and
 rejects statement drift. After comparing a changed Lean statement with its HOL
 source, run `python3 scripts/check_hol_type_hashes.py --update` and review the
-lock-file diff. The hash gate detects Lean statement changes; it does not prove
-HOL-to-Lean equivalence or replace source-level review.
+lock-file diff. The hash gate detects Lean statement changes only: it does not
+hash the bodies of tagged definitions, the bodies of referenced dependencies,
+or the HOL declarations, and it does not prove HOL-to-Lean equivalence or
+replace source-level review.
 
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side

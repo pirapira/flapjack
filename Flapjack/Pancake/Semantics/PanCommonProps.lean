@@ -155,4 +155,47 @@ theorem MAP3_MAP2 {α β γ δ : Type} (f : α → β → γ → δ) (l1 : List 
         (l1.zip l2) l3 :=
   panMap3_eq_map2_zip f l1 l2 l3 h1 h2
 
+/-- Exact port of HOL `all_distinct_take`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:384`):
+    `ALL_DISTINCT` is closed under `TAKE`; HOL carries the bound
+    `n <= LENGTH ns`, so it is retained here. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_take"]
+theorem all_distinct_take {α : Type} (ns : List α) (n : Nat) (h : ns.Nodup)
+    (_hbound : n ≤ ns.length) : (ns.take n).Nodup :=
+  nodup_take ns n h
+
+/-- Exact port of HOL `all_distinct_drop`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:392`):
+    `ALL_DISTINCT` is closed under `DROP`; HOL carries the bound
+    `n <= LENGTH ns`, so it is retained here. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_drop"]
+theorem all_distinct_drop {α : Type} (ns : List α) (n : Nat) (h : ns.Nodup)
+    (_hbound : n ≤ ns.length) : (ns.drop n).Nodup :=
+  nodup_drop ns n h
+
+/-- Exact port of HOL `distinct_lists_append`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:108`): an
+    `ALL_DISTINCT` concatenation has pairwise-disjoint halves; HOL
+    `distinct_lists` is the proposition `ListDisjoint`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_append"]
+theorem distinct_lists_append {α : Type} (xs ys : List α)
+    (h : (xs ++ ys).Nodup) : ListDisjoint xs ys :=
+  listDisjoint_append xs ys h
+
+/-- Exact port of HOL `distinct_lists_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:125`): pairwise
+    disjointness of concatenations restricts to the inner halves. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_cons"]
+theorem distinct_lists_cons {α : Type} (ns xs ys zs : List α)
+    (h : ListDisjoint (ns ++ xs) (ys ++ zs)) : ListDisjoint xs zs :=
+  listDisjoint_of_append_left ns xs ys zs h
+
+/-- Exact port of HOL `distinct_lists_simp_cons`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:133`): pairwise
+    disjointness survives dropping the head of the right list. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "distinct_lists_simp_cons"]
+theorem distinct_lists_simp_cons {α : Type} (xs : List α) (y : α) (ys : List α)
+    (h : ListDisjoint xs (y :: ys)) : ListDisjoint xs ys :=
+  listDisjoint_of_cons_right xs y ys h
+
 end Flapjack

@@ -58,10 +58,27 @@ def replicateConstGuard : Bool :=
 
 #guard replicateConstGuard
 
-/-- The tagged HOL port instantiated concretely. -/
+/-- The word_lab core instantiated concretely.  This core is untagged (the HOL
+tag is withheld pending the arbitrary-runtime-hook mismatch tracked by bead
+flapjack-pxn.18.4.3.48.1). -/
 example : evalCrepRuntimeExpsWordLab baseState
     (List.replicate 3 (.const (0 : Nat))) = some [.word 0, .word 0, .word 0] :=
   evaluateReplicateConst 3 baseState
+
+/-- Projection: the production evaluator read back through `PanWordLab.word`
+equals the word_lab core, for a representative expression. -/
+example :
+    (evalCrepRuntimeExp baseState (.const (7 : Nat))).map PanWordLab.word =
+      evalCrepRuntimeExpWordLab baseState (.const (7 : Nat)) :=
+  evalCrepRuntimeExp_wordLab_projection baseState (.const (7 : Nat))
+
+/-- Projection: the production list evaluator read back through `PanWordLab.word`
+equals the word_lab list core. -/
+example :
+    (evalCrepRuntimeExps baseState [.const (1 : Nat), .const (2 : Nat)]).map
+        (List.map PanWordLab.word) =
+      evalCrepRuntimeExpsWordLab baseState [.const (1 : Nat), .const (2 : Nat)] :=
+  evalCrepRuntimeExps_wordLab_projection baseState [.const (1 : Nat), .const (2 : Nat)]
 
 def runChecks : IO Bool := do
   IO.println s!"PASS crep evaluate_replicate_const word_lab shape"

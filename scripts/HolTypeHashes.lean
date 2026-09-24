@@ -1,6 +1,7 @@
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Compiler.Backend.StackLang
-import Flapjack.Compiler.Backend.MlString
+import Flapjack.Compiler.Backend.StackLang.Prog
+import Flapjack.Basis.Pure.MlString
 import Flapjack.Compiler.Backend.WordToStack
 import Flapjack.Compiler.Backend.WordToStackRegFormat
 import Flapjack.Compiler.Backend.LabSem

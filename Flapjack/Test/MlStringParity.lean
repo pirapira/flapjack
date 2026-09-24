@@ -1,8 +1,8 @@
-import Flapjack.Compiler.Backend.MlString
+import Flapjack.Basis.Pure.MlString
 
 namespace Flapjack.Test.MlStringParity
 
-open Flapjack.Compiler.Backend.MlString
+open Flapjack.Basis.Pure.MlString
 
 /-- Character codes used by the oracle rows (`CHR n`). -/
 private def c (n : Nat) : HolChar := BitVec.ofNat 8 n

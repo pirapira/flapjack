@@ -1298,16 +1298,27 @@ def holFiniteWordSourceWordOfBytes {ι : Type u}
 
 /-- The result of HOL `word_of_bytes` at its fixed `word32` width. Each source
     byte is first widened to a 32-bit word, independently of the carrier width. -/
+private def holFiniteWordSourceWordOfBytesBitVecAt {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (address : ι → Bool) :
+    List (BitVec dimension.width) → BitVec dimension.width
+  | [] => BitVec.ofNat dimension.width 0
+  | byte :: rest =>
+      holFiniteWordSetByteBitVec dimension.width
+        (8 * holFiniteWordSourceByteIndex dimension address bigEndian) byte
+        (holFiniteWordSourceWordOfBytesBitVecAt dimension bigEndian
+          (bitVecToHolWord dimension
+            (holWordToBitVec dimension address + 1)) rest)
+
 def holFiniteWordSourceWordOfBytes32BitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
     (bytes : List (ι → Bool)) : BitVec 32 := by
   let dimension32 : HolFiniteDimension (Fin 32) :=
     instFinHolFiniteDimension (width := 32)
   let bytes32 := bytes.map fun byte =>
-    bitVecToHolWord dimension32
-      (BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256))
-  exact holWordToBitVec dimension32
-    (holFiniteWordSourceWordOfBytes dimension32 bigEndian bytes32)
+    BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256)
+  exact holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
+    (bitVecToHolWord dimension32 (BitVec.ofNat 32 0)) bytes32
 
 /-- HOL `mem_load_32` builds `word_of_bytes` at fixed width 32 and only then
     applies `w2w` to the carrier word. -/
@@ -1331,17 +1342,6 @@ theorem holFiniteWordSourceWordOfBytes32_toBitVec {ι : Type u}
         (holFiniteWordSourceWordOfBytes32BitVec dimension bigEndian bytes).toNat := by
   simp [holFiniteWordSourceWordOfBytes32,
     holWordToBitVec_bitVecToHolWord]
-
-private def holFiniteWordSourceWordOfBytesBitVecAt {ι : Type u}
-    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
-    (address : ι → Bool) : List (BitVec dimension.width) → BitVec dimension.width
-  | [] => BitVec.ofNat dimension.width 0
-  | byte :: rest =>
-      holFiniteWordSetByteBitVec dimension.width
-        (8 * holFiniteWordSourceByteIndex dimension address bigEndian) byte
-        (holFiniteWordSourceWordOfBytesBitVecAt dimension bigEndian
-          (bitVecToHolWord dimension
-            (holWordToBitVec dimension address + 1)) rest)
 
 /-- The recursive HOL `word_of_bytes_def` model commutes with the explicit
     finite-word-to-BitVec encoding, for every byte list, address, and endian
@@ -1371,10 +1371,47 @@ theorem holFiniteWordSourceWordOfBytes_toBitVec {ι : Type u}
     (bytes : List (ι → Bool)) :
     holWordToBitVec dimension
         (holFiniteWordSourceWordOfBytes dimension bigEndian bytes) =
-      holFiniteWordSourceWordOfBytesBitVecAt dimension bigEndian
+        holFiniteWordSourceWordOfBytesBitVecAt dimension bigEndian
         (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0))
         (bytes.map (holWordToBitVec dimension)) := by
-  exact holFiniteWordSourceWordOfBytesAt_toBitVec dimension bigEndian _ bytes
+  change holWordToBitVec dimension
+      (holFiniteWordSourceWordOfBytesAt dimension bigEndian
+        (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)) bytes) = _
+  simpa [holWordToBitVec_bitVecToHolWord] using
+    holFiniteWordSourceWordOfBytesAt_toBitVec dimension bigEndian
+      (bitVecToHolWord dimension (BitVec.ofNat dimension.width 0)) bytes
+
+/-- The direct BitVec implementation used by fixed-width HOL `word_of_bytes`
+    is exactly the transport of the recursive source-word definition. Keeping
+    this equation explicit lets tests and production callers reduce at BitVec
+    width 32 instead of repeatedly converting finite Boolean functions. -/
+theorem holFiniteWordSourceWordOfBytes32BitVec_eq_source {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (bytes : List (ι → Bool)) :
+    holFiniteWordSourceWordOfBytes32BitVec dimension bigEndian bytes =
+      holWordToBitVec (instFinHolFiniteDimension (width := 32))
+        (holFiniteWordSourceWordOfBytes
+          (instFinHolFiniteDimension (width := 32)) bigEndian
+          (bytes.map fun byte =>
+            bitVecToHolWord (instFinHolFiniteDimension (width := 32))
+              (BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256)))) := by
+  let dimension32 : HolFiniteDimension (Fin 32) :=
+    instFinHolFiniteDimension (width := 32)
+  change holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
+      (bitVecToHolWord dimension32 (BitVec.ofNat 32 0))
+      (bytes.map fun byte =>
+        BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256)) = _
+  rw [holFiniteWordSourceWordOfBytes_toBitVec]
+  simp only [List.map_map]
+  apply congrArg (holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
+    (bitVecToHolWord dimension32 (BitVec.ofNat 32 0)))
+  apply List.map_congr_left
+  intro byte _
+  change BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256) =
+    holWordToBitVec dimension32
+      (bitVecToHolWord dimension32
+        (BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256)))
+  exact (holWordToBitVec_bitVecToHolWord dimension32 _).symm
 
 def holFiniteWordSourceMemoryModel {ι : Type u}
     (dimension : HolFiniteDimension ι) (_bigEndian : Bool) :

@@ -459,22 +459,16 @@ theorem allDistinctDrop_tagged_fixture : ([1, 2, 3, 4].drop 1).Nodup :=
   all_distinct_drop [1, 2, 3, 4] 1 (by decide) (by decide)
 
 theorem distinctListsAppend_tagged_fixture :
-    ListDisjoint ([] : List Nat) [1, 2] :=
+    distinctListsHol ([] : List Nat) [1, 2] = true :=
   distinct_lists_append [] [1, 2] (by decide)
 
 theorem distinctListsCons_tagged_fixture :
-    ListDisjoint [1] [4] :=
-  distinct_lists_cons [] [1] [] [4] (by
-    intro value hmem h
-    simp at hmem h
-    omega)
+    distinctListsHol [1] [4] = true :=
+  distinct_lists_cons [] [1] [] [4] (by decide)
 
 theorem distinctListsSimpCons_tagged_fixture :
-    ListDisjoint [1] [3, 4] :=
-  distinct_lists_simp_cons [1] 2 [3, 4] (by
-    intro value hmem h
-    simp at hmem h
-    omega)
+    distinctListsHol [1] [3, 4] = true :=
+  distinct_lists_simp_cons [1] 2 [3, 4] (by decide)
 
 def distinctListsTaggedGuard : Bool :=
   (([1, 2, 3, 4].take 2).Nodup) && (([1, 2, 3, 4].drop 1).Nodup)
@@ -487,29 +481,18 @@ def distinctListsTaggedGuard : Bool :=
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:116/141/150`). -/
 
 theorem distinctListsCommutes_tagged_fixture :
-    ListDisjoint ([1, 2] : List Nat) [3, 4] ↔
-      ListDisjoint [3, 4] ([1, 2] : List Nat) :=
+    distinctListsHol ([1, 2] : List Nat) [3, 4] =
+      distinctListsHol [3, 4] ([1, 2] : List Nat) :=
   distinct_lists_commutes [1, 2] [3, 4]
 
 theorem distinctListsAppendIntro_tagged_fixture :
-    ListDisjoint ([1, 2] : List Nat) ([3, 4] ++ [5, 6]) :=
-  distinct_lists_append_intro [1, 2] [3, 4] [5, 6]
-    (by
-      intro value hmem h
-      simp at hmem h
-      omega)
-    (by
-      intro value hmem h
-      simp at hmem h
-      omega)
+    distinctListsHol ([1, 2] : List Nat) ([3, 4] ++ [5, 6]) = true :=
+  distinct_lists_append_intro [1, 2] [3, 4] [5, 6] (by decide)
 
 theorem distinctListsAppendRightElim_tagged_fixture :
-    ListDisjoint ([1, 2] : List Nat) [3, 4] ∧
-      ListDisjoint [1, 2] [5, 6] :=
-  distinct_lists_append_right_elim [1, 2] [3, 4] [5, 6] (by
-    intro value hmem h
-    simp at hmem h
-    omega)
+    distinctListsHol ([1, 2] : List Nat) [3, 4] = true ∧
+      distinctListsHol [1, 2] [5, 6] = true :=
+  distinct_lists_append_right_elim [1, 2] [3, 4] [5, 6] (by decide)
 
 theorem optMmapLengthEq_tagged_fixture :
     ([1, 2, 3] : List Nat).length =

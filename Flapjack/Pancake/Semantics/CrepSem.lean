@@ -699,9 +699,11 @@ theorem lookupCrepHolCodeW_eq_lookupCrepHolCode {width : Nat} [NeZero width]
     lookupCrepHolCodeW code fname args len = lookupCrepHolCode code fname args len :=
   rfl
 
-/-- Executed code lookup routed through the generic `lookupCrepHolCode` helper.
-    The word-width-specific tagged counterpart is definitionally equal to that
-    helper, but literal routing through it remains tracked separately. -/
+/-- Executed code lookup routed literally through the exact HOL-shaped
+    `lookupCrepHolCode` definition: the runtime passes evaluated words as
+    `PanWordLab.word` cells and reuses the same finite-map local representation.
+    The word-width-specific tagged counterpart `lookupCrepHolCodeW` is
+    definitionally equal to this helper. -/
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
     Option (CrepProg α × (Nat → Option (PanWordLab α))) :=
@@ -713,9 +715,9 @@ theorem zip_word_eq {α : Type} (names : List Nat) (values : List α) :
   rw [List.zip_map_right]
   rfl
 
-/-- Kernel-checked adapter: the executed raw lookup agrees with the tagged
-    HOL-shaped `lookupCrepHolCode` on the wrapped arguments, under
-    `[LawfulBEq String]`. -/
+/-- Definitional bridge: the executed lookup routes literally through the
+    tagged HOL-shaped `lookupCrepHolCode` on the wrapped arguments, so the two
+    sides are identical (the `len` argument is unused by the definition). -/
 theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq String]
     (name : FunName) (values : List α) (len : Nat)
     (code : FunName → Option (List Nat × CrepProg α)) :

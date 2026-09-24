@@ -2130,6 +2130,77 @@ theorem evalCrepRuntimeExpWordLab_op_const_of_matches
   rw [evalCrepRuntimeExpWordLab_op_of_matches base hmodel operator (values.map CrepExp.const), hmapConst]
   rfl
 
+/-- Source/production relation: the exact condition under which an arbitrary
+`PanMemoryModel` `compare` hook coincides with HOL's fixed `word_cmp`. -/
+def CrepMemoryModelCmpMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : Cmp) (left right : RiscV.Word 64),
+    model.compare operator left right = evalPanCmp operator left right
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelCmpMatchesHOL64` computes `Cmp` as HOL `word_cmp`. -/
+theorem crepMemoryModelCmp_eq_evalPanCmp_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 model)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    model.compare operator left right = evalPanCmp operator left right :=
+  hmodel operator left right
+
+/-- The RV64 target's memory model satisfies the `Cmp`/HOL-`word_cmp` predicate. -/
+theorem riscv64CrepRuntimeTarget_cmp_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelCmpMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator left right => panRiscVCmp_eq_evalPanCmp operator left right
+
+/-- Generic production equation for `Cmp` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_cmp` predicate, the hook is resolved as the HOL
+primitive. -/
+theorem evalCrepRuntimeExp_cmp_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.cmp operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          some (evalPanCmp operator leftWord rightWord))) := by
+  simp only [CrepMemoryModelCmpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_cmp_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_cmp_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.cmp operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          some (.word (evalPanCmp operator leftWord rightWord)))) := by
+  simp only [CrepMemoryModelCmpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_cmp_of_matches`. -/
+theorem evalCrepRuntimeExp_cmp_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.cmp operator (.const left) (.const right)) =
+      some (evalPanCmp operator left right) := by
+  rw [evalCrepRuntimeExp_cmp_of_matches base hmodel operator (.const left) (.const right)]
+  simp [evalCrepRuntimeExp]
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_cmp_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_cmp_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelCmpMatchesHOL64 base.memoryModel)
+    (operator : Cmp) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.cmp operator (.const left) (.const right)) =
+      some (.word (evalPanCmp operator left right)) := by
+  rw [evalCrepRuntimeExpWordLab_cmp_of_matches base hmodel operator (.const left) (.const right)]
+  simp [evalCrepRuntimeExp]
+
 /-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
 two word operands yields their product, any other arity is a failure. -/
 def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
@@ -2454,6 +2525,18 @@ theorem evalCrepRuntimeExp_op_map_eq_holCrepEval64
     (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
         (.op operator expressions)).map PanWordLab.word =
       holCrepEval64 base (.op operator expressions) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition of the generic `Cmp` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Cmp` expressions at the RV64
+target, whose model satisfies the HOL-`word_cmp` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_cmp_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : Cmp) (left right : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.cmp operator left right)).map PanWordLab.word =
+      holCrepEval64 base (.cmp operator left right) :=
   evalCrepRuntimeExp_map_eq_holCrepEval64 base _
 
 end Flapjack

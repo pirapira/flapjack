@@ -1,0 +1,7 @@
+rf_reg1_high=([(3,8)],3)
+rf_reg1_low=([],1)
+rf_reg2_high=([(4,8)],4)
+rf_reg2_low=([],2)
+rf_format_var_none=INL 6
+rf_format_var_some_reg=INL 2
+rf_format_var_some_frame=INR 7

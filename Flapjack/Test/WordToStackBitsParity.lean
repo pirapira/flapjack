@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.WordToStack
+import Flapjack.Compiler.Backend.WordToStackRegFormat
 import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.CakeAllocatorBitsBridge
 
@@ -265,6 +266,39 @@ example : perfRbp = 15 := rfl
 example : handlerSlots true = 5 := rfl
 example : handlerSlots false = 3 := rfl
 
+/-! ## register-format helper oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_reg_format_probe.out` (bead
+`flapjack-pxn.18.5.15.3.13`):
+
+```
+rf_reg1_high=([(3,8)],3)   rf_reg1_low=([],1)
+rf_reg2_high=([(4,8)],4)   rf_reg2_low=([],2)
+rf_format_var_none=INL 6
+rf_format_var_some_reg=INL 2   rf_format_var_some_frame=INR 7
+```
+-/
+
+open Flapjack.Compiler.Backend.WordToStackRegFormat
+
+def regFormatParityGuard : Bool :=
+  (wReg1 8 (3, 10, 12) == ([(3, 8)], 3)) &&
+  (wReg1 2 (3, 10, 12) == ([], 1)) &&
+  (wReg2 8 (3, 10, 12) == ([(4, 8)], 4)) &&
+  (wReg2 4 (3, 10, 12) == ([], 2)) &&
+  (formatVar 5 none == Sum.inl 6) &&
+  (formatVar 5 (some 2) == Sum.inl 2) &&
+  (formatVar 5 (some 7) == Sum.inr 7)
+
+#eval regFormatParityGuard
+#guard regFormatParityGuard
+
+example : wReg1 8 (3, 10, 12) = ([(3, 8)], 3) := rfl
+example : wReg2 4 (3, 10, 12) = ([], 2) := rfl
+example : formatVar 5 none = Sum.inl 6 := rfl
+example : formatVar 5 (some 7) = Sum.inr 7 := rfl
+
 /-! ## Executable bitmap recursion ↔ tagged recursion
 
 Untagged bridge (bead `flapjack-pxn.18.5.15.3.1.1`): the executed
@@ -440,6 +474,6 @@ def runChecks : IO Bool := do
   pure (parityGuard && wordListParityGuard && chunkToBitsParityGuard &&
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
-    progCombinatorsParityGuard && storeNameParityGuard)
+    progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

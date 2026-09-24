@@ -1829,4 +1829,105 @@ theorem evalPanValueExp_op_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq St
         simp only [if_neg hall]
         simp
 
+/-! ## Production `panOp` clause bridge (flapjack-pxn.18.3.6.9.2.10)
+
+Untagged production-to-evalHOL bridge for the `.panOp` expression clause. The
+executed clause destructures the evaluated value list as exactly two words and
+calls `evalPanOp`; the tagged `evalHOL` instead checks `List.all holValueIsWord`
+and calls `panOpHOL`. The two agree because `evalPanOp` is definitionally
+`panOpHOL`. No new `@[hol]` tags are added here. -/
+
+theorem evalPanOp_eq_panOpHOL {width : Nat} [NeZero width] (operator : PanOp)
+    (values : List (RiscV.Word width)) :
+    evalPanOp operator values = panOpHOL (width := width) operator values := by
+  cases operator <;>
+    (cases values with
+     | nil => rfl
+     | cons x xs =>
+         cases xs with
+         | nil => rfl
+         | cons y ys =>
+             cases ys with
+             | nil => rfl
+             | cons z zs => rfl)
+
+theorem panOpHOL_nil {width : Nat} [NeZero width] (operator : PanOp) :
+    panOpHOL (width := width) operator [] = none := by
+  cases operator <;> rfl
+
+theorem panOpHOL_one {width : Nat} [NeZero width] (operator : PanOp)
+    (x : RiscV.Word width) :
+    panOpHOL (width := width) operator [x] = none := by
+  cases operator <;> rfl
+
+theorem panOpHOL_three {width : Nat} [NeZero width] (operator : PanOp)
+    (x y z : RiscV.Word width) (rest : List (RiscV.Word width)) :
+    panOpHOL (width := width) operator (x :: y :: z :: rest) = none := by
+  cases operator <;> rfl
+
+theorem evalPanValueExp_panOp_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
+    (state : PanSemHolState width σ) [DecidablePred state.memaddrs]
+    (structs : StructContext) (locals globals : VarName → Option (PanValue (BitVec width)))
+    (memory : BitVec width → Option (PanValue (BitVec width)))
+    (baseAddress topAddress bytesInWord : BitVec width)
+    (access : Option (PanValueMemoryAccess (BitVec width)))
+    (operator : PanOp) (arguments : List (Exp (BitVec width)))
+    (hargs : ∀ e ∈ arguments,
+      evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord e
+        (memoryAccess := access) = (evalHOL state e).map HolValue.toPanValue) :
+    evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        (.panOp operator arguments) (memoryAccess := access)
+      = (evalHOL state (.panOp operator arguments)).map HolValue.toPanValue := by
+  simp only [evalPanValueExp, evalHOL]
+  rw [evalPanValueExps_eq_evalListHOL state structs locals globals memory baseAddress
+    topAddress bytesInWord access arguments hargs]
+  cases hlist : evalListHOL state arguments with
+  | none => simp
+  | some hvs =>
+      cases hvs with
+      | nil => simp [panOpHOL_nil]
+      | cons a as =>
+          cases as with
+          | nil =>
+              cases a with
+              | val w =>
+                  cases w with
+                  | word aBits => simp [holValueIsWord, panOpHOL_one]
+              | rStruct f => simp [holValueIsWord, HolValue.toPanValue_rStruct]
+              | nStruct n f => simp [holValueIsWord, HolValue.toPanValue_nStruct]
+          | cons b bs =>
+              cases bs with
+              | nil =>
+                  cases a with
+                  | val w =>
+                      cases w with
+                      | word aBits =>
+                          cases b with
+                          | val w2 =>
+                              cases w2 with
+                              | word bBits =>
+                                  simp only [List.map_cons, List.map_nil,
+                                    HolValue.toPanValue_val, List.all_cons, List.all_nil,
+                                    holValueIsWord, Bool.true_and, if_true, holValueWord,
+                                    Option.map_some]
+                                  simp
+                                  rw [show (HolValue.toPanValue ∘
+                                        fun (w : RiscV.Word width) => HolValue.val (HolWordLab.word w))
+                                      = (fun w => PanValue.word w) from by
+                                    funext w
+                                    exact HolValue.toPanValue_val w]
+                                  exact congrArg (Option.map PanValue.word)
+                                    (evalPanOp_eq_panOpHOL (width := width) operator [aBits, bBits])
+                          | rStruct f =>
+                              simp [holValueIsWord, HolValue.toPanValue_rStruct]
+                          | nStruct n f =>
+                              simp [holValueIsWord, HolValue.toPanValue_nStruct]
+                  | rStruct f =>
+                      cases b <;> simp [holValueIsWord, HolValue.toPanValue_rStruct]
+                  | nStruct n f =>
+                      cases b <;> simp [holValueIsWord, HolValue.toPanValue_nStruct]
+              | cons c cs =>
+                  cases a <;> cases b <;> cases c <;>
+                    simp [holValueIsWord, panOpHOL_three]
+
 end Flapjack

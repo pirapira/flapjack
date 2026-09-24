@@ -8038,5 +8038,13 @@
   "lean_name": "everyVarInst",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+  "hol_name": "good_handlers_def",
+  "lean_path": "Flapjack/Pancake/WordConvs.lean",
+  "lean_name": "goodHandlers",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

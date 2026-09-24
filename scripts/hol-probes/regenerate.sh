@@ -1143,3 +1143,10 @@ run_probe word_lang_every_var_probeScript.sml word_lang_every_var_probe.out \
   evar_var einst_skip \
   "$cake_dir/compiler/backend/wordLangScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The good_handlers probe observes the structural handler-label predicate,
+# including the NONE-ret case (handler ignored) and nested bad handlers.
+run_probe word_convs_good_handlers_probeScript.sml word_convs_good_handlers_probe.out \
+  gh_call_none gh_other \
+  "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"

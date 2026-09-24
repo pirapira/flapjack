@@ -8536,6 +8536,38 @@
     "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `insert_bitmap_def` at word_to_stackScript.sml:246-250 — insert_bitmap ws (data,data_len) = let l = LENGTH ws in ((Append data (List ws), data_len + l), data_len) — with Append/List the misc$app_list constructors and the same length/data_len arithmetic; HOL is fully polymorphic in the word element type 'a and insert_bitmap uses no word operation or dimindex, so the generic-α Lean port introduces no side condition, matching the reviewed generic app_list/append_aux/append tags in Flapjack/Misc/AppList.lean; direct HOL-EVAL rows ib_empty=((Append Nil (List []),0),0)/ib_flat=((Append (List [9; 8]) (List [1; 2; 3]),8),5)/ib_nested=((Append (Append (List [1]) (List [2])) (List [4]),8),7)/ib_data_len=5/ib_new_len=8 in scripts/hol-probes/word_to_stack_insert_bitmap_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "num_stack_ret_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "numStackRet",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `num_stack_ret_def` at word_to_stackScript.sml:417-420 - num_stack_ret k vs = LENGTH vs + 1 - k - with the same LENGTH-based list length and HOL num truncating subtraction (Lean Nat subtraction); HOL is polymorphic in the value type and only measures LENGTH, so the generic-alpha Lean port introduces no side condition; direct HOL-EVAL rows ss_num_stack_ret_pair=2/ss_num_stack_ret_three=1 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "skip_free_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "skipFree",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `skip_free_def` at word_to_stackScript.sml:423-426 - skip_free (k,f,f') vs = f - num_stack_ret k vs - with the (k,f,f') triple kept as three Nat arguments, f' unused as in HOL, and the tagged numStackRet; pure num arithmetic with no word operation, so the generic-alpha Lean port introduces no side condition; direct HOL-EVAL row ss_skip_free_pair=5 in scripts/hol-probes/word_to_stack_stack_slots_probe.out is reproduced by a Lean guard in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "stack_arg_count_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "stackArgCount",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_arg_count_def` at word_to_stackScript.sml:274-279 - case dest of INL _ => (arg_count - k:num) | INR _ => ((arg_count - 1) - k:num) - with HOL's ('a,'b) sum rendered as Lean Sum alpha beta and only the constructor inspected; pure num arithmetic, so the generic Lean port introduces no side condition; direct HOL-EVAL rows ss_arg_count_inl=5/ss_arg_count_inr=4 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "stack_free_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStack.lean",
+    "lean_name": "stackFree",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-24: matches HOL `stack_free_def` at word_to_stackScript.sml:281-284 - stack_free dest arg_count (k,f,f') = f - stack_arg_count dest arg_count k - with the (k,f,f') triple kept as four Nat arguments (f' unused as in HOL), HOL's ('a,'b) sum rendered as Lean Sum alpha beta, and the tagged stackArgCount; pure num arithmetic, so the generic Lean port introduces no side condition; direct HOL-EVAL rows ss_stack_free_inr=3/ss_stack_free_inl=2 in scripts/hol-probes/word_to_stack_stack_slots_probe.out are reproduced by Lean guards in Flapjack/Test/WordToStackBitsParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
     "hol_name": "find_var_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

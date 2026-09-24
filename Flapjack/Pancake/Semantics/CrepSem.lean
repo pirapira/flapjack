@@ -725,6 +725,21 @@ theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq Strin
     lookupCrepHolCode code name (values.map PanWordLab.word) len := by
   rfl
 
+/-- The production call adapter is the positive-width specialization of the
+    tagged HOL `lookup_code_def` port. Runtime arguments are wrapped as HOL
+    `word_lab` words; the returned body and finite-map locals retain exactly
+    the source result representation. This bridge adds no call-success premise
+    and does not depend on arithmetic simplification correctness. It is a
+    Flapjack-specific adapter lemma with no separate HOL declaration; the
+    `@[hol]` reference remains on `lookupCrepHolCodeW`. -/
+theorem lookupCrepRuntimeCode_eq_lookupCrepHolCodeW {width : Nat}
+    [NeZero width] [BEq String]
+    (name : FunName) (values : List (BitVec width)) (len : Nat)
+    (code : FunName → Option (List Nat × CrepProg (BitVec width))) :
+    lookupCrepRuntimeCode name values code =
+      lookupCrepHolCodeW code name (values.map PanWordLab.word) len := by
+  rfl
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration array : List UInt8)

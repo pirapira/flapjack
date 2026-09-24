@@ -188,33 +188,33 @@ Lean mirror at `width = 64`. -/
 
 private def w64 (n : Nat) : BitVec 64 := BitVec.ofNat 64 n
 
-private def regImmTag {width : Nat} : HolRegImm width → Nat
+private def regImmTag {width : Nat} [NeZero width] : HolRegImm width → Nat
   | .reg name => name
   | .imm value => value.toNat
 
-private def addrBase {width : Nat} : HolAddr width → Nat
+private def addrBase {width : Nat} [NeZero width] : HolAddr width → Nat
   | .addr base _ => base
 
-private def addrOff {width : Nat} : HolAddr width → Nat
+private def addrOff {width : Nat} [NeZero width] : HolAddr width → Nat
   | .addr _ offset => offset.toNat
 
-private def instSkip {width : Nat} : HolInst width → Nat
+private def instSkip {width : Nat} [NeZero width] : HolInst width → Nat
   | .skip => 1
   | _ => 0
 
-private def instConstReg {width : Nat} : HolInst width → Nat
+private def instConstReg {width : Nat} [NeZero width] : HolInst width → Nat
   | .const register _ => register
   | _ => 0
 
-private def instConstVal {width : Nat} : HolInst width → Nat
+private def instConstVal {width : Nat} [NeZero width] : HolInst width → Nat
   | .const _ value => value.toNat
   | _ => 0
 
-private def instMemReg {width : Nat} : HolInst width → Nat
+private def instMemReg {width : Nat} [NeZero width] : HolInst width → Nat
   | .mem _ register _ => register
   | _ => 0
 
-private def instMemBase {width : Nat} : HolInst width → Nat
+private def instMemBase {width : Nat} [NeZero width] : HolInst width → Nat
   | .mem _ _ address => addrBase address
   | _ => 0
 
@@ -278,11 +278,11 @@ private def memopTag : HolMemop → Nat
   | .store16 => 6
   | .store32 => 7
 
-private def arithDivSum {width : Nat} : HolArith width → Nat
+private def arithDivSum {width : Nat} [NeZero width] : HolArith width → Nat
   | .div a b c => a + b + c
   | _ => 0
 
-private def arithLongDivSum {width : Nat} : HolArith width → Nat
+private def arithLongDivSum {width : Nat} [NeZero width] : HolArith width → Nat
   | .longDiv a b c d e => a + b + c + d + e
   | _ => 0
 
@@ -294,19 +294,19 @@ private def fpFromIntSum : HolFp → Nat
   | .fpFromInt a b => a + b
   | _ => 0
 
-private def asmJumpTarget {width : Nat} : HolAsm width → Nat
+private def asmJumpTarget {width : Nat} [NeZero width] : HolAsm width → Nat
   | .jump target => target.toNat
   | _ => 0
 
-private def asmJumpCmpReg {width : Nat} : HolAsm width → Nat
+private def asmJumpCmpReg {width : Nat} [NeZero width] : HolAsm width → Nat
   | .jumpCmp _ register _ _ => register
   | _ => 0
 
-private def asmJumpRegTarget {width : Nat} : HolAsm width → Nat
+private def asmJumpRegTarget {width : Nat} [NeZero width] : HolAsm width → Nat
   | .jumpReg register => register
   | _ => 0
 
-private def asmLocSum {width : Nat} : HolAsm width → Nat
+private def asmLocSum {width : Nat} [NeZero width] : HolAsm width → Nat
   | .loc register offset => register + offset.toNat
   | _ => 0
 

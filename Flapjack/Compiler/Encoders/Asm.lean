@@ -121,7 +121,7 @@ reg reg reg | AddOverflow reg reg reg reg | SubOverflow reg reg reg reg`, with
 Lean mirror is definitionally the production generic `WordLangArith` at
 `BitVec width`; the alias records the exact instantiation. -/
 @[hol "cakeml/compiler/encoders/asm/asmScript.sml" "arith"]
-abbrev HolArith (width : Nat) := WordLangArith (BitVec width)
+abbrev HolArith (width : Nat) [NeZero width] := WordLangArith (BitVec width)
 
 /-- Exact HOL `asm$fp` (`cakeml/compiler/encoders/asm/asmScript.sml:97-119`),
 16 constructors over `reg`/`fp_reg` (`num`).  Monomorphic and width-independent;
@@ -133,7 +133,7 @@ abbrev HolFp := WordLangFp
 `reg_imm = Reg reg | Imm ('a imm)` with `imm = 'a word`.  This is the payload
 type of stackLang's `If`. -/
 @[hol "cakeml/compiler/encoders/asm/asmScript.sml" "reg_imm"]
-inductive HolRegImm (width : Nat) where
+inductive HolRegImm (width : Nat) [NeZero width] where
   | reg (name : Nat)
   | imm (value : BitVec width)
   deriving Repr
@@ -142,7 +142,7 @@ inductive HolRegImm (width : Nat) where
 `addr = Addr reg ('a word)`.  This is the payload type of stackLang's
 `ShMemOp`. -/
 @[hol "cakeml/compiler/encoders/asm/asmScript.sml" "addr"]
-inductive HolAddr (width : Nat) where
+inductive HolAddr (width : Nat) [NeZero width] where
   | addr (base : Nat) (offset : BitVec width)
   deriving Repr
 
@@ -151,7 +151,7 @@ inductive HolAddr (width : Nat) where
 | FP fp`.  This is the payload type of stackLang's `Inst`.  `HolArith` and
 `HolFp` are the exact `arith`/`fp` mirrors. -/
 @[hol "cakeml/compiler/encoders/asm/asmScript.sml" "inst"]
-inductive HolInst (width : Nat) where
+inductive HolInst (width : Nat) [NeZero width] where
   | skip
   | const (destination : Nat) (value : BitVec width)
   | arith (operation : HolArith width)
@@ -162,20 +162,20 @@ inductive HolInst (width : Nat) where
 namespace HolRegImm
 
 /-- Forget the width index to the production `reg_imm` mirror. -/
-def toWordRegImm {width : Nat} : HolRegImm width → WordRegImm (BitVec width)
+def toWordRegImm {width : Nat} [NeZero width] : HolRegImm width → WordRegImm (BitVec width)
   | .reg name => .reg name
   | .imm value => .imm value
 
 /-- Recover the exact carrier from the production `reg_imm` mirror. -/
-def ofWordRegImm {width : Nat} : WordRegImm (BitVec width) → HolRegImm width
+def ofWordRegImm {width : Nat} [NeZero width] : WordRegImm (BitVec width) → HolRegImm width
   | .reg name => .reg name
   | .imm value => .imm value
 
-@[simp] theorem of_to {width : Nat} (carrier : HolRegImm width) :
+@[simp] theorem of_to {width : Nat} [NeZero width] (carrier : HolRegImm width) :
     ofWordRegImm (toWordRegImm carrier) = carrier := by
   cases carrier <;> rfl
 
-@[simp] theorem to_of {width : Nat} (carrier : WordRegImm (BitVec width)) :
+@[simp] theorem to_of {width : Nat} [NeZero width] (carrier : WordRegImm (BitVec width)) :
     toWordRegImm (ofWordRegImm carrier) = carrier := by
   cases carrier <;> rfl
 
@@ -184,18 +184,18 @@ end HolRegImm
 namespace HolAddr
 
 /-- Forget the width index to the production `addr` mirror. -/
-def toWordLangAddr {width : Nat} : HolAddr width → WordLangAddr (BitVec width)
+def toWordLangAddr {width : Nat} [NeZero width] : HolAddr width → WordLangAddr (BitVec width)
   | .addr base offset => .addr base offset
 
 /-- Recover the exact carrier from the production `addr` mirror. -/
-def ofWordLangAddr {width : Nat} : WordLangAddr (BitVec width) → HolAddr width
+def ofWordLangAddr {width : Nat} [NeZero width] : WordLangAddr (BitVec width) → HolAddr width
   | .addr base offset => .addr base offset
 
-@[simp] theorem of_to {width : Nat} (carrier : HolAddr width) :
+@[simp] theorem of_to {width : Nat} [NeZero width] (carrier : HolAddr width) :
     ofWordLangAddr (toWordLangAddr carrier) = carrier := by
   cases carrier <;> rfl
 
-@[simp] theorem to_of {width : Nat} (carrier : WordLangAddr (BitVec width)) :
+@[simp] theorem to_of {width : Nat} [NeZero width] (carrier : WordLangAddr (BitVec width)) :
     toWordLangAddr (ofWordLangAddr carrier) = carrier := by
   cases carrier <;> rfl
 
@@ -204,7 +204,7 @@ end HolAddr
 namespace HolInst
 
 /-- Forget the width index to the production `inst` mirror. -/
-def toWordLangInst {width : Nat} : HolInst width → WordLangInst (BitVec width)
+def toWordLangInst {width : Nat} [NeZero width] : HolInst width → WordLangInst (BitVec width)
   | .skip => .skip
   | .const destination value => .const destination value
   | .arith operation => .arith operation
@@ -212,14 +212,14 @@ def toWordLangInst {width : Nat} : HolInst width → WordLangInst (BitVec width)
   | .fp operation => .fp operation
 
 /-- Recover the exact carrier from the production `inst` mirror. -/
-def ofWordLangInst {width : Nat} : WordLangInst (BitVec width) → HolInst width
+def ofWordLangInst {width : Nat} [NeZero width] : WordLangInst (BitVec width) → HolInst width
   | .skip => .skip
   | .const destination value => .const destination value
   | .arith operation => .arith operation
   | .mem operator destination address => .mem operator destination (HolAddr.ofWordLangAddr address)
   | .fp operation => .fp operation
 
-@[simp] theorem of_to {width : Nat} (carrier : HolInst width) :
+@[simp] theorem of_to {width : Nat} [NeZero width] (carrier : HolInst width) :
     ofWordLangInst (toWordLangInst carrier) = carrier := by
   cases carrier with
   | skip => rfl
@@ -228,7 +228,7 @@ def ofWordLangInst {width : Nat} : WordLangInst (BitVec width) → HolInst width
   | mem operator destination address => simp [toWordLangInst, ofWordLangInst]
   | fp operation => rfl
 
-@[simp] theorem to_of {width : Nat} (carrier : WordLangInst (BitVec width)) :
+@[simp] theorem to_of {width : Nat} [NeZero width] (carrier : WordLangInst (BitVec width)) :
     toWordLangInst (ofWordLangInst carrier) = carrier := by
   cases carrier with
   | skip => rfl
@@ -246,7 +246,7 @@ mirror uses the exact `HolInst`/`HolRegImm`/`HolCmp` carriers; the production
 `AsmData` below is the generic-field carrier consumed by the assembler's
 `encode` field. -/
 @[hol "cakeml/compiler/encoders/asm/asmScript.sml" "asm"]
-inductive HolAsm (width : Nat) where
+inductive HolAsm (width : Nat) [NeZero width] where
   | inst (value : HolInst width)
   | jump (target : BitVec width)
   | jumpCmp (operator : HolCmp) (source : Nat) (right : HolRegImm width)
@@ -269,7 +269,7 @@ here it is carried as Lean `String` (a `List Char` over Unicode scalars).  A
 faithful `mlstring`/`char` carrier is required before `prog` can carry an exact
 `@[hol ... "prog"]` tag; recorded on `flapjack-pxn.18.5.15.3.11`.  The
 width-indexed `HolInst`/`HolAsm` payloads above are exact and tagged. -/
-abbrev HolProg (width : Nat) :=
+abbrev HolProg (width : Nat) [NeZero width] :=
   Flapjack.Compiler.Backend.StackLang.Prog (HolInst width) HolCmp (HolRegImm width)
     HolBinop HolMemop (HolAddr width) String
 

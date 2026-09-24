@@ -25,7 +25,7 @@ and its FFI constructor stores an `mlstring`, whereas the executable
 `Flapjack.Compiler.Backend.StackCarrier.ProgW` uses Lean `String`.
 -/
 
-namespace Flapjack.Compiler.Backend.MlString
+namespace Flapjack.Basis.Pure.MlString
 
 /-- Model of HOL `char`: the canonical 256-element type.  HOL `char` is an
 abstract type with a bijection `CHR`/`ORD` to the 256 values; `BitVec 8` has the
@@ -108,6 +108,27 @@ theorem char_of_byte_toNat (c : Char) (h : c.toNat < 256) :
   change c.toNat % 256 = c.toNat
   exact Nat.mod_eq_of_lt h
 
+/-- The low-byte projection of `ofString` is explicit: decoding `ofString s`
+recovers each character code modulo 256.  For an arbitrary Lean `String`
+(characters outside the byte range) `ofString` truncates the code to its low
+byte, so `toStringOfBytes (ofString s) = s` holds only on the byte range — see
+`ofString_char_toNat_mod` and `toStringOfBytes_ofString_of_bytes`. -/
+@[simp] theorem explode_map_toNat_ofString (s : String) :
+    (ofString s).explode.map BitVec.toNat =
+      s.toList.map (fun c => c.toNat % 256) := by
+  rw [explode_ofString, List.map_map]
+  apply List.map_congr_left
+  intro c _
+  show BitVec.toNat (BitVec.ofNat 8 c.toNat) = c.toNat % 256
+  rw [BitVec.toNat_ofNat]
+
+/-- Character codes outside the byte range are explicitly truncated to their low
+byte by `ofString`; this records the non-byte behavior rather than implying a
+silent identity on arbitrary Lean strings. -/
+theorem ofString_char_toNat_mod (c : Char) :
+    (BitVec.ofNat 8 c.toNat).toNat = c.toNat % 256 := by
+  rw [BitVec.toNat_ofNat]
+
 /-- `MlString -> String -> MlString` round trips exactly. -/
 theorem ofString_toStringOfBytes (m : MlString) :
     ofString (toStringOfBytes m) = m := by
@@ -139,4 +160,4 @@ theorem toStringOfBytes_ofString_of_bytes (s : String)
         rw [Function.comp_apply, char_of_byte_toNat c (h c hc)]
         simp [Char.ofNat_toNat])
 
-end Flapjack.Compiler.Backend.MlString
+end Flapjack.Basis.Pure.MlString

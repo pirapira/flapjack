@@ -131,4 +131,70 @@ def listSeq {Inst Cmp RegImm Binop Memop Addr MlString : Type} :
   | [x] => x
   | x :: y :: xs => .seq x (listSeq (y :: xs))
 
+namespace Prog
+
+/-- Carrier-changing structural map for `Prog`: applies one function to each of
+the seven type parameters.  Used by the bridge in
+`Flapjack.Compiler.Backend.MlStringBridge` to convert the exact
+`HolProg` (`MlString` FFI) into the executable `ProgW` (`String` FFI) and back. -/
+def map {Inst Cmp RegImm Binop Memop Addr MlString
+         Inst' Cmp' RegImm' Binop' Memop' Addr' MlString' : Type}
+    (fInst : Inst → Inst') (fCmp : Cmp → Cmp') (fRegImm : RegImm → RegImm')
+    (fBinop : Binop → Binop') (fMemop : Memop → Memop') (fAddr : Addr → Addr')
+    (fMlString : MlString → MlString') :
+    Prog Inst Cmp RegImm Binop Memop Addr MlString →
+      Prog Inst' Cmp' RegImm' Binop' Memop' Addr' MlString'
+  | .skip => .skip
+  | .inst i => .inst (fInst i)
+  | .get d s => .get d s
+  | .set s x => .set s x
+  | .opCurrHeap b d s => .opCurrHeap (fBinop b) d s
+  | .call rh t h =>
+      .call (match rh with
+              | none => none
+              | some (returnProgram, linkRegister, returnSection, returnLabel) =>
+                  some (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString returnProgram,
+                        linkRegister, returnSection, returnLabel))
+            t
+            (match h with
+             | none => none
+             | some (handlerProgram, handlerSection, handlerLabel) =>
+                 some (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString handlerProgram,
+                       handlerSection, handlerLabel))
+  | .seq a b => .seq (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString a)
+      (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString b)
+  | .ite c condition r t e => .ite (fCmp c) condition (fRegImm r)
+      (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString t)
+      (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString e)
+  | .loop b => .loop (map fInst fCmp fRegImm fBinop fMemop fAddr fMlString b)
+  | .jumpLower a b c => .jumpLower a b c
+  | .alloc n => .alloc n
+  | .storeConsts a b c => .storeConsts a b c
+  | .raise n => .raise n
+  | .ret n => .ret n
+  | .break n => .break n
+  | .continue n => .continue n
+  | .ffi f cfg cl arr al ra => .ffi (fMlString f) cfg cl arr al ra
+  | .tick => .tick
+  | .locValue d l e => .locValue d l e
+  | .install a b c d e => .install a b c d e
+  | .shMemOp op r addr => .shMemOp (fMemop op) r (fAddr addr)
+  | .codeBufferWrite a b => .codeBufferWrite a b
+  | .dataBufferWrite a b => .dataBufferWrite a b
+  | .rawCall n => .rawCall n
+  | .stackAlloc n => .stackAlloc n
+  | .stackFree n => .stackFree n
+  | .stackStore o r => .stackStore o r
+  | .stackStoreAny r o => .stackStoreAny r o
+  | .stackLoad o r => .stackLoad o r
+  | .stackLoadAny r o => .stackLoadAny r o
+  | .stackGetSize r => .stackGetSize r
+  | .stackSetSize r => .stackSetSize r
+  | .bitmapLoad d a => .bitmapLoad d a
+  | .halt r => .halt r
+termination_by p => sizeOf p
+decreasing_by all_goals decreasing_trivial
+
+end Prog
+
 end Flapjack.Compiler.Backend.StackLang

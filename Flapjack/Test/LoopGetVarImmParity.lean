@@ -1,4 +1,5 @@
 import Flapjack.LoopGetVarImm
+import Flapjack.Pancake.Semantics.LoopSem
 
 /-!
 # Original-domain parity for `loopSem.get_var_imm`
@@ -37,6 +38,15 @@ def originalRegLoc : Option LoopWordLoc := some (.loc 9 0)
 #guard getVarImm probeState (.reg 2) == originalRegMiss
 #guard getVarImm probeState (.imm 7) == originalImmWord
 #guard getVarImm probeState (.reg 3) == originalRegLoc
+
+/-- The width-indexed exact HOL counterpart of `get_var_imm_def` agrees with
+    the generic executable helper. -/
+example (state : LoopMachineState (BitVec 64)) (operand : RegImm (BitVec 64)) :
+    getVarImmHOL state operand = getVarImm state operand :=
+  getVarImmHOL_eq_getVarImm state operand
+
+example (state : LoopMachineState (BitVec 64)) :
+    getVarImmHOL state (.imm (7 : BitVec 64)) = some (.word 7) := rfl
 
 def runChecks : IO Bool := do
   let checks :=

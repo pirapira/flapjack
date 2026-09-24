@@ -824,4 +824,22 @@ def loopMachineFfiHook (function : FunName)
     LoopMachineStep (RiscV.Word 64) F :=
   loopMachineExtCall state function configurationSize configurationAddress arraySize arrayAddress
 
+/-! ## Exact HOL `loopSem.get_var_imm_def` over the width-indexed machine state
+
+HOL `get_var_imm_def` (`cakeml/pancake/semantics/loopSemScript.sml:165`) reads a
+register operand from the machine state's local map and returns an immediate
+operand directly, at `'a word_loc` values. The generic `getVarImm`
+(`Flapjack/LoopGetVarImm.lean`) is word-carrier polymorphic, so the exact
+width-indexed counterpart is tagged here, in the `loopSemScript.sml` counterpart
+module. -/
+@[hol "cakeml/pancake/semantics/loopSemScript.sml" "get_var_imm_def"]
+def getVarImmHOL {width : Nat} [NeZero width]
+    (state : LoopMachineState (BitVec width) F) (operand : RegImm (BitVec width)) :
+    Option (LoopValue (BitVec width)) :=
+  getVarImm state operand
+
+theorem getVarImmHOL_eq_getVarImm {width : Nat} [NeZero width]
+    (state : LoopMachineState (BitVec width) F) (operand : RegImm (BitVec width)) :
+    getVarImmHOL state operand = getVarImm state operand := rfl
+
 end Flapjack

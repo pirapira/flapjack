@@ -238,7 +238,7 @@ private theorem loadShapeBytes_length {width : Nat}
     word offset `address + bytes_in_word * n2w index`. The dependent Lean index
     carries the HOL premise `index < count` without an Option result. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "load_shape_el_rel"]
-theorem loadShapeBytes_getElem_rel {width : Nat}
+theorem loadShapeBytes_getElem_rel {width : Nat} [NeZero width]
     (address : BitVec width) (count index : Nat)
     (value : CrepExp (BitVec width)) (hindex : index < count) :
     (loadShapeBytes address count value)[index]'(by
@@ -580,7 +580,7 @@ theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
     equivalence is reviewed by comparing definitions (per SOUNDNESS), not
     proved by this theorem. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "get_eids_imp_excp_rel"]
-theorem getEidsFromDeclsImpExcpRel
+theorem getEidsFromDeclsImpExcpRel [NeZero width]
     (seids : FiniteMap ExceptionId (BitVec width))
     (pc : List (Decl (BitVec width)))
     (hsize : sizeOfEids pc < 2 ^ width)
@@ -2154,7 +2154,7 @@ theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
     changes bodies and parameter slots but preserves every function name in
     source order, so distinct source names stay distinct. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_to_crep_all_distinct"]
-theorem firstCompileToCrepAllDistinct
+theorem firstCompileToCrepAllDistinct [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map
       fun (name, _, _, _) => name).Nodup) :
@@ -2205,7 +2205,7 @@ theorem compileToCrepHOL_eq_map
       correspondence is reviewed by comparing the definitions (per SOUNDNESS),
       not established by the proof below. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
-theorem alookupCompileToCrepCode
+theorem alookupCompileToCrepCode [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (start : FunName) (prog : Prog (BitVec width)) (rshape : Shape)
     (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
@@ -2372,7 +2372,7 @@ theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
     literal (as for `mk_ctxt_imp_locals_rel`). The HOL-vs-Lean equivalence of
     the statement is reviewed by comparing the definitions (per SOUNDNESS). -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mk_ctxt_code_imp_code_rel"]
-theorem mkCtxtCodeImpCodeRel
+theorem mkCtxtCodeImpCodeRel [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
     (hlocalised : ∀ entry ∈ functionEntries declarations,
@@ -2421,7 +2421,7 @@ theorem codeRel_of_codeRelW (width : Nat)
     `code_rel_def` form (`codeRelW`), derived from the existing tagged
     `mk_ctxt_code_imp_code_rel` port via `codeRelW_iff_codeRel`. This is the
     relation used at the start of the full `pc_compile_correct` statement. -/
-theorem mkCtxtCodeImpCodeRelW (declarations : List (Decl (BitVec width)))
+theorem mkCtxtCodeImpCodeRelW [NeZero width] (declarations : List (Decl (BitVec width)))
     (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)
     (hlocalised : ∀ entry ∈ functionEntries declarations,
       localisedProg entry.2.2.1) :
@@ -2445,7 +2445,7 @@ theorem mkCtxtCodeImpCodeRelW (declarations : List (Decl (BitVec width)))
     the statement is reviewed by comparing the definitions (per SOUNDNESS), not
     proved by this theorem, which is a within-Lean indexed-table fact. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "el_compile_prog_el_prog_eq"]
-theorem elCompileToCrepElProgEq
+theorem elCompileToCrepElProgEq [NeZero width]
     (declarations : List (Decl (BitVec width))) (n : Nat) (start : FunName)
     (cprog : CrepProg (BitVec width)) (p : Prog (BitVec width)) (rshape : Shape)
     (hentry : (compileToCrepHOL declarations)[n]? = some (start, [], cprog))
@@ -2492,7 +2492,7 @@ theorem elCompileToCrepElProgEq
     premise is distinct names from `functions prog`; `compile_prog` preserves
     those names while compiling each body and applying `compile_inl_top`. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_prog_all_distinct"]
-theorem firstCompileProgAllDistinct {width : Nat}
+theorem firstCompileProgAllDistinct {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map
       fun (name, _, _, _) => name).Nodup) :

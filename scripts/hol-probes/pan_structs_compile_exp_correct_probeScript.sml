@@ -312,6 +312,18 @@ val _ = print_eval "compile_exp_correct_load_byte"
        (pan_structs$compile_exp ^ctxt ^load_byte_expression) =
        SOME (pan_structsProof$convert_v ^load_byte_value))``;
 
+val load32_value = ``ValWord (19w:8 word)``;
+val load32_expression =
+  ``(panLang$Load32 (panLang$Const (0w:8 word)) : 8 panLang$exp)``;
+val _ = print_eval "compile_exp_correct_load32"
+  ``(pan_structs$old_exp_shape ^ctxt ^load32_expression,
+     panSem$shape_of ^load32_value,
+     pan_structsProof$v_flds_ok (^load_byte_state).structs ^load32_value,
+     panSem$eval ^load_byte_state ^load32_expression = SOME ^load32_value,
+     panSem$eval (pan_structsProof$convert_s ^ctxt ^load_byte_state)
+       (pan_structs$compile_exp ^ctxt ^load32_expression) =
+       SOME (pan_structsProof$convert_v ^load32_value))``;
+
 val panop_value = ``ValWord (15w:8 word)``;
 val panop_expression =
   ``(panLang$Panop Mul [panLang$Const (3w:8 word);

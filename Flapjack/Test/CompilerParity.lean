@@ -237,6 +237,7 @@ import Flapjack.Test.LabPropsSecEndsLabelParity
 import Flapjack.Test.CakeAllocatorBitsBridgeParity
 import Flapjack.Test.StackNamesParity
 import Flapjack.Test.StackRemoveInitParity
+import Flapjack.Test.WordLocWParity
 import Flapjack.Test.RiscvConfigParity
 import Flapjack.Test.MiscAppListParity
 import Flapjack.Test.StackToLabFlattenOpsParity
@@ -859,6 +860,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CakeAllocatorBitsBridgeParity.runChecks,
     Flapjack.Test.StackNamesParity.runChecks,
     Flapjack.Test.StackRemoveInitParity.runChecks,
+    Flapjack.Test.WordLocWParity.runChecks,
     Flapjack.Test.RiscvConfigParity.runChecks,
     Flapjack.Test.MiscAppListParity.runChecks,
     Flapjack.Test.StackToLabFlattenOpsParity.runChecks,

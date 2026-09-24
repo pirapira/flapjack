@@ -733,6 +733,12 @@ run_probe crep_eval_op_rv64_probeScript.sml crep_eval_op_rv64_probe.out \
   eval_op_add_const eval_op_sub_arity \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
+# The eval Cmp probe observes HOL word_cmp over constant operands for the RV64
+# target (Equal/Lower/Test true and false).
+run_probe crep_eval_cmp_rv64_probeScript.sml crep_eval_cmp_rv64_probe.out \
+  eval_cmp_equal_true eval_cmp_test_disjoint \
+  "$cake_dir/pancake/semantics/crepSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"

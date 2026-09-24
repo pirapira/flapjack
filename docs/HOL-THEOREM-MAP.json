@@ -6478,5 +6478,13 @@
     "lean_name": "memLoadCrepHol",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (clause-for-clause port of crepSem$mem_load_def over CrepHolState; if addr IN state.memaddrs then SOME (state.memory addr) else NONE; direct HOL oracle crep_mem_load_probe.out rows reproduced by Lean guards; bridge crepRuntimeLoad_eq_memLoadCrepHol to the executed load)."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_const_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Const base case for the localized four-part expression relation used toward Call argument induction. It proves evaluation, length, shape, and well-formedness for the constant constructor, but does not establish the general HOL compile_exp_val_rel induction; no @[hol] tag claimed."
   }
 ]

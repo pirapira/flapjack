@@ -192,8 +192,10 @@ import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackLang.Prog
 import Flapjack.Compiler.Backend.StackCarrier
-import Flapjack.Compiler.Backend.MlString
+import Flapjack.Basis.Pure.MlString
+import Flapjack.Compiler.Backend.MlStringBridge
 import Flapjack.Compiler.Backend.StackProps
 import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.Misc.AppList

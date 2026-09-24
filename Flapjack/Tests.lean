@@ -149,6 +149,7 @@ import Flapjack.RiscV.CorrectnessDirectLongMulMixed
 import Flapjack.Test.PanValueFfiClockFuel
 import Flapjack.Test.WordToStackBitsParity
 import Flapjack.Test.MlStringParity
+import Flapjack.Test.MlStringBridgeParity
 
 /-!
 # Flapjack regression tests

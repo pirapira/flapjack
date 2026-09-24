@@ -177,7 +177,7 @@ reduces to `0x2211w` and big-endian to `0x1122w`. The nonzero-initial-value
 `set_byte` rows use HOL's proved `set_byte_bit_field_insert` rewrite followed
 by evaluation, preserving the other bits while reducing to concrete words.
 For initial value `0x1abcdw`, byte `0xa5w` at address `1w` reduces to
-`0x1a5cdw` little-endian and `0x1abaw` big-endian.
+`0x1a5cdw` little-endian and `0x1aba5w` big-endian.
 The width-5 rows record HOL's `MOD_0` theorem and the resulting zero-byte-slot
 `byte_index` branches, which the Lean source adapter handles explicitly.
 `crep_arith_eval_mul_const_probe.out` records direct HOL EVAL of

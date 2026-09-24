@@ -737,6 +737,30 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL SUBMAP is rendered by the repo crepHolSubmap lookup-function predicate, |+ is FUPDATE; both sides updated at the same key; [LawfulBEq κ] ties the Boolean key equality to HOL =; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; crepHolSubmap for SUBMAP, FDOMSUB for HOL \\; same key removed from both sides; [LawfulBEq κ]; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; f \\ x SUBMAP g |+ (x,y); crepHolSubmap/FDOMSUB/FUPDATE; [LawfulBEq κ]; no extra hypotheses)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_commutes_strong",

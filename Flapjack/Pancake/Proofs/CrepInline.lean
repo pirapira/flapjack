@@ -228,8 +228,55 @@ def crepInlineStateRel (s t : CrepHolState α σ) : Prop :=
     `SUBMAP` holds when `FLOOKUP s` and `FLOOKUP t` agree on `FDOM s`, which is
     exactly this statement.  Untagged infrastructure: HOL's `SUBMAP` is a
     finite-map operation, not a declaration of `crep_inlineProofScript.sml`. -/
-def crepHolSubmap (s t : Nat → Option β) : Prop :=
+def crepHolSubmap {κ : Type} (s t : κ → Option β) : Prop :=
   ∀ n v, s n = some v → t n = some v
+
+/-- Finite-map `SUBMAP_IMP_FUPDATE_SUBMAP`
+    (`crep_inlineProofScript.sml:117`): pointwise updates at the same key
+    preserve `SUBMAP`.  Stated over `crepHolSubmap`; `|+` is `FUPDATE`, whose
+    Boolean key equality reflects HOL's `=` under `[LawfulBEq κ]`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_FUPDATE_SUBMAP"]
+theorem SUBMAP_IMP_FUPDATE_SUBMAP {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FUPDATE f (x, y)) (FUPDATE g (x, y)) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp only [FUPDATE, beq_self_eq_true] at hn ⊢
+    exact hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FUPDATE, hb] at hn ⊢
+    exact h n v hn
+
+/-- Finite-map `SUBMAP_IMP_DOMSUB_SUBMAP`
+    (`crep_inlineProofScript.sml:127`): removing the same key from both sides
+    preserves `SUBMAP`.  `\\` is `FDOMSUB`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_DOMSUB_SUBMAP"]
+theorem SUBMAP_IMP_DOMSUB_SUBMAP {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FDOMSUB g x) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp [FDOMSUB] at hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FDOMSUB, hb] at hn ⊢
+    exact h n v hn
+
+/-- Finite-map `SUBMAP_IMP_DOMSUB_FUPDATE`
+    (`crep_inlineProofScript.sml:135`): removing a key from the left and
+    inserting it on the right preserves `SUBMAP`. -/
+@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_DOMSUB_FUPDATE"]
+theorem SUBMAP_IMP_DOMSUB_FUPDATE {κ : Type} {β : Type} [BEq κ] [LawfulBEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB f x) (FUPDATE g (x, y)) := by
+  intro n v hn
+  by_cases hxn : x = n
+  · subst hxn
+    simp [FDOMSUB] at hn
+  · have hb : (x == n) = false := beq_eq_false_iff_ne.mpr hxn
+    simp only [FDOMSUB, FUPDATE, hb] at hn ⊢
+    exact h n v hn
 
 /-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
     `s.locals SUBMAP t.locals`. -/

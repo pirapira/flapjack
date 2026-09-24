@@ -4293,7 +4293,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "length_loadShape_eq_shapeW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
+    "reviewer": "Codex (statement compared against length_load_shape_eq_shape at crepPropsScript.sml; carrier is width-indexed over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the tagged wrapper is stated over the tagged loadShapeBytesW (load_shape_def) via simpa [loadShapeBytesW]; the generic-α helper stays untagged)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",

@@ -453,8 +453,8 @@ theorem map_var_crepExpVars_eqW {width : Nat} [NeZero width] (names : List Nat) 
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
 theorem length_loadShape_eq_shapeW {width : Nat} [NeZero width]
     (count : Nat) (address : BitVec width) (value : CrepExp (BitVec width)) :
-    (loadShapeBytes address count value).length = count :=
-  length_loadShape_eq_shape count address value
+    (loadShapeBytesW address count value).length = count := by
+  simpa [loadShapeBytesW] using length_loadShape_eq_shape count address value
 
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_globals_eq_read_size"]
 theorem loadGlobals_lengthW {width : Nat} [NeZero width]

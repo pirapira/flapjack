@@ -10148,17 +10148,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     intro hzero
     apply hclock
     simpa [hclockRel] using hzero
-  let fuel := panSemCodeEvaluateFuel source
-    (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
-      function expressions) - 2
-  have hsourceFuel : panSemCodeEvaluateFuel source
-      (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
-        function expressions) = fuel + 2 := by
-    dsimp [fuel]
-    have htwo := panSemCodeEvaluateFuel_call_two_le source
-      (some (none, some (sourceException, handlerVariable, handlerProgram)))
-      function expressions
-    omega
   have hsourceRun := panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     sourceContext sourcePrimitive sourceHandler source function sourceException
     handlerVariable expressions arguments returnShape sourceBody sourceCalleeLocals
@@ -10352,13 +10341,13 @@ now indexed by the actual source evaluator result, projected through
 `panSemCodeStateAfter`; the source run uses the state-owned code map and the
 RISC-V state-derived memory inputs. It derives that run from the source
 callee-body and handler-body premises. The premise `hcalleeTargetBodyIH`
-assumes the target callee-body evaluator run and its post-state, code,
-exception, and payload-global facts needed by `exp_hdl`; this theorem supplies
-the exact `locals_rel` at callee entry from the two production code lookups.
-The relation-aware handler IH also supplies its target result and post-state
-relations. The recursive body simulations remain induction premises, so this
-is a Call-case composition step, not the complete
-`pc_compile_correct[Call_Ret_Exception]` theorem. -/
+applies the callee induction hypothesis to the source body run and the
+callee-entry relations derived from the actual code lookups; its conclusion
+provides the target callee-body run and post-state, code, exception, and
+payload-global facts needed by `exp_hdl`. The relation-aware handler IH also
+provides its target result and post-state relations. The recursive body
+simulations remain induction premises, so this is a Call-case composition
+step, not the complete `pc_compile_correct[Call_Ret_Exception]` theorem. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))

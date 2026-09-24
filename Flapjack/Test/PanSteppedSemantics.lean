@@ -67,6 +67,18 @@ def steppedStructuredStoreLoadProgram : Prog Nat :=
 def steppedTestFunctions : List (FunName × List VarName × Prog Nat) :=
   [("id", ["x"], .return (.var .local "x"))]
 
+/- A callee whose return payload exceeds the CakeML 32-word limit is rejected
+   by the callee `Return`, so the enclosing call still fails even though the
+   Call itself now checks only the return shape (as in HOL). -/
+def steppedOversizedReturn : Prog Nat :=
+  .return (.rStruct (List.replicate 33 (.const 0)))
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi []
+    [("big", [], steppedOversizedReturn)] 0 100 1 20
+    steppedTestLocals steppedTestGlobals steppedTestMemory
+    (.call none "big" [])).isNone
+
 def steppedRaiseFunctions : List (FunName × List VarName × Prog Nat) :=
   [("raise", [], .raise "E" (.const 9))]
 

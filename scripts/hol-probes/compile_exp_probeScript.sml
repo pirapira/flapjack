@@ -36,6 +36,9 @@ val _ = print_eval "nstruct"
   ``pan_to_crep$compile_exp ^ctxt ^nstruct_expression``;
 val _ = print_eval "nfield"
   ``pan_to_crep$compile_exp ^ctxt ^nfield_expression``;
+val _ = print_eval "load_one"
+  ``pan_to_crep$compile_exp ^ctxt
+      (panLang$Load panLang$One (panLang$Const (3w : 64 word)))``;
 val _ = print_eval "struct_field"
   ``(pan_to_crep$compile_exp ^ctxt
       (RStruct [Const (1w : 8 word); Const 2w]),

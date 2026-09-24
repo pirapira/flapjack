@@ -6712,6 +6712,22 @@
     "reviewer": "Flapjack-only full localized-expression case for NField. It derives contradiction from stateRel's empty source struct table and PanSem lookupInfo semantics; it does not claim the target compiler's fallback is a semantic translation or port standalone HOL theorem text."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadOne_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full localized-expression IH case for Load One at fixed RV64 width. It consumes the address full IH and uses stateRel to relate the source word-cell load to production Crep Load; arbitrary shapes remain unproved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "evalPanSemStateExp_loadOne_const_stateRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Private Flapjack-only evaluator bridge equating source state-owned Load One at a constant address with production target Crep Load under stateRel; a prerequisite for the untagged full-IH constructor case, not a standalone HOL theorem port."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "el_compile_prog_el_prog_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -6766,5 +6782,13 @@
     "lean_name": "compFuncHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Exact port of HOL comp_func_def (pan_to_crepScript.sml:337): build make_vmap from the parameter shapes, take vmax = size_of_shape (Comb (MAP SND params)) - 1, and compile the body in the mk_ctxt context carrying the caller's function and exception maps. panToCrepCompFuncRiscV_eq_compFuncHOL proves the record-context adapter panToCrepCompFuncRiscV equals compFuncHOL at context.funcs/context.eids. Unfolded by HOL mk_ctxt_code_imp_code_rel."
+  },
+  {
+    "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml",
+    "hol_name": "word_extract_6",
+    "lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean",
+    "lean_name": "wordExtract6OfLt64",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact BitVec translation of riscv_targetProofScript.sml:505-510: HOL unsigned word64 <+ 64w is word.toNat < 64; the low slice (5 >< 0) is BitVec.extractLsb' 0 6; and HOL w2w to word6 retains the low bits as BitVec.setWidth 6. The premise is retained. Direct HOL boundary oracle scripts/hol-probes/riscv_word_extract_6_probe.out and Lean zero/63 guards in Flapjack/Test/RiscVWordExtract6Parity.lean."
   }
 ]

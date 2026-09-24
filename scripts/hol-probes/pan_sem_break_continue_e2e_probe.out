@@ -1,0 +1,6 @@
+break_result=SOME Break
+break_clock=5
+break_locals_preserved=SOME (ValWord 7w)
+continue_result=SOME Continue
+continue_clock=5
+continue_locals_preserved=SOME (ValWord 7w)

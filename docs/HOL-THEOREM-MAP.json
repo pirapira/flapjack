@@ -8198,5 +8198,37 @@
     "lean_name": "crepToLoopCtxtMax",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against ctxt_max_def at crep_to_loopProofScript.sml:90; HOL's un-annotated Definition infers 'a |-> num because m <= n, so the port is polymorphic in the key and fixed at Nat for values; direct HOL-EVAL rows ctxt_max_within/exceeds/absent reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "gen_temps_def",
+    "lean_name": "genTemps",
+    "reviewer": "Codex (statement compared against gen_temps_def at crep_to_loopScript.sml:101; HOL GENLIST (\\x. n + x) l rendered as (List.range l).map (fun x => n + x); direct HOL-EVAL row gen_temps_3=[5;6;7] reproduced by a Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "first_name_def",
+    "lean_name": "firstLoopName",
+    "reviewer": "Codex (statement compared against first_name_def at crep_to_loopScript.sml:243; HOL first_name = 64 rendered as the Nat definition 64; direct HOL-EVAL row first_name=64 reproduced by a Lean guard)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "rt_var_def",
+    "lean_name": "rtVar",
+    "reviewer": "Codex (statement compared against rt_var_def at crep_to_loopScript.sml:105; HOL 'a |-> num FLOOKUP resolver with mx+1 sentinel; key polymorphic exactly as HOL infers; direct HOL-EVAL rows rt_var_some=7/none=9/absent=100 reproduced by Lean guards)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
+    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "rt_vars_def",
+    "lean_name": "rtVars",
+    "reviewer": "Codex (statement compared against rt_vars_def at crep_to_loopScript.sml:113; HOL OPT_MMAP (FLOOKUP fm) vs with [mx+1] sentinel rendered as vs.mapM (FLOOKUP fm); key polymorphic exactly as HOL infers; direct HOL-EVAL rows rt_vars_some=[10;7]/absent=[100] reproduced by Lean guards)"
   }
 ]

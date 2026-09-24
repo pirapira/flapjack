@@ -3,9 +3,11 @@ import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.CrepSem.Eval
 
-/-! Exact theorem counterpart for CakeML's `crep_arithProofScript.sml`.
-    The statement specializes the source's `'a word crepLang$exp` to a
-    width-parametric RISC-V word, and uses the production `crepDestConst`. -/
+/-! Theorem counterparts and Flapjack support for CakeML's
+    `crep_arithProofScript.sml`. The tagged `dest_const_thm` statement below
+    uses the polymorphic HOL word carrier `ι → Bool` with an explicit finite
+    dimension. Separate untagged helpers specialize words to RISC-V `BitVec`s
+    for executable arithmetic-simplifier support. -/
 
 namespace Flapjack
 

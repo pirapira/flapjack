@@ -798,6 +798,51 @@ theorem crepDest2ExpHolFiniteDimension_eq_shift {ι : Type}
         (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent)) :=
           bitVecToHolWord_holWordToBitVec dimension _
 
+/-- Flapjack-only natural-exponent shift adapter for an explicit finite word
+    dimension. It converts the production `ShiftLeft` operation, whose amount
+    is a word, to the source-style `BitVec.shiftLeft` amount used for HOL
+    `word_lsl`. The `HolFiniteDimension`/HOL `finite_index` correspondence is
+    still an open review gap, so this carries no HOL tag. -/
+theorem holFiniteDimension_wordLsl_toBitVec {ι : Type}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool)
+    (exponent : Nat) (hbound : exponent < dimension.width) :
+    holWordToBitVec dimension
+        (ShiftLeft.shiftLeft word
+          (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent))) =
+      BitVec.shiftLeft (holWordToBitVec dimension word) exponent := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  rw [holFiniteWordToBitVec_shiftLeft, holWordToBitVec_bitVecToHolWord]
+  change BitVec.shiftLeft (holWordToBitVec dimension word)
+      (BitVec.ofNat dimension.width exponent).toNat = _
+  have hfromNat : (BitVec.ofNat dimension.width exponent).toNat = exponent := by
+    rw [BitVec.toNat_ofNat]
+    apply Nat.mod_eq_of_lt
+    exact Nat.lt_trans (Nat.lt_two_pow_self (n := exponent))
+      (Nat.pow_lt_pow_right (by decide) hbound)
+  rw [hfromNat]
+
+/-- Transported `dest_2exp` source support: successful recognition proves the
+    input is `word_lsl 1 exponent`, with natural-exponent left shift represented
+    on the canonical BitVec image. Kept untagged because the finite-index
+    witness and evaluator are not yet identified with HOL's implicit choice. -/
+theorem crepDest2ExpHolFiniteDimension_eq_lsl {ι : Type}
+    (dimension : HolFiniteDimension ι) (word : ι → Bool)
+    (exponent : Nat)
+    (h : crepDest2Exp 0 word = some exponent) :
+    word = bitVecToHolWord dimension
+      (BitVec.shiftLeft (holWordToBitVec dimension (1 : ι → Bool)) exponent) := by
+  have hbound := crepDest2ExpHolFiniteDimension_lt_width dimension word exponent h
+  have hshift := crepDest2ExpHolFiniteDimension_eq_shift dimension word exponent h
+  have hshiftEq : ShiftLeft.shiftLeft (1 : ι → Bool)
+      (bitVecToHolWord dimension (BitVec.ofNat dimension.width exponent)) =
+      bitVecToHolWord dimension
+        (BitVec.shiftLeft (holWordToBitVec dimension (1 : ι → Bool)) exponent) := by
+    apply holWordToBitVec_injective dimension
+    rw [holFiniteDimension_wordLsl_toBitVec dimension (1 : ι → Bool)
+      exponent hbound, holWordToBitVec_bitVecToHolWord]
+  exact hshift.trans hshiftEq
+
 /- The arithmetic half of `eval_mul_const` only needs the target model's
 left-shift operation to agree with the fixed-width word shift for amounts
 below the word width. Isolating that exact operation contract lets finite

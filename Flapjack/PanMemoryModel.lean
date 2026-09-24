@@ -23,6 +23,10 @@ structure PanMemoryModel (α : Type u) where
   aligned : Nat → α → Bool
   /-- Decode a byte list using the source endianness convention. -/
   wordOfBytes : Bool → List α → α
+  /-- HOL `mem_load_32` decodes bytes into a fixed `word32`, then widens or
+      truncates that value to the state's word type. Models may override this
+      operation when their carrier width differs from 32. -/
+  wordOfBytes32 : Bool → List α → α := wordOfBytes
   /-- Evaluate a Pancake word operator on its complete argument list. -/
   wordOp : BinOp → List α → Option α
   /-- Evaluate a Pancake comparison, including its signed/unsigned split. -/
@@ -81,7 +85,7 @@ def panModelRead32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
     let alignedAddress := model.byteAlign bytesInWord address
     if domain alignedAddress then do
       let value ← memory alignedAddress
-      pure (model.wordOfBytes bigEndian
+      pure (model.wordOfBytes32 bigEndian
         [model.getByte bytesInWord address value bigEndian,
          model.getByte bytesInWord (address + 1) value bigEndian,
          model.getByte bytesInWord (address + 2) value bigEndian,

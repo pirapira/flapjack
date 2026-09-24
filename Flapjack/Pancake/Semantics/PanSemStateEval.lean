@@ -544,5 +544,36 @@ theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word
       | rStruct fs => simp [panValueWordDefined, hcell]
       | nStruct nm fs => simp [panValueWordDefined, hcell]
 
+/-! ### Structured `.load` word-node bridge (flapjack-pxn.18.3.6.9.2.2)
+
+The executed structured `.load` uses `panValueFlatLoad`; the tagged exact
+`panMemLoadHOL` reads the same nodes.  The `One` clause is proved here; the
+`Comb`/`Named` clauses require the fuel/context/offset machinery and are tracked
+by the child bead `flapjack-pxn.18.3.6.9.2.2.1`. -/
+
+theorem panValueFlatLoad_one_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)
+    (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64)))
+    (structs : StructContext) (address : RiscV.Word 64) :
+    panValueFlatLoad structs memory panSemBitVec64BytesInWord address .one
+        (some (panSemBitVec64MemoryAccess state)) =
+      (panMemLoadHOL (width := 64) .one address
+        (fun a => state.memaddrs a && panValueWordDefined memory a = true)
+        (panValueWordHOL memory) structs.toHOL).map HolValue.toPanValue := by
+  unfold panValueFlatLoad panMemLoadHOL
+  simp only [isWfShape.eq_def, if_true]
+  unfold panValueFlatLoadFuel panValueFlatReadWord
+  unfold panSemBitVec64MemoryAccess panValueMemoryAccessOfModel
+  simp only []
+  cases hmem : memory address with
+  | none => cases hd : state.memaddrs address <;> simp [hmem, panValueWordDefined]
+  | some cell =>
+      cases cell with
+      | word w =>
+          cases hd : state.memaddrs address <;>
+            simp [hmem, panValueWordHOL, panValueWordDefined, HolValue.toPanValue]
+      | rStruct fs =>
+          cases hd : state.memaddrs address <;> simp [hmem, panValueWordDefined]
+      | nStruct nm fs =>
+          cases hd : state.memaddrs address <;> simp [hmem, panValueWordDefined]
 
 end Flapjack

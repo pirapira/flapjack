@@ -1,0 +1,7 @@
+bits_empty=0w
+bits_true=1w
+bits_false=0w
+bits_true_false_true=5w
+bits_all_true_3=7w
+bits_pattern=18w
+bits_equation=T

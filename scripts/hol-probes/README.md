@@ -9,6 +9,14 @@ implementations. A parity fixture may be used to close a porting bead only
 when it records the original source definition, the probe source, and the
 command used to regenerate its output.
 
+`semantics_props_implements_probe.out` prints the proved HOL
+`semanticsPropsTheory.implements'_trans` conclusion from
+`cakeml/semantics/proofs/semanticsPropsScript.sml:285-295`. The structural
+Lean analogue and behavior-extension regressions are in
+`Flapjack.Test.SemanticsPropsParity`; the HOL `llist` to Lean
+`CakeLazyList` carrier bridge remains unproved, so this evidence does not
+qualify those declarations for exact HOL tags.
+
 The probes currently cover the small `loop_to_word` slice used by
 `Flapjack.Test.LoopToWord`, the `panSem$mem_load` boundary used by
 `Flapjack.Test.PanMemoryParity`, the fixed-width load boundary used by

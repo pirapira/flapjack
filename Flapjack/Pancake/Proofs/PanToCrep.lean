@@ -1950,8 +1950,10 @@ theorem compileToCrepHOL_eq_map
       record: it reads `context.funcs`/`context.eids` instead of HOL's separate
       `fs`/`eids` arguments and applies the tagged `compile_def` to the tagged
       `mk_ctxt_def`/`make_vmap_def`. No HOL side condition or body step is
-      dropped; the correspondence is established by this theorem rather than
-      by definitional identity of the adapter's own binder shape. -/
+      dropped.  The HOL-vs-Lean equivalence of the statement is not proved by
+      this theorem: the theorem is a within-Lean lookup fact, and the HOL
+      correspondence is reviewed by comparing the definitions (per SOUNDNESS),
+      not established by the proof below. -/
 @[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
 theorem alookupCompileToCrepCode
     (declarations : List (Decl (BitVec width)))

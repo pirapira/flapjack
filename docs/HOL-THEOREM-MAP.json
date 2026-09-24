@@ -7974,5 +7974,37 @@
     "lean_name": "mkCtxtCodeImpCodeRelW",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack bridge lemma for the width-indexed codeRelW exact HOL code_rel_def boundary; no standalone HOL original)"
-  }
+  },
+{
+  "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+  "hol_name": "is_stack_var_def",
+  "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+  "lean_name": "isStackVar",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+  "hol_name": "is_phy_var_def",
+  "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+  "lean_name": "isPhyVar",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+  "hol_name": "is_alloc_var_def",
+  "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+  "lean_name": "isAllocVar",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
+  "hol_name": "convention_partitions",
+  "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
+  "lean_name": "conventionPartitions",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

@@ -1408,9 +1408,38 @@ private theorem crepSimpExpEvalPreservesHolFiniteDimensionWithRuntime {ι : Type
         (toRuntime state) expressions with
     | none => simp [hx] at h
     | some values =>
-        have hi := ih.2 state (by simp [hx])
-        rw [← evalExpsMapM state (expressions.map (crepSimpExp fromNat)),
-          ← evalExpsMapM state expressions, hi]
+        have hOriginal : expressions.mapM
+            (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [← evalExpsMapM state expressions]
+          exact hx
+        have hSimplified : expressions.mapM
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) = some values := by
+          apply optMmapEqSomeMono
+            (evalCrepRuntimeExp (toRuntime state))
+            (fun expression => evalCrepRuntimeExp (toRuntime state)
+              (crepSimpExp fromNat expression)) expressions values hOriginal
+          intro expression value hmem heval
+          have hSuccessful :
+              evalCrepRuntimeExp (toRuntime state) expression ≠ none := by
+            rw [heval]
+            simp
+          have hPreserved := ih.1 expression hmem state hSuccessful
+          rw [hPreserved, heval]
+        have hMapMapM (xs : List (CrepExp (ι → Bool))) :
+            (xs.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) =
+              xs.mapM (fun expression => evalCrepRuntimeExp (toRuntime state)
+                (crepSimpExp fromNat expression)) := by
+          induction xs with
+          | nil => rfl
+          | cons head tail ihTail => simp [List.mapM_cons, ihTail]
+        have hSimplifiedMapped :
+            (expressions.map (crepSimpExp fromNat)).mapM
+                (evalCrepRuntimeExp (toRuntime state)) = some values := by
+          rw [hMapMapM]
+          exact hSimplified
+        rw [hSimplifiedMapped, hOriginal]
   case crepOp operator expressions ih =>
     cases operator
     cases expressions with
@@ -2017,6 +2046,141 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceRuntime {ι : Type} {σ : Type}
     _ = (evalCrepRuntimeExp runtime expression).map PanWordLab.word :=
       congrArg (Option.map PanWordLab.word) hsimp
 
+/-- The `Const` case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). This case has the original success
+    premise, arbitrary code-map update, simplifier, and complete
+    `Option word_lab` equality. Both sides reduce directly to
+    `SOME (Word value)`, so it requires no evaluator correspondence beyond
+    the defining `Const` equations. It is one constructor case, not the full
+    recursive theorem. -/
+def crepArithHolMapCode {n : Nat} {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) :
+    CrepHolState (RiscV.Word n) σ :=
+  { state with code := fun name => (state.code name).map f }
+
+/-- Apply the Crep arithmetic simplifier to the body stored at every function
+    name, preserving the declaration's parameter list. This is the Lean
+    function-map form of the `FMAP_MAP2` code transformation used by the local
+    `lookup_code` lemma in `crep_arithProofScript.sml`. -/
+def crepArithSimpCodeMap {α : Type} [BEq α] [OfNat α 0] [OfNat α 1]
+    [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α)) :
+    FunName → Option (List Nat × CrepProg α) :=
+  fun name => (code name).map fun (parameters, body) =>
+    (parameters, crepSimpProg fromNat body)
+
+/-- CakeML's local `lookup_code` simplification lemma
+    (`crep_arithProofScript.sml:162`): mapping `simp_prog` over every code
+    body commutes with a successful code lookup, leaving its argument-local
+    map unchanged. The unused length parameter is retained because it is a
+    quantified input in the HOL declaration. This theorem uses the faithful
+    `lookupCrepHolCode` definition rather than the executable runtime lookup. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "lookup_code" 162]
+theorem crepArithLookupCodeSimpProg {α : Type} [BEq String]
+    [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α]
+    (fromNat : Nat → α)
+    (code : FunName → Option (List Nat × CrepProg α))
+    (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
+    lookupCrepHolCode (crepArithSimpCodeMap fromNat code) fname args =
+      (lookupCrepHolCode code fname args).map
+        (fun (body, locals) => (crepSimpProg fromNat body, locals)) := by
+  unfold lookupCrepHolCode crepArithSimpCodeMap FLOOKUP
+  cases hlookup : code fname with
+  | none => simp [hlookup]
+  | some entry =>
+      rcases entry with ⟨parameters, body⟩
+      by_cases hvalid : parameters.length = args.length ∧ parameters.Nodup
+      · simp [hlookup, hvalid]
+      · simp [hlookup, hvalid]
+
+/-- Flapjack-specific `Const` case corresponding to part of CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, both sides reduce by
+    the defining `Const` evaluator equations. -/
+theorem crepSimpExpCorrect1ConstCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (value : RiscV.Word n)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.const value) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.const value)) =
+    evalCrepHolExpWordLab state (.const value) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11]
+
+/-- Flapjack-specific `Var` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, `mapc f` changes only
+    code and the local value is unchanged. -/
+theorem crepSimpExpCorrect1VarCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (name : Nat)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.var name) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.var name)) =
+    evalCrepHolExpWordLab state (.var name) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `LoadGlob` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the global lookup is
+    unchanged by `mapc f`. -/
+theorem crepSimpExpCorrect1LoadGlobCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ) (address : BitVec 5)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state (.loadGlob address) ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) (.loadGlob address)) =
+    evalCrepHolExpWordLab state (.loadGlob address) := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `BaseAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
+theorem crepSimpExpCorrect1BaseAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .baseAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .baseAddr) =
+    evalCrepHolExpWordLab state .baseAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
+/-- Flapjack-specific `TopAddr` case corresponding to CakeML's local
+    `simp_exp_correct1` (`crep_arithProofScript.sml:111`). It specializes the
+    HOL-polymorphic word carrier to `RiscV.Word n`, so it is deliberately not
+    tagged as a HOL case. Within that specialization, the address is unchanged
+    by simplification. -/
+theorem crepSimpExpCorrect1TopAddrCase {n : Nat} [NeZero n] {σ : Type}
+    (f : (List Nat × CrepProg (RiscV.Word n)) →
+      (List Nat × CrepProg (RiscV.Word n)))
+    (state : CrepHolState (RiscV.Word n) σ)
+    (_result : PanWordLab (RiscV.Word n))
+    (_h : evalCrepHolExpWordLab state .topAddr ≠ none) :
+    evalCrepHolExpWordLab (crepArithHolMapCode f state)
+      (crepSimpExp (BitVec.ofNat n) .topAddr) =
+    evalCrepHolExpWordLab state .topAddr := by
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11,
+    crepArithHolMapCode]
+
 /-- Successful-result form of the all-width source-runtime support, following
     HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
     result. This remains untagged for the evaluator-correspondence gap recorded
@@ -2318,13 +2482,6 @@ theorem crepSimpExpCorrect1 {n : Nat} [NeZero n] {σ : Type}
     width operations through the RISC-V model. The exact arbitrary HOL word
     carrier theorem remains open. The all-constructor production evaluator
     correspondence is proved in `CrepSem.Eval`. -/
-def crepArithHolMapCode {n : Nat} {σ : Type}
-    (f : (List Nat × CrepProg (RiscV.Word n)) →
-      (List Nat × CrepProg (RiscV.Word n)))
-    (state : CrepHolState (RiscV.Word n) σ) :
-    CrepHolState (RiscV.Word n) σ :=
-  { state with code := fun name => (state.code name).map f }
-
 theorem crepArithHolMapCode_target [NeZero n] {σ : Type}
     (f : (List Nat × CrepProg (RiscV.Word n)) →
       (List Nat × CrepProg (RiscV.Word n)))

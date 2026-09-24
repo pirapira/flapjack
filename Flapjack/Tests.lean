@@ -150,6 +150,7 @@ import Flapjack.Test.PanValueFfiClockFuel
 import Flapjack.Test.WordToStackBitsParity
 import Flapjack.Test.MlStringParity
 import Flapjack.Test.MlStringBridgeParity
+import Flapjack.Test.PanLangShapeHOLParity
 
 /-!
 # Flapjack regression tests

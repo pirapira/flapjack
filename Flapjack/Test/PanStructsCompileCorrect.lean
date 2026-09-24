@@ -994,40 +994,43 @@ example :
         panSemShapeOf (.word finiteMapRuntime.baseAddress) ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs
         (.word finiteMapRuntime.baseAddress) = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
-        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .baseAddr) =
+        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .baseAddr)
+        (memoryAccess := none) =
           some (panStructConvertValue (.word finiteMapRuntime.baseAddress))) ∧
     (structOldExpShape (α := Word64) emptyStructCompileContext .topAddr =
         panSemShapeOf (.word finiteMapRuntime.topAddress) ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs
         (.word finiteMapRuntime.topAddress) = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
-        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .topAddr) =
+        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .topAddr)
+        (memoryAccess := none) =
           some (panStructConvertValue (.word finiteMapRuntime.topAddress))) ∧
     (structOldExpShape (α := Word64) emptyStructCompileContext .bytesInWord =
         panSemShapeOf (.word (BitVec.ofNat 64 1)) ∧
       panStructValueFieldsOkBool finiteMapRuntime.structs
         (.word (BitVec.ofNat 64 1)) = true ∧
-      evalPanValueExp
+      evalPanValueExpFull
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).structs
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).locals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).globals
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).memory
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).baseAddress
         (panStructConvertState emptyStructCompileContext finiteMapRuntime).topAddress
-        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .bytesInWord) =
+        (BitVec.ofNat 64 1) (structCompileExp emptyStructCompileContext .bytesInWord)
+        (memoryAccess := none) =
           some (panStructConvertValue (.word (BitVec.ofNat 64 1)))) := by
   have hlocalsFields : panStructEveryValueFieldsOkBool
       finiteMapRuntime.structs finiteMapRuntime.locals := by
@@ -1048,16 +1051,16 @@ example :
     intro name
     simp [emptyStructCompileContext, finiteMapRuntime, lookupInfo]
   have hbase := panStructCompileExpCorrectBaseAddrCase emptyStructCompileContext
-    finiteMapRuntime (BitVec.ofNat 64 1) (.word finiteMapRuntime.baseAddress)
-    (by simp [evalPanValueExp]) rfl hlocalsFields hglobalsFields
+    finiteMapRuntime (BitVec.ofNat 64 1) none (.word finiteMapRuntime.baseAddress)
+    (by simp [evalPanValueExpFull]) rfl hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap
   have htop := panStructCompileExpCorrectTopAddrCase emptyStructCompileContext
-    finiteMapRuntime (BitVec.ofNat 64 1) (.word finiteMapRuntime.topAddress)
-    (by simp [evalPanValueExp]) rfl hlocalsFields hglobalsFields
+    finiteMapRuntime (BitVec.ofNat 64 1) none (.word finiteMapRuntime.topAddress)
+    (by simp [evalPanValueExpFull]) rfl hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap
   have hbytes := panStructCompileExpCorrectBytesInWordCase emptyStructCompileContext
-    finiteMapRuntime (BitVec.ofNat 64 1) (.word (BitVec.ofNat 64 1))
-    (by simp [evalPanValueExp]) rfl hlocalsFields hglobalsFields
+    finiteMapRuntime (BitVec.ofNat 64 1) none (.word (BitVec.ofNat 64 1))
+    (by simp [evalPanValueExpFull]) rfl hlocalsFields hglobalsFields
     hstructInfos hlocalsMap hglobalsMap
   exact ⟨hbase, htop, hbytes⟩
 
@@ -2265,16 +2268,16 @@ example :
     panStructValueFieldsOkBool finiteMapState.runtime.structs
       (.word (BitVec.ofNat 64 7)) = true ∧
     evalPanValueExpFull
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).structs
+      (panStructConvertState finiteMapContext finiteMapState.runtime).locals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).globals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).memory
+      (panStructConvertState finiteMapContext finiteMapState.runtime).baseAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).topAddress
       (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
         (.var .local "local" : Exp Word64))
       (memoryAccess := none) = some (.word (BitVec.ofNat 64 7)) := by
-  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState
+  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState.runtime
     (BitVec.ofNat 64 8) none "local" .local (.word (BitVec.ofNat 64 7))
     (by simp [evalPanValueExpFull, finiteMapState, panStructFiniteStateFromMaps,
       finiteMapRuntime, panPropsALookupEq]) rfl finiteMapLocalValueFieldsOk finiteMapGlobalValueFieldsOk
@@ -2287,16 +2290,16 @@ example :
     panStructValueFieldsOkBool finiteMapState.runtime.structs
       (.word (BitVec.ofNat 64 11)) = true ∧
     evalPanValueExpFull
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).structs
+      (panStructConvertState finiteMapContext finiteMapState.runtime).locals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).globals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).memory
+      (panStructConvertState finiteMapContext finiteMapState.runtime).baseAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).topAddress
       (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
         (.var .global "global" : Exp Word64))
       (memoryAccess := none) = some (.word (BitVec.ofNat 64 11)) := by
-  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState
+  have hresult := panStructCompileExpCorrectVarCase finiteMapContext finiteMapState.runtime
     (BitVec.ofNat 64 8) none "global" .global (.word (BitVec.ofNat 64 11))
     (by simp [evalPanValueExpFull, finiteMapState, panStructFiniteStateFromMaps,
       finiteMapRuntime, panPropsALookupEq]) rfl finiteMapLocalValueFieldsOk finiteMapGlobalValueFieldsOk
@@ -2309,16 +2312,16 @@ example :
     panStructValueFieldsOkBool finiteMapState.runtime.structs
       (.word (BitVec.ofNat 64 13)) = true ∧
     evalPanValueExpFull
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.structs
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.locals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.globals
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.memory
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.baseAddress
-      (panStructConvertFiniteState finiteMapContext finiteMapState).runtime.topAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).structs
+      (panStructConvertState finiteMapContext finiteMapState.runtime).locals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).globals
+      (panStructConvertState finiteMapContext finiteMapState.runtime).memory
+      (panStructConvertState finiteMapContext finiteMapState.runtime).baseAddress
+      (panStructConvertState finiteMapContext finiteMapState.runtime).topAddress
       (BitVec.ofNat 64 8) (structCompileExp finiteMapContext
         (.const (BitVec.ofNat 64 13) : Exp Word64))
       (memoryAccess := none) = some (.word (BitVec.ofNat 64 13)) := by
-  have hresult := panStructCompileExpCorrectConstCase finiteMapContext finiteMapState
+  have hresult := panStructCompileExpCorrectConstCase finiteMapContext finiteMapState.runtime
     (BitVec.ofNat 64 8) none (BitVec.ofNat 64 13) (.word (BitVec.ofNat 64 13))
     (by simp [evalPanValueExpFull]) rfl finiteMapLocalValueFieldsOk
     finiteMapGlobalValueFieldsOk

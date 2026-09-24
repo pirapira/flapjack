@@ -2043,6 +2043,101 @@ theorem crepSimpExpCorrect1ConstCase {ι : Type} {σ : Type}
       (.const value)).map PanWordLab.word := by
   simp [crepSimpExp.eq_11, evalCrepRuntimeExp]
 
+/-- Flapjack-only `Var` code-map irrelevance support. Although the source
+    constructor is unchanged by `simp_exp`, this is not tagged as a HOL case:
+    Lean's `PanWordLab` has only `word`, while HOL `word_lab` also has `Label`,
+    and the runtime projects local cells through `panTheWord`. -/
+theorem crepSimpExpVarCodeIrrel {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (name : Nat)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.var name) ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.var name))).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.var name)).map PanWordLab.word := by
+  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
+    CrepHolState.toHolFiniteWordSourceRuntime,
+    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+
+/-- Flapjack-only `LoadGlob` code-map irrelevance support. It is not tagged as
+    a HOL case because Lean `PanWordLab` omits HOL's `Label` constructor and
+    the runtime projects global cells through `panTheWord`. -/
+theorem crepSimpExpLoadGlobCodeIrrel {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ) (address : Nat)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.loadGlob address) ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.loadGlob address))).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      (.loadGlob address)).map PanWordLab.word := by
+  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
+    CrepHolState.toHolFiniteWordSourceRuntime,
+    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+
+/-- The `BaseAddr` constructor case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). It retains the success premise and full
+    wrapped result; `mapc f` leaves the base address unchanged. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+theorem crepSimpExpCorrect1BaseAddrCase {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      .baseAddr ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        .baseAddr)).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      .baseAddr).map PanWordLab.word := by
+  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
+    CrepHolState.toHolFiniteWordSourceRuntime,
+    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+
+/-- The `TopAddr` constructor case of CakeML's local `simp_exp_correct1`
+    (`crep_arithProofScript.sml:111`). It retains the success premise and full
+    wrapped result; `mapc f` leaves the top address unchanged. -/
+@[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "simp_exp_correct1" 111]
+theorem crepSimpExpCorrect1TopAddrCase {ι : Type} {σ : Type}
+    [dimension : HolFiniteDimension ι]
+    (f : (List Nat × CrepProg (ι → Bool)) →
+      (List Nat × CrepProg (ι → Bool)))
+    (state : CrepHolState (ι → Bool) σ)
+    (_result : PanWordLab (ι → Bool))
+    (_h : evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      .topAddr ≠ none) :
+    (evalCrepRuntimeExp
+      ((crepArithHolFiniteDimensionMapCode f state).toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        .topAddr)).map PanWordLab.word =
+    (evalCrepRuntimeExp (state.toHolFiniteWordSourceRuntime dimension)
+      .topAddr).map PanWordLab.word := by
+  simp [crepSimpExp.eq_11, evalCrepRuntimeExp,
+    CrepHolState.toHolFiniteWordSourceRuntime,
+    CrepHolState.toHolFiniteWordRuntime, crepArithHolFiniteDimensionMapCode]
+
 /-- Successful-result form of the all-width source-runtime support, following
     HOL `simp_exp_correct`'s premise and conclusion with the full wrapped
     result. This remains untagged for the evaluator-correspondence gap recorded

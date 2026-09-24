@@ -153,6 +153,23 @@ theorem holWordToBitVec_getLsbD {ι : Type u}
   rw [holWordBitsToBitVec_getLsbD]
   rfl
 
+/-! Signed word ordering for the source finite-index carrier. HOL's `word <`
+    compares the two's-complement values: different sign bits decide the
+    result, and equal sign bits use unsigned order. Keep this definition in
+    the HOL word adapter instead of selecting RISC-V's comparison instance. -/
+def holWordSignedLess {width : Nat} (left right : BitVec width) : Bool :=
+  let sign := 2 ^ (width - 1)
+  if left.toNat < sign then
+    if right.toNat < sign then decide (left.toNat < right.toNat) else false
+  else if right.toNat < sign then
+    true
+  else
+    decide (left.toNat < right.toNat)
+
+theorem holWordSignedLess_eq_riscvSignedLess {width : Nat}
+    (left right : BitVec width) :
+    holWordSignedLess left right = RiscV.signedLess left right := rfl
+
 /-! Generic finite-index word operations are transported by the explicit
     dimension enumeration. They are kept in their own namespace so existing
     Fin-specific instances remain the canonical production adapters. -/
@@ -217,7 +234,7 @@ instance : DecidableRel (fun left right : ι → Bool => left < right) := by
 instance : PanCmp (ι → Bool) :=
   ⟨fun left right => decide (holWordToBitVec dimension left <
       holWordToBitVec dimension right),
-    fun left right => RiscV.signedLess (holWordToBitVec dimension left)
+    fun left right => holWordSignedLess (holWordToBitVec dimension left)
       (holWordToBitVec dimension right)⟩
 
 instance : PanShiftWidth (ι → Bool) :=
@@ -799,7 +816,7 @@ instance : DecidableRel (fun left right : Fin width → Bool => left < right) :=
 
 instance : PanCmp (Fin width → Bool) :=
   ⟨fun left right => decide (holWordBitsToBitVec left < holWordBitsToBitVec right),
-    fun left right => RiscV.signedLess
+    fun left right => holWordSignedLess
       (holWordBitsToBitVec left) (holWordBitsToBitVec right)⟩
 
 instance : PanShiftWidth (Fin width → Bool) :=

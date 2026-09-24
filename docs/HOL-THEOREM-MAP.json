@@ -4433,22 +4433,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "lookup_kvar_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "lookupKvarHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL lookup_kvar Local/Global clauses over PanSemHolState locals/globals; direct HOL rows lookup_kvar_local/global/missing in pan_sem_e2e_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "set_kvar_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "setKvarHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL set_kvar sets the Local/Global finite-map entry via (name =+ value), rendered as a function update by HOL equality, no Boolean-BEq side condition)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",

@@ -2546,18 +2546,22 @@ def nbOpHOL : OpSize → Nat
   | .opW => 0
   | .op32 => 4
 
-/-- Exact HOL `lookup_kvar` (`panSemScript.sml:415`): first-match lookup of the
-local or global finite map. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_kvar_def"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). Source-shaped counterpart of HOL
+`lookup_kvar` (`panSemScript.sml:415`), but the key type does not match: HOL
+`varname` is `mlstring` whereas the Lean state uses `VarName = String`. The
+`@[hol]` tag is therefore withheld; an exact port keyed by `MlString` is tracked
+by the dependency bead `flapjack-pxn.18.4.3.77.8.1`. -/
 def lookupKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
     (state : PanSemHolState width σ) : Option (HolValue width) :=
   match kind with
   | .local => state.locals name
   | .global => state.globals name
 
-/-- Exact HOL `set_kvar` (`panSemScript.sml:403`): the HOL finite-map update
-`(name =+ value)` rendered as a function update by HOL equality. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_kvar_def"]
+/-- FLAPJACK-SPECIFIC (not an exact HOL port). Source-shaped counterpart of HOL
+`set_kvar` (`panSemScript.sml:403`), but the key type does not match (HOL
+`varname` is `mlstring`, Lean `VarName` is `String`). The `@[hol]` tag is
+therefore withheld; an exact port keyed by `MlString` is tracked by the
+dependency bead `flapjack-pxn.18.4.3.77.8.1`. -/
 def setKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
     (value : HolValue width) (state : PanSemHolState width σ) : PanSemHolState width σ :=
   match kind with

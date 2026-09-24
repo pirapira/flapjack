@@ -1102,7 +1102,12 @@ example :
             (.const 0)).map HolValue.toPanValue :=
   evalPanValueExp_eq_evalHOL_state littleEndianState sourceFfiState (.const 0)
 
-/-! ### Exact HOL `panSem` helper definitions (flapjack-pxn.18.4.3.77.8)
+/-! ### HOL `panSem` helper definitions (flapjack-pxn.18.4.3.77.8)
+
+`nbOpHOL` is an exact tagged port. `lookupKvarHOL`/`setKvarHOL` are
+FLAPJACK-SPECIFIC: their key type is Lean `String` while HOL `varname` is
+`mlstring`, so they are untagged (exact MlString-keyed port tracked by
+`flapjack-pxn.18.4.3.77.8.1`).
 
 Direct-HOL rows in `scripts/hol-probes/pan_sem_e2e_probe.out`:
 `nb_op_op8=1`, `nb_op_op16=2`, `nb_op_opW=0`, `nb_op_op32=4`,

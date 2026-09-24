@@ -1,4 +1,5 @@
 import Flapjack.FiniteMap.Basic
+import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Proofs.PanSimp
 import Flapjack.PanValueFlatten
 import Flapjack.PanToCrepCorrectnessBoundary
@@ -308,23 +309,6 @@ theorem executableLocalsRel_extend_new_var [BEq String] [LawfulBEq String]
               (panValueShape [] v'') ns'' hrel.2.1 (hbounds slot hmem).1 hctxt'' hmem'
           rw [opt_mmap_disj_zip_flookup ns l' ns'' (panValueFlatten v) hdisj'' hlenFlat]
           exact hmap''
-
-/-! ### Domain subtraction and Cake's `res_var` -/
-
-/-- Flapjack-specific counterpart of HOL4's `\\` (domain subtraction) on finite
-maps, not an exact HOL port: `FDOMSUB f key` removes `key` from the domain of
-`f`. -/
-def FDOMSUB [BEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
-  fun k => if key == k then none else f k
-
-/-- Flapjack-specific analogue of Cake's `res_var_def`
-(cakeml/pancake/semantics/crepSemScript.sml:163); not an exact HOL port, since it
-is implemented with this file's Boolean `BEq`: `res_var lc (n, NONE) = lc \\ n`
-and `res_var lc (n, SOME v) = lc |+ (n,v)`. -/
-def resVar [BEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
-  match entry.2 with
-  | none => FDOMSUB f entry.1
-  | some v => FUPDATE f (entry.1, v)
 
 theorem FLOOKUP_domsub [BEq α] [LawfulBEq α] (f : FiniteMap α β) (key k : α) :
     FLOOKUP (FDOMSUB f key) k = if key == k then none else FLOOKUP f k := rfl

@@ -336,4 +336,25 @@ theorem crepToLoopLocalsRelHOL_iff {width : Nat} [NeZero width]
           tLocals n = some (wlabWloc v) :=
   Iff.rfl
 
+/-! ## Pure-num context lookups
+
+`crep_to_loopScript.sml`'s `find_var`/`find_lab` are plain finite-map lookups
+with default `0`; over `CrepToLoopFiniteMapContext` they need no width. -/
+
+/-- Exact port of HOL `find_var_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:20-25`). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "find_var_def"]
+def findVarHOL (ctxt : CrepToLoopFiniteMapContext) (v : Nat) : Nat :=
+  match FLOOKUP ctxt.vars v with
+  | some n => n
+  | none => 0
+
+/-- Exact port of HOL `find_lab_def`
+    (`cakeml/pancake/crep_to_loopScript.sml:27-32`). -/
+@[hol "cakeml/pancake/crep_to_loopScript.sml" "find_lab_def"]
+def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
+  match FLOOKUP ctxt.funcs f with
+  | some (n, _) => n
+  | none => 0
+
 end Flapjack

@@ -491,6 +491,109 @@ example :
 #guard corrGuard
 #eval corrGuard
 
+/-! ## Arbitrary Shift hook versus HOL `word_sh` -/
+
+/-- A memory model whose `shift` hook is literally HOL `word_sh` at 64 bits,
+    but which is otherwise not the RISC-V target model. -/
+def holShiftModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with
+    shift := fun operator left right => holWordShift64 operator left right.toNat }
+
+def holShiftBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memoryModel := holShiftModel }
+
+theorem holShiftBaseState_matches :
+    CrepMemoryModelShiftMatchesHOL64 holShiftBaseState.memoryModel :=
+  fun _ _ _ => rfl
+
+example : CrepMemoryModelShiftMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_shift_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 3)) =
+      holWordShift64 .lsl 1 3 :=
+  evalCrepRuntimeExp_shift_const_of_matches holShiftBaseState
+    holShiftBaseState_matches .lsl 1 3
+
+/-- Generic `Shift` equation supports arbitrary (nested) child expressions. -/
+example :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holShiftBaseState)
+        (.shift .lsl (.const 1) (.const 3))).map PanWordLab.word =
+      holCrepEval64 holShiftBaseState (.shift .lsl (.const 1) (.const 3)) :=
+  evalCrepRuntimeExp_shift_map_eq_holCrepEval64 holShiftBaseState .lsl (.const 1) (.const 3)
+
+/-- The production evaluator over an arbitrary matching model agrees with HOL
+    `word_sh` on valid shifts and rejects an out-of-range amount. -/
+def shiftMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 3)) ==
+      some (8 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holShiftBaseState (.shift .lsl (.const 1) (.const 64)) ==
+      none) &&
+    (evalCrepRuntimeExp holShiftBaseState (.shift .ror (.const 1) (.const 1)) ==
+      some (0x8000000000000000 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holShiftBaseState
+        (.shift .lsl (.op .add ([(1 : RiscV.Word 64), 2].map CrepExp.const)) (.const 3)) ==
+      some (24 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holShiftBaseState)
+        (.shift .lsl (.const 1) (.const 3)) == some (8 : RiscV.Word 64))
+
+#guard shiftMatchesGuard
+#eval shiftMatchesGuard
+
+/-- A memory model whose `wordOp` hook is literally HOL `word_op` at 64 bits,
+    but which is otherwise not the RISC-V target model. -/
+def holOpModel : PanMemoryModel (RiscV.Word 64) :=
+  { RiscV.panRiscVMemoryModel with wordOp := fun operator values => wordOpHOL operator values }
+
+def holOpBaseState : CrepRuntimeState (RiscV.Word 64) Unit :=
+  { probeBaseState with memoryModel := holOpModel }
+
+theorem holOpBaseState_matches :
+    CrepMemoryModelOpMatchesHOL64 holOpBaseState.memoryModel :=
+  fun _ _ => rfl
+
+example : CrepMemoryModelOpMatchesHOL64 (riscv64CrepRuntimeTarget corrState).memoryModel :=
+  riscv64CrepRuntimeTarget_op_matches_HOL64 corrState
+
+example :
+    evalCrepRuntimeExp holOpBaseState
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) =
+      wordOpHOL .add [3, 4] :=
+  evalCrepRuntimeExp_op_const_of_matches holOpBaseState holOpBaseState_matches .add [3, 4]
+
+/-- Generic `Op` equation supports arbitrary (nested) child expressions. -/
+example :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holOpBaseState)
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const))).map PanWordLab.word =
+      holCrepEval64 holOpBaseState (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) :=
+  evalCrepRuntimeExp_op_map_eq_holCrepEval64 holOpBaseState .add
+    ([(3 : RiscV.Word 64), 4].map CrepExp.const)
+
+/-- The production evaluator over an arbitrary matching model agrees with HOL
+    `word_op` on valid operations and rejects an out-of-range arity. -/
+def opMatchesGuard : Bool :=
+  (evalCrepRuntimeExp holOpBaseState
+      (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+    some (7 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holOpBaseState
+        (.op .and ([(0xF0 : RiscV.Word 64), 0x3C].map CrepExp.const)) ==
+      some (0x30 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExp holOpBaseState
+        (.op .sub ([(7 : RiscV.Word 64)].map CrepExp.const)) ==
+      none) &&
+    (evalCrepRuntimeExp holOpBaseState
+        (.op .add [.op .sub ([(9 : RiscV.Word 64), 4].map CrepExp.const), .const 4]) ==
+      some (9 : RiscV.Word 64)) &&
+    (evalCrepRuntimeExpWordLab holOpBaseState
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+      some (.word (7 : RiscV.Word 64))) &&
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget holOpBaseState)
+        (.op .add ([(3 : RiscV.Word 64), 4].map CrepExp.const)) ==
+      some (7 : RiscV.Word 64))
+
+#guard opMatchesGuard
+#eval opMatchesGuard
+
 def runChecks : IO Bool := do
   if wordBoundaryGuard && storeRoundTripGuard then
     IO.println "PASS crep runtime RISC-V 64 target word/byte boundary parity"
@@ -528,8 +631,16 @@ def runChecks : IO Bool := do
     IO.println "PASS crep RV64 evaluator correspondence holds on compound expressions"
   else
     IO.println "FAIL crep RV64 evaluator correspondence holds on compound expressions"
+  if shiftMatchesGuard then
+    IO.println "PASS crep Shift hook matches HOL word_sh over arbitrary model and nested operands"
+  else
+    IO.println "FAIL crep Shift hook matches HOL word_sh over arbitrary model and nested operands"
+  if opMatchesGuard then
+    IO.println "PASS crep Op hook matches HOL word_op over arbitrary model and nested operands"
+  else
+    IO.println "FAIL crep Op hook matches HOL word_op over arbitrary model and nested operands"
   pure (wordBoundaryGuard && storeRoundTripGuard && loadByteEvalGuard &&
     load32EvalGuard && loadEvalGuard && opEvalGuard && cmpEvalGuard && shiftEvalGuard &&
-    crepOpEvalGuard && corrGuard)
+    crepOpEvalGuard && corrGuard && shiftMatchesGuard && opMatchesGuard)
 
 end Flapjack.Test.CrepRuntimeTargetParity

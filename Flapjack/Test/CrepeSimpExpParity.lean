@@ -153,6 +153,18 @@ example : boolDimensionWord = ShiftLeft.shiftLeft (1 : Bool → Bool)
   crepDest2ExpHolFiniteDimension_eq_shift boolWordDimension
     boolDimensionWord 1 (by decide +kernel)
 
+example : boolDimensionWord = bitVecToHolWord boolWordDimension
+    (BitVec.shiftLeft (holWordToBitVec boolWordDimension (1 : Bool → Bool)) 1) :=
+  crepDest2ExpHolFiniteDimension_eq_lsl boolWordDimension
+    boolDimensionWord 1 (by decide +kernel)
+
+example (word : Bool → Bool) (exponent : Nat) (hbound : exponent < 2) :
+    holWordToBitVec boolWordDimension
+        (ShiftLeft.shiftLeft word
+          (bitVecToHolWord boolWordDimension (BitVec.ofNat 2 exponent))) =
+      BitVec.shiftLeft (holWordToBitVec boolWordDimension word) exponent :=
+  holFiniteDimension_wordLsl_toBitVec boolWordDimension word exponent hbound
+
 #guard wordOp .add [] == some (0 : Bool → Bool)
 #guard wordOp .and [] == some (Complement.complement (0 : Bool → Bool))
 #guard wordOp .or [] == some (0 : Bool → Bool)

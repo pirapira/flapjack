@@ -595,6 +595,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "holFiniteDimension_wordLsl_toBitVec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only adapter from word-valued ShiftLeft amounts to natural-exponent BitVec.shiftLeft; finite_index representation relation remains open, so this is untagged support."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolFiniteDimension_eq_lsl",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Untagged all-dimension transported dest_2exp support with HOL's natural-exponent lsl shape encoded by BitVec; no @[hol] claim pending exact finite_index representation review."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConstFiniteWordForModel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack support lemma over explicit finite Boolean-index words. It isolates a runtime shift-law premise and is not an unrestricted HOL eval_mul_const port."

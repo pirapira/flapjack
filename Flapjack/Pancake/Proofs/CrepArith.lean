@@ -193,9 +193,9 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
 theorem crepDestConstHolWord_eq_const {ι : Type} [HolFiniteDimension ι]
     (expression : CrepExp (ι → Bool))
     (value : ι → Bool)
-    (h : crepDestConst expression = some value) :
+    (h : crepDestConstHolWord expression = some value) :
     expression = .const value := by
-  cases expression <;> simp_all [crepDestConst]
+  cases expression <;> simp_all [crepDestConstHolWord]
 
 /-- Canonical width-indexed BitVec support specialization of the generic
     HOL-word `dest_const_thm` port above. Kept untagged because the theorem
@@ -1385,10 +1385,18 @@ private theorem crepSimpMulEvalHolFiniteDimension {ι : Type} {σ : Type}
   change evalCrepRuntimeExp (toRuntime state) (simpExp right) = some rightValue at hright
   cases hL : crepDestConst (simpExp left) with
   | some leftConstant =>
-      have hLshape := crepDestConst_eq_const (simpExp left) leftConstant hL
+      have hLword : crepDestConstHolWord (simpExp left) = some leftConstant := by
+        rw [crepDestConstHolWord_eq_production]
+        exact hL
+      have hLshape := crepDestConstHolWord_eq_const
+        (simpExp left) leftConstant hLword
       cases hR : crepDestConst (simpExp right) with
       | some rightConstant =>
-          have hRshape := crepDestConst_eq_const (simpExp right) rightConstant hR
+          have hRword : crepDestConstHolWord (simpExp right) = some rightConstant := by
+            rw [crepDestConstHolWord_eq_production]
+            exact hR
+          have hRshape := crepDestConstHolWord_eq_const
+            (simpExp right) rightConstant hRword
           have hmulShape := crepSimpExp.eq_5 fromNat [left, right]
             leftConstant rightConstant (by simp [simpExp, hLshape, hRshape])
           rw [hmulShape]

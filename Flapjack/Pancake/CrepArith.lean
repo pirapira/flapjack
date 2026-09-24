@@ -1,3 +1,4 @@
+import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.RiscV.Model
 
@@ -14,12 +15,30 @@ namespace Flapjack
 
 /-- Generic Flapjack helper for extracting a value from a Const node.
     This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
-    stores an `'a word`, while this helper accepts arbitrary `α`. A
-    width-indexed word-shaped port and its connection to this production
-    helper remain open. -/
+    stores an `'a word`, while this production helper accepts arbitrary `α`.
+    The exact word-carrier definition is tagged below; this generic helper is
+    retained for the executable simplifier and connected to it on word values. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
+
+/-- Word-valued counterpart of CakeML's `crep_arith$dest_const_def`
+    (`crep_arithScript.sml:10-12`). HOL's `Const` payload is an `'a word`,
+    represented here by the Boolean function `ι → Bool`; unlike the generic
+    production helper above, this definition has exactly the HOL value type. -/
+@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+def crepDestConstHolWord {ι : Type u} :
+    CrepExp (ι → Bool) → Option (ι → Bool)
+  | .const value => some value
+  | _ => none
+
+/-- The executable arbitrary-carrier extractor reduces to the tagged HOL
+    word definition whenever its carrier is a word. This keeps the production
+    simp implementation reusable while exposing its exact word behavior. -/
+theorem crepDestConstHolWord_eq_production {ι : Type u}
+    (expression : CrepExp (ι → Bool)) :
+    crepDestConstHolWord expression = crepDestConst expression := by
+  cases expression <;> rfl
 
 def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat

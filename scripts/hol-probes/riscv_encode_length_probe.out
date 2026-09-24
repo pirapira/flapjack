@@ -4,3 +4,5 @@ riscv_encode_length_branch=T
 riscv_encode_length_load=T
 riscv_encode_bytes_addi=[147w; 130w; 241w; 127w]
 riscv_encode_bytes_add=[179w; 130w; 113w; 0w]
+riscv_encode_bytes_beq=[99w; 130w; 32w; 0w]
+riscv_encode_bytes_ld=[131w; 48w; 1w; 0w]

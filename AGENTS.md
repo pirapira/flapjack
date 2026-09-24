@@ -118,11 +118,14 @@ the tag of one.
 
 **Reviewed statements are pinned.** `docs/HOL-TYPE-HASHES.json` records the
 elaborated Lean type of each `reviewed_exact` entry in
-`docs/HOL-THEOREM-MAP.json`. CI runs `scripts/check_hol_type_hashes.py` and
-rejects statement drift. After comparing a changed Lean statement with its HOL
-source, run `python3 scripts/check_hol_type_hashes.py --update` and review the
-lock-file diff. The hash gate detects Lean statement changes; it does not prove
-HOL-to-Lean equivalence or replace source-level review.
+`docs/HOL-THEOREM-MAP.json`; for tagged definitions and `opaque` declarations it
+also records the elaborated body. CI runs `scripts/check_hol_type_hashes.py` and
+rejects statement or definition-body drift. After comparing a changed Lean
+statement (or definition body) with its HOL source, run
+`python3 scripts/check_hol_type_hashes.py --update` and review the
+lock-file diff. The hash gate detects Lean declaration changes only: it does not
+hash untagged dependencies, theorem proof terms, or the HOL declarations, and it
+does not prove HOL-to-Lean equivalence or replace source-level review.
 
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side

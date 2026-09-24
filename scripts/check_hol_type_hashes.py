@@ -2,8 +2,14 @@
 """Pin reviewed HOL ports to their elaborated Lean declaration types.
 
 This detects statement drift after human review. It does not prove that a Lean
-statement is equivalent to its HOL source. Regenerate the lock only after
+statement is equivalent to its HOL source, and it does not hash the HOL
+declaration or untagged transitive dependencies. Regenerate the lock only after
 reviewing the changed statement against HOL, then inspect the lock diff.
+
+For tagged definitions and `opaque` declarations the lock additionally covers
+the elaborated Lean body, because such a body can change without changing its
+type. Proof terms of tagged theorems are not hashed; they may be refactored
+without changing the reviewed statement.
 """
 
 from __future__ import annotations
@@ -21,6 +27,20 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "HOL-THEOREM-MAP.json"
 LOCK = ROOT / "docs" / "HOL-TYPE-HASHES.json"
 EXPORTER = ROOT / "scripts" / "HolTypeHashes.lean"
+
+
+def validate_export_record(record: Any, line_number: int) -> dict[str, str]:
+    """Reject malformed exporter output. `value_expr` is optional and only
+    emitted for definitions and `opaque` declarations."""
+    if not isinstance(record, dict):
+        raise ValueError(f"Lean export line {line_number} is not an object")
+    required = {"lean_name", "hol_path", "hol_name", "type_expr"}
+    allowed = required | {"value_expr"}
+    if not required.issubset(record) or not set(record) <= allowed:
+        raise ValueError(f"Lean export line {line_number} has invalid fields")
+    if not all(isinstance(record[key], str) for key in record):
+        raise ValueError(f"Lean export line {line_number} has non-string fields")
+    return record
 
 
 def exported_types() -> list[dict[str, str]]:
@@ -42,13 +62,21 @@ def exported_types() -> list[dict[str, str]]:
             record = json.loads(line)
         except json.JSONDecodeError as error:
             raise ValueError(f"Lean export line {line_number} is not JSON: {line[:160]}") from error
-        fields = {"lean_name", "hol_path", "hol_name", "type_expr"}
-        if set(record) != fields or not all(isinstance(record[key], str) for key in fields):
-            raise ValueError(f"Lean export line {line_number} has invalid fields")
-        records.append(record)
+        records.append(validate_export_record(record, line_number))
     if not records:
         raise ValueError("Lean type export returned no declarations")
     return records
+
+
+def reviewed_payload(item: dict[str, str]) -> str:
+    """Serialize the reviewed part of a declaration: type and, when tagged,
+    the definition body. A definition whose body appears or disappears (for
+    example a change between `def` and `theorem`) changes the hash. Theorem
+    records keep their original type-only hash so the lock diff isolates the
+    newly covered definition bodies."""
+    if "value_expr" in item:
+        return f"{item['type_expr']}\x00{item['value_expr']}"
+    return item["type_expr"]
 
 
 def lock_records(
@@ -83,7 +111,9 @@ def lock_records(
                 "lean_full_name": item["lean_name"],
                 "hol_path": record["hol_path"],
                 "hol_name": record["hol_name"],
-                "sha256": hashlib.sha256(item["type_expr"].encode("utf-8")).hexdigest(),
+                "sha256": hashlib.sha256(
+                    reviewed_payload(item).encode("utf-8")
+                ).hexdigest(),
             }
         )
     return sorted(result, key=lambda item: (item["lean_path"], item["lean_name"]))

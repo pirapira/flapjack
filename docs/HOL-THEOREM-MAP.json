@@ -8992,38 +8992,6 @@
   "reviewer": "flapjack-deepseek (stack_namesScript.sml:21-49 one clause per asm inst constructor with catch-all; only register fields renamed via find_name. Width-indexed at BitVec width.)"
 },
 {
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "comp_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "progComp",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-deepseek (stack_namesScript.sml:56-99 comp pmatch quotation reproduced branch-for-branch including catch-all p => p; over the shared-word ProgW (BitVec width) carrier matching HOL's single 'a.)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "prog_comp_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "progCompEntry",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-deepseek (stack_namesScript.sml:101-103 prog_comp f (n,p) = (n, comp f p); Lean (entry.1, progComp names entry.2).)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "compile_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "compile",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-deepseek (stack_namesScript.sml:105-107 compile f prog = MAP (prog_comp f) prog; Lean program.map (progCompEntry names).)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
-  "hol_name": "MAP_FST_compile",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "map_fst_compile",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-deepseek (stack_namesProofScript.sml:268-272 MAP FST (compile f c) = MAP FST c; exact over ProgW (BitVec width).)"
-},
-{
   "hol_path": "cakeml/compiler/backend/proofs/stack_removeProofScript.sml",
   "hol_name": "is_SOME_Word_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",

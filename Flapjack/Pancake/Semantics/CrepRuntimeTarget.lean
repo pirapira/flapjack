@@ -2576,6 +2576,122 @@ theorem crepRuntimeStoreByte_eq_holMemStoreByte64_of_matches
     simp only [Option.pure_def, Option.map_some]
   · simp [hd]
 
+/-- HOL `panSemScript.sml` `mem_store_32_def`: guarded four-byte replacement in
+the aligned cell of the total memory function. -/
+def holMemStore32_64 (domain : PanMemoryDomain (RiscV.Word 64))
+    (memory : RiscV.Word 64 → PanWordLab (RiscV.Word 64))
+    (bigEndian : Bool) (address value : RiscV.Word 64) :
+    Option (RiscV.Word 64 → PanWordLab (RiscV.Word 64)) :=
+  if holAligned32_64 address then
+    let alignedAddress := holByteAlign64 address
+    if domain alignedAddress then
+      let cell := panTheWord (memory alignedAddress)
+      let cell0 := holSetByte64 address (holGetByte64 0 value bigEndian) cell bigEndian
+      let cell1 := holSetByte64 (address + 1) (holGetByte64 1 value bigEndian) cell0 bigEndian
+      let cell2 := holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value bigEndian) cell1 bigEndian
+      let cell3 := holSetByte64 (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value bigEndian) cell2 bigEndian
+      some (updateCrepRuntimeMemory memory alignedAddress (.word cell3))
+    else none
+  else none
+
+def CrepMemoryModelStore32MatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (address _value cell : RiscV.Word 64),
+    model.aligned 4 address = holAligned32_64 address ∧
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+        holGetByte64 byteAddress byteValue false) ∧
+    (∀ (byteAddress byteValue : RiscV.Word 64),
+      model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+        holSetByte64 byteAddress byteValue cell false)
+
+theorem crepMemoryModelStore32_aligned_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.aligned 4 address = holAligned32_64 address :=
+  (hmodel address value cell).1
+
+theorem crepMemoryModelStore32_byteAlign_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell : RiscV.Word 64) :
+    model.byteAlign (8 : RiscV.Word 64) address = holByteAlign64 address :=
+  (hmodel address value cell).2.1
+
+theorem crepMemoryModelStore32_getByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.getByte (8 : RiscV.Word 64) byteAddress byteValue false =
+      holGetByte64 byteAddress byteValue false :=
+  (hmodel address value cell).2.2.1 byteAddress byteValue
+
+theorem crepMemoryModelStore32_setByte_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 model)
+    (address value cell byteAddress byteValue : RiscV.Word 64) :
+    model.setByte (8 : RiscV.Word 64) byteAddress byteValue cell false =
+      holSetByte64 byteAddress byteValue cell false :=
+  (hmodel address value cell).2.2.2 byteAddress byteValue
+
+theorem riscv64CrepRuntimeTarget_store32_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelStore32MatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun address _value cell =>
+    ⟨panRiscVAligned32_eq_holAligned32 address,
+      panRiscVByteAlign_eight_eq_holByteAlign64 address,
+      fun byteAddress byteValue => panRiscVGetByte_eight_eq_holGetByte64 byteAddress byteValue,
+      fun byteAddress byteValue => panRiscVSetByte_eight_eq_holSetByte64 byteAddress byteValue cell⟩
+
+theorem crepRuntimeStore32_eq_holMemStore32_64_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelStore32MatchesHOL64 base.memoryModel)
+    (hbytes : base.bytesInWord = (8 : RiscV.Word 64))
+    (hbig : base.bigEndian = false) (address value : RiscV.Word 64) :
+    crepRuntimeStore32 base address value =
+      (holMemStore32_64 base.memaddrs base.memory false address value).map
+        (fun memory => { base with memory := memory }) := by
+  have haligned := crepMemoryModelStore32_aligned_of_matches hmodel address value 0
+  have halign := crepMemoryModelStore32_byteAlign_of_matches hmodel address value 0
+  simp only [crepRuntimeStore32, holMemStore32_64, hbytes, hbig]
+  rw [haligned]
+  by_cases ha : holAligned32_64 address = true
+  · simp only [ha, if_true]
+    rw [halign]
+    by_cases hd : base.memaddrs (holByteAlign64 address) = true
+    · simp only [hd, if_true]
+      have hget0 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 0 value
+      have hget1 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) 1 value
+      have hget2 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1) value
+      have hget3 := crepMemoryModelStore32_getByte_of_matches hmodel address value
+        (panTheWord (base.memory (holByteAlign64 address))) (1 + 1 + 1) value
+      rw [hget0, hget1, hget2, hget3]
+      rw [crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (panTheWord (base.memory (holByteAlign64 address))) address
+            (holGetByte64 0 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 address (holGetByte64 0 value false)
+              (panTheWord (base.memory (holByteAlign64 address))) false)
+            (address + 1) (holGetByte64 1 value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1) (holGetByte64 1 value false)
+              (holSetByte64 address (holGetByte64 0 value false)
+                (panTheWord (base.memory (holByteAlign64 address))) false) false)
+            (address + 1 + 1) (holGetByte64 (1 + 1) value false),
+          crepMemoryModelStore32_setByte_of_matches hmodel address value
+            (holSetByte64 (address + 1 + 1) (holGetByte64 (1 + 1) value false)
+              (holSetByte64 (address + 1) (holGetByte64 1 value false)
+                (holSetByte64 address (holGetByte64 0 value false)
+                  (panTheWord (base.memory (holByteAlign64 address))) false) false) false)
+            (address + 1 + 1 + 1) (holGetByte64 (1 + 1 + 1) value false)]
+      simp only [Option.pure_def, Option.map_some]
+    · simp [hd]
+  · simp [ha]
+
 /-- The production word store is HOL `mem_store` for any model: no memory-model
 hook is involved. -/
 theorem crepRuntimeStore_eq_holMemStore64

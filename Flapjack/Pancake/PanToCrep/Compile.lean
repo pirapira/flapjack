@@ -118,6 +118,20 @@ def compileExpHOLW {width : Nat} [NeZero width]
     Exp (BitVec width) → List (CrepExp (BitVec width)) × Shape :=
   compileExpHOL context
 
+/-- Kernel-checked definitional-equality bridge for `flapjack-pxn.18.3.1.3.2`:
+    at the RISC-V word carrier, the generic expression compiler `compileExpHOL`
+    is definitionally the tagged width-indexed `compile_exp_def` port
+    `compileExpHOLW`.  This is a BRIDGE ONLY, not textual routing: the shipped
+    `compileProgRiscV`/`compileProgHOL` path still calls the generic
+    `compileExpHOL`, so the executed compiler does not textually call the tagged
+    definition and the AGENTS.md production-path rule is NOT met here.  A
+    textual width specialization of the enclosing `compileProg` chain would
+    duplicate the large `compileProgHOL` equation/codeRel proof surface and is
+    tracked by `flapjack-pxn.18.3.5.3.1.2`. -/
+theorem compileExpHOLW_eq_compileExpHOL {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) (expression : Exp (BitVec width)) :
+    compileExpHOLW context expression = compileExpHOL context expression := rfl
+
 def compileArgsHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
   match expressions with
@@ -303,7 +317,12 @@ def storeMemOpHOL : OpSize → CrepMemOp
 /-! Generic finite-map implementation used to share the compile equations
     with non-word fixtures. This helper takes the target word's byte stride as
     an instance parameter, so the HOL reference belongs to the RISC-V
-    specialization below rather than this generic adapter. -/
+    specialization below rather than this generic adapter.  Its expression
+    compilation runs the generic `compileExpHOL`; the kernel-checked bridge
+    `compileExpHOLW_eq_compileExpHOL` shows this is definitionally equal to the
+    tagged width-indexed `compileExpHOLW` at the RISC-V carrier, but the path is
+    NOT textually routed to the tagged definition (see
+    `flapjack-pxn.18.3.5.3.1.2`). -/
 def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
     (program : Prog α) : CrepProg α :=

@@ -63,4 +63,18 @@ example :
       subst current
       simp [liveAliasColour])
 
+example :
+    liveAliasColour 3 ≠ liveAliasColour 2 := by
+  apply wordColouringRespectsClashes_singleWrite_map_noAlias
+    2 [3] liveAliasColour [(2, 1), (3, 2)]
+  · decide
+  · intro name hname
+    rcases hname with rfl | hname
+    · simp [lookupNatInfo, liveAliasColour]
+    · have : name = 3 := by simpa using hname
+      subst name
+      simp [lookupNatInfo, liveAliasColour]
+  · simp
+  · simp
+
 end Flapjack.Test.RiscVColourLivenessParity

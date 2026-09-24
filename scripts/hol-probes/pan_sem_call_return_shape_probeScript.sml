@@ -58,3 +58,16 @@ val _ = print_eval "deccall_bad_return_shape_caller_local"
       (panLang$DecCall (strlit "dest") panLang$One (strlit "badret") []
          panLang$Skip, ^baseState))).locals
       (strlit "caller")``;
+
+(* Unlike the zero-parameter call above, this distinguishes the callee's
+   initial parameter bindings from its post-Return empty locals. *)
+val parameterState = ``(^baseState with code :=
+  FEMPTY |+ (strlit "badret_param",
+    ([(strlit "x", panLang$One)] : (mlstring # panLang$shape) list,
+     panLang$Return (panLang$Const (7w:8 word)),
+     panLang$Comb [panLang$One; panLang$One])))``;
+val _ = print_eval "call_bad_return_shape_param_local"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$Call NONE (strlit "badret_param")
+         [panLang$Const (4w:8 word)], ^parameterState))).locals
+      (strlit "x")``;

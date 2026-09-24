@@ -286,6 +286,9 @@ run_probe crep_to_loop_make_vmap_dup_probeScript.sml crep_to_loop_make_vmap_dup_
 run_probe crep_to_loop_map_map2_fst_probeScript.sml crep_to_loop_map_map2_fst_probe.out \
   mm2_pair_eq mm2_empty "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_alookup_el_probeScript.sml crep_to_loop_alookup_el_probe.out \
+  ael_shape_0 ael_result "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
   mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -1349,6 +1352,14 @@ run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_prob
 # (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
 # compile / names_ok) against a small renaming map.
 run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
-  ri_reg names_ok_dup \
+  ri_reg compile_map_fst_src \
   "$cake_dir/compiler/backend/stack_namesScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The stack_remove make_init probe observes the state-free prerequisites used by
+# init_reduce / init_prop: is_SOME_Word, read_mem (and its LENGTH) and the
+# addresses set with its membership characterization.
+run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
+  is_word_some in_addr_out \
+  "$cake_dir/compiler/backend/proofs/stack_removeProofScript.sml" \
+  "$cake_dir/compiler/backend/proofs"

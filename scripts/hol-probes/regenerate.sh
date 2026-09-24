@@ -334,6 +334,8 @@ run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
   ra_delta_pair moves_to_sp_resort ra_spill_cost \
   node_list_empty_length node_list_first node_list_last \
   node_list_last_in_range node_list_out_of_range \
+  node_list_lupdate_same node_list_lupdate_other node_list_lupdate_length \
+  node_list_lupdate_outside \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe sort_moves_probeScript.sml sort_moves_probe.out \

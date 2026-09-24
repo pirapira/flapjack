@@ -824,6 +824,14 @@
     "reviewer": "Codex (source comparison; HOL ZIP (vs, MAP f vs) is Lean vs.zip (vs.map f), FOLDL is List.foldl; no extra hypotheses)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
+    "hol_name": "flookup_res_var_is_mem_zip_eq",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
+    "lean_name": "flookup_res_var_is_mem_zip_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; FOLDL/ZIP/MEM clauses over resVar, reuses tagged res_var_foldl_commutes_strong; no extra hypotheses)"
+  },
+  {
     "hol_path": "cakeml/pancake/crep_inlineScript.sml",
     "hol_name": "compile_inl_top_def",
     "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
@@ -6403,6 +6411,46 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeGlobalWordsRel_updateLocal",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only proof that changing locals preserves the recursive state-owned global-read condition; no standalone HOL declaration"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlNestedWords",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only recursive production evaluator proof for a nested exp_hdl assignment list; not an enclosing HOL Call theorem"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlFiniteMapWords",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-list production target exp_hdl execution over FLOOKUP slots and related state-owned globals; Call_Ret_Exception composition remains open"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlFiniteMapWords_localsRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-payload exp_hdl/local-map relation support for the handler-body IH; does not prove the enclosing HOL Call_Ret_Exception simulation"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "crepRuntimeExpHdlFiniteMapWords_handlerPrestateRelations",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only arbitrary-payload actual-state handler-entry boundary carrying state_rel/code_rel/excp_rel/locals_rel; recursive body IH composition and pc_compile_correct Call_Ret_Exception remain open"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "crepRuntimeExpHdlTwoWords",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only production target exp_hdl execution for a two-word exception payload; no standalone HOL theorem declaration"
@@ -7118,5 +7166,101 @@
     "lean_name": "panToCrepCompFuncRiscV_eq_compileCodeRelProg",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific bridge: the production per-function compiler panToCrepCompFuncRiscV equals the codeRel proof-context compilation compileCodeRelProg at the ctxtFc context. Vars agree by panToCrepMakeVmapHOL_eq_ctxtFcVars, vmax by maxList_range; funcs/eids are the same finite maps. No separate HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_none",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destNone_handlerNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destNone_handlerSome_eidsNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destNone_handlerSome_eidsSome",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_nocall_handlerNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_nocall_handlerSome_eidsNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_nocall_handlerSome_eidsSome",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_somecall_handlerNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_somecall_handlerSome_eidsNone",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_call_destSome_somecall_handlerSome_eidsSome",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compileProgHOL_not_mem_assignedFreeVars",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific concrete call-form / strong-induction helper for the exact HOL not_mem_context_assigned_mem_gt port; no standalone HOL declaration."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "not_mem_context_assigned_mem_gt",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "notMemContextAssignedMemGt",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact HOL-shaped port over PanToCrepHOLContext + compileProgHOL: ctxt_max hypothesis kept (intentionally unused; the freshness hypothesis is stronger), FLOOKUP freshness hypothesis, x <= vmax bound, conclusion x not in crepAssignedFreeVars (compileProgHOL context program). HOL statement pan_to_crepProofScript.sml:1252."
   }
 ]

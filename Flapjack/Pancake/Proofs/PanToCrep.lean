@@ -2489,7 +2489,8 @@ theorem panValueFfiSharedLoad_stateRel_target
        simp only [opSizeToCrepLoadOp, crepRuntimeMemWidth,
          riscv64CrepRuntimeTarget_ffi, riscv64CrepRuntimeTarget_ffiContext,
          riscv64SharedMemCallFfiHandler_sharedMem, crepSharedMemOperator,
-         crepRuntimeSharedMem, hvalid, if_true, hcallBase, ← hvalue])
+         crepRuntimeSharedMem, setCrepRuntimeLocal_eq_update, hvalid, if_true,
+         hcallBase, ← hvalue])
   · simpa only [stateRel] using stateRel_ffiUpdate source (riscv64CrepRuntimeTarget base)
       nextFfi hstate
 

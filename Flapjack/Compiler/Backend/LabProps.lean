@@ -1,4 +1,6 @@
 import Flapjack.Compiler.Backend.LabLang
+import Flapjack.Compiler.Encoders.Asm
+import Flapjack.Pancake.WordLang
 
 /-!
 # Cake labProps pre-encoding predicates
@@ -56,5 +58,58 @@ def allEncOkPre {Asm Memop Addr Cmp RegImm MlString Word : Type}
     (sections : List (Section (Line (AsmOrCbw Asm Memop Addr)
       (AsmWithLab Cmp RegImm MlString) Word))) : Bool :=
   sections.all (secOkPre checks)
+
+/-- Concrete instantiation of the `line_ok_pre` callback record from a faithful
+`AsmConfig`, so `line_ok_pre`/`sec_ok_pre`/`all_enc_ok_pre` can be stated over
+the same configuration `c` that `stackProps$stack_asm_ok_def` consumes. This
+fills the configuration gap noted for bead `flapjack-pxn.18.5.15.9.5`; the
+`flatten`-side precondition proof remains open there. -/
+def asmConfigChecks {width : Nat}
+    (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width) :
+    AsmChecks (Flapjack.Compiler.Encoders.Asm.AsmData width) WordMemOp
+      (WordLangAddr (BitVec width)) (BitVec width) where
+  zeroWord := 0
+  addr := fun base offset => .addr base offset
+  store8 := .store8
+  instMem := fun operator register address => .inst (.mem operator register address)
+  asmOk := Flapjack.Compiler.Encoders.Asm.asmOk config
+
+/-- HOL `cbw_to_asm_def` at the concrete configuration: `Cbw` becomes
+`Inst (Mem Store8 right (Addr left 0w))` and `ShareMem` becomes
+`Inst (Mem op r ad)`. -/
+theorem cbwToAsm_asmConfigChecks {width : Nat}
+    (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (instruction : AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
+      WordMemOp (WordLangAddr (BitVec width))) :
+    cbwToAsm (asmConfigChecks config) instruction =
+      match instruction with
+      | .asmi asm => asm
+      | .cbw left right => .inst (.mem .store8 right (.addr left 0))
+      | .shareMem operator register address => .inst (.mem operator register address) := by
+  cases instruction <;> rfl
+
+/-- HOL `labProps$line_ok_pre_def` over a concrete assembler configuration. -/
+def lineOkPreConfig {width : Nat}
+    (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (line : Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
+      WordMemOp (WordLangAddr (BitVec width)))
+      (AsmWithLab Cmp Nat MlString) (BitVec width)) : Bool :=
+  lineOkPre (asmConfigChecks config) line
+
+/-- HOL `labProps$sec_ok_pre_def` over a concrete assembler configuration. -/
+def secOkPreConfig {width : Nat}
+    (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (sec : Section (Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
+      WordMemOp (WordLangAddr (BitVec width)))
+      (AsmWithLab Cmp Nat MlString) (BitVec width))) : Bool :=
+  secOkPre (asmConfigChecks config) sec
+
+/-- HOL `labProps$all_enc_ok_pre` over a concrete assembler configuration. -/
+def allEncOkPreConfig {width : Nat}
+    (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
+    (sections : List (Section (Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
+      WordMemOp (WordLangAddr (BitVec width)))
+      (AsmWithLab Cmp Nat MlString) (BitVec width)))) : Bool :=
+  allEncOkPre (asmConfigChecks config) sections
 
 end Flapjack.Compiler.Backend.LabProps

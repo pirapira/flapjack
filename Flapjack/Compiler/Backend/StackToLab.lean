@@ -1,6 +1,7 @@
 import Flapjack.Compiler.Backend.LabLang
 import Flapjack.Compiler.Backend.StackAlloc
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Misc.AppList
 
 /-!
 # Cake stack_to_lab flatten
@@ -123,6 +124,268 @@ def flatten {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
     | _ => ([], false, next)
 termination_by _tail program _section _next _conts _breaks => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+
+/-- HOL `stack_to_lab$flatten`, with the HOL `misc$app_list` codomain.
+
+The HOL source builds its output as an `app_list` concatenation tree (`List`,
+`Append`, `Nil`) and flattens it with `misc$append`. This is the identical
+function with that codomain, so the exact HOL hypothesis `flatten t p n m cs bs
+= (ls, a, b)` can be stated. `flatten` is the flat production form. -/
+def flattenApp {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+    (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word) :
+    Bool → Prog Inst Cmp RegImm Binop Memop Addr MlString → Nat → Nat →
+      List Nat → List Nat →
+      AppList (FlatLine Memop Addr Cmp RegImm MlString AsmInst Word) × Bool × Nat
+  | tail, program, sectionId, next, conts, breaks =>
+    match program with
+    | .tick => (.list [.asm (.asmi ops.skip) [] 0], false, next)
+    | .inst instruction => (.list [.asm (.asmi (ops.embedInst instruction)) [] 0], false, next)
+    | .halt _ => (.list [.labAsm .halt zero [] 0], true, next)
+    | .seq first second =>
+        let (xs, nr1, next) := flattenApp ops zero false first sectionId next conts breaks
+        let (ys, nr2, next) := flattenApp ops zero false second sectionId next conts breaks
+        ((if tail then .append xs (.append (.list [.label sectionId 1 0]) ys) else .append xs ys),
+          nr1 || nr2, next)
+    | .ite condition register right thenBranch elseBranch =>
+        let (xs, nr1, next) := flattenApp ops zero false thenBranch sectionId next conts breaks
+        let (ys, nr2, next) := flattenApp ops zero false elseBranch sectionId next conts breaks
+        if stackIsSkip thenBranch && stackIsSkip elseBranch then
+          (.list [], false, next)
+        else if stackIsSkip thenBranch then
+          (.append (.list [.labAsm (.jumpCmp condition register right (.lab sectionId next)) zero [] 0])
+            (.append ys (.list [.label sectionId next 0])), false, next + 1)
+        else if stackIsSkip elseBranch then
+          (.append (.list [.labAsm (.jumpCmp (ops.negate condition) register right (.lab sectionId next)) zero [] 0])
+            (.append xs (.list [.label sectionId next 0])), false, next + 1)
+        else if nr1 then
+          (.append (.list [.labAsm (.jumpCmp (ops.negate condition) register right (.lab sectionId next)) zero [] 0])
+            (.append xs (.append (.list [.label sectionId next 0]) ys)), nr2, next + 1)
+        else if nr2 then
+          (.append (.list [.labAsm (.jumpCmp condition register right (.lab sectionId next)) zero [] 0])
+            (.append ys (.append (.list [.label sectionId next 0]) xs)), nr1, next + 1)
+        else
+          (.append (.list [.labAsm (.jumpCmp condition register right (.lab sectionId next)) zero [] 0])
+            (.append ys (.append (.list [.labAsm (.jump (.lab sectionId (next + 1))) zero [] 0,
+                .label sectionId next 0])
+              (.append xs (.list [.label sectionId (next + 1) 0])))), nr1 && nr2, next + 2)
+    | .loop body =>
+        let continueLabel := next
+        let breakLabel := next + 1
+        let (xs, _, nextAfterBody) := flattenApp ops zero false body sectionId (next + 2)
+          (continueLabel :: conts) (breakLabel :: breaks)
+        (.append (.list [.label sectionId continueLabel 0])
+          (.append xs
+            (.list [.labAsm (.jump (.lab sectionId continueLabel)) zero [] 0,
+              .label sectionId breakLabel 0])), false, nextAfterBody)
+    | .raise register => (.list [.asm (.asmi (ops.jumpReg register)) [] 0], true, next)
+    | .ret register => (.list [.asm (.asmi (ops.jumpReg register)) [] 0], true, next)
+    | .break index =>
+        (.list [.labAsm (.jump (.lab sectionId (findLab index breaks))) zero [] 0], true, next)
+    | .continue index =>
+        (.list [.labAsm (.jump (.lab sectionId (findLab index conts))) zero [] 0], true, next)
+    | .rawCall target => (.list [.labAsm (.jump (.lab target 1)) zero [] 0], true, next)
+    | .call none target _ => (.list [compileJump ops zero target], true, next)
+    | .call (some (returnProgram, linkRegister, returnSection, returnLabel)) target handler =>
+        let (xs, nr1, next) := flattenApp ops zero false returnProgram sectionId next conts breaks
+        let prelude := .append
+          (.list [.labAsm (.locValue linkRegister (.lab returnSection returnLabel)) zero [] 0,
+            compileJump ops zero target, .label returnSection returnLabel 0]) xs
+        match handler with
+        | none => (prelude, nr1, next)
+        | some (handlerProgram, handlerSection, handlerLabel) =>
+            let (ys, nr2, next) := flattenApp ops zero false handlerProgram sectionId next conts breaks
+            (.append prelude
+              (.append (.list [.labAsm (.jump (.lab sectionId next)) zero [] 0,
+                  .label handlerSection handlerLabel 0])
+                (.append ys (.list [.label sectionId next 0]))), nr1 && nr2, next + 1)
+    | .jumpLower left right target =>
+        (.list [.labAsm (.jumpCmp ops.lower left (ops.reg right) (.lab target 0)) zero [] 0], false, next)
+    | .ffi function _ _ _ _ returnAddress =>
+        (.list [.labAsm (.locValue returnAddress (.lab sectionId next)) zero [] 0,
+          .labAsm (.callFFI function) zero [] 0, .label sectionId next 0], false, next + 1)
+    | .locValue register label entry =>
+        (.list [.labAsm (.locValue register (.lab label entry)) zero [] 0], false, next)
+    | .install _ _ _ _ returnAddress =>
+        (.list [.labAsm (.locValue returnAddress (.lab sectionId next)) zero [] 0,
+          .labAsm .install zero [] 0, .label sectionId next 0], false, next + 1)
+    | .shMemOp operator register address =>
+        (.list [.asm (.shareMem operator register address) [] 0], false, next)
+    | .codeBufferWrite left right => (.list [.asm (.cbw left right) [] 0], false, next)
+    | _ => (.list [], false, next)
+termination_by _tail program _section _next _conts _breaks => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+
+/-! The representation bridge: flattening the HOL `app_list` output of
+`flattenApp` with `misc$append`/`appListAppend` gives the flat production
+output of `flatten`. Non-recursive constructors are proved pointwise here; the
+recursive composition cases are built on these. -/
+section FlattenAppBridge
+
+variable {Inst Cmp RegImm Binop Memop Addr MlString AsmInst Word : Type}
+variable (ops : FlattenOps Inst Cmp RegImm AsmInst) (zero : Word)
+
+theorem flattenApp_tick (tail : Bool) (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail (.tick : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail (.tick : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_inst (tail : Bool) (instruction : Inst) (sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.inst instruction : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.inst instruction : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_halt (tail : Bool) (register sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.halt register : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.halt register : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_raise (tail : Bool) (exception sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.raise exception : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.raise exception : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_ret (tail : Bool) (value sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.ret value : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.ret value : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_break (tail : Bool) (label sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.break label : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.break label : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_continue (tail : Bool) (label sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.continue label : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.continue label : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_rawCall (tail : Bool) (target sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.rawCall target : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.rawCall target : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_call_none (tail : Bool) (target : Sum Nat Nat)
+    (handler : Option (Prog Inst Cmp RegImm Binop Memop Addr MlString × Nat × Nat))
+    (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.call none target handler : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.call none target handler : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_jumpLower (tail : Bool) (left right target sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.jumpLower left right target : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.jumpLower left right target : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_ffi (tail : Bool) (function : MlString)
+    (configuration configurationLength array arrayLength returnAddress sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.ffi function configuration configurationLength array arrayLength returnAddress :
+          Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.ffi function configuration configurationLength array arrayLength returnAddress :
+          Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_locValue (tail : Bool) (destination label entry sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.locValue destination label entry : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.locValue destination label entry : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_install (tail : Bool)
+    (codeBuffer codeLength dataBuffer dataLength returnAddress sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.install codeBuffer codeLength dataBuffer dataLength returnAddress :
+          Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.install codeBuffer codeLength dataBuffer dataLength returnAddress :
+          Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_shMemOp (tail : Bool) (operator : Memop) (register : Nat) (address : Addr)
+    (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.shMemOp operator register address : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.shMemOp operator register address : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+theorem flattenApp_codeBufferWrite (tail : Bool) (address value sectionId next : Nat)
+    (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.codeBufferWrite address value : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.codeBufferWrite address value : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+/-- Representative of the `_ => List []` catch-all constructors (e.g. `skip`,
+`get`, `set`, `alloc`, the `stack*` family). -/
+theorem flattenApp_skip (tail : Bool) (sectionId next : Nat) (conts breaks : List Nat) :
+    appListFlatten (flattenApp ops zero tail
+        (.skip : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks) =
+      flatten ops zero tail
+        (.skip : Prog Inst Cmp RegImm Binop Memop Addr MlString)
+        sectionId next conts breaks := by
+  simp [flattenApp, flatten, appListFlatten, appListAppend, appendAux]
+
+end FlattenAppBridge
 
 
 /-! Base cases of `flatten`: the non-recursive constructors emit exactly their

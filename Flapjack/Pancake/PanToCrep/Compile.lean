@@ -26,15 +26,20 @@ termination_by structural expressions
     finite map into `InfoMap`. `compileProgHOL` uses this expression compiler
     throughout its recursive program lowering.
 
-    This is the Lean counterpart of Cake's `pan_to_crep$compile_exp`
-    (`cakeml/pancake/pan_to_crepScript.sml:39-101`): the two match the source
-    expression constructors equation by equation, with `compileExpListHOL`
-    standing for HOL's `MAP (compile_exp ctxt)` and the `CrepBytesInWord`
-    stride for HOL's implicit `bytes_in_word` (as in the tagged
-    `load_shape_def` counterpart `loadShapeBytes`). The fallback branches
-    return `([Const 0w], One)`, matching HOL. Direct oracle:
+    NOT TAGGED `@[hol]`.  The equations match Cake's
+    `pan_to_crep$compile_exp` (`cakeml/pancake/pan_to_crepScript.sml:39-101`)
+    clause by clause, with `compileExpListHOL` standing for HOL's
+    `MAP (compile_exp ctxt)` and the `CrepBytesInWord` stride for HOL's implicit
+    `bytes_in_word`.  The declaration is however generic in the element type `α`
+    carrying `[BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]`, whereas HOL's
+    `compile_exp` and `context` are indexed by the word type `'a word`
+    (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
+    conditions.  As with the generic `loadShapeBytes` versus the exact
+    width-indexed `loadShapeBytesW` (`Flapjack/Pancake/CrepLang.lean:210-228`),
+    the exact Lean tag is on the width-indexed `compileExpHOLW` below; this
+    generic form is retained as Flapjack support.  The fallback branches return
+    `([Const 0w], One)`, matching HOL.  Direct oracle:
     `scripts/hol-probes/compile_exp_probe.out`. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_exp_def"]
 def compileExpHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)
@@ -99,6 +104,20 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
+/-- Exact width-indexed port of `pan_to_crep$compile_exp_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:39-101`).  HOL's `compile_exp` and
+    `context` are indexed by the word type `'a word`
+    (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
+    conditions; following the `loadShapeBytes` versus `loadShapeBytesW` standard
+    (`Flapjack/Pancake/CrepLang.lean:210-228`), the faithful statement fixes the
+    carrier to `BitVec width` with `[NeZero width]` and delegates to the generic
+    helper instantiated at that carrier. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_exp_def"]
+def compileExpHOLW {width : Nat} [NeZero width]
+    (context : PanToCrepHOLContext (BitVec width)) :
+    Exp (BitVec width) → List (CrepExp (BitVec width)) × Shape :=
+  compileExpHOL context
+
 def compileArgsHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (context : PanToCrepHOLContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
   match expressions with
@@ -134,6 +153,10 @@ def firstCompiledExpAnyShapeHOL [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord 
   | (compiled :: _, _) => some compiled
   | _ => none
 
+/-- Maximum variable index mentioned by the given compiled expressions.  Calls
+    the generic `crepExpVars`; the tagged width-indexed `crepExpVarsW` is a
+    definitional delegation of it, so this executed use computes the identical
+    function (`flapjack-pxn.18.4.3.82`). -/
 def maxCrepExpVarHOL (expressions : List (CrepExp α)) : Nat :=
   (expressions.flatMap crepExpVars).foldl max 0
 

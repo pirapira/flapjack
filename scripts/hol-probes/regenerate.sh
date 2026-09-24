@@ -262,6 +262,10 @@ run_probe fm_empty_zip_alist_probeScript.sml fm_empty_zip_alist_probe.out \
 run_probe pan_common_props_no_overlap_probeScript.sml pan_common_props_no_overlap_probe.out \
   slot_nodup_x nested_zip_lookup "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_probe.out \
+  distinct_true distinct_eq_disjoint genlist_vmax_bound genlist_vmax_hit \
+  genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
+  "$cake_dir/pancake"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -582,7 +586,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   if_true_eval if_false_eval if_error_eval if_nested_eval \
   seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
   seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
-  return_missing_eval \
+  return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
+  assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \

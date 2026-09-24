@@ -222,7 +222,7 @@ private theorem load32CompileCaseRead32 :
         some (.word (BitVec.ofNat 64 0x8877665544332211)) else none)
       (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) =
         some (BitVec.ofNat 64 0x44332211) := by
-  native_decide
+  decide
 
 private theorem load32CompileCaseSourceEval :
     evalPanValueExpFull load32CompileCaseRuntime.structs

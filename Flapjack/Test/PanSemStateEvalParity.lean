@@ -413,4 +413,20 @@ example :
 #guard decide (panValueFlatShapeFuel Shape.one ≤
   panValueFlatFieldsFuel ([("f", Shape.one)] : List (FieldName × Shape)))
 
+/- The per-node word read agrees with the exact domain/memory pair. -/
+example :
+    panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+        (some (panSemBitVec64MemoryAccess littleEndianState)) 0 =
+      (if littleEndianState.memaddrs 0 &&
+          panValueWordDefined littleEndianState.memory 0 = true
+        then some (panValueWordHOL littleEndianState.memory 0) else none).map
+        (fun lab => match lab with | .word value => value) :=
+  panValueFlatReadWord_eq_panValueWordHOL littleEndianState
+    littleEndianState.memory 0
+
+#guard
+  (panValueFlatReadWord littleEndianState.memory panSemBitVec64BytesInWord
+      (some (panSemBitVec64MemoryAccess littleEndianState)) 0 ==
+    some sourceMemoryWord)
+
 end Flapjack.Test.PanSemStateEvalParity

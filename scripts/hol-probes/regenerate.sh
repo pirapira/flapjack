@@ -406,6 +406,9 @@ run_probe pan_sem_tick_e2e_probeScript.sml pan_sem_tick_e2e_probe.out \
 run_probe pan_sem_skip_e2e_probeScript.sml pan_sem_skip_e2e_probe.out \
   skip_result skip_locals_preserved \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_break_continue_e2e_probeScript.sml pan_sem_break_continue_e2e_probe.out \
+  break_result continue_locals_preserved \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 # The Assign probe observes the accepted, fresh-destination, and
 # source-evaluation-failure branches, including the unchanged post-state on the
 # two Error branches.
@@ -1153,3 +1156,12 @@ run_probe word_convs_good_handlers_probeScript.sml word_convs_good_handlers_prob
   gh_call_none gh_other \
   "$cake_dir/compiler/backend/semantics/wordConvsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
+
+# The num_set audit probe observes HOL misc$num_set = unit spt behaviour via
+# sptree$toAList: canonical insertion-order-independent enumeration, duplicate
+# collapse, wf for LN/insert/union, order-insensitive EVERY, and left-bias of
+# union / last-write of insert for non-unit maps.
+run_probe num_set_audit_probeScript.sml num_set_audit_probe.out \
+  ns_empty nsmap_insert_last \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"

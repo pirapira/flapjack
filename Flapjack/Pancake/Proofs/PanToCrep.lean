@@ -1835,10 +1835,11 @@ proves target runtime `exp_hdl` execution, while
 `locals_rel`. The corresponding two-word execution and post-state relation
 are proved by `crepRuntimeExpHdlTwoWords` and
 `crepRuntimeExpHdlTwoWords_localsRel`. This lemma supplies the
-source-to-target map-update relation used by those results. The remaining
-gap is actual-state `Call_Ret_Exception` branch matching/composition and
-arbitrary payload arities; the full HOL
-`pc_compile_correct[Call_Ret_Exception]` simulation remains open. -/
+source-to-target map-update relation used by those results. The one-word
+actual-state matching-handler case is also available as untagged induction
+support. The general HOL `Call_Ret_Exception` simulation remains open: its
+callee and handler induction hypotheses still need to be composed for
+arbitrary payload arities and post-state relations. -/
 theorem localsRelUpdateExistingValue
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

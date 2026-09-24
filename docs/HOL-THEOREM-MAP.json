@@ -8750,5 +8750,29 @@
     "lean_name": "crepToLoopLocalsRelHOL_cutset_prop",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against locals_rel_cutset_prop at crep_to_loopProofScript.sml:239-249; HOL subspt cset cset' rendered as the pointwise implication (forall n, live n = true -> live' n = true) and sptree locals/domain rendered extensionally as in crepToLoopLocalsRelHOL; the two source-local obligations are reconciled by FLOOKUP functionality on ctxt.vars; direct HOL-EVAL rows cutset_* in scripts/hol-probes/crep_to_loop_locals_cutset_probe.out reproduced by Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
-  }
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "mem_lookup_fromalist_some",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "memLookupFromAListSome",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
+  },
+{
+  "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
+  "hol_name": "is_Label_def",
+  "lean_path": "Flapjack/Compiler/Backend/LabSem.lean",
+  "lean_name": "isLabel",
+  "statement_status": "reviewed_exact",
+  "reviewer": "Codex (labSemScript.sml:47 is_Label returns T exactly on Label, F otherwise; Lean pattern match preserves all constructors)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/semantics/labPropsScript.sml",
+  "hol_name": "sec_ends_with_label_def",
+  "lean_path": "Flapjack/Compiler/Backend/LabProps.lean",
+  "lean_name": "secEndsWithLabelHOL",
+  "statement_status": "reviewed_exact",
+  "reviewer": "Codex (labPropsScript.sml:81 is a HOL predicate, not a Boolean result; the tagged Lean declaration returns Prop with nonempty and final-label conditions, while secEndsWithLabel is an untagged executable Bool counterpart)"
+}
 ]

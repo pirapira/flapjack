@@ -115,7 +115,7 @@ inductive Prog (Inst Cmp RegImm Binop Memop Addr MlString : Type) where
 (list_Seq (x::y::xs) = Seq x (list_Seq (y::xs)))
 ```
 
-    `list_Seq` builds the left-nested `Seq` chain of a program list, the
+    `list_Seq` builds the right-associated `Seq` chain of a program list, the
     canonical stackLang combinator used by the Word-to-Stack stubs and
     `compile_prog`.  HOL `list_Seq` is polymorphic in the word type `'a` and
     touches only the word-independent `Skip`/`Seq` constructors, whose fields are

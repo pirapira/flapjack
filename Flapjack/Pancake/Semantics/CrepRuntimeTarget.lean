@@ -1975,6 +1975,161 @@ theorem evalCrepRuntimeExpWordLab_shift_rv64_const
   simp [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp,
     crepRuntimeShift_rv64_eq_holWordShift64]
 
+/-- Exact condition under which the production `Shift` hook coincides with
+HOL's fixed `word_sh` at 64 bits.  `crepRuntimeShift_rv64_eq_holWordShift64`
+is the `riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need
+not satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelShiftMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : Shift) (left right : RiscV.Word 64),
+    model.shift operator left right = holWordShift64 operator left right.toNat
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelShiftMatchesHOL64` computes `Shift` as HOL `word_sh`. -/
+theorem crepMemoryModelShift_eq_holWordShift64_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 model)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    model.shift operator left right = holWordShift64 operator left right.toNat :=
+  hmodel operator left right
+
+/-- The RV64 target's memory model satisfies the shift/HOL-`word_sh` predicate. -/
+theorem riscv64CrepRuntimeTarget_shift_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelShiftMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator left right => crepRuntimeShift_rv64_eq_holWordShift64 base operator left right
+
+/-- Generic production equation for `Shift` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_sh` predicate, the hook is resolved as the HOL
+primitive.  This composes the recursive evaluator; it is not a constant
+specialization. -/
+theorem evalCrepRuntimeExp_shift_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.shift operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          holWordShift64 operator leftWord rightWord.toNat)) := by
+  simp only [CrepMemoryModelShiftMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_shift_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_shift_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.shift operator left right) =
+      (evalCrepRuntimeExp base left).bind (fun leftWord =>
+        (evalCrepRuntimeExp base right).bind (fun rightWord =>
+          (holWordShift64 operator leftWord rightWord.toNat).map PanWordLab.word)) := by
+  simp only [CrepMemoryModelShiftMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_shift_of_matches`. -/
+theorem evalCrepRuntimeExp_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExp base (.shift operator (.const left) (.const right)) =
+      holWordShift64 operator left right.toNat := by
+  simpa [evalCrepRuntimeExp] using
+    evalCrepRuntimeExp_shift_of_matches base hmodel operator (.const left) (.const right)
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_shift_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_shift_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelShiftMatchesHOL64 base.memoryModel)
+    (operator : Shift) (left right : RiscV.Word 64) :
+    evalCrepRuntimeExpWordLab base (.shift operator (.const left) (.const right)) =
+      (holWordShift64 operator left right.toNat).map PanWordLab.word := by
+  simpa [evalCrepRuntimeExpWordLab, evalCrepRuntimeExp] using
+    evalCrepRuntimeExpWordLab_shift_of_matches base hmodel operator (.const left) (.const right)
+
+/-- Exact condition under which the production `Op` hook coincides with HOL's
+fixed `word_op` at 64 bits.  `panRiscVWordOp_eq_wordOpHOL` is the
+`riscv64CrepRuntimeTarget` instance; an arbitrary `PanMemoryModel` need not
+satisfy it, so this predicate names the precise assumption. -/
+def CrepMemoryModelOpMatchesHOL64 (model : PanMemoryModel (RiscV.Word 64)) : Prop :=
+  ∀ (operator : BinOp) (values : List (RiscV.Word 64)),
+    model.wordOp operator values = wordOpHOL operator values
+
+/-- Source/production relation: any memory model satisfying
+`CrepMemoryModelOpMatchesHOL64` computes `Op` as HOL `word_op`. -/
+theorem crepMemoryModelOp_eq_wordOpHOL_of_matches
+    {model : PanMemoryModel (RiscV.Word 64)}
+    (hmodel : CrepMemoryModelOpMatchesHOL64 model)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    model.wordOp operator values = wordOpHOL operator values :=
+  hmodel operator values
+
+/-- The RV64 target's memory model satisfies the `Op`/HOL-`word_op` predicate. -/
+theorem riscv64CrepRuntimeTarget_op_matches_HOL64
+    (base : CrepRuntimeState (RiscV.Word 64) σ) :
+    CrepMemoryModelOpMatchesHOL64 (riscv64CrepRuntimeTarget base).memoryModel :=
+  fun operator values => panRiscVWordOp_eq_wordOpHOL operator values
+
+/-- Generic production equation for `Op` over *arbitrary* operand
+expressions: the children are recursively evaluated and, whenever the model
+satisfies the HOL-`word_op` predicate, the hook is resolved as the HOL
+primitive. -/
+theorem evalCrepRuntimeExp_op_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    evalCrepRuntimeExp base (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp base)).bind
+        (fun values => wordOpHOL operator values) := by
+  simp only [CrepMemoryModelOpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExp, hmodel]
+  rfl
+
+/-- Word_lab version of `evalCrepRuntimeExp_op_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_op_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    evalCrepRuntimeExpWordLab base (.op operator expressions) =
+      (expressions.mapM (evalCrepRuntimeExp base)).bind
+        (fun values => (wordOpHOL operator values).map PanWordLab.word) := by
+  simp only [CrepMemoryModelOpMatchesHOL64] at hmodel
+  simp only [evalCrepRuntimeExpWordLab, hmodel]
+  rfl
+
+/-- Constant-operand specialization of `evalCrepRuntimeExp_op_of_matches`. -/
+theorem evalCrepRuntimeExp_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExp base (.op operator (values.map CrepExp.const)) =
+      wordOpHOL operator values := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  rw [evalCrepRuntimeExp_op_of_matches base hmodel operator (values.map CrepExp.const), hmapConst]
+  rfl
+
+/-- Constant-operand specialization of
+`evalCrepRuntimeExpWordLab_op_of_matches`. -/
+theorem evalCrepRuntimeExpWordLab_op_const_of_matches
+    (base : CrepRuntimeState (RiscV.Word 64) σ)
+    (hmodel : CrepMemoryModelOpMatchesHOL64 base.memoryModel)
+    (operator : BinOp) (values : List (RiscV.Word 64)) :
+    evalCrepRuntimeExpWordLab base (.op operator (values.map CrepExp.const)) =
+      (wordOpHOL operator values).map PanWordLab.word := by
+  have hmapConst : List.mapM (evalCrepRuntimeExp base) (values.map CrepExp.const) = some values := by
+    induction values with
+    | nil => rfl
+    | cons value rest ih =>
+        simp [List.map_cons, List.mapM_cons, evalCrepRuntimeExp, ih]
+  rw [evalCrepRuntimeExpWordLab_op_of_matches base hmodel operator (values.map CrepExp.const), hmapConst]
+  rfl
+
 /-- HOL `crepSemScript.sml` `crep_op_def` shape at 64 bits: `Mul` over exactly
 two word operands yields their product, any other arity is a failure. -/
 def holCrepOpMul64 (values : List (RiscV.Word 64)) : Option (RiscV.Word 64) :=
@@ -2276,5 +2431,29 @@ mutual
             rw [← he, ← ht]
             simp [Option.map_bind, Option.bind_map, Function.comp_def]
 end
+
+/-- Composition of the generic `Shift` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Shift` expressions at the
+RV64 target, whose model satisfies the HOL-`word_sh` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_shift_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : Shift) (left right : CrepExp (RiscV.Word 64)) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.shift operator left right)).map PanWordLab.word =
+      holCrepEval64 base (.shift operator left right) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
+
+/-- Composition of the generic `Op` equation with the all-expression
+recursive bridge: for arbitrary (possibly nested) `Op` expressions at the RV64
+target, whose model satisfies the HOL-`word_op` predicate, production
+evaluation maps onto the HOL-shaped `holCrepEval64`. -/
+theorem evalCrepRuntimeExp_op_map_eq_holCrepEval64
+    (base : CrepRuntimeState (RiscV.Word 64) Unit)
+    (operator : BinOp) (expressions : List (CrepExp (RiscV.Word 64))) :
+    (evalCrepRuntimeExp (riscv64CrepRuntimeTarget base)
+        (.op operator expressions)).map PanWordLab.word =
+      holCrepEval64 base (.op operator expressions) :=
+  evalCrepRuntimeExp_map_eq_holCrepEval64 base _
 
 end Flapjack

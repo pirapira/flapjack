@@ -717,7 +717,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgConstLocalStructAddressOrRFieldInnerIH_eval_flatten",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, one-word Local LoadByte/Load32, and Load32 of recursively supported addresses with an explicit One compile shape, all under the canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+    "reviewer": "Flapjack-only induction over restricted Call-argument evidence; composes Const/Local/address/local-RField, recursively nested RStruct, source-impossible Global/NStruct/NField, PanOp.mul over supported operands, constant-address LoadByte/Load32, one-word Local LoadByte/Load32, and LoadByte/Load32 of recursively supported addresses with an explicit One compile shape, all under the canonical RISC-V target invariant. It is not the full HOL compile_exp_val_rel relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "compileExpHOL_loadByte_ofHOLIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only fixed-RV64 specialization of the HOL compile_exp_val_rel LoadByte constructor: consumes the full four-part per-expression IH for its address plus state_rel/code_rel/locals_rel and localization premises, and proves production target LoadByte evaluation and shape/length/well-formedness facts. It requires the canonical RISC-V target invariant, so it is not tagged as the general HOL theorem."
   },
   {
     "hol_path": null,
@@ -5286,6 +5294,14 @@
     "lean_name": "panStructCompileExpCorrectPanOpCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Kernel-checked recursive Panop-constructor specialization with successful evaluation, translated context/FEVERY/FMAP_MAP2/struct_infos_ok premise roles, per-argument induction hypotheses, and all three parent conclusions. Successful PanOp evaluation supplies exactly two word arguments; the proof transports compiled argument results and reuses the same evalPanOp result. Intentionally untagged because HOL has only universal compile_exp_correct, and production Lean uses projected context views, total-function Bool/map adapters, explicit bytesInWord, and the evalPanOp interface."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "compile_exp_correct",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "panStructCompileExpCorrectCmpCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Kernel-checked Cmp constructor specialization with distinct recursive left/right induction hypotheses, successful-evaluation premises, translated context/FEVERY/FMAP_MAP2/struct_infos_ok roles, and all three conclusions of HOL compile_exp_correct. Successful source evaluation forces two word operands; conversion preserves each word so both evaluators compute the same evalPanCmp result. Intentionally untagged because HOL has only the universal theorem and Lean uses projected context views, total lookup/Bool adapters, and explicit bytesInWord."
   },
   {
     "hol_path": null,

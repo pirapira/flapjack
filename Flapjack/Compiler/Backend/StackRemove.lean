@@ -1,3 +1,4 @@
+import Flapjack.Compiler.Backend.StackCarrier
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Pancake.WordLang
 import Flapjack.HolRef
@@ -144,5 +145,51 @@ def storeLength : Nat :=
 /-- HOL `stack_err_lab` (`stack_removeScript.sml:54-56`). -/
 @[hol "cakeml/compiler/backend/stack_removeScript.sml" "stack_err_lab_def"]
 def stackErrLab : Nat := 2
+
+/-!
+## Instruction overloads and `halt_inst`
+
+HOL `stackLangScript.sml:80-84` declares the `left_shift_inst`,
+`right_shift_inst`, `const_inst`, `load_inst`, and `store_inst` overloads, and
+`stack_removeScript.sml:58-60` defines `halt_inst` on top of `const_inst` and
+`Halt`.  All are stated over the canonical single-word-parameter carrier
+`StackCarrier.ProgW (BitVec width)`, matching HOL's `'a stackLang$prog`.
+-/
+
+/-- HOL `left_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:80`). -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "left_shift_inst"]
+def leftShiftInst {width : Nat} (register value : Nat) :
+    StackCarrier.ProgW (BitVec width) :=
+  .inst (.arith (.shift .lsl register register (.imm (BitVec.ofNat width value))))
+
+/-- HOL `right_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:81`). -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "right_shift_inst"]
+def rightShiftInst {width : Nat} (register value : Nat) :
+    StackCarrier.ProgW (BitVec width) :=
+  .inst (.arith (.shift .lsr register register (.imm (BitVec.ofNat width value))))
+
+/-- HOL `const_inst` (`cakeml/compiler/backend/stackLangScript.sml:82`). -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "const_inst"]
+def constInst {width : Nat} (register : Nat) (value : BitVec width) :
+    StackCarrier.ProgW (BitVec width) :=
+  .inst (.const register value)
+
+/-- HOL `load_inst` (`cakeml/compiler/backend/stackLangScript.sml:83`). -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "load_inst"]
+def loadInst {width : Nat} (register address : Nat) :
+    StackCarrier.ProgW (BitVec width) :=
+  .inst (.mem .load register (.addr address 0))
+
+/-- HOL `store_inst` (`cakeml/compiler/backend/stackLangScript.sml:84`). -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_inst"]
+def storeInst {width : Nat} (register address : Nat) :
+    StackCarrier.ProgW (BitVec width) :=
+  .inst (.mem .store register (.addr address 0))
+
+/-- HOL `halt_inst` (`cakeml/compiler/backend/stack_removeScript.sml:58-60`). -/
+@[hol "cakeml/compiler/backend/stack_removeScript.sml" "halt_inst_def"]
+def haltInst {width : Nat} (value : BitVec width) :
+    StackCarrier.ProgW (BitVec width) :=
+  .seq (.inst (.const 1 value)) (.halt 1)
 
 end Flapjack.Compiler.Backend.StackRemove

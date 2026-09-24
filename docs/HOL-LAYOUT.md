@@ -62,7 +62,7 @@ for the review rule.
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
 | `crep_inlineScript.sml` | `Flapjack/Pancake/CrepInline.lean`, `CrepInline/Pass.lean` |
 | `crep_to_loopScript.sml` | `Flapjack/Pancake/CrepToLoop.lean`, `CrepToLoop/Optimise.lean` |
-| `loopLangScript.sml` | `Flapjack/Pancake/LoopLang.lean` |
+| `loopLangScript.sml` | `Flapjack/Pancake/LoopLang.lean` (exp, loop_arith, prog faithful carriers + bridged executable syntax) |
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |

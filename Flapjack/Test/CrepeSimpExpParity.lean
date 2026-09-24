@@ -481,6 +481,43 @@ def holWordBitsState4 : CrepHolState (Fin 4 → Bool) Unit where
   baseAddress := holBits4
   topAddress := holBits4
 
+example (value : Fin 4 → Bool) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+        holWordBitsState4)
+      (crepSimpExp
+        (fun n => bitVecToHolWord (instFinHolFiniteDimension (width := 4))
+          (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n))
+        (.const value)) = some (.word value) := by
+  have hsuccess : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4)) holWordBitsState4
+      (.const value) ≠ none := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp]
+  have hcase := crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+    (f := fun (_, entry) => entry) (state := holWordBitsState4)
+    value (.word value) hsuccess
+  have hvalue : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4)) holWordBitsState4
+      (.const value) = some (.word value) := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp]
+  calc
+    evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := 4))
+        (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+          holWordBitsState4)
+        (crepSimpExp
+          (fun n => bitVecToHolWord
+            (instFinHolFiniteDimension (width := 4))
+            (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n))
+          (.const value)) =
+      evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := 4)) holWordBitsState4
+        (.const value) := hcase
+    _ = some (.word value) := hvalue
+
 def holWordBits64 (value : Nat) : Fin 64 → Bool :=
   bitVecToHolWordBits (BitVec.ofNat 64 value)
 

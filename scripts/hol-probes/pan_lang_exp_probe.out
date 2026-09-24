@@ -1,0 +1,15 @@
+ex_const=5
+ex_var_len=2
+ex_rstruct_len=2
+ex_rfield=3
+ex_nstruct_len=2
+ex_nfield_len=3
+ex_load_shape=«1»
+ex_load32=1
+ex_op_len=2
+ex_panop_len=1
+ex_cmp=1
+ex_shift=1
+ex_baseaddr=1
+ex_topaddr=1
+ex_bytesinword=1

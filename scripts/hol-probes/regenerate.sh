@@ -283,6 +283,9 @@ run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
 run_probe crep_to_loop_make_vmap_dup_probeScript.sml crep_to_loop_make_vmap_dup_probe.out \
   mvd_single_hit mvd_dup_last_wins "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_rt_vars_distinct_probeScript.sml crep_to_loop_rt_vars_distinct_probe.out \
+  acd_distinct acd_missing "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_map_map2_fst_probeScript.sml crep_to_loop_map_map2_fst_probe.out \
   mm2_pair_eq mm2_empty "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -676,7 +679,7 @@ run_probe pan_sem_lookup_code_probeScript.sml pan_sem_lookup_code_probe.out \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
-  recursive_call_timeout recursive_deccall_timeout \
+  recursive_call_timeout recursive_deccall_timeout pan_sem_e2e_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
@@ -1450,13 +1453,19 @@ run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
 
-# The loopLang prog probe observes the exact HOL program constructor shapes
-# (word width fixed at 8) over the accepted `unit spt` num_set model.
+# The loopLang prog probe records HOL constructor outputs for comparison with
+# the untagged finite-map approximation (which is not an exact num_set port).
 run_probe loop_lang_prog_probeScript.sml loop_lang_prog_probe.out \
   prog_skip prog_ffi \
   "$cake_dir/pancake/loopLangScript.sml" \
   "$cake_dir/pancake"
 
+# The panLang exp probe pins the `exp` word payload (`Const`), its `mlstring`
+# identifier fields, and representative constructor arities at word type 64.
+run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
+  ex_const ex_bytesinword \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
 # The num_set/spt probe observes the exact HOL sptree lookup/insert/wf/isEmpty
 # behaviour for the unit-spt carrier used as num_set.
 run_probe num_set_spt_probeScript.sml num_set_spt_probe.out \

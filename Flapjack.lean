@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Display
 import Flapjack.Ffi
 import Flapjack.LoopFfi
@@ -68,6 +69,7 @@ import Flapjack.Pancake.Proofs.PanStructs.CompileCorrect
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.Proofs.PanGlobals
 import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
+import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams

@@ -1102,4 +1102,39 @@ example :
             (.const 0)).map HolValue.toPanValue :=
   evalPanValueExp_eq_evalHOL_state littleEndianState sourceFfiState (.const 0)
 
+/-! ### HOL `panSem` helper definitions (flapjack-pxn.18.4.3.77.8)
+
+`nbOpHOL` is an exact tagged port. `lookupKvarHOL`/`setKvarHOL` are
+FLAPJACK-SPECIFIC: their key type is Lean `String` while HOL `varname` is
+`mlstring`, so they are untagged (exact MlString-keyed port tracked by
+`flapjack-pxn.18.4.3.77.8.1`).
+
+Direct-HOL rows in `scripts/hol-probes/pan_sem_e2e_probe.out`:
+`nb_op_op8=1`, `nb_op_op16=2`, `nb_op_opW=0`, `nb_op_op32=4`,
+`lookup_kvar_local=SOME (ValWord 3w)`, `lookup_kvar_global=SOME (ValWord 4w)`,
+`lookup_kvar_missing=NONE`. -/
+
+example : nbOpHOL OpSize.op8 = 1 := rfl
+example : nbOpHOL OpSize.op16 = 2 := rfl
+example : nbOpHOL OpSize.opW = 0 := rfl
+example : nbOpHOL OpSize.op32 = 4 := rfl
+
+/-- A state with one bound local and one bound global, mirroring the HOL rows. -/
+abbrev kvarState : PanSemHolState 64 Unit :=
+  { holEvalState with
+    locals := fun name => if name = "x" then some (.val (.word 3)) else none
+    globals := fun name => if name = "y" then some (.val (.word 4)) else none }
+
+example : lookupKvarHOL VarKind.local "x" kvarState = some (.val (.word 3)) := rfl
+
+example : lookupKvarHOL VarKind.global "y" kvarState = some (.val (.word 4)) := rfl
+
+example : lookupKvarHOL VarKind.local "z" kvarState = none := rfl
+
+example : (setKvarHOL VarKind.local "z" (.val (.word 5)) kvarState).locals "z"
+    = some (.val (.word 5)) := rfl
+
+example : (setKvarHOL VarKind.local "z" (.val (.word 5)) kvarState).locals "x"
+    = some (.val (.word 3)) := rfl
+
 end Flapjack.Test.PanSemStateEvalParity

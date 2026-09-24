@@ -121,6 +121,17 @@ example :
     code body: `(5 + 1) * (max 1 1 + 1) + 1 = 13`. -/
 example : panSemCodeEvaluateFuel sampleState (.call none "f" []) = 13 := by decide
 
+/-- The canonical Call fuel is at least two, so the body budget never
+    underflows at the two dispatch steps. -/
+example : 2 ≤ panSemCodeEvaluateFuel sampleState (.call none "f" []) :=
+  panSemCodeEvaluateFuel_call_two_le sampleState none "f" []
+
+/-- The state-owned call-clause fuel is one more than the body budget
+    `canonical - 2`, so the recursive callee/handler bodies run exactly there. -/
+example : panSemCodeEvaluateFuel sampleState (.call none "f" []) - 1 =
+    (panSemCodeEvaluateFuel sampleState (.call none "f" []) - 2) + 1 :=
+  panSemCodeEvaluateFuel_call_sub_one_eq sampleState none "f" []
+
 def runChecks : IO Bool := do
   IO.println "PASS PanSem fuel decomposition: stored body bounded by code body fuel"
   IO.println "PASS PanSem fuel decomposition: canonical Call callee fuel = canonical - 2"

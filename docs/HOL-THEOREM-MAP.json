@@ -8997,7 +8997,7 @@
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "wordOffset",
   "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
+  "reviewer": "flapjack-deepseek (source comparison; carries [NeZero width] matching HOL nonzero dimindex)"
 },
 {
   "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",

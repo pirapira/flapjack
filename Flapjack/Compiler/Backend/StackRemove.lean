@@ -105,9 +105,10 @@ which is tracked separately). -/
 def maxStackAlloc : Nat := 255
 
 /-- HOL `word_offset` (`stack_removeScript.sml:20-22`):
-`word_offset n = n2w (dimindex (:'a) DIV 8 * n)`. -/
+`word_offset n = n2w (dimindex (:'a) DIV 8 * n)`. HOL word dimensions are
+nonzero (`dimindex (:'a) > 0`), so the exact carrier requires `[NeZero width]`. -/
 @[hol "cakeml/compiler/backend/stack_removeScript.sml" "word_offset_def"]
-def wordOffset {width : Nat} (n : Nat) : BitVec width :=
+def wordOffset {width : Nat} [NeZero width] (n : Nat) : BitVec width :=
   BitVec.ofNat width ((width / 8) * n)
 
 /-- HOL `store_list` (`stack_removeScript.sml:24-35`): the sixteen fixed store

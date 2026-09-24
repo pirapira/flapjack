@@ -1,0 +1,15 @@
+nac_skip=T
+nac_alloc_empty=F
+nac_alloc_other=F
+nac_seq_alloc=F
+nac_mt_skip=T
+nins_install_empty=F
+nmt_mt_skip=F
+nsi_skip=T
+nsi_share_arb=F
+nsi_share_load=F
+nsi_seq_share=F
+nsi_call_none=T
+nsi_call_handler_mt=T
+nmt_call_handler_mt=F
+nac_install_empty=T

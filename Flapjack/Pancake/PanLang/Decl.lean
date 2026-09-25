@@ -173,6 +173,24 @@ def functionsHOL {width : Nat} [NeZero width] :
   | .exnDecl _ _ :: declarations => functionsHOL declarations
   | .name _ _ :: declarations => functionsHOL declarations
 
+/-- Exact port of HOL `panLang$is_decl` (`panLangScript.sml:234-237`):
+`is_decl (Decl sh v e) = T`, `is_decl _ = F`.  The argument carrier
+`DeclHOL width` is the reviewed word-indexed rendering of HOL's polymorphic
+`'a decl` (see the `decl` tag above), so the body transfers clause for
+clause. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_decl_def"]
+def isDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .decl _ _ _ => true
+  | _ => false
+
+/-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
+`is_function (Function _) = T`, `is_function _ = F`, over the same reviewed
+`DeclHOL width` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_function_def"]
+def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .function _ => true
+  | _ => false
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production

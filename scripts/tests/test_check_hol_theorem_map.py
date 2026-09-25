@@ -1053,5 +1053,39 @@ class ValidateInventoryTest(unittest.TestCase):
             self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
 
 
+    def test_panlang_functions_append_filter_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/PanLang/Decl.lean", "isDeclHOL"): (
+                "cakeml/pancake/panLangScript.sml", "is_decl_def"),
+            ("Flapjack/Pancake/PanLang/Decl.lean", "isFunctionHOL"): (
+                "cakeml/pancake/panLangScript.sml", "is_function_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_append"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_append"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "functionsHOL_filter_isFunction"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_FILTER"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "functionsHOL_filter_isDecl"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_FILTER'"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+        # The ARB-carrying functions_eq_FILTER is deliberately not tagged.
+        eq_filter = ("Flapjack/Pancake/Semantics/PanProps.lean",
+                     "functionsHOL_eq_filter")
+        self.assertNotIn(eq_filter, MAP["tagged_declarations"]())
+        self.assertNotIn(eq_filter, by_key)
+
+
 if __name__ == "__main__":
     unittest.main()

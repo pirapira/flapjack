@@ -2072,6 +2072,46 @@
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.17): HOL functions (cakeml/pancake/panLangScript.sml:319-326) projects top-level Function declarations in source order, returning (fi.name,fi.params,fi.body,fi.return) and dropping Decl/ExnDecl/Name. functionsHOL matches clause-for-clause over the exact DeclHOL/FunDeclHOL carriers: MlS names, List (MlS x ShapeHOL) params, ProgHOL width bodies, ShapeHOL returns, with [NeZero width] matching HOL's positive word type. Direct HOL rows functions_empty/functions_function/functions_global in scripts/hol-probes/pan_globals_mem_functions_probe.out (and pan_lang_functions_probe.out) are replayed on the exact carriers in Flapjack/Test/PanGlobalsMemFunctionsHOLParity.lean. Production functionEntries/functions (String and generic Prog a) stay untagged."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_decl_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isDeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.1.34): HOL is_decl (panLangScript.sml:234-237) is is_decl (Decl sh v e) = T /\\ is_decl _ = F, polymorphic in the word type. isDeclHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier (the accepted rendering of HOL's polymorphic decl; see the tagged decl), with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows for the sibling declaration predicates are in scripts/hol-probes/pan_lang_decl_predicates_probeScript.sml (panLangScript.sml:234-253), replayed in Flapjack/Test/PanLangDeclPredicatesParity.lean. The production isDecl (String-backed generic Decl) stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_function_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isFunctionHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.1.42): HOL is_function (panLangScript.sml:314-317) is is_function (Function _) = T /\\ is_function _ = F, polymorphic in the word type. isFunctionHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier, with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows function=T / global=F are in scripts/hol-probes/pan_lang_is_function_probe.out, replayed in Flapjack/Test/PanLangIsFunctionParity.lean. The production globalDeclIsFunction (String-backed generic Decl) stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_append",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "functionsHOL_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.81): HOL functions_append (panPropsScript.sml:1496-1500) states functions (prog1 ++ prog2) = functions prog1 ++ functions prog2, polymorphic in the word type. functionsHOL_append matches the statement over the exact-ish List (DeclHOL width) carrier with the tagged functionsHOL; no ARB fallback and no extra hypotheses ([NeZero width] matches HOL's positive word type). Direct HOL rows for the underlying functions projection are in scripts/hol-probes/pan_lang_functions_probe.out and pan_globals_mem_functions_probe.out, replayed in Flapjack/Test/PanLangFunctionsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_FILTER",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "functionsHOL_filter_isFunction",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.82): HOL functions_FILTER (panPropsScript.sml:1502-1508) states functions (FILTER is_function prog) = functions prog. functionsHOL_filter_isFunction matches it over List (DeclHOL width) using the tagged functionsHOL and isFunctionHOL (the exact port of is_function); no ARB and no extra hypotheses beyond [NeZero width]. Sibling predicate/projection rows in scripts/hol-probes/pan_lang_is_function_probe.out and pan_lang_functions_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_FILTER'",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "functionsHOL_filter_isDecl",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.83): HOL functions_FILTER' (panPropsScript.sml:1510-1516) states functions (FILTER is_decl prog) = []. functionsHOL_filter_isDecl matches it over List (DeclHOL width) using the tagged functionsHOL and isDeclHOL (the exact port of is_decl); no ARB and no extra hypotheses beyond [NeZero width]. Sibling predicate/projection rows in scripts/hol-probes/pan_lang_decl_predicates_probeScript.sml and pan_lang_functions_probe.out. The ARB-carrying sibling functions_eq_FILTER (bead flapjack-4ac.4.80) is intentionally not tagged here."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "MEM_functions",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

@@ -8,6 +8,7 @@ Rows reproduce `scripts/hol-probes/pan_lang_decl_probe.out`:
   si_fields_len=1 si_size=7
 -/
 import Flapjack.Pancake.PanLang.Decl
+import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Parser.ParseTopDecsByteRanged
 
@@ -163,5 +164,42 @@ example {width : Nat} [NeZero width]
     compileProgTopHOLOfExact (declarations.map declToHOL) =
       compileProgTopHOL declarations :=
   Parser.parseTopDecs_routes_exactBoundary ofInt source locations declarations h
+
+/-! ### Exact `is_decl` / `is_function` / `functions` append-filter cluster
+(beads .1.34, .1.42, .4.81, .4.82, .4.83)
+
+Rows reproduce `scripts/hol-probes/pan_lang_is_function_probe.out`
+(`function=T`, `global=F`) and `scripts/hol-probes/pan_lang_functions_probe.out`
+(`functions_function`, `functions_global`). -/
+
+private def exactDecls : List (DeclHOL 64) :=
+  [ .function fdH, .decl .one (s "z") expH, .name (s "S") [], .exnDecl (s "ex") .one ]
+
+private def exactIsDeclRow : Bool :=
+  isDeclHOL (DeclHOL.decl .one (s "z") expH) &&
+  !isDeclHOL (DeclHOL.function fdH)
+
+private def exactIsFunctionRow : Bool :=
+  isFunctionHOL (DeclHOL.function fdH) &&
+  !isFunctionHOL (DeclHOL.decl .one (s "z") expH)
+
+#eval (exactIsDeclRow, exactIsFunctionRow)
+#guard exactIsDeclRow && exactIsFunctionRow
+
+example : isDeclHOL (DeclHOL.decl .one (s "z") expH) = true := rfl
+example : isDeclHOL (DeclHOL.function fdH) = false := rfl
+example : isFunctionHOL (DeclHOL.function fdH) = true := rfl
+example : isFunctionHOL (DeclHOL.decl .one (s "z") expH) = false := rfl
+
+example :
+    functionsHOL (exactDecls ++ exactDecls) =
+      functionsHOL exactDecls ++ functionsHOL exactDecls :=
+  functionsHOL_append _ _
+
+example : functionsHOL (exactDecls.filter isFunctionHOL) = functionsHOL exactDecls :=
+  functionsHOL_filter_isFunction _
+
+example : (functionsHOL (exactDecls.filter isDeclHOL)).length = 0 := by
+  simp [functionsHOL_filter_isDecl]
 
 end Flapjack.Test.PanLangDeclHOLParity

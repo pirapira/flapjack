@@ -112,4 +112,28 @@ decreasing_by
     | sizeOf_list_dec
     | decreasing_trivial
 
+/-- Exact port of HOL `isValWord_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:35-38`):
+    `isValWord (ValWord _) = T`, `isValWord _ = F`.
+
+    `ValWord w = Val (Word w)`, and the `word_lab` payload has a single
+    constructor, so the `Val` case is always a word value; `RStruct`/`NStruct`
+    are `F`.  No `word_lab`-free side condition or carrier coercion is needed. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "isValWord_def"]
+def isValWordHOL {width : Nat} [NeZero width] : ValueHOL width → Bool
+  | .val _ => true
+  | .rStruct _ => false
+  | .nStruct _ _ => false
+
+@[simp] theorem isValWordHOL_val {width : Nat} [NeZero width] (value : HolWordLab width) :
+    isValWordHOL (.val value : ValueHOL width) = true := rfl
+
+@[simp] theorem isValWordHOL_rStruct {width : Nat} [NeZero width]
+    (fields : List (ValueHOL width)) :
+    isValWordHOL (.rStruct fields : ValueHOL width) = false := rfl
+
+@[simp] theorem isValWordHOL_nStruct {width : Nat} [NeZero width] (name : MlStringHOL)
+    (fields : List (MlStringHOL × ValueHOL width)) :
+    isValWordHOL (.nStruct name fields : ValueHOL width) = false := rfl
+
 end Flapjack

@@ -432,6 +432,14 @@
     "reviewer": "Source-model Load32 case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension wordOfBytes32/getByte evaluator has not yet been proved identical to native HOL mem_load_32 for implicit finite_index, so it is untagged support rather than a HOL case port."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Load32 adapter equation: after successful source address evaluation, it connects the explicit finite-dimension Crep source evaluator to the imported panMemLoad32HOL primitive. No standalone HOL theorem states this representation bridge; full crepSem eval/state correspondence remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
@@ -9216,6 +9224,22 @@
     "reviewer": "Codex (statement compared against list_insert_SNOC at crep_to_loopProofScript.sml:386: HOL list_insert (SNOC x y) l = insert x () (list_insert y l); SNOC x y rendered as y ++ [x], list_insert/insert as the untagged sptListInsert/sptInsert renderings of HOL src/finite_maps/sptreeScript.sml list_insert/insert; direct HOL-EVAL rows li_mem_3/li_mem_4/li_absent_5/li_snoc_mem_5/li_snoc_agrees in scripts/hol-probes/crep_to_loop_list_insert_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "insert_insert_eq",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "sptInsert_insert_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against insert_insert_eq at crep_to_loopProofScript.sml:380: HOL insert a b (insert a b c) = insert a b c with a:num key, b:'a value, c:'a spt tree; insert rendered as the untagged sptInsert of HOL src/finite_maps/sptreeScript.sml insert; direct HOL-EVAL rows iie_hit/iie_hit_deep/iie_other/iie_absent/iie_agrees_empty/iie_agrees_deep in scripts/hol-probes/crep_to_loop_insert_insert_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "isValWord_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "isValWordHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "is_wf_shape_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
@@ -9236,6 +9260,14 @@
     "hol_name": "is_wf_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfCtxtExactHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
+    "lean_name": "emptyLocalsHOLExact",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   }

@@ -496,6 +496,14 @@
     "reviewer": "All-width Load32 case over exact CrepExpHOL syntax, preserving the result binder, successful-load premise, address IH, mapc update, and complete Option word_lab equality; it uses the observation projection and source evaluator, not native crepSem$eval/eval_def. No @[hol] tag."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_loadByte",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width LoadByte case over exact CrepExpHOL syntax, preserving the result binder, successful-load premise, address IH, mapc update, and complete Option word_lab equality; it uses the observation projection and source evaluator, not native crepSem$eval/eval_def. No @[hol] tag."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

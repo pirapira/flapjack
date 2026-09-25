@@ -12,11 +12,32 @@ translation limits are documented at the declarations.
 
 namespace Flapjack
 
-/-- HOL's local `compile_exps_eq_map` (`pan_structsProofScript.sml:11`): the
-    production recursive helper used by `structCompileExp` maps the production
-    single-expression compiler over the list. `List.map` represents HOL `MAP`;
-    `[BEq String]` is the typeclass needed by the Lean implementation's lookup. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL's local `compile_exps_eq_map`
+    (`pan_structsProofScript.sml:11`): the production recursive helper used by
+    `structCompileExp` maps the production single-expression compiler over the
+    list. `List.map` represents HOL `MAP`; `[BEq String]` is the typeclass
+    needed by the Lean implementation's lookup. Not an exact port; see the note
+    below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL's
+-- `compile_exps_eq_map` (`pan_structsProofScript.sml:11`) is over the record
+-- `context` (`pan_structsScript.sml:15-21`) whose `structs` field is the
+-- fields-only list `(stcname # (fldname # shape) list) list`, with
+-- `stcname`/`fldname` = `mlstring`, and over the same mutually recursive
+-- `compile_exp`/`compile_exps` pair (`pan_structsScript.sml:107-154`). This
+-- Lean statement is over production `StructPassContext`
+-- (`Flapjack/Pancake/PanStructs.lean:41-45`), whose `structs : StructContext`
+-- has `StructInfo` entries carrying the production-only `shapedFields` cache
+-- (HOL's `structs` field is a bare `(fldname # shape) list`, no `struct_info`)
+-- and whose `locals`/`globals` are `InfoMap Shape`. The constructors therefore
+-- differ in arity and field types, not only in name representation, and
+-- `structCompileExp` passes the full `StructContext` to `structCompileShape`,
+-- whereas HOL `compile_shape` consumes the fields-only `ctxt.structs`. A
+-- `(names_as_string := ...)` qualifier does not authorize these carrier
+-- differences. The exact MlString carriers are available and the faithful port
+-- is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- Oracle: `scripts/hol-probes/pan_structs_compile_exp_probe.out` row
+-- `list_map=T`. Fixture:
+-- `Flapjack.Test.PanStructsCompileExpParity.structCompileExps_eq_map_fixture`.
 theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassContext) :
     (structCompileExp.structCompileExps (α := α) context :
       List (Exp α) → List (Exp α)) =

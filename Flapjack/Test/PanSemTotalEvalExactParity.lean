@@ -551,11 +551,29 @@ def stateOwnedTimeoutRows : Bool :=
     | _ => false
   callTimeout && decCallTimeout
 
-/-- The outer `none` is a documented unassembled-constructor gap, not HOL
-    `SOME Error`. -/
-def recursivePrimitiveGapRows : Bool :=
-  evalPanSemRecursiveCallHOLExact
-    (.primitive (ml "x") .addCarry [.const 1, .const 2, .const 0]) baseState |>.isNone
+/-- The recursive dispatcher routes Primitive through the reviewed HOL clause.
+    The successful `primitive_success` and invalid-arity `primitive_wrong_args`
+    cases are direct rows from `pan_sem_e2e_probe.out`. -/
+def recursivePrimitiveRows : Bool :=
+  let success := evalPanSemRecursiveCallHOLExact
+    (.primitive (ml "x") .addCarry [.const 40, .const 50, .const 0]) primitiveState
+  let wrongArity := evalPanSemRecursiveCallHOLExact
+    (.primitive (ml "x") .addCarry [.const 1, .const 2]) primitiveState
+  let successOk := match success with
+    | some (none, post) =>
+        match post.locals (ml "x") with
+        | some (.rStruct [.val (.word sum), .val (.word carry)]) =>
+            sum.toNat == 90 && carry.toNat == 0
+        | _ => false
+    | _ => false
+  let wrongArityOk := match wrongArity with
+    | some (some .error, post) =>
+        match post.locals (ml "x") with
+        | some (.rStruct [.val (.word first), .val (.word second)]) =>
+            first.toNat == 0 && second.toNat == 0 && post.clock == 5
+        | _ => false
+    | _ => false
+  successOk && wrongArityOk
 
 /-- Direct original-HOL While equations for false/true conditions, recursive
     normal and Continue iterations to timeout, Break exit, terminal Return, and
@@ -674,7 +692,7 @@ def recursiveDecRows : Bool :=
 #guard recursiveIfRows
 #guard recursiveWhileRows
 #guard recursiveDecRows
-#guard recursivePrimitiveGapRows
+#guard recursivePrimitiveRows
 
 def runChecks : IO Bool := do
   if skipBreakTickRows then
@@ -740,9 +758,9 @@ def runChecks : IO Bool := do
   if recursiveDecRows then
     IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
   else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
-  if recursivePrimitiveGapRows then
-    IO.println "PASS exact-state dispatcher keeps Primitive explicitly open"
-  else IO.println "FAIL exact-state dispatcher keeps Primitive explicitly open"
+  if recursivePrimitiveRows then
+    IO.println "PASS exact recursive dispatcher Primitive rows match HOL"
+  else IO.println "FAIL exact recursive dispatcher Primitive rows match HOL"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
     sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
     stateOwnedCallDestinationRows &&
@@ -751,6 +769,6 @@ def runChecks : IO Bool := do
     stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
     stateOwnedDecCallExceptionRows && stateOwnedDecCallControlNegativeRows &&
     stateOwnedTimeoutRows && recursiveIfRows && recursiveWhileRows && recursiveDecRows &&
-    recursivePrimitiveGapRows)
+    recursivePrimitiveRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

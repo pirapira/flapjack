@@ -122,4 +122,132 @@ theorem callFfi_empty_extCall_bridge {σ : Type} (state : FfiState σ) (holState
   rw [callFfi_empty_extCall, callFFIHOL_empty_extCall]
   exact ⟨hrel, bytesRel_map_byteToBits bytes⟩
 
+
+/-- A nonempty byte-ranged `String` maps to a nonempty `mlstring`. -/
+theorem holName_ne_empty_of_ne {name : String}
+    (hne : name ≠ "") (hr : ∀ c ∈ name.toList, c.toNat < 256) :
+    Flapjack.Basis.Pure.MlString.ofString name ≠
+      (Flapjack.Basis.Pure.MlString.MlString.implode [] :
+        Flapjack.Basis.Pure.MlString.MlString) := by
+  intro h
+  have h1 := congrArg Flapjack.Basis.Pure.MlString.toStringOfBytes h
+  rw [Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hr] at h1
+  have h2 : Flapjack.Basis.Pure.MlString.toStringOfBytes
+      (Flapjack.Basis.Pure.MlString.MlString.implode []) = "" := rfl
+  rw [h2] at h1
+  exact hne h1
+
+/-- Production `callFfi` on a nonempty external call whose oracle finalises. -/
+theorem callFfi_extCall_final {σ : Type} (state : FfiState σ) (name : String)
+    (hne : name ≠ "") (configuration bytes : List UInt8) (outcome : FfiOutcome)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .final outcome) :
+    callFfi state (.extCall name) configuration bytes =
+      .final { name := .extCall name, configuration := configuration, bytes := bytes,
+               outcome := outcome } := by
+  unfold callFfi
+  split
+  · rename_i h
+    exact absurd h (by simpa only [FfiName.extCall.injEq] using hne)
+  · split
+    · rename_i nextState nextBytes hres
+      have hc : FfiOracleResult.returned nextState nextBytes = FfiOracleResult.final outcome :=
+        hres.symm.trans ho
+      exact absurd hc (by simp)
+    · rename_i holOutcome hres
+      have hc : FfiOracleResult.final holOutcome = FfiOracleResult.final outcome :=
+        hres.symm.trans ho
+      injection hc with hoo
+      subst hoo
+      rfl
+
+/-- Production `callFfi` on a nonempty external call whose oracle returns the wrong length. -/
+theorem callFfi_extCall_return_lengthFailure {σ : Type} (state : FfiState σ) (name : String)
+    (hne : name ≠ "") (configuration bytes : List UInt8) (nextState : σ)
+    (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .returned nextState nextBytes)
+    (hlen : nextBytes.length ≠ bytes.length) :
+    callFfi state (.extCall name) configuration bytes =
+      .final { name := .extCall name, configuration := configuration, bytes := bytes,
+               outcome := .failed } := by
+  unfold callFfi
+  split
+  · rename_i h
+    exact absurd h (by simpa only [FfiName.extCall.injEq] using hne)
+  · split
+    · rename_i ns nb hres
+      have hc : FfiOracleResult.returned ns nb = FfiOracleResult.returned nextState nextBytes :=
+        hres.symm.trans ho
+      injection hc with hns hnb
+      subst hns
+      subst hnb
+      rw [if_neg (by simpa using hlen)]
+    · rename_i holOutcome hres
+      have hc : FfiOracleResult.final holOutcome = FfiOracleResult.returned nextState nextBytes :=
+        hres.symm.trans ho
+      exact absurd hc (by simp)
+
+/-- Under `FfiStateRel`, a nonempty external call that the oracle finalises agrees. -/
+theorem callFfi_extCall_oracleFinal_bridge {σ : Type} (state : FfiState σ)
+    (holState : HolFfiState σ) (hrel : FfiStateRel state holState) (name : String)
+    (hr : ∀ c ∈ name.toList, c.toNat < 256) (hne : name ≠ "")
+    (configuration bytes : List UInt8) (outcome : FfiOutcome)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .final outcome) :
+    FfiResultRel (callFfi state (.extCall name) configuration bytes)
+      (callFFIHOL holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits)) := by
+  have hneH : ¬ (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString name) =
+      HolFfiName.extCall (Flapjack.Basis.Pure.MlString.MlString.implode [])) := by
+    simpa only [HolFfiName.extCall.injEq] using holName_ne_empty_of_ne hne hr
+  rw [callFfi_extCall_final state name hne configuration bytes outcome ho]
+  have hcorr := hrel.2.2 (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    rfl configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
+    (bytesRel_map_byteToBits configuration) (bytesRel_map_byteToBits bytes)
+  rw [ho] at hcorr
+  generalize hy : holState.oracle (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    holState.ffiState (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+  simp only [OracleResultRel] at hcorr
+  cases holRes with
+  | final holOutcome =>
+      rw [callFFIHOL_final holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits) holOutcome hneH hy]
+      exact ⟨rfl, bytesRel_map_byteToBits configuration, bytesRel_map_byteToBits bytes, hcorr⟩
+  | ret holState' holBytes' => exact hcorr.elim
+
+/-- Under `FfiStateRel`, a nonempty external call with a mismatched return length agrees. -/
+theorem callFfi_extCall_lengthFailure_bridge {σ : Type} (state : FfiState σ)
+    (holState : HolFfiState σ) (hrel : FfiStateRel state holState) (name : String)
+    (hr : ∀ c ∈ name.toList, c.toNat < 256) (hne : name ≠ "")
+    (configuration bytes : List UInt8) (nextState : σ) (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .returned nextState nextBytes)
+    (hlen : nextBytes.length ≠ bytes.length) :
+    FfiResultRel (callFfi state (.extCall name) configuration bytes)
+      (callFFIHOL holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits)) := by
+  have hneH : ¬ (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString name) =
+      HolFfiName.extCall (Flapjack.Basis.Pure.MlString.MlString.implode [])) := by
+    simpa only [HolFfiName.extCall.injEq] using holName_ne_empty_of_ne hne hr
+  rw [callFfi_extCall_return_lengthFailure state name hne configuration bytes nextState nextBytes ho hlen]
+  have hcorr := hrel.2.2 (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    rfl configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
+    (bytesRel_map_byteToBits configuration) (bytesRel_map_byteToBits bytes)
+  rw [ho] at hcorr
+  generalize hy : holState.oracle (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    holState.ffiState (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+  simp only [OracleResultRel] at hcorr
+  cases holRes with
+  | final holOutcome => exact hcorr.elim
+  | ret holState' holBytes' =>
+      obtain ⟨_, hbytes⟩ := hcorr
+      have hlenH : holBytes'.length ≠ (bytes.map byteToBits).length := by
+        intro hEq
+        have hlenEq : holBytes'.length = nextBytes.length := by
+          have := congrArg List.length hbytes
+          simpa [BytesRel, List.length_map] using this
+        exact hlen (by rw [← hlenEq, hEq]; simp)
+      rw [callFFIHOL_ret holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits) holState' holBytes' hneH hy]
+      rw [if_neg hlenH]
+      exact ⟨rfl, bytesRel_map_byteToBits configuration, bytesRel_map_byteToBits bytes,
+        Or.inl ⟨rfl, rfl⟩⟩
+
 end Flapjack

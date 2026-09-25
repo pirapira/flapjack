@@ -67,6 +67,24 @@ The recursive `evaluate` dispatcher over this evaluator is separate and not yet
 assembled.  Direct original-HOL rows are in
 `scripts/hol-probes/pan_eval_probe.out` and are reproduced by
 `Flapjack/Test/PanSemEvalExactParity.lean`.
+
+Direct source review of `panPropsScript.sml:621`
+`eval_some_var_exp_local_lookup`
+(`∀s e v n. eval s e = SOME v ∧ MEM n (var_exp e) ⇒ ∃w. FLOOKUP s.locals n = SOME w`)
+finds no statement-exact Lean declaration.  The HOL statement reads the exact
+`eval` (`eval_def`) together with the exact `panLang$var_exp`
+(`panLangScript.sml:253-270`), whose input is the word-indexed `exp` with
+`mlstring` names and whose result is `mlstring list`.  The Lean analogue of the
+evaluator is this untagged `evalHOLExact` (blocked on the
+`PanSemStateExact` raw-function state carrier, see above), and the analogue of
+`var_exp` is the untagged String-backed `expLocalVars`
+(`Flapjack/Pancake/PanLang.lean:1380`, whose HOL tag is withdrawn for the same
+carrier reason).  Both sides of the implication are therefore expressible only
+over carriers that are not exact HOL ports, so the premise/conclusion shape
+cannot be reproduced faithfully here.  The lookup invariant over the faithful
+finite-support state is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`, and the
+exact `mlstring`-keyed expression/variable carriers by
+`flapjack-pxn.18.3.5.8`.  Recorded by bead `flapjack-4ac.4.39`.
 -/
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Encoders.Asm

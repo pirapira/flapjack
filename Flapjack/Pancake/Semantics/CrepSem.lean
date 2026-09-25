@@ -176,23 +176,24 @@ theorem crepHolEvalMemLoad32_eq_panModelRead32 [Add α]
     HOL `crepSem$set_globals_def` (`crepSemScript.sml:61`) is word-length
     indexed (`'a crepSem$state`), so the generic-`α` form is deliberately
     UNTAGGED (a generic parameter is not the fixed HOL word carrier); the
-    width-indexed exact counterpart is `setCrepHolGlobalsW` below.
+    width-indexed counterpart is `setCrepHolGlobalsW` below (also untagged:
+    the whole-state carrier still admits infinite-support `locals`/`code`).
     Production `setCrepRuntimeGlobals` routes its globals update through this
     definition while preserving its three extra configuration fields. -/
 def setCrepHolGlobals (key : BitVec 5) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with globals := FUPDATE state.globals (key, value) }
 
-/-- Width-indexed exact HOL-shaped port of `crepSem$set_globals_def`
-    (`crepSemScript.sml:61`): `set_globals gv w s = s with globals := s.globals |+ (gv,w)`
-    over the word-length-indexed carrier `CrepHolState (BitVec width) σ`, which
-    is HOL's `'a crepSem$state` at `'a := BitVec width`. Carrier argument
-    (`flapjack-pxn.18.3.7.1.3.1.1.3` audit): the only finite-map field this
-    observes or updates is `globals : BitVec 5 → Option _`, whose domain is
-    finite by type (32 elements), so `FUPDATE`/lookup are HOL's `|+`/`FLOOKUP`
-    on a genuinely finite map; `locals`/`code` are carried unchanged on both
-    sides by `rfl`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
+    `set_globals gv w s = s with globals := s.globals |+ (gv,w)` is HOL's
+    (`crepSemScript.sml:61`), and the field it updates (`globals : BitVec 5 →
+    Option _`) is finite by type, but the carrier `CrepHolState (BitVec width) σ`
+    also stores `locals`/`code` as raw functions (`Nat → Option _` /
+    `FunName → Option _`) which admit infinite-support inhabitants, a strict
+    superset of HOL's finite maps (`|->`). The statement quantifies the whole
+    unrestricted state, so the `@[hol set_globals_def]` tag was withdrawn in the
+    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
+    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
 def setCrepHolGlobalsW {width : Nat} [NeZero width] {σ : Type} (key : BitVec 5)
     (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
     CrepHolState (BitVec width) σ :=
@@ -394,20 +395,22 @@ theorem crepOpCrep_eq_crepOpValue [Mul α] (operator : CrepOp)
 /-- Generic production memory load on the 11-field `CrepHolState`. HOL
     `crepSem$mem_load_def` (`crepSemScript.sml:48-52`) is word-length indexed,
     so the generic-`α` form is deliberately UNTAGGED; the width-indexed exact
-    counterpart is `memLoadCrepHolW` below. -/
+    counterpart is `memLoadCrepHolW` below (also untagged: the whole-state
+    carrier still admits infinite-support `locals`/`code`). -/
 def memLoadCrepHol (address : α) (state : CrepHolState α σ) : Option (PanWordLab α) :=
   if state.memaddrs address then some (state.memory address) else none
 
-/-- Exact width-indexed HOL-shaped port of `crepSem$mem_load_def`
-    (`crepSemScript.sml:48-52`): `mem_load addr s = if addr IN s.memaddrs then
-    SOME (s.memory addr) else NONE` at the word-length carrier
-    `BitVec width` (HOL's `'a crepSem$state` at `'a := BitVec width`). Carrier
-    argument (`flapjack-pxn.18.3.7.1.3.1.1.3` audit): it reads only
-    `memory : α → PanWordLab α` (a total function, exactly HOL's
-    `'a word -> 'a word_lab`) and `memaddrs : α → Bool` (the Boolean
-    characteristic function of HOL's `('a word) set`); no finite map is
-    involved. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
+    `mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE`
+    is HOL's (`crepSemScript.sml:48-52`), and it reads only `memory : α →
+    PanWordLab α` and `memaddrs : α → Bool`, but the carrier `CrepHolState
+    (BitVec width) σ` also stores `locals`/`code` as raw functions (`Nat →
+    Option _` / `FunName → Option _`) which admit infinite-support inhabitants,
+    a strict superset of HOL's finite maps (`|->`). The statement quantifies the
+    whole unrestricted state, so the `@[hol mem_load_def]` tag was withdrawn in
+    the `flapjack-pxn.18.3.7.1.3.1.1.3` audit (same whole-state mismatch that
+    forced the PanSem clock-only withdrawals); exact finite-support carrier
+    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
 def memLoadCrepHolW {width : Nat} [NeZero width] {σ : Type} (address : BitVec width)
     (state : CrepHolState (BitVec width) σ) : Option (PanWordLab (BitVec width)) :=
   if state.memaddrs address then some (state.memory address) else none

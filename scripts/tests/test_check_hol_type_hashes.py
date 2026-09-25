@@ -86,6 +86,7 @@ class HolTypeHashesTest(unittest.TestCase):
             "list_as_array": [],
             "names_as_string": ["key", "generated"],
             "names_as_string_boundary": ["generated"],
+            "fmap_as_finite_support": [],
         })
         changed = [{
             **export[0],
@@ -123,6 +124,53 @@ class HolTypeHashesTest(unittest.TestCase):
             lock["records"][0]["sha256"],
             hashlib.sha256(self.export[0]["type_expr"].encode()).hexdigest(),
         )
+
+    def test_reviewed_fmap_as_finite_support_qualifiers_are_locked(self):
+        manifest = [{
+            **self.manifest[0],
+            "statement_status": "reviewed_fmap_as_finite_support",
+            "fmap_as_finite_support": ["locals", "globals"],
+        }]
+        export = [{
+            **self.export[0],
+            "qualifiers": {
+                "list_as_array": [],
+                "names_as_string": [],
+                "names_as_string_boundary": [],
+                "fmap_as_finite_support": ["locals", "globals"],
+            },
+        }]
+        lock = MODULE.expected_lock(manifest, export, "leanprover/lean4:v4")
+        self.assertEqual(lock["records"][0]["qualifiers"]["fmap_as_finite_support"],
+                         ["locals", "globals"])
+        changed = [{
+            **export[0],
+            "qualifiers": {
+                **export[0]["qualifiers"],
+                "fmap_as_finite_support": ["locals"],
+            },
+        }]
+        with self.assertRaisesRegex(ValueError, "manifest qualifiers differ"):
+            MODULE.lock_records(manifest, changed)
+
+    def test_fmap_qualifier_validates_and_rejects_unknown(self):
+        MODULE.validate_export_record(
+            {
+                "lean_name": "n", "hol_path": "p", "hol_name": "h",
+                "type_expr": "t",
+                "qualifiers": {"fmap_as_finite_support": ["locals"]},
+            },
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "invalid qualifiers"):
+            MODULE.validate_export_record(
+                {
+                    "lean_name": "n", "hol_path": "p", "hol_name": "h",
+                    "type_expr": "t",
+                    "qualifiers": {"finite_map": ["locals"]},
+                },
+                1,
+            )
 
     def test_unknown_export_field_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "invalid fields"):

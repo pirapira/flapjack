@@ -1922,64 +1922,11 @@ theorem panSemEvaluateExactState_call_error_of_callee_error
     (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
     harguments hlookup hbind hparameters hclock hbody
 
-/-- A callee that returns a value failing the call's return contract is a call
-    failure: Cake's `evaluate (Call ...)` maps a mismatched `Return` to
-    `(SOME Error,st)`, preserving the callee's post-call globals, memory, FFI
-    state and clock (its locals were already emptied by the return). -/
-theorem panSemEvaluateExactState_call_error_of_returned_invalid
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : PanValueFfiContext α)
-    (primitive : PanPrimitiveHandler α)
-    (handler : PanValueStatefulFfiHandler α σ)
-    (state : PanSemExactState α σ)
-    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
-    (function : FunName) (arguments : List (Exp α))
-    (values : List (PanValue α)) (parameters : List VarName) (body : Prog α)
-    (calleeLocals bodyLocals returnGlobals : VarName → Option (PanValue α))
-    (returnMemory : α → Option (PanValue α)) (returnFfi : FfiState σ)
-    (finalClock fuel : Nat)
-    (harguments :
-      evalPanValueExps state.legacy.structs state.legacy.locals state.legacy.globals
-        state.legacy.memory state.legacy.baseAddress state.legacy.topAddress
-        state.legacy.bytesInWord arguments (memoryAccess := some state.memoryAccess) =
-        some values)
-    (hlookup : lookupPanFunction function state.legacy.functions = some (parameters, body))
-    (hbind : bindPanValueParameters parameters values = some calleeLocals)
-    (hparameters :
-      panValueParametersValid state.legacy.structs state.legacy.contracts function values =
-        true)
-    (hclock : state.legacy.clock ≠ 0)
-    (hfuel :
-      state.legacy.clock +
-          max (panSemProgFuel (Prog.call info function arguments))
-            (panSemFunctionFuel state.legacy.functions) = fuel + 1)
-    (hbody :
-      evalPanValueFfiClockProg context primitive handler state.legacy.structs
-        state.legacy.functions state.legacy.baseAddress state.legacy.topAddress
-        state.legacy.bytesInWord fuel calleeLocals state.legacy.globals
-        state.legacy.memory state.legacy.ffi (state.legacy.clock - 1) body
-        (memoryAccess := some state.memoryAccess) (contracts := state.legacy.contracts)
-        (memoryHandler := state.legacy.memoryHandler) =
-        some (.control (.returned bodyLocals returnGlobals returnMemory returnFfi values),
-          finalClock))
-    (hret :
-      panValueReturnValid state.legacy.structs state.legacy.contracts function values = false) :
-    panSemEvaluateExactState context primitive handler state (.call info function arguments) =
-      some (.control (.error (fun _ => none) returnGlobals returnMemory returnFfi),
-        finalClock) := by
-  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
-    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
-  rw [hfuel]
-  exact evalPanValueFfiClockCall_returned_invalid_error context primitive handler
-    state.legacy.structs state.legacy.functions state.legacy.baseAddress
-    state.legacy.topAddress state.legacy.bytesInWord fuel state.legacy.locals
-    state.legacy.globals state.legacy.memory state.legacy.ffi state.legacy.clock
-    info function arguments values parameters calleeLocals bodyLocals returnGlobals
-    returnMemory returnFfi body finalClock (memoryAccess := some state.memoryAccess)
-    (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
-    harguments hlookup hbind hparameters hclock hbody hret
+/-! The legacy function-list evaluator does not carry HOL `state.code`'s
+    per-entry `returnShape`; an optional `PanValueCallContracts.returnShapes`
+    table is not a sound substitute for that field. The compatibility call
+    path therefore does not reject a return based on that table. The exact
+    state-owned evaluator checks the source code-map return shape. -/
 
 /-- HOL `Dec` (`panSemScript.sml:558-565`) whose initialiser expression fails to
     evaluate returns `(SOME Error, s)` with the unchanged source state.  Stated

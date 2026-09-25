@@ -8,7 +8,12 @@ before the callee lookup, so a memory-reading argument is gated by the source
 `memaddrs`: an address outside the domain rejects the call with `SOME Error`
 over the unchanged state, even when the raw memory function holds a cell.  An
 unknown callee is likewise rejected.  The expected values are the original-HOL
-`EVAL` rows in `scripts/hol-probes/pan_sem_call_error_state_probe.out`:
+`EVAL` rows in `scripts/hol-probes/pan_sem_call_error_state_probe.out`.
+The return-shape conflict case is paired with
+`pan_sem_call_return_shape_probe.out`: HOL accepts `goodret` because its
+`state.code` entry declares `One`, regardless of any compatibility contracts
+Lean might supply separately; the mismatched source code-map row returns
+`Error`.
 
 * `call_error_load_result=SOME Error`, `call_error_load_clock=5`,
   `call_error_load_locals=SOME (ValWord 3w)`;
@@ -198,30 +203,20 @@ private def calleeErrorState : PanSemExactState Word64 Unit :=
 private def callCalleeErrorGuard : Bool :=
   isPropagatedError 4 (evaluate calleeErrorState (.call none "f" [.const 1]))
 
-/-- Contracts declaring that callee `f` must return a `Named "Other"` shape. -/
+/-- A compatibility contract deliberately disagrees with the source-shaped
+    code map. The functions-list carrier has no source `returnShape`, so its
+    optional contract table must not be used as HOL's code-map return shape. -/
 private def returnInvalidContracts : Option PanValueCallContracts :=
   some { returnShapes := [("f", Shape.named "Other")], exceptionShapes := [], parameterShapes := [("f", [("p", Shape.one)])] }
 
-/-- State whose callee `f` returns a word while the contract demands a named
-    shape, so the call is rejected with `Error`. -/
 private def returnInvalidState : PanSemExactState Word64 Unit :=
   exactStateOf <| { (exactLegacy 5 (fun _ => some (.word 3)) (fun _ => none) returnInvalidContracts) with functions := [("f", ["p"], .return (.const 0))] }
 
-/-- Result matcher for a callee whose returned shape does not match the
-    declared return shape: `SOME Error` at the decremented clock with the
-    callee-cleared locals. -/
-private def isReturnInvalidError (clock : Nat)
-    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
-  match result with
-  | some (.control control, n) =>
-      match control with
-      | .error locals _ _ _ =>
-          n == clock && (locals "p").isNone && (locals "x").isNone
-      | _ => false
+private def callReturnContractConflictGuard : Bool :=
+  match evaluate returnInvalidState (.call none "f" [.const 1]) with
+  | some (.control (.returned _ _ _ _ [.word value]), clock) =>
+      clock == 4 && value == BitVec.ofNat 64 0
   | _ => false
-
-private def callReturnInvalidGuard : Bool :=
-  isReturnInvalidError 4 (evaluate returnInvalidState (.call none "f" [.const 1]))
 
 private def callLoadMissGuard : Bool :=
   isErrorKeeping 5 3 (evaluate memoryState (.call none "f" [loadMiss]))
@@ -241,7 +236,7 @@ private def callDomainGuard : Bool :=
 private def callGuard : Bool :=
   callLoadMissGuard && callMissingGuard && callDomainGuard &&
     callParamArityGuard && callParamShapeGuard && callFallThroughGuard &&
-    callBreakGuard && callContinueGuard && callCalleeErrorGuard && callReturnInvalidGuard
+    callBreakGuard && callContinueGuard && callCalleeErrorGuard && callReturnContractConflictGuard
 
 #guard callGuard
 
@@ -312,9 +307,9 @@ def runChecks : IO Bool := do
   if callCalleeErrorGuard then
     IO.println "PASS exact-state Call callee error propagates cleared locals"
   else IO.println "FAIL exact-state Call callee error propagates cleared locals"
-  if callReturnInvalidGuard then
-    IO.println "PASS exact-state Call invalid return shape rejects with Error"
-  else IO.println "FAIL exact-state Call invalid return shape rejects with Error"
+  if callReturnContractConflictGuard then
+    IO.println "PASS functions-list Call ignores a conflicting compatibility return contract"
+  else IO.println "FAIL functions-list Call ignores a conflicting compatibility return contract"
   pure callGuard
 
 end Flapjack.Test.PanSemCallErrorExactParity

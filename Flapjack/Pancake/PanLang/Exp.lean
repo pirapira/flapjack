@@ -313,4 +313,46 @@ decreasing_by
       simp only [Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes fst hf,
         ih hs])
 
+/-! ### Exact `panLang$var_exp` -/
+
+/-- Exact port of HOL `panLang$var_exp` (`cakeml/pancake/panLangScript.sml:253-276`):
+collects the local variable names of an expression in source order, returning
+`mlstring` names.  `Var Local v` contributes `[v]`, `Var Global` nothing, and
+aggregating constructs concatenate the results of their sub-expressions
+(`FLAT (MAP var_exp …)` for `RStruct`/`NStruct`/`Op`/`Panop`, `++` for
+`Cmp`/`Shift`).  The production `expLocalVars` uses Lean `String` and is
+untagged. -/
+@[hol "cakeml/pancake/panLangScript.sml" "var_exp_def"]
+def varExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
+  | .const _ => []
+  | .var .local name => [name]
+  | .var .global _ => []
+  | .rstruct fields => (fields.map varExpHOL).flatten
+  | .rfield _ value => varExpHOL value
+  | .nstruct _ fields => (fields.map (fun pair => varExpHOL pair.2)).flatten
+  | .nfield _ value => varExpHOL value
+  | .load _ address => varExpHOL address
+  | .load32 address => varExpHOL address
+  | .loadByte address => varExpHOL address
+  | .op _ args => (args.map varExpHOL).flatten
+  | .panop _ args => (args.map varExpHOL).flatten
+  | .cmp _ left right => varExpHOL left ++ varExpHOL right
+  | .shift _ left right => varExpHOL left ++ varExpHOL right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | (rename_i mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+       omega)
+    | (rename_i elem mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       omega)
+
 end Flapjack.Pancake.PanLang

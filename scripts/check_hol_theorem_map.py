@@ -856,6 +856,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

@@ -2008,6 +2008,14 @@
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.44): HOL exceptions (cakeml/pancake/panLangScript.sml:328-333) projects top-level ExnDecl entries in source order, returning (eid,sh) and dropping Function/Decl/Name. exceptionsHOL matches clause-for-clause over the exact DeclHOL carrier: the exception id is MlS and the shape ShapeHOL, with [NeZero width] matching HOL's positive word type. Direct HOL-EVAL rows empty/exception in scripts/hol-probes/pan_lang_exceptions_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangExceptionsParity.lean, and the kernel-checked exceptionsHOL_map_paramOfHOL bridges the result to production exceptionEntries. Production exceptionEntries (String and monomorphic Shape) stays untagged."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "var_exp_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "varExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.38): HOL var_exp (cakeml/pancake/panLangScript.sml:253-276) collects the Local-variable names of an expression in order (Const/Var Global/BaseAddr/TopAddr/BytesInWord empty; Var Local singleton; RStruct/Op/Panop flatten over the list; NStruct flattens over the field values; RField/NField/Load/Load32/LoadByte recurse; Cmp/Shift concatenate), with termination over exp_size. varExpHOL matches clause-for-clause over the exact ExpHOL carrier with MlS names and MlS x ExpHOL nstruct fields, matching HOL's mlstring names, and termination_by sizeOf mirrors the HOL measure. Direct HOL-EVAL rows local_var/nested in scripts/hol-probes/pan_lang_var_exp_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangVarExpParity.lean. Production expLocalVars (String carrier) stays untagged. global_var_exp is tracked separately (flapjack-4ac.1.39)."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "MEM_functions",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

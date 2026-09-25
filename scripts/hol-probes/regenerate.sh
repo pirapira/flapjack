@@ -1607,3 +1607,9 @@ run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
 run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
   el_lookup el_globals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The mem_store_32 probe observes the exact four-byte replacement (little and
+# big endian), plus the unaligned and out-of-domain NONE cases.
+run_probe pan_sem_mem_store_32_probeScript.sml pan_sem_mem_store_32_probe.out \
+  ms32_aligned ms32_other_cell \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

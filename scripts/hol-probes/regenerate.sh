@@ -199,7 +199,8 @@ run_probe pan_op_probeScript.sml pan_op_probe.out \
   mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   mem_load_byte_definition load32_width24_address4 \
-  "$cake_dir/pancake/semantics/panSemScript.sml"
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
@@ -695,6 +696,11 @@ run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_store_eval_probeScript.sml crep_store_eval_probe.out \
   store_success store_address_error store_value_error store_domain_error \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_shmem_eval_probeScript.sml crep_shmem_eval_probe.out \
+  shmem_load_success shmem_store_success shmem_load8_success shmem_store8_success \
+  shmem_load_domain_error \
+  shmem_missing_local_error shmem_load_final \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
@@ -1521,5 +1527,12 @@ run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
 # carrier (word payloads and fixed 5-word LoadGlob width).
 run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
   cexp_const cexp_topaddr \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The crepLang prog probe observes the exact width-indexed Crepe program
+# carrier (MlString Call/ExtCall names, word payloads, fixed 5-word StoreGlob).
+run_probe crep_lang_prog_probeScript.sml crep_lang_prog_probe.out \
+  prg_skip prg_tick \
   "$cake_dir/pancake/crepLangScript.sml" \
   "$cake_dir/pancake"

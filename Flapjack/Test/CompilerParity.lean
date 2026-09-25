@@ -32,6 +32,7 @@ import Flapjack.Test.CrepSemTotalClockLeavesParity
 import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Test.CrepSemTotalAssignParity
 import Flapjack.Test.CrepSemTotalStoreParity
+import Flapjack.Test.CrepSemTotalShMemParity
 import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -152,6 +153,7 @@ import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
 import Flapjack.Test.CrepLookupCodeHOLParity
 import Flapjack.Test.CrepExpHOLParity
+import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
@@ -278,6 +280,7 @@ import Flapjack.Test.ParserTryProgParity
 import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.ParserParseStatementParity
 import Flapjack.Test.ParserByteNamesParity
+import Flapjack.Test.ParserByteRangedParity
 import Flapjack.Test.PanLangWfShapeParity
 import Flapjack.Test.PanLangWfFieldsContextParity
 import Flapjack.Test.PanHHandleCallRetParity
@@ -954,7 +957,8 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.FfiHOLParity.runChecks,
     Flapjack.Test.CrepSemTotalAssignParity.runChecks,
     Flapjack.Test.FfiBridgeParity.runChecks,
-    Flapjack.Test.CrepSemTotalStoreParity.runChecks
+    Flapjack.Test.CrepSemTotalStoreParity.runChecks,
+    Flapjack.Test.CrepSemTotalShMemParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

@@ -1097,6 +1097,22 @@
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
+    "lean_name": "CrepProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (inductive compared constructor-by-constructor against the Datatype prog at crepLangScript.sml:41-66: all 19 constructors and field types match, the `'a word` payloads are carried by BitVec width with [NeZero width], StoreGlob keeps the fixed 5-word address, Call/ExtCall names are MlString (HOL funname=mlstring), and varnames/Break/Continue stay num; the generic production CrepProg (alpha) with String function names stays untagged; total kernel isomorphisms crepProgToHOL/crepProgOfHOL with @[simp] forward roundtrip and a byte-ranged reverse roundtrip live in Flapjack/Pancake/CrepLang/Prog.lean; direct HOL oracle scripts/hol-probes/crep_lang_prog_probe.{sml,out} and guards in Flapjack/Test/CrepProgHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "lookup_code_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/LookupCode.lean",
+    "lean_name": "lookupCodeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (FLOOKUP on an MlString-keyed code map, arity + ALL_DISTINCT check, and FEMPTY |++ ZIP (parameters,args) compared against lookup_code_def at crepSemScript.sml:76-84; the code-map key is the faithful MlString carrier and the code value is the exact width-indexed CrepProgHOL with MlString Call/ExtCall names (flapjack-4w9.1.2), with 'a word_lab arguments/locals carried by HolWordLab width under [NeZero width]; the production String-keyed lookupCrepHolCode stays untagged; kernel bridge lookupCodeHOL_exactToProd transports the result back along crepProgOfHOL and HolWordLab.toPanWordLab; direct HOL oracle scripts/hol-probes/crep_lookup_code_probe.{sml,out} and guards in Flapjack/Test/CrepLookupCodeHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
     "lean_name": "storeGlobalsW",

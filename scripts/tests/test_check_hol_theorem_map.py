@@ -373,6 +373,128 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_props_res_var_flookup_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            "resVarHOLExact_flookup_some_eq_lookup": "flookup_res_var_some_eq_lookup",
+            "resVarHOLExact_flookup_of_ne": "flookup_res_var_diff_eq_org",
+            "resVarHOLExact_flookup": "FLOOKUP_pan_res_var_thm",
+        }
+        for lean_name, hol_name in cases.items():
+            key = ("Flapjack/Pancake/Semantics/PanProps.lean", lean_name)
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panPropsScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("finite-map", record["reviewer"])
+            self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_lang_with_shape_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            "length_withShape_eq_shape": "length_with_shape_eq_shape",
+            "all_distinct_withShape": "all_distinct_with_shape",
+            "mem_of_withShape_mem": "el_mem_with_shape",
+            "mem_withShape_length": "mem_with_shape_length",
+            "withShape_getElem_eq_take_drop": "with_shape_el_take_drop_eq",
+        }
+        for lean_name, hol_name in cases.items():
+            key = ("Flapjack/Pancake/PanLang.lean", lean_name)
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panPropsScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("Shape", record["reviewer"])
+            self.assertIn("flapjack-pxn.18.3.5.8", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_props_flatten_and_disjoint_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            ("Flapjack/Pancake/PanLang.lean", "listDisjoint_withShape_getElem"):
+                "all_distinct_with_shape_distinct",
+            ("Flapjack/Pancake/PanLang.lean", "listDisjoint_withShape_getElem_lt"):
+                "all_distinct_disjoint_with_shape",
+            ("Flapjack/Pancake/PanLang.lean", "listDisjoint_of_mem_zip_withShape"):
+                "all_distinct_mem_zip_disjoint_with_shape",
+            ("Flapjack/Pancake/PanLang.lean", "withShape_getElem_getElem"):
+                "el_el_with_shape",
+            ("Flapjack/PanValueFlatten.lean",
+             "shapeSize_comb_eq_flatten_length_of_getElem"):
+                "list_rel_length_shape_of_flatten_better",
+            ("Flapjack/PanValueFlatten.lean",
+             "shapeSize_comb_map_panValueShape_eq_flatten_length"):
+                "list_rel_length_shape_of_flatten",
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "listRelFlattenWithShapeLength"):
+                "list_rel_flatten_with_shape_length",
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "listRelFlattenWithShapeFlookup"):
+                "list_rel_flatten_with_shape_flookup",
+        }
+        for key, hol_name in cases.items():
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panPropsScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("flapjack-pxn.18.3.5.8", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pansem_state_defs_function_backed_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            ("Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
+             "fixClockHOLExact_IMP_LESS_EQ"): "fix_clock_IMP_LESS_EQ",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "kvar_simps"): "kvar_simps",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "is_valid_value_simps"): "is_valid_value_simps",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "is_valid_value_simps2"): "is_valid_value_simps2",
+            ("Flapjack/Pancake/Semantics/PanSem/StateDefsExact.lean",
+             "kvar_defs"): "kvar_defs",
+            ("Flapjack/Pancake/Semantics/PanSem/IsValidValueExact.lean",
+             "isValidValueHOLExact"): "is_valid_value_def",
+            ("Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+             "updLocalsHOLExact"): "upd_locals_def",
+            ("Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+             "resVarHOLExact"): "res_var_def",
+            ("Flapjack/Pancake/Semantics/PanSem/DecCallExact.lean",
+             "lookupCodeHOLExact"): "lookup_code_def",
+        }
+        for key, hol_name in cases.items():
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panSemScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.5", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

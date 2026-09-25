@@ -908,6 +908,22 @@ theorem optMmapEqSomeHelper {α β : Type} (f g : α → Option β) :
                     (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
               rfl
 
+/-- Exact port of Cake's `not_mem_map_flat` (`panPropsScript.sml:1035-1039`):
+    an element is absent from the flattening of a mapped list exactly when it
+    is absent from every image. Fully polymorphic with no carrier side
+    condition, matching the HOL statement `~ MEM y (FLAT (MAP f xs)) =
+    (!x. MEM x xs ==> ~ MEM y (f x))`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "not_mem_map_flat"]
+theorem not_mem_map_flatten {α β : Type} (f : α → List β) (xs : List α)
+    (y : β) : y ∉ (xs.map f).flatten ↔ ∀ x, x ∈ xs → y ∉ f x := by
+  simp only [List.mem_flatten, List.mem_map]
+  constructor
+  · intro h x hx hy
+    exact h ⟨f x, ⟨x, hx, rfl⟩, hy⟩
+  · rintro h ⟨ys, hysmem, hy⟩
+    obtain ⟨x, hx, hfx⟩ := hysmem
+    exact h x hx (hfx.symm ▸ hy)
+
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
     `EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`). -/
@@ -1316,7 +1332,11 @@ theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab wid
 
 /-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
     (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
-    while this Lean statement quantifies over every `MlS → Option _` function. -/
+    while this Lean statement quantifies over every `MlS → Option _` function.
+    The exact finite-map route is `HolFiniteMapExact.resVarEq` with
+    `lookup_resVarEq_none`/`lookup_resVarEq_some`, whose canonical qualification
+    (the bare-map carrier has no owning structure field) is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.21`. -/
 theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (m n : MlS) (v : Option (ValueHOL width)) :
@@ -1325,7 +1345,9 @@ theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_diff_eq_org`
     (`panPropsScript.sml:228`); untagged because its lookup-function input
-    ranges beyond HOL finite maps. -/
+    ranges beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.20`. -/
 theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
@@ -1335,7 +1357,9 @@ theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_some_eq_lookup`
     (`panPropsScript.sml:220`); untagged because the two lookup-function
-    arguments range beyond HOL finite maps. -/
+    arguments range beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.19`. -/
 theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
     (lc lc' : MlS → Option (ValueHOL width))
     (v : MlS) (value : ValueHOL width)

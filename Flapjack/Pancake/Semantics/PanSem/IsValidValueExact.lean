@@ -81,7 +81,8 @@ end
 
 /-- Function-backed rendering of HOL `is_valid_value` (`panSemScript.sml:469-475`).
     Kept untagged because its `PanSemStateExact` argument admits arbitrary
-    lookup functions rather than HOL finite-map fields. -/
+    lookup functions rather than HOL finite-map fields. Exact finite-support
+    replacement tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 def isValidValueHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (kind : VarKind) (name : MlS)
     (value : ValueHOL width) : Bool :=

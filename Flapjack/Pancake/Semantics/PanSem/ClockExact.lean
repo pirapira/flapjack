@@ -43,7 +43,9 @@ theorem fixClockHOLExact_clock_le {width : Nat} {σ : Type} [NeZero width] {β :
 
 /-- Function-backed rendering of HOL `fix_clock_IMP_LESS_EQ`
     (`panSemScript.sml:451-457`); untagged because the state map fields are not
-    constrained to finite support. -/
+    constrained to finite support. The exact finite-support replacement over
+    `PanSemStateFiniteExact` is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5`
+    (parent `.2.3`). -/
 theorem fixClockHOLExact_IMP_LESS_EQ {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (state : PanSemStateExact width σ) (result : β) (state1 : PanSemStateExact width σ)
     (step : β × PanSemStateExact width σ)

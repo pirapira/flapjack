@@ -40,7 +40,10 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ShapeHOL ProgHOL)
 
-/-- Function-backed rendering of HOL `panSem$kvar_simps` (`panSemScript.sml:422-429`). -/
+/-- Function-backed rendering of HOL `panSem$kvar_simps` (`panSemScript.sml:422-429`);
+    untagged because the state map fields are unrestricted functions rather than
+    HOL finite maps. Exact finite-support replacement tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 theorem kvar_simps {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateExact width σ) :
     (setKvarHOLExact .local name value state = setVarHOLExact name value state) ∧
@@ -51,7 +54,8 @@ theorem kvar_simps {width : Nat} {σ : Type} [NeZero width]
 
 /-- Function-backed rendering of HOL `panSem$is_valid_value_simps`
     (`panSemScript.sml:476-487`); untagged because the carrier's maps are not
-    finite-map fields. -/
+    finite-map fields. Exact finite-support replacement tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 theorem is_valid_value_simps {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (name : MlS) (value : ValueHOL width) :
     (isValidValueHOLExact state .local name value =
@@ -66,7 +70,8 @@ theorem is_valid_value_simps {width : Nat} {σ : Type} [NeZero width]
 
 /-- Function-backed rendering of HOL `panSem$is_valid_value_simps2`
     (`panSemScript.sml:489-500`); untagged because its whole-state binder uses
-    function fields in place of HOL finite maps. -/
+    function fields in place of HOL finite maps. Exact finite-support
+    replacement tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 theorem is_valid_value_simps2 {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (kind : VarKind) (name : MlS)
     (value : ValueHOL width) (clock : Nat) (ffi : HolFfiState σ)

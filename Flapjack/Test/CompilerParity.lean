@@ -310,6 +310,7 @@ import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.ParserParseStatementParity
 import Flapjack.Test.ParserByteNamesParity
 import Flapjack.Test.ParserByteRangedParity
+import Flapjack.Test.EntryTransformsByteRangedParity
 import Flapjack.Test.ParserKeywordParity
 import Flapjack.Test.PanLangWfShapeParity
 import Flapjack.Test.PanLangWfFieldsContextParity

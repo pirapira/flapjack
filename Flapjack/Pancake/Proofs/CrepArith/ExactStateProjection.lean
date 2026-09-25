@@ -775,4 +775,278 @@ theorem crepSimpExpCorrect1SourceProjection_loadByte
   rw [hAddressEq]
   rfl
 
+/-- All-width simp_exp_correct1 LoadGlob case over exact CrepExpHOL syntax.
+    The result binder, successful-evaluation premise, code-map update, and
+    complete Option word_lab equality are retained. It stays untagged because
+    evaluation uses the source projection rather than native crepSem$eval. -/
+theorem crepSimpExpCorrect1SourceProjection_loadGlob
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL width) → List Nat × CrepProgHOL width)
+    (locals : CrepLocalsExact width)
+    (globals : FiniteMap (BitVec 5) (HolWordLab width))
+    (code : CrepCodeMapExact width)
+    (memory : BitVec width → HolWordLab width)
+    (memaddrs shMemaddrs : BitVec width → Prop)
+    [DecidablePred memaddrs] [DecidablePred shMemaddrs]
+    (clock : Nat) (bigEndian : Bool) (ffi : HolFfiState σ)
+    (baseAddress topAddress : BitVec width)
+    (_result : HolWordLab width) (name : BitVec 5)
+    (_h : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits (.loadGlob name)) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals
+        (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepSimpExpHOLToSourceBits (.loadGlob name)) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits (.loadGlob name)) := by
+  have hState := crepSourceEvalStateOfHOLFields_codeFfiIrrel
+    locals globals f code memory memaddrs shMemaddrs clock bigEndian ffi ffi
+    baseAddress topAddress natCrepRuntimeFfiState natCrepRuntimeFfiState
+  rw [hState]
+  simp [crepSimpExpHOLToSourceBits, crepExpHOLToSourceBits,
+    crepExpOfHOL, mapCrepExpWord, crepSimpExp,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+
+/-- All-width simp_exp_correct1 BaseAddr case over exact CrepExpHOL syntax.
+    The result binder, successful-evaluation premise, code-map update, and
+    complete Option word_lab equality are retained. It stays untagged because
+    evaluation uses the source projection rather than native crepSem$eval. -/
+theorem crepSimpExpCorrect1SourceProjection_baseAddr
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL width) → List Nat × CrepProgHOL width)
+    (locals : CrepLocalsExact width)
+    (globals : FiniteMap (BitVec 5) (HolWordLab width))
+    (code : CrepCodeMapExact width)
+    (memory : BitVec width → HolWordLab width)
+    (memaddrs shMemaddrs : BitVec width → Prop)
+    [DecidablePred memaddrs] [DecidablePred shMemaddrs]
+    (clock : Nat) (bigEndian : Bool) (ffi : HolFfiState σ)
+    (baseAddress topAddress : BitVec width)
+    (_result : HolWordLab width)
+    (_h : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits .baseAddr) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals
+        (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepSimpExpHOLToSourceBits .baseAddr) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits .baseAddr) := by
+  have hState := crepSourceEvalStateOfHOLFields_codeFfiIrrel
+    locals globals f code memory memaddrs shMemaddrs clock bigEndian ffi ffi
+    baseAddress topAddress natCrepRuntimeFfiState natCrepRuntimeFfiState
+  rw [hState]
+  simp [crepSimpExpHOLToSourceBits, crepExpHOLToSourceBits,
+    crepExpOfHOL, mapCrepExpWord, crepSimpExp,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+
+/-- All-width simp_exp_correct1 TopAddr case over exact CrepExpHOL syntax.
+    The result binder, successful-evaluation premise, code-map update, and
+    complete Option word_lab equality are retained. It stays untagged because
+    evaluation uses the source projection rather than native crepSem$eval. -/
+theorem crepSimpExpCorrect1SourceProjection_topAddr
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL width) → List Nat × CrepProgHOL width)
+    (locals : CrepLocalsExact width)
+    (globals : FiniteMap (BitVec 5) (HolWordLab width))
+    (code : CrepCodeMapExact width)
+    (memory : BitVec width → HolWordLab width)
+    (memaddrs shMemaddrs : BitVec width → Prop)
+    [DecidablePred memaddrs] [DecidablePred shMemaddrs]
+    (clock : Nat) (bigEndian : Bool) (ffi : HolFfiState σ)
+    (baseAddress topAddress : BitVec width)
+    (_result : HolWordLab width)
+    (_h : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits .topAddr) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals
+        (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepSimpExpHOLToSourceBits .topAddr) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits .topAddr) := by
+  have hState := crepSourceEvalStateOfHOLFields_codeFfiIrrel
+    locals globals f code memory memaddrs shMemaddrs clock bigEndian ffi ffi
+    baseAddress topAddress natCrepRuntimeFfiState natCrepRuntimeFfiState
+  rw [hState]
+  simp [crepSimpExpHOLToSourceBits, crepExpHOLToSourceBits,
+    crepExpOfHOL, mapCrepExpWord, crepSimpExp,
+    evalCrepHolFiniteWordSourceExpWordLab, evalCrepHolFiniteWordSourceExp]
+
+/-- All-width simp_exp_correct1 Cmp case over exact CrepExpHOL syntax. The
+    left and right induction hypotheses preserve complete Option word_lab
+    results after the code-map update. This remains untagged because evaluation
+    uses the source projection rather than native crepSem$eval/eval_def. -/
+theorem crepSimpExpCorrect1SourceProjection_cmp
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL width) → List Nat × CrepProgHOL width)
+    (locals : CrepLocalsExact width)
+    (globals : FiniteMap (BitVec 5) (HolWordLab width))
+    (code : CrepCodeMapExact width)
+    (memory : BitVec width → HolWordLab width)
+    (memaddrs shMemaddrs : BitVec width → Prop)
+    [DecidablePred memaddrs] [DecidablePred shMemaddrs]
+    (clock : Nat) (bigEndian : Bool) (ffi : HolFfiState σ)
+    (baseAddress topAddress : BitVec width)
+    (operator : Cmp) (left right : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (_h : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (.cmp operator (crepExpHOLToSourceBits left) (crepExpHOLToSourceBits right)) ≠ none)
+    (ihLeft : evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals
+          (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepExpHOLToSourceBits left) ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals
+          (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepSimpExpHOLToSourceBits left) =
+      evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepExpHOLToSourceBits left))
+    (ihRight : evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals
+          (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepExpHOLToSourceBits right) ≠ none →
+      evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals
+          (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepSimpExpHOLToSourceBits right) =
+      evalCrepHolFiniteWordSourceExpWordLab
+        (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+          clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+        (crepExpHOLToSourceBits right)) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals
+        (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepSimpExpHOLToSourceBits (.cmp operator left right)) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+        (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits (.cmp operator left right)) := by
+  have hState := crepSourceEvalStateOfHOLFields_codeFfiIrrel
+    locals globals f code memory memaddrs shMemaddrs clock bigEndian ffi ffi
+    baseAddress topAddress natCrepRuntimeFfiState natCrepRuntimeFfiState
+  let source := crepSourceEvalStateOfHOLFields locals globals code memory
+    memaddrs shMemaddrs clock bigEndian ffi baseAddress topAddress
+    natCrepRuntimeFfiState
+  let updated := crepSourceEvalStateOfHOLFields locals globals
+    (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+    clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState
+  have hUpdatedEq : updated = source := by
+    simpa [updated, source] using hState.symm
+  have hRaw : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (.cmp operator (crepExpHOLToSourceBits left)
+        (crepExpHOLToSourceBits right)) ≠ none := by
+    simpa [source, evalCrepHolFiniteWordSourceExpWordLab] using _h
+  have hLeftRaw : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits left) ≠ none := by
+    intro hNone
+    apply hRaw
+    simp [evalCrepHolFiniteWordSourceExp, hNone]
+  have hRightRaw : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits right) ≠ none := by
+    intro hNone
+    apply hRaw
+    simp [evalCrepHolFiniteWordSourceExp, hNone]
+  have hLeftLab : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits left) ≠ none := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hLeftRaw
+  have hRightLab : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits right) ≠ none := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using hRightRaw
+  have hLeftUpdated : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width)) updated
+      (crepExpHOLToSourceBits left) ≠ none := by
+    simpa [hUpdatedEq] using hLeftLab
+  have hRightUpdated : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width)) updated
+      (crepExpHOLToSourceBits right) ≠ none := by
+    simpa [hUpdatedEq] using hRightLab
+  have hLeftEqLab := ihLeft hLeftUpdated
+  have hRightEqLab := ihRight hRightUpdated
+  have wordInjective : Function.Injective
+      (PanWordLab.word : (Fin width → Bool) → PanWordLab (Fin width → Bool)) := by
+    intro x y hxy
+    cases hxy
+    rfl
+  have hLeftEq : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepSimpExpHOLToSourceBits left) =
+    evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits left) := by
+    apply Option.map_injective wordInjective
+    simpa [evalCrepHolFiniteWordSourceExpWordLab, source, updated, hState]
+      using hLeftEqLab
+  have hRightEq : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepSimpExpHOLToSourceBits right) =
+    evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) source
+      (crepExpHOLToSourceBits right) := by
+    apply Option.map_injective wordInjective
+    simpa [evalCrepHolFiniteWordSourceExpWordLab, source, updated, hState]
+      using hRightEqLab
+  have hSimpCmp : crepSimpExpHOLToSourceBits (.cmp operator left right) =
+      .cmp operator (crepSimpExpHOLToSourceBits left)
+        (crepSimpExpHOLToSourceBits right) := by
+    simp [crepSimpExpHOLToSourceBits, crepExpOfHOL,
+      crepSimpExp, mapCrepExpWord]
+  have hOriginalCmp : crepExpHOLToSourceBits (.cmp operator left right) =
+      .cmp operator (crepExpHOLToSourceBits left)
+        (crepExpHOLToSourceBits right) := by
+    simp [crepExpHOLToSourceBits, crepExpOfHOL, mapCrepExpWord]
+  rw [← hState, hSimpCmp, hOriginalCmp]
+  simp only [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp]
+  rw [hLeftEq, hRightEq]
+
 end Flapjack

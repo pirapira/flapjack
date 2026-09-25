@@ -1,5 +1,6 @@
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.ConversionByteRanged
+import Flapjack.Parser.GrammarByteRanged
 
 /-! Kernel checks for the byte-rangedness foundation (bead
     `flapjack-pxn.18.3.5.8.7.1`).  These are the reusable lemmas the parser
@@ -288,5 +289,36 @@ example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : 
     (h : convTopDecList ofInt locations fuel tree = some ds) :
     ∀ d ∈ ds, DeclByteRanged d :=
   convTopDecList_byteRanged ofInt locations fuel tree ht ds h
+
+/-- A token list keeps the byte-ranged invariant under `P.expect`. -/
+example (expected : Token) (described : String) :
+    PStateToksSafe (P.expect expected described) :=
+  PStateToksSafe.expect expected described
+
+/-- `keepTok`-style leaves are byte-ranged when the accepted tokens are. -/
+example {entry : Token × Locs} (h : TokenNameByteRanged entry.1) :
+    TreesByteRanged (P.mkLeaf entry) :=
+  mkLeaf_byteRanged h
+
+/-- The fallback leaf of `try_default` is byte-ranged. -/
+example {token : Token} (h : TokenNameByteRanged token) :
+    ∀ s trees s', P.defaultLeaf token s = (some trees, s') → TreesByteRanged trees :=
+  defaultLeaf_trees_byteRanged h
+
+/-! Tree-producing primitive safety (bead 18.3.5.8.7.1.1.1). -/
+
+example : PTreesSafe (P.keepTok (fun _ => true) "any") := keepTok_treesSafe _ _
+example : PTreesSafe P.keepIdent := keepIdent_treesSafe
+example : PTreesSafe P.keepAnnot := keepAnnot_treesSafe
+example (nonterminal : Nonterminal) : PTreesSafe (P.emptyNode nonterminal) :=
+  emptyNode_treesSafe nonterminal
+example {p : P P.Trees} (hp : PTreesSafe p) : PTreesSafe (P.tryRule p) :=
+  tryRule_treesSafe hp
+example (nonterminal : Nonterminal) {children : P.Trees} (h : TreesByteRanged children) :
+    TreesByteRanged (P.mkSubtree nonterminal children) :=
+  mkSubtree_treesByteRanged nonterminal h
+example (nonterminal : Nonterminal) {p : P P.Trees} (hp : PTreesSafe p) :
+    PTreesSafe (P.subtree nonterminal p) :=
+  subtree_treesSafe nonterminal hp
 
 end Flapjack.Test.ParserByteRangedParity

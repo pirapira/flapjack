@@ -12,11 +12,30 @@ comparisons go through `shapeEqHOL` (whose `= true` reading is proved exact in
 (`word_op_def`), `panOpHOL` (`pan_op_def`), `wordCmpHOL` (`word_cmp_def`) and
 `wordShiftHOL` (`word_sh_def`).
 
-The evaluator itself is UNTAGGED: it is the exact-carrier prerequisite for the
-recursive `evaluate` dispatcher and is only statement-exact once the whole
-`evaluate_def` shape (monad, clock, exception state) is assembled.  Direct
-original-HOL rows are in `scripts/hol-probes/pan_eval_probe.out` and are
-reproduced by `Flapjack/Test/PanSemEvalExactParity.lean`.
+The evaluator is TAGGED as the exact `eval_def` port (`@[hol ... "eval_def"]`):
+its clauses are compared one by one against
+`cakeml/pancake/semantics/panSemScript.sml:209-283` --- `Const`, `Var
+Local`/`Global` (`=`-keyed `FLOOKUP`), `RStruct` (`OPT_MMAP`), `RField`
+(`index < LENGTH` as `values[index]?`), `NStruct` (`ALOOKUP` + `UNZIP` +
+`field_names' = field_names` + `OPT_MMAP` + `EVERY (s = shape_of v) (ZIP ...)`),
+`NField`, `Load`/`Load32`/`LoadByte`, `Op`/`Panop` (`EVERY isValWord` +
+`MAP theWord`), `Cmp` (`word_cmp`), `Shift` (`word_sh`),
+`BaseAddr`/`TopAddr`/`BytesInWord` --- over the exact `mlstring`-keyed
+`PanSemStateExact` carrier, the exact `ExpHOL` syntax and the exact `ValueHOL`
+values.  The mutual list helpers `evalListHOLExact`/`evalListFieldsHOLExact` and
+`valueIsWord`/`valueWord`/`lookupFieldHOL` are the `OPT_MMAP`/`EVERY`/`theWord`/
+`ALOOKUP` renderings and are untagged.  The shape comparisons go through
+`shapeEqHOL` (whose `= true` reading is proved exact in
+`IsValidValueExact.lean`); loads reuse the tagged exact `memLoadHOLExact`
+(`mem_load_def`), `panMemLoad32HOL` (`mem_load_32_def`), `panMemLoadByteHOL`
+(`mem_load_byte_def`); the wording operations reuse the tagged exact `wordOpHOL`
+(`word_op_def`), `panOpHOL` (`pan_op_def`), `wordCmpHOL` (`word_cmp_def`) and
+`wordShiftHOL` (`word_sh_def`).
+
+The recursive `evaluate` dispatcher over this evaluator is separate and not yet
+assembled.  Direct original-HOL rows are in
+`scripts/hol-probes/pan_eval_probe.out` and are reproduced by
+`Flapjack/Test/PanSemEvalExactParity.lean`.
 -/
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Encoders.Asm
@@ -51,7 +70,8 @@ def lookupFieldHOL {width : Nat} [NeZero width] (name : MlS) :
 /-! ## The exact `eval_def` evaluator -/
 
 mutual
-  /-- Untagged exact carrier port of HOL `eval`. -/
+  /-- Exact carrier port of HOL `eval` (tagged `eval_def`). -/
+  @[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"]
   def evalHOLExact {width : Nat} {σ : Type} [NeZero width]
       (state : PanSemStateExact width σ) [DecidablePred state.memaddrs] :
       ExpHOL width → Option (ValueHOL width)

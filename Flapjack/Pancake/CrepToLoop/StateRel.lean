@@ -211,10 +211,31 @@ theorem crepToLoopGlobalsRel_iff {width : Nat} [NeZero width]
       ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value) :=
   Iff.rfl
 
-/-- Untagged Flapjack state-relation analogue of HOL `state_rel_clock_add_zero`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`). The equations
-    match, but the quantified production state carriers have String-backed code
-    names and do not match the exact HOL state types. -/
+/-- Flapjack analogue of HOL `state_rel_clock_add_zero`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`):
+    `!s t. state_rel s t ==> ?ck. state_rel s (t with clock := ck + t.clock)`.
+
+    The statement shape is identical (a single preservation implication whose
+    witness is the fresh clock `ck`), but the tag stays **withdrawn** for a
+    substantive carrier mismatch. HOL quantifies `('a,'ffi) crepSem$state` and
+    `('a,'ffi) loopSem$state`, whose code maps are keyed by `mlstring`
+    (`funname`) and whose memories are total functions/`mlstring`-keyed finite
+    maps. The Flapjack declarations quantify the production `CrepHolState` and
+    `LoopMachineState`, whose code maps use `FunName = String` and whose memory
+    representation differs; those carriers appear in the quantified state types
+    even though `state_rel` itself only reads seven fields, so per AGENTS.md the
+    general parameterisation is a mismatch. `names_as_string` cannot authorise a
+    different state carrier (only identifier-representing names), and no
+    same-module `NameRanged` byte witness applies because the conclusion is a
+    `Prop` (an existential over clocks), not a name.
+
+    Direct HOL oracle: `scripts/hol-probes/crep_to_loop_state_rel_probe.out`
+    rows `memaddrs_mdomain_mem`, `sh_memaddrs_sh_mdomain_mem`, `clock_eq`,
+    `be_eq`, `base_eq`, `top_eq`, `clock_mismatch` pin the seven-field relation;
+    the theorem is exercised by the kernel-checked example in
+    `Flapjack/Test/CrepToLoopParity.lean` (`state_rel_clock_add_zero`,
+    ~lines 363-368). Faithful exact-carrier port is tracked by
+    `flapjack-pxn.18.5.6.9.1`. -/
 theorem crepToLoopStateRel_clock_add_zero {width : Nat} [NeZero width] {σ : Type}
     (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) (h : crepToLoopStateRel s t) :

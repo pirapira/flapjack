@@ -787,6 +787,42 @@ theorem crepAssignedFreeVarsHOL_nestedDecs_append {width : Nat} [NeZero width]
             simp
           · simp [hc, List.mem_cons, bne_iff_ne]
 
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_seq_store_empty"]
+theorem crepAssignedVarsHOL_nestedSeq_storesHOL {width : Nat} [NeZero width]
+    (values : List (CrepExpHOL width)) (address : CrepExpHOL width) (offset : BitVec width) :
+    crepAssignedVarsHOL (crepNestedSeqHOL (storesHOL address values offset)) = [] := by
+  induction values generalizing offset with
+  | nil => simp [storesHOL, crepNestedSeqHOL, crepAssignedVarsHOL]
+  | cons value values ih =>
+      simp [storesHOL, crepNestedSeqHOL, crepAssignedVarsHOL, ih]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_seq_store_empty"]
+theorem crepAssignedFreeVarsHOL_nestedSeq_storesHOL {width : Nat} [NeZero width]
+    (values : List (CrepExpHOL width)) (address : CrepExpHOL width) (offset : BitVec width) :
+    crepAssignedFreeVarsHOL (crepNestedSeqHOL (storesHOL address values offset)) = [] := by
+  induction values generalizing offset with
+  | nil => simp [storesHOL, crepNestedSeqHOL, crepAssignedFreeVarsHOL]
+  | cons value values ih =>
+      simp [storesHOL, crepNestedSeqHOL, crepAssignedFreeVarsHOL, ih]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_store_globals_empty"]
+theorem crepAssignedVarsHOL_nestedSeq_storeGlobalsHOL {width : Nat} [NeZero width]
+    (values : List (CrepExpHOL width)) (address : BitVec 5) :
+    crepAssignedVarsHOL (crepNestedSeqHOL (storeGlobalsHOL address values)) = [] := by
+  induction values generalizing address with
+  | nil => simp [storeGlobalsHOL, crepNestedSeqHOL, crepAssignedVarsHOL]
+  | cons value values ih =>
+      simp [storeGlobalsHOL, crepNestedSeqHOL, crepAssignedVarsHOL, ih]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_store_globals_empty"]
+theorem crepAssignedFreeVarsHOL_nestedSeq_storeGlobalsHOL {width : Nat} [NeZero width]
+    (values : List (CrepExpHOL width)) (address : BitVec 5) :
+    crepAssignedFreeVarsHOL (crepNestedSeqHOL (storeGlobalsHOL address values)) = [] := by
+  induction values generalizing address with
+  | nil => simp [storeGlobalsHOL, crepNestedSeqHOL, crepAssignedFreeVarsHOL]
+  | cons value values ih =>
+      simp [storeGlobalsHOL, crepNestedSeqHOL, crepAssignedFreeVarsHOL, ih]
+
 theorem crepAssignedVars_nestedDecs_appendW {width : Nat} [NeZero width]
     (names : List Nat) (values : List (CrepExp (BitVec width)))
     (body : CrepProg (BitVec width)) (h : names.length = values.length) :

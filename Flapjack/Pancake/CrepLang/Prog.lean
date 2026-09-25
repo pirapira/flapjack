@@ -274,6 +274,31 @@ def nestedDecsHOL {width : Nat} [NeZero width] (names : List Nat)
   | name :: names, value :: values => .dec name value (nestedDecsHOL names values body)
   | _, _ => .skip
 
+/-- Exact-shaped `stores` over the exact `CrepProgHOL` carrier, matching HOL
+    `crepLang$stores_def` (`cakeml/pancake/crepLangScript.sml:95-100`). The
+    exact HOL tag for `stores_def` is carried by the production `storesW`; this
+    is the same function over `CrepProgHOL`, needed for the exact `seq_store_empty`
+    lemmas. -/
+def storesHOL {width : Nat} [NeZero width] (address : CrepExpHOL width)
+    (values : List (CrepExpHOL width)) (offset : BitVec width) :
+    List (CrepProgHOL width) :=
+  match values with
+  | [] => []
+  | value :: values =>
+      let destination := if offset == 0 then address else .op .add [address, .const offset]
+      .store destination value ::
+        storesHOL address values (offset + BitVec.ofNat width (width / 8))
+
+/-- Exact-shaped `store_globals` over the exact `CrepProgHOL` carrier, matching
+    HOL `crepLang$store_globals_def` (`cakeml/pancake/crepLangScript.sml:109-113`).
+    The exact HOL tag for `store_globals_def` is carried by the production
+    `storeGlobalsW`; this is the same function over `CrepProgHOL`. -/
+def storeGlobalsHOL {width : Nat} [NeZero width] (address : BitVec 5)
+    (values : List (CrepExpHOL width)) : List (CrepProgHOL width) :=
+  match values with
+  | [] => []
+  | value :: values => .storeGlob address value :: storeGlobalsHOL (address + 1) values
+
 @[simp] theorem crepProgToHOL_crepNestedSeqHOL {width : Nat} [NeZero width]
     (statements : List (CrepProg (BitVec width))) :
     crepProgToHOL (crepNestedSeq statements) =

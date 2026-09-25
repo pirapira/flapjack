@@ -350,4 +350,32 @@ example :
     [.val (.word (2 : BitVec 8)), .val (.word (3 : BitVec 8)),
      .val (.word (4 : BitVec 8))] _ rfl
 
+/-! ## Exact `is_wf_shape_v_nil`/`is_wf_shape_v_drop` over the exact carriers
+    (HOL `panProps$is_wf_shape_v_nil`/`is_wf_shape_v_drop`, beads
+    flapjack-4ac.4.7/.4.8/.4.9). -/
+
+/-- `is_wf_shape_v_nil_step1`. -/
+example : isWfShapeValueHOLExact
+    ([] : Flapjack.Pancake.PanLang.StructContextExact)
+    (.val (.word 1) : ValueHOL 8) = true := by
+  apply isWfShapeValueHOLExact_nil_step1
+  refine ⟨rfl, ?_⟩
+  simp [shapeOfHOLExact]
+
+/-- `is_wf_shape_v_nil`: the two predicates coincide on the empty context. -/
+example : Flapjack.Pancake.PanLang.isWfShapeExactHOL
+      ([] : Flapjack.Pancake.PanLang.StructContextExact)
+      (shapeOfHOLExact (.val (.word 1) : ValueHOL 8)) =
+    isWfShapeValueHOLExact
+      ([] : Flapjack.Pancake.PanLang.StructContextExact)
+      (.val (.word 1) : ValueHOL 8) :=
+  isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil [] rfl _
+
+/-- `is_wf_shape_v_drop`: a value well-formed after dropping still is. -/
+example :
+    isWfShapeValueHOLExact exactPairContext
+      (.val (.word 1) : ValueHOL 8) = true :=
+  isWfShapeValueHOLExact_drop 1 exactPairContext
+    (.val (.word 1) : ValueHOL 8) (by simp [isWfShapeValueHOLExact])
+
 end Flapjack.Test

@@ -10323,6 +10323,30 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_nil_step1",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "isWfShapeValueHOLExact_nil_step1",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.7; exact HOL panProps$is_wf_shape_v_nil_step1 (panPropsScript.sml:48): !sctxt v. sctxt = [] /\\ is_wf_shape sctxt (shape_of v) ==> is_wf_shape_v sctxt v. Lean `{width : Nat} [NeZero width] (context : StructContextExact) (value : ValueHOL width) (h : context = [] /\\ Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true) : isWfShapeValueHOLExact context value = true` renders the conjunction with /\\ and the Bool predicates with `= true`; carriers are the already-reviewed exact StructContextExact/ValueHOL/isWfShapeExactHOL/shapeOfHOLExact. No extra hypotheses; [NeZero width] models HOL's positive word dimension. Proof by induction on the value with the context substituted to []. Direct HOL rows is_wf_shape_v_* in pan_structs_value_validity_probe.out; parity example in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_nil",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.8; exact HOL panProps$is_wf_shape_v_nil (panPropsScript.sml:56): !xs v. xs = [] ==> is_wf_shape xs (shape_of v) = is_wf_shape_v xs v. Lean `{width : Nat} [NeZero width] (context : StructContextExact) (hctx : context = []) (value : ValueHOL width) : Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = isWfShapeValueHOLExact context value` is HOL's equality between the two Bool predicates with the context-equality side condition kept as an explicit hypothesis; forward direction is the tagged isWfShapeValueHOLExact_shapeOfHOLExact, backward is isWfShapeValueHOLExact_nil_step1. No extra hypotheses; [NeZero width] models HOL's positive word dimension. Source only, since no dedicated probe exists; parity example in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_drop",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "isWfShapeValueHOLExact_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.9; exact HOL panProps$is_wf_shape_v_drop (panPropsScript.sml:63): !sctxt v. is_wf_shape_v (DROP k sctxt) v ==> is_wf_shape_v sctxt v. Lean `{width : Nat} [NeZero width] (taken : Nat) (context : StructContextExact) (value : ValueHOL width) (h : isWfShapeValueHOLExact (context.drop taken) value = true) : isWfShapeValueHOLExact context value = true`; HOL DROP is Lean List.drop; the NStruct clause uses structContextLookupHOL_append (Flapjack/Pancake/PanLang/Decl.lean:435, HOL ALOOKUP_APPEND) together with List.take_append_drop. No extra hypotheses; [NeZero width] models HOL's positive word dimension. Direct HOL rows is_wf_shape_v_* in pan_structs_value_validity_probe.out; parity example in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "everyExpHOL",

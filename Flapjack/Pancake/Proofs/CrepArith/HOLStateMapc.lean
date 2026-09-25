@@ -807,6 +807,43 @@ theorem crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime
             rw [evalCrepRuntimeExp_toRuntime_eq]
   exact congrArg (Option.map PanWordLab.toHolWordLab) hRuntimePreserved
 
+/-- All-positive-width `simp_exp_correct1` support over the exact
+`CrepSemHOLState` and `CrepExpHOL` carriers, using the source-shaped
+`evalCrepHolExp` translation of `crepSem$eval_def` in the premise and result.
+The code update has HOL's exact `MlString`/`CrepProgHOL` type and the result
+preserves the complete `HolWordLab`-backed word result through the evaluator's
+word-lab projection. This stays untagged because the source evaluator still
+uses canonical `BitVec width` rather than an arbitrary HOL finite_index
+carrier; the adjacent production-runtime theorem separately connects this
+result to the executed evaluator. -/
+theorem crepSimpExpCorrect1CrepSemHOLStateHolEval
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (h : evalCrepHolExpWordLab state.toBitVecEvaluatorState
+      (crepExpOfHOL expression) ≠ none) :
+    evalCrepHolExpWordLab
+      (state.mapc update).toBitVecEvaluatorState
+      (crepSimpExp (BitVec.ofNat width) (crepExpOfHOL expression)) =
+    evalCrepHolExpWordLab state.toBitVecEvaluatorState
+      (crepExpOfHOL expression) := by
+  rw [CrepSemHOLState.toBitVecEvaluatorState_mapc]
+  let projected := state.toBitVecEvaluatorState
+  have hCodeId :
+      crepArithHolMapCode
+        (fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+        projected = projected := by
+    cases projected
+    simp [crepArithHolMapCode]
+  have hPres := crepSimpExpCorrect1BitVec
+    (f := fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+    projected (crepExpOfHOL expression) h
+  rw [hCodeId] at hPres
+  exact hPres
+
 /-- Native production-evaluator `Var` case against the exact finite-map local
 field in `CrepSemHOLState`, corresponding to HOL `crepSem$eval_def`
 (`crepSemScript.sml:91`). The production runtime state remains arbitrary,

@@ -10601,8 +10601,8 @@
     "hol_name": "mem_store_32_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemStore32HOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.21): HOL mem_store_32_def (panSemScript.sml:327-346) is the aligned-2 mem_store_32: when aligned 2 w, m (byte_align w) = Word v, and byte_align w IN dm, the four word32 bytes get_byte 0w..3w hw be are written with set_byte at w,w+1,w+2,w+3 and the aligned cell FUPDATE'd to Word v3, else NONE. panMemStore32HOL (PanSemStateEval.lean:280) matches clause-for-clause: aligned 2 w rendered as address.toNat % 4 = 0 (same convention as the reviewed_exact sibling panMemLoad32HOL), byte_align via panByteAlignHOL, the total word_lab memory as a total HolWordLab map with the word set a Prop/DecidablePred domain, and get_byte/set_byte via panGetByteHOL/panSetByteHOL at the same addresses and byte order. Direct HOL rows in scripts/hol-probes/pan_sem_mem_store_32_probe.out (6 rows) reproduced by Flapjack/Test/PanMemStore32HOLParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

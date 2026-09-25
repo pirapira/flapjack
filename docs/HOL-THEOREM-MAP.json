@@ -8082,7 +8082,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgsHOL_eval_flatten_of_compileExpRel",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only compile_args bridge that projects target evaluation from the full per-expression compile_exp_val_rel-shaped IH; the argument list result is derived without a separate target-evaluation premise. It does not prove the expression IH or the complete Call theorem."
+    "reviewer": "Flapjack-only list adapter, not HOL compile_exp_val_rel. Source review of pan_to_crepProofScript.sml:130-395 records the mismatch: HOL is width-polymorphic over ExpHOL/word_lab values/ShapeHOL and HOL panSem/crepSem states with mlstring finite-map relations; this helper uses production String/Shape/Exp/PanValue and RV64 PanSemState/CrepRuntimeState/CrepExp carriers. It also consumes a stronger four-part per-expression heach premise and proves only the list-evaluation conclusion, while existing case lemmas are constructor subsets. No HOL tag is claimed. Faithful replacement flapjack-4ac.5.81 depends on exact compiler/context beads flapjack-pxn.18.3.5.8.8/.13 and exact state relation flapjack-pxn.18.3.7.1.3.1. compile_exp direct-output probes do not cover this evaluation theorem."
   },
   {
     "hol_path": null,

@@ -251,9 +251,9 @@
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_const_def",
     "lean_path": "Flapjack/Pancake/CrepArith.lean",
-    "lean_name": "crepDestConstHolWord",
+    "lean_name": "crepDestConstHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "The tagged definition is restricted to CrepExp (Fin width → Bool) with NeZero width, so the payload is a positive-width finite word rather than an arbitrary carrier. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The arbitrary-alpha production helper remains untagged and is definitionally equal on this carrier."
+    "reviewer": "Exact width-indexed definition over CrepExpHOL, whose Const carries BitVec width; the generic-alpha production extractor remains untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -261,15 +261,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The faithful polymorphic word statement is separately tagged as crepDestConstHolWord_eq_const."
+    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged support over generic CrepExp (Fin width → Bool), not HOL's exact CrepExpHOL syntax carrier. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConstHOL_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Width-specialized positive finite word carrier Fin width → Bool with NeZero width. Successful dest_const premise and Const conclusion match the HOL theorem; arbitrary-alpha support remains untagged."
+    "reviewer": "Exact width-indexed statement over CrepExpHOL/BitVec width with NeZero width, matching HOL's word-typed expression, successful dest_const premise, and Const conclusion."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -358,6 +366,118 @@
     "lean_name": "crepEvalMulConstHolWordBits",
     "statement_status": "documented_mismatch",
     "reviewer": "All-positive-width source-state support over canonical Fin width -> Bool words. It still interprets HOL eval_def/crep_op_def through BitVec/RISC-V operations and byte loads; no @[hol] tag until that evaluator correspondence is proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "panWordLabWord_panTheWord_holWordLabToCrepSourceWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only wrapper round trip for the canonical Fin-index projection; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_codeFfiIrrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equality for the expression-observation projection, which deliberately erases code and FFI. It is not a port of the HOL state datatype or an eval theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_locals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for local lookup from the named lookup-function carrier; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_globals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for global lookup from the named lookup-function carrier; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_memaddrs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only conversion of a word-set predicate to the source evaluator's Bool membership test; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_memory",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for the total memory field; no standalone HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Const clause equation on a projected state, not the exact polymorphic crepSem state/evaluator statement; keep untagged until the full state/eval relation is proved."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Var clause equation over a projection from named lookup-function carriers; no exact Crep state record or native eval_def identity is established."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_load",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Load plus mem_load clause observation over the projected state; the finite-support map and native eval_def/state relation remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_loadGlob",
+    "statement_status": "documented_mismatch",
+    "reviewer": "LoadGlob clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "BaseAddr clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "TopAddr clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Var case preserves the result binder, success premise, code-map update and full Option word_lab result, but uses lookup-function carriers without finite-support witnesses and the projected source evaluator rather than native crepSem$eval. No @[hol] tag."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Const case preserves the result binder, success premise, mapc code update and complete Option word_lab equality, but uses the expression-observation projection rather than the native HOL Crep state/evaluator. No @[hol] tag."
   },
   {
     "hol_path": null,

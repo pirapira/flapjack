@@ -341,6 +341,17 @@ def evaluateSourceDecCallBadReturnShape :=
     statefulTestHandler sourceBadReturnShapeState
     (.decCall "dest" .one "badret" [] .skip : Prog Word64)
 
+def sourceBadCallDestinationState : PanSemState Word64 (FfiState Unit) :=
+  { emptyPanSourceState 10 sourceIdCode with
+      locals := updatePanValueMap (fun _ => none) "answer"
+        (.rStruct [.word (BitVec.ofNat 64 0), .word (BitVec.ofNat 64 0)]) }
+
+def evaluateSourceCallBadDestination :=
+  panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8) sourceBadCallDestinationState
+    (.call (some (some (.local, "answer"), none)) "id"
+      [.const (BitVec.ofNat 64 7)] : Prog Word64)
+
 private def isSourceReturnedWord
     (result : Option (PanValueFfiClockResult Word64 Unit))
     (expected : Word64) (expectedClock : Nat) : Bool :=
@@ -401,6 +412,13 @@ def observeSourceCallAssigned : Bool :=
       | _ => false
   | _ => false
 
+def observeSourceCallBadDestination : Bool :=
+  match evaluateSourceCallBadDestination with
+  | some ((.control (.error locals _ _ _), clock), postState) =>
+      clock == 9 && (locals "answer").isNone && postState.clock == 9 &&
+        (postState.locals "answer").isNone
+  | _ => false
+
 def observeSourceCallRaisesException : Bool :=
   match evaluateSourceCallRaisesException with
   | some (.control (.raised _ _ _ _ "E" (.word value)), 9) =>
@@ -440,6 +458,18 @@ def observeSourceCodePreservedAfterRecursion : Bool :=
       | _, _ => false
   | none => false
 
+/-- The generic state-owned code invariant applies to the original HOL-backed
+    nested Call/DecCall case, independently of its returned result. -/
+theorem sourceNestedCallPreservesCode
+    (result : PanValueFfiClockResult Word64 Unit)
+    (postState : PanSemState Word64 (FfiState Unit))
+    (heval : evaluateSourceNestedCallWithPostState = some (result, postState)) :
+    postState.code = (emptyPanSourceState 10 sourceRecursiveCode).code := by
+  exact panSemEvaluateCodeStateWithPostState_preserves_code
+    statefulTestContext statefulTestPrimitive statefulTestHandler
+    (BitVec.ofNat 64 8) (emptyPanSourceState 10 sourceRecursiveCode)
+    (.call none "f" []) result postState heval
+
 def observeSourceRecursiveCallTimeout :=
   isSourceTimeoutAt evaluateSourceRecursiveCallTimeout 0
 
@@ -477,6 +507,7 @@ def observeSourceDecCallBadReturnShape : Bool :=
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
 #guard observeSourceCallAssigned
+#guard observeSourceCallBadDestination
 #guard observeSourceCallRaisesException
 #guard observeSourceCallHandlesException
 #guard observeSourceCallHandlesPairException
@@ -810,6 +841,9 @@ def runChecks : IO Bool := do
   else IO.println "FAIL state-owned Call evaluates first field of a local record like HOL"
   if observeSourceCallAssigned then IO.println "PASS state-owned Call writes the existing local destination" else
     IO.println "FAIL state-owned Call writes the existing local destination"
+  if observeSourceCallBadDestination then
+    IO.println "PASS state-owned Call maps rejected destination assignment to HOL Error"
+  else IO.println "FAIL state-owned Call maps rejected destination assignment to HOL Error"
   if observeSourceCallRaisesException then IO.println "PASS state-owned Call propagates the callee exception payload" else
     IO.println "FAIL state-owned Call propagates the callee exception payload"
   if observeSourceCallHandlesException then IO.println "PASS state-owned Call handler catches and binds the exception payload" else
@@ -895,7 +929,8 @@ def runChecks : IO Bool := do
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
-    observeSourceCallBadReturnShape && observeSourceDecCallBadReturnShape &&
+    observeSourceCallBadDestination && observeSourceCallBadReturnShape &&
+    observeSourceDecCallBadReturnShape &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

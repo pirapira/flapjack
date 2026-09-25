@@ -1691,3 +1691,10 @@ run_probe pan_sem_vshapes_args_rel_probeScript.sml pan_sem_vshapes_args_rel_prob
   vra_one vra_map_two \
   "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The pan_commonProps take/drop disjoint, EL disjoint, and empty zip lookup
+# probe observes pan_commonPropsScript.sml:534, :606, and :575.
+run_probe pan_common_props_take_drop_el_zip_probeScript.sml pan_common_props_take_drop_el_zip_probe.out \
+  atdd_disjoint nmfz_hit \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

@@ -126,6 +126,9 @@ statement (or definition body) with its HOL source, run
 lock-file diff. The hash gate detects Lean declaration changes only: it does not
 hash untagged dependencies, theorem proof terms, or the HOL declarations, and it
 does not prove HOL-to-Lean equivalence or replace source-level review.
+After rebuilding a tagged declaration, run `lake build Flapjack` before the
+type-hash check: it refreshes `.lake/build/ir/Flapjack.setup.json`, which can
+otherwise still point at an older cached OLean even when `lake test` passes.
 
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side

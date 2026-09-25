@@ -313,6 +313,85 @@ private theorem structContextLookupHOL_append_eq_of_some
       have hlookupTail := ih htailNodup
       simp [hne, hlookupTail]
 
+/-- For a distinct-name context, a successful lookup after a prefix drop is
+    unchanged by the drop. -/
+private theorem structContextLookupHOL_drop_eq_of_some
+    (n : Nat) (context : StructContextExact) (name : MlS) (info : StructInfoHOLExact)
+    (hlookup : Flapjack.Pancake.PanLang.structContextLookupHOL name (context.drop n) = some info)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    Flapjack.Pancake.PanLang.structContextLookupHOL name context = some info := by
+  induction n generalizing context with
+  | zero => simpa using hlookup
+  | succ n ih =>
+      cases context with
+      | nil => simp at hlookup
+      | cons entry rest =>
+          obtain ⟨candidate, candidateInfo⟩ := entry
+          have hnames : (candidate :: rest.map Prod.fst).Nodup := by
+            simpa using hnodup
+          obtain ⟨hnot, hrest⟩ := List.nodup_cons.mp hnames
+          have htail : Flapjack.Pancake.PanLang.structContextLookupHOL name
+              (rest.drop n) = some info := by
+            simpa using hlookup
+          have hmemTail := structContextLookupHOL_mem_of_some name (rest.drop n) info htail
+          have hmemRest : name ∈ rest.map Prod.fst := by
+            rw [List.map_drop] at hmemTail
+            exact List.mem_of_mem_drop hmemTail
+          have hne : name ≠ candidate := by
+            intro heq
+            apply hnot
+            rw [← heq]
+            exact hmemRest
+          have hctx := ih rest htail hrest
+          simpa [Flapjack.Pancake.PanLang.structContextLookupHOL, hne] using hctx
+
+/-- Exact port of HOL `size_of_sh_with_ctxt_drop`
+    (`pan_structsProofScript.sml:99`). This keeps HOL's well-formedness and
+    distinct-name premises over `ShapeHOL` and `StructContextExact`. The
+    production String-carrier analogue remains untagged in `PanStructs.lean`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "size_of_sh_with_ctxt_drop"]
+theorem sizeOfShapeWithContextHOL_drop (context : StructContextExact)
+    (shape : ShapeHOL) (n : Nat)
+    (hwf : Flapjack.Pancake.PanLang.isWfShapeExactHOL (context.drop n) shape = true)
+    (hnodup : (context.map Prod.fst).Nodup) :
+    Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL (context.drop n) shape =
+      Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context shape := by
+  let contextDrop := context.drop n
+  have hrec := Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL.induct
+    (context := contextDrop)
+    (motive_1 := fun sh =>
+      Flapjack.Pancake.PanLang.isWfShapeExactHOL contextDrop sh = true →
+        Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL contextDrop sh =
+          Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context sh)
+    (motive_2 := fun shapes =>
+      Flapjack.Pancake.PanLang.isWfShapesExactHOL contextDrop shapes = true →
+        Flapjack.Pancake.PanLang.sizeOfShapesWithContextHOL contextDrop shapes =
+          Flapjack.Pancake.PanLang.sizeOfShapesWithContextHOL context shapes)
+    (case1 := by
+      intro _
+      rfl)
+    (case2 := by
+      intro shapes ih hwfShapes
+      simpa [Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL_comb] using ih hwfShapes)
+    (case3 := by
+      intro name info hlookup _
+      have hctx := structContextLookupHOL_drop_eq_of_some n context name info hlookup hnodup
+      simp [Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL, hlookup, hctx])
+    (case4 := by
+      intro name hlookup hwfName
+      simp [Flapjack.Pancake.PanLang.isWfShapeExactHOL, hlookup] at hwfName)
+    (case5 := by
+      intro _
+      rfl)
+    (case6 := by
+      intro child rest ihChild ihRest hwfRest
+      simp only [Flapjack.Pancake.PanLang.isWfShapesExactHOL, Bool.and_eq_true] at hwfRest
+      obtain ⟨hwfChild, hwfTail⟩ := hwfRest
+      simp only [Flapjack.Pancake.PanLang.sizeOfShapesWithContextHOL]
+      rw [ihChild hwfChild, ihRest hwfTail])
+    shape
+  exact hrec hwf
+
 /-- Exact port of HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`).
     Its value, context keys, field keys, and shape keys are the faithful HOL
     carriers: `ValueHOL`, `MlString`, `ShapeHOL`, and `StructContextExact`.

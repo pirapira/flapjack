@@ -304,13 +304,29 @@ decreasing_by
   rw [hone]
   omega
 
-/-- Internal freshness support for `globalNewMainName`; the proof-script
-    theorem `fresh_name_correct` is tracked separately from this helper. -/
+/-- Untagged helper: the source-shaped theorem that a name returned by the
+    fresh-name search is not a member of the search list. This is the internal
+    workhorse used by `globalNewMainName`; the `@[hol]`-tagged exact port of
+    Cake's `fresh_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`) lives in the HOL
+    proof counterpart `Flapjack/Pancake/Proofs/PanGlobals.lean`
+    (`freshNameHOL_not_mem_hol`), per the HOL-script placement rule. -/
 theorem freshNameHOL_not_mem (name : String) (names : List String) :
     freshNameHOL name names ∉ names := by
   fun_induction freshNameHOL name names with
   | case1 name names ih => exact ih
   | case2 name names => assumption
+
+/-- Untagged helper: the source-shaped subset form corresponding to Cake's
+    `fresh_name_correct'` (`pan_globalsProofScript.sml:1003`). The
+    `@[hol]`-tagged exact port lives in the HOL proof counterpart
+    `Flapjack/Pancake/Proofs/PanGlobals.lean`
+    (`freshNameHOL_not_mem_of_subset_hol`), per the HOL-script placement rule. -/
+theorem freshNameHOL_not_mem_of_subset (name : String) (names names' : List String)
+    (hmem : freshNameHOL name names ∈ names')
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    False :=
+  freshNameHOL_not_mem name names (hsubset _ hmem)
 
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
@@ -463,22 +479,24 @@ def fpermName {α : Type u} [DecidableEq α] (f g h : α) : α :=
 
 /-- Production `String`-specialized form of Cake's polymorphic `fperm_name`
     (`fpermName` above): renaming swaps the `source` and `target` function
-    names and leaves every other name unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
--- mismatch, audit beads `flapjack-dlc.52`/`flapjack-dlc.53`): HOL's
--- `fperm_name_def` (`pan_globalsScript.sml:184`) has no type annotation and
--- HOL generalizes it to the polymorphic `'a -> 'a -> 'a -> 'a`.  This
--- declaration instantiates `α := String` (`FunName`), so it is a
--- specialization of the HOL constant rather than the constant itself; the
--- `names_as_string` qualifier does not authorize specializing a polymorphic
--- HOL name to `String`.  The exact polymorphic port is `fpermName` above.
--- `globalRenameFunctionName` is retained as production infrastructure (it only
--- compares and swaps names, never inspects their bytes).  Direct HOL/Lean
--- edge-case fixtures: `scripts/hol-probes/pan_globals_fperm_name_probe.out`
--- and `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
+    names and leaves every other name unchanged.  Its body is exactly the
+    reviewed `@[hol]` port `fpermName source target name`, so the executed
+    compiler path runs the HOL-shaped definition. -/
+-- FLAPJACK-SPECIFIC (`@[hol]` tag WITHDRAWN, documented mismatch, audit beads
+-- `flapjack-dlc.52`/`flapjack-dlc.53`): HOL's `fperm_name_def`
+-- (`pan_globalsScript.sml:184`) has no type annotation and HOL generalizes it
+-- to the polymorphic `'a -> 'a -> 'a -> 'a`.  This declaration instantiates
+-- `α := String` (`FunName`), so it is a specialization of the HOL constant
+-- rather than the constant itself; the `names_as_string` qualifier does not
+-- authorize specializing a polymorphic HOL name to `String`.  The exact
+-- polymorphic port is `fpermName` above, which this declaration calls, so the
+-- executed path uses the reviewed definition and only the type instantiation
+-- remains Flapjack-specific.  Direct HOL/Lean edge-case fixtures:
+-- `scripts/hol-probes/pan_globals_fperm_name_probe.out` and
+-- `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
 def globalRenameFunctionName
     (source target name : FunName) : FunName :=
-  if source = name then target else if target = name then source else name
+  fpermName source target name
 
 /-! Counterparts of Cake's `fperm_name_cancel` and `fperm_name_cong`
     (`pan_globalsProofScript.sml:1622,1629`): the source/target renaming is an
@@ -487,7 +505,7 @@ theorem globalRenameFunctionName_cancel [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target
         (globalRenameFunctionName source target name) = name := by
-  unfold globalRenameFunctionName
+  unfold globalRenameFunctionName fpermName
   repeat' split <;> simp_all
 
 theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
@@ -1026,15 +1044,22 @@ theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
     keeps the shape of each value declaration, in order. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the clauses preserve declaration
--- order and select the `Decl` shape as in `dec_shapes_def`, but this executed
--- function consumes `Decl α`, whose `Exp α.Const` payload is not HOL's
--- word-valued `ExpHOL width.Const`; its returned `Shape` also contains
--- production `String` names rather than HOL `mlstring`. The
--- `(names_as_string := ...)` qualifier covers only the latter difference.
--- Keep untagged until an exact-carrier definition is connected to the executed
--- path; tracked by bead `flapjack-6nn.3.1`. Clause/order evidence:
--- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` and
+-- FLAPJACK-SPECIFIC (not an exact HOL port): source review for bead
+-- `flapjack-dlc.12`. HOL `dec_shapes_def` (`pan_globalsScript.sml:228-234`) is
+-- the five-clause projection `Function _::ds |-> dec_shapes ds`,
+-- `Decl sh _ _::ds |-> sh::dec_shapes ds`, `Name _ _::ds |-> dec_shapes ds`,
+-- `ExnDecl _ _::ds |-> dec_shapes ds`, `[] |-> []`; the Lean clauses match that
+-- order and shape selection clause-for-clause. The mismatch is the imported
+-- declaration carrier: the executed function consumes production `Decl α`
+-- (whose `Exp α.Const` payload is a generic word `α`, not HOL's
+-- `ExpHOL width.Const : 'a word` fixed width, and whose identifiers/`Shape`
+-- are `String`, not HOL `mlstring`), so the statement ranges over inputs HOL
+-- cannot represent. `(names_as_string := ...)` cannot authorize a whole
+-- declaration carrier; no byte witness applies. Keep untagged until an
+-- exact-carrier definition is connected to the executed path; tracked by
+-- `flapjack-6nn.3.1` with `flapjack-pxn.18.3.5.8`. Clause/order evidence:
+-- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` rows `empty=[]`,
+-- `mixed=[Comb [One; Named «S»]; One]`, `functions_only=[]`, sampled by
 -- `Flapjack/Test/PanGlobalsDecShapesParity.lean`.
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
@@ -3116,7 +3141,7 @@ theorem globalFindFunction_name_mem [BEq String] [LawfulBEq String]
 theorem globalRenameFunctionName_eq_source_iff [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target name = source ↔ name = target := by
-  unfold globalRenameFunctionName
+  unfold globalRenameFunctionName fpermName
   by_cases h1 : source = name
   · rw [if_pos h1]
     rw [h1]
@@ -3140,7 +3165,7 @@ theorem mem_map_globalRenameFunctionName_source [BEq String] [LawfulBEq String]
     rwa [hname_target] at hname
   · intro htarget
     refine ⟨target, htarget, ?_⟩
-    unfold globalRenameFunctionName
+    unfold globalRenameFunctionName fpermName
     by_cases hst : source = target
     · rw [if_pos hst]
       exact hst.symm

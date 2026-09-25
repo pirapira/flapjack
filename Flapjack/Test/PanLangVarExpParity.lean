@@ -73,4 +73,21 @@ example : globalVarExpHOL (.var .global (ofString "g") : ExpHOL 8) = [ofString "
 example : globalVarExpHOL nestedHOL = [ofString "g", ofString "addr"] := by
   simp [globalVarExpHOL, nestedHOL]
 
+/-! ## Production-to-exact bridge for `var_exp`
+
+`varExpHOL_expToHOL` proves the executable `expLocalVars` is the reviewed HOL
+`var_exp` under the checked `expToHOL` name codec.  Because the probe names are
+byte-ranged, decoding with `toStringOfBytes` reproduces the production result. -/
+
+def nestedProd : Exp (BitVec 8) :=
+  .rStruct [.var .local "x",
+    .var .global "g",
+    .nStruct "S" [("field", .var .local "y")],
+    .load .one (.var .global "addr")]
+
+#guard ((varExpHOL (expToHOL nestedProd)).map toStringOfBytes) == expLocalVars nestedProd
+
+example : varExpHOL (expToHOL nestedProd) = (expLocalVars nestedProd).map ofString :=
+  varExpHOL_expToHOL nestedProd
+
 end Flapjack.Test.PanLangVarExpParity

@@ -1383,10 +1383,17 @@ theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : N
     word-indexed `exp` (including `mlstring` names and HOL `shape`) and returns
     `mlstring list`; this function takes generic `Exp α` with String-backed
     names/fields and monomorphic `Shape`, and returns `List VarName` with
-    `VarName := String`. The 17 constructor clauses agree structurally, but
-    the direct HOL-EVAL rows and Lean guard test only selected values, not
-    these carrier differences. The `@[hol]` tag remains WITHDRAWN pending an
-    exact MlString/ShapeHOL expression carrier (bead `flapjack-pxn.18.3.5.8`). -/
+    `VarName := String`. The 17 constructor clauses agree structurally, and the
+    kernel bridge `Flapjack.Pancake.PanLang.varExpHOL_expToHOL` in `PanLang/Exp.lean`
+    proves this helper is the reviewed HOL `var_exp` under the checked
+    `expToHOL` name codec: `varExpHOL (expToHOL e) = (expLocalVars e).map ofString`
+    for width-indexed expressions. This declaration stays untagged because its
+    carrier is the broader generic `Exp α`; the exact-port declaration is the
+    tagged `varExpHOL` over `ExpHOL width`. The executable compiler's call sites
+    (`globalCompileExp`/`globalCompileProg`) are generic in `α` with no `width`,
+    so the width-indexed `expToHOL` codec is not threaded through them;
+    production routing is tracked on bead `flapjack-4ac.1.38.1`. The faithful
+    MlString/ShapeHOL carrier work is tracked by `flapjack-pxn.18.3.5.8`. -/
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

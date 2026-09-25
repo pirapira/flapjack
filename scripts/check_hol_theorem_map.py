@@ -29,6 +29,23 @@ THEOREM_RE = re.compile(
     r"(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
     r"(?:theorem|lemma)\s+([^\s:({\[]+)"
 )
+DEFINITION_RE = re.compile(
+    r"^\s*(?:@\[[^\]]*\]\s*)?"
+    r"(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
+    r"(?:def|abbrev|opaque)\s+([^\s:({\[]+)"
+)
+DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_globals_def",
+        "Codex (source comparison with crepSemScript.sml:61-63: the BitVec 5 "
+        "global key and PanWordLab word_lab cell, plus the FUPDATE body, match. "
+        "The quantified whole-state carrier CrepHolState (BitVec width) still "
+        "uses unrestricted Nat-to-Option locals and FunName-to-Option code "
+        "functions, unlike HOL finite maps. Keep the tag withdrawn pending "
+        "finite-support state carrier flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+}
 VALID_STATUSES = {
     "reviewed_exact",
     "reviewed_list_as_array",
@@ -108,6 +125,15 @@ def strip_comments(text: str) -> str:
     return "".join(result)
 
 
+def lean_definition_exists(root: Path, lean_path: str, lean_name: str) -> bool:
+    """Check that a registered untagged mismatch still names a Lean definition."""
+    source = (root / lean_path).read_text(encoding="utf-8")
+    return any(
+        (match := DEFINITION_RE.match(line)) and match.group(1) == lean_name
+        for line in strip_comments(source).splitlines()
+    )
+
+
 def proof_theorem_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
     """Return file/name pairs for theorem and lemma declarations under Proofs.
 
@@ -185,6 +211,18 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
                 "reviewer": "Codex (proof inventory)",
             },
         )
+
+    for (lean_path, lean_name), (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
+        if not lean_definition_exists(root, lean_path, lean_name):
+            raise ValueError(f"documented mismatch is not a current definition: {lean_path}:{lean_name}")
+        inventory[(lean_path, lean_name)] = {
+            "hol_path": hol_path,
+            "hol_name": hol_name,
+            "lean_path": lean_path,
+            "lean_name": lean_name,
+            "statement_status": "documented_mismatch",
+            "reviewer": reviewer,
+        }
 
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
@@ -358,8 +396,9 @@ def validate_inventory(
         if key not in by_key:
             errors.append(f"Proofs theorem missing from manifest: {key[0]}:{key[1]}")
 
+    documented_mismatch_keys = set(DOCUMENTED_MISMATCHES)
     for key in by_key:
-        if key not in tagged and key not in proof_declarations:
+        if key not in tagged and key not in proof_declarations and key not in documented_mismatch_keys:
             errors.append(f"manifest entry is not a current declaration: {key[0]}:{key[1]}")
     return errors
 

@@ -32,6 +32,22 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_crep_set_globals_state_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/crepSemScript.sml", "set_globals_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("unrestricted Nat-to-Option locals", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_crep_state_shape_mismatch_is_not_mapped_as_exact(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record

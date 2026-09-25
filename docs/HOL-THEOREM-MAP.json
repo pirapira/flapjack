@@ -432,6 +432,14 @@
     "reviewer": "Source-model Load32 case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension wordOfBytes32/getByte evaluator has not yet been proved identical to native HOL mem_load_32 for implicit finite_index, so it is untagged support rather than a HOL case port."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Load32 adapter equation: after successful source address evaluation, it connects the explicit finite-dimension Crep source evaluator to the imported panMemLoad32HOL primitive. No standalone HOL theorem states this representation bridge; full crepSem eval/state correspondence remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

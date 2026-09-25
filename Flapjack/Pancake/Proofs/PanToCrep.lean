@@ -12,6 +12,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
@@ -457,13 +458,10 @@ private theorem compileField_mem_of_index_lt
           exact List.mem_of_mem_drop
             (ih index (expressions.drop (Shape.shapeSize shape)) hindex' hmem')
 
-/-- Flapjack analogue of the field-selection fact used by HOL
-    `mem_comp_field_lem`: with a valid index and matching source record shape,
-    every expression selected by the pair-valued `compileField` is from the
-    flattened record input. It is untagged because it uses production
-    `Shape` (String-backed `Named`) and generic `PanValue α`; HOL `shape`
-    contains `mlstring` names and its expressions are word-indexed. There is no
-    separate HOL declaration named `mem_comp_field`. -/
+/-- Production-carrier analogue of HOL `mem_comp_field`:
+    every expression selected by `compileField` is from the flattened record
+    input. It stays untagged because it uses production `Shape` (String-backed
+    `Named`) and generic `PanValue α`; see the exact-carrier port below. -/
 theorem compileField_mem_of_record_shape
     [OfNat α 0] (shapes : List Shape) (index : Nat)
     (expressions : List (CrepExp α)) (selectedShape : Shape)
@@ -484,6 +482,61 @@ theorem compileField_mem_of_record_shape
   have hmem' : candidate ∈ (compileField index shapes expressions).1 := by
     simpa [hcompiled] using hmem
   exact compileField_mem_of_index_lt index shapes expressions candidate hindex' hmem'
+
+/-! The `mem_comp_field` proof helper over the faithful HOL carriers. -/
+private theorem compFieldHOL_mem_of_index_lt {width : Nat} [NeZero width]
+    (index : Nat) (shapes : List Flapjack.Pancake.PanLang.ShapeHOL)
+    (expressions : List (CrepExpHOL width)) (candidate : CrepExpHOL width)
+    (hindex : index < shapes.length)
+    (hmem : candidate ∈ (compFieldHOL index shapes expressions).1) :
+    candidate ∈ expressions := by
+  induction shapes generalizing index expressions with
+  | nil => simp at hindex
+  | cons shape shapes ih =>
+      cases index with
+      | zero =>
+          exact List.mem_of_mem_take (by simpa [compFieldHOL] using hmem)
+      | succ index =>
+          have hindex' : index < shapes.length := by simpa using hindex
+          have hmem' : candidate ∈
+              (compFieldHOL index shapes
+                (expressions.drop
+                  (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape))).1 := by
+            simpa [compFieldHOL] using hmem
+          exact List.mem_of_mem_drop (ih index
+            (expressions.drop
+              (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape)) hindex' hmem')
+
+/-- Exact port of HOL `mem_comp_field`
+    (`pan_to_crepProofScript.sml:666`). The value, shape, and expression
+    carriers are `ValueHOL`, `ShapeHOL`, and `CrepExpHOL`; `hindex`, the
+    flattened-size premise, the `comp_field` result equation, the record-shape
+    equation, and the membership conclusion match HOL directly. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field"]
+theorem memCompFieldHOLExact {width : Nat} [NeZero width]
+    (shapes : List Flapjack.Pancake.PanLang.ShapeHOL) (index : Nat)
+    (expressions : List (CrepExpHOL width))
+    (selectedShape : Flapjack.Pancake.PanLang.ShapeHOL)
+    (candidate : CrepExpHOL width) (selected : List (CrepExpHOL width))
+    (values : List (ValueHOL width))
+    (hindex : index < values.length)
+    (_hlength : expressions.length =
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL
+        (shapeOfHOLExact (.rStruct values)))
+    (hcompiled : compFieldHOL index shapes expressions =
+      (selected, selectedShape))
+    (hshape : Flapjack.Pancake.PanLang.ShapeHOL.comb shapes =
+      shapeOfHOLExact (.rStruct values))
+    (hmem : candidate ∈ selected) :
+    candidate ∈ expressions := by
+  have hshapes : shapes = values.map shapeOfHOLExact :=
+    Flapjack.Pancake.PanLang.ShapeHOL.comb.inj
+      (by simpa [shapeOfHOLExact] using hshape)
+  have hindex' : index < shapes.length := by
+    simpa [hshapes] using hindex
+  have hmem' : candidate ∈ (compFieldHOL index shapes expressions).1 := by
+    simpa [hcompiled] using hmem
+  exact compFieldHOL_mem_of_index_lt index shapes expressions candidate hindex' hmem'
 
 /-- HOL `filter_not_mem_self`: filtering a list by non-membership in that
     same list removes every element. -/

@@ -10812,12 +10812,40 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "setVarHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.26): HOL set_var_def panSemScript.sml:398-401 is `set_var v value s = s with locals := s.locals |+ (v,value)` (FUPDATE). setVarHOLFinite performs the canonical HolFiniteMapExact.update on the locals field of PanSemStateFiniteExact, so the statement matches clause for clause under the finite-map representation qualifier (canonical witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_global_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "setGlobalHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.27): HOL set_global_def panSemScript.sml:403-406 is `set_global v value s = s with globals := s.globals |+ (v,value)` (FUPDATE). setGlobalHOLFinite performs the canonical HolFiniteMapExact.update on the globals field of PanSemStateFiniteExact, so the statement matches clause for clause under the finite-map representation qualifier (canonical witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "set_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
     "lean_name": "setKvarHOLFinite",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
-    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the untagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the canonically tagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

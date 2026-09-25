@@ -1109,6 +1109,28 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
 
 
+    def test_pansem_set_var_set_global_finite_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            "setVarHOLFinite": "set_var_def",
+            "setGlobalHOLFinite": "set_global_def",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+                   lean_name)
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual((record["hol_path"], record["hol_name"]),
+                                 ("cakeml/pancake/semantics/panSemScript.sml",
+                                  hol_name))
+                self.assertEqual(
+                    record["statement_status"], "reviewed_fmap_as_finite_support")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+
     def test_panlang_functions_append_filter_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {

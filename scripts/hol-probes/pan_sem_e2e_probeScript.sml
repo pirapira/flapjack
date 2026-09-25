@@ -757,6 +757,28 @@ val _ = print_eval "while_error_condition"
           locals := FEMPTY; structs := []; clock := 5 |>)) of
       (res,s') => res``
 
+val _ = print_eval "while_skip_timeout"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word)) panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 1 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_continue_timeout"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word)) panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 1 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_return_propagates"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word))
+         (panLang$Return (panLang$Const (9w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
 val _ = print_eval "dec_clock_step"
   ``panSem$dec_clock ((ARB:((8),unit) panSem$state) with <| clock := 5 |>)``
 

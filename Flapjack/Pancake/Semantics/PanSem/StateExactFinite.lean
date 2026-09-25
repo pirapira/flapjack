@@ -12,28 +12,38 @@ stores them as finite maps (`|->`). The unrestricted functions form a strict
 superset: they admit lookups with infinite support, which no HOL finite map can
 have.
 
-This file adds the field-wise finite-support prerequisite needed before the
-`pan_to_crep$state_rel_def` projections can be stated exactly, and records the
-classification of the existing `@[hol]` definitions in `StateExact.lean` /
-`LocalUpdatesExact.lean` that currently quantify the broader carrier:
+This file adds the field-wise finite-support refinement and records the
+per-declaration classification of the five existing `@[hol]` definitions that
+quantify the `PanSemStateExact` carrier. **Classification outcome: all five tags
+are kept** — the raw `MlS → Option _` carrier is the repository-wide rendering of
+HOL finite maps (`Flapjack.FiniteMap.Basic`: `abbrev FiniteMap α β := α → Option
+β`), and the accepted exact Crep-state ports use exactly the same raw carrier:
+`decCrepHolClock` / `fixCrepHolClockW` (`@[hol dec_clock_def]` /
+`fix_clock_def`), `setCrepHolVarW` (`@[hol set_var_def]`),
+`updCrepHolLocalsW` (`@[hol upd_locals_def]`) and the `empty_locals` port all
+quantify `CrepHolState (BitVec width) σ`, whose `locals`/`globals`/`code` fields
+are `Nat → Option _` / `BitVec 5 → Option _` / `FunName → Option _` functions.
+So the finite-support obligation is a strengthening, not a precondition for the
+tags; it is discharged field-wise below.
 
-* `decClockHOLExact` / `fixClockHOLExact` only write `clock`, so their
-  equations are faithful but their quantified carrier is broader than HOL's
-  finite-map state; retarget to `FiniteSupport` (or an exact finite-map state)
-  is tracked by bead `flapjack-pxn.18.3.7.1.3.1.1` before the parent
-  `state_rel_def` can be tagged.
-* `emptyLocalsHOLExact` sets `locals` to the empty map, which is exactly HOL
-  `FEMPTY`, so it stays inside the finite-support subclass (proved below).
-* `lookupKvarHOLExact` / `setKvarHOLExact` read and update `locals`/`globals`,
-  which HOL performs with finite-map `FLOOKUP`/`FUPDATE`; their equations match
-  but the unrestricted carrier again admits non-HOL states.
+Per declaration:
+
+* `decClockHOLExact` / `fixClockHOLExact` only write `clock`. They preserve
+  finite support trivially (`finiteSupport_decClock` / `finiteSupport_fixClock`).
+* `emptyLocalsHOLExact` sets `locals` to the empty map, exactly HOL `FEMPTY`, so
+  the result always has finite support (`finiteSupport_emptyLocals`).
+* `setVarHOLExact` / `setGlobalHOLExact` / `setKvarHOLExact` update one key,
+  matching HOL finite-map `FUPDATE`; they preserve finite support
+  (`finiteSupport_setVar` / `finiteSupport_setGlobal` / `finiteSupport_setKvar`).
+* `lookupKvarHOLExact` reads a single key, matching HOL finite-map `FLOOKUP`;
+  adding a support witness does not change the read.
 
 The reused `HolFiniteMapExact` carrier (`CrepSem/HOLState.lean`) is the
 established finite-support representation with an explicit support witness; its
-`finiteSupport` projection is the kernel-checked field representation.
-None of the declarations in this file carry `@[hol]` tags: the finite-support
-refinement is Flapjack representation infrastructure pending the coordinator's
-retargeting decision for the five existing tags.
+`finiteSupport` projection is the kernel-checked field representation. None of
+the declarations in this file carry `@[hol]` tags: the finite-support refinement
+is Flapjack representation infrastructure used by the exact `pan_to_crep`
+`state_rel_def` work (parent bead `flapjack-pxn.18.3.7.1.3.1`).
 -/
 
 namespace Flapjack
@@ -108,5 +118,20 @@ theorem PanSemStateExact.finiteSupport_setKvar {width : Nat} [NeZero width]
   split
   · exact PanSemStateExact.finiteSupport_setVar (state := state) h name value
   · exact PanSemStateExact.finiteSupport_setGlobal (state := state) h name value
+
+/-- Decrementing the clock (HOL `dec_clock`) does not touch any `MlS`-keyed map
+    field, so finite support is preserved unchanged. -/
+theorem PanSemStateExact.finiteSupport_decClock {width : Nat} [NeZero width]
+    {σ : Type} {state : PanSemStateExact width σ} (h : state.FiniteSupport) :
+    (decClockHOLExact state).FiniteSupport := by
+  simpa [PanSemStateExact.FiniteSupport, decClockHOLExact] using h
+
+/-- Clamping the result clock (HOL `fix_clock`) keeps the map fields of the
+    *new* state, so finite support transfers from the step's state. -/
+theorem PanSemStateExact.finiteSupport_fixClock {width : Nat} [NeZero width]
+    {σ : Type} {β : Type} (oldState : PanSemStateExact width σ)
+    (step : β × PanSemStateExact width σ) (h : step.2.FiniteSupport) :
+    (fixClockHOLExact oldState step).2.FiniteSupport := by
+  simpa [PanSemStateExact.FiniteSupport, fixClockHOLExact] using h
 
 end Flapjack

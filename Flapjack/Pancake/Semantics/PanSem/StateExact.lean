@@ -77,7 +77,10 @@ structure PanSemStateExact (width : Nat) (σ : Type) [NeZero width] where
   topAddr : RiscV.Word width
 
 /-- Exact port of HOL `panSem$dec_clock` (`panSemScript.sml:441`):
-    `dec_clock s = s with clock := s.clock - 1`. -/
+    `dec_clock s = s with clock := s.clock - 1`. Classification
+    (`StateExactFinite.lean`): carrier-only, matching the tagged `CrepSem`
+    clock ports over the raw `FiniteMap α β := α → Option β` rendering; finite
+    support is preserved (`PanSemStateExact.finiteSupport_decClock`). -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "dec_clock_def"]
 def decClockHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
@@ -85,7 +88,10 @@ def decClockHOLExact {width : Nat} {σ : Type} [NeZero width]
 
 /-- Exact port of HOL `panSem$fix_clock` (`panSemScript.sml:446`):
     `fix_clock old_s (res, new_s) = (res, new_s with clock := min old_s.clock
-    new_s.clock)`. -/
+    new_s.clock)`. Classification (`StateExactFinite.lean`): carrier-only, the
+    same raw finite-map rendering as the tagged `CrepSem` `fix_clock_def` port;
+    finite support transfers from the new state
+    (`PanSemStateExact.finiteSupport_fixClock`). -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_def"]
 def fixClockHOLExact {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (oldState : PanSemStateExact width σ) (step : β × PanSemStateExact width σ) :
@@ -94,7 +100,9 @@ def fixClockHOLExact {width : Nat} {σ : Type} [NeZero width] {β : Type}
     clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
 /-- Exact port of HOL `panSem$lookup_kvar` (`panSemScript.sml:415`): a `Local`
-    variable is looked up in `locals`, a `Global` one in `globals`. -/
+    variable is looked up in `locals`, a `Global` one in `globals`.
+    Classification (`StateExactFinite.lean`): carrier-only; a single-key read
+    (`FLOOKUP`), unaffected by the finite-support refinement. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_kvar_def"]
 def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (state : PanSemStateExact width σ) :
@@ -105,7 +113,10 @@ def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
 
 /-- Exact port of HOL `panSem$set_kvar` (`panSemScript.sml:408-412`): a `Local`
     variable updates `locals`, a `Global` one updates `globals`, via the HOL
-    `|+` (counterpart `FUPDATE`, which is `=`-based). -/
+    `|+` (counterpart `FUPDATE`, which is `=`-based). Classification
+    (`StateExactFinite.lean`): carrier-only; single-key updates matching the
+    tagged `CrepSem` `set_var_def` port over the same raw rendering, and finite
+    support is preserved (`PanSemStateExact.finiteSupport_setKvar`). -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "set_kvar_def"]
 def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (value : ValueHOL width)
@@ -117,7 +128,10 @@ def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
       { state with globals := fun current => if current = name then some value else state.globals current }
 
 /-- Exact port of HOL `panSem$empty_locals` (`panSemScript.sml:436`):
-    `empty_locals s = s with locals := FEMPTY`. -/
+    `empty_locals s = s with locals := FEMPTY`. Classification
+    (`StateExactFinite.lean`): carrier-only; the written map is exactly HOL
+    `FEMPTY`, so the result always has finite support
+    (`PanSemStateExact.finiteSupport_emptyLocals`). -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
 def emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=

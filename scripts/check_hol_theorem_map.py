@@ -256,6 +256,96 @@ DOCUMENTED_MISMATCHES = {
         "Shape carrier and Shape.shapeSize. Exact ShapeHOL route tracked by "
         "flapjack-pxn.18.3.5.8. "
     ),
+    ("Flapjack/Pancake/PanLang.lean", "listDisjoint_withShape_getElem"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "all_distinct_with_shape_distinct",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.30; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL all_distinct_with_shape_distinct "
+        "(panPropsScript.sml:357-408) concludes DISJOINT (set x) (set y) for two MEM "
+        "components of with_shape sh ns over the mlstring-named shape. "
+        "listDisjoint_withShape_getElem (PanLang.lean:955) selects the components by two "
+        "distinct indices and concludes element-level ListDisjoint over the production "
+        "Shape carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "listDisjoint_withShape_getElem_lt"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "all_distinct_disjoint_with_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.31; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL all_distinct_disjoint_with_shape "
+        "(panPropsScript.sml:409-451) concludes DISJOINT (set (EL n ...)) (set (EL n' ...)) "
+        "over the mlstring-named shape. listDisjoint_withShape_getElem_lt "
+        "(PanLang.lean:921) is the strictly increasing n < n' case concluding "
+        "element-level ListDisjoint over the production Shape carrier. Exact ShapeHOL "
+        "route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "listDisjoint_of_mem_zip_withShape"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "all_distinct_mem_zip_disjoint_with_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.32; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL all_distinct_mem_zip_disjoint_with_shape "
+        "(panPropsScript.sml:452-...) reads ZIP (l,ZIP (sh,with_shape sh ns)) members and "
+        "concludes DISJOINT (set xs) (set ys) over the mlstring-named shape. "
+        "listDisjoint_of_mem_zip_withShape (PanLang.lean:988) reads the aligned triples by "
+        "an indexed getElem helper and concludes element-level ListDisjoint over the "
+        "production Shape carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "withShape_getElem_getElem"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "el_el_with_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.36; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL el_el_with_shape "
+        "(panPropsScript.sml:568-583) keeps the EVERY is_wf_shape_nil shs hypothesis. "
+        "withShape_getElem_getElem (PanLang.lean:1340) states the same indexed equality "
+        "but drops that hypothesis (Shape.shapeSize is total) and uses the production "
+        "Shape carrier and Shape.shapeSize. Exact ShapeHOL route tracked by "
+        "flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/PanValueFlatten.lean", "shapeSize_comb_eq_flatten_length_of_getElem"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "list_rel_length_shape_of_flatten_better",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.22; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL list_rel_length_shape_of_flatten_better "
+        "(panPropsScript.sml:244-254) uses LIST_REL (fun vsh arg => vsh = shape_of arg) and "
+        "EVERY is_wf_shape_v_nil args over the mlstring-named shape. "
+        "shapeSize_comb_eq_flatten_length_of_getElem (PanValueFlatten.lean:159) renders the "
+        "relation as indexed getElem equality over the production PanValue carrier with "
+        "panValueShape []/panValueFlatten/isWfShape. Exact ShapeHOL route tracked by "
+        "flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/PanValueFlatten.lean", "shapeSize_comb_map_panValueShape_eq_flatten_length"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "list_rel_length_shape_of_flatten",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.23; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL list_rel_length_shape_of_flatten "
+        "(panPropsScript.sml:256-261) uses LIST_REL (fun vsh arg => SND vsh = shape_of arg) "
+        "and EVERY is_wf_shape_v_nil args over the mlstring-named shape. "
+        "shapeSize_comb_map_panValueShape_eq_flatten_length (PanValueFlatten.lean:111) is the "
+        "MAP-image form with a per-element isWfShape (panValueShape []) hypothesis over the "
+        "production PanValue carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanProps.lean", "listRelFlattenWithShapeLength"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "list_rel_flatten_with_shape_length",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.35; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL list_rel_flatten_with_shape_length "
+        "(panPropsScript.sml:549-559) uses LIST_REL/shape_of/flatten/is_wf_shape_v_nil over "
+        "the mlstring-named shape. listRelFlattenWithShapeLength (PanProps.lean:707) renders "
+        "EL/LIST_REL/shape_of/flatten by indexed getElem/panValueShape []/panValueFlatten/"
+        "panValueIsWf [] over the production Shape/PanValue carriers. Exact ShapeHOL route "
+        "tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanProps.lean", "listRelFlattenWithShapeFlookup"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "list_rel_flatten_with_shape_flookup",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.37; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL list_rel_flatten_with_shape_flookup "
+        "(panPropsScript.sml:585-599) uses FEMPty |++ ZIP (ns,FLAT (MAP flatten args)) and "
+        "LIST_REL/shape_of over the mlstring-named shape. listRelFlattenWithShapeFlookup "
+        "(PanProps.lean:767) renders the finite-map update as FUPDATE_LIST FEMPTY "
+        "(names.zip ...) and the relation via indexed getElem/panValueShape []/panValueFlatten "
+        "over the production Shape/PanValue carriers. Exact ShapeHOL route tracked by "
+        "flapjack-pxn.18.3.5.8. "
+    ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "localised_prog_def",

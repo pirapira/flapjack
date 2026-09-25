@@ -327,6 +327,39 @@ example :
           (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
       · cases hnil
 
+/-! The all-width Shift case preserves successful shift evaluation under the
+    same arbitrary code-map update, using the successful left-shift-by-zero
+    fixture and the recursive Const case for its children. -/
+example :
+    evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+          boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.shift .lsl (.const boolDimensionWord) (.const boolDimensionZero))) =
+      evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        boolDimensionHolState
+        (.shift .lsl (.const boolDimensionWord) (.const boolDimensionZero)) := by
+  apply crepSimpExpCorrect1ShiftHolFiniteWordSourceCase
+  · exact .word boolDimensionWord
+  · simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMemoryModel,
+      wordShiftHOL, boolDimensionWord, boolDimensionZero,
+      holWordToBitVec_bitVecToHolWord]
+  · intro child hmem source result hsuccess
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hleft | htail
+    · have hshape : child = .const boolDimensionWord := by simpa using hleft
+      subst child
+      exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+        (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
+    · rcases htail with hright | hnil
+      · have hshape : child = .const boolDimensionZero := by simpa using hright
+        subst child
+        exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+          (f := fun (_, entry) => entry) source boolDimensionZero result hsuccess
+      · cases hnil
+
 example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)

@@ -307,7 +307,7 @@ def StructContextByteRanged (c : Flapjack.StructContextHOL) : Prop :=
 def structContextLookupHOL (name : MlS) : StructContextExact → Option StructInfoHOLExact
   | [] => none
   | (candidate, info) :: rest =>
-      if name == candidate then some info else structContextLookupHOL name rest
+      if name = candidate then some info else structContextLookupHOL name rest
 
 /-! Exact port of HOL `panLang$size_of_sh_with_ctxt`
 (`cakeml/pancake/panLangScript.sml:164-171`): `One` is `1`, `Comb` sums the
@@ -338,7 +338,7 @@ end
 @[simp] theorem structContextLookupHOL_cons (name candidate : MlS)
     (info : StructInfoHOLExact) (rest : StructContextExact) :
     structContextLookupHOL name ((candidate, info) :: rest) =
-      (if name == candidate then some info else structContextLookupHOL name rest) := rfl
+      (if name = candidate then some info else structContextLookupHOL name rest) := rfl
 
 @[simp] theorem sizeOfShapeWithContextHOL_one (context : StructContextExact) :
     sizeOfShapeWithContextHOL context .one = 1 := rfl

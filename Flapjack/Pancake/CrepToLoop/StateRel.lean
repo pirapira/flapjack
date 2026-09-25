@@ -679,4 +679,36 @@ theorem sptListInsert_snoc (x : Nat) (ys : List Nat) (tree : NumSet) :
   | nil => rfl
   | cons y ys ih => simp [sptListInsert, ih]
 
+/-- Exact port of HOL `insert_insert_eq`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:380`): inserting the
+    same key with the same value twice is the same as inserting it once. HOL
+    `insert` is the `sptree` operation, rendered here by the exact `Spt`
+    carrier with the matching recursive key arithmetic. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "insert_insert_eq"]
+theorem sptInsert_insert_eq {α : Type} (a : Nat) (b : α) (tree : Spt α) :
+    sptInsert a b (sptInsert a b tree) = sptInsert a b tree := by
+  revert b tree
+  induction a using Nat.strongRecOn with
+  | ind a ih =>
+    intro b tree
+    by_cases h0 : a = 0
+    · subst h0
+      cases tree <;> simp [sptInsert]
+    · have ha : 0 < a := Nat.pos_of_ne_zero h0
+      have hk : (a - 1) / 2 < a := by
+        have hle : (a - 1) / 2 ≤ a - 1 := Nat.div_le_self _ _
+        have hlt : a - 1 < a := Nat.sub_lt ha (by decide)
+        omega
+      by_cases h2 : a % 2 = 0
+      · cases tree with
+        | ln => rw [sptInsert.eq_1, if_neg h0, if_pos h2, sptInsert.eq_3, if_neg h0, if_pos h2, ih ((a-1)/2) hk b .ln]
+        | ls existing => rw [sptInsert.eq_2, if_neg h0, if_pos h2, sptInsert.eq_4, if_neg h0, if_pos h2, ih ((a-1)/2) hk b .ln]
+        | bn left right => rw [sptInsert.eq_3, if_neg h0, if_pos h2, sptInsert.eq_3, if_neg h0, if_pos h2, ih ((a-1)/2) hk b left]
+        | bs left existing right => rw [sptInsert.eq_4, if_neg h0, if_pos h2, sptInsert.eq_4, if_neg h0, if_pos h2, ih ((a-1)/2) hk b left]
+      · cases tree with
+        | ln => rw [sptInsert.eq_1, if_neg h0, if_neg h2, sptInsert.eq_3, if_neg h0, if_neg h2, ih ((a-1)/2) hk b .ln]
+        | ls existing => rw [sptInsert.eq_2, if_neg h0, if_neg h2, sptInsert.eq_4, if_neg h0, if_neg h2, ih ((a-1)/2) hk b .ln]
+        | bn left right => rw [sptInsert.eq_3, if_neg h0, if_neg h2, sptInsert.eq_3, if_neg h0, if_neg h2, ih ((a-1)/2) hk b right]
+        | bs left existing right => rw [sptInsert.eq_4, if_neg h0, if_neg h2, sptInsert.eq_4, if_neg h0, if_neg h2, ih ((a-1)/2) hk b right]
+
 end Flapjack

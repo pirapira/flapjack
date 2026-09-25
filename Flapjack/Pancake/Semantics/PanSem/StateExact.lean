@@ -116,4 +116,23 @@ def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
   | .global =>
       { state with globals := fun current => if current = name then some value else state.globals current }
 
+/-- Exact port of HOL `panSem$empty_locals` (`panSemScript.sml:436`):
+    `empty_locals s = s with locals := FEMPTY`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
+def emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
+  { state with locals := fun _ => none }
+
+@[simp] theorem emptyLocalsHOLExact_locals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (name : MlS) :
+    (emptyLocalsHOLExact state).locals name = none := rfl
+
+@[simp] theorem emptyLocalsHOLExact_clock {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) :
+    (emptyLocalsHOLExact state).clock = state.clock := rfl
+
+@[simp] theorem emptyLocalsHOLExact_globals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) :
+    (emptyLocalsHOLExact state).globals = state.globals := rfl
+
 end Flapjack

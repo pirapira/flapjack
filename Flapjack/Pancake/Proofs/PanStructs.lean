@@ -94,9 +94,22 @@ theorem isWfShapeList_of_all {context : StructContext} {shapes : List Shape}
       simp only [isWfShape.isWfShapeList, Bool.and_eq_true]
       exact ⟨h s (by simp), ih (fun t ht => h t (by simp [ht]))⟩
 
-/-- The `struct_infos_ok` predicate from `pan_structsProofScript.sml`, over
-    the production Pancake structure context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production invariant corresponding clause-for-clause to HOL
+    `pan_structsProofScript.sml:struct_infos_ok_def`. It remains untagged:
+    HOL takes `(stcname # struct_info) list`, where names and field names are
+    `mlstring` and each `struct_info` contains only fields and size. This
+    predicate takes production `StructContext`, whose names and field names
+    are `String`, whose `Shape.named` also carries `String`, and whose
+    `StructInfo` adds the production-only `shapedFields` cache. The body uses
+    production String equality in nodup checks and `isWfShape` lookups. Thus a
+    `names_as_string` qualifier would not address the different context and
+    record carriers; the exact `MlS`/`ShapeHOL`/`StructContextExact` carriers
+    are available for a faithful counterpart. The identifier carrier work is
+    tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). There are no additional hypotheses, and the
+    four invariant clauses otherwise follow HOL's distinct field names,
+    distinct structure names, suffix shape well-formedness, and context-based
+    size calculation. -/
 def structInfosOk (context : StructContext) : Prop :=
   (∀ entry ∈ context, (entry.2.fields.map Prod.fst).Nodup) ∧
   (context.map Prod.fst).Nodup ∧

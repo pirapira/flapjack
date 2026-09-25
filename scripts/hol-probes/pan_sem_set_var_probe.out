@@ -1,9 +1,11 @@
 set_var_new=SOME 9
-
 set_var_overwrite=SOME 9
-
 set_var_other=SOME 7
-
 set_var_globals=SOME 1
-
 set_var_clock=s.clock
+set_global_new=SOME 9
+set_global_locals=SOME 5
+upd_locals_x=SOME 9
+upd_locals_other=NONE
+upd_locals_dup=SOME 11
+set_var_done=0

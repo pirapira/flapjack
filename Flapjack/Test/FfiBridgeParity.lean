@@ -43,7 +43,7 @@ private def holState : HolFfiState Nat :=
 theorem fixture_rel : FfiStateRel prodState holState := by
   refine ⟨rfl, ?_, ?_⟩
   · exact trivial
-  · intro _name _holName _hname _configuration _holConfiguration bytes holBytes _hconf hbytes
+  · intro _name _holName _hname _state _configuration _holConfiguration bytes holBytes _hconf hbytes
     simp only [prodState, holState, prodOracle, holOracle, OracleResultRel, BytesRel] at hbytes ⊢
     rw [List.map_append, List.map_append, hbytes]
     exact ⟨trivial, rfl⟩
@@ -67,7 +67,7 @@ private def holFinalState : HolFfiState Nat :=
 theorem finalState_rel : FfiStateRel prodFinalState holFinalState := by
   refine ⟨rfl, ?_, ?_⟩
   · exact trivial
-  · intro _name _holName _hname _configuration _holConfiguration bytes holBytes _hconf _hbytes
+  · intro _name _holName _hname _state _configuration _holConfiguration bytes holBytes _hconf _hbytes
     simp [prodFinalState, holFinalState, prodFinalOracle, holFinalOracle,
       OracleResultRel, OutcomeRel]
 
@@ -89,6 +89,13 @@ example : FfiResultRel (callFfi prodState (FfiName.extCall "f") [1] [2])
 
 
 
+/-- A nonempty external call whose returned length matches agrees. -/
+example : FfiResultRel (callFfi prodState (FfiName.extCall "f") [] [])
+    (callFFIHOL holState
+      (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString "f")) [] []) :=
+  callFfi_extCall_success_bridge prodState holState fixture_rel "f"
+    (by decide) (by decide) [] [] 1 [] (by simp [prodState, prodOracle]) rfl
+
 example : BytesPairRel ([(1 : UInt8), 2].zip [(3 : UInt8)])
     ([byteToBits 1, byteToBits 2].zip [byteToBits 3]) :=
   bytesPairRel_zip (bytesRel_map_byteToBits [1, 2]) (bytesRel_map_byteToBits [3])
@@ -97,7 +104,7 @@ example : FfiEventListRel ([] ++ []) ([] ++ []) :=
   ffiEventListRel_append (by trivial) (by trivial)
 
 def runChecks : IO Bool := do
-  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, append/zip)"
+  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, append/zip)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

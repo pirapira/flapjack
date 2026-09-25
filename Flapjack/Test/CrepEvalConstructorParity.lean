@@ -130,6 +130,46 @@ example : evalCrepHolFiniteWordSourceExpWordLab
 
 example : evalCrepHolFiniteWordSourceExpWordLab
     (instFinHolFiniteDimension (width := 8)) exactCrepProjection
+    (crepSimpExpHOLToSourceBits
+      (.load (.const (word8 3)) : CrepExpHOL 8)) =
+  evalCrepHolFiniteWordSourceExpWordLab
+    (instFinHolFiniteDimension (width := 8)) exactCrepProjection
+    (crepExpHOLToSourceBits
+      (.load (.const (word8 3)) : CrepExpHOL 8)) := by
+  exact crepSimpExpCorrect1SourceProjection_load
+    (fun pair => pair.2) exactCrepLocals exactCrepGlobals exactCrepCode
+    exactCrepMemory exactCrepMemaddrs exactCrepShMemaddrs 0 false exactCrepFfi
+    (word8 12) (word8 13) (.const (word8 3))
+    (HolWordLab.word (word8 9))
+    (by
+      simp [evalCrepHolFiniteWordSourceExpWordLab,
+        evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
+        crepExpOfHOL, mapCrepExpWord, crepSourceEvalStateOfHOLFields,
+        exactCrepMemory, exactCrepMemaddrs, word8,
+        holWordBitsToBitVec_bitVecToHolWordBits])
+    (by
+      intro _ hAddress
+      have hAddressOriginal :
+          evalCrepHolFiniteWordSourceExpWordLab
+            (instFinHolFiniteDimension (width := 8)) exactCrepProjection
+            (crepExpHOLToSourceBits
+              (.const (word8 3) : CrepExpHOL 8)) ≠ none := by
+        simp [evalCrepHolFiniteWordSourceExpWordLab,
+          evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
+          crepExpOfHOL, mapCrepExpWord, word8]
+      exact crepSimpExpCorrect1SourceProjection_const
+        (fun pair => pair.2) exactCrepLocals exactCrepGlobals exactCrepCode
+        exactCrepMemory exactCrepMemaddrs exactCrepShMemaddrs 0 false exactCrepFfi
+        (word8 12) (word8 13) (HolWordLab.word (word8 3)) (word8 3)
+        (by
+          simp [evalCrepHolFiniteWordSourceExpWordLab,
+            evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
+            crepExpOfHOL, mapCrepExpWord,
+            crepSourceEvalStateOfHOLFields, exactCrepMemory, exactCrepMemaddrs,
+            word8]))
+
+example : evalCrepHolFiniteWordSourceExpWordLab
+    (instFinHolFiniteDimension (width := 8)) exactCrepProjection
     (crepExpHOLToSourceBits (.load (.const (word8 3)) : CrepExpHOL 8)) =
       some (.word (word8Bits 9)) := by
   have hAddress := evalCrepSourceProjection_const exactCrepLocals exactCrepGlobals

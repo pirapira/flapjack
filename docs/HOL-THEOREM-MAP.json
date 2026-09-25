@@ -8021,10 +8021,10 @@
   {
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileProgRiscV_eq_compileProgHOL",
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_def",
-    "statement_status": "documented_mismatch",
-    "reviewer": "This Flapjack-only bridge proves only that compileProgRiscV unfolds to generic compileProgHOL at the production carriers; it is not itself the HOL definition. Source audit flapjack-2eh compared the executed equations against pan_to_crepScript.sml:141-307: Skip, Dec, Assign, Primitive, Store, Store32/Byte, Return, Raise, Seq, If, While, Break/Continue, Call, DecCall, ExtCall, ShMemLoad/Store, Tick, Annot are structurally represented and finite maps have the same total-function shape/FLOOKUP/FUPDATE behavior. The helper still admits width 0 and uses production Prog/CrepProg, Exp/Shape and String identifiers/map keys/target function names, unlike HOL's positive-width word, exact ProgHOL/CrepProgHOL, ExpHOL/ShapeHOL and MlString. Generic compileProgHOL further permits arbitrary α and caller-supplied CrepBytesInWord. Thus names are not the sole difference and no @[hol] tag is eligible; exact-carrier replacement bead flapjack-pxn.18.3.5.8.13 is under flapjack-pxn.18.3.5.8."
+    "hol_path": null,
+    "hol_name": null,
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only bridge: compileProgRiscV unfolds to generic compileProgHOL at the production carriers; it is not itself HOL compile_def. Exact-carrier mismatch for the underlying compiler is documented beside compileProgRiscV in Compile.lean and tracked by flapjack-pxn.18.3.5.8.13."
   },
   {
     "hol_path": null,

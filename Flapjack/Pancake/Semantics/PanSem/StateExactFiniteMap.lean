@@ -38,6 +38,19 @@
   The broad-carrier helpers over `PanSemStateExact` (`StateExact.lean`) remain the
   `documented_mismatch` analogues.  Work tracked by
   `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
+
+  Word-model review for `flapjack-pxn.18.3.7.1.3.1.1.2.4.6` (2026-09-25): HOL
+  types the state components over `'a word` for an arbitrary finite type `'a`
+  (the `finite_index` class; `panSemScript.sml:48-63` uses `'a word` for
+  `memory`/`base_addr`/`top_addr` and `'a word_lab` for the memory values), while
+  this module uses `RiscV.Word width` (`= BitVec width`, `RiscV/Model.lean:17`)
+  together with `[NeZero width]` and `HolWordLab width`.  A HOL finite type is
+  nonempty, so `dimindex 'a >= 1`, and the positive-width `BitVec width` carrier
+  is the standard faithful translation of `'a word` (with `HolWordLab` its
+  `word_lab` wrapper).  The five helpers themselves are word-agnostic: they only
+  read/write `clock` and the finite-map fields, so they add no word-model side
+  condition; `[NeZero width]` mirrors HOL nonemptiness and is a carrier artifact,
+  not a changed side condition of the tagged definitions.
 -/
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite

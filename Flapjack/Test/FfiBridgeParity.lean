@@ -179,8 +179,61 @@ example : FfiResultRel (callFfi prodEchoState (FfiName.sharedMem .mappedRead)
     .mappedRead .mappedRead (Or.inl ⟨rfl, rfl⟩) [(7 : UInt8), 8]
     [(1 : UInt8)] 1 [(1 : UInt8)] rfl rfl
 
+/-! ## Direct byte-boundary fixtures for the executed `ExtCall` name (flapjack-0up.2)
+
+HOL-EVAL rows `oracle_return` / `extcall_name_explode` / `extcall_name_len` in
+`scripts/hol-probes/ffi_call_probe.out` pin the external-call event name to
+`ExtCall «foo»` with `explode «foo» = "foo"` and `strlen «foo» = 3`.  The fixtures
+below pin the production-side byte boundary: a byte-ranged `String` name maps to
+its `ofString` image with identical character codes. -/
+
+/-- The concrete `foo` name is byte-ranged (`f`, `o` = 102, 111 < 256). -/
+example : FfiNameByteRanged (FfiName.extCall "foo") := by
+  intro c hc
+  simp at hc
+  rcases hc with rfl | rfl | rfl <;> decide
+
+/-- The byte-boundary witness for `foo`: related name and explicit codes. -/
+example : FfiNameRel (FfiName.extCall "foo")
+      (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString "foo")) ∧
+    (Flapjack.Basis.Pure.MlString.ofString "foo").explode.map BitVec.toNat =
+      [102, 111, 111] := by
+  have h := ffiNameRel_extCall_byteBoundary (name := "foo") (by decide)
+  exact ⟨h.1, by decide⟩
+
+/-- The byte-boundary witness reaches the event boundary for the `foo` call. -/
+example : FfiEventRel
+    { name := FfiName.extCall "foo", configuration := [(1 : UInt8), 2],
+      bytes := [((3 : UInt8), 5), (4, 6)] }
+    { name := HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString "foo"),
+      configuration := [byteToBits 1, byteToBits 2],
+      bytes := [(byteToBits 3, byteToBits 5), (byteToBits 4, byteToBits 6)] } :=
+  ffiEventRel_extCall_byteBoundary "foo" (by decide)
+    [1, 2] [byteToBits 1, byteToBits 2] [(3, 5), (4, 6)]
+    [(byteToBits 3, byteToBits 5), (byteToBits 4, byteToBits 6)]
+    (bytesRel_map_byteToBits [1, 2])
+    (bytesPairRel_zip (bytesRel_map_byteToBits [3, 4]) (bytesRel_map_byteToBits [5, 6]))
+
+/-- The byte-ranged `success` boundary combines the name witness with the exact
+    `callFfi` event append. -/
+example : FfiNameRel (FfiName.extCall "foo")
+      (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString "foo")) ∧
+    callFfi prodEchoState (FfiName.extCall "foo") [1] [2] =
+      FfiResult.returned
+        { prodEchoState with
+            state := 0 + 1
+            ioEvents := prodEchoState.ioEvents ++
+              [{ name := FfiName.extCall "foo", configuration := [1],
+                 bytes := [(2, 2)] }] } [2] := by
+  refine ⟨(ffiNameRel_extCall_byteBoundary (name := "foo") (by decide)).1, ?_⟩
+  have h := callFfi_extCall_success prodEchoState "foo" (by decide)
+    [1] [2] (0 + 1) [2] (by simp [prodEchoState, prodEchoOracle]) (by simp)
+  simpa [prodEchoState, prodEchoOracle] using h
+
 def runChecks : IO Bool := do
+
   IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, shared-mem, shared-mem HOL rows, append/zip)"
+  IO.println "PASS ExtCall FFI-name byte boundary witness (flapjack-0up.2)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

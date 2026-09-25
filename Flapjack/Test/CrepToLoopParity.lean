@@ -1,5 +1,6 @@
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.CrepToLoop.StateRel
+import Flapjack.Misc.Sptree
 
 /-!
 Direct parity for `crep_to_loop$compile` (`crep_to_loopScript.sml:120`).
@@ -758,11 +759,22 @@ example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 
 example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
   simp [rtVars, FLOOKUP]
 
-/-- Association-list analogue of HOL `mem_lookup_fromalist_some` oracle rows
-    (`ml_*` in `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`). The
-    sptree `fromAList` theorem itself remains unported. -/
-example : ([(1, 7), (2, 9)] : List (Nat × Nat)).lookup 2 = some 9 :=
-  memLookupFromAListSome (n := 2) (x := 9) (by decide) (by decide)
+/-! Exact `Spt` regression for HOL `mem_lookup_fromalist_some`; these checks
+    reproduce `ml_hit`, `ml_miss`, and `ml_distinct` in
+    `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`. -/
+private def memLookupOracleEntries : List (Nat × Nat) := [(1, 7), (2, 9)]
+
+example : memLookupOracleEntries.map Prod.fst = [1, 2] := by decide
+
+example : (memLookupOracleEntries.map Prod.fst).Nodup := by decide
+
+example : (2, 9) ∈ memLookupOracleEntries := by decide
+
+example : sptLookup 2 (sptFromAList memLookupOracleEntries) = some 9 :=
+  memLookupFromAListSomeExact (by decide) (by decide)
+
+example : sptLookup 3 (sptFromAList memLookupOracleEntries) = none := by
+  simp [sptFromAList, memLookupOracleEntries, sptLookup, sptInsert]
 
 /-- HOL `make_vmap` is a left fold of `|+`, so a duplicate parameter keeps the
     LAST binding (`mvd_dup_last_wins` in

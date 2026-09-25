@@ -9601,5 +9601,13 @@
     "lean_name": "panToCrepSourceLoad32HOLCase",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-specific RISC-V source evaluator case under stateRel: reduces source Load32 to existing panMemLoad32HOL using source memaddrs/be and target word memory; not a standalone HOL theorem or pc_compile_correct case proof. Direct HOL EVAL row state_rel_source_word32_little and state_rel_source_word32_misaligned in pan_sem_state_eval_probe.out.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "mem_lookup_fromalist_some",
+    "lean_path": "Flapjack/Misc/Sptree.lean",
+    "lean_name": "memLookupFromAListSomeExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared with mem_lookup_fromalist_some at crep_to_loopProofScript.sml:3813-3827: HOL !xs n x. ALL_DISTINCT (MAP FST xs) ∧ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x; Lean uses (xs.map Prod.fst).Nodup, pair membership, and sptLookup n (sptFromAList xs) = some x over Nat keys and polymorphic values. Spt matches the exact HOL spt constructor arity. sptFromAList matches external HOL/src/finite_maps/sptreeScript.sml:1478-1480 recursive head insertion; lookup/insert mirror that same Spt carrier. Direct HOL EVAL rows ml_hit/ml_miss/ml_distinct in scripts/hol-probes/crep_to_loop_mem_lookup_probe.out are reproduced in Flapjack/Test/CrepToLoopParity.lean."
   }
 ]

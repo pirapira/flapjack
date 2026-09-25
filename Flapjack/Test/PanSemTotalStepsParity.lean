@@ -559,6 +559,49 @@ def extCallGuard : Bool :=
   extCallNoneArgsGuard && extCallReadErrorGuard && extCallFinalGuard &&
     extCallReturnedGuard
 
+/-- Echo-FFI word-cell state for the dispatcher `ExtCall`: the addresses 0 and 8
+    hold the word `0xAB`, and the echo oracle returns the request bytes. -/
+def extCallMemoryState : PanSemState Word64 (FfiState Unit) :=
+  { stepsState with
+    memaddrs := fun _ => true
+    memory := fun address =>
+      if address == BitVec.ofNat 64 0 || address == BitVec.ofNat 64 8 then
+        some (.word (BitVec.ofNat 64 0xAB))
+      else none
+    ffi := shMemTestFfi }
+
+/-- Finalizing-FFI variant of the dispatcher `ExtCall` state. -/
+def extCallFinalState : PanSemState Word64 (FfiState Unit) :=
+  { extCallMemoryState with
+    ffi := { oracle := fun _ _ _ _ => .final .failed, state := (), ioEvents := [] } }
+
+/-- The dispatcher `ExtCall` reads both arrays through `panMemLoadByteHOL` and
+    writes the returned bytes back at the array address. -/
+def extCallDispatcherReturnedGuard : Bool :=
+  let result := panSemTotalEvaluatePartial (fun _ _ => none) extCallMemoryState
+    (.extCall "f" (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 1))
+      (.const (BitVec.ofNat 64 8)) (.const (BitVec.ofNat 64 1)))
+  isNoneResult result.1 && memoryWordAt result.2.memory 8 0xAB
+
+/-- An `ExtCall` whose byte read is out of the memory domain errors. -/
+def extCallDispatcherReadErrorGuard : Bool :=
+  isErrorResult (panSemTotalEvaluatePartial (fun _ _ => none)
+    { extCallMemoryState with memaddrs := fun _ => false }
+    (.extCall "f" (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 1))
+      (.const (BitVec.ofNat 64 8)) (.const (BitVec.ofNat 64 1)))).1
+
+/-- An `ExtCall` whose oracle finalizes propagates the final event and clears locals. -/
+def extCallDispatcherFinalGuard : Bool :=
+  let result := panSemTotalEvaluatePartial (fun _ _ => none) extCallFinalState
+    (.extCall "f" (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 1))
+      (.const (BitVec.ofNat 64 8)) (.const (BitVec.ofNat 64 1)))
+  isFinalFfiResult result.1 && (result.2.locals "x").isNone
+
+def extCallDispatcherGuard : Bool :=
+  extCallDispatcherReturnedGuard && extCallDispatcherReadErrorGuard &&
+    extCallDispatcherFinalGuard
+
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -572,7 +615,7 @@ def stepsGuard : Bool :=
     partialEvaluateGuard &&
     shMemLoadGuard && shMemLoadMissingGuard && shMemLoadUnsharedGuard &&
     shMemStoreGuard && shMemStoreNonWordGuard && whileGuard && decCallGuard &&
-    callGuard && extCallGuard
+    callGuard && extCallGuard && extCallDispatcherGuard
 
 #eval stepsGuard
 #guard stepsGuard

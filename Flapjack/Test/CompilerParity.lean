@@ -381,6 +381,7 @@ import Flapjack.Test.FfiBridgeParity
 import Flapjack.Test.PanLangShapeSizeWithContextParity
 import Flapjack.Test.PanLangShapeSizeParity
 import Flapjack.Test.PanLangIsWfShapeParity
+import Flapjack.Test.PanLangExceptionsParity
 import Flapjack.Test.PanSemIsValWordHOLParity
 import Flapjack.Test.PanSemEmptyLocalsHOLParity
 import Flapjack.Test.PanSemMemStore32HOLParity

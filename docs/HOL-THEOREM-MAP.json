@@ -9334,5 +9334,13 @@
   "lean_name": "shMemStoreHOLExact",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "decs_stcnames_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/DeclContextExact.lean",
+  "lean_name": "decsStcnamesHOLExact",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

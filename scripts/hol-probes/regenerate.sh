@@ -1632,3 +1632,10 @@ run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
 run_probe pan_sem_sh_mem_probeScript.sml pan_sem_sh_mem_probe.out \
   l_load_hit_local l_store_final_unchanged \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The declaration-context probe observes panSem `decs_stcnames`: the empty
+# context, a well-formed structure, its computed size, duplicate names,
+# duplicate field names, an unknown `Named` shape, and skipped decl forms.
+run_probe pan_sem_decs_stcnames_probeScript.sml pan_sem_decs_stcnames_probe.out \
+  dsc_empty dsc_skip_len \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

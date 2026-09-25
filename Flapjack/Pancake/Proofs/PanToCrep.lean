@@ -28,11 +28,22 @@ context.
 namespace Flapjack
 
 /-! Flapjack analogue of HOL `globals_lookup_def`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The lookup
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435-438`). The lookup
     algorithm uses the same 5-bit indices, shape-size count, and optional-map
-    traversal. It is untagged: the input `PanValue` embeds String-backed
-    struct/field names where HOL `v` embeds `mlstring`, and `CrepRuntimeState`
-    is only a production projection of the HOL state. -/
+    traversal. It is deliberately untagged: HOL's input is a `panSem$value`
+    and a `crepSem$state` (the direct probe instantiates an
+    `((8),unit) crepSem$state` with `ValWord`/`RStruct` values), whereas this
+    uses the production `PanValue α` with String-backed struct/field names,
+    the untagged production `panSemShapeOf`/`Shape.shapeSize` in place of HOL
+    `shape_of`/`size_of_shape`, and `CrepRuntimeState α σ`, which is only a
+    production projection of the HOL state. The `names_as_string` qualifier
+    cannot authorize the value/shape/state carriers, and its required
+    same-module `NameRanged` witness cannot be stated for an
+    `Option (List (PanWordLab α))` output. Direct HOL-EVAL rows
+    (`lookup_success`, `lookup_missing`, `lookup_struct`) are recorded in
+    `scripts/hol-probes/globals_lookup_probe.out` and reproduced by
+    `Flapjack/Test/PanToCrepGlobalsLookupParity.lean`. Exact-carrier
+    replacement is tracked by `flapjack-pxn.18.3.5.8.8`. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
@@ -764,12 +775,22 @@ theorem ctxtFcVarsLookupGetElem
 
 /-- HOL `ctxt_fc_funcs_eq`: constructing a function context preserves the
     supplied function map. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the HOL statement
+-- (`pan_to_crepProofScript.sml:2295`) has no premises and is definitionally the
+-- projection `(ctxt_fc cvs em vs shs ns).funcs = cvs`; the Lean projection
+-- matches clause-for-clause but is keyed by the production identifiers
+-- `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` with `String`-keyed finite maps
+-- and production `Shape`), while HOL keys names by `funname`/`varname`/`eid` =
+-- `mlstring` and shapes by `shape`. The `names_as_string` qualifier cannot cover
+-- the `Shape` carrier, and no `NameRanged` byte witness exists because the
+-- output is a finite map of function signatures, not a name. The direct HOL
+-- EVAL row `functions_projection=T` is recorded in
+-- `scripts/hol-probes/ctxt_fc_probe.out` and paired with the kernel-checked
+-- fixture `ctxt_fc_funcs_eq_fixture` in
+-- `Flapjack/Test/PanToCrepRelationsParity.lean`. The exact MlString identifier
+-- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 theorem ctxtFcFuncsEq
     (functions : FiniteMap String (List (String × Shape) × Shape))
     (codes : FiniteMap String α) (variables : List String)
@@ -792,12 +813,23 @@ theorem ctxtFcEidsEq
 
 /-- HOL `ctxt_fc_vmax`: the constructed context's maximum slot is the
     maximum of the supplied slot list. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL
+-- `pan_to_crepProofScript.sml:2307-2312` proves
+-- `(ctxt_fc ctxt.funcs em vs shs ns).vmax = MAX_LIST ns` with no premises
+-- (`rw [ctxt_fc_def]`); this theorem has the same no-premises projection shape
+-- and is likewise definitional (`rfl`), but is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are
+-- `String`-keyed) with production `Shape`, while HOL keys names by
+-- `funname`/`varname`/`eid` = `mlstring` and slots by `shape`. The
+-- `names_as_string` qualifier cannot cover the `Shape` carrier, and no
+-- `NameRanged` byte witness exists because the output is a `num` slot bound,
+-- not a name. Direct HOL-EVAL rows `vmax_nonempty_list=T`/`vmax_empty_list=T`
+-- in `scripts/hol-probes/ctxt_fc_probe.out` are paired with the kernel-checked
+-- instances `ctxt_fc_vmax_nonempty_fixture`/`ctxt_fc_vmax_empty_fixture` and
+-- `ctxtFcVmaxGuard` in `Flapjack/Test/PanToCrepRelationsParity.lean`. The exact
+-- MlString carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`); this analogue remains deliberately untagged.
 theorem ctxtFcVmax
     (context : PanToCrepProofContext α) (codes : FiniteMap String α)
     (variables : List String) (shapes : List Shape) (names : List Nat) :
@@ -2283,16 +2315,34 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
         (names, compileCodeRelProg nextContext program)
 
 /-- Width-indexed proof-side `code_rel` interface: the HOL reference is
-    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
+    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32-43`),
     so this width-indexed form makes the compiler expression the
     `compileProgRiscV` (`compile_def`-shaped) boundary. The generic `codeRel` is its
-    `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    `alpha`-instantiated view (`codeRelW_iff_codeRel` below).
+
+    Source-reviewed decision: the `code_rel_def` tag stays WITHDRAWN as a
+    documented carrier mismatch, not an exact port. Clause for clause this matches
+    HOL `code_rel` (`∀ f vshs prog rsh, FLOOKUP s_code f = SOME (...) ==>
+    localised_prog prog ∧ FLOOKUP ctxt.funcs f = SOME (vshs, rsh) ∧ let ... ns =
+    GENLIST I (size_of_shape (Comb shs)); nctxt = ctxt_fc ... in FLOOKUP t_code f =
+    SOME (ns, compile nctxt prog)`), but the carriers differ: (1) the
+    source/target/context maps are keyed by production `FunName`/`VarName`/
+    `ExceptionId` = `String`, while HOL keys them by `funname`/`varname`/`eid` =
+    `mlstring` (the direct probe prints the HOL type as `(mlstring |->
+    (mlstring # shape) list # α panLang$prog # shape) -> (mlstring |-> num list #
+    α crepLang$prog) -> bool`); (2) the source shapes are the production `Shape`
+    and the target code the production `CrepProg (BitVec width)` whose `Call`/
+    `ExtCall` funnames are `String`, compiled through the production
+    `compileProgRiscV` rather than HOL's `crepLang$prog`-returning `compile`; (3)
+    `names_as_string` cannot authorize the `Shape`/`CrepProg` carriers, and no
+    `NameRanged` witness can be stated for a `Prop`-valued relation. Direct
+    HOL-EVAL/proof rows (`code_rel_matching`, `code_rel_rejects_wrong_body`,
+    `code_rel_rejects_missing_function_signature`,
+    `code_rel_rejects_unlocalised_source`) are recorded in
+    `scripts/hol-probes/code_rel_probe.out` and reproduced by
+    `Flapjack/Test/PanToCrepCodeRelParity.lean`. Exact-carrier replacement is
+    tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`); the
+    width-indexing part is now handled by this `codeRelW`. -/
 def codeRelW (width : Nat)
     (context : PanToCrepProofContext (BitVec width))
     (sourceCode : FiniteMap FunName

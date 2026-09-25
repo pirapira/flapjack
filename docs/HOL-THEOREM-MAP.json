@@ -672,6 +672,14 @@
     "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSourceRuntimeWordLabHolResult",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width support over the exact CrepSemHOLState, CrepExpHOL, MlString/CrepProgHOL mapc update, and HolWordLab result binder. Runtime word_lab values are transported through Fin width -> Bool and an expression-only projection drops code/FFI; the explicit source evaluator is not native HOL finite_index/eval_def, so no HOL tag is claimed."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

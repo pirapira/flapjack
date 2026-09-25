@@ -931,6 +931,120 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
   rw [hCodeId] at hSource
   exact hSource
 
+/-- All-positive-width direct word_lab-core support for `simp_exp_correct1`
+over the exact `CrepSemHOLState` and `CrepExpHOL` carriers. It translates the
+core's `Fin width → Bool` result back to `HolWordLab width`, retaining HOL's
+code-entry and unused result-binder types. It stays untagged: evaluation still
+uses an expression-only state projection that drops the code and FFI fields,
+plus the explicit source-runtime/finite-index adapter, rather than native HOL
+`crepSem$eval`. -/
+theorem crepSimpExpCorrect1CrepSemHOLStateSourceRuntimeWordLabHolResult
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (h : ((evalCrepRuntimeExpWordLab
+      (state.toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width)))
+      (crepExpHOLToSourceBits expression)).map
+        (fun result =>
+          (mapCrepHolWordLab holWordBitsToBitVec result).toHolWordLab)) ≠ none) :
+    ((evalCrepRuntimeExpWordLab
+      ((state.mapc update).toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width)))
+      (crepSimpExp
+        (fun n => bitVecToHolWord
+          (instFinHolFiniteDimension (width := width))
+          (BitVec.ofNat width n))
+        (crepExpHOLToSourceBits expression))).map
+        (fun result =>
+          (mapCrepHolWordLab holWordBitsToBitVec result).toHolWordLab)) =
+    ((evalCrepRuntimeExpWordLab
+      (state.toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+        (instFinHolFiniteDimension (width := width)))
+      (crepExpHOLToSourceBits expression)).map
+        (fun result =>
+          (mapCrepHolWordLab holWordBitsToBitVec result).toHolWordLab)) := by
+  let dimension := instFinHolFiniteDimension (width := width)
+  let toHol : PanWordLab (Fin width → Bool) → HolWordLab width :=
+    fun result => (mapCrepHolWordLab holWordBitsToBitVec result).toHolWordLab
+  let runtime := state.toExpressionEvaluatorState.toHolFiniteWordSourceRuntime dimension
+  let sourceExpression := crepExpHOLToSourceBits expression
+  have hCore : evalCrepRuntimeExpWordLab runtime sourceExpression ≠ none := by
+    intro hnone
+    rw [hnone] at h
+    simp at h
+  have hBefore : evalCrepRuntimeExpWordLab runtime sourceExpression =
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        state.toExpressionEvaluatorState sourceExpression := by
+    calc
+      evalCrepRuntimeExpWordLab runtime sourceExpression =
+          (evalCrepRuntimeExp runtime sourceExpression).map PanWordLab.word :=
+        (evalCrepRuntimeExp_wordLab_projection runtime sourceExpression).symm
+      _ = evalCrepHolFiniteWordSourceExpWordLab dimension
+            state.toExpressionEvaluatorState sourceExpression :=
+        evalCrepRuntimeExp_sourceWordLab_eq dimension
+          state.toExpressionEvaluatorState sourceExpression
+  have hSource : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toExpressionEvaluatorState sourceExpression ≠ none := by
+    intro hnone
+    rw [hBefore, hnone] at hCore
+    simp at hCore
+  have hPreserved := crepSimpExpCorrect1CrepSemHOLStateSource
+    update state expression _result hSource
+  have hAfter : evalCrepRuntimeExpWordLab
+      ((state.mapc update).toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+        sourceExpression) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (state.mapc update).toExpressionEvaluatorState
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+        sourceExpression) := by
+    calc
+      _ = (evalCrepRuntimeExp
+          ((state.mapc update).toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+            dimension)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+            sourceExpression)).map PanWordLab.word :=
+        (evalCrepRuntimeExp_wordLab_projection
+          ((state.mapc update).toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+            dimension)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+            sourceExpression)).symm
+      _ = evalCrepHolFiniteWordSourceExpWordLab dimension
+          (state.mapc update).toExpressionEvaluatorState
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+            sourceExpression) :=
+        evalCrepRuntimeExp_sourceWordLab_eq dimension
+          (state.mapc update).toExpressionEvaluatorState _
+  change (evalCrepRuntimeExpWordLab
+      ((state.mapc update).toExpressionEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+        sourceExpression)).map toHol =
+    (evalCrepRuntimeExpWordLab runtime sourceExpression).map toHol
+  calc
+    _ = (evalCrepHolFiniteWordSourceExpWordLab dimension
+      (state.mapc update).toExpressionEvaluatorState
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat width n))
+        sourceExpression)).map toHol :=
+          congrArg (Option.map toHol) hAfter
+    _ = (evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toExpressionEvaluatorState sourceExpression).map toHol :=
+        congrArg (Option.map toHol) hPreserved
+    _ = (evalCrepRuntimeExpWordLab runtime sourceExpression).map toHol :=
+        congrArg (Option.map toHol) hBefore.symm
+
 /-- All-width `simp_exp_correct1` support over a finite-map state with an
 arbitrary finite-index word carrier. The input retains locals, globals, code,
 memory, memory domains, clock/endian fields, FFI, and base/top words; its code

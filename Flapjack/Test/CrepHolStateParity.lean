@@ -1,4 +1,4 @@
-import Flapjack.Pancake.Semantics.CrepSem.HOLState
+import Flapjack.Pancake.Proofs.CrepArith.HOLStateMapc
 
 namespace Flapjack.Test.CrepHolStateParity
 

@@ -695,6 +695,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
   while_break_zero_eval while_break_label_eval while_continue_label_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
+  call_total_return_success call_total_return_destination call_total_missing_code \
+  call_total_wrong_arity call_total_timeout \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

@@ -1992,24 +1992,36 @@ theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
       congr 1
       exact List.map_congr_left ih
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_globals$compile_exp_def`
-    (`pan_globalsScript.sml:18-46`) over the canonical word context
-    `CakeContext`.  Each clause matches HOL directly: `Var Global` uses
-    `FLOOKUP` (with `Const 0w` on a missing name), `NStruct`/`NField` produce
-    `Const 0w`, and `TopAddr` becomes `Op Sub [TopAddr; Const max_globals_size]`.
-    Clause review against the HOL definition is recorded on
-    `flapjack-pxn.18.5.2.20.1.1`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `compile_decs_def` returns a
--- four-tuple of initializers, function declarations, exception declarations,
--- and context; `CakeCompileDecsResult` names those same four projections.
--- But HOL's context map, declaration names, expression names, and compiled
--- program names use `mlstring` and its word-indexed `decl`/`exp`/`prog`
--- carriers. Here `CakeContext.globals` and production `Decl`/`Exp`/`Prog`
--- use `String` names. The direct HOL probe and Lean parity tests check the
--- five branches and context threading on selected examples, not equivalence
--- of these carriers. Consequently the `@[hol]` tag is withheld; exact-carrier
--- replacement is tracked by `flapjack-pxn.18.3.5.8` (parent
--- `flapjack-pxn.18.3.5.7.2`).
+/-- Source-reviewed Flapjack mirror (NOT an exact HOL port; `@[hol]` tag WITHDRAWN, documented
+    carrier mismatch, audit bead `flapjack-dlc.11`) of HOL `pan_globals$compile_exp_def`
+    (`cakeml/pancake/pan_globalsScript.sml:18-46`).  The fifteen HOL clauses map
+    one-for-one onto the Lean clauses in the same order:
+    `Var Local` is the identity; `Var Global` looks the name up in
+    `CakeContext.globals` (HOL `FLOOKUP ctxt.globals`) and yields
+    `Load sh (Op Sub [TopAddr; Const addr])` on a hit, `Const 0w` on a miss;
+    `RStruct`/`RField` recurse; `NStruct`/`NField` yield `Const 0w`;
+    `Load`/`LoadByte`/`Load32` recurse into the address; `Op`/`Panop` map over
+    the arguments; `Cmp`/`Shift` recurse into both operands; `TopAddr` becomes
+    `Op Sub [TopAddr; Const max_globals_size]`; and the HOL catch-all clause
+    `compile_exp ctxt e = e` (`Const`, `BaseAddr`, `BytesInWord`) is the Lean fallthrough
+    `expression => expression`.
+
+    The definition cannot carry an exact tag because the carriers differ: HOL
+    works over `'a pan_globals$context` and `'a panLang$exp` with
+    `globals : varname |-> shape # 'a word` (mlstring keys), the HOL `shape`
+    datatype, and a positive-width `'a word`, while this mirror uses the
+    production `CakeContext width` (String-keyed globals), production
+    `Exp (BitVec width)` and production `Shape`, plus an executable-only
+    `[NeZero width]`.  These are structural carriers, not identifiers, so the
+    `names_as_string` qualifier does not authorise them; and no same-module
+    `NameRanged` witness applies because the result is an expression, not a
+    name.
+
+    Direct HOL oracle: `scripts/hol-probes/pan_globals_compile_exp_probe.out`
+    (rows `local`, `global_hit`, `global_miss`, `top_addr`, `nested`), replayed
+    by `Flapjack/Test/PanGlobalsCompileExpParity.lean`.  Exact-carrier
+    replacement is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). -/
 def compileExpCake {width : Nat} [NeZero width] (context : CakeContext width) :
     Exp (BitVec width) → Exp (BitVec width)
   | .var .local name => .var .local name

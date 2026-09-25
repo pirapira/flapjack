@@ -1,0 +1,5 @@
+call_total_return_success=T
+call_total_return_destination=T
+call_total_missing_code=T
+call_total_wrong_arity=T
+call_total_timeout=T

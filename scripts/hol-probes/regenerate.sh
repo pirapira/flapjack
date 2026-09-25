@@ -279,6 +279,10 @@ run_probe crep_to_loop_list_insert_probeScript.sml crep_to_loop_list_insert_prob
   li_mem_3 li_snoc_agrees \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_insert_insert_probeScript.sml crep_to_loop_insert_insert_probe.out \
+  iie_hit iie_agrees_deep \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -694,6 +698,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
   while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
   while_break_zero_eval while_break_label_eval while_continue_label_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
+  call_total_return_success call_total_return_destination call_total_missing_code \
+  call_total_wrong_arity call_total_timeout \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
@@ -1578,4 +1586,16 @@ run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
 # The shape_of probe observes the total HOL shape_of over panSem$v.
 run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
   so_valword so_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The isValWord probe observes the exact boolean `panSem$isValWord` on
+# Val/RStruct/NStruct and on the raw Word payload.
+run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
+  is_valword_val is_valword_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The empty_locals probe observes the exact `panSem$empty_locals` state update:
+# the locals map is cleared while other fields are preserved.
+run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
+  el_lookup el_globals \
   "$cake_dir/pancake/semantics/panSemScript.sml"

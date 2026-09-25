@@ -9705,5 +9705,37 @@
     "lean_name": "memLookupFromAListSomeExact",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (compared with mem_lookup_fromalist_some at crep_to_loopProofScript.sml:3813-3827: HOL !xs n x. ALL_DISTINCT (MAP FST xs) ∧ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x; Lean uses (xs.map Prod.fst).Nodup, pair membership, and sptLookup n (sptFromAList xs) = some x over Nat keys and polymorphic values. Spt matches the exact HOL spt constructor arity. sptFromAList matches external HOL/src/finite_maps/sptreeScript.sml:1478-1480 recursive head insertion; lookup/insert mirror that same Spt carrier. Direct HOL EVAL rows ml_hit/ml_miss/ml_distinct in scripts/hol-probes/crep_to_loop_mem_lookup_probe.out are reproduced in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordLangExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:14-21: exact Const 'a word, Var num, Lookup store_name, Load exp, Op binop (exp list), and Shift shift exp exp constructor shapes. The lookup field uses the exact WordStoreHOL alias for fixed HOL store_name, avoiding WordStore's phantom word parameter."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordLangProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:35-68: every prog constructor is present with matching arity and field types. WordLangCutsetsHOL uses Spt Unit for HOL num_set (unit spt); the FFI function uses exact MlString; expressions use the exact WordLangExpHOL/store_name carriers; the word, instruction, register/immediate, operator, and scalar fields match their HOL carriers."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "store_name",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordStoreHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against stackLangScript.sml:17-22: the Temp constructor carries BitVec 5, and all remaining nullary store names match the HOL constructor set and arity. WordStore Unit fixes its otherwise phantom word parameter while preserving the exact source field carrier."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "good_handlers_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "goodHandlersHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:512-520: Call ret=NONE returns true without inspecting its handler; ret=SOME checks the return-handler program and, when present, requires its label equal n and checks that body; Seq and If conjoin recursive checks; Loop and MustTerminate recurse on their body; every remaining constructor is true. Lean uses the exact WordLangProgHOL carrier with positive BitVec word width corresponding to HOL words, exact spt num_set and mlstring fields, so there are no added predicates or altered clauses. All 12 direct HOL EVAL rows gh_call_none through gh_other in scripts/hol-probes/word_convs_good_handlers_probe.out are reproduced by Flapjack/Test/WordLangGoodHandlersParity.lean."
   }
 ]

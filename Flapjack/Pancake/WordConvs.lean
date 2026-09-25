@@ -400,28 +400,24 @@ def noShareInstSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : 
     (fun q => q ≠ .shareInst wordLangArbMemOp 0 (.var 0))
     program
 
-/-- Flapjack structural check corresponding to HOL
-`wordConvs$good_handlers_def`: every handler label in the program equals the
-enclosing code-table label `n`. This remains untagged because it takes
-`WordLangProg`, whose loop cut sets use `FiniteMap Nat Unit` rather than HOL's
-`unit spt`, and whose FFI name field is `String` rather than HOL `mlstring`.
-The predicate does not inspect those fields, and its direct behavior matches
-the checked-in HOL oracle, but the full input carrier is not exact. -/
-def goodHandlers {width : Nat} (n : Nat) : WordLangProg (BitVec width) -> Bool
+/-! HOL `good_handlers_def` over the exact HOL-shaped WordLang carrier. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "good_handlers_def"]
+def goodHandlersHOL {width : Nat} [NeZero width] (n : Nat) :
+    WordLangProgHOL (BitVec width) -> Bool
   | .call returns _ _ handler =>
       match returns with
       | none => true
       | some (_, _, returnHandler, _, _) =>
-          goodHandlers n returnHandler &&
+          goodHandlersHOL n returnHandler &&
             (match handler with
              | some (_, handlerProg, handlerLabel, _) =>
-                 handlerLabel == n && goodHandlers n handlerProg
+                 handlerLabel == n && goodHandlersHOL n handlerProg
              | none => true)
-  | .seq first second => goodHandlers n first && goodHandlers n second
-  | .loop _ body _ => goodHandlers n body
+  | .seq first second => goodHandlersHOL n first && goodHandlersHOL n second
+  | .loop _ body _ => goodHandlersHOL n body
   | .ite _ _ _ thenBranch elseBranch =>
-      goodHandlers n thenBranch && goodHandlers n elseBranch
-  | .mustTerminate body => goodHandlers n body
+      goodHandlersHOL n thenBranch && goodHandlersHOL n elseBranch
+  | .mustTerminate body => goodHandlersHOL n body
   | _ => true
 
 /-- HOL `wordConvsScript$pre_alloc_conventions_def` (`wordConvsScript.sml:425-429`).

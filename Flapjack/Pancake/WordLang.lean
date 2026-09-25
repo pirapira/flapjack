@@ -3,6 +3,8 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Word
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Basis.Pure.MlString
+import Flapjack.Misc.Sptree
 
 /-!
 # Pancake wordLang word operations
@@ -207,6 +209,71 @@ inductive WordLangProg (α : Type u) where
   | ffi (function : FunName) (configuration configurationLength array arrayLength : Nat)
       (live : WordLangCutsets)
   | shareInst (operator : WordMemOp) (name : Nat) (address : WordLangExp α)
+
+/-- Exact HOL `num_set` carrier (`num |-> unit`) for the faithful backend AST.
+Unlike `WordLangNumSet`, this retains the source `spt` representation. -/
+abbrev WordLangNumSetHOL := Spt Unit
+
+/-- Exact HOL `wordLang$cutsets = num_set # num_set` carrier. -/
+abbrev WordLangCutsetsHOL := WordLangNumSetHOL × WordLangNumSetHOL
+
+/-- Exact HOL `store_name` carrier. `WordStore` has only a phantom word-type
+parameter; fixing it to `Unit` leaves exactly the source constructor fields. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_name"]
+abbrev WordStoreHOL := WordStore Unit
+
+/-- Exact HOL `wordLang$exp` carrier, with `store_name` separate from its
+width-indexed word values. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp"]
+inductive WordLangExpHOL (α : Type u) where
+  | const (value : α)
+  | var (name : Nat)
+  | lookup (store : WordStoreHOL)
+  | load (address : WordLangExpHOL α)
+  | op (operator : BinOp) (args : List (WordLangExpHOL α))
+  | shift (operator : Shift) (left right : WordLangExpHOL α)
+
+/-- HOL-shaped backend program carrier with the exact `spt` cut sets and
+`mlstring` FFI name. Other syntax components are shared with `WordLangProg`
+because their constructors and fields already match the HOL declarations. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "prog"]
+inductive WordLangProgHOL (α : Type u) where
+  | skip
+  | move (priority : Nat) (moves : List (Nat × Nat))
+  | inst (instruction : WordLangInst α)
+  | assign (name : Nat) (value : WordLangExpHOL α)
+  | get (destination : Nat) (store : WordStoreHOL)
+  | set (store : WordStoreHOL) (value : WordLangExpHOL α)
+  | store (address : WordLangExpHOL α) (value : Nat)
+  | mustTerminate (body : WordLangProgHOL α)
+  | call (returns : Option
+      (List Nat × WordLangCutsetsHOL × WordLangProgHOL α × Nat × Nat))
+      (target : Option Nat) (arguments : List Nat)
+      (handler : Option (Nat × WordLangProgHOL α × Nat × Nat))
+  | seq (first second : WordLangProgHOL α)
+  | ite (operator : Cmp) (condition : Nat) (right : WordRegImm α)
+      (thenBranch elseBranch : WordLangProgHOL α)
+  | loop (liveIn : WordLangNumSetHOL) (body : WordLangProgHOL α)
+      (liveOut : WordLangNumSetHOL)
+  | alloc (destination : Nat) (cutsets : WordLangCutsetsHOL)
+  | storeConsts (source bitmap codeLength dataLength : Nat)
+      (constants : List (Bool × α))
+  | raise (exception : Nat)
+  | return (label : Nat) (values : List Nat)
+  | break (label : Nat)
+  | continue (label : Nat)
+  | tick
+  | opCurrHeap (operator : BinOp) (destination source : Nat)
+  | locValue (destination source : Nat)
+  | install (codeBuffer codeLength dataBuffer dataLength : Nat)
+      (cutsets : WordLangCutsetsHOL)
+  | codeBufferWrite (address value : Nat)
+  | dataBufferWrite (address value : Nat)
+  | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
+      (configuration configurationLength array arrayLength : Nat)
+      (live : WordLangCutsetsHOL)
+  | shareInst (operator : WordMemOp) (name : Nat)
+      (address : WordLangExpHOL α)
 
 /-- HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises a
 `Var` or `Op Add [Var; Const]` address expression. -/

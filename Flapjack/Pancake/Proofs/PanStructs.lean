@@ -42,11 +42,29 @@ theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
   | cons shape shapes ih =>
       simp [structCompileShapeFuel.structCompileShapesFuel, ih]
 
-/-- Exact no-fuel port of HOL `compile_shapes_eq_map`
-    (`pan_structsProofScript.sml:310`). The production mutually recursive
-    compiler decreases on the HOL context-suffix/syntax-size measure, so this
-    statement keeps the source theorem's context and list arguments unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- No-fuel analogue of HOL `compile_shapes_eq_map`
+    (`pan_structsProofScript.sml:310`), stated over the production compiler
+    `structCompileShapeWF`. The production mutually recursive compiler
+    decreases on the HOL context-suffix/syntax-size measure, so this statement
+    keeps the source theorem's context and list arguments unchanged, but it is
+    not an exact port of the HOL carriers (see the FLAPJACK-SPECIFIC note
+    below). -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL's
+-- `compile_shapes_eq_map` (`pan_structsProofScript.sml:310`) is stated over a
+-- fields-only context `(stcname # (fldname # shape) list) list` with
+-- `stcname`/`fldname` = `mlstring`, and its `compile_shapes`/`compile_shape`
+-- both consume exactly that list. This Lean statement uses the production
+-- carrier `StructContext = List (StructName × StructInfo)`, whose
+-- `StructName` and `FieldName` are `String` and whose `StructInfo` adds the
+-- production-only `shapedFields` cache (HOL `struct_info` is fields and size
+-- only), so the context carrier differs in arity, not only in name
+-- representation. This theorem only passes the context through, but a tag on
+-- it would still record the compiled functions' carriers, and a
+-- `(names_as_string := ...)` qualifier does not authorize the extra
+-- `StructInfo` field. The exact MlString carriers are available and the
+-- faithful port is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsCompileShapeParity.structCompileShapes_eq_map_fixture`.
 theorem structCompileShapes_eq_map (context : StructContext) :
     (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
       fun shapes => shapes.map (structCompileShapeWF context) := by
@@ -125,7 +143,24 @@ def structInfosOk (context : StructContext) : Prop :=
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in
     any outer structure context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL states
+-- this mutual theorem over fields-only contexts `(stcname # (fldname # shape)
+-- list) list`, with `stcname`/`fldname` = `mlstring`, and `compile_shape`
+-- consumes exactly that list. This Lean statement is keyed by the production
+-- carriers: `isWfShape`/`structCompileShapeWF` both take
+-- `StructContext = List (StructName × StructInfo)`, whose `StructName` and
+-- `FieldName` are `String` and whose `StructInfo` adds the production-only
+-- `shapedFields` cache (HOL `struct_info` is fields and size only). The
+-- wf-context and the compile-context are therefore a different carrier, not
+-- just a different name representation, and `structCompileShapeWF` receives
+-- the full cache-augmented context rather than HOL's fields projection
+-- `MAP (λ(nm,info).(nm,info.fields)) ctxt`; the `[BEq String]` argument is
+-- production `String` equality in the `Named` lookup. So a
+-- `(names_as_string := ...)` qualifier does not apply. The exact
+-- MlString/`ShapeHOL`/`StructContextExact` carriers are available for a
+-- faithful port, which is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsCompileShapeParity.structCompileShapeWF_isWfShape_fixture`.
 theorem structCompileShapeWF_isWfShape [BEq String]
     (outer : StructContext) :
     (∀ (context : StructContext) (shape : Shape),
@@ -195,10 +230,15 @@ theorem lookupInfo_isSome_drop (name : String) (context : StructContext)
           · simp only [lookupInfo, hc]
             exact hrest
 
-/-- Exact API translation of HOL `is_wf_shape_drop`
+/-- Production-carrier analogue of HOL `is_wf_shape_drop`
     (`pan_structsProofScript.sml:114`): a shape well formed in a context
     suffix remains well formed in the full context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): this statement quantifies over
+-- production `StructContext`/`Shape`, whose names use unrestricted `String`
+-- and whose struct records include the production-only `shapedFields` cache.
+-- HOL uses `StructContextExact`/`ShapeHOL` with `mlstring` names. There is no
+-- NameRanged premise, so `names_as_string` cannot bridge arbitrary inputs;
+-- the exact-carrier replacement is tracked by flapjack-pxn.18.3.5.8.
 theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
     (n : Nat) :
     isWfShape (context.drop n) shape = true → isWfShape context shape = true :=
@@ -298,10 +338,20 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
   rw [lookupInfo_eq_lookup] at hlookup ⊢
   exact (lookup_drop_helper n context name info hlookup hnodup).2
 
-/-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
+/-- Production analogue of HOL `size_of_sh_with_ctxt_drop`
     (`pan_structsProofScript.sml:99`): a well-formed shape has the same
-    context-sensitive size in a distinct-key context and its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    context-sensitive size in a distinct-key context and its suffix. It is
+    untagged because HOL's `sh_ctxt` is `StructContextExact` over `MlS`,
+    `ShapeHOL`, and the exact fields/size-only struct record, whereas this
+    theorem uses production `StructContext`/`Shape`: struct and named-shape
+    identifiers use `String`, and production `StructInfo` has an additional
+    `shapedFields` cache. The body uses String-keyed production lookup. A
+    `names_as_string` qualifier cannot cover those context/record differences.
+    The statement otherwise has HOL's two premises and equality conclusion;
+    the exact context-sensitive size definition already exists as
+    `sizeOfShapeWithContextHOL`, but the drop theorem over exact carriers is
+    still missing; the exact theorem is tracked by
+    `flapjack-pxn.18.3.5.8.16` under the exact-carrier work. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)
@@ -498,11 +548,26 @@ private theorem shapeSizeWithContext_fold_drop
       rw [← hsize]
       exact htail
 
-/-- Exact size-preservation theorem used by HOL's `mem_load_conversion`
+/-- Size-preservation theorem for the Lean port of HOL's `mem_load_conversion`
     (`pan_structsProofScript.sml:512`). It compares Cake's context-sensitive
-    shape size before and after `compile_shape`; Lean's extra `shapedFields`
-    cache is not inspected. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    shape size before and after the production `structCompileShapeWF`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag).
+-- HOL `size_of_compile_shape` (`pan_structsProofScript.sml:512`) is stated over
+-- `stcname`/`fldname` = `mlstring` and applies `compile_shape` to the fields
+-- projection `MAP (λ(nm,info). (nm, info.fields)) ctxt`, i.e. a context
+-- `(stcname # (fldname # shape) list) list` with neither `size` nor the
+-- production cache. This theorem instead quantifies the production
+-- `StructContext = List (StructName × StructInfo)`, where `StructName`/
+-- `FieldName` = `String` and `StructInfo` carries the extra production-only
+-- `shapedFields` cache, and it passes the full cache-augmented `StructInfo` to
+-- `structCompileShapeWF` rather than HOL's fields projection. The carrier arity
+-- and context term therefore differ beyond name representation, so the
+-- `(names_as_string := ...)` qualifier does not apply and the tag stays
+-- withdrawn. Faithful MlString/ShapeHOL port: `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Direct HOL evidence:
+-- `scripts/hol-probes/pan_structs_compile_exp_correct_probe.out`
+-- (`size_of_compile_shape_comb`); Lean fixture
+-- `Flapjack.Test.PanStructsCompileShapeParity`.
 theorem structCompileShapeWF_size
     (context : StructContext) (shape : Shape)
     (hshape : isWfShape context shape = true) (hok : structInfosOk context) :
@@ -589,20 +654,35 @@ theorem structCompileShapeWF_size
       exact hfalse.elim
   exact hsize context shape hshape hok
 
-/-- Exact API translation of HOL `struct_infos_ok_append`
+/-- Production analogue of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
-    remains valid in its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    remains valid in its suffix. It is untagged because HOL's contexts use
+    `MlS` structure/field names, `ShapeHOL`, and a fields/size-only
+    `struct_info`; this theorem uses production `String`-backed
+    `StructContext`/`Shape` and cache-augmented `StructInfo.shapedFields`.
+    The body relies on production String-keyed lookup through `structInfosOk`.
+    `names_as_string` cannot cover the context/record difference. The single
+    premise and conclusion otherwise match HOL exactly, and no name bytes are
+    observable in this proposition. A faithful statement can use the exact
+    `StructContextExact` carrier; name-carrier/bridge work is tracked by
+    `flapjack-pxn.18.3.5.8`. -/
 theorem structInfosOk_append (xs ys : StructContext)
     (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
   rwa [List.drop_left] at hdrop
 
-/-- Exact API translation of HOL `struct_infos_ok_cons`
+/-- Production analogue of HOL `struct_infos_ok_cons`
     (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
     fields, well-formed field shapes, and its computed size preserves the
-    structure-context invariant. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    structure-context invariant. It remains untagged because HOL uses
+    `MlS`/`ShapeHOL`/`StructContextExact` with the fields/size-only exact
+    `struct_info`, while this statement uses String-backed production
+    `StructName`, `Shape`, `StructContext`, and cache-augmented `StructInfo`.
+    Its well-formedness and size premises also use production String-keyed
+    lookup. The logical hypotheses and conclusion otherwise match HOL; no
+    byte-observable name output is present. A faithful exact-carrier invariant
+    and its cons/append theorems are tracked by
+    `flapjack-pxn.18.3.5.8.18`. -/
 theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
     (hxs : structInfosOk xs)
     (hflds : (info.fields.map Prod.fst).Nodup)
@@ -684,11 +764,16 @@ theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
       · rw [if_neg hc] at hlookup
         exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
-/-- Exact production-helper translation of HOL `fields_in_order_reorder_noop`
-    (`pan_structsProofScript.sml:218`): selecting fields from compiled
-    expressions in the original field-name order yields the compiled source
-    expressions. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `fields_in_order_reorder_noop`
+    (`pan_structsProofScript.sml:218-239`): selecting compiled fields in the
+    original field-name order yields the compiled source expressions. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the field names, production
+-- StructPassContext, and expression identifiers use unrestricted `String`,
+-- while HOL uses `mlstring` names and its exact expression/context carriers.
+-- The conclusion preserves compiled expression identifiers, so they are
+-- byte-observable; there is no NameRanged premise and `names_as_string` cannot
+-- bridge arbitrary inputs. Exact carrier work is tracked by
+-- flapjack-pxn.18.3.5.8.
 theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
     (context : StructPassContext) (eflds : List (FieldName × Exp α))
     (infoFields : List (FieldName × Shape))
@@ -830,10 +915,16 @@ theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
         rw [← h, List.map_cons, List.dropWhile_cons, hQ]
         simp only [Bool.false_eq_true, if_false]
 
-/-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
-    production old-shape list helper equals `MAP` of the production
-    single-expression old-shape function, with no additional premises. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `old_exp_shapes_eq`
+    (`pan_structsProofScript.sml:679-683`): the production old-shape list
+    helper equals `List.map` of its single-expression helper. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the generic production `Exp α`,
+-- `Shape`, and `StructPassContext` use unrestricted `String` identifiers;
+-- HOL uses its expression/shape carriers with `mlstring` names. In
+-- particular, `NStruct` returns its input name as a named shape, and no
+-- NameRanged premise restricts that byte-observable value. `names_as_string`
+-- cannot bridge arbitrary names; exact-carrier work is tracked by
+-- flapjack-pxn.18.3.5.8.
 theorem structOldExpShapes_eq_map {α : Type} (context : StructPassContext) :
     (structOldExpShape.structOldExpShapes (α := α) context :
       List (Exp α) → List Shape) =

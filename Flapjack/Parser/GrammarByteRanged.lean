@@ -520,4 +520,97 @@ theorem tryRule_treesSafe {p : P P.Trees} (hp : PTreesSafe p) :
   unfold P.tryRule
   exact PTreesSafe.orElse' hp (PTreesSafe.pure [] TreesByteRanged.nil)
 
+/-! `rpt` repeats a parser while it succeeds, so its result is a concatenation
+    of tree-safety-respecting chunks.  `optional'` is the only primitive that
+    returns an `Option`, so we record its own invariant and bind it. -/
+
+/-- Tree-safety for a parser returning an optional tree list (the shape used
+    inside `rpt`). -/
+def POptionTreesSafe (p : P (Option P.Trees)) : Prop :=
+  (∀ s o s', p s = (some o, s') → ToksByteRanged s.toks →
+      (match o with
+       | none => True
+       | some trees => TreesByteRanged trees) ∧
+        ToksByteRanged s'.toks) ∧
+  (∀ s s', p s = (none, s') → ToksByteRanged s.toks → ToksByteRanged s'.toks)
+
+theorem POptionTreesSafe.bind {p : P (Option P.Trees)} {f : Option P.Trees → P P.Trees}
+    (hp : POptionTreesSafe p)
+    (hf : ∀ o, (match o with
+                | none => True
+                | some trees => TreesByteRanged trees) → PTreesSafe (f o)) :
+    PTreesSafe (P.bind' p f) := by
+  constructor
+  · intro s trees s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i o s'' heq
+      have hp1 := hp.1 s o s'' heq h
+      exact (hf o hp1.1).1 s'' trees s' hs hp1.2
+    · rename_i s'' heq
+      exact absurd (congrArg Prod.fst hs) (by simp)
+  · intro s s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i o s'' heq
+      have hp1 := hp.1 s o s'' heq h
+      exact (hf o hp1.1).2 s'' s' hs hp1.2
+    · rename_i s'' heq
+      simp only [Prod.mk.injEq] at hs
+      rw [← hs.2]
+      exact hp.2 s s'' heq h
+
+theorem optional'_optionTreesSafe {p : P P.Trees} (hp : PTreesSafe p) :
+    POptionTreesSafe (P.optional' p) := by
+  constructor
+  · intro s o s' hs h
+    simp only [P.optional'] at hs
+    split at hs
+    · rename_i trees s'' heq
+      simp only [Prod.mk.injEq, Option.some.injEq] at hs
+      obtain ⟨h1, h2⟩ := hs
+      subst h1
+      rw [← h2]
+      exact hp.1 s trees s'' heq h
+    · rename_i s'' heq
+      simp only [Prod.mk.injEq, Option.some.injEq] at hs
+      obtain ⟨h1, h2⟩ := hs
+      subst h1
+      rw [← h2]
+      exact ⟨trivial, h⟩
+  · intro s s' hs h
+    simp only [P.optional'] at hs
+    split at hs
+    · rename_i trees s'' heq
+      exact absurd (congrArg Prod.fst hs) (by simp)
+    · rename_i s'' heq
+      exact absurd (congrArg Prod.fst hs) (by simp)
+
+theorem rpt_treesSafe {p : P P.Trees} (hp : PTreesSafe p) :
+    ∀ steps, PTreesSafe (P.rpt p steps) := by
+  intro steps
+  induction steps with
+  | zero =>
+    rw [P.rpt]
+    exact PTreesSafe.pure [] TreesByteRanged.nil
+  | succ steps ih =>
+    rw [P.rpt]
+    exact POptionTreesSafe.bind (optional'_optionTreesSafe hp) (fun o ho => by
+      cases o with
+      | none => exact PTreesSafe.pure [] TreesByteRanged.nil
+      | some trees =>
+          exact PTreesSafe.bind ih (fun rest hrest =>
+            PTreesSafe.pure (trees ++ rest) (TreesByteRanged.append ho hrest)))
+
+theorem rptHere_treesSafe {p : P P.Trees} (hp : PTreesSafe p) :
+    PTreesSafe (P.rptHere p) := by
+  constructor
+  · intro s trees s' hs h
+    simp only [P.rptHere] at hs
+    exact (rpt_treesSafe hp s.remaining).1 s trees s' hs h
+  · intro s s' hs h
+    simp only [P.rptHere] at hs
+    exact (rpt_treesSafe hp s.remaining).2 s s' hs h
+
+
 end Flapjack.Parser

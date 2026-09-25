@@ -362,6 +362,14 @@
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width successful Word premise and complete Option word_lab result over the exact finite-map state carrier, with no RISC-V target premise. Evaluation still uses the state-derived source-memory runtime adapter; native HOL eval_def/crep_op_def and the selected finite_index operation interpretation are not yet established."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConstHolWordBits",
     "statement_status": "documented_mismatch",

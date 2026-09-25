@@ -1273,6 +1273,37 @@ theorem evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab
   simp [evalCrepHolFiniteWordSourceExpWordLab,
     evalCrepRuntimeExp_sourceWord_eq]
 
+/-- All-width exact-state production-runtime support for HOL
+`eval_mul_const`. The successful premise and complete `Option word_lab`
+conclusion match the source theorem's evaluation shape; the state keeps exact
+finite maps and the implicit dimension dictionary represents a chosen finite
+index. This remains untagged because evaluation still passes through the
+state-derived source-memory adapter, whose word-operation interpretation has
+not been identified with native HOL `crepSem$eval` for that finite index. -/
+theorem crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab
+    {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι codeEntry σ)
+    (expression : CrepExp (ι → Bool)) (constant value : ι → Bool)
+    (h : (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression).map PanWordLab.word = some (.word value)) :
+    (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression constant)).map PanWordLab.word =
+      some (.word (value * constant)) := by
+  have hSource : (evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState expression).map PanWordLab.word =
+      some (.word value) := by
+    simpa [evalCrepHolFiniteWordSourceExpWordLab] using
+      (evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab
+        state expression).symm.trans h
+  have hSourceMul := crepEvalMulConstHolFiniteWordSourceEval dimension
+    state.toSourceEvaluatorState expression constant value hSource
+  exact (evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab state _).trans
+    hSourceMul
+
 /-- Production-evaluator view of the arbitrary-index exact-state theorem
 above. The adapter is constructed solely from the HOL-observable state fields
 and the explicit word-dimension representation; it uses the source memory

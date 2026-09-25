@@ -8,6 +8,7 @@ Rows reproduce `scripts/hol-probes/pan_lang_decl_probe.out`:
   si_fields_len=1 si_size=7
 -/
 import Flapjack.Pancake.PanLang.Decl
+import Flapjack.Pancake.PanToCrep.CompileProg
 
 namespace Flapjack.Test.PanLangDeclHOLParity
 
@@ -109,5 +110,40 @@ example : structContextOfHOL (structContextToHOL prodContext) = prodContext :=
   structContextOfHOL_structContextToHOL prodContext (by
     simp [prodContext, prodSi, StructContextByteRanged, NameRanged, StructInfoByteRanged,
       ListParamByteRanged, ParamByteRanged, ShapeByteRanged])
+
+/-! ### Exact-carrier `compile_prog` boundary (bead .18.3.5.8.6)
+
+`compileProgTopHOLOfExact` accepts the MLString-keyed declaration carrier and
+agrees with the production compiler on byte-ranged declarations. -/
+
+example :
+    compileProgTopHOLOfExact
+        (([] : List (Flapjack.Decl (BitVec 64))).map declToHOL) =
+      compileProgTopHOL ([] : List (Flapjack.Decl (BitVec 64))) :=
+  compileProgTopHOLOfExact_declToHOL [] (by simp)
+
+example :
+    compileProgTopHOLOfExact ([prodDecl].map declToHOL) =
+      compileProgTopHOL [prodDecl] :=
+  compileProgTopHOLOfExact_declToHOL [prodDecl] (by
+    intro d hd
+    rcases List.mem_singleton.mp hd with rfl
+    simp [prodDecl, DeclByteRanged, prodFd, FunDeclByteRanged, ListParamByteRanged,
+      ParamByteRanged, NameRanged, ShapeByteRanged, ProgByteRanged])
+
+/-! ### Nonbyte String-to-MlString blocker (bead .18.3.5.8.6)
+
+`ofString`/`toStringOfBytes` is a round trip only on byte-ranged names
+(codepoints `< 256`). A name with a codepoint `>= 256` (here U+1D518) is
+truncated to its low byte, so `toStringOfBytes (ofString s) != s`. The executed
+source path builds production `Decl` with `String` names in
+`Parser.parseTopDecs`, and nonbyte names therefore cannot round-trip through
+the exact MlString carrier. This is the concrete blocker preventing the
+executed parser boundary from using the exact carrier. -/
+example :
+    Flapjack.Basis.Pure.MlString.toStringOfBytes
+      (Flapjack.Basis.Pure.MlString.ofString (String.singleton (Char.ofNat 0x1d518))) ≠
+    String.singleton (Char.ofNat 0x1d518) := by
+  decide
 
 end Flapjack.Test.PanLangDeclHOLParity

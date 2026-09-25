@@ -480,6 +480,14 @@
     "reviewer": "Untagged all-width Cmp case with the successful premise, arbitrary code-map update, full Option word_lab result, and child IHs over its two source expressions. The proof uses the explicit finite-dimension source evaluator; its state and primitive word-operation interpretation is not yet proved identical to native HOL crepSem eval."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_cmp_eq_wordCmpHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Cmp adapter equation: after successful child evaluations, the explicit finite-dimension Crep source evaluator returns the word embedding of tagged HOL word_cmp. No standalone HOL declaration states this representation bridge; full crepSem eval/state correspondence remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

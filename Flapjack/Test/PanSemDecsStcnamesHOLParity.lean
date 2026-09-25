@@ -71,7 +71,7 @@ private def functionAndExn : List (DeclHOL 8) :=
 example (context : StructContextExact) :
     decsStcnamesHOLExact (width := 8) context functionAndExn = some context := by
   apply decsStcnamesHOLExact_of_functions_or_exnDecls
-  native_decide
+  decide
 
 private def decsGuard : Bool :=
   (ctxLen (decsStcnamesHOLExact (width := 8) [] ([] : List (DeclHOL 8))) == some 0) &&

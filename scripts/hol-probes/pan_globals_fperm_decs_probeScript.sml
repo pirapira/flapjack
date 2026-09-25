@@ -26,4 +26,6 @@ val _ = print_eval "mixed"
          return := panLang$One |> ]``;
 val _ = print_eval "empty"
   ``pan_globals$fperm_decs «foo» «bar» []``;
-val _ = print_eval "fperm_decs_done" ``0n``;
+val _ = print_eval "singleton_nonfunction"
+  ``pan_globals$fperm_decs «foo» «bar»
+      [panLang$Decl panLang$One «g» (panLang$Const 7w)]``;

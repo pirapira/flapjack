@@ -1758,6 +1758,6 @@ run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
 # permutation `fperm_decs f g ds` (pan_globalsScript.sml:216-221) for a mixed
 # declaration list and the empty list.
 run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.out \
-  mixed fperm_decs_done \
+  mixed singleton_nonfunction \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"

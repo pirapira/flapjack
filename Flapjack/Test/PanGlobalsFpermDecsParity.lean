@@ -47,10 +47,18 @@ def emptyGuard : Bool :=
 
 #guard emptyGuard
 
+def singletonGuard : Bool :=
+  match globalRenameDecls "foo" "bar"
+      ([.decl .one "g" (.const 7)] : List (Decl Nat)) with
+  | [.decl .one "g" (.const 7)] => true
+  | _ => false
+
+#guard singletonGuard
+
 def runChecks : IO Bool := do
-  IO.println (if parityGuard && emptyGuard then
-    "PASS pan_globals fperm_decs_def parity (2 HOL rows)"
-    else "FAIL pan_globals fperm_decs_def parity (2 HOL rows)")
-  pure (parityGuard && emptyGuard)
+  IO.println (if parityGuard && emptyGuard && singletonGuard then
+    "PASS pan_globals fperm_decs_def parity (3 HOL rows)"
+    else "FAIL pan_globals fperm_decs_def parity (3 HOL rows)")
+  pure (parityGuard && emptyGuard && singletonGuard)
 
 end Flapjack.Test.PanGlobalsFpermDecsParity

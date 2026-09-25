@@ -1,19 +1,22 @@
-# PanGlobals identifier-carrier review (flapjack-6nn)
+# PanGlobals carrier review (flapjack-6nn)
 
-Read-only source comparison of the original Cake `pan_globalsScript.sml`
-definitions with the production Lean declarations in
-`Flapjack/Pancake/PanGlobals.lean`, classifying each declaration as
+Source comparison of the original Cake `pan_globalsScript.sml` definitions
+with the definitions called by the executed global compiler in
+`Flapjack/Pancake/PanGlobals.lean`. Constructor cases, filtering order, and
+projected values agree for these two helpers. They are not exact HOL ports:
+production `Decl α` contains production `Exp α` (`Const` stores `α`) and
+production `Shape` (named identifiers are `String`), whereas HOL `decl` uses
+word-valued `ExpHOL width` and `ShapeHOL` with `mlstring` names. The
+`names_as_string` qualifier only addresses the identifier component and cannot
+make these generic production carriers equal to HOL's. Direct parity tests
+exercise the constructor/order behavior on production values, not a typed HOL
+carrier conversion. Neither definition is tagged.
 
-- **carrier-only**: the only remaining difference is the identifier carrier
-  (HOL `funname`/`varname`/`stcname` = `mlstring` vs Lean `String`), so it is a
-  candidate for the narrow `reviewed_names_as_string` qualifier once the
-  qualifier tooling (`flapjack-an4`) lands; or
-- **beyond carrier**: at least one further mismatch (recursion shape, map
-  representation, ...), so the qualifier alone does not license a tag.
-
-Prerequisites not yet met: qualifier tooling `flapjack-an4` and generated-name
-byte-boundary witnesses `flapjack-0up`. Nothing here is tagged; no Lean source
-is changed by this review.
+An exact-carrier replacement requires definitions over `DeclHOL width` and
+`ShapeHOL`, direct HOL rows reproduced at that carrier, and a reviewed
+connection to the executed path. Until then retain these definitions as
+Flapjack-specific behavior and track the replacement in
+`flapjack-6nn.3.1`.
 
 ## Comparison
 
@@ -22,8 +25,8 @@ is changed by this review.
 | `fperm_name_def` (:184) | `globalRenameFunctionName` (:433) | carrier-only (name swap, no new bytes) |
 | `fperm_def` (:191) | `globalRenameProg` (:470) | carrier-only |
 | `fperm_decs_def` (:216) | `globalRenameDecls` (:504) | carrier-only |
-| `resort_decls_def` (:179) | `globalResortDecls` (:810) | carrier-only (decl-kind filters, names ignored) |
-| `dec_shapes_def` (:228) | `globalDeclShapes` (:842) | carrier-only (names ignored) |
+| `resort_decls_def` (:179) | `globalResortDecls` (:864) | documented mismatch: generic `Decl α` / `Exp α` payload and `String`/`Shape` carriers differ from HOL `DeclHOL width` / word-valued `ExpHOL width` / `ShapeHOL` |
+| `dec_shapes_def` (:228) | `globalDeclShapes` (:993) | documented mismatch: consumes generic `Decl α` and returns production `Shape` (`String` names), rather than HOL `DeclHOL width` and `ShapeHOL` |
 | `fresh_name_def` (:55) | `freshNameHOL` (:279) | carrier-only in shape, but constructs new names (`++ "'"`), so the `flapjack-0up` boundary witness is required |
 | `new_main_name_def` (:224) | `globalNewMainName` (:824) | carrier-only (delegates to `freshNameHOL`); needs the same boundary witness |
 | `fresh_name_def` (:55) | `globalFreshName`/`globalFreshNameAux` (:154/:145) | **beyond carrier**: fuel-bounded search via `globalApostrophes`, not HOL's unbounded `strcat`/`strlen` recursion |
@@ -35,16 +38,14 @@ is changed by this review.
 | `compile_decs_def` (:160) | `compileDecsCake` (:2120) | carrier-only (canonical) |
 | `compile_top_def` (:236) | `globalCompileTopCake` (:2744) | carrier-only (canonical); not the whole executed path on its own |
 
-## Proposed first narrow retag
+## Qualification boundary
 
-The smallest genuinely carrier-only slice is the **rename/shape cluster**
-`fperm_name_def`, `fperm_def`, `fperm_decs_def`, `resort_decls_def`,
-`dec_shapes_def`. These construct no new name bytes, need no FFI boundary
-witness, and are currently documented as `FLAPJACK-SPECIFIC` only because of the
-identifier carrier.
-
-Then, once `flapjack-0up` provides the byte-rangedness witness, retag
-`freshNameHOL` and `globalNewMainName`.
+The earlier proposal to retag `resort_decls_def` and `dec_shapes_def` with
+`names_as_string` was incorrect: both executed definitions range over
+`Decl α`, whose `Const` payload is `α`, not HOL's `'a word`, and the shape
+projection uses the production `Shape` carrier. Equality-only behavior does
+not erase these type differences. Do not add tags until the exact-carrier
+replacement is implemented and connected to production.
 
 Do **not** retag the executed `globalCompileExp`/`globalCompileProg`/
 `globalCompileDecsThreaded` on the strength of the qualifier alone: their

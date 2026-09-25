@@ -851,14 +851,15 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
     functions, in that order.  `globalDeclIsName`/`globalDeclIsException`/
     `globalDeclIsGlobal`/`globalDeclIsFunction` are the HOL `is_name`/
     `is_exn_decl`/`is_decl`/`is_function` predicates. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
--- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
--- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
--- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
--- `resort_decls` has no `String` identifier parameter or use (it only regroups
--- by constructor), so the reviewed `(names_as_string := ...)` qualifier does not
--- apply; the only mismatch is the imported `Decl` carrier, so this stays
--- untagged pending the exact MlString carrier.  Clause/side-condition evidence:
+-- FLAPJACK-SPECIFIC (not an exact HOL port): constructor filtering and output
+-- order match `resort_decls_def`, but the executed `Decl α` is not HOL's
+-- `DeclHOL width`. In particular, `Exp α` stores `α` directly in `Const`,
+-- while HOL `ExpHOL width` stores `BitVec width` (`'a word`); names and
+-- `Shape` also use production `String` instead of HOL `mlstring`. The
+-- `(names_as_string := ...)` qualifier only accounts for the last difference,
+-- so it cannot justify this tag. Keep untagged until an exact-carrier
+-- definition is connected to the executed path; tracked by bead
+-- `flapjack-6nn.3.1`. Clause/order evidence:
 -- `scripts/hol-probes/pan_globals_resort_decls_probe.out` and
 -- `Flapjack/Test/PanGlobalsResortDeclsParity.lean`.
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
@@ -980,14 +981,14 @@ theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
     keeps the shape of each value declaration, in order. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
--- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
--- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
--- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
--- `dec_shapes` has no `String` identifier parameter or use (it only projects the
--- constructor shape of each declaration), so the reviewed
--- `(names_as_string := ...)` qualifier does not apply; this stays untagged
--- pending the exact MlString carrier.  Clause/side-condition evidence:
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the clauses preserve declaration
+-- order and select the `Decl` shape as in `dec_shapes_def`, but this executed
+-- function consumes `Decl α`, whose `Exp α.Const` payload is not HOL's
+-- word-valued `ExpHOL width.Const`; its returned `Shape` also contains
+-- production `String` names rather than HOL `mlstring`. The
+-- `(names_as_string := ...)` qualifier covers only the latter difference.
+-- Keep untagged until an exact-carrier definition is connected to the executed
+-- path; tracked by bead `flapjack-6nn.3.1`. Clause/order evidence:
 -- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` and
 -- `Flapjack/Test/PanGlobalsDecShapesParity.lean`.
 def globalDeclShapes : List (Decl α) → List Shape

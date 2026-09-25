@@ -1864,7 +1864,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "dec_shapes_resort_decls_def",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex (source comparison): the filter/reordering clauses agree, but the Lean theorem uses production Decl α and Shape; HOL declarations contain word-valued ExpHOL width and return ShapeHOL. Production names are String while HOL identifiers are mlstring. names_as_string only covers identifiers. The theorem is untagged and exact-carrier replacement is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -1872,7 +1872,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "resort_decls_preserve_functions",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex (source comparison): function preservation follows the same constructor partition, but the theorem ranges over production Decl α with Exp α.Const : α and String identifiers; HOL decl uses word-valued ExpHOL width and mlstring identifiers. names_as_string cannot cover the expression-carrier difference. The theorem is untagged; exact-carrier production replacement is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

@@ -2591,11 +2591,34 @@ theorem compileToCrepHOL_eq_map
       this theorem: the theorem is a within-Lean lookup fact, and the HOL
       correspondence is reviewed by comparing the definitions (per SOUNDNESS),
       not established by the proof below. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- FLAPJACK-SPECIFIC (not an exact HOL port). Source-reviewed against HOL
+-- `alookup_compile_prog_code` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575-4586`),
+-- which states: `ALL_DISTINCT (MAP FST (functions pan_code)) /\
+-- ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) ==>
+-- ALOOKUP (compile_to_crep pan_code) start =
+--   SOME ([], comp_func (make_funcs (functions pan_code))
+--                       (get_eids_from_decls pan_code) [] prog)`.
+-- The Lean statement has the same premise/conclusion shape (Nodup + `List.lookup`
+-- for `ALL_DISTINCT`/`ALOOKUP`), but its carriers and compilation terms differ:
+--   * keyed by production `FunName`/`VarName`/`ExceptionId` = `String` (and the
+--     embedded `PanToCrepProofContext`/`PanToCrepHOLContext` `FiniteMap`s are
+--     `String`-keyed), while HOL keys by `funname`/`varname`/`eid` = `mlstring`;
+--   * `Prog (BitVec width)`/production `Shape` vs HOL's word-indexed `prog`/`shape`;
+--   * the body is `panToCrepCompFuncRiscV` (a `comp_func` after threading the
+--     context as a record) over `functionInfosHOL` rather than HOL's literal
+--     `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)`;
+--   * the width is a parameter with `[NeZero width]`, an executable condition HOL
+--     does not need.
+-- `names_as_string` cannot authorize the `Shape`/`Prog` carriers or the adapter
+-- terms, and no `NameRanged` byte witness applies (the conclusion is an `ALOOKUP`
+-- equation over compiled programs, not a name).  Direct HOL-EVAL rows are recorded
+-- in `scripts/hol-probes/crep_alookup_compile_probe.out`
+-- (`source_names_distinct=T`, `alookup_empty_params=T`, `alookup_param_entry=T`)
+-- and reproduced by `alookupGuard` plus the worked `example`s in
+-- `Flapjack/Test/PanToCrepCodeRelParity.lean:158-195` (registered at :440).
+-- The `docs/HOL-THEOREM-MAP.json` entry `alookup_compile_prog_code` ->
+-- `alookupCompileToCrepCode` is already `documented_mismatch`, so the tag stays
+-- WITHDRAWN.  The exact MlString carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem alookupCompileToCrepCode [NeZero width]
     (declarations : List (Decl (BitVec width)))

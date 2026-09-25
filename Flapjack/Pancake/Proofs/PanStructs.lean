@@ -415,10 +415,24 @@ theorem shapeSizeWithContext_drop (context : StructContext)
           have hctx := lookupInfo_drop_helper n context name info hlk hnodup
           simp [shapeSizeWithContext, hlk, hctx]
 
-/-- Exact API translation of HOL `struct_infos_ok_drop`
-    (`pan_structsProofScript.sml:169`): dropping a context prefix preserves
+/-- Production-carrier analogue of HOL `struct_infos_ok_drop`
+    (`pan_structsProofScript.sml:169-196`): dropping a context prefix preserves
     distinct field and structure names, suffix well-formedness, and sizes. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag):
+-- HOL `struct_infos_ok_drop` is
+-- `struct_infos_ok sh_ctxt ==> struct_infos_ok (DROP n sh_ctxt)`, with `sh_ctxt`
+-- the fields-only `(stcname # struct_info) list` whose `stcname`/`fldname` are
+-- `mlstring` and whose `struct_info = <| fields; size |>` has no cache. This
+-- statement is keyed by the production `StructContext = List (StructName × StructInfo)`,
+-- whose `StructName`/`FieldName` are `String` and whose `StructInfo` carries the
+-- extra `shapedFields` cache; that constructor-arity/field-type difference from
+-- HOL's `struct_info` goes beyond name representation, so the
+-- `(names_as_string := ...)` qualifier does not apply. The executable
+-- `structInfosOk` predicate is likewise the production analogue (see its own
+-- declaration-local note), not a tagged HOL port. The faithful MlString/ShapeHOL
+-- carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2).
+-- Evidence: HOL oracle row in scripts/hol-probes/afindi_probe.out; Lean fixture
+-- Flapjack.Test.PanStructsAfindiParity.structInfosOk_drop_fixture.
 theorem structInfosOk_drop (n : Nat) (context : StructContext)
     (h : structInfosOk context) : structInfosOk (context.drop n) := by
   obtain ⟨h1, h2, h3, h4⟩ := h

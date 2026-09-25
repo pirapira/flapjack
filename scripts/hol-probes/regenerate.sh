@@ -279,6 +279,10 @@ run_probe crep_to_loop_list_insert_probeScript.sml crep_to_loop_list_insert_prob
   li_mem_3 li_snoc_agrees \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_insert_insert_probeScript.sml crep_to_loop_insert_insert_probe.out \
+  iie_hit iie_agrees_deep \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -694,6 +698,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
   while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
   while_break_zero_eval while_break_label_eval while_continue_label_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
+  call_total_return_success call_total_return_destination call_total_missing_code \
+  call_total_wrong_arity call_total_timeout \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \

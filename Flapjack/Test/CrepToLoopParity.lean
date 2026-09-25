@@ -842,4 +842,41 @@ example (x : Nat) (ys : List Nat) (tree : NumSet) :
     sptListInsert (ys ++ [x]) tree = sptInsert x () (sptListInsert ys tree) :=
   sptListInsert_snoc x ys tree
 
+/-- HOL `insert_insert_eq` oracle rows (`iie_*` in
+    `scripts/hol-probes/crep_to_loop_insert_insert_probe.out`): inserting the
+    same key with the same value twice overwrites rather than duplicates, so
+    the inserted key reads back the value, a neighbouring key is preserved, and
+    the double insert agrees with the single insert. -/
+example : sptLookup 5 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) = some 7 := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 11 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat)))) =
+      some 7 := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 5 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 1 (Spt.ln : Spt Nat)))) =
+      some 1 := by
+  simp [sptLookup, sptInsert]
+
+example : sptLookup 4 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) = none := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 5 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) =
+      sptLookup 5 (sptInsert 5 7 (Spt.ln : Spt Nat)) := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 11 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat)))) =
+      sptLookup 11 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat))) := by
+  simp [sptLookup, sptInsert]
+
+/-- HOL `insert_insert_eq` (`crep_to_loopProofScript.sml:380`): inserting the
+    same key with the same value twice is the same as inserting it once. -/
+example {α : Type} (a : Nat) (b : α) (tree : Spt α) :
+    sptInsert a b (sptInsert a b tree) = sptInsert a b tree :=
+  sptInsert_insert_eq a b tree
+
 end Flapjack.Test.CrepToLoopParity

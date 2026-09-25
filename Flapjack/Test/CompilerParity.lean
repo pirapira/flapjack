@@ -29,6 +29,7 @@ import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity
 import Flapjack.Test.CrepSemTotalClockLeavesParity
+import Flapjack.Test.CrepSemTotalCallParity
 import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Test.CrepSemTotalAssignParity
 import Flapjack.Test.CrepSemTotalStoreParity
@@ -223,6 +224,8 @@ import Flapjack.Test.PanSemValueHOLParity
 import Flapjack.Test.PanSemStateExactParity
 import Flapjack.Test.PanSemLocalUpdatesExactParity
 import Flapjack.Test.PanSemIsValidValueExactParity
+import Flapjack.Test.PanSemDecExactParity
+import Flapjack.Test.PanSemAssignPrimitiveExactParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
@@ -873,6 +876,8 @@ def main : IO Unit := do
     Flapjack.Test.PanSemStateExactParity.runChecks,
     Flapjack.Test.PanSemLocalUpdatesExactParity.runChecks,
     Flapjack.Test.PanSemIsValidValueExactParity.runChecks,
+    Flapjack.Test.PanSemDecExactParity.runChecks,
+    Flapjack.Test.PanSemAssignPrimitiveExactParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
@@ -973,6 +978,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
     Flapjack.Test.CrepFuelCutoffParity.runChecks,
     Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
+    Flapjack.Test.CrepSemTotalCallParity.runChecks,
     Flapjack.Test.FfiHOLParity.runChecks,
     Flapjack.Test.CrepSemTotalAssignParity.runChecks,
     Flapjack.Test.FfiBridgeParity.runChecks,

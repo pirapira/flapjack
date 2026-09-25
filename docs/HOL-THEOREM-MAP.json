@@ -4734,8 +4734,8 @@
     "hol_name": "map_fst_eq_alookup",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "map_fst_eq_lookup",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison against pan_structsProofScript.sml:278. The direct HOL statement inference probe reports nm: α, xs: (α × β) list, ys: (α × γ) list, and v: β; Lean keeps the independent generic key and value types. Premises, existential afindi index, bounds, and selected-value/ALOOKUP conclusions match; Option.map Prod.snd is the indexed Lean API form of SND (EL i ...) under the bounds. Direct HOL rows (including Nat values in xs and Bool values in ys) and inferred types are in scripts/hol-probes/afindi_probe.out; matching Lean regressions are map_fst_eq_lookup_fixture and map_fst_eq_lookup_different_value_types_fixture in Flapjack/Test/PanStructsAfindiParity."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

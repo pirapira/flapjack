@@ -506,4 +506,19 @@ val _ = print_eval "while_error_condition"
           locals := FEMPTY; structs := []; clock := 5 |>)) of
       (res,s') => res``
 
+val _ = print_eval "dec_clock_step"
+  ``panSem$dec_clock ((ARB:((8),unit) panSem$state) with <| clock := 5 |>)``
+
+val _ = print_eval "fix_clock_clamps"
+  ``case panSem$fix_clock
+      ((ARB:((8),unit) panSem$state) with <| clock := 2 |>)
+      (NONE, ((ARB:((8),unit) panSem$state) with <| clock := 7 |>)) of
+      (res,s') => (res, s'.clock)``
+
+val _ = print_eval "fix_clock_keeps_new"
+  ``case panSem$fix_clock
+      ((ARB:((8),unit) panSem$state) with <| clock := 9 |>)
+      (NONE, ((ARB:((8),unit) panSem$state) with <| clock := 4 |>)) of
+      (res,s') => (res, s'.clock)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

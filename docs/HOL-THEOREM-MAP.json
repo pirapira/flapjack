@@ -4457,6 +4457,22 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
+    "lean_name": "decClockHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL dec_clock s = s with clock := s.clock - 1 ported over the word-indexed HOL-shaped source state PanSemHolState; direct HOL row dec_clock_step=<|clock := 4|>)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "fix_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
+    "lean_name": "fixClockHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL fix_clock clamps the returned clock to min(old,new) and threads res through; result-polymorphic in beta exactly as HOL leaves res unconstrained; direct HOL rows fix_clock_clamps=(NONE,2), fix_clock_keeps_new=(NONE,4))"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",
@@ -8384,14 +8400,6 @@
     "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of mem_load_def crepSemScript.sml:48-52 at 'a := BitVec width: mem_load addr s = if addr IN s.memaddrs then SOME (s.memory addr) else NONE, with membership rendered as the memaddrs Bool map. Generic-alpha memLoadCrepHol stays untagged as production's form; kernel bridge memLoadCrepHolW_eq_memLoadCrepHol; direct HOL oracle and Lean guards unchanged) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
-    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
-    "hol_name": "lookup_code_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
-    "lean_name": "lookupCrepHolCodeW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field lookup_code_def port crepSemScript.sml:76-84 at 'a := BitVec width: FLOOKUP code fname, same-length duplicate-free parameter list, body with locals FEMPTY |++ ZIP (parameters,args); NO key-equality assumption (HOL has none and the lookup is plain function application / List.Nodup); defined as the width-specialized production lookupCrepHolCode so kernel bridge lookupCrepHolCodeW_eq_lookupCrepHolCode is rfl; generic-alpha lookupCrepHolCode untagged; executed lookupCrepRuntimeCode adapter documented separately; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "distinct_funcs_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
@@ -9132,7 +9140,55 @@
     "hol_name": "prog",
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "HolLoopProg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
-  }
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-two (independent HOL/Lean comparison: all 24 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
+  },
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "left_shift_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "leftShiftInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "right_shift_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "rightShiftInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "const_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "constInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "load_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "loadInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "store_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "storeInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "halt_inst_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "haltInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

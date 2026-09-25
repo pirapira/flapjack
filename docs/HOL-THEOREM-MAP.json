@@ -4397,7 +4397,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "decClockHOLExact",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$dec_clock (panSemScript.sml:441) = s with clock := s.clock - 1, over the exact MlString-keyed PanSemStateExact carrier; direct HOL row dec_clock_step (clock 5 -> 4) in pan_sem_e2e_probe.out reproduced by PanSemStateExactParity)"
+    "reviewer": "Codex (source comparison; HOL panSem$dec_clock (panSemScript.sml:441) = s with clock := s.clock - 1, over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL row dec_clock_step (clock 5 -> 4) in pan_sem_e2e_probe.out reproduced by PanSemStateExactParity)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -4405,7 +4405,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "fixClockHOLExact",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$fix_clock (panSemScript.sml:446) = (res, new_s with clock := min old_s.clock new_s.clock), result-polymorphic as HOL leaves res unconstrained, over the exact MlString-keyed PanSemStateExact carrier; direct HOL rows fix_clock_clamps and fix_clock_keeps_new reproduced by PanSemStateExactParity)"
+    "reviewer": "Codex (source comparison; HOL panSem$fix_clock (panSemScript.sml:446) = (res, new_s with clock := min old_s.clock new_s.clock), result-polymorphic as HOL leaves res unconstrained, over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL rows fix_clock_clamps and fix_clock_keeps_new reproduced by PanSemStateExactParity)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -4413,7 +4413,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$lookup_kvar (panSemScript.sml:415) Local -> locals, Global -> globals over the exact MlString-keyed PanSemStateExact carrier; direct HOL rows lookup_kvar_local/global/missing reproduced by PanSemStateExactParity)"
+    "reviewer": "Codex (source comparison; HOL panSem$lookup_kvar (panSemScript.sml:415) Local -> locals, Global -> globals over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL rows lookup_kvar_local/global/missing reproduced by PanSemStateExactParity)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -4421,7 +4421,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "setKvarHOLExact",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$set_kvar (panSemScript.sml:408) Local -> set_var, Global -> set_global, with the =-based finite-map update over the exact MlString-keyed PanSemStateExact carrier; PanSemStateExactParity checks set-then-lookup round trip)"
+    "reviewer": "Codex (source comparison; HOL panSem$set_kvar (panSemScript.sml:408) Local -> set_var, Global -> set_global, with the =-based finite-map update over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); PanSemStateExactParity checks set-then-lookup round trip)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

@@ -1,5 +1,5 @@
 import Flapjack.HolRef
-import Flapjack.Ffi
+import Flapjack.FfiHOL
 import Flapjack.RiscV.Model
 import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
@@ -57,7 +57,8 @@ open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL)
     `funname` to its parameter list, body `prog` and return shape, `eshapes` maps
     an exception identifier to a shape, `memory` is a total `'a word -> 'a
     word_lab` map, `memaddrs`/`sh_memaddrs` are word sets (here `Prop` with
-    decidability supplied at use sites), and `base_addr`/`top_addr` are words.
+    decidability supplied at use sites), `ffi` is the exact HOL `'ffi ffi_state`
+    carrier (`Flapjack.HolFfiState σ`), and `base_addr`/`top_addr` are words.
     The positive-width constraint mirrors HOL's positive `dimindex`, matching the
     `ProgHOL`/`ValueHOL` carriers. -/
 structure PanSemStateExact (width : Nat) (σ : Type) [NeZero width] where
@@ -71,7 +72,7 @@ structure PanSemStateExact (width : Nat) (σ : Type) [NeZero width] where
   shMemaddrs : RiscV.Word width → Prop
   clock : Nat
   be : Bool
-  ffi : FfiState σ
+  ffi : HolFfiState σ
   baseAddr : RiscV.Word width
   topAddr : RiscV.Word width
 

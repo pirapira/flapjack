@@ -29,7 +29,7 @@ def exactState : PanSemStateExact 64 Unit where
   shMemaddrs := fun _ => False
   clock := 5
   be := false
-  ffi := { oracle := fun _ _ _ _ => .final .failed, state := (), ioEvents := [] }
+  ffi := { oracle := fun _ _ _ _ => .final .failed, ffiState := (), ioEvents := [] }
   baseAddr := 0
   topAddr := 100
 

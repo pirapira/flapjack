@@ -1074,4 +1074,86 @@ def fixClockHOL {width : Nat} [NeZero width] {β : Type} (oldState : PanSemHolSt
   (step.1, { step.2 with
     clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
+/-! ## Total `DecCall` clause composition step (flapjack-pxn.18.4.3.77.13)
+
+`panSemTotalDecCallStep` mirrors the HOL `DecCall` case of `evaluate_def`
+(`cakeml/pancake/semantics/panSemScript.sml:679-706`): evaluate the arguments,
+look the callee up, raise a timeout at clock zero, otherwise evaluate the body
+on the decremented state with the callee's locals and the clock clamped by
+`fix_clock`, then handle the body outcome. It is UNTAGGED (carrier-safe
+infrastructure, no `@[hol]` claim): HOL's `varname`/`funname` are `mlstring`
+while Lean uses `String`. -/
+
+/-- HOL `DecCall` (`panSemScript.sml:679-706`). The arguments, the callee
+    lookup result, the result binding name/shape, the continuation program, and
+    the recursive evaluator are all supplied explicitly, so the step is a pure
+    composition. On a `Return` whose shape matches both the declared result
+    shape and the callee's return shape, the continuation runs on the bound
+    result and the previous local binding of the result name is restored with
+    `res_var`. -/
+def panSemTotalDecCallStep [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ))
+    (evaluatedArguments : Option (List (PanValue α)))
+    (lookup : Option (Prog α × (VarName → Option (PanValue α)) × Shape))
+    (resultName : VarName) (resultShape : Shape) (continuation : Prog α)
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match evaluatedArguments, lookup with
+  | some _, some (body, newLocals, returnShape) =>
+      if state.clock = 0 then (some .timeOut, panEmptyLocals state)
+      else
+        let entry : PanSemState α (FfiState σ) :=
+          { state with clock := state.clock - 1, locals := newLocals }
+        let bodyResult := evaluate body entry
+        let fixed : Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+          (bodyResult.1, panSemFixClock entry.clock bodyResult.2)
+        match fixed.1 with
+        | none => (some .error, fixed.2)
+        | some .break => (some .error, fixed.2)
+        | some .continue => (some .error, fixed.2)
+        | some (.returned value) =>
+            if panShapeMatches resultShape (panSemShapeOf value) &&
+                panShapeMatches resultShape returnShape then
+              let bound : PanSemState α (FfiState σ) :=
+                { fixed.2 with
+                  locals := updatePanValueMap state.locals resultName value }
+              let continuationResult := evaluate continuation bound
+              (continuationResult.1,
+                { continuationResult.2 with
+                  locals := resVar continuationResult.2.locals
+                    (resultName, state.locals resultName) })
+            else (some .error, fixed.2)
+        | some other => (some other, panEmptyLocals fixed.2)
+  | _, _ => (some .error, state)
+
+@[simp] theorem panSemTotalDecCallStep_none_args [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ))
+    (lookup : Option (Prog α × (VarName → Option (PanValue α)) × Shape))
+    (resultName : VarName) (resultShape : Shape) (continuation : Prog α)
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalDecCallStep state none lookup resultName resultShape continuation evaluate =
+      (some .error, state) := rfl
+
+@[simp] theorem panSemTotalDecCallStep_none_lookup [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ)) (arguments : List (PanValue α))
+    (resultName : VarName) (resultShape : Shape) (continuation : Prog α)
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalDecCallStep state (some arguments) none resultName resultShape
+      continuation evaluate = (some .error, state) := rfl
+
+theorem panSemTotalDecCallStep_timeout [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ)) (arguments : List (PanValue α))
+    (body : Prog α) (newLocals : VarName → Option (PanValue α)) (returnShape : Shape)
+    (resultName : VarName) (resultShape : Shape) (continuation : Prog α)
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (hclock : state.clock = 0) :
+    panSemTotalDecCallStep state (some arguments) (some (body, newLocals, returnShape))
+        resultName resultShape continuation evaluate =
+      (some .timeOut, panEmptyLocals state) := by
+  simp [panSemTotalDecCallStep, hclock]
+
 end Flapjack

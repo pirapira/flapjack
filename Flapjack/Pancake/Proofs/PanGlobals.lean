@@ -920,8 +920,8 @@ theorem compile_decs_decls_thm_cake [LawfulBEq String] {width : Nat} [NeZero wid
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `compile_decs_EVERY_is_function`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1977`) for the canonical
-    word context: every returned declaration is a function.  Exactness follows
-    from the tagged `compileDecsCake`; the finite-map representation caveat and
+    word context: every returned declaration is a function.  The result uses
+    the untagged, HOL-clause-shaped `compileDecsCake`; its carrier caveat and
     `[NeZero width]` are as in `compile_decs_decls_thm_cake`. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
@@ -945,8 +945,8 @@ theorem compile_decs_EVERY_is_function_cake [LawfulBEq String] {width : Nat} [Ne
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `compile_decls_append`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1997`) for the canonical
     word context: the second declaration list runs under the context reached by
-    the first, and the output lists/context append.  Exactness follows from the
-    tagged `compileDecsCake`; the finite-map representation caveat and
+    the first, and the output lists/context append.  The result uses the
+    untagged, HOL-clause-shaped `compileDecsCake`; its carrier caveat and
     `[NeZero width]` are as in `compile_decs_decls_thm_cake`. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`

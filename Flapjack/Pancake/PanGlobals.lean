@@ -1939,10 +1939,16 @@ theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
     `Const 0w`, and `TopAddr` becomes `Op Sub [TopAddr; Const max_globals_size]`.
     Clause review against the HOL definition is recorded on
     `flapjack-pxn.18.5.2.20.1.1`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): `CakeContext.globals` is keyed by
--- production `String` and `Exp`/`Prog`/`Decl` names are `String`, while HOL
--- `pan_globalsScript.sml` keys `ctxt.globals` by `mlstring`. The exact MlString
--- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `compile_decs_def` returns a
+-- four-tuple of initializers, function declarations, exception declarations,
+-- and context; `CakeCompileDecsResult` names those same four projections.
+-- But HOL's context map, declaration names, expression names, and compiled
+-- program names use `mlstring` and its word-indexed `decl`/`exp`/`prog`
+-- carriers. Here `CakeContext.globals` and production `Decl`/`Exp`/`Prog`
+-- use `String` names. The direct HOL probe and Lean parity tests check the
+-- five branches and context threading on selected examples, not equivalence
+-- of these carriers. Consequently the `@[hol]` tag is withheld; exact-carrier
+-- replacement is tracked by `flapjack-pxn.18.3.5.8` (parent
 -- `flapjack-pxn.18.3.5.7.2`).
 def compileExpCake {width : Nat} [NeZero width] (context : CakeContext width) :
     Exp (BitVec width) → Exp (BitVec width)

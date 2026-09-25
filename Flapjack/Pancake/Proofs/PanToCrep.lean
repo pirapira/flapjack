@@ -2870,21 +2870,32 @@ theorem mkCtxtCodeImpCodeRelW [NeZero width] (declarations : List (Decl (BitVec 
   (codeRelW_iff_codeRel width _ _ _).mpr
     (mkCtxtCodeImpCodeRel declarations _hdistinct hlocalised)
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `el_compile_prog_el_prog_eq`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
-    entry at index `n` comes from the source table at the same index, with
-    identical name, empty argument slots, body and return shape.  `List.get?`
-    is the bounded form of HOL `EL` (the same `n < length` hypothesis is
-    present), and `lookupFunctionEntry` is HOL `ALOOKUP` on the
-    `(name, params, body, rshape)` projection.  The HOL-vs-Lean equivalence of
-    the statement is reviewed by comparing the definitions (per SOUNDNESS), not
-    proved by this theorem, which is a within-Lean indexed-table fact. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `el_compile_prog_el_prog_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589-4599`): if the
+    compiled table's entry at index `n` is `(start, [], cprog)`, the source
+    names are distinct, `n` is in range, and the source table maps `start` to
+    `([], p, rshape)`, then the source entry at `n` is exactly
+    `(start, [], p, rshape)`.  The HOL `EL`/`ALL_DISTINCT`/`LENGTH`/`ALOOKUP`
+    hypotheses appear here as the bounded `[n]?`, `Nodup`, `length`, and
+    `lookupFunctionEntry`; the conclusion is the same indexed-table fact.  The
+    HOL-vs-Lean equivalence of the statement is reviewed by comparing the
+    definitions (per SOUNDNESS), not proved by this theorem.
+    Direct HOL-EVAL rows are recorded in
+    `scripts/hol-probes/crep_el_compile_probe.out` (`source_el_f=T`,
+    `alookup_f=T`, `compiled_el_f=T`) and exercised by the `elCompileGuard`
+    fixture and the worked `example` in
+    `Flapjack/Test/PanToCrepCodeRelParity.lean:190-212`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port), source-reviewed: the statement is
+-- keyed by the production identifiers `FunName`/`VarName`/`ExceptionId` =
+-- `String` (or embeds a `PanToCrepProofContext`/`PanToCrepHOLContext` whose
+-- `FiniteMap`s are `String`-keyed), while HOL `pan_to_crepProofScript.sml` keys
+-- names by `funname`/`varname`/`eid` = `mlstring`; the `Decl (BitVec width)`
+-- list uses production `Shape` (`named : String`) rather than HOL word-indexed
+-- `decl`/`shape`.  `names_as_string` cannot authorize the `Decl`/`Shape`/program
+-- carriers, and no `NameRanged` byte witness applies (the conclusion is an
+-- indexed-table equality, not a name).  The exact MlString carrier is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem elCompileToCrepElProgEq [NeZero width]
     (declarations : List (Decl (BitVec width))) (n : Nat) (start : FunName)
     (cprog : CrepProg (BitVec width)) (p : Prog (BitVec width)) (rshape : Shape)

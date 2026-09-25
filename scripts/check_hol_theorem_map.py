@@ -130,8 +130,9 @@ DOCUMENTED_MISMATCHES = {
         "over the exact v/word_lab carrier, unspecified on other constructors. "
         "holValueWord (PanSemStateEval.lean:1362) totalizes to 0 on non-word "
         "inputs and is over the String-backed HolValue width (word carrier "
-        "HolWordLab). Not statement-exact; tag withheld. Faithful-port "
-        "dependency flapjack-0lj.5 (umbrella flapjack-pxn.18.3.5.8). "
+        "HolWordLab). Not statement-exact; tag withheld. HOL's unspecified "
+        "branch needs separate review (flapjack-yaq); positive-width carrier "
+        "work remains flapjack-0lj.5 (umbrella flapjack-pxn.18.3.5.8). "
     ),
     ("Flapjack/Pancake/Semantics/PanSem.lean", "HolWordLab"): (
         "cakeml/pancake/semantics/panSemScript.sml",

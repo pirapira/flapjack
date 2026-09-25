@@ -2000,6 +2000,14 @@
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.17): HOL functions (cakeml/pancake/panLangScript.sml:319-326) projects top-level Function declarations in source order, returning (fi.name,fi.params,fi.body,fi.return) and dropping Decl/ExnDecl/Name. functionsHOL matches clause-for-clause over the exact DeclHOL/FunDeclHOL carriers: MlS names, List (MlS x ShapeHOL) params, ProgHOL width bodies, ShapeHOL returns, with [NeZero width] matching HOL's positive word type. Direct HOL rows functions_empty/functions_function/functions_global in scripts/hol-probes/pan_globals_mem_functions_probe.out (and pan_lang_functions_probe.out) are replayed on the exact carriers in Flapjack/Test/PanGlobalsMemFunctionsHOLParity.lean. Production functionEntries/functions (String and generic Prog a) stay untagged."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "exceptions_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "exceptionsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.44): HOL exceptions (cakeml/pancake/panLangScript.sml:328-333) projects top-level ExnDecl entries in source order, returning (eid,sh) and dropping Function/Decl/Name. exceptionsHOL matches clause-for-clause over the exact DeclHOL carrier: the exception id is MlS and the shape ShapeHOL, with [NeZero width] matching HOL's positive word type. Direct HOL-EVAL rows empty/exception in scripts/hol-probes/pan_lang_exceptions_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangExceptionsParity.lean, and the kernel-checked exceptionsHOL_map_paramOfHOL bridges the result to production exceptionEntries. Production exceptionEntries (String and monomorphic Shape) stays untagged."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "MEM_functions",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

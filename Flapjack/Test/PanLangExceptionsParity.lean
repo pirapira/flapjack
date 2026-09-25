@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 # Pancake `exceptions` parity
@@ -29,5 +30,24 @@ def parityGuard : Bool :=
   "cakeml/pancake/panLangScript.sml:328-337 (exceptions_def)"
 #eval parityGuard
 #guard parityGuard
+
+/-! Exact-carrier parity: `exceptionsHOL` over the faithful `DeclHOL` carrier
+replays the same HOL-EVAL rows. -/
+
+open Flapjack.Pancake.PanLang
+open Flapjack.Basis.Pure.MlString
+
+def exceptionDeclHOL : DeclHOL 8 :=
+  .exnDecl (ofString "E") (.comb [.one, .one])
+
+#guard (exceptionsHOL ([] : List (DeclHOL 8))).length == 0
+#guard (exceptionsHOL [exceptionDeclHOL]).length == 1
+
+/-- HOL-EVAL oracle row `empty=[]`. -/
+example : exceptionsHOL ([] : List (DeclHOL 8)) = [] := rfl
+
+/-- HOL-EVAL oracle row `exception=[(«E»,Comb [One; One])]`. -/
+example : exceptionsHOL [exceptionDeclHOL] =
+    [(ofString "E", ShapeHOL.comb [ShapeHOL.one, ShapeHOL.one])] := rfl
 
 end Flapjack.Test.PanLangExceptionsParity

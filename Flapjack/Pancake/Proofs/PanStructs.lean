@@ -297,8 +297,8 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
     The statement otherwise has HOL's two premises and equality conclusion;
     the exact context-sensitive size definition already exists as
     `sizeOfShapeWithContextHOL`, but the drop theorem over exact carriers is
-    still missing. Exact MlString carrier and bridge work is tracked by
-    `flapjack-pxn.18.3.5.8`. -/
+    still missing; the exact theorem is tracked by
+    `flapjack-pxn.18.3.5.8.16` under the exact-carrier work. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)

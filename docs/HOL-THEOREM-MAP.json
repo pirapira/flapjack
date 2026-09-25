@@ -1984,6 +1984,22 @@
     "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "functions_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "functionsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.17): HOL functions (cakeml/pancake/panLangScript.sml:319-326) projects top-level Function declarations in source order, returning (fi.name,fi.params,fi.body,fi.return) and dropping Decl/ExnDecl/Name. functionsHOL matches clause-for-clause over the exact DeclHOL/FunDeclHOL carriers: MlS names, List (MlS x ShapeHOL) params, ProgHOL width bodies, ShapeHOL returns, with [NeZero width] matching HOL's positive word type. Direct HOL rows functions_empty/functions_function/functions_global in scripts/hol-probes/pan_globals_mem_functions_probe.out (and pan_lang_functions_probe.out) are replayed on the exact carriers in Flapjack/Test/PanGlobalsMemFunctionsHOLParity.lean. Production functionEntries/functions (String and generic Prog a) stay untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "MEM_functions",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "MEM_functionsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.17): HOL MEM_functions[local] (pan_globalsProofScript.sml:2380-2387) states MEM t (functions decs) ==> exists fi. MEM (Function fi) decs and t = (fi.name,fi.params,fi.body,fi.return). MEM_functionsHOL matches the implication shape over the exact DeclHOL/FunDeclHOL/functionsHOL carriers with MlS/ShapeHOL/ProgHOL width. HOL declares it [local] so it has no theory-database name; scripts/hol-probes/pan_globals_mem_functions_probe.out records the underlying functions projection and the membership instance the theorem characterizes, replayed in Flapjack/Test/PanGlobalsMemFunctionsHOLParity.lean. Production MEM_functions stays documented_mismatch."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "fperm_name_cancel",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

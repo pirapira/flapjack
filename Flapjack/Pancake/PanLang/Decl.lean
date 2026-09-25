@@ -154,6 +154,25 @@ def structInfoToHOL (d : Flapjack.StructInfoHOL) : StructInfoHOLExact :=
   obtain ⟨fields, size⟩ := d
   simp [structInfoToHOL, structInfoOfHOL, listParamToHOL_paramOfHOL]
 
+/-- Exact port of HOL `panLang$functions` (`panLangScript.sml:319-326`):
+`functions` projects the top-level function declarations of a program in source
+order, returning `(name, params, body, return)` for each `Function` and dropping
+`Decl`/`ExnDecl`/`Name` entries.  Names use `MlS`, shapes use `ShapeHOL`, and
+bodies use the word-indexed `ProgHOL width`, so this is an exact word-indexed
+port (the production `functionEntries`/`functions` use Lean `String` and generic
+`Prog α`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "functions_def"]
+def functionsHOL {width : Nat} [NeZero width] :
+    List (DeclHOL width) →
+      List (MlS × List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionsHOL declarations
+  | .decl _ _ _ :: declarations => functionsHOL declarations
+  | .exnDecl _ _ :: declarations => functionsHOL declarations
+  | .name _ _ :: declarations => functionsHOL declarations
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production

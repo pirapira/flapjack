@@ -58,6 +58,39 @@ example : expHdl [("x", (.comb [.one, .one], [1, 2]))] "x"
   expHdl_eq_assignRet_of_lookupInfo (shape := .comb [.one, .one])
     (by simp [lookupInfo])
 
+/-! ## Exact-carrier HOL-parity checks
+
+The tagged exact `retHdlHOL` over `ShapeHOL` reproduces the same HOL-EVAL rows
+`one`/`comb_empty`/`comb_one`/`comb_two`/`named`, and the kernel bridge
+`crepProgToHOL_retHdl` carries the production `retHdl` onto it. -/
+
+def isSkipHOL (program : CrepProgHOL 64) : Bool :=
+  match program with
+  | .skip => true
+  | _ => false
+
+def isTwoWordAssignHOL (program : CrepProgHOL 64) : Bool :=
+  match program with
+  | .seq (.assign 1 (.loadGlob 0))
+      (.seq (.assign 2 (.loadGlob 1)) .skip) => true
+  | _ => false
+
+#guard isSkipHOL (retHdlHOL (width := 64) .one [])
+#guard isSkipHOL (retHdlHOL (width := 64) (.comb []) [])
+#guard isSkipHOL (retHdlHOL (width := 64) (.comb [.one]) [1])
+#guard isTwoWordAssignHOL (retHdlHOL (width := 64) (.comb [.one, .one]) [1, 2])
+#guard isSkipHOL
+  (retHdlHOL (width := 64)
+    (.named (Flapjack.Basis.Pure.MlString.ofString "S")) [1])
+
+example (shape : Flapjack.Shape) (names : List Nat) :
+    crepProgToHOL (retHdl (α := BitVec 64) shape names) =
+      retHdlHOL (Flapjack.Pancake.PanLang.shapeToHOL shape) names :=
+  crepProgToHOL_retHdl shape names
+
+example : crepProgToHOL (assignRet (α := BitVec 64) [1, 2]) = assignRetHOL [1, 2] :=
+  crepProgToHOL_assignRet [1, 2]
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS ret_hdl One/Comb/Named parity"

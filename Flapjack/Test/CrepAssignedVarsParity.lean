@@ -69,6 +69,54 @@ example : crepAssignedFreeVars parityNested = [1, 2] :=
   crepAssignedFreeVars_nestedSeq_assign_zipWith [1, 2]
     [CrepExp.const (1 : Nat), CrepExp.const 2] (by decide)
 
+/-- Exact-carrier (`CrepProgHOL`) sampling of the HOL rows `nested_av=[1; 2]`
+    and `nested_afv=[1; 2]` in `scripts/hol-probes/crep_assigned_vars_probe.out`. -/
+example : crepAssignedVarsHOL
+    (crepNestedSeqHOL
+      ([1, 2].zipWith (fun name value => CrepProgHOL.assign name value)
+        [.const (1 : BitVec 64), .const (2 : BitVec 64)])) = [1, 2] :=
+  crepAssignedVarsHOL_nestedSeq_assign_zipWith [1, 2]
+    [.const (1 : BitVec 64), .const (2 : BitVec 64)] (by decide)
+
+example : crepAssignedFreeVarsHOL
+    (crepNestedSeqHOL
+      ([1, 2].zipWith (fun name value => CrepProgHOL.assign name value)
+        [.const (1 : BitVec 64), .const (2 : BitVec 64)])) = [1, 2] :=
+  crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith [1, 2]
+    [.const (1 : BitVec 64), .const (2 : BitVec 64)] (by decide)
+
+/-- Width-indexed production programme used to exercise the kernel bridges. -/
+def parityNestedW : CrepProg (BitVec 64) :=
+  crepNestedSeq
+    ([1, 2].zipWith (fun name value => CrepProg.assign name value)
+      [CrepExp.const (1 : BitVec 64), CrepExp.const 2])
+
+/-- The kernel bridges relate the exact helpers to the executable ones. -/
+example : crepAssignedVarsHOL (crepProgToHOL parityNestedW) =
+    crepAssignedVars parityNestedW :=
+  crepProgToHOL_crepAssignedVars parityNestedW
+
+example : crepAssignedFreeVarsHOL (crepProgToHOL parityNestedW) =
+    crepAssignedFreeVars parityNestedW :=
+  crepProgToHOL_crepAssignedFreeVars parityNestedW
+
+/-- The exact `assigned_free_vars_IMP_assigned_vars` port over `CrepProgHOL` and
+    its production bridge, exercising the transferred membership. -/
+example : 2 ∈ crepAssignedVarsHOL
+    (crepNestedSeqHOL
+      ([1, 2].zipWith (fun name value => CrepProgHOL.assign name value)
+        [.const (1 : BitVec 64), .const (2 : BitVec 64)])) :=
+  crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL _ 2 (by
+    rw [crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith [1, 2]
+      [.const (1 : BitVec 64), .const (2 : BitVec 64)] (by decide)]
+    decide)
+
+example : 2 ∈ crepAssignedVars parityNestedW :=
+  crepAssignedFreeVars_imp_crepAssignedVars_via_HOL parityNestedW 2 (by
+    rw [parityNestedW, crepAssignedFreeVars_nestedSeq_assign_zipWith [1, 2]
+      [CrepExp.const (1 : BitVec 64), CrepExp.const 2] (by decide)]
+    decide)
+
 /-- Width-indexed `W`-wrapper spot checks (beads `.18.4.3.85`): each HOL
     crepProps theorem restated over `CrepProg (BitVec 64)`/`CrepExp (BitVec 64)`. -/
 example : ((List.range 3).map (CrepExp.var (α := BitVec 64))).flatMap crepExpVarsW =

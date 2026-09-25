@@ -400,11 +400,13 @@ mutual
                         let sourceReturnValid := match values with
                           | [value] => panShapeMatches (panValueShape structs value) returnShape
                           | _ => false
-                        if sourceReturnValid &&
-                            -- HOL `Call` checks only `shape_of retv <> return_sh`; the
-                            -- payload-size limit is enforced by the callee's `Return`
-                            -- equation, so no separate size test is needed here.
-                            panValueReturnValid structs contracts function values then
+                        if sourceReturnValid then
+                          -- The source code entry supplies `returnShape`; HOL
+                          -- Call checks that shape directly. `contracts` is a
+                          -- compatibility input and is not part of the HOL
+                          -- state, so it must not impose a second return-shape
+                          -- check here. The payload-size limit is enforced by
+                          -- the callee's `Return` equation.
                           match info with
                           | none =>
                               let returnedLocals :=

@@ -182,6 +182,22 @@ def evaluateSourceCallId :=
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
 
+/-! The original code-map Call oracle's return shape comes from the entry in
+`state.code`. The generic Lean evaluator also accepts optional compatibility
+contracts, but those are not a HOL state field and must not override that
+source return shape. -/
+def sourceConflictingReturnContracts : PanValueCallContracts :=
+  { returnShapes := [("id", .comb [.one, .one])]
+    exceptionShapes := []
+    parameterShapes := [("id", [("x", .one)])] }
+
+def evaluateSourceCallWithConflictingReturnContract :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceIdCode)
+    (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
+    (contracts := some sourceConflictingReturnContracts)
+
 def evaluateSourceCallStructArgument :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -283,6 +299,14 @@ def evaluateSourceDecCallId :=
     (emptyPanSourceState 10 sourceIdCode)
     (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
       (.return (.var .local "answer")) : Prog Word64)
+
+def evaluateSourceDecCallWithConflictingReturnContract :=
+  panSemEvaluateCodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    (emptyPanSourceState 10 sourceIdCode)
+    (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
+      (.return (.var .local "answer")) : Prog Word64)
+    (contracts := some sourceConflictingReturnContracts)
 
 /-- Direct HOL row `deccall_tick_restores_existing_local`: the source code-map
 DecCall returns from `id`, runs a non-Skip Tick continuation, decrements the
@@ -463,6 +487,9 @@ private def isSourceTimeoutAt
 def observeSourceCodeCall := isSourceReturnedWord evaluateSourceCallId
   (BitVec.ofNat 64 7) 9
 
+def observeSourceCallUsesCodeReturnShape := isSourceReturnedWord
+  evaluateSourceCallWithConflictingReturnContract (BitVec.ofNat 64 7) 9
+
 def observeSourceCallStructArgument : Bool :=
   match evaluateSourceCallStructArgument with
   | some (.control (.returned _ _ _ _ [.rStruct [.word left, .word right]]), 9) =>
@@ -531,6 +558,9 @@ def observeSourceCallHandlesPairException : Bool :=
 
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
+
+def observeSourceDecCallUsesCodeReturnShape := isSourceReturnedWord
+  evaluateSourceDecCallWithConflictingReturnContract (BitVec.ofNat 64 7) 9
 
 def observeSourceDecCallTick : Bool :=
   match evaluateSourceDecCallTick with
@@ -664,6 +694,7 @@ def observeSourceDecCallBadArgument :=
   isSourceErrorPreservingX evaluateSourceDecCallBadArgument 10
 
 #guard observeSourceCodeCall
+#guard observeSourceCallUsesCodeReturnShape
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
 #guard observeSourceCallAssigned
@@ -674,6 +705,7 @@ def observeSourceDecCallBadArgument :=
 #guard observeSourceCallStructFieldRField
 #guard observeSourceCallNestedStructFieldRField
 #guard observeSourceCodeDecCall
+#guard observeSourceDecCallUsesCodeReturnShape
 #guard observeSourceDecCallTick
 #guard observeSourceNestedCodeCall
 #guard observeSourceNestedOrdinaryCall
@@ -1000,6 +1032,9 @@ def runChecks : IO Bool := do
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
   if observeSourceCodeCall then IO.println "PASS state-owned code Call matches HOL call_code_map_7" else
     IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
+  if observeSourceCallUsesCodeReturnShape then
+    IO.println "PASS source Call return validation follows the state code entry"
+  else IO.println "FAIL source Call return validation follows the state code entry"
   if observeSourceCallStructArgument then
     IO.println "PASS state-owned Call binds and returns a structured argument like HOL"
   else IO.println "FAIL state-owned Call binds and returns a structured argument like HOL"
@@ -1032,6 +1067,9 @@ def runChecks : IO Bool := do
   else IO.println "FAIL state-owned Call recursively compiles nested records with an RField field like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
+  if observeSourceDecCallUsesCodeReturnShape then
+    IO.println "PASS source DecCall return validation follows the state code entry"
+  else IO.println "FAIL source DecCall return validation follows the state code entry"
   if observeSourceDecCallTick then
     IO.println "PASS state-owned DecCall Tick continuation matches direct HOL clock/local row"
   else IO.println "FAIL state-owned DecCall Tick continuation matches direct HOL clock/local row"
@@ -1107,10 +1145,11 @@ def runChecks : IO Bool := do
   if observeShMemStoreDomainFailure then IO.println "PASS evaluate ShMemStore rejects shared-domain miss with Error" else
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
-    observeSourceCodeCall && observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
+    observeSourceCodeCall && observeSourceCallUsesCodeReturnShape &&
+    observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
     observeSourceCallMiddlePairField &&
     observeSourceCallConstructedMiddlePairField &&
-    observeSourceCodeDecCall &&
+    observeSourceCodeDecCall && observeSourceDecCallUsesCodeReturnShape &&
     observeSourceNestedDecCall &&
     observeSourceNestedCodeCall &&
     observeSourceNestedOrdinaryCall &&

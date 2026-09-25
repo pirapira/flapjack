@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -430,6 +431,19 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
 -- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
 -- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
+--
+-- Clause-by-clause review (flapjack-6nn.1.1):
+--   HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
+--   Lean `if source == name then target else if target == name then source
+--   else name`.  The clauses, branch order and result names match exactly;
+--   the `[LawfulBEq String]` instance makes `==` reflect HOL `=`, so it adds
+--   no mathematical content.  `globalRenameFunctionName` only compares and
+--   swaps names, never inspects their bytes; every use is equality/`map`-key
+--   only, so the `String`/`mlstring` carrier difference is unobservable here.
+--   Direct HOL/Lean edge-case fixtures: `scripts/hol-probes/
+--   pan_globals_fperm_name_probe.out` and `Flapjack/Test/
+--   PanGlobalsFpermNameParity.lean`.  The qualifier is applied in
+--   flapjack-6nn.1 once the `flapjack-an4.3` checker gates land.
 def globalRenameFunctionName [LawfulBEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name
@@ -831,6 +845,91 @@ theorem globalNewMainName_not_mem
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   freshNameHOL_not_mem "main" (globalFunctionNames declarations)
+
+/-! ## `holMlStringWitness_*`: same-module byte-boundary witnesses
+
+The `names_as_string` qualifier (`Flapjack/HolRef.lean`) records Lean `String`
+fields standing for HOL `mlstring` names.  Declarations tagged with it are
+expected to carry a checked `holMlStringWitness_*` witness **in the same
+module**, establishing the byte-range condition of the generated names.  HOL
+`mlstring` is a list of 8-bit characters, so a generated name must never contain
+a code point `>= 256`; `Flapjack.Pancake.PanLang.NameRanged` is exactly that
+condition (and is definitionally the parser-chain `StringByteRanged`).
+
+The witnesses below are premise-aware: `freshNameHOL`, `globalFreshNameAux`, and
+`globalFreshName` may append apostrophes to an input name, so they preserve
+byte-rangedness only when the input name is byte-ranged.  `globalNewMainName`
+starts from the literal `"main"` and therefore needs no premise.  These are the
+same-module witnesses consumed by the `names_as_string` checker tooling
+(`flapjack-an4`). -/
+
+private theorem nameRanged_append {s₁ s₂ : String}
+    (h₁ : Flapjack.Pancake.PanLang.NameRanged s₁)
+    (h₂ : Flapjack.Pancake.PanLang.NameRanged s₂) :
+    Flapjack.Pancake.PanLang.NameRanged (s₁ ++ s₂) := by
+  intro c hc
+  rw [String.toList_append, List.mem_append] at hc
+  rcases hc with h | h
+  · exact h₁ c h
+  · exact h₂ c h
+
+private theorem nameRanged_quote : Flapjack.Pancake.PanLang.NameRanged "'" := by
+  unfold Flapjack.Pancake.PanLang.NameRanged
+  decide
+
+private theorem globalApostrophes_nameRanged (count : Nat) :
+    Flapjack.Pancake.PanLang.NameRanged (globalApostrophes count) := by
+  induction count with
+  | zero =>
+      simp [globalApostrophes, Flapjack.Pancake.PanLang.NameRanged]
+  | succ count ih =>
+      rw [globalApostrophes]
+      exact nameRanged_append nameRanged_quote ih
+
+/-- Witness: the source-shaped HOL `fresh_name` port preserves byte-rangedness
+    of the input name (it only appends apostrophes). -/
+theorem holMlStringWitness_freshNameHOL (name : String) (names : List String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) := by
+  fun_induction freshNameHOL name names with
+  | case1 name names ih =>
+      exact ih (nameRanged_append h nameRanged_quote)
+  | case2 name names => exact h
+
+/-- Witness: the fuel-bounded production fresh-name search preserves
+    byte-rangedness of the input name. -/
+theorem holMlStringWitness_globalFreshNameAux [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String)
+    (candidate fuel : Nat) :
+    Flapjack.Pancake.PanLang.NameRanged
+      (globalFreshNameAux name names candidate fuel) := by
+  induction fuel generalizing candidate with
+  | zero =>
+      rw [globalFreshNameAux]
+      exact nameRanged_append h (globalApostrophes_nameRanged candidate)
+  | succ fuel ih =>
+      rw [globalFreshNameAux]
+      by_cases hc : names.contains (name ++ globalApostrophes candidate) = true
+      · rw [if_pos hc]
+        exact ih (candidate + 1)
+      · rw [if_neg hc]
+        exact nameRanged_append h (globalApostrophes_nameRanged candidate)
+
+/-- Witness: production `globalFreshName` preserves byte-rangedness of the input
+    name. -/
+theorem holMlStringWitness_globalFreshName [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String) :
+    Flapjack.Pancake.PanLang.NameRanged (globalFreshName name names) :=
+  holMlStringWitness_globalFreshNameAux name h names 0 names.length
+
+/-- Witness: the executed entry-point name `new_main_name` is byte-ranged (the
+    literal `"main"` needs no premise). -/
+theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
+    Flapjack.Pancake.PanLang.NameRanged (globalNewMainName declarations) := by
+  unfold globalNewMainName
+  exact holMlStringWitness_freshNameHOL "main" (globalFunctionNames declarations)
+    (by unfold Flapjack.Pancake.PanLang.NameRanged; decide)
+
 
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and

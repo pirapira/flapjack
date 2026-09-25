@@ -2151,6 +2151,107 @@ theorem panSemEvaluateRiscV64CodeState_decCallSkip_ofEntry
         panSemBitVec64BytesInWord state function name value hentry hclock
         (some (panSemBitVec64MemoryAccess state))
 
+/-! State-owned DecCall/Tick source equation. The nonempty finite-support code
+entry supplies the callee body; the evaluator then executes the non-Skip
+continuation under the caller's updated local and performs both HOL clock
+decrements. This is source-side proof infrastructure, not a complete
+Pan-to-Crep theorem. -/
+theorem panSemEvaluateCodeState_decCallTick_ofEntry
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Sub α]
+    [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (function name : FunName) (value : α)
+    (hentry : panSemCodeLookup state.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hclock : 2 ≤ state.clock)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    panSemEvaluateCodeState context primitive handler bytesInWord state
+      (.decCall name .one function [.const value] .tick : Prog α)
+        (memoryAccess := memoryAccess) =
+      some (.control (.normal state.locals state.globals state.memory state.ffi),
+        decPanClock (decPanClock state.clock)) := by
+  let program : Prog α :=
+    .decCall name .one function [.const value] .tick
+  have hprogramFuel : panSemProgFuel program = 3 := by
+    simp [program, panSemProgFuel, panSemExpFuel, panSemExpListFuel]
+  have hclockLower : 2 ≤ state.clock + 1 := by omega
+  have hbodyLower : 4 ≤ max (panSemProgFuel program)
+      (panSemCodeBodyFuel state.code) + 1 := by
+    rw [hprogramFuel]
+    omega
+  have hfuelLower : 5 ≤ panSemCodeEvaluateFuel state program := by
+    unfold panSemCodeEvaluateFuel
+    have hmul := Nat.mul_le_mul hclockLower hbodyLower
+    omega
+  obtain ⟨tail, hfuelLeft⟩ := Nat.exists_eq_add_of_le hfuelLower
+  have hfuel : panSemCodeEvaluateFuel state program = tail + 5 := by
+    rw [hfuelLeft]
+    omega
+  have hargs : evalPanValueExps state.structs state.locals state.globals
+      state.memory state.baseAddress state.topAddress
+      bytesInWord [.const value] (memoryAccess := memoryAccess) =
+        some [.word value] := by
+    simp [evalPanValueExps, evalPanValueExp.evalPanValueExps,
+      evalPanValueExp]
+  have hcallee : lookupPanSemCodeCall state.structs state.code function
+      [.word value] = some
+        (.return (.var .local "parameter"), .one,
+          fun key => if key == "parameter" then some (.word value) else none) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [panSemCodeArgumentsMatch, bindPanValueParameters, panValueShape,
+      panShapeMatches]
+    all_goals
+      funext key
+      simp [updatePanValueMap, beq_iff_eq]
+  have hclockNonzero : state.clock ≠ 0 := by omega
+  have hcontinuationClockNonzero : decPanClock state.clock ≠ 0 := by
+    simp [decPanClock]
+    omega
+  unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
+  have hfuelConcrete : panSemCodeEvaluateFuel state
+      (.decCall name .one function [.const value] .tick : Prog α) = tail + 5 := by
+    simpa [program] using hfuel
+  rw [hfuelConcrete]
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+    panValueCallArgumentsValue, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps, panValueReturnResult, evalPanValueExpCounted,
+    evalPanValueExp, hargs, hcallee, hclockNonzero,
+    hcontinuationClockNonzero, panValueShape, panShapeMatches,
+    panValueFfiClockRestoreLocal, panValueExpStepCost,
+    restorePanValueFfiLocal, decPanClock]
+  all_goals
+    funext key
+    by_cases hkey : key = name
+    · simp [restorePanValueLocal, hkey]
+    · simp [restorePanValueLocal, updatePanValueMap, beq_iff_eq, hkey]
+
+theorem panSemEvaluateRiscV64CodeState_decCallTick_ofEntry
+    (context : PanValueFfiContext (RiscV.Word 64))
+    (primitive : PanPrimitiveHandler (RiscV.Word 64))
+    (handler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (state : PanSemState (RiscV.Word 64) (FfiState σ))
+    (function name : FunName) (value : RiscV.Word 64)
+    (hentry : panSemCodeLookup state.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hclock : 2 ≤ state.clock) :
+    panSemEvaluateRiscV64CodeState context primitive handler state
+      (.decCall name .one function [.const value] .tick : Prog (RiscV.Word 64)) =
+      some (.control (.normal state.locals state.globals state.memory state.ffi),
+        decPanClock (decPanClock state.clock)) := by
+  simpa [panSemEvaluateRiscV64CodeState,
+    panSemEvaluateCodeStateWithMemoryModel, panSemBitVec64BytesInWord,
+    panSemBitVec64MemoryAccess] using
+      panSemEvaluateCodeState_decCallTick_ofEntry context
+        primitive handler panSemBitVec64BytesInWord state function name value hentry hclock
+        (some (panSemBitVec64MemoryAccess state))
+
 /-! Actual-state fixed-RV64 DecCall simulation slice for one word parameter.
 The callee's parameter slot and body are obtained from `code_rel`; the
 compiled DecCall uses the same state-related target code map and its scoped

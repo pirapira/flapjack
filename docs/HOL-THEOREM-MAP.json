@@ -5598,6 +5598,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_decCallTick_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (state-owned nonempty-code DecCall/Tick source equation; untagged evaluator-case infrastructure)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_decCallTick_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 specialization of the state-owned DecCall/Tick source equation; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state DecCall induction case; untagged)"

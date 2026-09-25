@@ -105,9 +105,9 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
-    results. `Dec`, `Assign`, `Primitive`, stores, `If`,
-    `While`, `ExtCall`, and ShMem leaves remain explicit gaps, so this
-    definition does not claim or tag the full `evaluate_def`. -/
+    results. `If` selects and recursively evaluates one branch. `Dec`, `Assign`,
+    `Primitive`, stores, `While`, `ExtCall`, and ShMem leaves remain explicit
+    gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
       Option (Option (PanSemResultExact width) × PanSemExactEvalContext width σ)
@@ -126,7 +126,14 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               match firstResult with
               | none => evalPanSemRecursiveCallContextHOLExact second fixedContext
               | some _ => some (firstResult, fixedContext)
-      | .ite _ _ _ => none
+      | .ite condition thenBranch elseBranch =>
+          match evalHOLExact state condition with
+          | some (.val (.word value)) =>
+              if value != 0 then
+                evalPanSemRecursiveCallContextHOLExact thenBranch context
+              else
+                evalPanSemRecursiveCallContextHOLExact elseBranch context
+          | _ => some (some .error, context)
       | .while _ _ => none
       | .call info function arguments =>
           match evalListHOLExact state arguments with
@@ -299,6 +306,14 @@ decreasing_by
       apply Prod.Lex.right
       simp_wf
       omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
   · simp only [PanSemExactEvalContext.withState]
     apply Prod.Lex.left
     exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)

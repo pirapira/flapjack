@@ -125,3 +125,36 @@ val _ = print_eval "if_op_sub_zero_tick_clock"
         (panLang$Op Sub [panLang$Const (3w:8 word);
                          panLang$Const (3w:8 word)])
         panLang$Tick panLang$Skip, ^baseState))).clock``;
+
+(* Direct result/state rows consumed by the exact-state recursive If dispatcher. *)
+val _ = print_eval "exact_if_nonzero_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) panLang$Tick panLang$Skip, ^baseState))``;
+val _ = print_eval "exact_if_nonzero_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) panLang$Tick panLang$Skip, ^baseState))).clock``;
+val _ = print_eval "exact_if_zero_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) panLang$Tick panLang$Skip, ^baseState))``;
+val _ = print_eval "exact_if_zero_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Const (0w:8 word)) panLang$Tick panLang$Skip, ^baseState))).clock``;
+val _ = print_eval "exact_if_nonword_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$RStruct []) ^thenAssign panLang$Skip, ^baseState))``;
+val _ = print_eval "exact_if_nonword_local"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$RStruct []) ^thenAssign panLang$Skip, ^baseState))).locals
+      (strlit "x")``;
+val _ = print_eval "exact_if_failed_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip,
+        ^baseState))``;
+val _ = print_eval "exact_if_failed_clock"
+  ``(SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip,
+        ^baseState))).clock``;
+val _ = print_eval "exact_if_failed_local"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip,
+        ^baseState))).locals (strlit "x")``;

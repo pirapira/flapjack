@@ -397,7 +397,15 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSource",
     "statement_status": "documented_mismatch",
-    "reviewer": "HOL-shaped mapc and finite-width state carrier, but the expression uses generic Fin-indexed syntax and the successful premise/result are evaluated through the explicit source projection rather than native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
+    "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLStateRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Uses evalCrepRuntimeExp over HOL expression syntax translated to the canonical Fin word carrier and exact mapc-shaped state, but the state projection fixes code/FFI observations and does not relate native HOL eval_def or arbitrary finite_index. This support remains untagged."
   },
   {
     "hol_path": null,
@@ -1446,6 +1454,14 @@
     "lean_name": "retVarHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-pxn.18.3.5.8.9): ret_var's three clauses (pan_to_crepScript.sml:114-119) are ret_var One ns = oHD ns, ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE, and ret_var (Named sh) ns = NONE. HOL oHD (HOL/src/list/src/listScript.sml:5474) is exactly List.head?, and Lean sizeOfShapeHOL is the tagged size_of_shape_def over ShapeHOL (panLangScript.sml:174). retVarHOL is stated over the exact MlString-backed ShapeHOL carrier with matching constructor arities and field types; the Named name is carried exactly as an MlString and then discarded by the function. Direct HOL rows are in scripts/hol-probes/ret_var_probe.out; Lean exact-carrier rows and the retVarHOL_shapeToHOL kernel bridge to production retVar are checked in Flapjack/Test/RetVarParity.lean. Production retVar stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "wrap_rt_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "wrapRtHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison at pan_to_crepScript.sml:131-136): HOL wrap_rt n = case n of NONE => NONE | SOME (One,[]) => NONE | m => m over the mlstring-named shape; Lean wrapRtHOL has the identical three clauses over the exact MlString-backed ShapeHOL carrier. Narrow codec bridge wrapRtHOL_map_shapeToHOL relates production wrapRt. Direct HOL rows none/empty_one/one_word/comb_empty/named in scripts/hol-probes/wrap_rt_probe.out; replayed on ShapeHOL and production in Flapjack/Test/WrapRtParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",

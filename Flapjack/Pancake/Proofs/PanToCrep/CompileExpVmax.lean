@@ -87,15 +87,17 @@ private theorem crepExpVarsList_mem_iff
     that is a different conclusion and does not establish the context lookup
     result, so it must not receive the theorem's `@[hol]` tag.
 
-    The available cross-pass `stateRel` in `PanToCrep.lean` is documented there
-    as Flapjack-specific: it uses production `PanSemState`/`CrepRuntimeState`,
-    String-backed identifiers, optional `PanValue` memory, and a target relation
-    that is not HOL's direct `word_lab` state relation. The evaluator's current
-    `evalHOLExact` also has unrestricted function-backed locals/globals rather
-    than HOL finite maps. These are carrier and premise-shape mismatches, not a
-    missing proof hint. A faithful port needs the finite-support PanSem state
-    and exact Pan-to-Crep context/state/local relations; those are tracked by
-    `flapjack-pxn.18.3.7.1.3.1.1.2.5` and
+    `EvalFinite.lean` now provides the fifteen `eval_def` clauses over
+    `PanSemStateFiniteExact`, but it remains untagged pending its body/qualifier
+    review and does not port Pan-to-Crep's `state_rel`, `code_rel`, or
+    `locals_rel`. The available cross-pass `stateRel` in `PanToCrep.lean` is
+    documented there as Flapjack-specific: it uses production
+    `PanSemState`/`CrepRuntimeState`, String-backed identifiers, optional
+    `PanValue` memory, and a target relation that is not HOL's direct `word_lab`
+    state relation. These are carrier and premise-shape mismatches, not a
+    missing proof hint. A faithful port needs the reviewed finite-support
+    evaluator and exact Pan-to-Crep context/state/local relations; the open
+    prerequisites are tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` and
     `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.21` open until that
     exact statement can be assembled and proved. -/
 

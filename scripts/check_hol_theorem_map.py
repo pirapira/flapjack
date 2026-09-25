@@ -32,6 +32,8 @@ THEOREM_RE = re.compile(
 VALID_STATUSES = {
     "reviewed_exact",
     "reviewed_list_as_array",
+    "reviewed_names_as_string",
+    "reviewed_list_as_array_names_as_string",
     "pending_statement_review",
     "documented_mismatch",
     "no_hol_reference_pending_classification",
@@ -125,19 +127,23 @@ def proof_theorem_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
 
 def tagged_declarations(
     root: Path = ROOT,
-) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...]]]:
+) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
     """Return Lean file/name to HOL file/name for every active ``@[hol]``."""
-    tagged: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]] = {}
+    tagged: dict[
+        tuple[str, str],
+        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]],
+    ] = {}
     for path in REFS["lean_files"]():
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
-        for line, hol_path, hol_name, _hol_line, fields in HOL_ATTRIBUTE_SITES(lines):
+        for (line, hol_path, hol_name, _hol_line, list_fields,
+             names_fields, boundary_fields) in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
-            value = (hol_path, hol_name, fields)
+            value = (hol_path, hol_name, list_fields, names_fields, boundary_fields)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -148,7 +154,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     """Build a review inventory template without claiming statement review."""
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
-    for (lean_path, lean_name), (hol_path, hol_name, fields) in tagged.items():
+    for (lean_path, lean_name), (
+        hol_path, hol_name, list_fields, names_fields, boundary_fields
+    ) in tagged.items():
         entry = {
             "hol_path": hol_path,
             "hol_name": hol_name,
@@ -157,8 +165,12 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             "statement_status": "pending_statement_review",
             "reviewer": "Codex (reference inventory)",
         }
-        if fields:
-            entry["list_as_array"] = list(fields)
+        if list_fields:
+            entry["list_as_array"] = list(list_fields)
+        if names_fields:
+            entry["names_as_string"] = list(names_fields)
+        if boundary_fields:
+            entry["names_as_string_boundary"] = list(boundary_fields)
         inventory[(lean_path, lean_name)] = entry
 
     for lean_path, lean_name in proof_theorem_declarations(root):
@@ -205,7 +217,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
 def validate_inventory(
     records: list[dict[str, Any]],
     proof_declarations: set[tuple[str, str]],
-    tagged: dict[tuple[str, str], tuple[str, str, tuple[str, ...]]],
+    tagged: dict[
+        tuple[str, str],
+        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]],
+    ],
 ) -> list[str]:
     errors: list[str] = []
     by_key: dict[tuple[str, str], dict[str, Any]] = {}
@@ -228,21 +243,88 @@ def validate_inventory(
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         tag = tagged.get(key)
-        tag_fields = tag[2] if tag is not None and len(tag) > 2 else ()
-        manifest_fields = tuple(record.get("list_as_array", ()))
-        if manifest_fields != tag_fields:
+        if tag is not None and len(tag) < 5:
+            tag = tag + ((),) * (5 - len(tag))
+        list_fields = tag[2] if tag is not None else ()
+        names_fields = tag[3] if tag is not None else ()
+        boundary_fields = tag[4] if tag is not None else ()
+        manifest_list_fields = tuple(record.get("list_as_array", ()))
+        manifest_names_fields = tuple(record.get("names_as_string", ()))
+        manifest_boundary_fields = tuple(record.get("names_as_string_boundary", ()))
+        if manifest_list_fields != list_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
             )
-        if tag_fields and status == "reviewed_exact":
+        if manifest_names_fields != names_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest names_as_string fields do not match its @[hol] tag"
+            )
+        if manifest_boundary_fields != boundary_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest names_as_string_boundary fields do not match its @[hol] tag"
+            )
+        if not set(boundary_fields) <= set(names_fields):
+            errors.append(
+                f"{key[0]}:{key[1]}: names_as_string_boundary must be a subset of names_as_string"
+            )
+        if list_fields and status == "reviewed_exact":
             errors.append(
                 f"{key[0]}:{key[1]}: qualified @[hol] tag cannot have reviewed_exact status; "
                 "use reviewed_list_as_array after source comparison"
             )
-        if not tag_fields and status == "reviewed_list_as_array":
+        if not list_fields and status == "reviewed_list_as_array":
             errors.append(
                 f"{key[0]}:{key[1]}: reviewed_list_as_array needs a qualified @[hol] tag"
             )
+        if names_fields and status == "reviewed_exact":
+            errors.append(
+                f"{key[0]}:{key[1]}: names_as_string @[hol] tag cannot have reviewed_exact status; "
+                "use reviewed_names_as_string after source comparison"
+            )
+        if names_fields and status not in {
+            "reviewed_names_as_string",
+            "reviewed_list_as_array_names_as_string",
+        }:
+            errors.append(
+                f"{key[0]}:{key[1]}: names_as_string @[hol] tag needs a reviewed "
+                "source classification"
+            )
+        if not names_fields and status == "reviewed_names_as_string":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_names_as_string needs a names_as_string @[hol] tag"
+            )
+        if list_fields and names_fields:
+            if status == "reviewed_list_as_array" or status == "reviewed_names_as_string":
+                errors.append(
+                    f"{key[0]}:{key[1]}: combined qualifiers require "
+                    "reviewed_list_as_array_names_as_string"
+                )
+        elif status == "reviewed_list_as_array_names_as_string":
+            errors.append(
+                f"{key[0]}:{key[1]}: combined review status requires both qualifiers"
+            )
+        if status in {
+            "reviewed_names_as_string",
+            "reviewed_list_as_array_names_as_string",
+        }:
+            reviewer_text = reviewer.lower() if isinstance(reviewer, str) else ""
+            if "source" not in reviewer_text or any(
+                field not in reviewer_text for field in names_fields
+            ):
+                errors.append(
+                    f"{key[0]}:{key[1]}: {status} needs a source-review note that "
+                    "names every names_as_string field"
+                )
+            for identifier in names_fields:
+                classification = (
+                    "byte-observable" if identifier in boundary_fields
+                    else "equality/map-key-only"
+                )
+                if f"{identifier}: {classification}" not in reviewer_text:
+                    errors.append(
+                        f"{key[0]}:{key[1]}: source-review note must classify "
+                        f"{identifier} as {classification}"
+                    )
         if (hol_path is None) != (hol_name is None):
             errors.append(f"{key[0]}:{key[1]}: HOL path and name must both be set or null")
         elif status == "documented_mismatch":

@@ -167,6 +167,22 @@ Representation witnesses alone do not establish transition equivalence.
 Review successful updates, invalid representations, and out-of-range errors
 separately before tagging any transition theorem.
 
+**Qualify String-backed HOL `mlstring` names.** Use
+`(names_as_string := [name, ...])` when a Lean `String` identifier models HOL
+`mlstring`; identifiers can be parameters or uses, not just structure fields.
+Use manifest status `reviewed_names_as_string` only after comparing the cited
+HOL declaration. Classify each identifier in the reviewer note as
+`equality/map-key-only` or `byte-observable`; the latter must also appear in
+`(names_as_string_boundary := [...])`. For each byte-observable declaration,
+provide a same-module `holMlStringWitness_<LeanDeclaration>` whose conclusion
+is `NameRanged` on that declaration's output. Input premises such as
+`NameRanged name` are allowed; source review must verify that the executed path
+supplies them. The reference checker verifies the witness name/result shape and
+manifest classification, while Lake checks the proof. Neither check establishes
+HOL correspondence or premise discharge; record those in source review. The
+theorem map and type-hash lock record both qualifier lists. Do not add this
+qualifier to production declarations until checker tests and source review pass.
+
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
 definitions. A tagged proof-only duplicate beside a different production

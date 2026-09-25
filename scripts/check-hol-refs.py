@@ -37,6 +37,10 @@ LEAN_DIRS = [ROOT / "Flapjack", ROOT / "Flapjack.lean"]
 
 ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"(?:\s+(\d+))?')
 QUALIFIER_RE = re.compile(r'\(\s*list_as_array\s*:=\s*\[([^]]*)\]\s*\)')
+NAMES_AS_STRING_RE = re.compile(r'\(\s*names_as_string\s*:=\s*\[([^]]*)\]\s*\)')
+NAMES_AS_STRING_BOUNDARY_RE = re.compile(
+    r'\(\s*names_as_string_boundary\s*:=\s*\[([^]]*)\]\s*\)'
+)
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
     r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
@@ -109,6 +113,7 @@ def hol_attribute_sites(lines: list[str]):
     comment_depth = 0
     start: int | None = None
     chunks: list[str] = []
+    attribute_bracket_depth = 0
     for number, line in enumerate(lines, start=1):
         # Ignore documentation/examples in nestable Lean block comments.
         in_comment = comment_depth > 0
@@ -122,20 +127,32 @@ def hol_attribute_sites(lines: list[str]):
             if not stripped.startswith("@["):
                 continue
             start = number
+            attribute_bracket_depth = 0
         chunks.append(stripped)
-        if "]" not in stripped:
+        attribute_bracket_depth += stripped.count("[") - stripped.count("]")
+        if attribute_bracket_depth > 0:
             continue
         attribute = " ".join(chunks)
         if "hol " in attribute:
             for hol_path, hol_name, hol_line in ATTR_RE.findall(attribute):
-                qualifier = QUALIFIER_RE.search(attribute)
-                fields = tuple(
-                    field.strip()
-                    for field in qualifier.group(1).split(",")
-                ) if qualifier else ()
-                yield start, hol_path, hol_name, int(hol_line) if hol_line else None, fields
+                def fields_for(pattern: re.Pattern[str]) -> tuple[str, ...]:
+                    qualifier = pattern.search(attribute)
+                    return tuple(
+                        field.strip() for field in qualifier.group(1).split(",")
+                    ) if qualifier else ()
+
+                yield (
+                    start,
+                    hol_path,
+                    hol_name,
+                    int(hol_line) if hol_line else None,
+                    fields_for(QUALIFIER_RE),
+                    fields_for(NAMES_AS_STRING_RE),
+                    fields_for(NAMES_AS_STRING_BOUNDARY_RE),
+                )
         start = None
         chunks = []
+        attribute_bracket_depth = 0
 
 
 def strip_lean_comments(text: str) -> str:
@@ -275,6 +292,70 @@ def list_as_array_errors(lines: list[str], fields: tuple[str, ...], module: str)
     return errors
 
 
+def has_mlstring_witness(lines: list[str], declaration: str) -> bool:
+    """Require a same-module byte-range theorem for a byte-observable tag.
+
+    The theorem is named for the tagged declaration and its result must
+    establish `NameRanged`. Input range premises are allowed. This syntax check
+    does not establish that the result is the right output or that a premise is
+    discharged on the executed path; Lean checks the proof and source review
+    records those obligations.
+    """
+    source = strip_lean_comments("\n".join(lines))
+    pattern = re.compile(
+        rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
+        rf"(?:theorem|lemma)\s+holMlStringWitness_{re.escape(declaration)}\b"
+        rf"(?P<type>[\s\S]*?):=",
+        re.M,
+    )
+    for match in pattern.finditer(source):
+        statement = match.group("type")
+        depth = 0
+        result_start: int | None = None
+        for index, char in enumerate(statement):
+            if char in "([{":
+                depth += 1
+            elif char in ")]}":
+                depth -= 1
+            elif char == ":" and depth == 0:
+                result_start = index + 1
+        if result_start is None:
+            continue
+        result_type = statement[result_start:]
+        result = result_type.strip()
+        if re.match(r"^(?:[A-Za-z0-9_]+\.)*NameRanged\b", result):
+            return True
+    return False
+
+
+def names_as_string_errors(
+    lines: list[str],
+    identifiers: tuple[str, ...],
+    boundary_identifiers: tuple[str, ...],
+    module: str,
+    declaration: str,
+) -> list[str]:
+    """Validate reviewed HOL `mlstring` identifiers and byte boundaries."""
+    errors: list[str] = []
+    if len(set(identifiers)) != len(identifiers):
+        errors.append("names_as_string identifiers must be distinct")
+    if len(set(boundary_identifiers)) != len(boundary_identifiers):
+        errors.append("names_as_string_boundary identifiers must be distinct")
+    for identifier in boundary_identifiers:
+        if identifier not in identifiers:
+            errors.append(
+                f"names_as_string_boundary identifier `{identifier}` is not listed by "
+                "names_as_string"
+            )
+        if not has_mlstring_witness(lines, declaration):
+            errors.append(
+                f"names_as_string_boundary identifier `{identifier}` in {module}:{declaration} "
+                f"has no same-module checked witness `holMlStringWitness_{declaration}` "
+                "with a NameRanged result"
+            )
+    return errors
+
+
 def hol_declaration_lines(
     path: Path, cache: dict[Path, dict[str, list[int]]]
 ) -> dict[str, list[int]]:
@@ -348,7 +429,8 @@ def main(argv: list[str]) -> int:
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         module = module_name(lean_path)
         module_reported = False
-        for number, hol_path, hol_name, hol_line, fields in hol_attribute_sites(lines):
+        for (number, hol_path, hol_name, hol_line, list_fields,
+             names_fields, boundary_fields) in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -358,10 +440,17 @@ def main(argv: list[str]) -> int:
                     f"(transitively) from Flapjack.lean, so `lake build Flapjack` "
                     f"never checks it; add the import to Flapjack.lean"
                 )
-            if fields:
+            if list_fields:
                 errors.extend(
                     f"{where}: {error}"
-                    for error in list_as_array_errors(lines, fields, rel)
+                    for error in list_as_array_errors(lines, list_fields, rel)
+                )
+            if names_fields or boundary_fields:
+                errors.extend(
+                    f"{where}: {error}"
+                    for error in names_as_string_errors(
+                        lines, names_fields, boundary_fields, rel, lean_decl
+                    )
                 )
             target = ROOT / hol_path
             if not hol_path.startswith("cakeml/") or not hol_path.endswith(".sml"):

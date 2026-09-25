@@ -364,9 +364,15 @@ theorem panMemStoresHOL_cons_none {width : Nat} [NeZero width] (address : RiscV.
     statements must not admit it.  The `[DecidablePred domain]` binder is
     likewise only Lean decidability evidence, needed so that the `if domain
     address` branch elaborates; it is not a HOL side condition (HOL `domain` is
-    a `'a word set` and membership is a `bool`-valued test there). -/
+    a `'a word set` and membership is a `bool`-valued test there).
+
+    DELIBERATELY UNTAGGED: HOL `panLang$shape` and the structure/field names in
+    the context are `mlstring`, while the Lean carriers used here (`Shape`
+    names, `StructContextHOL`, `FieldName`) are `String` (`Flapjack/Pancake/PanLang.lean:15,28,67`).
+    Retagging requires an exact `MlString`-keyed `ShapeHOL`/context carrier; that
+    substitution is tracked by bead `flapjack-pxn.18.5.17.1.2.1`.  The `[NeZero
+    width]` improvement and the untagged implementation remain valid. -/
 mutual
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_def"]
   def panMemLoadHOL {width : Nat} [NeZero width] (shape : Shape) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
@@ -990,8 +996,10 @@ theorem HolValue.toPanValue_nStruct {width : Nat} (name : StructName)
 /-! ## Structured `.load` fuel-indexed equivalence (flapjack-pxn.18.3.6.9.2.2.1.1.2/.3)
 
 Kernel-checked equivalence between the production fuel-indexed flattening loader and
-the tagged exact HOL `mem_load_def` port for arbitrary Comb/List/Fields/Named shapes,
-under the executed RV64 memory-access state. Untagged production-side adapter. -/
+the `mem_load_def`-shaped port for arbitrary Comb/List/Fields/Named shapes, under the
+executed RV64 memory-access state.  The port is currently UNTAGGED pending an exact
+`MlString`-keyed `ShapeHOL`/context carrier (bead flapjack-pxn.18.5.17.1.2.1); this is
+an untagged production-side adapter. -/
 
 abbrev panValueFlatMachineReadWord (state : PanSemState (RiscV.Word 64) ffi)
     (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) : RiscV.Word 64 → Option (RiscV.Word 64) :=
@@ -1161,7 +1169,8 @@ theorem panValueFlatLoadFuel_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
 The production `panValueFlatLoad` guards on `isWfShape` and starts the fuel at
 `panValueFlatContextFuel + panValueFlatShapeFuel + 1`.  Combining that with the
 fuel-indexed equivalence above and the initial-fuel bound yields the executed
-`.load` result as the tagged exact HOL `mem_load_def` port.  Untagged
+`.load` result as the HOL `mem_load_def`-shaped port (currently untagged pending an
+exact `MlString`-keyed carrier; bead flapjack-pxn.18.5.17.1.2.1).  Untagged
 production-side adapter. -/
 
 theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)

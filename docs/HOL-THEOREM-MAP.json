@@ -4428,8 +4428,8 @@
     "hol_name": "pan_primop_crep_primop",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean",
     "lean_name": "panPrimopCrepPrimop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (original premise/conclusion shape and shared word_add_carry cases)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-two (tag withdrawn: stated over production PanValue whose nStruct names are FieldName=String while HOL panSem$v uses fldname=mlstring; dependencies panPrimopHOL/panSemFlattenHOL were withdrawn under flapjack-0lj.3; exact MlString carrier tracked by flapjack-pxn.18.3.5.8 / flapjack-0lj)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -5454,14 +5454,6 @@
     "lean_name": "panValueFldsOk_append",
     "statement_status": "reviewed_exact",
     "reviewer": "The HOL implication over ctxt, v, and the theorem's pfx is preserved over StructContextHOL: Bool-valued v_flds_ok is panValueFldsOk, ALL_DISTINCT (MAP FST pfx ++ MAP FST ctxt) is List.Nodup on the corresponding mapped keys, and lawful String BEq reflects HOL equality for first-match ALOOKUP. The direct original-HOL EVAL fixture includes a nonempty prefix and nested named value."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-    "hol_name": "is_wf_shape_v_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-    "lean_name": "panIsWfShapeValueHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
   },
   {
     "hol_path": null,

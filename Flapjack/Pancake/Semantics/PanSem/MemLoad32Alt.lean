@@ -1,5 +1,5 @@
 /-
-# Exact `panSem$mem_load_32_alt` OR/shift assembly
+# RV64-specialized analogue of `panSem$mem_load_32_alt` OR/shift assembly
 
 HOL `mem_load_32_alt` (`cakeml/pancake/semantics/panSemScript.sml:108`) restates
 `mem_load_32` by assembling the four stored bytes with `w2w` widening and

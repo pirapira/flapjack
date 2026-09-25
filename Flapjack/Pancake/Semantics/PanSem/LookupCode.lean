@@ -109,6 +109,152 @@ theorem panSemLookupCodeShapeRel_length {width : Nat} [NeZero width]
             | true => simpa [hhead] using hstep
           simp [ih arguments htail]
 
+/-- Folding production parameter bindings and then converting each looked-up
+    value to the HOL carrier is extensionally the same operation as HOL's
+    `FUPDATE_LIST` over the converted entries. This is the result-side bridge
+    needed to relate a successful `lookup_code`, not only its success bit. -/
+private theorem foldlUpdatePanMap_eq_FUPDATE_LIST_toHol {width : Nat}
+    [LawfulBEq String]
+    (entries : List (VarName × PanValue (BitVec width))) :
+    ∀ (locals : VarName → Option (PanValue (BitVec width)))
+      (holLocals : FiniteMap VarName (HolValue width)),
+      (∀ name, locals name = (FLOOKUP holLocals name).map HolValue.toPanValue) →
+      ∀ name,
+        entries.foldl
+            (fun current (binding : VarName × PanValue (BitVec width)) =>
+              updatePanValueMap current binding.1 binding.2)
+            locals name =
+          (FLOOKUP (FUPDATE_LIST holLocals
+            (entries.map fun binding => (binding.1, binding.2.toHolValue))) name).map
+              HolValue.toPanValue := by
+  induction entries with
+  | nil =>
+      intro locals holLocals hrel name
+      simpa [FUPDATE_LIST] using hrel name
+  | cons entry entries ih =>
+      intro locals holLocals hrel name
+      have hrel' : ∀ key,
+          updatePanValueMap locals entry.1 entry.2 key =
+            (FLOOKUP (FUPDATE holLocals (entry.1, entry.2.toHolValue)) key).map
+              HolValue.toPanValue := by
+        intro key
+        by_cases heq : key == entry.1
+        · have hkey : key = entry.1 := beq_iff_eq.mp heq
+          subst key
+          simp [FLOOKUP, FUPDATE, updatePanValueMap,
+            PanValue.toHolValue_toPanValue]
+        · have hne : ¬ (entry.1 == key) := by
+            intro hreverse
+            have hEq : entry.1 = key := beq_iff_eq.mp hreverse
+            have hforward : (key == entry.1) = true :=
+              beq_iff_eq.mpr hEq.symm
+            simp [hforward] at heq
+          have hreverse : (entry.1 == key) = false := by
+            cases hbeq : entry.1 == key with
+            | false => rfl
+            | true => exact absurd hbeq hne
+          simp [FLOOKUP, FUPDATE, updatePanValueMap, heq, hreverse, hrel key]
+      simpa [List.foldl_cons, FUPDATE_LIST_cons, List.map_cons] using
+        (ih (updatePanValueMap locals entry.1 entry.2)
+          (FUPDATE holLocals (entry.1, entry.2.toHolValue)) hrel' name)
+
+/-- For equal-length parameter and argument lists, the production fresh-local
+    binder agrees pointwise with the exact HOL `FEMPTY |++ ZIP` map after the
+    `PanValue`/`HolValue` isomorphism. -/
+theorem bindPanValueParameters_eq_holFupdateList {width : Nat}
+    [LawfulBEq String]
+    (parameters : List VarName) (arguments : List (PanValue (BitVec width)))
+    (hlen : parameters.length = arguments.length) :
+    bindPanValueParameters parameters arguments =
+      some (fun name =>
+        (FLOOKUP (FUPDATE_LIST (FEMPTY : FiniteMap VarName (HolValue width))
+          (parameters.zip (arguments.map PanValue.toHolValue))) name).map
+            HolValue.toPanValue) := by
+  unfold bindPanValueParameters
+  simp [hlen]
+  have hzip :
+      (parameters.zip arguments).map
+          (fun binding => (binding.1, binding.2.toHolValue)) =
+        parameters.zip (arguments.map PanValue.toHolValue) := by
+    induction parameters generalizing arguments with
+    | nil =>
+        cases arguments with
+        | nil => rfl
+        | cons _ _ => simp at hlen
+    | cons parameter parameters ih =>
+        cases arguments with
+        | nil => simp at hlen
+        | cons argument arguments =>
+            simp only [List.zip_cons_cons, List.map_cons]
+            congr 1
+            exact ih arguments (Nat.succ.inj hlen)
+  funext name
+  have hfold := foldlUpdatePanMap_eq_FUPDATE_LIST_toHol
+    (parameters.zip arguments) (fun _ => none) FEMPTY (by intro key; rfl) name
+  simpa [hzip] using hfold
+
+/-- A valid production state-code entry has the same body, return shape, and
+    freshly bound locals as the exact HOL `lookup_code` result. This bridges
+    the complete successful lookup result; `lookup_code` itself retains its
+    original HOL signature and does not depend on production lookup inputs. -/
+theorem panSemLookupStateCodeHOL_matches_production_entry {width : Nat}
+    [NeZero width] [LawfulBEq String]
+    (state : PanSemState (BitVec width) ffi) (function : FunName)
+    (arguments : List (PanValue (BitVec width)))
+    (parameters : List (VarName × Shape)) (body : Prog (BitVec width))
+    (returnShape : Shape)
+    (hentry : panSemCodeLookup state.code function =
+      some (parameters, body, returnShape))
+    (hnames : (parameters.map Prod.fst).Nodup)
+    (hshape : panSemCodeArgumentsMatch state.structs parameters arguments = true) :
+    ∃ (holLocals : FiniteMap VarName (HolValue width))
+      (productionLocals : VarName → Option (PanValue (BitVec width))),
+      panSemLookupStateCodeHOL state function arguments =
+        some (body, holLocals, returnShape) ∧
+      lookupPanSemCodeCall state.structs state.code function arguments =
+        some (body, returnShape, productionLocals) ∧
+      ∀ name, productionLocals name =
+        (FLOOKUP holLocals name).map HolValue.toPanValue := by
+  have hshapeHOL : panSemLookupCodeShapeRel parameters
+      (arguments.map PanValue.toHolValue) = true := by
+    rw [← panSemCodeArgumentsMatch_eq_holLookupValidity]
+    exact hshape
+  have hlength := panSemLookupCodeShapeRel_length parameters
+    (arguments.map PanValue.toHolValue) hshapeHOL
+  have hnamesBool : decide (parameters.map Prod.fst).Nodup = true := by
+    simp [hnames]
+  have hvalid : panSemLookupCodeArgumentsValid parameters
+      (arguments.map PanValue.toHolValue) = true := by
+    unfold panSemLookupCodeArgumentsValid
+    rw [hnamesBool, hshapeHOL]
+    rfl
+  let holLocals : FiniteMap VarName (HolValue width) :=
+    FUPDATE_LIST FEMPTY
+      ((parameters.map Prod.fst).zip (arguments.map PanValue.toHolValue))
+  let productionLocals : VarName → Option (PanValue (BitVec width)) :=
+    fun name => (FLOOKUP holLocals name).map HolValue.toPanValue
+  have hparametersLength : (parameters.map Prod.fst).length = arguments.length := by
+    calc
+      (parameters.map Prod.fst).length = parameters.length := by simp
+      _ = (arguments.map PanValue.toHolValue).length := hlength
+      _ = arguments.length := by simp
+  have hbind : bindPanValueParameters (parameters.map Prod.fst) arguments =
+      some productionLocals := by
+    simpa [productionLocals, holLocals] using
+      (bindPanValueParameters_eq_holFupdateList
+        (parameters.map Prod.fst) arguments hparametersLength)
+  have hholLookup : panSemLookupStateCodeHOL state function arguments =
+      some (body, holLocals, returnShape) := by
+    unfold panSemLookupStateCodeHOL panSemLookupCodeHOL
+    simp [FLOOKUP, panSemCodeAsLookup, hentry,
+      panSemLookupCodeArgumentsValid, hnamesBool, hshapeHOL, holLocals]
+  have hproductionLookup : lookupPanSemCodeCall state.structs state.code
+      function arguments = some (body, returnShape, productionLocals) := by
+    unfold lookupPanSemCodeCall
+    rw [hentry]
+    simp [hnames, hshape, hbind]
+  exact ⟨holLocals, productionLocals, hholLookup, hproductionLookup, fun _ => rfl⟩
+
 /-- The state-owned wrapper is definitionally the tagged lookup over exactly
     the finite `state.code` support view; this bridge does not introduce a
     detached function table. -/

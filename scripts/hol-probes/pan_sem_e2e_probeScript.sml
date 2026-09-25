@@ -470,4 +470,40 @@ val _ = print_eval "shmemstore_out_of_domain"
           sh_memaddrs := EMPTY; ffi := ^returning_ffi |>)) of
       (res,s') => res``
 
+val _ = print_eval "while_cond_zero"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (0w:8 word)) panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock)``
+
+val _ = print_eval "while_timeout"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word)) panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (0w:8 word)); structs := []; clock := 0 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_break"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Var Local «x») panLang$Break,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_continue_then_zero"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Var Local «x»)
+         (panLang$Assign Local «x» (panLang$Const (0w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_error_condition"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Var Local «missing») panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => res``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

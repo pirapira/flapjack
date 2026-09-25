@@ -19,23 +19,23 @@ open Flapjack
 
 namespace Flapjack.Test.WordLangExtractLabelsParity
 
-private def emptySet : WordLangNumSet := fun _ => none
+private def emptySet : WordLangNumSetHOL := .ln
 
-private def cutsets : WordLangCutsets := (emptySet, emptySet)
+private def cutsets : WordLangCutsetsHOL := (emptySet, emptySet)
 
-private def skipProg : WordLangProg (BitVec 8) := .skip
+private def skipProg : WordLangProgHOL (BitVec 8) := .skip
 
-private def callNone : WordLangProg (BitVec 8) := .call none none [] none
+private def callNone : WordLangProgHOL (BitVec 8) := .call none none [] none
 
-private def callRet : WordLangProg (BitVec 8) :=
+private def callRet : WordLangProgHOL (BitVec 8) :=
   .call (some ([1], cutsets, skipProg, 10, 11)) none [] none
 
-private def callBoth : WordLangProg (BitVec 8) :=
+private def callBoth : WordLangProgHOL (BitVec 8) :=
   .call (some ([1], cutsets, skipProg, 10, 11)) none []
     (some (2, skipProg, 20, 21))
 
 /-- `Inst Skip` carries no labels. -/
-example : extractLabels (WordLangProg.inst (WordLangInst.skip : WordLangInst (BitVec 8))) = [] := rfl
+example : extractLabels (WordLangProgHOL.inst (WordLangInst.skip : WordLangInst (BitVec 8))) = [] := rfl
 
 /-- A `Call` with no return metadata contributes no labels. -/
 example : extractLabels callNone = [] := rfl

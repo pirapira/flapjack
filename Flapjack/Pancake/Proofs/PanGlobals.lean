@@ -197,13 +197,22 @@ def isWfShapeNil : Shape → Bool := isWfShape []
 
 /-- HOL's empty-structure corollary: successful declaration evaluation and
     admissible declarations give well-formed output shapes under `isWfShapeNil`.
-    The empty-structure premise is explicit, as in the HOL statement. -/
+    The empty-structure premise is explicit, as in the HOL statement. The
+    related HOL theorem at `pan_globalsProofScript.sml:2495` concludes one
+    `EVERY` predicate directly over `compile_top code start`; this theorem
+    instead uses membership in `globalCompileTopCake` plus an equality test for
+    each function output. That pointwise form and the production AST/evaluator
+    are not the statement or carriers of the HOL declaration, so it remains
+    an untagged Flapjack-specific consequence. No direct HOL oracle fixture for
+    this theorem is currently recorded. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
 -- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- (parent `flapjack-pxn.18.3.5.7.2`). Even after that carrier lands, a faithful
+-- port needs the HOL-shaped `EVERY` conclusion over the reviewed `compile_top`
+-- definition and a direct source oracle regression.
 theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulBEq String]
     [ShiftLeft (BitVec width)] [ShiftRight (BitVec width)]
     (state : PanSemDeclarationState (BitVec width) σ)

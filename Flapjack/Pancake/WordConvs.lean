@@ -81,11 +81,10 @@ metadata there are no labels; otherwise the return-handler labels come first
 (followed by the handler-body pair when a handler exists, and the
 return-handler's own labels last).
 
-HOL's `wordLang$prog` is indexed by the word width `'a` and carries `'a word`
-values, so the faithful statement fixes the value carrier to `BitVec width`
-(the width is implicit, matching HOL's universally quantified `'a`). -/
+HOL's `wordLang$prog` carries `num_set` and `mlstring` fields exactly in the
+WordLangProgHOL carrier below. -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "extract_labels_def"]
-def extractLabels {width : Nat} : WordLangProg (BitVec width) → List (Nat × Nat)
+def extractLabels {width : Nat} : WordLangProgHOL (BitVec width) → List (Nat × Nat)
   | .call returns _ _ handler =>
       match returns, handler with
       | none, _ => []
@@ -139,7 +138,7 @@ synthetic instruction of `OpCurrHeap`).  Note HOL's `Call` nesting: when the
 return metadata is `NONE` the result is `T` regardless of the handler. -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "every_inst_def"]
 def everyInst {width : Nat} (P : WordLangInst (BitVec width) → Bool) :
-    WordLangProg (BitVec width) → Bool
+    WordLangProgHOL (BitVec width) → Bool
   | .inst instruction => P instruction
   | .seq first second => everyInst P first && everyInst P second
   | .loop _ body _ => everyInst P body
@@ -164,7 +163,7 @@ through `Seq`, `Loop`, `If`, `MustTerminate` and both `Call` bodies (the
 return and handler cases are both required, so a `Call` with no return
 metadata but a non-flat handler is rejected). -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "flat_exp_conventions_def"]
-def flatExpConventions {width : Nat} : WordLangProg (BitVec width) → Bool
+def flatExpConventions {width : Nat} : WordLangProgHOL (BitVec width) → Bool
   | .assign _ _ => false
   | .store _ _ => false
   | .set _ (.var _) => true
@@ -265,7 +264,7 @@ weaker per-instruction validity predicate lifted over the program, with the
 `ShareInst` address-expression restriction via `expToAddr`. -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "full_inst_ok_less_def"]
 def fullInstOkLess {width : Nat} (config : AsmConfig width) :
-    WordLangProg (BitVec width) -> Bool
+    WordLangProgHOL (BitVec width) → Bool
   | .inst value => instOkLess config value
   | .seq first second =>
       fullInstOkLess config first && fullInstOkLess config second
@@ -282,7 +281,7 @@ def fullInstOkLess {width : Nat} (config : AsmConfig width) :
             | none => true
             | some (_, handlerProg, _, _) => fullInstOkLess config handlerProg
   | .shareInst operator _ address =>
-      match expToAddr address with
+      match expToAddrHOL address with
       | some (.addr _ offset) =>
           if operator == .load || operator == .store ||
               operator == .load32 || operator == .store32 then
@@ -307,10 +306,10 @@ def instArgConvention {width : Nat} : WordLangInst (BitVec width) -> Bool
       r1 == 0 && r2 == 6 && r3 == 6 && r4 == 0
   | _ => true
 
-/-- HOL `wordConvs$call_arg_convention` (`wordConvsScript.sml:391-423`):
-the generated Calling-Convention placement of arguments in registers.
+/-- Production helper corresponding to HOL `call_arg_convention_def`.
+Untagged because its whole-program argument uses the production AST fields
+`FiniteMap Nat Unit` and `String`, rather than HOL's `unit spt` and `mlstring`.
 `GENLIST f n` is represented by `(List.range n).map f`. -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "call_arg_convention_def"]
 def callArgConvention {width : Nat} : WordLangProg (BitVec width) -> Bool
   | .inst value => instArgConvention value
   | .return _ values => values == (List.range values.length).map (fun x => 2 * (x + 1))
@@ -337,6 +336,37 @@ def callArgConvention {width : Nat} : WordLangProg (BitVec width) -> Bool
   | .loop _ body _ => callArgConvention body
   | .ite _ _ _ thenBranch elseBranch =>
       callArgConvention thenBranch && callArgConvention elseBranch
+  | _ => true
+
+/-- Exact HOL `wordConvs$call_arg_convention` over the faithful program
+carrier. `GENLIST f n` is represented by `(List.range n).map f`. -/
+@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "call_arg_convention_def"]
+def callArgConventionHOL {width : Nat} : WordLangProgHOL (BitVec width) → Bool
+  | .inst value => instArgConvention value
+  | .return _ values => values == (List.range values.length).map (fun x => 2 * (x + 1))
+  | .raise exception => exception == 2
+  | .install ptr len _ _ _ => ptr == 2 && len == 4
+  | .ffi _ configuration configurationLength array arrayLength _ =>
+      configuration == 2 && configurationLength == 4 &&
+        array == 6 && arrayLength == 8
+  | .alloc destination _ => destination == 2
+  | .storeConsts a b c d _ => a == 0 && b == 2 && c == 4 && d == 6
+  | .call returns _ arguments handler =>
+      (match returns with
+        | none => arguments == (List.range arguments.length).map (fun x => 2 * x)
+        | some (returns, _, returnHandler, _, _) =>
+            arguments == (List.range arguments.length).map (fun x => 2 * (x + 1)) &&
+            returns == (List.range returns.length).map (fun x => 2 * (x + 1)) &&
+            callArgConventionHOL returnHandler &&
+            (match handler with
+              | none => true
+              | some (value, handlerProg, _, _) =>
+                  value == 2 && callArgConventionHOL handlerProg))
+  | .mustTerminate body => callArgConventionHOL body
+  | .seq first second => callArgConventionHOL first && callArgConventionHOL second
+  | .loop _ body _ => callArgConventionHOL body
+  | .ite _ _ _ thenBranch elseBranch =>
+      callArgConventionHOL thenBranch && callArgConventionHOL elseBranch
   | _ => true
 
 /-- HOL `ARB : memop`, represented by a fixed representative. Untagged
@@ -400,24 +430,24 @@ def noShareInstSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : 
     (fun q => q ≠ .shareInst wordLangArbMemOp 0 (.var 0))
     program
 
-/-- HOL `wordConvs$good_handlers_def`: every handler label in the program equals
-the enclosing code-table label `n`.  Purely structural (no `num_set`). -/
+/-! HOL `good_handlers_def` over the exact HOL-shaped WordLang carrier. -/
 @[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "good_handlers_def"]
-def goodHandlers {width : Nat} (n : Nat) : WordLangProg (BitVec width) -> Bool
+def goodHandlersHOL {width : Nat} [NeZero width] (n : Nat) :
+    WordLangProgHOL (BitVec width) -> Bool
   | .call returns _ _ handler =>
       match returns with
       | none => true
       | some (_, _, returnHandler, _, _) =>
-          goodHandlers n returnHandler &&
+          goodHandlersHOL n returnHandler &&
             (match handler with
              | some (_, handlerProg, handlerLabel, _) =>
-                 handlerLabel == n && goodHandlers n handlerProg
+                 handlerLabel == n && goodHandlersHOL n handlerProg
              | none => true)
-  | .seq first second => goodHandlers n first && goodHandlers n second
-  | .loop _ body _ => goodHandlers n body
+  | .seq first second => goodHandlersHOL n first && goodHandlersHOL n second
+  | .loop _ body _ => goodHandlersHOL n body
   | .ite _ _ _ thenBranch elseBranch =>
-      goodHandlers n thenBranch && goodHandlers n elseBranch
-  | .mustTerminate body => goodHandlers n body
+      goodHandlersHOL n thenBranch && goodHandlersHOL n elseBranch
+  | .mustTerminate body => goodHandlersHOL n body
   | _ => true
 
 /-- HOL `wordConvsScript$pre_alloc_conventions_def` (`wordConvsScript.sml:425-429`).

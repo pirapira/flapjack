@@ -354,4 +354,19 @@ theorem sptInsert_swap {α : Type} :
               conv => rhs; rw [sptInsert.eq_4, if_neg ha0, if_neg ha2, sptInsert.eq_4, if_neg hc0, if_pos hc2]
               rw [sptInsert.eq_4, if_neg hc0, if_pos hc2, sptInsert.eq_4, if_neg ha0, if_neg ha2]
 
+/-! ## HOL `fromAList` rendering
+
+The `fromAList` definition is in HOL's external standard-library
+`HOL/src/finite_maps/sptreeScript.sml`, not in the CakeML submodule. Its Lean
+rendering below is therefore Flapjack infrastructure without an `@[hol]` tag.
+The CakeML theorem `mem_lookup_fromalist_some` is ported in the
+`Flapjack.Pancake.CrepToLoop.StateRel` proof counterpart. -/
+
+/-- Flapjack rendering of HOL `sptree$fromAList`: each head association is
+inserted over the tree built from the tail, matching the external HOL
+standard-library definition. -/
+def sptFromAList {α : Type} : List (Nat × α) → Spt α
+  | [] => .ln
+  | (key, value) :: entries => sptInsert key value (sptFromAList entries)
+
 end Flapjack

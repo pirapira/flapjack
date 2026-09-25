@@ -244,4 +244,33 @@ theorem evalCrepRuntimeExp_crepSemHOLState_var
   | some cell => cases cell <;> simp [HolWordLab.toPanWordLab,
       PanWordLab.toHolWordLab, panTheWord]
 
+/-- Native production-evaluator `LoadGlob` case against the exact finite-map
+global field in `CrepSemHOLState`, corresponding to HOL
+`crepSem$eval_def` (`crepSemScript.sml:111`). The production runtime state
+remains arbitrary, including its code, FFI, memory model, and byte
+configuration; the only premise relates the queried global observation to
+this state's finite-map lookup. No state projection or successful-evaluation
+premise is used, so the equation covers both a lookup hit and a miss. The
+direct HOL rows are `eval_global_hit` and `eval_global_miss` in
+`scripts/hol-probes/crep_eval_probe.out`. This stays untagged: the HOL state
+uses the positive-width `BitVec` encoding rather than an arbitrary HOL
+`finite_index`, and the local observation premise is only one component of the
+full state/evaluator correspondence. -/
+theorem evalCrepRuntimeExp_crepSemHOLState_loadGlob
+    {width : Nat} [NeZero width] {σ ρ : Type}
+    (holState : CrepSemHOLState width σ)
+    (runtimeState : CrepRuntimeState (RiscV.Word width) ρ)
+    (address : BitVec 5)
+    (hGlobal : runtimeState.globals address =
+      (holState.globals.lookup address).map HolWordLab.toPanWordLab) :
+    ((evalCrepRuntimeExp runtimeState (.loadGlob address)).map
+      PanWordLab.word).map PanWordLab.toHolWordLab =
+        holState.globals.lookup address := by
+  simp only [evalCrepRuntimeExp]
+  rw [hGlobal]
+  cases h : holState.globals.lookup address with
+  | none => simp
+  | some cell => cases cell <;> simp [HolWordLab.toPanWordLab,
+      PanWordLab.toHolWordLab, panTheWord]
+
 end Flapjack

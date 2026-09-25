@@ -498,6 +498,14 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_crepSemHOLState_loadGlob",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Production LoadGlob result is related to the exact finite-map globals lookup under a queried-global relation, with runtime code/FFI left arbitrary and no success premise. The HOL state still uses the positive-width BitVec encoding and the theorem supplies neither a full-state relation nor arbitrary finite_index evaluator correspondence; keep untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
     "lean_name": "evalCrepSourceProjection_load",
     "statement_status": "documented_mismatch",

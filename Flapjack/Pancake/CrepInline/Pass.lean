@@ -701,12 +701,18 @@ def crepInlineTopRecursiveByNames [BEq FunName] [LawfulBEq FunName]
         (function.name, (function.params, function.body)))
   crepInlineTopRecursive inlineable functions
 
-/-- HOL `crep_inline$compile_inl_top`: filter the compiled Crep function
-    triples by the source inline-name set, then inline each body with its own
-    name removed from the finite active set. The source finite map's first
-    duplicate binding is represented by `crepInlineLookup`'s first-match
-    lookup on the filtered list. -/
-@[hol "cakeml/pancake/crep_inlineScript.sml" "compile_inl_top_def"]
+/-- Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of
+    `crep_inline$compile_inl_top`: filter the compiled Crep function triples by
+    the source inline-name set, then inline each body with its own name removed
+    from the finite active set. The source finite map's first duplicate binding
+    is represented by `crepInlineLookup`'s first-match lookup on the filtered
+    list.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port): `inlineNames` and the function
+    triples are keyed by `FunName` = `String`, while HOL
+    `crep_inlineScript.sml` keys `inl_fname`/`inl_fs` by `funname` = `mlstring`.
+    The exact MlString identifier carrier is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
 def compileInlTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
     (inlineNames : List FunName)

@@ -1,5 +1,6 @@
 import Flapjack.Parser
 import Flapjack.Parser.LocaliseByteRanged
+import Flapjack.Pancake.PanToCrep.CompileProg
 
 /-!
 The executed parser boundary preserves byte-rangedness.
@@ -64,5 +65,25 @@ theorem parseTopDecs_declByteRanged {width : Nat} (ofInt : Int → BitVec width)
         exact localiseDecls_byteRanged decls
           (convTopDecList_byteRanged ofInt locations (parseFuel toks.length) tree
             (runGrammar_byteRanged (safePancakeLex_tokens_byteRanged hlex) hrun) decls hconv)
+
+/-! ### Routing the executed parser boundary through the exact carrier
+
+`parseTopDecs` returns byte-ranged declarations (`parseTopDecs_declByteRanged`),
+so the exact MLString-keyed `compile_prog` boundary
+(`compileProgTopHOLOfExact`) applied to their `declToHOL` image is
+definitionally equal to the production String-keyed `compileProgTopHOL`.
+This is the kernel-checked bridge from the executed parser output to the exact
+carrier; the executed pipeline still calls `compileProgTopHOLWithMetadata`
+directly, so the textual-routing obligation remains tracked separately. -/
+theorem parseTopDecs_routes_exactBoundary {width : Nat} [NeZero width]
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]
+    (ofInt : Int → BitVec width) (source : String) (locations : Bool)
+    (declarations : List (Decl (BitVec width)))
+    (h : parseTopDecs ofInt source locations = .ok declarations) :
+    compileProgTopHOLOfExact (declarations.map declToHOL) =
+      compileProgTopHOL declarations :=
+  compileProgTopHOLOfExact_declToHOL declarations
+    (parseTopDecs_declByteRanged ofInt source locations declarations h)
 
 end Flapjack.Parser

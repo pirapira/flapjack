@@ -20,7 +20,7 @@ FLAPJACK-SPECIFIC infrastructure because they quantify the broader carrier:
 * `decClockHOLExact` / `fixClockHOLExact` only write `clock`, so their
   equations are faithful, but the quantified state carrier is broader than HOL's
   finite-map state; retyping to `FiniteSupport` (or an exact finite-map state) so
-  the tags can be restored is tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.1`.
+  the tags can be restored is tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.2`.
 * `emptyLocalsHOLExact` sets `locals` to the empty map, exactly HOL `FEMPTY`, so
   its `locals` is unconditionally finite; the other map fields are untouched, so
   the whole state keeps finite support only when the input has it (proved

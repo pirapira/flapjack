@@ -85,7 +85,7 @@ structure PanSemStateExact (width : Nat) (σ : Type) [NeZero width] where
     (`PanSemStateExact.FiniteSupport`, preserved by
     `PanSemStateExact.finiteSupport_decClock` in `StateExactFinite.lean`). The
     exact finite-map carrier rebuild and tag restoration is tracked by bead
-    `flapjack-pxn.18.3.7.1.3.1.1.1`. -/
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def decClockHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with clock := state.clock - 1 }
@@ -96,7 +96,7 @@ def decClockHOLExact {width : Nat} {σ : Type} [NeZero width]
     `PanSemStateExact.finiteSupport_fixClock` in `StateExactFinite.lean`), while
     `PanSemStateExact`'s unrestricted `MlS → Option _` fields admit non-HOL
     states. Exact finite-map carrier rebuild and tag restoration tracked by bead
-    `flapjack-pxn.18.3.7.1.3.1.1.1`. -/
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def fixClockHOLExact {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (oldState : PanSemStateExact width σ) (step : β × PanSemStateExact width σ) :
     β × PanSemStateExact width σ :=
@@ -108,7 +108,7 @@ def fixClockHOLExact {width : Nat} {σ : Type} [NeZero width] {β : Type}
     faithful only on `PanSemStateExact.FiniteSupport`, since the unrestricted
     `MlS → Option _` carrier admits non-HOL states. Exact finite-map carrier
     rebuild and tag restoration tracked by bead
-    `flapjack-pxn.18.3.7.1.3.1.1.1`. -/
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (state : PanSemStateExact width σ) :
     Option (ValueHOL width) :=
@@ -123,7 +123,7 @@ def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     `PanSemStateExact.finiteSupport_setKvar` in `StateExactFinite.lean`), since
     the unrestricted `MlS → Option _` carrier admits non-HOL states. Exact
     finite-map carrier rebuild and tag restoration tracked by bead
-    `flapjack-pxn.18.3.7.1.3.1.1.1`. -/
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (value : ValueHOL width)
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
@@ -141,7 +141,7 @@ def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     support only when the input does
     (`PanSemStateExact.finiteSupport_emptyLocals`, which preserves an input
     `FiniteSupport`). Exact finite-map carrier rebuild and tag restoration
-    tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.1`. -/
+    tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with locals := fun _ => none }

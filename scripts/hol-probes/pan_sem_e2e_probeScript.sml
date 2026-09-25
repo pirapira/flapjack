@@ -912,4 +912,22 @@ val _ = print_eval "is_valid_value_memory_update"
   ``panSem$is_valid_value ^ivs_memory_state Local «x» (ValWord (7w:8 word)) =
     panSem$is_valid_value ^ivs_state Local «x» (ValWord (7w:8 word))``
 
+val _ = print_eval "kvar_defs_set_kvar_local"
+  ``panSem$set_kvar Local «x» (ValWord (3w:8 word)) ^ivs_state =
+    panSem$set_var «x» (ValWord (3w:8 word)) ^ivs_state``
+
+val _ = print_eval "kvar_defs_set_global_update"
+  ``FLOOKUP (panSem$set_global «g» (ValWord (3w:8 word)) ^ivs_state).globals «g»
+      = SOME (ValWord (3w:8 word)) /\
+    FLOOKUP (panSem$set_global «g» (ValWord (3w:8 word)) ^ivs_state).locals «x»
+      = SOME (ValWord (7w:8 word))``
+
+val _ = print_eval "kvar_defs_lookup_global"
+  ``panSem$lookup_kvar Global «g» ^ivs_state = SOME (ValWord (9w:8 word))``
+
+val _ = print_eval "kvar_defs_is_valid_value"
+  ``panSem$is_valid_value ^ivs_state Local «x» (ValWord (7w:8 word)) =
+    (panSem$shape_of (ValWord (7w:8 word)) =
+     panSem$shape_of (ValWord (7w:8 word)))``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

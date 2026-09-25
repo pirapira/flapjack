@@ -264,6 +264,71 @@ DOCUMENTED_MISMATCHES = {
         "withdrawn pending the exact mlstring-carrier port "
         "flapjack-pxn.18.3.5.8.8."
     ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "flookup_setCrepHolGlobals_localsW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "FLOOKUP_set_globals",
+        "Codex (source comparison with crepPropsScript.sml:297-301: the equation "
+        "`FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n` matches the "
+        "Lean pointwise equation, because setCrepHolGlobalsW updates only globals, "
+        "as HOL set_globals_def does (crepSemScript.sml:61-63). However the "
+        "quantified whole-state carrier CrepHolState (BitVec width) stores "
+        "locals/globals/code as unrestricted Nat-to-Option, BitVec-5-to-Option and "
+        "FunName-to-Option functions that admit infinite support and String-backed "
+        "code names, a strict superset of HOL's finite mlstring-keyed maps "
+        "(crepSemScript.sml:19-32). names_as_string cannot authorize a whole-state "
+        "carrier and no NameRanged byte witness applies. The update boundary is "
+        "pinned by the set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) row "
+        "of crep_store_global_probe.out and sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:110-116. No exact finite-support "
+        "carrier; tag remains withdrawn pending flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedFreeVars_nestedSeq_storeGlobalsW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "assigned_free_vars_store_globals_empty",
+        "Codex (source comparison with crepPropsScript.sml:458-465: the equation "
+        "`assigned_free_vars (nested_seq (store_globals ad es)) = []` matches the "
+        "Lean crepNestedSeqW/storeGlobalsW equation pointwise, since storeGlobals "
+        "builds only StoreGlob programs. The mismatch is the imported programme "
+        "carrier: HOL crepLang$prog embeds funname = mlstring in Call/ExtCall, "
+        "while Lean CrepProg embeds FunName = String, so the quantified programs "
+        "need not agree and no mlstring identifier exists for names_as_string, nor "
+        "a NameRanged byte witness. The store_globals list shape is pinned by the "
+        "empty/one/two rows of crep_store_globals_probe.out and sampled by "
+        "Flapjack/Test/CrepAssignedVarsParity.lean:84-86,108-111. Keep the tag "
+        "withdrawn pending the exact mlstring-carrier port flapjack-pxn.18.3.5.8.8."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedVars_nestedSeq_storeGlobalsW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "assigned_vars_store_globals_empty",
+        "Codex (source comparison with crepPropsScript.sml:449-456: the equation "
+        "`assigned_vars (nested_seq (store_globals ad es)) = []` matches the Lean "
+        "crepNestedSeqW/storeGlobalsW equation pointwise, since storeGlobals builds "
+        "only StoreGlob programs. The mismatch is the imported programme carrier: "
+        "HOL crepLang$prog embeds funname = mlstring in Call/ExtCall, while Lean "
+        "CrepProg embeds FunName = String, so the quantified programs need not "
+        "agree and no mlstring identifier exists for names_as_string, nor a "
+        "NameRanged byte witness. The store_globals list shape is pinned by "
+        "crep_store_globals_probe.out and sampled by "
+        "Flapjack/Test/CrepAssignedVarsParity.lean:88-90,111. Keep the tag "
+        "withdrawn pending the exact mlstring-carrier port flapjack-pxn.18.3.5.8.8."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "assigned_free_vars_IMP_assigned_vars",
+        "Codex (source comparison with crepPropsScript.sml:373-378: the implication "
+        "`MEM x (assigned_free_vars prog) ==> MEM x (assigned_vars prog)` matches "
+        "the Lean crepAssignedFreeVarsW/crepAssignedVarsW implication pointwise. "
+        "The mismatch is the imported programme carrier: HOL crepLang$prog embeds "
+        "funname = mlstring in Call/ExtCall, while Lean CrepProg embeds "
+        "FunName = String, so the quantified program ranges over a carrier whose "
+        "function names can differ from HOL's. The quantifiers are a whole CrepProg "
+        "and a varname = num name, so no mlstring identifier exists for "
+        "names_as_string and no NameRanged byte witness applies. Direct HOL rows "
+        "imp_mem=T and imp_mem_absent=T are in crep_assigned_vars_probe.out (probe "
+        "header cites crepPropsScript.sml:373) and sampled by "
+        "Flapjack/Test/CrepAssignedVarsParity.lean:50-62. Keep the tag withdrawn "
+        "pending the exact mlstring-carrier port flapjack-pxn.18.3.5.8.8."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

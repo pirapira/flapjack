@@ -72,13 +72,15 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
     word payload, indexed by `width` with a `BitVec width` payload.  The
     executable code uses the generic `PanWordLab` (`Flapjack/PanValues.lean`),
     and the two are related by the checked isomorphism below at each width. -/
--- FLAPJACK-SPECIFIC (not a statement-exact HOL port): the constructor
--- arity/field type match, but this `width : Nat` admits `width = 0` while the
--- HOL `'a word` carrier requires positive `dimindex`.  Adding the positive-width
--- constraint (`[NeZero width]` on the inductive, as done for `CrepProgHOL`)
--- would propagate through `HolValue`, `CrepLocalsExact`, and the frozen
--- `PanSemStateEval.lean`, so the Datatype tag is withheld and the exact
--- positive-width carrier is tracked by `flapjack-0lj.5`.
+-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
+-- `word_lab = Word ('a word)` has one constructor and one word payload, which
+-- matches `.word (BitVec width)` at every positive width. This Lean inductive
+-- quantifies over every `width : Nat`, including zero; HOL's finite word
+-- carrier has a positive `dimindex` and has no width-zero instance. The extra
+-- width-zero carrier in this family has no HOL counterpart. Adding
+-- `[NeZero width]` to this inductive (as on `CrepProgHOL`) propagates through
+-- `HolValue`, `CrepLocalsExact`, and the frozen `PanSemStateEval.lean`, so the
+-- tag stays withheld until the dependency slice in `flapjack-0lj.5` lands.
 inductive HolWordLab (width : Nat) where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr

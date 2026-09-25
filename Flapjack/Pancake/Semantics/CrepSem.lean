@@ -266,14 +266,19 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE_LIST FEMPTY varargs }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `upd_locals varargs s = s with locals := FEMPTY |++ varargs` is HOL's
-    (`crepSemScript.sml:66-68`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions that admit infinite-support
-    inhabitants, a strict superset of HOL's finite maps. The
-    `@[hol upd_locals_def]` tag was withdrawn in the
-    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
-    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
+    `upd_locals_def` (`crepSemScript.sml:66-68`) sets `locals` to
+    `FEMPTY |++ varargs`, preserving the other state fields. This definition
+    matches that update clause, and `[NeZero width]` excludes invalid word
+    dimensions, but its full state argument is `CrepHolState (BitVec width) σ`:
+    `locals` and `code` are raw lookup functions with no finite-support
+    witnesses, so this carrier includes states HOL's finite maps cannot
+    represent. The direct rows `upd_locals_replace` and
+    `locals_upd_locals_cells` pin update behavior only; they do not close this
+    state-carrier gap. The source-shaped `CrepSemHOLState` now has finite
+    support, but its `upd_locals` helper and bridge to this executable state
+    remain in `flapjack-pxn.18.3.7.1.3.1.1.3.1.1`. The tag withdrawn by
+    `flapjack-pxn.18.3.7.1.3.1.1.3` therefore remains withheld here. -/
 def updCrepHolLocalsW {width : Nat} [NeZero width] {σ : Type}
     (varargs : List (Nat × PanWordLab (BitVec width)))
     (state : CrepHolState (BitVec width) σ) : CrepHolState (BitVec width) σ :=

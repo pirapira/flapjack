@@ -459,6 +459,42 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
             self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pansem_state_defs_function_backed_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            ("Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
+             "fixClockHOLExact_IMP_LESS_EQ"): "fix_clock_IMP_LESS_EQ",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "kvar_simps"): "kvar_simps",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "is_valid_value_simps"): "is_valid_value_simps",
+            ("Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+             "is_valid_value_simps2"): "is_valid_value_simps2",
+            ("Flapjack/Pancake/Semantics/PanSem/StateDefsExact.lean",
+             "kvar_defs"): "kvar_defs",
+            ("Flapjack/Pancake/Semantics/PanSem/IsValidValueExact.lean",
+             "isValidValueHOLExact"): "is_valid_value_def",
+            ("Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+             "updLocalsHOLExact"): "upd_locals_def",
+            ("Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+             "resVarHOLExact"): "res_var_def",
+            ("Flapjack/Pancake/Semantics/PanSem/DecCallExact.lean",
+             "lookupCodeHOLExact"): "lookup_code_def",
+        }
+        for key, hol_name in cases.items():
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panSemScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.5", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

@@ -5485,6 +5485,78 @@
     "reviewer": "Codex and flapjack-ds6 (source comparison, bead flapjack-dlc.120, with panSemScript.sml:209-283: all fifteen clauses Const, Var Local/Global, RStruct, RField, NStruct, NField, Load/Load32/LoadByte, Op/Panop, Cmp, Shift, BaseAddr/TopAddr/BytesInWord and every used subcarrier (MlS/ExpHOL/ValueHOL/ShapeHOL/StructContextExact, HolWordLab memory, memaddrs as a Prop for HOL 'a word set, [NeZero width] for HOL's positive dimindex) were compared one by one and match. The blocking mismatch is the state carrier: HOL panSem$state.locals/globals are finite maps varname |-> 'a v, while PanSemStateExact.locals/globals are unrestricted MlS -> Option _ functions, a strict superset admitting infinite support; the evaluator is faithful only on the finite-support subcarrier. Direct HOL rows are in pan_eval_probe.out, reproduced by Flapjack/Test/PanSemEvalExactParity.lean. This raw-function rendering stays documented_mismatch and untagged; the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 has since landed and the qualified eval_def tag is carried by evalHOLFinite over PanSemStateFiniteExact in Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean (reviewed_fmap_as_finite_support; audit flapjack-pxn.18.3.7.1.3.1.2)."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
+    "lean_name": "fixClockHOLExact_IMP_LESS_EQ",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.35; FLAPJACK-SPECIFIC, documented_mismatch). HOL fix_clock_IMP_LESS_EQ (panSemScript.sml:451-457) states over panSem$state finite maps that a fix_clock step cannot raise the clock. fixClockHOLExact_IMP_LESS_EQ (ClockExact.lean:47) keeps the same quantifiers and conclusion but PanSemStateExact uses unrestricted functions in place of the finite-map fields, admitting infinite support. Exact finite-support replacement over PanSemStateFiniteExact tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "kvar_simps",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.30; FLAPJACK-SPECIFIC, documented_mismatch). HOL kvar_simps (panSemScript.sml:422-429) is the four set_kvar/lookup_kvar simp equations over panSem$state finite maps. Lean kvar_simps (StateSimpExact.lean:44) keeps the four equations but its PanSemStateExact carrier exposes unrestricted lookup functions instead of HOL finite maps. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.38; FLAPJACK-SPECIFIC, documented_mismatch). HOL is_valid_value_simps (panSemScript.sml:476-487) gives the Local/Global FLOOKUP clauses of is_valid_value over panSem$state finite maps. is_valid_value_simps (StateSimpExact.lean:55) matches the two clauses but its PanSemStateExact carrier reads arbitrary functions rather than HOL finite-map fields. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps2",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps2",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.39; FLAPJACK-SPECIFIC, documented_mismatch). HOL is_valid_value_simps2 (panSemScript.sml:489-500) is the eight clock/ffi/code/memory update-invariance equations for is_valid_value and lookup_kvar over panSem$state. is_valid_value_simps2 (StateSimpExact.lean:70) keeps the equations but binds whole-state records with function-typed code/memory in place of HOL finite maps. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_defs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateDefsExact.lean",
+    "lean_name": "kvar_defs",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.40; FLAPJACK-SPECIFIC, documented_mismatch). HOL kvar_defs (panSemScript.sml:502-503) is LIST_CONJ of set_var/set_global/set_kvar/is_valid_value/lookup_kvar over panSem$state finite maps. kvar_defs (StateDefsExact.lean:51) spells out the same five accessor equations as a nested conjunction, but its PanSemStateExact map fields are unrestricted functions rather than HOL finite maps. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/IsValidValueExact.lean",
+    "lean_name": "isValidValueHOLExact",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.37; FLAPJACK-SPECIFIC, documented_mismatch). HOL is_valid_value (panSemScript.sml:469-475) compares shape_of value with the looked-up shape in panSem$state finite maps. isValidValueHOLExact (IsValidValueExact.lean:85) matches the body and uses exact ShapeHOL/ValueHOL, but its PanSemStateExact argument admits arbitrary lookup functions instead of HOL finite-map fields. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "upd_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "updLocalsHOLExact",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.31; FLAPJACK-SPECIFIC, documented_mismatch). HOL upd_locals (panSemScript.sml:431-434) sets locals := FEMPTY |++ varargs, a finite map. updLocalsHOLExact (LocalUpdatesExact.lean:60) models FEMPTY followed by FUPDATE_LIST pointwise, but its PanSemStateExact state type is not restricted to finite maps. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "res_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "resVarHOLExact",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.41; FLAPJACK-SPECIFIC, documented_mismatch). HOL res_var (panSemScript.sml:505-508) performs the finite-map delete/update on locals. resVarHOLExact (LocalUpdatesExact.lean:72) reproduces the delete/update behavior pointwise, but its MlS -> Option function input is not HOL's finite-map carrier. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "lookup_code_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/DecCallExact.lean",
+    "lean_name": "lookupCodeHOLExact",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.36; FLAPJACK-SPECIFIC, documented_mismatch). HOL lookup_code (panSemScript.sml:458-467) FLOOKUPs the code finite map and builds FEMPTY |++ ZIP arguments. lookupCodeHOLExact (DecCallExact.lean:39) retains the lookup and argument checks and the same return triple, but its code is an unrestricted function rather than a HOL finite map. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

@@ -105,10 +105,11 @@ mutual
         (memoryAccess : Option (PanValueMemoryAccess α) := none) →
         (contracts : Option PanValueCallContracts := none) →
         (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) →
+        (preserveReturnLocals : Bool := false) →
         Option (PanValueFfiClockResult α σ)
-    | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+    | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, clock, info, function, arguments,
-        memoryAccess, contracts, memoryHandler => do
+        memoryAccess, contracts, memoryHandler, preserveReturnLocals => do
         (panValueCallArgumentsValue structs baseAddress topAddress bytesInWord locals globals memory
           arguments memoryAccess).elim
           (pure (.control (.error locals globals memory ffi), clock))
@@ -151,8 +152,11 @@ mutual
                         -- shape-only, exactly as in `panSemScript.sml`.
                         if panValueReturnValid structs contracts function values then
                           match info with
-                          | none => pure (.control
-                              (.returned (fun _ => none) calleeGlobals calleeMemory
+                          | none =>
+                              let returnedLocals :=
+                                if preserveReturnLocals then calleeLocals else fun _ => none
+                              pure (.control
+                              (.returned returnedLocals calleeGlobals calleeMemory
                                 calleeFfi values), calleeClock)
                           | some (destination, _) => do
                               let (callerLocals, callerGlobals) ←
@@ -161,7 +165,8 @@ mutual
                               pure (.control (.normal callerLocals callerGlobals
                                 calleeMemory calleeFfi), calleeClock)
                         else pure (.control
-                          (.error (fun _ => none) calleeGlobals calleeMemory calleeFfi),
+                          (.error (if preserveReturnLocals then calleeLocals else fun _ => none)
+                            calleeGlobals calleeMemory calleeFfi),
                           calleeClock)
                     | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
                         if panValueExceptionValid structs contracts exception value &&
@@ -255,9 +260,9 @@ mutual
         let (outcome, nextClock) ← evalPanValueFfiClockCall context primitive handler structs
           functions baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
           none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+          (memoryHandler := memoryHandler) (preserveReturnLocals := true)
         match outcome with
-        | .control (.returned _ nextGlobals nextMemory nextFfi [value]) =>
+        | .control (.returned nextLocals nextGlobals nextMemory nextFfi [value]) =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyOutcome, bodyClock) ← evalPanValueFfiClockProg context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
@@ -265,7 +270,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)
@@ -275,8 +281,12 @@ mutual
             pure (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
               nextClock)
         | .control (.returned _ _ _ _ _) => none
-        | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
-            .control (.continued _ _ _ _) => none
+        | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.broke nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+            -- HOL `DecCall` turns callee NONE/Break/Continue into Error and
+            -- returns the fixed callee post-state unchanged.
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
@@ -345,10 +355,11 @@ mutual
         (memoryAccess : Option (PanValueMemoryAccess α) := none) →
         (contracts : Option PanValueCallContracts := none) →
         (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) →
+        (preserveReturnLocals : Bool := false) →
         Option (PanValueFfiClockResult α σ)
-    | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+    | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, clock, info, function, arguments,
-        memoryAccess, contracts, memoryHandler => do
+        memoryAccess, contracts, memoryHandler, preserveReturnLocals => do
         (panValueCallArgumentsValue structs baseAddress topAddress bytesInWord locals globals memory
           arguments memoryAccess).elim
           (pure (.control (.error locals globals memory ffi), clock))
@@ -395,8 +406,11 @@ mutual
                             -- equation, so no separate size test is needed here.
                             panValueReturnValid structs contracts function values then
                           match info with
-                          | none => pure (.control
-                              (.returned (fun _ => none) calleeGlobals calleeMemory
+                          | none =>
+                              let returnedLocals :=
+                                if preserveReturnLocals then calleeLocals else fun _ => none
+                              pure (.control
+                              (.returned returnedLocals calleeGlobals calleeMemory
                                 calleeFfi values), calleeClock)
                           | some (destination, _) =>
                               match assignPanValueCallResult locals calleeGlobals destination values
@@ -407,8 +421,9 @@ mutual
                               | none =>
                                   pure (.control (.error calleeLocals calleeGlobals
                                     calleeMemory calleeFfi), calleeClock)
-                        else pure (.control (.error calleeLocals calleeGlobals
-                          calleeMemory calleeFfi), calleeClock)
+                        else pure (.control (.error
+                          (if preserveReturnLocals then calleeLocals else fun _ => none)
+                          calleeGlobals calleeMemory calleeFfi), calleeClock)
                     | .raised calleeLocals calleeGlobals calleeMemory calleeFfi exception value =>
                         match info with
                         | some (_, some (caught, handlerVariable, handlerProgram)) =>
@@ -507,11 +522,11 @@ mutual
         .decCall name shape function arguments body, memoryAccess, contracts, memoryHandler => do
         let oldValue := locals name
         let (outcome, nextClock) ← evalPanValueFfiClockCodeCall context primitive handler
-          structs code exceptionShapes baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-          none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+          structs code exceptionShapes baseAddress topAddress bytesInWord fuel locals globals memory ffi
+          clock none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+          (memoryHandler := memoryHandler) (preserveReturnLocals := true)
         match outcome with
-        | .control (.returned _ nextGlobals nextMemory nextFfi [value]) =>
+        | .control (.returned nextLocals nextGlobals nextMemory nextFfi [value]) =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyOutcome, bodyClock) ← evalPanValueFfiClockCodeProg
                 context primitive handler structs code exceptionShapes baseAddress topAddress bytesInWord fuel
@@ -519,7 +534,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)
@@ -528,8 +544,12 @@ mutual
         | .control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event) =>
             pure (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event), nextClock)
         | .control (.returned _ _ _ _ _) => none
-        | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
-            .control (.continued _ _ _ _) => none
+        | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.broke nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+            -- HOL `DecCall` turns these callee outcomes into Error and returns
+            -- the fixed callee post-state unchanged.
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | _fuel + 1, locals, globals, memory, ffi, clock,

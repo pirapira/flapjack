@@ -91,9 +91,12 @@ def panSimpDecl : Decl α → Decl α
 
 /-! Cake's `functions` projection (`panLangScript.sml:319-326`): the function
     table as `(name, params, body, returnShape)` entries, with non-function
-    declarations dropped.  This is an alias for the reviewed, HOL-tagged
-    `functionEntries` (`Flapjack/Pancake/PanLang.lean`), so the executable
-    path and the ported definition coincide. -/
+    declarations dropped.  This is an alias for the production `functionEntries`
+    (`Flapjack/Pancake/PanLang.lean`); that mirror is deliberately untagged
+    because its carriers are generic `Decl α` with String-backed names and
+    monomorphic `Shape`/`Prog α`, not HOL's word-indexed `decl` with `mlstring`
+    identifiers (bead `flapjack-pxn.18.3.5.8`).  The executable path and the
+    production definition coincide. -/
 abbrev functions :
     List (Decl α) → List (FunName × List (VarName × Shape) × Prog α × Shape) :=
   functionEntries

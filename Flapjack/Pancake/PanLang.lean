@@ -368,12 +368,17 @@ def inlinable : Decl α → Bool
   | _ => false
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
-    `panLang$exceptions` (`panLangScript.sml:328`), the exception table of a
-    declaration list in declaration order, dropping every non-exception
-    declaration. The tag is WITHDRAWN because the result keys are
-    `ExceptionId := String` (PanLang.lean:18) while HOL `eid = ``:mlstring```
-    (`panLangScript.sml:29`); an exact port needs the MlString carrier
-    (bead `flapjack-pxn.18.3.5.8`). -/
+    `panLang$exceptions` (`panLangScript.sml:328-337`), preserving exception
+    declaration order and dropping all other constructors. HOL takes its
+    word-indexed `decl list` and returns `(mlstring # shape) list` (`eid` is
+    `mlstring`, `panLangScript.sml:29`). This function instead takes generic
+    `Decl α` and returns `(ExceptionId × Shape)` entries with
+    `ExceptionId := String`; `Decl α` and monomorphic `Shape` are not the
+    reviewed exact HOL carriers either. The direct HOL-EVAL fixture and Lean
+    parity guard exercise the five selection clauses, not byte-level carrier
+    equivalence. The `@[hol]` tag therefore remains WITHDRAWN; an exact
+    counterpart needs the MlString/ShapeHOL declaration carrier (bead
+    `flapjack-pxn.18.3.5.8`). -/
 def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | [] => []
   | .exnDecl exception shape :: declarations =>
@@ -381,14 +386,22 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
-/- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
-    `panLang$functions` (`panLangScript.sml:319-328`), retaining every
+/- FLAPJACK-SPECIFIC (not an exact HOL port): clause-structured mirror of HOL
+    `panLang$functions` (`panLangScript.sml:319-326`), retaining every
     function's metadata while skipping value, exception, and struct
     declarations; the tuple order matches HOL (name, params, body, return
-    shape). The tag is WITHDRAWN because the result keys are
-    `FunName := String` / `VarName := String` (PanLang.lean:16-17) while HOL
-    `funname`/`varname` are `mlstring` (`panLangScript.sml:24,27`); an exact port
-    needs the MlString carrier (bead `flapjack-pxn.18.3.5.8`). -/
+    shape). The `@[hol]` tag is WITHDRAWN for more than a name representation
+    change: HOL's input is a `decl list` whose `Function` payload is
+    word-indexed (`'a prog` bodies, `mlstring` names, `shape` params/return) and
+    its result is `(mlstring # (mlstring # shape) list # 'a prog # shape)
+    list`; this production function instead quantifies over generic `Decl α`
+    with String-backed names and monomorphic `Shape`/`Prog α`. The
+    `names_as_string` qualifier cannot account for the generic expression and
+    program carriers. Direct HOL-EVAL rows are recorded in
+    `scripts/hol-probes/pan_lang_functions_probe.out` and reproduced by
+    `Flapjack/Test/PanLangFunctionsParity.lean`. Exact-carrier replacement is
+    tracked by `flapjack-pxn.18.3.5.8`; this analogue remains useful to the
+    executed compiler and is deliberately untagged. -/
 def functionEntries : List (Decl α) →
     List (FunName × List (VarName × Shape) × Prog α × Shape)
   | [] => []
@@ -1407,13 +1420,16 @@ where
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): clause-structured mirror of HOL
-    `panLang$free_var_ids` (`panLangScript.sml:347`). The expression helper is
-    the mirror of HOL `var_exp` preserving the local/global distinction; the
-    `Dec` filter uses `!=` (lawful String equality). The `@[hol]` tag is
-    WITHDRAWN because the result element type is `VarName := String`
-    (PanLang.lean:16) while HOL `varname` is `mlstring`
-    (`panLangScript.sml:27`); pending an MlString carrier
-    (bead `flapjack-pxn.18.3.5.8`). -/
+    `panLang$free_var_ids` (`panLangScript.sml:347`). The expression helper
+    mirrors HOL `var_exp`, and the `Dec` filter uses lawful String equality.
+    The `@[hol]` tag is WITHDRAWN for more than a name representation change:
+    HOL's input is a word-indexed `prog` with `mlstring` identifiers and its
+    result is `mlstring list`; this production function instead quantifies over
+    generic `Prog α`/`Exp α` with String-backed names and returns `List String`.
+    The `names_as_string` qualifier cannot account for the generic expression
+    and program carriers. Exact-carrier replacement is tracked by
+    `flapjack-pxn.18.3.5.8`; this analogue remains useful to the executed
+    compiler and is deliberately untagged. -/
 def freeVarIds : Prog α → List VarName
   | .dec name _ value body =>
       expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)

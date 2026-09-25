@@ -31,10 +31,19 @@ val _ = print_eval "word_load_miss"
       (panLang$Load One (panLang$Const 0w))``;
 val _ = print_eval "byte_little_first"
   ``eval ^little (panLang$LoadByte (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_byte_little"
+  ``eval ^little (panLang$LoadByte (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_byte_domain_failure"
+  ``eval (^little with memaddrs := {})
+      (panLang$LoadByte (panLang$Const 0w))``;
 val _ = print_eval "byte_little_last"
   ``eval ^little (panLang$LoadByte (panLang$Const 7w))``;
 val _ = print_eval "word32_little"
   ``eval ^little (panLang$Load32 (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_word32_little"
+  ``eval ^little (panLang$Load32 (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_word32_misaligned"
+  ``eval ^little (panLang$Load32 (panLang$Const 1w))``;
 val _ = print_eval "byte_big_first"
   ``eval ^big (panLang$LoadByte (panLang$Const 0w))``;
 val _ = print_eval "byte_big_last"

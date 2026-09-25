@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanSimp
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -267,15 +268,31 @@ theorem length_le_maxNameLength {name : String} {names : List String}
         exact Nat.le_max_left _ _
       · exact Nat.le_trans (ih htail) (Nat.le_max_right _ _)
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fresh_name`
-    (`pan_globalsScript.sml:55`): while the candidate is already a member of
-    `names`, append one apostrophe and retry.  Termination follows HOL's own
-    measure: appending a character strictly increases the length, bounded above
-    by the maximum name length. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over production
--- `String` names, while HOL `pan_globalsScript.sml` keys `fresh_name` by
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Qualified HOL port of Cake's `fresh_name` (`pan_globalsScript.sml:55`):
+    while the candidate is already a member of `names`, append one apostrophe
+    and retry.  The Lean clauses match HOL's exactly --
+    `if name ∈ names then freshNameHOL (name ++ "'") names else name` versus
+    `if MEM name names then fresh_name (strcat name «'») names else name` --
+    with `∈` being `String`/list equality and `++`/`strcat` the same
+    one-character append.  Termination is proved with a Flapjack-specific
+    measure (`maxNameLength`); HOL uses a `strlen`/`MAX_SET` measure, but the
+    measure is not operational, and `String.length`/`strlen` occur only there,
+    never in the result.  The sole operational difference is the name carrier:
+    production `String` versus HOL `mlstring`.
+
+    `name` is byte-observable: the generated name crosses the compiler
+    boundary, and the same-module witness `holMlStringWitness_freshNameHOL`
+    establishes `NameRanged (freshNameHOL name names)` from the input premise
+    `NameRanged name` (only apostrophes are appended).  The executed path
+    supplies byte-ranged seeds: `globalCompile` uses `freshNameHOL "" names` and
+    `freshNameHOL "vn'" (resultName :: names)`, and `globalNewMainName` uses the
+    literal `"main"`.  The `names` list is used only for membership equality,
+    never inspected, so it is not a byte-observable identifier.  Direct HOL rows
+    are in `scripts/hol-probes/pan_globals_fresh_name_probe.out`; Lean rows and
+    the byte-rangedness guard are in
+    `Flapjack/Test/PanGlobalsNameByteRangedParity.lean`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fresh_name_def"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
 def freshNameHOL (name : String) (names : List String) : String :=
   if name ∈ names then freshNameHOL (name ++ "'") names else name
 termination_by 1 + maxNameLength names - name.length
@@ -422,17 +439,33 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_name_def`
+/-- Reviewed qualified HOL port of Cake's `fperm_name_def`
     (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
     function names and leaves every other name unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
-def globalRenameFunctionName [LawfulBEq String]
+-- Qualified HOL port (names_as_string): the produced value is a keyed
+-- identifier, so the declaration carries the reviewed
+-- `(names_as_string := [source, target, name])` qualifier (manifest status
+-- `reviewed_names_as_string`).  The Lean statement matches HOL's exactly: it
+-- compares names with propositional `=` (`String`'s built-in `DecidableEq`)
+-- and the three identifiers are equality/map-key-only, so no byte-boundary
+-- witness is required.  The exact MlString identifier carrier is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+--
+-- Clause-by-clause review (flapjack-6nn.1.1):
+--   HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
+--   Lean `if source = name then target else if target = name then source
+--   else name`.  The clauses, branch order, comparison `=` and result names
+--   match exactly with no side condition.  `globalRenameFunctionName` only
+--   compares and swaps names, never inspects their bytes; every use is
+--   equality/`map`-key only, so the `String`/`mlstring` carrier difference is
+--   unobservable here.  Direct HOL/Lean edge-case fixtures:
+--   `scripts/hol-probes/pan_globals_fperm_name_probe.out` and
+--   `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"
+  (names_as_string := [source, target, name])]
+def globalRenameFunctionName
     (source target name : FunName) : FunName :=
-  if source == name then target else if target == name then source else name
+  if source = name then target else if target = name then source else name
 
 /-! Counterparts of Cake's `fperm_name_cancel` and `fperm_name_cong`
     (`pan_globalsProofScript.sml:1622,1629`): the source/target renaming is an
@@ -442,7 +475,6 @@ theorem globalRenameFunctionName_cancel [BEq String] [LawfulBEq String]
     globalRenameFunctionName source target
         (globalRenameFunctionName source target name) = name := by
   unfold globalRenameFunctionName
-  simp only [beq_iff_eq]
   repeat' split <;> simp_all
 
 theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
@@ -458,16 +490,17 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
   · intro h
     rw [h]
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_def`
-    (`pan_globalsScript.sml:191`): rename `source` to `target` and vice versa
-    in every function occurrence and nested handler/body, leaving the other
-    program constructs structurally unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
-def globalRenameProg [LawfulBEq String]
+/-! Flapjack-specific structural renaming corresponding clause-for-clause to
+    Cake's `fperm_def` (`pan_globalsScript.sml:191-214`). The direct HOL/Lean
+    fixture is `pan_globals_fperm_probe.out` /
+    `Flapjack/Test/PanGlobalsFpermParity.lean`. -/
+-- This definition is not tagged as HOL's `fperm_def`: production `Prog α`
+-- carries generic `Exp α` values (`Const : α`), while HOL `prog` contains
+-- word-valued `exp` (`Const : 'a word`). Production names and shapes also use
+-- String rather than HOL mlstring. `names_as_string` only covers the latter
+-- identifier difference, so the exact carrier mismatch remains open in
+-- `flapjack-6nn.3.1`.
+def globalRenameProg
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
       .dec name shape value (globalRenameProg source target body)
@@ -492,16 +525,17 @@ def globalRenameProg [LawfulBEq String]
   | program => program
 termination_by program => sizeOf program
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_decs_def`
-    (`pan_globalsScript.sml:216`): rename `source`/`target` in each function
-    declaration's name and body; every other declaration passes through
-    unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
-def globalRenameDecls [LawfulBEq String]
+/-! Flapjack-specific structural declaration renaming corresponding
+    clause-for-clause to Cake's `fperm_decs_def` (`pan_globalsScript.sml:216`).
+    The direct HOL/Lean fixture is `pan_globals_fperm_decs_probe.out` /
+    `Flapjack/Test/PanGlobalsFpermDecsParity.lean`. -/
+-- This definition is not tagged as HOL's `fperm_decs_def`: production
+-- `Decl α` contains `Prog α` and `Exp α` with `Const : α`; HOL `decl` carries
+-- word-valued `ExpHOL width` with `Const : 'a word`. Production identifiers
+-- and shapes also use String instead of mlstring. The `names_as_string`
+-- qualifier cannot repair the expression-carrier difference. The exact
+-- carrier replacement is tracked by `flapjack-6nn.3.1`.
+def globalRenameDecls
     (source target : FunName) : List (Decl α) → List (Decl α)
   | [] => []
   | .function declaration :: declarations =>
@@ -803,42 +837,145 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
     functions, in that order.  `globalDeclIsName`/`globalDeclIsException`/
     `globalDeclIsGlobal`/`globalDeclIsFunction` are the HOL `is_name`/
     `is_exn_decl`/`is_decl`/`is_function` predicates. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
--- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
--- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
--- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): constructor filtering and output
+-- order match `resort_decls_def`, but the executed `Decl α` is not HOL's
+-- `DeclHOL width`. In particular, `Exp α` stores `α` directly in `Const`,
+-- while HOL `ExpHOL width` stores `BitVec width` (`'a word`); names and
+-- `Shape` also use production `String` instead of HOL `mlstring`. The
+-- `(names_as_string := ...)` qualifier only accounts for the last difference,
+-- so it cannot justify this tag. Keep untagged until an exact-carrier
+-- definition is connected to the executed path; tracked by bead
+-- `flapjack-6nn.3.1`. Clause/order evidence:
+-- `scripts/hol-probes/pan_globals_resort_decls_probe.out` and
+-- `Flapjack/Test/PanGlobalsResortDeclsParity.lean`.
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
     globalDeclsFilter globalDeclIsGlobal declarations ++
     globalDeclsFilter globalDeclIsFunction declarations
 
-/-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `new_main_name_def` (`pan_globalsScript.sml:224`):
-    the synthesized entry-point name is `fresh_name "main"` over the current
-    function names (`globalFunctionNames` is `MAP FST` of the function table). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-! Flapjack-specific production counterpart of Cake's `new_main_name_def`
+    (`pan_globalsScript.sml:224`): it calls `freshNameHOL "main"` on the
+    function names projected from the declaration list. The direct behavior
+    fixture is `scripts/hol-probes/pan_globals_new_main_name_probe.out`. -/
+-- This definition is not tagged as HOL's `new_main_name_def`: its input is
+-- generic production `List (Decl α)`, whose expressions carry `Const : α`;
+-- HOL `new_main_name` consumes word-valued declarations with `Const : 'a word`.
+-- `names_as_string` and the generated-name boundary witness only address the
+-- String/mlstring name difference, not this input-carrier mismatch. The exact
+-- carrier replacement is tracked by `flapjack-6nn.3.1`.
 def globalNewMainName (declarations : List (Decl α)) : FunName :=
   freshNameHOL "main" (globalFunctionNames declarations)
 
-/-! Counterpart of Cake's `new_main_name_correct`
-    (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
-    is never one of the program's existing function names. -/
+/-! Flapjack-specific freshness property for the synthesized `main` entry-point
+    name. The proof-level statement is over generic production `Decl α`, while
+    HOL `new_main_name_correct` ranges over word-valued declarations; see the
+    exact-carrier replacement bead `flapjack-6nn.3.1`. -/
 theorem globalNewMainName_not_mem
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   freshNameHOL_not_mem "main" (globalFunctionNames declarations)
 
+/-! ## `holMlStringWitness_*`: same-module byte-boundary witnesses
+
+The `names_as_string` qualifier (`Flapjack/HolRef.lean`) records Lean `String`
+fields standing for HOL `mlstring` names.  Declarations tagged with it are
+expected to carry a checked `holMlStringWitness_*` witness **in the same
+module**, establishing the byte-range condition of the generated names.  HOL
+`mlstring` is a list of 8-bit characters, so a generated name must never contain
+a code point `>= 256`; `Flapjack.Pancake.PanLang.NameRanged` is exactly that
+condition (and is definitionally the parser-chain `StringByteRanged`).
+
+The witnesses below are premise-aware: `freshNameHOL`, `globalFreshNameAux`, and
+`globalFreshName` may append apostrophes to an input name, so they preserve
+byte-rangedness only when the input name is byte-ranged. `globalNewMainName`
+starts from the literal `"main"` and therefore needs no premise. The witness
+for `freshNameHOL` supports its names-only `names_as_string` tag; the
+`globalNewMainName` witness remains a Flapjack production byte-safety fact and
+does not establish that its generic declaration carrier matches HOL. -/
+
+private theorem nameRanged_append {s₁ s₂ : String}
+    (h₁ : Flapjack.Pancake.PanLang.NameRanged s₁)
+    (h₂ : Flapjack.Pancake.PanLang.NameRanged s₂) :
+    Flapjack.Pancake.PanLang.NameRanged (s₁ ++ s₂) := by
+  intro c hc
+  rw [String.toList_append, List.mem_append] at hc
+  rcases hc with h | h
+  · exact h₁ c h
+  · exact h₂ c h
+
+private theorem nameRanged_quote : Flapjack.Pancake.PanLang.NameRanged "'" := by
+  unfold Flapjack.Pancake.PanLang.NameRanged
+  decide
+
+private theorem globalApostrophes_nameRanged (count : Nat) :
+    Flapjack.Pancake.PanLang.NameRanged (globalApostrophes count) := by
+  induction count with
+  | zero =>
+      simp [globalApostrophes, Flapjack.Pancake.PanLang.NameRanged]
+  | succ count ih =>
+      rw [globalApostrophes]
+      exact nameRanged_append nameRanged_quote ih
+
+/-- Witness: the source-shaped HOL `fresh_name` port preserves byte-rangedness
+    of the input name (it only appends apostrophes). -/
+theorem holMlStringWitness_freshNameHOL (name : String) (names : List String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) := by
+  fun_induction freshNameHOL name names with
+  | case1 name names ih =>
+      exact ih (nameRanged_append h nameRanged_quote)
+  | case2 name names => exact h
+
+/-- Witness: the fuel-bounded production fresh-name search preserves
+    byte-rangedness of the input name. -/
+theorem holMlStringWitness_globalFreshNameAux [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String)
+    (candidate fuel : Nat) :
+    Flapjack.Pancake.PanLang.NameRanged
+      (globalFreshNameAux name names candidate fuel) := by
+  induction fuel generalizing candidate with
+  | zero =>
+      rw [globalFreshNameAux]
+      exact nameRanged_append h (globalApostrophes_nameRanged candidate)
+  | succ fuel ih =>
+      rw [globalFreshNameAux]
+      by_cases hc : names.contains (name ++ globalApostrophes candidate) = true
+      · rw [if_pos hc]
+        exact ih (candidate + 1)
+      · rw [if_neg hc]
+        exact nameRanged_append h (globalApostrophes_nameRanged candidate)
+
+/-- Witness: production `globalFreshName` preserves byte-rangedness of the input
+    name. -/
+theorem holMlStringWitness_globalFreshName [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String) :
+    Flapjack.Pancake.PanLang.NameRanged (globalFreshName name names) :=
+  holMlStringWitness_globalFreshNameAux name h names 0 names.length
+
+/-- Production safety witness: `globalNewMainName` outputs a byte-ranged
+    string because its seed is the literal `"main"`. This is not evidence that
+    the generic declaration input is HOL's word-valued carrier. -/
+theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
+    Flapjack.Pancake.PanLang.NameRanged (globalNewMainName declarations) := by
+  unfold globalNewMainName
+  exact holMlStringWitness_freshNameHOL "main" (globalFunctionNames declarations)
+    (by unfold Flapjack.Pancake.PanLang.NameRanged; decide)
+
+
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
     keeps the shape of each value declaration, in order. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
--- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
--- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
--- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the clauses preserve declaration
+-- order and select the `Decl` shape as in `dec_shapes_def`, but this executed
+-- function consumes `Decl α`, whose `Exp α.Const` payload is not HOL's
+-- word-valued `ExpHOL width.Const`; its returned `Shape` also contains
+-- production `String` names rather than HOL `mlstring`. The
+-- `(names_as_string := ...)` qualifier covers only the latter difference.
+-- Keep untagged until an exact-carrier definition is connected to the executed
+-- path; tracked by bead `flapjack-6nn.3.1`. Clause/order evidence:
+-- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` and
+-- `Flapjack/Test/PanGlobalsDecShapesParity.lean`.
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations
@@ -2908,7 +3045,6 @@ theorem globalRenameFunctionName_eq_source_iff [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target name = source ↔ name = target := by
   unfold globalRenameFunctionName
-  simp only [beq_iff_eq]
   by_cases h1 : source = name
   · rw [if_pos h1]
     rw [h1]
@@ -2933,7 +3069,6 @@ theorem mem_map_globalRenameFunctionName_source [BEq String] [LawfulBEq String]
   · intro htarget
     refine ⟨target, htarget, ?_⟩
     unfold globalRenameFunctionName
-    simp only [beq_iff_eq]
     by_cases hst : source = target
     · rw [if_pos hst]
       exact hst.symm

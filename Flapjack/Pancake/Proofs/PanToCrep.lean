@@ -27,15 +27,12 @@ context.
 
 namespace Flapjack
 
-/-! Exact Lean port of HOL `globals_lookup_def`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The production
-    globals field has HOL's `5 word` keys and `word_lab` cells; `panSemShapeOf`
-    is the exact `shape_of` port constructor by constructor, with no premises.
-    `Shape.shapeSize` matches HOL `size_of_shape_def` on `One`, `Comb` (sum of
-    child sizes), and `Named`, also without side conditions. `List.range` with
-    `BitVec.ofNat` represents `GENLIST n2w` including 5-bit truncation, and
-    `List.mapM` represents `OPT_MMAP`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
+/-! Flapjack analogue of HOL `globals_lookup_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The lookup
+    algorithm uses the same 5-bit indices, shape-size count, and optional-map
+    traversal. It is untagged: the input `PanValue` embeds String-backed
+    struct/field names where HOL `v` embeds `mlstring`, and `CrepRuntimeState`
+    is only a production projection of the HOL state. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
@@ -387,9 +384,11 @@ theorem noOverlapWrapRtNodup
         rcases hwrap with ⟨_, hslots⟩ <;>
         simpa [← hslots] using hnodup
 
-/-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
-    input expression or produces the zero fallback. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]
+/-- Flapjack analogue of HOL `mem_comp_field_lem`: selecting a compiled record
+    field retains an input expression or produces the zero fallback. This is
+    deliberately untagged: the production `Shape` embedded in `shapes` uses
+    `String` for `Named`, whereas HOL `shape` uses `mlstring`, and the HOL
+    expression payload is an indexed word rather than arbitrary `α`. -/
 theorem compileField_mem_or_zero
     [OfNat α 0]
     (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
@@ -438,10 +437,13 @@ private theorem compileField_mem_of_index_lt
           exact List.mem_of_mem_drop
             (ih index (expressions.drop (Shape.shapeSize shape)) hindex' hmem')
 
-/-- HOL `mem_comp_field`: with a valid record-field index and matching
-    source record shape, every expression selected by the pair-valued
-    `compileField` is from the flattened record input. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field"]
+/-- Flapjack analogue of the field-selection fact used by HOL
+    `mem_comp_field_lem`: with a valid index and matching source record shape,
+    every expression selected by the pair-valued `compileField` is from the
+    flattened record input. It is untagged because it uses production
+    `Shape` (String-backed `Named`) and generic `PanValue α`; HOL `shape`
+    contains `mlstring` names and its expressions are word-indexed. There is no
+    separate HOL declaration named `mem_comp_field`. -/
 theorem compileField_mem_of_record_shape
     [OfNat α 0] (shapes : List Shape) (index : Nat)
     (expressions : List (CrepExp α)) (selectedShape : Shape)
@@ -1523,27 +1525,146 @@ def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : P
     s.clock = t.clock ∧ s.be = t.bigEndian ∧ s.ffi = t.ffi ∧
     s.baseAddress = t.baseAddress ∧ s.topAddress = t.topAddress
 
-/-- HOL `state_rel_structs[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-! The executable source state's memory is optional and carries `PanValue`,
+whereas HOL `panSem$state.memory` is total and carries `word_lab`.  Under
+`stateRel`, every source cell is exactly the target's word cell and the
+`memaddrs`/endianness fields agree.  These untagged adapters expose that
+boundary for the fixed RV64 source evaluator's byte and 32-bit loads.  They are
+case lemmas, not claims that the enclosing `pc_compile_correct` proof is done. -/
+
+/-- A source `LoadByte (Const address)` under the Pan-to-Crep state relation
+uses the state-owned address domain, byte order, and total word memory found in
+the related target state.  This is a RISC-V evaluator-case adapter, not a
+standalone HOL theorem. -/
+theorem panToCrepSourceLoadByteHOLCase
+    [NeZero 64] [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)]
+    [Sub (RiscV.Word 64)] [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) (hstate : stateRel source target) :
+    evalPanSemStateExp source (.loadByte (.const address)) =
+      (panMemLoadByteHOL (width := 64)
+        (fun current => match target.memory current with
+          | .word value => .word value)
+        (fun current =>
+          (source.memaddrs current && panValueWordDefined source.memory current) = true)
+        source.be address).map
+          (fun byte => PanValue.word (BitVec.ofNat 64 byte.toNat)) := by
+  rcases hstate with ⟨hmemory, _, _, _, _, _, _, _, _, _⟩
+  simp only [evalPanSemStateExp, evalPanValueExp]
+  change ((panSemBitVec64MemoryAccess source).readByte
+      (panSemBitVec64MemoryAccess source).domain source.memory
+      panSemBitVec64BytesInWord address).map PanValue.word = _
+  rw [panSemBitVec64ReadByte_eq_panMemLoadByteHOL source source.memory address]
+  have hmemoryView :
+      (fun current => match target.memory current with
+        | .word value => .word value) = panValueWordHOL source.memory := by
+    funext current
+    simp [panValueWordHOL, hmemory, panTheWord]
+  rw [hmemoryView]
+  have hdomainView :
+      (fun current =>
+        (source.memaddrs current && decide (panValueWordDefined source.memory current = true)) = true) =
+      (fun current =>
+        (source.memaddrs current && panValueWordDefined source.memory current) = true) := by
+    funext current
+    simp
+  simp only [hdomainView]
+  simp only [Option.map_map]
+  rfl
+
+/-- A source `Load32 (Const address)` under the Pan-to-Crep state relation
+uses the related target's word cells, address domain, and byte order.  This is
+an untagged RISC-V evaluator-case adapter. -/
+theorem panToCrepSourceLoad32HOLCase
+    [NeZero 64] [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)]
+    [Sub (RiscV.Word 64)] [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) (hstate : stateRel source target) :
+    evalPanSemStateExp source (.load32 (.const address)) =
+      (panMemLoad32HOL (width := 64)
+        (fun current => match target.memory current with
+          | .word value => .word value)
+        (fun current =>
+          (source.memaddrs current && panValueWordDefined source.memory current) = true)
+        source.be address).map
+          (fun value => PanValue.word (BitVec.ofNat 64 value.toNat)) := by
+  rcases hstate with ⟨hmemory, _, _, _, _, _, _, _, _, _⟩
+  simp only [evalPanSemStateExp, evalPanValueExp]
+  change ((panSemBitVec64MemoryAccess source).read32
+      (panSemBitVec64MemoryAccess source).domain source.memory
+      panSemBitVec64BytesInWord address).map PanValue.word = _
+  rw [panSemBitVec64Read32_eq_panMemLoad32HOL source source.memory address]
+  have hmemoryView :
+      (fun current => match target.memory current with
+        | .word value => .word value) = panValueWordHOL source.memory := by
+    funext current
+    simp [panValueWordHOL, hmemory, panTheWord]
+  rw [hmemoryView]
+  have hdomainView :
+      (fun current =>
+        (source.memaddrs current && decide (panValueWordDefined source.memory current = true)) = true) =
+      (fun current =>
+        (source.memaddrs current && panValueWordDefined source.memory current) = true) := by
+    funext current
+    simp
+  simp only [hdomainView]
+  simp only [Option.map_map]
+  rfl
+
+/-- Source-shaped port of HOL `state_rel_structs[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`. Independently of the identifier carrier:
+    (a) `stateRel` relates the source's *optional* `PanValue` memory to the target's
+    *total* `word_lab` memory (`s.memory = fun a => some (PanValue.word (panTheWord
+    (t.memory a)))`, see the `state_rel_def` note above), whereas HOL `state_rel`
+    equates two total `word_lab` memories directly; (b) the source field types are
+    `StructContext` (`StructName`/`FieldName` = `String`, `StructInfo` also carrying
+    the production-only `shapedFields`) and `PanValue α`, while HOL uses
+    `(stcname # struct_info) list` with `stcname`/`fldname` = `mlstring` and the
+    `'a v` value type; (c) finite-map keys are `VarName` = `String` vs HOL
+    `varname` = `mlstring`. The mismatch is therefore not limited to String-backed
+    names, so the `(names_as_string := ...)` qualifier does not apply. The exact
+    projection depends on an exact MlString/`word_lab` Crep target relation, tracked
+    by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.structs = [] := by
   rcases hrel with ⟨_, _, _, hstructs, _, _, _, _, _, _⟩
   exact hstructs
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `state_rel_globals[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped port of HOL `state_rel_globals[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`, and the conclusion is stated over the
+    production carrier `FiniteMap VarName (PanValue α)` rather than HOL
+    `varname |-> 'a v`. The mismatch is not limited to the String-vs-`mlstring` domain
+    key (`VarName` vs `varname`): `stateRel` also relates an optional `PanValue`
+    source memory to a total `word_lab` target memory and the value type is
+    `PanValue α` vs `'a v` (see `stateRel_structs` above and the `state_rel_def` note),
+    so the `(names_as_string := ...)` qualifier does not apply. The exact projection
+    is tracked by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
@@ -2106,9 +2227,10 @@ def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
   { vars := context.vars, funcs := context.funcs, eids := context.eids,
     vmax := context.vmax }
 
-/-- `compileProgRiscV` is the `compile_def`-shaped HOL compiler (untagged since `flapjack-pxn.18.3.5.7.2`) applied to a
-    `PanToCrepHOLContext`; it is definitionally the generic `compileProgHOL`
-    on the same context. -/
+/-- `compileProgRiscV` is the untagged, `compile_def`-shaped Flapjack helper.
+    Its production syntax carriers do not match HOL; see the declaration-local
+    note in `PanToCrep/Compile.lean`. It is definitionally the generic
+    `compileProgHOL` on the same context. -/
 theorem compileProgRiscV_eq_compileProgHOL
     (context : PanToCrepHOLContext (BitVec width))
     (program : Prog (BitVec width)) :
@@ -2258,16 +2380,24 @@ theorem codeRelImp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
         (names, compileCodeRelProg nextContext program) :=
   hrel function variableShapes program returnShape hlookup
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `code_rel_empty_locals` (`pan_to_crepProofScript.sml:96`).
-Both code fields belong to their production semantic states. The HOL source
-and target `empty_locals` definitions update only locals, leaving each code
-map unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-! Source-shaped analogue of HOL `code_rel_empty_locals`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:96`), not an exact HOL
+port. The state updates do preserve both code fields: HOL `empty_locals_def`
+at panSemScript.sml:436 and crepSemScript.sml:71 update only `locals`, and
+the two Lean updates do the same. The relation carried across those unchanged
+fields is still production-specific, however. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `code_rel_def` at
+-- pan_to_crepProofScript.sml:30-42 relates `mlstring`-keyed finite maps whose
+-- source entries contain HOL `prog` and whose target entries contain HOL
+-- `crep_prog` compiled by `compile`. This theorem instead relates
+-- `panSemCodeAsLookup source.code` and `target.code` through production
+-- `codeRel`: its keys are `String` (`FunName`/`VarName`), its source entries
+-- use production `Prog α`, and its target entries use production `CrepProg α`
+-- / `compileCodeRelProg`. There is no `NameRanged` or same-module byte witness
+-- premise, and no proved state/code-carrier bridge in this statement. The
+-- identifier dependency is `flapjack-pxn.18.3.5.8`; exact HOL Prog/Crep code
+-- carriers and their compiler bridge are also still prerequisites. Do not tag
+-- this analogue with `code_rel_empty_locals` until those boundaries are exact.
 theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)
@@ -2286,10 +2416,17 @@ theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
   cases target
   rfl
 
-/-- HOL `first_compile_to_crep_all_distinct`: lowering function declarations
-    changes bodies and parameter slots but preserves every function name in
-    source order, so distinct source names stay distinct. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_to_crep_all_distinct"]
+/-- Flapjack analogue of HOL `first_compile_to_crep_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4566`). Its proof shows
+    the production `compileToCrepHOL` map preserves the names in
+    `functionEntries`, but its input is `Decl (BitVec width)` and its output
+    uses `FunName`/generic `CrepProg`. HOL quantifies over the `DeclHOL`/panLang
+    carrier (with `mlstring` identifiers and HOL expression/shape types) and
+    returns a function list with HOL `CrepProgHOL width` bodies. These input
+    and output carrier differences exceed identifier representation, so
+    `names_as_string` cannot qualify this analogue. It is intentionally
+    untagged; an exact-carrier replacement depends on `DeclHOL` and compiler
+    boundary work tracked by `flapjack-yao.1`. -/
 theorem firstCompileToCrepAllDistinct [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map
@@ -2638,11 +2775,18 @@ theorem elCompileToCrepElProgEq [NeZero width]
   refine Prod.ext (by simpa using g1) ?_
   exact Prod.ext (by simpa using g2) (by simpa using g3)
 
-/-- Exact port of HOL `first_compile_prog_all_distinct`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original
-    premise is distinct names from `functions prog`; `compile_prog` preserves
-    those names while compiling each body and applying `compile_inl_top`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_prog_all_distinct"]
+/-- Flapjack analogue of HOL `first_compile_prog_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The list
+    distinctness argument mirrors HOL, but this theorem quantifies over the
+    production `Decl (BitVec width)` carrier and concludes about
+    `compileProgTopHOL`, whose output uses production `FunName`/generic
+    `CrepProg`. HOL instead quantifies over the `DeclHOL`/`panLang` carrier
+    (with `mlstring` identifiers and HOL expression/shape types) and concludes
+    about the exact `compile_prog` output (`mlstring` names and HOL-shaped
+    `CrepProgHOL width` bodies). These input and output type differences are not covered by
+    `names_as_string`; therefore this analogue is intentionally untagged. An
+    exact-carrier replacement depends on the `DeclHOL` and compiler-boundary
+    work tracked by `flapjack-wur.1`. -/
 theorem firstCompileProgAllDistinct {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map

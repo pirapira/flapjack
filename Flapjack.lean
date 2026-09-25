@@ -69,6 +69,7 @@ import Flapjack.Pancake.Semantics.PanSem.EvaluateDeclsExact
 import Flapjack.Pancake.Semantics.PanSem.ClockExact
 import Flapjack.Pancake.Semantics.PanSem.StateSimpExact
 import Flapjack.Pancake.Semantics.PanSem.StateDefsExact
+import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
 import Flapjack.Pancake.Semantics.PanSem.MemByteAssembly
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
@@ -115,6 +116,9 @@ import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.ConversionByteRanged
+import Flapjack.Parser.GrammarByteRanged
+import Flapjack.Parser.LocaliseByteRanged
+import Flapjack.Parser.ParseTopDecsByteRanged
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.CrepLang.Prog

@@ -8,19 +8,21 @@ import Flapjack.Pancake.Semantics.PanSem.DecCallExact
 import Flapjack.Pancake.Semantics.PanSem.ClockExact
 
 /-!
-# Exact-state dispatcher for reviewed nonrecursive PanSem clauses
+# Exact-state PanSem dispatcher fragments
 
-This dispatcher assembles the reviewed clause definitions over the exact
+The nonrecursive dispatcher assembles the reviewed clause definitions over the exact
 `PanSemStateExact` / `ProgHOL` / `ExpHOL` carriers. It handles the
 nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 `Primitive`, the three stores, `ShMemLoad`, `ShMemStore`, `Break`, `Continue`,
 `Return`, `Raise`, `Tick`, `ExtCall`, and `Annot`.
 
-The outer `Option` means that a constructor has no assembled clause in this
-fragment; it is distinct from the inner HOL result option. `Dec`, `Seq`, `If`,
-and `While` remain open here. A separate exact-state recursive Call/DecCall
-slice follows below. This file still does not claim the complete recursive HOL
-`evaluate_def` and has no `@[hol]` tag.
+The outer `Option` means that a constructor has no assembled clause in the
+nonrecursive dispatcher; it is distinct from the inner HOL result option. The
+recursive evaluator below assembles `Dec`, `Seq`, `If`, `While`, `Call`, and
+`DecCall`, plus the `Assign` and `Primitive` clauses whose memory-set fields
+are proved preserved. Stores, `ExtCall`, and ShMem remain explicit gaps.
+This file does not
+claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
 
 namespace Flapjack
@@ -101,13 +103,17 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
       rw [hshared]
       exact context.shMemaddrsDecidable address }
 
-/-- Exact recursive Seq/Call/DecCall evaluator over the state-owned HOL code map.
+/-- Exact recursive Dec/Seq/If/While/Call/DecCall and Assign evaluator over the
+    state-owned HOL code map.
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
-    results. `Dec`, `Assign`, `Primitive`, stores, `If`,
-    `While`, `ExtCall`, and ShMem leaves remain explicit gaps, so this
-    definition does not claim or tag the full `evaluate_def`. -/
+    results. `If` selects and recursively evaluates one branch. `While` decrements
+    the clock before its body and recurses only on normal or Continue outcomes.
+    `Dec` installs its binding for the body and restores the prior local afterwards.
+    `Assign` and `Primitive` use reviewed nonrecursive clauses and preserve
+    both memory predicates. Stores, `ExtCall`, and ShMem leaves remain explicit
+    gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
       Option (Option (PanSemResultExact width) × PanSemExactEvalContext width σ)
@@ -116,7 +122,21 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
       letI : DecidablePred state.memaddrs := context.memaddrsDecidable
       letI : DecidablePred state.shMemaddrs := context.shMemaddrsDecidable
       exact match program with
-      | .dec _ _ _ _ => none
+      | .dec name shape initializer body =>
+          match evalHOLExact state initializer with
+          | none => some (some .error, context)
+          | some value =>
+              if shapeEqHOL shape (shapeOfHOLExact value) then
+                let bodyState := setVarHOLExact name value state
+                let bodyContext := context.withState bodyState rfl rfl
+                match evalPanSemRecursiveCallContextHOLExact body bodyContext with
+                | none => none
+                | some (result, postContext) =>
+                    let restored := { postContext.state with
+                      locals := resVarHOLExact postContext.state.locals
+                        (name, state.locals name) }
+                    some (result, postContext.withState restored rfl rfl)
+              else some (some .error, context)
       | .seq first second =>
           match evalPanSemRecursiveCallContextHOLExact first context with
           | none => none
@@ -126,8 +146,37 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               match firstResult with
               | none => evalPanSemRecursiveCallContextHOLExact second fixedContext
               | some _ => some (firstResult, fixedContext)
-      | .ite _ _ _ => none
-      | .while _ _ => none
+      | .ite condition thenBranch elseBranch =>
+          match evalHOLExact state condition with
+          | some (.val (.word value)) =>
+              if value != 0 then
+                evalPanSemRecursiveCallContextHOLExact thenBranch context
+              else
+                evalPanSemRecursiveCallContextHOLExact elseBranch context
+          | _ => some (some .error, context)
+      | .while condition body =>
+          match evalHOLExact state condition with
+          | some (.val (.word word)) =>
+              if word ≠ 0 then
+                if state.clock = 0 then
+                  some (some .timeOut,
+                    context.withState (emptyLocalsHOLExact state) rfl rfl)
+                else
+                  let entry := decClockHOLExact state
+                  let entryContext := context.withState entry rfl rfl
+                  match evalPanSemRecursiveCallContextHOLExact body entryContext with
+                  | none => none
+                  | some (bodyResult, bodyContext) =>
+                      let fixed := fixClockHOLExact entry (bodyResult, bodyContext.state)
+                      let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                      match bodyResult with
+                      | some .continue | none =>
+                          evalPanSemRecursiveCallContextHOLExact
+                            (.while condition body) fixedContext
+                      | some .break => some (none, fixedContext)
+                      | _ => some (bodyResult, fixedContext)
+              else some (none, context)
+          | _ => some (some .error, context)
       | .call info function arguments =>
           match evalListHOLExact state arguments with
           | none => some (some .error, context)
@@ -243,6 +292,52 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                         | some other =>
                             some (some other, fixedContext.withState
                               (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+      | .assign kind name source =>
+          let output := assignStepHOLExact state kind name source
+            (fun _ expression => evalHOLExact state expression)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            cases hEval : evalHOLExact state source with
+            | none => simp [output, assignStepHOLExact, hEval]
+            | some value =>
+                by_cases hvalid : isValidValueHOLExact state kind name value = true
+                · cases kind <;>
+                    simp [output, assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+                · simp [output, assignStepHOLExact, hEval, hvalid]
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            cases hEval : evalHOLExact state source with
+            | none => simp [output, assignStepHOLExact, hEval]
+            | some value =>
+                by_cases hvalid : isValidValueHOLExact state kind name value = true
+                · cases kind <;>
+                    simp [output, assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+                · simp [output, assignStepHOLExact, hEval, hvalid]
+          some (output.1, context.withState output.2 hmem hshared)
+      | .primitive name operator arguments =>
+          let output := primitiveStepHOLExact state name operator arguments
+            (fun _ expressions => evalListHOLExact state expressions)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            cases hEval : evalListHOLExact state arguments with
+            | none => simp [output, primitiveStepHOLExact, hEval]
+            | some values =>
+                cases hPrim : panPrimopHOLExact (width := width) operator values with
+                | none => simp [output, primitiveStepHOLExact, hEval, hPrim]
+                | some value =>
+                    by_cases hvalid : isValidValueHOLExact state .local name value = true
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid,
+                        setVarHOLExact]
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid]
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            cases hEval : evalListHOLExact state arguments with
+            | none => simp [output, primitiveStepHOLExact, hEval]
+            | some values =>
+                cases hPrim : panPrimopHOLExact (width := width) operator values with
+                | none => simp [output, primitiveStepHOLExact, hEval, hPrim]
+                | some value =>
+                    by_cases hvalid : isValidValueHOLExact state .local name value = true
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid,
+                        setVarHOLExact]
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid]
+          some (output.1, context.withState output.2 hmem hshared)
       | other =>
           match other with
           | .skip => some (none, context)
@@ -278,12 +373,16 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               else
                 some (none, context.withState (decClockHOLExact state) rfl rfl)
           | .annot _ _ => some (none, context)
-          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
-            .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
+          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ | .store32 _ _ |
+            .storeByte _ _ | .seq _ _ | .ite _ _ _ |
             .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ | .extCall _ _ _ _ _ |
             .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none
 termination_by _program context => (context.state.clock, sizeOf _program)
 decreasing_by
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
   · simp_wf
     apply Prod.Lex.right
     simp_wf
@@ -299,6 +398,22 @@ decreasing_by
       apply Prod.Lex.right
       simp_wf
       omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp only [PanSemExactEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+  · simp only [PanSemExactEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.lt_of_le_of_lt
+      (fixClockHOLExact_clock_le entry (bodyResult, bodyContext.state))
+      (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
   · simp only [PanSemExactEvalContext.withState]
     apply Prod.Lex.left
     exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)

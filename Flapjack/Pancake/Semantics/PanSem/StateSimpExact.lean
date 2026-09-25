@@ -2,7 +2,7 @@ import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
 
 /-!
-# Exact `panSem` state-accessor simplification lemmas over the exact carrier
+# `panSem` state-accessor simplification lemmas over the function-backed carrier
 
 HOL `panSemScript.sml` states three simplification lemmas about the state
 accessors, all over the `mlstring`-keyed `varname` maps of the source state:
@@ -19,13 +19,12 @@ accessors, all over the `mlstring`-keyed `varname` maps of the source state:
 * `is_valid_value_simps2` (`:489-500`): `is_valid_value` and `lookup_kvar` are
   invariant under updating `clock`, `ffi`, `code` or `memory`.
 
-The state carrier here is the exact `PanSemStateExact` (`StateExact.lean`) and the
-accessor carriers are the tagged exact ports `setKvarHOLExact`/`lookupKvarHOLExact`
-(`StateExact.lean`), `setVarHOLExact`/`setGlobalHOLExact` (`LocalUpdatesExact.lean`)
-and `isValidValueHOLExact` (`IsValidValueExact.lean`).  HOL's Boolean shape
-equality `shape_of value = shape_of w` is rendered as `shapeEqHOL`, the
-statement-exact Bool rendering of Shape equality with the proved bridge
-`shapeEqHOL_eq_true` (`IsValidValueExact.lean`).
+These useful simplification statements use the function-backed
+`PanSemStateExact` and its accessor definitions. HOL state maps are finite maps,
+while these Lean fields admit arbitrary lookup functions; the theorems are
+therefore untagged pending the finite-map carrier prerequisite tracked by
+`flapjack-pxn.18.3.7.1.3.1.1.2`. HOL Boolean shape equality is rendered as
+`shapeEqHOL`, with bridge `shapeEqHOL_eq_true`.
 
 Direct HOL oracle rows:
 
@@ -41,8 +40,7 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ShapeHOL ProgHOL)
 
-/-- Exact port of HOL `panSem$kvar_simps` (`panSemScript.sml:422-429`). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "kvar_simps"]
+/-- Function-backed rendering of HOL `panSem$kvar_simps` (`panSemScript.sml:422-429`). -/
 theorem kvar_simps {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateExact width σ) :
     (setKvarHOLExact .local name value state = setVarHOLExact name value state) ∧
@@ -51,9 +49,9 @@ theorem kvar_simps {width : Nat} {σ : Type} [NeZero width]
       (lookupKvarHOLExact .global name state = state.globals name) :=
   ⟨rfl, rfl, rfl, rfl⟩
 
-/-- Exact port of HOL `panSem$is_valid_value_simps`
-    (`panSemScript.sml:476-487`). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "is_valid_value_simps"]
+/-- Function-backed rendering of HOL `panSem$is_valid_value_simps`
+    (`panSemScript.sml:476-487`); untagged because the carrier's maps are not
+    finite-map fields. -/
 theorem is_valid_value_simps {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (name : MlS) (value : ValueHOL width) :
     (isValidValueHOLExact state .local name value =
@@ -66,10 +64,9 @@ theorem is_valid_value_simps {width : Nat} {σ : Type} [NeZero width]
           | none => false)) :=
   ⟨rfl, rfl⟩
 
-/-- Exact port of HOL `panSem$is_valid_value_simps2`
-    (`panSemScript.sml:489-500`): `is_valid_value` and `lookup_kvar` are invariant
-    under updating `clock`, `ffi`, `code` or `memory`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "is_valid_value_simps2"]
+/-- Function-backed rendering of HOL `panSem$is_valid_value_simps2`
+    (`panSemScript.sml:489-500`); untagged because its whole-state binder uses
+    function fields in place of HOL finite maps. -/
 theorem is_valid_value_simps2 {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (kind : VarKind) (name : MlS)
     (value : ValueHOL width) (clock : Nat) (ffi : HolFfiState σ)

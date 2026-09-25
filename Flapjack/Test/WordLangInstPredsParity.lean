@@ -15,9 +15,9 @@ open Flapjack
 
 private abbrev W := BitVec 8
 
-private def emptySet : WordLangNumSet := fun _ => none
+private def emptySet : WordLangNumSetHOL := .ln
 
-private def cutsets : WordLangCutsets := (emptySet, emptySet)
+private def cutsets : WordLangCutsetsHOL := (emptySet, emptySet)
 
 /-- `P i = (i = Skip)`, the HOL probe's test predicate. -/
 private def isSkip : WordLangInst W → Bool
@@ -33,18 +33,18 @@ private def binopTwoDiff : WordLangInst W := .arith (.binop .add 1 2 (.reg 0))
 private def instSkipInst : WordLangInst W := .skip
 
 -- Program fixtures (oracle rows 8-15).
-private def instSkip : WordLangProg W := .inst instSkipInst
-private def instConst : WordLangProg W := .inst (.const 1 (0 : W))
-private def opCurrHeap : WordLangProg W := .opCurrHeap .add 1 2
-private def callHandlerBad : WordLangProg W :=
+private def instSkip : WordLangProgHOL W := .inst instSkipInst
+private def instConst : WordLangProgHOL W := .inst (.const 1 (0 : W))
+private def opCurrHeap : WordLangProgHOL W := .opCurrHeap .add 1 2
+private def callHandlerBad : WordLangProgHOL W :=
   .call none none [] (some (2, .inst (.const 1 (0 : W)), 20, 21))
-private def callRetBad : WordLangProg W :=
+private def callRetBad : WordLangProgHOL W :=
   .call (some ([1], cutsets, .inst instSkipInst, 10, 11))
     none [] (some (2, .inst (.const 1 (0 : W)), 20, 21))
-private def callRetOk : WordLangProg W :=
+private def callRetOk : WordLangProgHOL W :=
   .call (some ([1], cutsets, .inst instSkipInst, 10, 11)) none [] none
-private def loopOk : WordLangProg W := .loop emptySet (.inst instSkipInst) emptySet
-private def allocProg : WordLangProg W := .alloc 0 cutsets
+private def loopOk : WordLangProgHOL W := .loop emptySet (.inst instSkipInst) emptySet
+private def allocProg : WordLangProgHOL W := .alloc 0 cutsets
 
 -- 15 kernel-checked rows matching the HOL oracle.
 example : distinctTarReg binopSame = false := by decide

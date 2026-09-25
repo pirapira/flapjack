@@ -704,15 +704,25 @@ def crepInlineTopRecursiveByNames [BEq FunName] [LawfulBEq FunName]
 /-- Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of
     `crep_inline$compile_inl_top`: filter the compiled Crep function triples by
     the source inline-name set, then inline each body with its own name removed
-    from the finite active set. The source finite map's first duplicate binding
-    is represented by `crepInlineLookup`'s first-match lookup on the filtered
-    list.
+    from the finite active set. HOL's `alist_to_fmap` uses the first binding
+    for duplicate function names; the retained ordered list and
+    `crepInlineLookup`'s first-match lookup have that same lookup behavior. The
+    direct duplicate-name oracle is in `Test/CompileProgParity.lean`.
 
-    FLAPJACK-SPECIFIC (not an exact HOL port): `inlineNames` and the function
-    triples are keyed by `FunName` = `String`, while HOL
-    `crep_inlineScript.sml` keys `inl_fname`/`inl_fs` by `funname` = `mlstring`.
-    The exact MlString identifier carrier is tracked by
-    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
+    This declaration has two carrier gaps, so it has no `@[hol]` tag. Its
+    names use `FunName = String`, whereas HOL `funname` is `mlstring`; the exact
+    name carrier work is tracked by `flapjack-pxn.18.3.5.8`. Its body is
+    generic `CrepProg α`, whereas HOL's `crepLang$prog` is indexed by the word
+    type; the exact width-indexed syntax is `CrepProgHOL width` with payloads
+    in `CrepExpHOL width` (`CrepLang/Prog.lean`). A `names_as_string` qualifier
+    can record the name representation difference when it is the only gap, but
+    it cannot bridge the generic program carrier. The exact `compile_inl_top`
+    boundary over both carriers remains open. `flapjack-e7w.1` covers only the
+    faithful inline-map carrier prerequisite; recursive exact `inline_prog`,
+    the `compile_inl_top` wrapper, and production-path routing remain separate
+    follow-up work. This declaration is a proof-side analogue; the executed
+    `panToCrepCompileInlTop` currently calls the production record-based
+    traversal instead. -/
 def compileInlTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
     (inlineNames : List FunName)
@@ -738,10 +748,15 @@ def compileInlTopHOLWithMetadata [BEq FunName] [LawfulBEq FunName]
   let inlined := compileInlTopHOL inlineNames triples
   functions.zipWith (fun original (_, _, body) => { original with body }) inlined
 
-/-! Source-named port of CakeML Pancake's `compile_inl_top_def`
-    (`crep_inlineScript.sml:264`).  The production recursive traversal is the
-    executable form of Cake's `compile_inl_prog`/`inline_prog` composition;
-    keeping this boundary named makes the pass correspondence explicit. -/
+/-! Production traversal corresponding to CakeML Pancake's
+    `compile_inl_top_def` (`crep_inlineScript.sml:264`), via
+    `compile_inl_prog`/`inline_prog`. This wrapper consumes the generic
+    `CompiledFunction α` record and returns records carrying Flapjack's
+    `returnShape` metadata; HOL operates on `(funname, params, prog)` triples
+    and its `prog` is indexed by a word type. It also uses String function
+    names rather than HOL `mlstring`. It is therefore not the tagged HOL
+    boundary; see `compileInlTopHOL` and open bead `flapjack-e7w.1` for the
+    exact-carrier port. -/
 def panToCrepCompileInlTop [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
     (inlineNames : List FunName) (functions : List (CompiledFunction α)) :

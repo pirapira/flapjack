@@ -5,7 +5,7 @@ import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 
 /-!
-# Exact `panSem$state` over the faithful `mlstring` carrier
+# `panSem$state` projection over the faithful `mlstring` name carrier
 
 HOL `panSem$state` (`cakeml/pancake/semantics/panSemScript.sml:44-62`) is
 
@@ -34,10 +34,15 @@ where `varname`, `stcname`, `fldname`, `funname`, `eid` are all `mlstring`
 `Flapjack.PanSemHolState` (`PanSemStateEval.lean`) is the String-backed source
 projection used by the executed evaluator; its `dec_clock_def`/`fix_clock_def`
 and `lookup_kvar_def`/`set_kvar_def` tags are withheld under the
-String/MlString carrier rule (`flapjack-0lj`).  This module introduces the
-exact carrier `PanSemStateExact` over `MlS` keys, `ShapeHOL`/`StructContextExact`
-syntax, `ProgHOL` code and the `ValueHOL` value carrier, and re-establishes the
-four state-helper tags exactly over it.
+String/MlString carrier rule (`flapjack-0lj`). This module introduces
+`PanSemStateExact` over `MlS` keys, `ShapeHOL`/`StructContextExact` syntax,
+`ProgHOL` code and the `ValueHOL` value carrier. Its map-valued fields are
+currently unrestricted lookup functions, however, so it is a function-backed
+projection rather than the HOL finite-map state carrier. State operations and
+the declarations that depend on them remain useful Lean infrastructure, but
+their `@[hol]` tags were withdrawn by audit bead
+`flapjack-pxn.18.3.7.1.3.1.2`; restoration depends on the finite-map carrier
+replacement tracked by open bead `flapjack-pxn.18.3.7.1.3.1.1.2`.
 
 Direct HOL oracle rows for the helpers live in
 `scripts/hol-probes/pan_sem_e2e_probe.out` (`dec_clock_step`,
@@ -76,26 +81,39 @@ structure PanSemStateExact (width : Nat) (σ : Type) [NeZero width] where
   baseAddr : RiscV.Word width
   topAddr : RiscV.Word width
 
-/-- Exact port of HOL `panSem$dec_clock` (`panSemScript.sml:441`):
-    `dec_clock s = s with clock := s.clock - 1`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "dec_clock_def"]
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL `panSem$dec_clock`
+    (`panSemScript.sml:441`) is `dec_clock s = s with clock := s.clock - 1` over
+    the HOL finite-map state, but `PanSemStateExact` stores `locals`/`globals`/
+    `code`/`eshapes` as unrestricted lookup functions `MlS → Option _`, a strict
+    superset of HOL finite maps (infinite-support lookups are admitted). The
+    equation is faithful only on the finite-support subcarrier
+    (`PanSemStateExact.FiniteSupport`, preserved by
+    `PanSemStateExact.finiteSupport_decClock` in `StateExactFinite.lean`). The
+    exact finite-map carrier rebuild and tag restoration is tracked by bead
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def decClockHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with clock := state.clock - 1 }
 
-/-- Exact port of HOL `panSem$fix_clock` (`panSemScript.sml:446`):
-    `fix_clock old_s (res, new_s) = (res, new_s with clock := min old_s.clock
-    new_s.clock)`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_def"]
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL `panSem$fix_clock`
+    (`panSemScript.sml:446`) is over the HOL finite-map state; the equation below
+    is faithful only on `PanSemStateExact.FiniteSupport` (preserved by
+    `PanSemStateExact.finiteSupport_fixClock` in `StateExactFinite.lean`), while
+    `PanSemStateExact`'s unrestricted `MlS → Option _` fields admit non-HOL
+    states. Exact finite-map carrier rebuild and tag restoration tracked by bead
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def fixClockHOLExact {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (oldState : PanSemStateExact width σ) (step : β × PanSemStateExact width σ) :
     β × PanSemStateExact width σ :=
   (step.1, { step.2 with
     clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
-/-- Exact port of HOL `panSem$lookup_kvar` (`panSemScript.sml:415`): a `Local`
-    variable is looked up in `locals`, a `Global` one in `globals`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_kvar_def"]
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL `panSem$lookup_kvar`
+    (`panSemScript.sml:415`) reads the HOL finite-map state; the read below is
+    faithful only on `PanSemStateExact.FiniteSupport`, since the unrestricted
+    `MlS → Option _` carrier admits non-HOL states. Exact finite-map carrier
+    rebuild and tag restoration tracked by bead
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (state : PanSemStateExact width σ) :
     Option (ValueHOL width) :=
@@ -103,10 +121,14 @@ def lookupKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
   | .local => state.locals name
   | .global => state.globals name
 
-/-- Exact port of HOL `panSem$set_kvar` (`panSemScript.sml:408-412`): a `Local`
-    variable updates `locals`, a `Global` one updates `globals`, via the HOL
-    `|+` (counterpart `FUPDATE`, which is `=`-based). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_kvar_def"]
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL `panSem$set_kvar`
+    (`panSemScript.sml:408-412`) updates the HOL finite-map state via `|+`
+    (counterpart `FUPDATE`, which is `=`-based); the update below is faithful
+    only on `PanSemStateExact.FiniteSupport` (preserved by
+    `PanSemStateExact.finiteSupport_setKvar` in `StateExactFinite.lean`), since
+    the unrestricted `MlS → Option _` carrier admits non-HOL states. Exact
+    finite-map carrier rebuild and tag restoration tracked by bead
+    `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (value : ValueHOL width)
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
@@ -116,9 +138,15 @@ def setKvarHOLExact {width : Nat} {σ : Type} [NeZero width]
   | .global =>
       { state with globals := fun current => if current = name then some value else state.globals current }
 
-/-- Exact port of HOL `panSem$empty_locals` (`panSemScript.sml:436`):
-    `empty_locals s = s with locals := FEMPTY`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL `panSem$empty_locals`
+    (`panSemScript.sml:436`) is `empty_locals s = s with locals := FEMPTY`. This
+    clears `locals` to the empty map (exactly HOL `FEMPTY`, hence `locals` is
+    unconditionally finite), but the other `PanSemStateExact` fields remain
+    unrestricted `MlS → Option _` functions: the result has whole-state finite
+    support only when the input does
+    (`PanSemStateExact.finiteSupport_emptyLocals`, which preserves an input
+    `FiniteSupport`). Exact finite-map carrier rebuild and tag restoration
+    tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with locals := fun _ => none }

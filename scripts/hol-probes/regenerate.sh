@@ -214,6 +214,10 @@ run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_
   "$cake_dir/pancake/semantics"
 run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
   constant dimindex_pos "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_state_mapc_probeScript.sml crep_state_mapc_probe.out \
+  fmap_map2_keyed_lookup \
+  "$hol_dir/src/finite_maps/finite_mapScript.sml" \
+  "$hol_dir/src/finite_maps"
 run_probe crep_arith_lookup_code_probeScript.sml crep_arith_lookup_code_probe.out \
   simp_prog_after_lookup \
   "$cake_dir/pancake/proofs/crep_arithProofScript.sml" \
@@ -587,7 +591,7 @@ run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
 # plus Const, Var Local, and operator-expression branch selection in the
 # restricted total evaluators.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result if_op_sub_zero_tick_clock \
+  if_true_result exact_if_failed_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The measure-driven total fragment probe observes Assign/Return/Raise result
 # and state branches, plus their interaction with If selection and Seq stopping.
@@ -623,8 +627,9 @@ run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out 
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
-  deccall_ok_result deccall_missing_result \
-  "$cake_dir/pancake/semantics/panSemScript.sml"
+  deccall_ok_result nested_deccall_bad_shape_state_exact \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 # The Call argument probe observes that a failing argument rejects the call
 # with `SOME Error` before callee lookup, preserving clock and locals.
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
@@ -680,10 +685,11 @@ run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_
 run_probe pan_sem_return_raise_memory_probeScript.sml pan_sem_return_raise_memory_probe.out \
   ret_mem_fail_result raise_mem_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-# The ExtCall error probe observes the non-word argument and failing
-# byte-read rejections, each returning `SOME Error` with unchanged state.
+# The ExtCall error probe observes the argument-evaluation failure, the
+# non-word argument and failing byte-read rejections, each returning
+# `SOME Error` with unchanged state.
 run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
-  ext_nonword_result ext_read_fail_ffi_io \
+  ext_nonword_result ext_argfail_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
@@ -713,7 +719,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
   call_total_return_success call_total_return_destination call_total_missing_code \
-  call_total_wrong_arity call_total_timeout \
+  call_total_wrong_arity call_total_timeout call_total_callee_normal \
+  call_total_callee_break call_total_callee_continue call_total_callee_exception \
+  call_total_return_arity_error call_total_duplicate_destinations \
+  call_total_missing_destination \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
@@ -747,7 +756,7 @@ run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
   ret tau return length_failure final div_ret div_tau \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe ffi_call_probeScript.sml ffi_call_probe.out \
-  oracle_return empty_extcall "$cake_dir/semantics/ffi/ffiScript.sml"
+  oracle_return extcall_name_len "$cake_dir/semantics/ffi/ffiScript.sml"
 run_probe pan_itree_trace_prefix_probeScript.sml pan_itree_trace_prefix_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_trace_prefix0_probeScript.sml pan_itree_trace_prefix0_probe.out \
@@ -882,9 +891,9 @@ run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
 run_probe crep_exps_probeScript.sml crep_exps_probe.out \
   leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
 run_probe cexp_heads_probeScript.sml cexp_heads_probe.out \
-  empty heads empty_head empty_tail "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty heads empty_head empty_tail inferred_type "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe comp_field_probeScript.sml comp_field_probe.out \
-  first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
+  first short "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
@@ -1714,3 +1723,75 @@ run_probe pan_to_crep_is_wf_shape_nil_probeScript.sml pan_to_crep_is_wf_shape_ni
   iwf_val iwf_wf_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+# The pan_globals fresh_name probe observes that the source-shaped fresh-name
+# search only ever appends apostrophes (pan_globalsScript.sml:55).
+run_probe pan_globals_fresh_name_probeScript.sml pan_globals_fresh_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals new_main_name probe observes the synthesized entry-point name
+# for representative declaration lists (pan_globalsScript.sml:224).
+run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals fperm_name probe observes the source-shape name permutation
+# `fperm_name f g h` (pan_globalsScript.sml:185-188) for unchanged and
+# colliding keys, including names that already carry apostrophes.
+run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.out \
+  source_collision fperm_name_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out \
+  shaF pop_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+run_probe word_to_stack_call_dest_probeScript.sml word_to_stack_call_dest_probe.out \
+  cd_some wl_store "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+# The pan_globals fperm probe observes the source-shape program permutation
+# `fperm f g p` (pan_globalsScript.sml:191-214) for the recursive control
+# constructs, the Call handler case, the DecCall case and the catch-all.
+run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
+  recursive_control fperm_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals fperm_decs probe observes the source-shape declaration-list
+# permutation `fperm_decs f g ds` (pan_globalsScript.sml:216-221) for a mixed
+# declaration list and the empty list.
+run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.out \
+  mixed singleton_nonfunction \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals resort_decls probe observes the declaration regrouping
+# `resort_decls ds` (pan_globalsScript.sml:179-182) for a mixed list, an
+# already-grouped list, and the empty list.
+run_probe pan_globals_resort_decls_probeScript.sml pan_globals_resort_decls_probe.out \
+  mixed empty \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals dec_shapes probe observes the shape projection
+# `dec_shapes ds` (pan_globalsScript.sml:228-233) for the empty list, a mixed
+# list, and a function-only list.
+run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.out \
+  empty functions_only \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
+  pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The word_to_stack wShareInst probe observes the shared-memory instruction
+# helper `wShareInst` (word_to_stackScript.sml:186-224) for all eight memop
+# forms at word type 64.
+run_probe word_to_stack_wshareinst_probeScript.sml word_to_stack_wshareinst_probe.out \
+  ws_load ws_store32 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

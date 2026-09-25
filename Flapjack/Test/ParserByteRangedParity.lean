@@ -1,5 +1,7 @@
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.ConversionByteRanged
+import Flapjack.Parser.GrammarByteRanged
+import Flapjack.Parser.ParseTopDecsByteRanged
 
 /-! Kernel checks for the byte-rangedness foundation (bead
     `flapjack-pxn.18.3.5.8.7.1`).  These are the reusable lemmas the parser
@@ -261,5 +263,179 @@ example {width : Nat} (locations : Bool) (tree : ParseTree)
 example {width : Nat} (ofInt : Int → BitVec width) (shape : Flapjack.Shape)
     (hs : ShapeByteRanged shape) : ExpByteRanged (Flapjack.Parser.shapeVal ofInt shape) :=
   shapeVal_byteRanged ofInt shape hs
+
+/-- A parsed program is byte-ranged when its parse tree is. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (tree : ParseTree) (ht : ParseTreeByteRanged tree) (p : Flapjack.Prog (BitVec width))
+    (h : convProg ofInt locations fuel tree = some p) : ProgByteRanged p :=
+  convProg_byteRanged ofInt locations fuel tree ht p h
+
+/-- A parsed program sequence is byte-ranged when its parse trees are. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (trees : List ParseTree) (ht : ∀ t ∈ trees, ParseTreeByteRanged t)
+    (p : Flapjack.Prog (BitVec width))
+    (h : convProgSeq ofInt locations fuel trees = some p) : ProgByteRanged p :=
+  convProgSeq_byteRanged ofInt locations fuel trees ht p h
+
+/-- A parsed top-level declaration is byte-ranged when its parse tree is. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (tree : ParseTree) (ht : ParseTreeByteRanged tree) (d : Flapjack.Decl (BitVec width))
+    (h : convTopDec ofInt locations fuel tree = some d) : DeclByteRanged d :=
+  convTopDec_byteRanged ofInt locations fuel tree ht d h
+
+/-- A parsed top-level declaration list is byte-ranged when its parse tree is. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (tree : ParseTree) (ht : ParseTreeByteRanged tree)
+    (ds : List (Flapjack.Decl (BitVec width)))
+    (h : convTopDecList ofInt locations fuel tree = some ds) :
+    ∀ d ∈ ds, DeclByteRanged d :=
+  convTopDecList_byteRanged ofInt locations fuel tree ht ds h
+
+/-- A token list keeps the byte-ranged invariant under `P.expect`. -/
+example (expected : Token) (described : String) :
+    PStateToksSafe (P.expect expected described) :=
+  PStateToksSafe.expect expected described
+
+/-- `keepTok`-style leaves are byte-ranged when the accepted tokens are. -/
+example {entry : Token × Locs} (h : TokenNameByteRanged entry.1) :
+    TreesByteRanged (P.mkLeaf entry) :=
+  mkLeaf_byteRanged h
+
+/-- The fallback leaf of `try_default` is byte-ranged. -/
+example {token : Token} (h : TokenNameByteRanged token) :
+    ∀ s trees s', P.defaultLeaf token s = (some trees, s') → TreesByteRanged trees :=
+  defaultLeaf_trees_byteRanged h
+
+/-! Tree-producing primitive safety (bead 18.3.5.8.7.1.1.1). -/
+
+example : PTreesSafe (P.keepTok (fun _ => true) "any") := keepTok_treesSafe _ _
+example : PTreesSafe P.keepIdent := keepIdent_treesSafe
+example : PTreesSafe P.keepAnnot := keepAnnot_treesSafe
+example (nonterminal : Nonterminal) : PTreesSafe (P.emptyNode nonterminal) :=
+  emptyNode_treesSafe nonterminal
+example {p : P P.Trees} (hp : PTreesSafe p) : PTreesSafe (P.tryRule p) :=
+  tryRule_treesSafe hp
+example (nonterminal : Nonterminal) {children : P.Trees} (h : TreesByteRanged children) :
+    TreesByteRanged (P.mkSubtree nonterminal children) :=
+  mkSubtree_treesByteRanged nonterminal h
+example (nonterminal : Nonterminal) {p : P P.Trees} (hp : PTreesSafe p) :
+    PTreesSafe (P.subtree nonterminal p) :=
+  subtree_treesSafe nonterminal hp
+
+/-- `rpt` preserves tree safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.rpt p 3) :=
+  Flapjack.Parser.rpt_treesSafe hp 3
+
+/-- `rptHere` preserves tree safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.rptHere p) :=
+  Flapjack.Parser.rptHere_treesSafe hp
+/-- `consume` contributes no tree and preserves the token invariant. -/
+example (expected : Flapjack.Parser.Token) (described : String) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.consume expected described) :=
+  Flapjack.Parser.consume_treesSafe expected described
+
+/-- The `==`/`!=` operator rule is tree-safe. -/
+example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gEqOps :=
+  Flapjack.Parser.gEqOps_treesSafe
+
+/-- The `RetNT` rule is tree-safe. -/
+example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gRet :=
+  Flapjack.Parser.gRet_treesSafe
+
+/-- `ShapeNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShape fuel) :=
+  Flapjack.Parser.gShape_treesSafe fuel
+
+/-- `ShapeCombNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapeComb fuel) :=
+  Flapjack.Parser.gShapeComb_treesSafe fuel
+
+/-- `ShapedIdentNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdent fuel) :=
+  Flapjack.Parser.gShapedIdent_treesSafe fuel
+
+/-- `ParamListNT`/`FieldNameListNT` are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdentList nonterminal fuel) :=
+  Flapjack.Parser.gShapedIdentList_treesSafe nonterminal fuel
+
+/-- Fuel exhaustion fails safely. -/
+example (message : String) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.P.fail (α := Flapjack.Parser.P.Trees) message) :=
+  Flapjack.Parser.PTreesSafe.fail message
+
+/-- The full expression grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) :=
+  Flapjack.Parser.gExp_treesSafe fuel
+
+/-- `EBaseNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gEBase fuel) :=
+  Flapjack.Parser.gEBase_treesSafe fuel
+
+/-- `ArgListNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  Flapjack.Parser.gArgList_treesSafe fuel
+
+/-- `NmdStructNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gNmdStruct fuel) :=
+  Flapjack.Parser.gNmdStruct_treesSafe fuel
+
+/-- The whole second grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock2_treesSafe fuel).1,
+    Flapjack.Parser.gArgList_treesSafe fuel⟩
+
+/-- `tryDefault` preserves tree-safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p)
+    (token : Flapjack.Parser.Token) (h : Flapjack.Parser.TokenNameByteRanged token) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.tryDefault p token) :=
+  Flapjack.Parser.tryDefault_treesSafe hp token h
+
+/-- Store-form and shared-load/store rules are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (keyword : Flapjack.Parser.Keyword)
+    (described : String) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.gStoreForm nonterminal keyword described fuel) :=
+  Flapjack.Parser.gStoreForm_treesSafe nonterminal keyword described fuel
+
+/-- The call/ext-call/dec-call rules are tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExtCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gDecCallHead fuel) :=
+  ⟨Flapjack.Parser.gCall_treesSafe fuel, Flapjack.Parser.gExtCall_treesSafe fuel,
+    Flapjack.Parser.gDecCallHead_treesSafe fuel⟩
+
+
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) :=
+  Flapjack.Parser.gProg_treesSafe fuel
+
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gTopDecList fuel) :=
+  Flapjack.Parser.gTopDecList_treesSafe fuel
+
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gFun fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gStmt fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock3_treesSafe fuel).1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.2.1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.1⟩
+
+
+example {width : Nat} (declarations : List (Flapjack.Decl (BitVec width)))
+    (h : ∀ d ∈ declarations, DeclByteRanged d) :
+    ∀ d ∈ localiseDecls declarations, DeclByteRanged d :=
+  localiseDecls_byteRanged declarations h
+
+example {width : Nat} (ofInt : Int → BitVec width) (source : String) (locations : Bool)
+    (declarations : List (Flapjack.Decl (BitVec width)))
+    (h : parseTopDecs ofInt source locations = .ok declarations) :
+    ∀ d ∈ declarations, DeclByteRanged d :=
+  parseTopDecs_declByteRanged ofInt source locations declarations h
 
 end Flapjack.Test.ParserByteRangedParity

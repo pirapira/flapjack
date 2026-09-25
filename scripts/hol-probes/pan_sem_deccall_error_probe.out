@@ -4,3 +4,7 @@ deccall_ok_locals=SOME (ValWord 3w)
 deccall_shape_result=SOME Error
 deccall_error_result=SOME Error
 deccall_missing_result=SOME Error
+nested_deccall_bad_shape_result=SOME Error
+nested_deccall_bad_shape_clock=8
+nested_deccall_bad_shape_parameter=SOME (ValWord 42w)
+nested_deccall_bad_shape_state_exact=T

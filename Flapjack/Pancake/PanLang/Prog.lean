@@ -265,4 +265,16 @@ theorem progOfHOL_progToHOL {width : Nat} [NeZero width] :
         shapeOfHOL_shapeToHOL, Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes,
         listMap_expOfHOL_expToHOL])
 
+
+/-- Extraction: a byte-ranged production `ExtCall` program has a byte-ranged
+    FFI function name (the precondition the production FFI boundary witness
+    consumes). -/
+theorem progByteRanged_extCall_name {width : Nat} {function : String}
+    {configuration configurationLength array arrayLength : Flapjack.Exp (BitVec width)}
+    (h : ProgByteRanged
+      (Flapjack.Prog.extCall function configuration configurationLength array arrayLength :
+        Flapjack.Prog (BitVec width))) :
+    NameRanged function :=
+  h.1
+
 end Flapjack.Pancake.PanLang

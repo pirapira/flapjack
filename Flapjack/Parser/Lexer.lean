@@ -7,9 +7,9 @@ becomes `lParT`) so that the two can be read side by side.
 
 Upstream recurses on the remaining input and discharges termination with a
 `measure (LENGTH o FST)` relation. Here the recursion is structural on an
-explicit fuel bound instead: every step consumes at least one character, so
-seeding the fuel with the input length loses nothing, and it keeps the lexer
-free of well-founded recursion.
+explicit fuel bound instead: each lexer step consumes at least one input byte,
+so seeding the fuel with the UTF-8 byte length loses nothing and keeps the
+lexer free of well-founded recursion.
 -/
 
 namespace Flapjack.Parser
@@ -17,9 +17,13 @@ namespace Flapjack.Parser
 /-- Encode a source string to the list of bytes the original CakeML lexer
     observes. HOL `string` is a `char list` with 256 possible characters, and the
     executed compiler reads the source file as bytes through CakeML's UTF-8 file
-    input; re-encoding the Lean decoded string recovers exactly those bytes.
+    input; for well-formed UTF-8 input, re-encoding the Lean decoded string
+    recovers exactly those bytes (Lean `String` does not represent invalid UTF-8).
     This keeps accepted identifiers byte-valued, so `MlString.ofString`
-    round-trips without silent truncation. -/
+    round-trips without silent truncation. For non-ASCII source, lexer columns
+    and the text recovered from `/@ ... @/` annotations follow this byte view;
+    exact diagnostic-text/column parity for those inputs is not covered by the
+    current fixtures. -/
 def utf8Bytes (s : String) : List Char :=
   s.toUTF8.toList.map (fun b => Char.ofNat b.toNat)
 
@@ -270,7 +274,7 @@ def numFromDecString (s : String) : Nat :=
 `next_atom`: read one lexeme, skipping whitespace and comments.
 
 `fuel` bounds only the whitespace- and comment-skipping recursion; each such
-step consumes at least one character, so `input.length` always suffices.
+step consumes at least one input byte, so the UTF-8 byte count always suffices.
 -/
 def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
   | 0, _, _ => none

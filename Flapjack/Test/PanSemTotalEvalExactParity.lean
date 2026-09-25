@@ -9,10 +9,16 @@ import Flapjack.Test.PanSemExtCallExactParity
     `recursive_call_callee_break`, `recursive_call_nonmatching_exception_handler`,
     `recursive_call_invalid_exception_target`,
     `recursive_deccall_exception_propagates`,
+    `while_cond_zero`, `while_timeout`, `while_break`, `while_skip_timeout`,
+    `while_continue_timeout`, `while_return_propagates`,
     `recursive_seq_call_normal_continue`, `recursive_seq_call_terminal_error`,
     and recursive timeout rows in
     `scripts/hol-probes/pan_sem_e2e_probe.out`; matching exception handling
-    corresponds to `call_handles_exception_7`. -/
+    corresponds to `call_handles_exception_7`. If rows correspond to
+    `exact_if_nonzero_*`, `exact_if_zero_*`, `exact_if_nonword_*`, and
+    `exact_if_failed_*` in `pan_sem_ite_e2e_probe.out`. Dec success, shape
+    mismatch, missing old binding, and Break restoration correspond to the
+    `dec_*` rows in `pan_sem_e2e_probe.out`. -/
 
 namespace Flapjack.Test.PanSemTotalEvalExactParity
 
@@ -44,6 +50,19 @@ private instance : DecidablePred baseState.memaddrs := fun address =>
   if h : address = 0 then isTrue h else isFalse h
 
 private instance : DecidablePred baseState.shMemaddrs := fun _ => isFalse id
+
+private def whileClockState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with clock := clock }
+
+private instance (clock : Nat) : DecidablePred (whileClockState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (whileClockState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
 
 private def idCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
   { baseState with
@@ -279,7 +298,15 @@ def assignPrimitiveRows : Bool :=
             sum.toNat == 90 && carry.toNat == 0
         | _ => false
     | _ => false
-  assignOk && primitiveOk
+  let recursiveAssignOk := match recursiveExact
+      (.assign .local (ml "x") (.const 9)) baseState with
+    | some (none, state) => localWord state "x" == some 9
+    | _ => false
+  let recursiveAssignError := match recursiveExact
+      (.assign .local (ml "x") (.var .local (ml "missing"))) baseState with
+    | some (some .error, state) => localWord state "x" == some 7 && state.clock == 5
+    | _ => false
+  assignOk && primitiveOk && recursiveAssignOk && recursiveAssignError
 
 def storeRows : Bool :=
   let storeOk := match exactDispatch (.store (.const 0) (.const 7)) baseState with
@@ -524,15 +551,125 @@ def stateOwnedTimeoutRows : Bool :=
     | _ => false
   callTimeout && decCallTimeout
 
-/-! The outer `none` is the documented fragment gap, not HOL `SOME Error`. -/
-def recursiveGapRows : Bool :=
-  let ifOpen := evalPanSemRecursiveCallHOLExact (.ite (.const 1) .skip .skip) baseState
-  let decOpen := evalPanSemRecursiveCallHOLExact
-    (.dec (ml "y") .one (.const 1) .skip) baseState
-  let assignOpen := evalPanSemRecursiveCallHOLExact
-    (.assign .local (ml "x") (.const 2)) baseState
-  let whileOpen := evalPanSemRecursiveCallHOLExact (.while (.const 1) .skip) baseState
-  ifOpen.isNone && decOpen.isNone && assignOpen.isNone && whileOpen.isNone
+/-- The recursive dispatcher routes Primitive through the reviewed HOL clause.
+    The successful `primitive_success` and invalid-arity `primitive_wrong_args`
+    cases are direct rows from `pan_sem_e2e_probe.out`. -/
+def recursivePrimitiveRows : Bool :=
+  let success := evalPanSemRecursiveCallHOLExact
+    (.primitive (ml "x") .addCarry [.const 40, .const 50, .const 0]) primitiveState
+  let wrongArity := evalPanSemRecursiveCallHOLExact
+    (.primitive (ml "x") .addCarry [.const 1, .const 2]) primitiveState
+  let successOk := match success with
+    | some (none, post) =>
+        match post.locals (ml "x") with
+        | some (.rStruct [.val (.word sum), .val (.word carry)]) =>
+            sum.toNat == 90 && carry.toNat == 0
+        | _ => false
+    | _ => false
+  let wrongArityOk := match wrongArity with
+    | some (some .error, post) =>
+        match post.locals (ml "x") with
+        | some (.rStruct [.val (.word first), .val (.word second)]) =>
+            first.toNat == 0 && second.toNat == 0 && post.clock == 5
+        | _ => false
+    | _ => false
+  successOk && wrongArityOk
+
+/-- Direct original-HOL While equations for false/true conditions, recursive
+    normal and Continue iterations to timeout, Break exit, terminal Return, and
+    failed condition evaluation. -/
+def recursiveWhileRows : Bool :=
+  let falseCondition := recursiveExact (.while (.const 0) .skip) baseState
+  let timeout := recursiveExact (.while (.const 1) .skip) (whileClockState 0)
+  let breakExit := recursiveExact (.while (.const 1) .break) baseState
+  let normalRecursion := recursiveExact (.while (.const 1) .skip) (whileClockState 1)
+  let continueRecursion := recursiveExact (.while (.const 1) .continue) (whileClockState 1)
+  let returnPropagation := recursiveExact
+    (.while (.const 1) (.return (.const 9))) baseState
+  let conditionFailure := recursiveExact
+    (.while (.var .local (ml "missing")) .skip) baseState
+  let falseOk := match falseCondition with
+    | some (none, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let timeoutOk := match timeout with
+    | some (some .timeOut, post) => post.clock == 0 && localWord post "x" == none
+    | _ => false
+  let breakOk := match breakExit with
+    | some (none, post) => post.clock == 4 && localWord post "x" == some 7
+    | _ => false
+  let normalOk := match normalRecursion with
+    | some (some .timeOut, post) => post.clock == 0 && localWord post "x" == none
+    | _ => false
+  let continueOk := match continueRecursion with
+    | some (some .timeOut, post) => post.clock == 0 && localWord post "x" == none
+    | _ => false
+  let returnOk := match returnPropagation with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 9 && post.clock == 4 && localWord post "x" == none
+    | _ => false
+  let failureOk := match conditionFailure with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  falseOk && timeoutOk && breakOk && normalOk && continueOk && returnOk && failureOk
+
+/-- The direct HOL rows `exact_if_nonzero_*`, `exact_if_zero_*`,
+    `exact_if_nonword_*`, and `exact_if_failed_*` exercise selected branches
+    and the state-preserving Error case in the exact recursive dispatcher. -/
+def recursiveIfRows : Bool :=
+  let nonzero := recursiveExact
+    (.ite (.const 1) .tick .skip) baseState
+  let zero := recursiveExact
+    (.ite (.const 0) .tick .skip) baseState
+  let nonword := recursiveExact
+    (.ite (.rstruct []) .tick .skip) baseState
+  let failed := recursiveExact
+    (.ite (.var .local (ml "missing")) .tick .skip)
+    baseState
+  let nonzeroOk := match nonzero with
+    | some (none, post) => post.clock == 4 && localWord post "x" == some 7
+    | _ => false
+  let zeroOk := match zero with
+    | some (none, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let nonwordOk := match nonword with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let failedOk := match failed with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  nonzeroOk && zeroOk && nonwordOk && failedOk
+
+/-- Exact recursive `Dec` checks against original HOL's successful local
+    restoration and shape-mismatch rows. -/
+def recursiveDecRows : Bool :=
+  let success := recursiveExact
+    (.dec (ml "x") .one (.const 9)
+      (.return (.var .local (ml "x")))) baseState
+  let missingOld := recursiveExact
+    (.dec (ml "fresh") .one (.const 9) .skip) baseState
+  let breakBody := recursiveExact
+    (.dec (ml "x") .one (.const 9) .break) baseState
+  let mismatch := recursiveExact
+    (.dec (ml "x") (.comb []) (.const 9) .skip) baseState
+  let initializerFailure := recursiveExact
+    (.dec (ml "x") .one (.var .local (ml "missing")) .skip) baseState
+  let successOk := match success with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 9 && localWord post "x" == some 7
+    | _ => false
+  let missingOldOk := match missingOld with
+    | some (none, post) => localWord post "fresh" == none && localWord post "x" == some 7
+    | _ => false
+  let breakBodyOk := match breakBody with
+    | some (some .break, post) => localWord post "x" == some 7
+    | _ => false
+  let mismatchOk := match mismatch with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let initializerFailureOk := match initializerFailure with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  successOk && missingOldOk && breakBodyOk && mismatchOk && initializerFailureOk
 
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
@@ -552,7 +689,10 @@ def recursiveGapRows : Bool :=
 #guard stateOwnedDecCallExceptionRows
 #guard stateOwnedDecCallControlNegativeRows
 #guard stateOwnedTimeoutRows
-#guard recursiveGapRows
+#guard recursiveIfRows
+#guard recursiveWhileRows
+#guard recursiveDecRows
+#guard recursivePrimitiveRows
 
 def runChecks : IO Bool := do
   if skipBreakTickRows then
@@ -609,9 +749,18 @@ def runChecks : IO Bool := do
   if stateOwnedTimeoutRows then
     IO.println "PASS exact-state recursive Call/DecCall timeout clocks match original HOL"
   else IO.println "FAIL exact-state recursive Call/DecCall timeout clocks match original HOL"
-  if recursiveGapRows then
-    IO.println "PASS exact-state dispatcher keeps unassembled constructors explicitly open"
-  else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"
+  if recursiveIfRows then
+    IO.println "PASS exact-state recursive If selects nonzero/zero branches and preserves state on Error"
+  else IO.println "FAIL exact-state recursive If selects nonzero/zero branches and preserves state on Error"
+  if recursiveWhileRows then
+    IO.println "PASS exact-state recursive While matches HOL clock, body, Break, Continue, and terminal-result clauses"
+  else IO.println "FAIL exact-state recursive While matches HOL clock, body, Break, Continue, and terminal-result clauses"
+  if recursiveDecRows then
+    IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
+  else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
+  if recursivePrimitiveRows then
+    IO.println "PASS exact recursive dispatcher Primitive rows match HOL"
+  else IO.println "FAIL exact recursive dispatcher Primitive rows match HOL"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
     sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
     stateOwnedCallDestinationRows &&
@@ -619,6 +768,7 @@ def runChecks : IO Bool := do
     stateOwnedSeqCallRows && stateOwnedLookupErrorRows &&
     stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
     stateOwnedDecCallExceptionRows && stateOwnedDecCallControlNegativeRows &&
-    stateOwnedTimeoutRows && recursiveGapRows)
+    stateOwnedTimeoutRows && recursiveIfRows && recursiveWhileRows && recursiveDecRows &&
+    recursivePrimitiveRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

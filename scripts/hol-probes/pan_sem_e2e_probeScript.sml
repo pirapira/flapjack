@@ -217,6 +217,13 @@ val _ = print_eval "deccall_restores_existing_local"
        ^deccall_existing_local_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
 
+val _ = print_eval "deccall_tick_restores_existing_local"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «id» [panLang$Const (7w:8 word)]
+        panLang$Tick,
+       ^deccall_existing_local_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
 val _ = print_eval "nested_deccall_code_map_7"
   ``FST (panSem$evaluate
       (panLang$DecCall «answer» panLang$One «f» []
@@ -607,6 +614,54 @@ val _ = print_eval "dec_shape_mismatch"
          panLang$Skip,
        (ARB:((8),unit) panSem$state)))``
 
+val _ = print_eval "dec_missing_old_binding"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "fresh") panLang$One (panLang$Const (9w:8 word))
+         panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "fresh") panLang$One (panLang$Const (9w:8 word))
+         panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "fresh"))``
+
+val _ = print_eval "dec_break_restores_locals"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_missing_local_break"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_missing_local_continue"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
 val _ = print_eval "nb_op_op8" ``nb_op Op8``
 
 val _ = print_eval "nb_op_op16" ``nb_op Op16``
@@ -708,6 +763,28 @@ val _ = print_eval "while_error_condition"
        ((ARB:((8),unit) panSem$state) with <|
           locals := FEMPTY; structs := []; clock := 5 |>)) of
       (res,s') => res``
+
+val _ = print_eval "while_skip_timeout"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word)) panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 1 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_continue_timeout"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word)) panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 1 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "while_return_propagates"
+  ``case panSem$evaluate
+      (panLang$While (panLang$Const (1w:8 word))
+         (panLang$Return (panLang$Const (9w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (1w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
 
 val _ = print_eval "dec_clock_step"
   ``panSem$dec_clock ((ARB:((8),unit) panSem$state) with <| clock := 5 |>)``

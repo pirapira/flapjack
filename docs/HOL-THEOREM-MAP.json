@@ -584,6 +584,22 @@
     "reviewer": "Untagged CrepOp.mul case with recursive child results and full word_lab wrapper, composing to tagged crep_op_def after explicit dimension conversion. The complete source evaluator/state correspondence remains open."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_cmp",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Cmp case over the arbitrary-index finite-map source state; successful recursive operands produce the tagged word_cmp result and full word_lab wrapper after explicit HolFiniteDimension transport. Native crepSem eval_def correspondence remains open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_shift",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Shift case over the arbitrary-index finite-map source state; successful recursive operands produce the complete option word_sh result, including failure, after explicit HolFiniteDimension transport. Native crepSem eval_def correspondence remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

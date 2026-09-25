@@ -623,6 +623,53 @@ theorem evalCrepHolFiniteStateSource_crepOpMul
     dimension state.toSourceEvaluatorState left right leftValue rightValue
     hLeft hRight
 
+/-- Arbitrary-index finite-state `Cmp` case of HOL `eval_def`. The recursive
+operand results feed the exact tagged HOL `word_cmp` operation; the result
+retains both finite-dimension transport and the complete `word_lab` wrapper.
+This remains untagged because it is a case of the explicit-dimension source
+evaluator, not yet a theorem about native HOL `crepSem$eval`. -/
+theorem evalCrepHolFiniteStateSource_cmp
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (operator : Cmp)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState left = some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState right = some rightValue) :
+    ((evalCrepHolFiniteWordSourceExp dimension state.toSourceEvaluatorState
+      (.cmp operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    some (PanWordLab.word
+      (Compiler.Encoders.Asm.wordCmpResultHOL operator
+        (holWordToBitVec dimension leftValue)
+        (holWordToBitVec dimension rightValue))) := by
+  exact evalCrepHolFiniteWordSourceExpWordLab_cmp_eq_wordCmpHOL
+    dimension state.toSourceEvaluatorState operator left right leftValue rightValue
+    hLeft hRight
+
+/-- Arbitrary-index finite-state `Shift` case of HOL `eval_def`. It exposes
+the exact tagged `word_sh` option result, including out-of-range failure, and
+keeps the `word_lab` constructor around any successful result. It is not
+tagged as native `eval_def` while the explicit-dimension evaluator relation is
+still unproved. -/
+theorem evalCrepHolFiniteStateSource_shift
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (operator : Shift)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState left = some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState right = some rightValue) :
+    ((evalCrepHolFiniteWordSourceExp dimension state.toSourceEvaluatorState
+      (.shift operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    (wordShiftHOL operator
+      (holWordToBitVec dimension leftValue)
+      (holWordToBitVec dimension rightValue).toNat).map PanWordLab.word := by
+  exact evalCrepHolFiniteWordSourceExpWordLab_shift_eq_wordShiftHOL
+    dimension state.toSourceEvaluatorState operator left right leftValue rightValue
+    hLeft hRight
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

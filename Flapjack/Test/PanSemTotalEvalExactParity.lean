@@ -14,7 +14,9 @@ import Flapjack.Test.PanSemExtCallExactParity
     `scripts/hol-probes/pan_sem_e2e_probe.out`; matching exception handling
     corresponds to `call_handles_exception_7`. If rows correspond to
     `exact_if_nonzero_*`, `exact_if_zero_*`, `exact_if_nonword_*`, and
-    `exact_if_failed_*` in `pan_sem_ite_e2e_probe.out`. -/
+    `exact_if_failed_*` in `pan_sem_ite_e2e_probe.out`. Dec success, shape
+    mismatch, missing old binding, and Break restoration correspond to the
+    `dec_*` rows in `pan_sem_e2e_probe.out`. -/
 
 namespace Flapjack.Test.PanSemTotalEvalExactParity
 
@@ -529,12 +531,10 @@ def stateOwnedTimeoutRows : Bool :=
 /-- The outer `none` is a documented unassembled-constructor gap, not HOL
     `SOME Error`. -/
 def recursiveGapRows : Bool :=
-  let decOpen := evalPanSemRecursiveCallHOLExact
-    (.dec (ml "y") .one (.const 1) .skip) baseState
   let assignOpen := evalPanSemRecursiveCallHOLExact
     (.assign .local (ml "x") (.const 2)) baseState
   let whileOpen := evalPanSemRecursiveCallHOLExact (.while (.const 1) .skip) baseState
-  decOpen.isNone && assignOpen.isNone && whileOpen.isNone
+  assignOpen.isNone && whileOpen.isNone
 
 /-- The direct HOL rows `exact_if_nonzero_*`, `exact_if_zero_*`,
     `exact_if_nonword_*`, and `exact_if_failed_*` exercise selected branches
@@ -563,6 +563,38 @@ def recursiveIfRows : Bool :=
     | _ => false
   nonzeroOk && zeroOk && nonwordOk && failedOk
 
+/-- Exact recursive `Dec` checks against original HOL's successful local
+    restoration and shape-mismatch rows. -/
+def recursiveDecRows : Bool :=
+  let success := recursiveExact
+    (.dec (ml "x") .one (.const 9)
+      (.return (.var .local (ml "x")))) baseState
+  let missingOld := recursiveExact
+    (.dec (ml "fresh") .one (.const 9) .skip) baseState
+  let breakBody := recursiveExact
+    (.dec (ml "x") .one (.const 9) .break) baseState
+  let mismatch := recursiveExact
+    (.dec (ml "x") (.comb []) (.const 9) .skip) baseState
+  let initializerFailure := recursiveExact
+    (.dec (ml "x") .one (.var .local (ml "missing")) .skip) baseState
+  let successOk := match success with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 9 && localWord post "x" == some 7
+    | _ => false
+  let missingOldOk := match missingOld with
+    | some (none, post) => localWord post "fresh" == none && localWord post "x" == some 7
+    | _ => false
+  let breakBodyOk := match breakBody with
+    | some (some .break, post) => localWord post "x" == some 7
+    | _ => false
+  let mismatchOk := match mismatch with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let initializerFailureOk := match initializerFailure with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  successOk && missingOldOk && breakBodyOk && mismatchOk && initializerFailureOk
+
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
 #guard storeRows
@@ -582,6 +614,7 @@ def recursiveIfRows : Bool :=
 #guard stateOwnedDecCallControlNegativeRows
 #guard stateOwnedTimeoutRows
 #guard recursiveIfRows
+#guard recursiveDecRows
 #guard recursiveGapRows
 
 def runChecks : IO Bool := do
@@ -642,6 +675,9 @@ def runChecks : IO Bool := do
   if recursiveIfRows then
     IO.println "PASS exact-state recursive If selects nonzero/zero branches and preserves state on Error"
   else IO.println "FAIL exact-state recursive If selects nonzero/zero branches and preserves state on Error"
+  if recursiveDecRows then
+    IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
+  else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
   if recursiveGapRows then
     IO.println "PASS exact-state dispatcher keeps unassembled constructors explicitly open"
   else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"
@@ -652,6 +688,6 @@ def runChecks : IO Bool := do
     stateOwnedSeqCallRows && stateOwnedLookupErrorRows &&
     stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
     stateOwnedDecCallExceptionRows && stateOwnedDecCallControlNegativeRows &&
-    stateOwnedTimeoutRows && recursiveIfRows && recursiveGapRows)
+    stateOwnedTimeoutRows && recursiveIfRows && recursiveDecRows && recursiveGapRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

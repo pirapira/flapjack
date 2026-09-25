@@ -14,8 +14,10 @@ HOL `panSemScript.sml` proves:
   `!prog s r s'. evaluate (prog,s) = (r,s') ==> s'.clock <= s.clock`.
 * `fix_clock_evaluate` (`:768-775`): `fix_clock s (evaluate (prog,s)) = evaluate (prog,s)`.
 
-The tagged port below is `fix_clock_IMP_LESS_EQ` over the exact `mlstring`-keyed
-carrier. `evaluate_clock`/`fix_clock_evaluate` mention the recursive `evaluate`
+The function-backed rendering below is `fix_clock_IMP_LESS_EQ` over the
+`mlstring`-keyed `PanSemStateExact` record. Its theorem tag is withheld because
+that record has unrestricted lookup-function fields where HOL `state` has
+finite-map fields. `evaluate_clock`/`fix_clock_evaluate` mention the recursive `evaluate`
 itself, which is not yet assembled over the exact carrier (four-luna owns
 `PanSem/TotalEvalExact.lean`), so they stay unported and tracked as a gap.
 
@@ -39,8 +41,9 @@ theorem fixClockHOLExact_clock_le {width : Nat} {σ : Type} [NeZero width] {β :
   simp only [fixClockHOLExact]
   split <;> omega
 
-/-- Exact HOL `fix_clock_IMP_LESS_EQ` (`panSemScript.sml:451-457`). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+/-- Function-backed rendering of HOL `fix_clock_IMP_LESS_EQ`
+    (`panSemScript.sml:451-457`); untagged because the state map fields are not
+    constrained to finite support. -/
 theorem fixClockHOLExact_IMP_LESS_EQ {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (state : PanSemStateExact width σ) (result : β) (state1 : PanSemStateExact width σ)
     (step : β × PanSemStateExact width σ)

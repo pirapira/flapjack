@@ -5,7 +5,7 @@ import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 
 /-!
-# Exact `panSem$state` over the faithful `mlstring` carrier
+# `panSem$state` projection over the faithful `mlstring` name carrier
 
 HOL `panSem$state` (`cakeml/pancake/semantics/panSemScript.sml:44-62`) is
 
@@ -34,10 +34,15 @@ where `varname`, `stcname`, `fldname`, `funname`, `eid` are all `mlstring`
 `Flapjack.PanSemHolState` (`PanSemStateEval.lean`) is the String-backed source
 projection used by the executed evaluator; its `dec_clock_def`/`fix_clock_def`
 and `lookup_kvar_def`/`set_kvar_def` tags are withheld under the
-String/MlString carrier rule (`flapjack-0lj`).  This module introduces the
-exact carrier `PanSemStateExact` over `MlS` keys, `ShapeHOL`/`StructContextExact`
-syntax, `ProgHOL` code and the `ValueHOL` value carrier, and re-establishes the
-four state-helper tags exactly over it.
+String/MlString carrier rule (`flapjack-0lj`). This module introduces
+`PanSemStateExact` over `MlS` keys, `ShapeHOL`/`StructContextExact` syntax,
+`ProgHOL` code and the `ValueHOL` value carrier. Its map-valued fields are
+currently unrestricted lookup functions, however, so it is a function-backed
+projection rather than the HOL finite-map state carrier. State operations and
+the declarations that depend on them remain useful Lean infrastructure, but
+their `@[hol]` tags were withdrawn by audit bead
+`flapjack-pxn.18.3.7.1.3.1.2`; restoration depends on the finite-map carrier
+replacement tracked by open bead `flapjack-pxn.18.3.7.1.3.1.1.2`.
 
 Direct HOL oracle rows for the helpers live in
 `scripts/hol-probes/pan_sem_e2e_probe.out` (`dec_clock_step`,

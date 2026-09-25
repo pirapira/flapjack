@@ -37,6 +37,13 @@ def CrepSemHOLState.mapc {width : Nat} [NeZero width] {σ : Type}
       state.toExpressionEvaluatorState := by
   rfl
 
+@[simp] theorem CrepSemHOLState.toBitVecEvaluatorState_mapc
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ) :
+    (state.mapc f).toBitVecEvaluatorState = state.toBitVecEvaluatorState := rfl
+
 /-- Changing only the HOL code map cannot alter expression evaluation after
 projection into the source evaluator. This is Flapjack support for the
 `simp_exp_correct1` dependency; the evaluator correspondence to native HOL
@@ -52,6 +59,96 @@ theorem evalCrepHolFiniteWordSourceExp_mapc_projection
       evalCrepHolFiniteWordSourceExp (instFinHolFiniteDimension (width := width))
         state.toExpressionEvaluatorState expression := by
   rw [CrepSemHOLState.toExpressionEvaluatorState_mapc]
+
+/-- The `memory` field in the all-width expression projection agrees with the
+direct BitVec projection after the canonical finite-index conversion. This
+representation equation is Flapjack support; it does not identify HOL's
+arbitrary `finite_index` type with `Fin width`. -/
+theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memory
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((state.toExpressionEvaluatorState).toHolFiniteBitVecState
+      (instFinHolFiniteDimension (width := width))).memory =
+    state.toBitVecEvaluatorState.memory := by
+  funext address
+  have hAddress : holWordBitsToBitVec
+      (bitVecToHolWord (instFinHolFiniteDimension (width := width)) address) =
+      address := by
+    change holWordBitsToBitVec
+      (holWordToFinBits (instFinHolFiniteDimension (width := width))
+        (finBitsToHolWord (instFinHolFiniteDimension (width := width))
+          (bitVecToHolWordBits address))) = address
+    rw [holWordToFinBits_finBitsToHolWord]
+    exact holWordBitsToBitVec_bitVecToHolWordBits address
+  dsimp only [CrepSemHOLState.toExpressionEvaluatorState,
+    CrepHolState.toHolFiniteBitVecState]
+  rw [hAddress]
+  cases hCell : state.memory address with
+  | word value =>
+      simp [CrepSemHOLState.toBitVecEvaluatorState,
+        mapCrepHolWordLab, holWordLabToBits_word,
+        instFinHolFiniteDimension, hCell]
+      change holWordToBitVec
+        (instFinHolFiniteDimension (width := width))
+        (bitVecToHolWordBits value) = value
+      change holWordBitsToBitVec (bitVecToHolWordBits value) = value
+      exact holWordBitsToBitVec_bitVecToHolWordBits value
+
+/-- The address-domain field in the expression projection agrees with the
+direct BitVec projection after the canonical finite-index conversion. -/
+theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memaddrs
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((state.toExpressionEvaluatorState).toHolFiniteBitVecState
+      (instFinHolFiniteDimension (width := width))).memaddrs =
+    state.toBitVecEvaluatorState.memaddrs := by
+  funext address
+  have hAddress : holWordBitsToBitVec
+      (bitVecToHolWord (instFinHolFiniteDimension (width := width)) address) =
+      address := by
+    change holWordBitsToBitVec
+      (holWordToFinBits (instFinHolFiniteDimension (width := width))
+        (finBitsToHolWord (instFinHolFiniteDimension (width := width))
+          (bitVecToHolWordBits address))) = address
+    rw [holWordToFinBits_finBitsToHolWord]
+    exact holWordBitsToBitVec_bitVecToHolWordBits address
+  dsimp only [CrepSemHOLState.toExpressionEvaluatorState,
+    CrepHolState.toHolFiniteBitVecState]
+  rw [hAddress]
+  rfl
+
+/-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
+state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec
+projection. This isolates the memory cell, domain, and endian fields from the
+recursive `eval_def` proof. It remains untagged: the enclosing evaluator still
+uses Flapjack's explicit finite-index projection. -/
+theorem evalCrepSemHOLStateSource_load32_eq_memLoad32HOL
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ)
+    (addressExpression : CrepExp (Fin width → Bool))
+    (address : Fin width → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width))
+      state.toExpressionEvaluatorState addressExpression = some address) :
+    (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width))
+      state.toExpressionEvaluatorState (.load32 addressExpression)).map
+        (holWordToBitVec (instFinHolFiniteDimension (width := width))) =
+    (panMemLoad32HOL
+        (fun bitAddress =>
+          (state.toBitVecEvaluatorState.memory bitAddress).toHolWordLab)
+        (fun bitAddress => state.toBitVecEvaluatorState.memaddrs bitAddress = true)
+        state.toBitVecEvaluatorState.bigEndian
+        (holWordToBitVec (instFinHolFiniteDimension (width := width)) address)).map
+          (fun value => BitVec.ofNat width value.toNat) := by
+  classical
+  rw [evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL
+    (dimension := instFinHolFiniteDimension (width := width))
+    (state := state.toExpressionEvaluatorState)
+    (addressExpression := addressExpression) (address := address) hAddress]
+  rw [CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memory,
+    CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memaddrs]
+  rfl
 
 /-- All-positive-width `simp_exp_correct1` support over the HOL-shaped Crep
 state carrier and the proof-script-local `mapc` update. The statement keeps
@@ -139,5 +236,131 @@ theorem crepSimpExpCorrect1CrepSemHOLStateRuntime
     projected (crepExpHOLToSourceBits expression) h
   rw [hCodeId] at hPres
   exact hPres
+
+/-- Direct BitVec production-runtime support for all-positive-width
+`crepSemHOLState`. It takes HOL's exact `CrepExpHOL` input and `HolWordLab`
+result carrier, and applies the actual HOL-shaped `mapc` update. The evaluator
+uses the production RISC-V runtime on a direct word-cell projection, so no
+`Fin width → Bool` conversion occurs here. It remains untagged: code/FFI are
+fixed in the expression-only projection, and the generic HOL
+finite-index/eval_def relation is not established. -/
+theorem crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (h : ((evalCrepRuntimeExp
+      (riscvCrepWordTarget state.toBitVecEvaluatorState.toRuntime)
+      (crepExpOfHOL expression)).map PanWordLab.word).map
+        PanWordLab.toHolWordLab ≠ none) :
+    ((evalCrepRuntimeExp
+      (riscvCrepWordTarget
+        (state.mapc update).toBitVecEvaluatorState.toRuntime)
+      (crepSimpExp (BitVec.ofNat width) (crepExpOfHOL expression))).map
+        PanWordLab.word).map PanWordLab.toHolWordLab =
+    ((evalCrepRuntimeExp
+      (riscvCrepWordTarget state.toBitVecEvaluatorState.toRuntime)
+      (crepExpOfHOL expression)).map PanWordLab.word).map
+        PanWordLab.toHolWordLab := by
+  rw [CrepSemHOLState.toBitVecEvaluatorState_mapc]
+  let projected := state.toBitVecEvaluatorState
+  let productionExpression := crepExpOfHOL expression
+  have hRuntime :
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        productionExpression).map PanWordLab.word ≠ none := by
+    have hWrapped := h
+    change ((evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+      productionExpression).map PanWordLab.word).map PanWordLab.toHolWordLab ≠ none
+      at hWrapped
+    intro hnone
+    rw [hnone] at hWrapped
+    simp at hWrapped
+  have hSource :
+      evalCrepHolExpWordLab projected productionExpression ≠ none := by
+    rw [evalCrepHolExpWordLab, ← evalCrepRuntimeExp_toRuntime_eq]
+    exact hRuntime
+  have hCodeId :
+      crepArithHolMapCode
+        (fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+        projected = projected := by
+    cases projected
+    simp [crepArithHolMapCode]
+  have hPres := crepSimpExpCorrect1BitVec
+    (f := fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+    projected productionExpression hSource
+  rw [hCodeId] at hPres
+  have hRuntimePreserved :
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        (crepSimpExp (BitVec.ofNat width) productionExpression)).map
+          PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        productionExpression).map PanWordLab.word := by
+    calc
+      _ = evalCrepHolExpWordLab projected
+            (crepSimpExp (BitVec.ofNat width) productionExpression) := by
+              simp only [evalCrepHolExpWordLab]
+              rw [evalCrepRuntimeExp_toRuntime_eq]
+      _ = evalCrepHolExpWordLab projected productionExpression := hPres
+      _ = _ := by
+            simp only [evalCrepHolExpWordLab]
+            rw [evalCrepRuntimeExp_toRuntime_eq]
+  exact congrArg (Option.map PanWordLab.toHolWordLab) hRuntimePreserved
+
+/-- Native production-evaluator `Var` case against the exact finite-map local
+field in `CrepSemHOLState`, corresponding to HOL `crepSem$eval_def`
+(`crepSemScript.sml:91`). The production runtime state remains arbitrary,
+including its code, FFI, memory model, and byte configuration; the only
+premise relates the queried local observation to this state's finite-map
+lookup. No state projection or successful-evaluation premise is used, so the
+equation covers both a lookup hit and a miss. This stays untagged: the HOL
+state uses the positive-width `BitVec` encoding rather than an arbitrary HOL
+`finite_index`, and the local observation premise is only one component of the
+full state/evaluator correspondence. -/
+theorem evalCrepRuntimeExp_crepSemHOLState_var
+    {width : Nat} [NeZero width] {σ ρ : Type}
+    (holState : CrepSemHOLState width σ)
+    (runtimeState : CrepRuntimeState (RiscV.Word width) ρ)
+    (name : Nat)
+    (hLocal : runtimeState.locals name =
+      (holState.locals.lookup name).map HolWordLab.toPanWordLab) :
+    ((evalCrepRuntimeExp runtimeState (.var name)).map PanWordLab.word).map
+      PanWordLab.toHolWordLab = holState.locals.lookup name := by
+  simp only [evalCrepRuntimeExp]
+  rw [hLocal]
+  cases h : holState.locals.lookup name with
+  | none => simp
+  | some cell => cases cell <;> simp [HolWordLab.toPanWordLab,
+      PanWordLab.toHolWordLab, panTheWord]
+
+/-- Native production-evaluator `LoadGlob` case against the exact finite-map
+global field in `CrepSemHOLState`, corresponding to HOL
+`crepSem$eval_def` (`crepSemScript.sml:111`). The production runtime state
+remains arbitrary, including its code, FFI, memory model, and byte
+configuration; the only premise relates the queried global observation to
+this state's finite-map lookup. No state projection or successful-evaluation
+premise is used, so the equation covers both a lookup hit and a miss. The
+direct HOL rows are `eval_global_hit` and `eval_global_miss` in
+`scripts/hol-probes/crep_eval_probe.out`. This stays untagged: the HOL state
+uses the positive-width `BitVec` encoding rather than an arbitrary HOL
+`finite_index`, and the local observation premise is only one component of the
+full state/evaluator correspondence. -/
+theorem evalCrepRuntimeExp_crepSemHOLState_loadGlob
+    {width : Nat} [NeZero width] {σ ρ : Type}
+    (holState : CrepSemHOLState width σ)
+    (runtimeState : CrepRuntimeState (RiscV.Word width) ρ)
+    (address : BitVec 5)
+    (hGlobal : runtimeState.globals address =
+      (holState.globals.lookup address).map HolWordLab.toPanWordLab) :
+    ((evalCrepRuntimeExp runtimeState (.loadGlob address)).map
+      PanWordLab.word).map PanWordLab.toHolWordLab =
+        holState.globals.lookup address := by
+  simp only [evalCrepRuntimeExp]
+  rw [hGlobal]
+  cases h : holState.globals.lookup address with
+  | none => simp
+  | some cell => cases cell <;> simp [HolWordLab.toPanWordLab,
+      PanWordLab.toHolWordLab, panTheWord]
 
 end Flapjack

@@ -557,12 +557,12 @@ theorem dec_shapes_fperm_decs [BEq String] (source target : FunName)
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2361`): resorting
     declarations preserves the collected shapes. `resort_decls` is the
     production `globalResortDecls`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides production String names
+-- versus HOL mlstring names, this proof ranges over production `Decl α` and
+-- `Shape`; HOL's declarations contain word-valued `ExpHOL width` and return
+-- `ShapeHOL`. The names_as_string qualifier cannot account for those carrier
+-- differences. Exact-carrier production replacement is tracked by
+-- `flapjack-6nn.3.1`.
 theorem dec_shapes_resort_decls_def (declarations : List (Decl α)) :
     globalDeclShapes (globalResortDecls declarations) =
       globalDeclShapes declarations :=
@@ -572,12 +572,11 @@ theorem dec_shapes_resort_decls_def (declarations : List (Decl α)) :
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2055`): resorting
     declarations leaves the function table unchanged. `resort_decls` is the
     production `globalResortDecls`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides production String names
+-- versus HOL mlstring names, this proof ranges over production `Decl α`; HOL
+-- `decl` contains word-valued `ExpHOL width`. The names_as_string qualifier
+-- cannot account for this expression-carrier mismatch. Exact-carrier
+-- production replacement is tracked by `flapjack-6nn.3.1`.
 theorem resort_decls_preserve_functions (declarations : List (Decl α)) :
     functions (globalResortDecls declarations) = functions declarations :=
   functions_globalResortDecls declarations
@@ -627,12 +626,12 @@ theorem fperm_decs_decls [BEq String] (source target : FunName)
     failure of membership in `(functions declarations).map (fun entry => entry.1)`;
     `globalFunctionNames_eq_functions_map` bridges the production
     `globalFunctionNames`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides production String names
+-- versus HOL mlstring names, the statement ranges over production `Decl α`,
+-- whose expressions carry `Const : α`; HOL's `decl` carries word-valued
+-- `ExpHOL width` with `Const : 'a word`. The names_as_string qualifier cannot
+-- cover that input-carrier difference. The exact-carrier replacement is
+-- tracked by `flapjack-6nn.3.1`.
 theorem new_main_name_correct [BEq String] [LawfulBEq String]
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∈

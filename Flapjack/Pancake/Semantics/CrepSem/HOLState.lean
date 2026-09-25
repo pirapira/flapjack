@@ -84,6 +84,12 @@ private def holWordLabToBits {width : Nat} (cell : HolWordLab width) :
   match cell with
   | .word word => .word (bitVecToHolWordBits word)
 
+/-- Flapjack representation helper exposing the exact-state word-cell
+projection for carrier-bridge proofs; it has no HOL theorem of its own. -/
+@[simp] theorem holWordLabToBits_word {width : Nat} (word : BitVec width) :
+    holWordLabToBits (HolWordLab.word word) =
+      PanWordLab.word (bitVecToHolWordBits word) := rfl
+
 /-- Project just the observable fields to the existing all-width source
 evaluator. Code is empty and FFI is a fixed witness because expression `eval`
 does not inspect either field; memory domains are converted from HOL sets to
@@ -108,5 +114,28 @@ noncomputable def CrepSemHOLState.toExpressionEvaluatorState
       ffi := crepExpressionProjectionFfi
       baseAddress := bitVecToHolWordBits state.baseAddr
       topAddress := bitVecToHolWordBits state.topAddr }
+
+/-- Project the expression-observable state fields directly to the canonical
+BitVec word evaluator. Code and FFI use fixed witnesses because expression
+evaluation does not inspect either field. Unlike
+`toExpressionEvaluatorState`, this view does not pass through `Fin width →
+Bool` before returning to the production RISC-V `BitVec width` carrier. -/
+noncomputable def CrepSemHOLState.toBitVecEvaluatorState
+    {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemHOLState width ffiState) :
+    CrepHolState (RiscV.Word width) Unit := by
+  classical
+  exact
+    { locals := fun name => (state.locals.lookup name).map HolWordLab.toPanWordLab
+      globals := fun name => (state.globals.lookup name).map HolWordLab.toPanWordLab
+      code := fun _ => none
+      memory := fun address => (state.memory address).toPanWordLab
+      memaddrs := fun address => decide (state.memaddrs address)
+      shMemaddrs := fun address => decide (state.shMemaddrs address)
+      clock := state.clock
+      bigEndian := state.be
+      ffi := crepExpressionProjectionFfi
+      baseAddress := state.baseAddr
+      topAddress := state.topAddr }
 
 end Flapjack

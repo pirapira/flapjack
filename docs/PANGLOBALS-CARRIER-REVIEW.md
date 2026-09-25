@@ -1,31 +1,34 @@
-# PanGlobals identifier-carrier review (flapjack-6nn)
+# PanGlobals carrier review (flapjack-6nn)
 
-Read-only source comparison of the original Cake `pan_globalsScript.sml`
-definitions with the production Lean declarations in
-`Flapjack/Pancake/PanGlobals.lean`, classifying each declaration as
+Source comparison of the original Cake `pan_globalsScript.sml` definitions
+with the definitions called by the executed global compiler in
+`Flapjack/Pancake/PanGlobals.lean`. Constructor cases, filtering order, and
+projected values agree for these two helpers. They are not exact HOL ports:
+production `Decl α` contains production `Exp α` (`Const` stores `α`) and
+production `Shape` (named identifiers are `String`), whereas HOL `decl` uses
+word-valued `ExpHOL width` and `ShapeHOL` with `mlstring` names. The
+`names_as_string` qualifier only addresses the identifier component and cannot
+make these generic production carriers equal to HOL's. Direct parity tests
+exercise the constructor/order behavior on production values, not a typed HOL
+carrier conversion. Neither definition is tagged.
 
-- **carrier-only**: the only remaining difference is the identifier carrier
-  (HOL `funname`/`varname`/`stcname` = `mlstring` vs Lean `String`), so it is a
-  candidate for the narrow `reviewed_names_as_string` qualifier once the
-  qualifier tooling (`flapjack-an4`) lands; or
-- **beyond carrier**: at least one further mismatch (recursion shape, map
-  representation, ...), so the qualifier alone does not license a tag.
-
-Prerequisites not yet met: qualifier tooling `flapjack-an4` and generated-name
-byte-boundary witnesses `flapjack-0up`. Nothing here is tagged; no Lean source
-is changed by this review.
+An exact-carrier replacement requires definitions over `DeclHOL width` and
+`ShapeHOL`, direct HOL rows reproduced at that carrier, and a reviewed
+connection to the executed path. Until then retain these definitions as
+Flapjack-specific behavior and track the replacement in
+`flapjack-6nn.3.1`.
 
 ## Comparison
 
 | HOL (`pan_globalsScript.sml`) | Lean (`PanGlobals.lean`) | classification |
 | --- | --- | --- |
 | `fperm_name_def` (:184) | `globalRenameFunctionName` (:433) | carrier-only (name swap, no new bytes) |
-| `fperm_def` (:191) | `globalRenameProg` (:470) | carrier-only |
-| `fperm_decs_def` (:216) | `globalRenameDecls` (:504) | carrier-only |
-| `resort_decls_def` (:179) | `globalResortDecls` (:810) | carrier-only (decl-kind filters, names ignored) |
-| `dec_shapes_def` (:228) | `globalDeclShapes` (:842) | carrier-only (names ignored) |
+| `fperm_def` (:191) | `globalRenameProg` (:470) | documented mismatch: production `Prog α` / `Exp α` uses `Const : α`; HOL `prog` / `exp` uses `Const : 'a word`, as well as mlstring identifiers |
+| `fperm_decs_def` (:216) | `globalRenameDecls` (:504) | documented mismatch: production `Decl α` / `Prog α` / `Exp α` uses `Const : α`; HOL `decl` / `prog` / `exp` uses `Const : 'a word`, as well as mlstring identifiers |
+| `resort_decls_def` (:179) | `globalResortDecls` (:864) | documented mismatch: generic `Decl α` / `Exp α` payload and `String`/`Shape` carriers differ from HOL `DeclHOL width` / word-valued `ExpHOL width` / `ShapeHOL` |
+| `dec_shapes_def` (:228) | `globalDeclShapes` (:993) | documented mismatch: consumes generic `Decl α` and returns production `Shape` (`String` names), rather than HOL `DeclHOL width` and `ShapeHOL` |
 | `fresh_name_def` (:55) | `freshNameHOL` (:279) | carrier-only in shape, but constructs new names (`++ "'"`), so the `flapjack-0up` boundary witness is required |
-| `new_main_name_def` (:224) | `globalNewMainName` (:824) | carrier-only (delegates to `freshNameHOL`); needs the same boundary witness |
+| `new_main_name_def` (:224) | `globalNewMainName` (:871) | documented mismatch: takes generic `Decl α` / `Exp α` (`Const : α`) rather than HOL word-valued declarations, despite only projecting names |
 | `fresh_name_def` (:55) | `globalFreshName`/`globalFreshNameAux` (:154/:145) | **beyond carrier**: fuel-bounded search via `globalApostrophes`, not HOL's unbounded `strcat`/`strlen` recursion |
 | `compile_exp_def` (:18) | `globalCompileExp` (:32) | **beyond carrier**: `lookupInfo` on an association list with `BEq String`, not HOL `FLOOKUP` on a finite map |
 | `compile_def` (:69) | `globalCompileProg` (:304) | **beyond carrier**: inherits the `globalCompileExp` list-vs-finite-map mismatch |
@@ -35,16 +38,19 @@ is changed by this review.
 | `compile_decs_def` (:160) | `compileDecsCake` (:2120) | carrier-only (canonical) |
 | `compile_top_def` (:236) | `globalCompileTopCake` (:2744) | carrier-only (canonical); not the whole executed path on its own |
 
-## Proposed first narrow retag
+## Qualification boundary
 
-The smallest genuinely carrier-only slice is the **rename/shape cluster**
-`fperm_name_def`, `fperm_def`, `fperm_decs_def`, `resort_decls_def`,
-`dec_shapes_def`. These construct no new name bytes, need no FFI boundary
-witness, and are currently documented as `FLAPJACK-SPECIFIC` only because of the
-identifier carrier.
-
-Then, once `flapjack-0up` provides the byte-rangedness witness, retag
-`freshNameHOL` and `globalNewMainName`.
+The earlier proposal to retag this equality-only cluster with
+`names_as_string` was incorrect wherever the executable declaration retains
+generic values. `resort_decls_def`/`fperm_decs_def` range over production
+`Decl α`, `fperm_def` ranges over `Prog α`, and their expression `Const`
+payload is `α`, not HOL's `'a word`; `dec_shapes_def` also returns production
+`Shape`, not `ShapeHOL`. `new_main_name_def` takes generic production
+`Decl α` even though its body projects only function names. Equality-only or
+projection-only behavior does not erase these input type differences.
+`fperm_name_def` and `fresh_name_def` remain names-only qualified cases; the
+other five definitions stay untagged until the exact-carrier replacement is
+connected to production.
 
 Do **not** retag the executed `globalCompileExp`/`globalCompileProg`/
 `globalCompileDecsThreaded` on the strength of the qualifier alone: their

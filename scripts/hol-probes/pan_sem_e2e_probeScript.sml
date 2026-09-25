@@ -607,6 +607,54 @@ val _ = print_eval "dec_shape_mismatch"
          panLang$Skip,
        (ARB:((8),unit) panSem$state)))``
 
+val _ = print_eval "dec_missing_old_binding"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "fresh") panLang$One (panLang$Const (9w:8 word))
+         panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "fresh") panLang$One (panLang$Const (9w:8 word))
+         panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "fresh"))``
+
+val _ = print_eval "dec_break_restores_locals"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word))))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with
+          locals := FEMPTY |+ (strlit "x", ValWord (7w:8 word)))))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_missing_local_break"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_missing_local_continue"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
 val _ = print_eval "nb_op_op8" ``nb_op Op8``
 
 val _ = print_eval "nb_op_op16" ``nb_op Op16``

@@ -222,6 +222,60 @@ example : panIsWfShapeValueHOL nestedContext nestedValue = true := by
   simp [panIsWfShapeValueHOL, panIsWfShapeValuesHOL, lookupInfo,
     nestedContext, nestedValue]
 
+/-! ## Exact `is_wf_shape_v` over the exact `ValueHOL`/`StructContextExact`
+    carriers (HOL `panProps$is_wf_shape_v`, bead flapjack-pxn.18.5.17.1.3.14). -/
+
+private def wrongName : ExactName := .implode [119, 114, 111, 110, 103]
+
+private def exactPairContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
+private def exactMatchingValue : ValueHOL 8 :=
+  .nStruct pairName [(leftName, .val (.word 2)), (rightName, .rStruct [])]
+
+private def exactMismatchValue : ValueHOL 8 :=
+  .nStruct pairName [(leftName, .val (.word 2)), (wrongName, .rStruct [])]
+
+private def exactFirstMatchContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 }),
+   (pairName, { fields := [(wrongName, .one)], size := 1 })]
+
+/-- `is_wf_shape_v_word`. -/
+example : isWfShapeValueHOLExact exactPairContext (.val (.word 1) : ValueHOL 8) = true := by
+  simp [isWfShapeValueHOLExact, exactPairContext]
+
+/-- `is_wf_shape_v_named_match`. -/
+example : isWfShapeValueHOLExact exactPairContext exactMatchingValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_named_missing`. -/
+example : isWfShapeValueHOLExact ([] : Flapjack.Pancake.PanLang.StructContextExact)
+    exactMatchingValue = false := by
+  simp [isWfShapeValueHOLExact, Flapjack.Pancake.PanLang.structContextLookupHOL,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_named_mismatch`: `is_wf_shape_v` ignores field names, so the
+    renamed field still counts. -/
+example : isWfShapeValueHOLExact exactPairContext exactMismatchValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    exactMismatchValue, pairName]
+
+/-- `is_wf_shape_v_duplicate_second`: a present key suffices regardless of which
+    duplicate entry matches first. -/
+example : isWfShapeValueHOLExact exactFirstMatchContext exactMatchingValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactFirstMatchContext,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_nested_match`. -/
+example : isWfShapeValueHOLExact exactNestedContext exactNestedValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactNestedContext,
+    exactNestedValue, pairName, outerName, leftName, rightName, innerName, tagName]
+
 /-! ## Adapters between the exact HOL-shaped predicates and the production
     cache-augmented-context predicates, under `StructContext.toHOL`. -/
 

@@ -1788,6 +1788,16 @@ run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.ou
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
 
+# The pan_globals MEM_functions probe observes the source-shape membership
+# projection described by the local theorem MEM_functions
+# (pan_globalsProofScript.sml:2380-2387).  Since `[local]` theorems are not
+# exported to the theory database, the probe records the direct EVAL rows for
+# `functions` and the membership instance the theorem characterizes.
+run_probe pan_globals_mem_functions_probeScript.sml pan_globals_mem_functions_probe.out \
+  functions_empty mem_function_entry \
+  "$cake_dir/pancake/proofs/pan_globalsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+
 run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
   pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"

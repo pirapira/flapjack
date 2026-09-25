@@ -374,6 +374,15 @@ accepted by `loop_inst_ok` only for `x86_64`. Consequently, RISC-V parity must
 port the `data_to_word` helper path rather than add a direct RISC-V lowering
 for source `LLongDiv`.
 
+`pan_globals_mem_functions_probe.out` records direct HOL EVAL of the
+`panLang$functions` projection and the membership instance characterized by the
+local theorem `MEM_functions` at
+`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380-2387` (the theorem is
+`[local]`, so it has no theory-database name). The exact word-indexed port
+`Flapjack.Pancake.PanLang.functionsHOL` and its membership theorem
+`MEM_functionsHOL` are paired with the Lean regression
+`Flapjack.Test.PanGlobalsMemFunctionsHOLParity`.
+
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:
 

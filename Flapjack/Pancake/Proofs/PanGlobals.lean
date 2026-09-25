@@ -1,9 +1,12 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Proofs.PanGlobals.ShapeInfrastructure
 import Flapjack.Pancake.Semantics.PanSem
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang
 
 /-! Flapjack-specific generalization for the parameterized
     \`globalCompileTopForStart\` analogue. The exact HOL-tagged theorem is
@@ -465,6 +468,48 @@ theorem MEM_functions {declarations : List (Decl α)}
         entry = (declaration.name, declaration.params, declaration.body,
           declaration.returnShape) :=
   mem_functions hmem
+
+/-- Exact HOL port of Cake's `MEM_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380-2387`): every entry
+    of `functions decs` comes from a `Function` declaration of `decs`, and is
+    that declaration's `(name, params, body, return)`.
+
+    This is the faithful word-indexed port and uses the exact carriers:
+    `DeclHOL`/`FunDeclHOL`/`ProgHOL width` with `MlS` names and `ShapeHOL`
+    shapes, and the exact `functions` projection `functionsHOL`.  The
+    Flapjack-specific production analogue `MEM_functions` above is keyed by
+    Lean `String` identifiers and generic `Prog α`, so it is untagged. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "MEM_functions"]
+theorem MEM_functionsHOL {width : Nat} [NeZero width]
+    {declarations : List (DeclHOL width)}
+    {entry : MlS × List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL}
+    (hmem : entry ∈ functionsHOL declarations) :
+    ∃ declaration : FunDeclHOL width,
+      (.function declaration : DeclHOL width) ∈ declarations ∧
+        entry = (declaration.name, declaration.params, declaration.body,
+          declaration.returnShape) := by
+  induction declarations with
+  | nil => simp [functionsHOL] at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function funDecl =>
+          simp only [functionsHOL, List.mem_cons] at hmem
+          rcases hmem with hentry | htail
+          · exact ⟨funDecl, by simp, hentry⟩
+          · rcases ih htail with ⟨fi, hmem, heq⟩
+            exact ⟨fi, by simp [hmem], heq⟩
+      | decl shape name value =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
+      | exnDecl exceptionName shape =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
+      | name struct fields =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
 
 /-- Exact HOL port of Cake's `fperm_name_cancel`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1626`):

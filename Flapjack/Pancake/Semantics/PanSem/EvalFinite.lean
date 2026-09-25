@@ -7,15 +7,15 @@ The exact `eval_def` evaluator `evalHOLExact` (`EvalExact.lean`) quantifies over
 finite maps (`varname |-> 'a v`, `|->`), so the evaluator is faithful only on the
 finite-support subcarrier.
 
-This module wraps the reviewed evaluator so its state quantification is
-`PanSemStateFiniteExact`, whose four map fields are `HolFiniteMapExact`
-(finite support by type).  The wrappers delegate through
-`PanSemStateFiniteExact.toExact`, so all fifteen `eval_def` clauses and the mutual
-`OPT_MMAP` / structured-field helpers of `EvalExact.lean` are reused unchanged.
-
-The clause-shaped equations below expose each of the fifteen `eval_def` clauses
-over the finite carrier one by one; they are the per-clause review surface and
-each holds definitionally.
+The tagged wrapper `PanSemStateFiniteExact.evalHOLFinite` now lives in
+`Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean`, the same module as
+the carrier `PanSemStateFiniteExact` and the canonical translation witness
+`holFmapAsFiniteSupportWitness` (the `fmap_as_finite_support` qualifier requires
+the owning structure, the witness, and the tagged declaration to share a module).
+Its body delegates through `PanSemStateFiniteExact.toExact`, so all fifteen
+`eval_def` clauses and the mutual `OPT_MMAP` / structured-field helpers of
+`EvalExact.lean` are reused unchanged; the tag does not claim a syntactic match
+of the Lean body with HOL's clause-shaped body.
 
 Per-clause source review (against `cakeml/pancake/semantics/panSemScript.sml:209-283`)
 is complete and each clause matches: `Const`; `Var Local`/`Global` as
@@ -26,15 +26,12 @@ is complete and each clause matches: `Const`; `Var Local`/`Global` as
 `Op`/`Panop` (`EVERY isValWord` + `theWord`); `Cmp`; `Shift`;
 `BaseAddr`/`TopAddr`/`BytesInWord`.
 
-No `@[hol]` tag yet.  The wrapper bodies are `evalHOLExact state.toExact`, so
-they do not textually present HOL's clause-shaped definition body; tagging a
-delegating body `eval_def` would overclaim, and the type-hash lock records the
-elaborated body.  Restoring the tag requires either a literal clause-shaped
-definition over `PanSemStateFiniteExact` plus a mutual-induction equality to the
-delegation, or an explicit coordinator ruling that the delegation wrapper plus
-these clause equations is the reviewed rendering.  The `fmap_as_finite_support`
-qualifier, type-lock coverage, and the production-path follow-up are tracked by
-the parent bead `flapjack-pxn.18.3.7.1.3.1.1.2.5`.
+This module provides the clause-shaped equations that expose each of the fifteen
+`eval_def` clauses over the finite carrier one by one; they are the per-clause
+review surface cited by the tagged definition and each holds definitionally.
+The `fmap_as_finite_support` qualifier, manifest entry, type-lock coverage, and
+the production-path follow-up are tracked by the parent bead
+`flapjack-pxn.18.3.7.1.3.1.1.2.5`.
 -/
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
@@ -46,50 +43,13 @@ open Flapjack.Pancake.PanLang (isWfShapeExactHOL structContextLookupHOL)
 
 namespace PanSemStateFiniteExact
 
-/-- Finite-support carrier rendering of HOL `eval` (`panSemScript.sml:209-283`):
-    delegate the broad evaluator through the projection `toExact`. -/
-def evalHOLFinite {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
-    ExpHOL width → Option (ValueHOL width) :=
-  @evalHOLExact width σ _ state.toExact h
-
-/-- Finite-support carrier rendering of the `OPT_MMAP eval` list step. -/
-def evalListHOLFinite {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
-    List (ExpHOL width) → Option (List (ValueHOL width)) :=
-  @evalListHOLExact width σ _ state.toExact h
-
-/-- Finite-support carrier rendering of the named-struct field-expression step. -/
-def evalListFieldsHOLFinite {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
-    List (MlS × ExpHOL width) → Option (List (MlS × ValueHOL width)) :=
-  @evalListFieldsHOLExact width σ _ state.toExact h
-
-@[simp] theorem evalHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
-    (expression : ExpHOL width) :
-    state.evalHOLFinite expression =
-      @evalHOLExact width σ _ state.toExact h expression := rfl
-
-@[simp] theorem evalListHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
-    (expressions : List (ExpHOL width)) :
-    state.evalListHOLFinite expressions =
-      @evalListHOLExact width σ _ state.toExact h expressions := rfl
-
-@[simp] theorem evalListFieldsHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
-    (fields : List (MlS × ExpHOL width)) :
-    state.evalListFieldsHOLFinite fields =
-      @evalListFieldsHOLExact width σ _ state.toExact h fields := rfl
-
 /-! ## Clause-shaped equations
 
-The wrapper delegates, so the following equations expose each clause of HOL
-`eval_def` one by one over the finite-support carrier.  Clause order and side
-conditions match `cakeml/pancake/semantics/panSemScript.sml:209-283` exactly, with
-the `Var` clauses reading `locals`/`globals` through
-`HolFiniteMapExact.lookup`. -/
+The tagged wrapper `evalHOLFinite` (in `StateExactFiniteMap.lean`) delegates, so
+the following equations expose each clause of HOL `eval_def` one by one over the
+finite-support carrier.  Clause order and side conditions match
+`cakeml/pancake/semantics/panSemScript.sml:209-283` exactly, with the `Var`
+clauses reading `locals`/`globals` through `HolFiniteMapExact.lookup`. -/
 
 @[simp] theorem evalHOLFinite_const {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]

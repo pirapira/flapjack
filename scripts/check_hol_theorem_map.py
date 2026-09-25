@@ -121,6 +121,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/PanSemStateEval.lean", "holValueWord"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "theValWord_def",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.7; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL theValWord_def "
+        "(panSemScript.sml:42) is the partial inverse theValWord (ValWord w) = w "
+        "over the exact v/word_lab carrier, unspecified on other constructors. "
+        "holValueWord (PanSemStateEval.lean:1362) totalizes to 0 on non-word "
+        "inputs and is over the String-backed HolValue width (word carrier "
+        "HolWordLab). Not statement-exact; tag withheld. Faithful-port "
+        "dependency flapjack-0lj.5 (umbrella flapjack-pxn.18.3.5.8). "
+    ),
     ("Flapjack/Pancake/Semantics/PanSem.lean", "HolWordLab"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "word_lab",

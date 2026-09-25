@@ -2227,9 +2227,10 @@ def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
   { vars := context.vars, funcs := context.funcs, eids := context.eids,
     vmax := context.vmax }
 
-/-- `compileProgRiscV` is the `compile_def`-shaped HOL compiler (untagged since `flapjack-pxn.18.3.5.7.2`) applied to a
-    `PanToCrepHOLContext`; it is definitionally the generic `compileProgHOL`
-    on the same context. -/
+/-- `compileProgRiscV` is the untagged, `compile_def`-shaped Flapjack helper.
+    Its production syntax carriers do not match HOL; see the declaration-local
+    note in `PanToCrep/Compile.lean`. It is definitionally the generic
+    `compileProgHOL` on the same context. -/
 theorem compileProgRiscV_eq_compileProgHOL
     (context : PanToCrepHOLContext (BitVec width))
     (program : Prog (BitVec width)) :

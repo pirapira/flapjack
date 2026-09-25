@@ -482,17 +482,30 @@ def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | .annot _ _ => .skip
 termination_by structural program
 
-/-! Source-shaped RISC-V word specialization (Flapjack-specific; NOT an exact
-    HOL port) of CakeML's `compile_def`: the word type
-    fixes `bytes_in_word` to `BitVec width / 8`, and the source context retains
-    the HOL finite-map fields directly. No caller-supplied stride or
-    list-backed map conversion appears in this specialization. Its String-keyed
-    context remains different from HOL's mlstring-keyed context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): `compile` consults `ctxt.vars`,
--- `ctxt.funcs`, and `ctxt.eids`, which are keyed by `VarName`/`FunName`/
--- `ExceptionId` = `String` here, while HOL `pan_to_crepScript.sml` keys them by
--- `varname`/`funname`/`eid` = `mlstring` (tracked by `flapjack-pxn.18.3.5.8`,
--- parent `flapjack-pxn.18.3.5.7.2`).
+/-! Flapjack-specific RISC-V specialization of the `compile_def`-shaped
+    equations above; this is not an exact HOL port. Although the word carrier
+    is `BitVec width` and the finite maps have the same total-function shape,
+    the declaration accepts every `width` (including zero), and its input and
+    output are production `Prog`/`CrepProg`, not exact `ProgHOL width` /
+    `CrepProgHOL width`. The nested source expressions and shapes are likewise
+    production `Exp`/`Shape`, and all source identifiers and context map keys
+    are `String` instead of HOL `mlstring`; the target Crep function names are
+    also `String` instead of `mlstring`. Consequently the name-carrier
+    difference is only one part of the mismatch. The exact syntax carriers
+    exist in `PanLang.ProgHOL` and `CrepProgHOL`; the exact-carrier compiler
+    replacement is tracked by `flapjack-2eh`'s follow-up under
+    `flapjack-pxn.18.3.5.8`.
+
+    Generic `compileProgHOL` is also not itself the HOL declaration: its word
+    type is arbitrary `α` with caller-supplied `CrepBytesInWord`, and it lacks
+    HOL's positive word-width condition. `compileProgRiscV` fixes `α` to
+    `BitVec width` and the byte stride, but still uses the production syntax
+    carriers and admits `width = 0`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the executed equations match
+-- `compile_def` structurally, but this specialization has production
+-- `Prog`/`CrepProg`/`Shape`/`Exp` carriers, String identifiers and context
+-- maps, and no `[NeZero width]`. See the docstring above and exact-carrier
+-- replacement bead under `flapjack-pxn.18.3.5.8`.
 def compileProgRiscV (context : PanToCrepHOLContext (BitVec width))
     (program : Prog (BitVec width)) : CrepProg (BitVec width) :=
   compileProgHOL context program

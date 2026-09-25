@@ -525,4 +525,67 @@ val _ = print_eval "isWord_def_word" ``panSem$isWord (Word (3w:8 word))``
 
 val _ = print_eval "theWord_def_word" ``panSem$theWord (Word (3w:8 word))``
 
+val _ = print_eval "assign_local_ok"
+  ``case panSem$evaluate
+      (panLang$Assign Local «x» (panLang$Const (9w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); globals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "assign_global_ok"
+  ``case panSem$evaluate
+      (panLang$Assign Global «g» (panLang$Const (9w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; globals := FEMPTY |+ («g», ValWord (1w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.globals «g»)``
+
+val _ = print_eval "assign_shape_mismatch"
+  ``case panSem$evaluate
+      (panLang$Assign Local «x» (panLang$RStruct []),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "assign_expr_error"
+  ``case panSem$evaluate
+      (panLang$Assign Local «x» (panLang$Var Local «missing»),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "primitive_success"
+  ``case panSem$evaluate
+      (panLang$Primitive «x» AddCarry
+         [panLang$Const (40w:8 word); panLang$Const (50w:8 word); panLang$Const (0w:8 word)],
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», RStruct [ValWord (0w:8 word); ValWord (0w:8 word)]);
+          structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "primitive_shape_mismatch"
+  ``case panSem$evaluate
+      (panLang$Primitive «x» AddCarry
+         [panLang$Const (40w:8 word); panLang$Const (50w:8 word); panLang$Const (0w:8 word)],
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "primitive_wrong_args"
+  ``case panSem$evaluate
+      (panLang$Primitive «x» AddCarry
+         [panLang$Const (1w:8 word); panLang$Const (2w:8 word)],
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», RStruct [ValWord (0w:8 word); ValWord (0w:8 word)]);
+          structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "primitive_arg_error"
+  ``case panSem$evaluate
+      (panLang$Primitive «x» AddCarry
+         [panLang$Const (1w:8 word); panLang$Var Local «missing»; panLang$Const (0w:8 word)],
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», RStruct [ValWord (0w:8 word); ValWord (0w:8 word)]);
+          structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

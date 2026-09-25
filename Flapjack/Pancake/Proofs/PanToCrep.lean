@@ -2432,19 +2432,27 @@ theorem codeRelW_iff_codeRel (width : Nat)
       codeRel context sourceCode targetCode :=
   Iff.rfl
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `compile_exp_not_mem_load_glob`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013`). The finite-map
-    context fields are passed unchanged to `compileExpHOL`; the source code
-    map is bridged from Pancake's executable association list as in the
-    surrounding `codeRel` interface. The state, code, and locals relations
-    remain explicit HOL premises, and the conclusion traverses the nested
-    Crepe expressions with `crepExps`. -/
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `compile_exp_not_mem_load_glob`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2013-2020`): under a
+    successful `compile_exp` plus `state_rel`, `code_rel`, and `locals_rel`, no
+    compiled expression contains a `LoadGlob`. The conclusion
+    `CrepExp.loadGlob address ∉ expressions.flatMap crepExps` mirrors HOL's
+    `~MEM (LoadGlob ad) (FLAT (MAP exps es))`, and the explicit state/code/locals
+    relation premises match HOL. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (and a
+-- `PanToCrepProofContext` whose finite maps are `String`-keyed), while HOL keys
+-- names by `funname`/`varname`/`eid` = `mlstring`; it also quantifies over the
+-- production `Exp α`/`Shape` with an arbitrary word carrier `α` and the extra
+-- `[BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]` typeclass
+-- arguments (executable-only artifacts absent from HOL), rather than HOL's
+-- word-indexed `exp` at a positive word width. The `names_as_string` qualifier
+-- cannot authorize the `Exp`/`Shape`/word carriers, and no same-module byte
+-- witness applies because the conclusion is a universally quantified `Prop` over
+-- expressions, not a name. The HOL statement shape was reviewed against lines
+-- 2013-2020 before keeping the tag withdrawn. The faithful exact-carrier port is
+-- tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem compileExpNotMemLoadGlob [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α) (expression : Exp α)

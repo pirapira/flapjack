@@ -8019,12 +8019,12 @@
     "reviewer": "Codex (statement compared against all_distinct_alist_ctxt_max at panPropsScript.sml:517; HOL ctxt_max/MAX_LIST rendered as Lean ctxtMax/maxList over the alist_to_fmap -> FUPDATE_LIST FEMPTY (vs.zip (sh.zip (withShape sh ns))) encoding with vs : List String; direct HOL-EVAL rows ctxt_a_bound/ctxt_b_bound/ctxt_max_value=T reproduced by Lean guard alistCtxtMaxExample in Flapjack/Test/FmEmptyZipAlistParity.lean)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileProgRiscV_eq_compileProgHOL",
+    "hol_path": null,
+    "hol_name": null,
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only bridge: compileProgRiscV (the tagged compile_def wrapper) is definitionally compileProgHOL on the same PanToCrepHOLContext."
+    "reviewer": "Flapjack-only bridge: compileProgRiscV unfolds to generic compileProgHOL at the production carriers; it is not itself HOL compile_def. Exact-carrier mismatch for the underlying compiler is documented beside compileProgRiscV in Compile.lean and tracked by flapjack-pxn.18.3.5.8.13."
   },
   {
     "hol_path": null,
@@ -8032,7 +8032,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileCodeRelProg_eq_compileProgRiscV",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the tagged compile_def compiler (compileProgRiscV) on the bridged context for every proof context; makes the code_rel_def tag truthful for arbitrary ctxt_fc contexts."
+    "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the compile_def-shaped helper (compileProgRiscV; not tagged due to the documented exact-carrier mismatch) on the bridged context for every proof context; this does not make a HOL compile_def tag eligible."
   },
   {
     "hol_path": null,

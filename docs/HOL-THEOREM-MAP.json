@@ -4488,7 +4488,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "lookupInfo_fields_nodup",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.63): HOL alookup_map_structs_ok is a local theorem over `(stcname # struct_info) list` with `stcname`/`fldname` = mlstring and `struct_info = <|fields; size|>`, looked up with ALOOKUP, concluding `ALL_DISTINCT (MAP FST info.fields)`. Lean lookupInfo_fields_nodup concludes the same shape but over the production `StructContext = List (StructName × StructInfo)` with `StructName`/`FieldName` = String, `StructInfo` carrying the extra shapedFields cache, lookupInfo as first-match BEq, and an extra `[BEq String] [LawfulBEq String]` side condition. Record arity, lookup, and equality side conditions differ beyond names, so (names_as_string := ...) does not apply and the tag stays withdrawn. Exact MlString/exact-record port tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2); oracle row scripts/hol-probes/afindi_probe.out:14, fixture Flapjack.Test.PanStructsAfindiParity (instantiates on simpleContext)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -737,10 +737,24 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
       exact h4 (name, info') hentry
 
-/-- Exact translation of HOL's local `alookup_map_structs_ok`
+/-- Production-carrier analogue of HOL's local `alookup_map_structs_ok`
     (`pan_structsProofScript.sml:243`): a found structure in a valid context
-    has distinct field names. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    has distinct field names. Not an exact port; see the note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL keys
+-- structure/field names by `stcname`/`fldname` = `mlstring`, its context is
+-- `(stcname # struct_info) list` with `struct_info = <| fields; size |>` (exactly
+-- fields and size; see the `alookup_map_structs_ok` oracle in
+-- `scripts/hol-probes/afindi_probe.out`), and lookup is `ALOOKUP` over
+-- `mlstring`. The Lean statement quantifies the production `StructContext =
+-- List (StructName × StructInfo)` where `StructName`/`FieldName` = `String`,
+-- `StructInfo` carries the extra `shapedFields` cache, and lookup is the
+-- first-match `lookupInfo` requiring `[BEq String] [LawfulBEq String]`; the
+-- record arity, lookup, and equality side conditions differ beyond the name
+-- representation, so `(names_as_string := ...)` does not apply. The exact
+-- MlString/exact-record carrier port is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsAfindiParity` instantiates this theorem on
+-- `simpleContext`.
 theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (context : StructContext) (info : StructInfo)
     (hlookup : lookupInfo name context = some info)

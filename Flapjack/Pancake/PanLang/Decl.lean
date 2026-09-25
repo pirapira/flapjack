@@ -301,4 +301,72 @@ def StructContextByteRanged (c : Flapjack.StructContextHOL) : Prop :=
       Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hname,
       structInfoOfHOL_structInfoToHOL info hinfo, ih ht]
 
+
+/-- HOL `ALOOKUP` over the exact MlString-keyed structure context
+(`panLangScript.sml:164-171` uses `ALOOKUP ctxt name`): first name match. -/
+def structContextLookupHOL (name : MlS) : StructContextExact → Option StructInfoHOLExact
+  | [] => none
+  | (candidate, info) :: rest =>
+      if name == candidate then some info else structContextLookupHOL name rest
+
+/-! Exact port of HOL `panLang$size_of_sh_with_ctxt`
+(`cakeml/pancake/panLangScript.sml:164-171`): `One` is `1`, `Comb` sums the
+field sizes, and `Named name` is the size of the first matching structure, or
+`1` when absent (HOL's "should not happen").  The context is the exact
+MlString-keyed `StructContextExact` and the shapes are `ShapeHOL`. -/
+mutual
+  @[hol "cakeml/pancake/panLangScript.sml" "size_of_sh_with_ctxt_def"]
+  def sizeOfShapeWithContextHOL (context : StructContextExact) : ShapeHOL → Nat
+    | .one => 1
+    | .comb shapes => sizeOfShapesWithContextHOL context shapes
+    | .named name =>
+        match structContextLookupHOL name context with
+        | some info => info.size
+        | none => 1
+
+  /- Sum of `sizeOfShapeWithContextHOL` over a list of shapes (HOL
+  `SUM (MAP (size_of_sh_with_ctxt ctxt) shapes)`). -/
+  def sizeOfShapesWithContextHOL (context : StructContextExact) : List ShapeHOL → Nat
+    | [] => 0
+    | shape :: rest =>
+        sizeOfShapeWithContextHOL context shape + sizeOfShapesWithContextHOL context rest
+end
+
+@[simp] theorem structContextLookupHOL_nil (name : MlS) :
+    structContextLookupHOL name ([] : StructContextExact) = none := rfl
+
+@[simp] theorem structContextLookupHOL_cons (name candidate : MlS)
+    (info : StructInfoHOLExact) (rest : StructContextExact) :
+    structContextLookupHOL name ((candidate, info) :: rest) =
+      (if name == candidate then some info else structContextLookupHOL name rest) := rfl
+
+@[simp] theorem sizeOfShapeWithContextHOL_one (context : StructContextExact) :
+    sizeOfShapeWithContextHOL context .one = 1 := rfl
+
+@[simp] theorem sizeOfShapeWithContextHOL_comb (context : StructContextExact)
+    (shapes : List ShapeHOL) :
+    sizeOfShapeWithContextHOL context (.comb shapes) =
+      sizeOfShapesWithContextHOL context shapes := by
+  simp only [sizeOfShapeWithContextHOL]
+
+@[simp] theorem sizeOfShapeWithContextHOL_named_hit (context : StructContextExact)
+    (name : MlS) (info : StructInfoHOLExact)
+    (h : structContextLookupHOL name context = some info) :
+    sizeOfShapeWithContextHOL context (.named name) = info.size := by
+  simp only [sizeOfShapeWithContextHOL, h]
+
+@[simp] theorem sizeOfShapeWithContextHOL_named_miss (context : StructContextExact)
+    (name : MlS) (h : structContextLookupHOL name context = none) :
+    sizeOfShapeWithContextHOL context (.named name) = 1 := by
+  simp only [sizeOfShapeWithContextHOL, h]
+
+@[simp] theorem sizeOfShapesWithContextHOL_nil (context : StructContextExact) :
+    sizeOfShapesWithContextHOL context ([] : List ShapeHOL) = 0 := rfl
+
+@[simp] theorem sizeOfShapesWithContextHOL_cons (context : StructContextExact)
+    (shape : ShapeHOL) (rest : List ShapeHOL) :
+    sizeOfShapesWithContextHOL context (shape :: rest) =
+      sizeOfShapeWithContextHOL context shape + sizeOfShapesWithContextHOL context rest := by
+  simp only [sizeOfShapesWithContextHOL]
+
 end Flapjack.Pancake.PanLang

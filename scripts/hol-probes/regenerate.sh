@@ -1546,3 +1546,8 @@ run_probe crep_lang_prog_probeScript.sml crep_lang_prog_probe.out \
   prg_skip prg_tick \
   "$cake_dir/pancake/crepLangScript.sml" \
   "$cake_dir/pancake"
+
+run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
+  sswc_one sswc_comb_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"

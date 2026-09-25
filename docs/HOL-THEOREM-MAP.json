@@ -9070,5 +9070,13 @@
     "lean_name": "callFFIHOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  }
+  },
+{
+  "hol_path": "cakeml/pancake/panLangScript.sml",
+  "hol_name": "size_of_sh_with_ctxt_def",
+  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+  "lean_name": "sizeOfShapeWithContextHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

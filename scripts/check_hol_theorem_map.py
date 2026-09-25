@@ -83,6 +83,23 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 (audit "
         "flapjack-pxn.18.3.7.1.3.1.2)."
     ),
+    ("Flapjack/Pancake/PanLang/Exp.lean", "globalVarExpHOL"): (
+        "cakeml/pancake/panLangScript.sml",
+        "global_var_exp_def",
+        "flapjack-ds6 (source comparison, bead flapjack-4ac.1.39): HOL "
+        "global_var_exp_def (panLangScript.sml:278-291) is a partially specified "
+        "recursive function: the exported theorem states exactly thirteen clauses, "
+        "and the generated global_var_exp_def_primitive stores `| Load32 v => ARB | "
+        "BaseAddr => ARB | TopAddr => ARB | BytesInWord => ARB`. A total Lean "
+        "function must choose values for those four constructors, so globalVarExpHOL "
+        "(exact ExpHOL/MlS carrier, the thirteen specified clauses verbatim, plus "
+        "`load32` recursion and `[]` for the three nullary address constructors, "
+        "matching production expGlobalVars) extends HOL's specification and cannot "
+        "be an exact port. Direct HOL-EVAL rows global_var/nested_global are in "
+        "pan_lang_var_exp_probe.out and replayed in Flapjack/Test/"
+        "PanLangVarExpParity.lean. The tag is withheld; ARB/partial rendering is "
+        "tracked by the child bead of flapjack-4ac.1.39."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "res_var_def",
@@ -1049,6 +1066,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

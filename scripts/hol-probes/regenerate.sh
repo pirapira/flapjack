@@ -279,6 +279,10 @@ run_probe crep_to_loop_list_insert_probeScript.sml crep_to_loop_list_insert_prob
   li_mem_3 li_snoc_agrees \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_insert_insert_probeScript.sml crep_to_loop_insert_insert_probe.out \
+  iie_hit iie_agrees_deep \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"

@@ -51,3 +51,21 @@ val _ = print_eval "call_final_event"
   ``(case call_FFI (initial_ffi_state ^ofin (0:num)) (ExtCall «f») (^conf) (^one) of
        FFI_return _ _ => F
      | FFI_final (Final_event _ _ _ oc) => oc = FFI_diverged)``;
+val _ = print_eval "shmem_mappedWrite" ``MappedWrite : shmem_op``;
+val _ = print_eval "call_shmem_ok_host"
+  ``(case call_FFI ^st (SharedMem MappedRead) (^conf) (^one) of
+       FFI_return st' _ => st'.ffi_state | FFI_final _ => 99)``;
+val _ = print_eval "call_shmem_ok_events"
+  ``(case call_FFI ^st (SharedMem MappedRead) (^conf) (^one) of
+       FFI_return st' _ => LENGTH st'.io_events | FFI_final _ => 0)``;
+val _ = print_eval "call_shmem_ok_bytes"
+  ``(case call_FFI ^st (SharedMem MappedRead) (^conf) (^one) of
+       FFI_return _ bs => bs | FFI_final _ => [])``;
+val _ = print_eval "call_shmem_length_failure"
+  ``(case call_FFI (initial_ffi_state ^obad (0:num)) (SharedMem MappedWrite) (^conf) (^one) of
+       FFI_return _ _ => F
+     | FFI_final (Final_event _ _ _ oc) => oc = FFI_failed)``;
+val _ = print_eval "call_shmem_final_event"
+  ``(case call_FFI (initial_ffi_state ^ofin (0:num)) (SharedMem MappedRead) (^conf) (^one) of
+       FFI_return _ _ => F
+     | FFI_final (Final_event _ _ _ oc) => oc = FFI_diverged)``;

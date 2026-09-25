@@ -158,85 +158,53 @@ def destLexErrorT : Token → Option String
   | .lexErrorT message => some message
   | _ => none
 
+/-- Association list for the symbolic-token table (`getToken`). Order and
+    values match the original if-chain exactly. -/
+def symbolTable : List (String × Token) :=
+  [("&&", .boolAndT), ("||", .boolOrT), ("&", .andT), ("|", .orT), ("^", .xorT),
+   ("==", .eqT), ("=>", .arrowT), ("!=", .neqT), ("<", .lessT), (">", .greaterT),
+   (">=", .geqT), ("<=", .leqT), ("<+", .lowerT), (">+", .higherT), (">=+", .higheqT),
+   ("<=+", .loweqT), ("!", .notT), ("+", .plusT), ("-", .minusT), ("*", .starT),
+   (".", .dotT), ("<<", .lslT), (">>>", .lsrT), (">>", .asrT), ("#>>", .rorT),
+   ("(", .lParT), (")", .rParT), (",", .commaT), (";", .semiT), (":", .colonT),
+   ("[", .lBrakT), ("]", .rBrakT), ("{", .lCurT), ("}", .rCurT), ("=", .assignT)]
+
+/-- Association list for the keyword table (`getKeyword`). Cake maps both
+    `@base` and `@top` to `BaseK`; the duplicate is intentional. -/
+def keywordTable : List (String × Keyword) :=
+  [("skip", .skipK), ("st", .stK), ("stw", .stwK), ("st8", .st8K), ("st16", .st16K),
+   ("st32", .st32K), ("if", .ifK), ("else", .elseK), ("while", .whileK),
+   ("break", .brK), ("continue", .contK), ("throw", .throwK), ("return", .retK),
+   ("tick", .ticK), ("var", .varK), ("in", .inK), ("try", .tryK), ("catch", .catchK),
+   ("lds", .ldsK), ("ldw", .ldwK), ("ld8", .ld8K), ("ld16", .ld16K), ("ld32", .ld32K),
+   ("@base", .baseK), ("@top", .baseK), ("@biw", .biwK), ("true", .trueK),
+   ("false", .falseK), ("fun", .funK), ("export", .exportK), ("inline", .inlineK),
+   ("exception", .exceptionK), ("struct", .namedK)]
+
+/-- First-match association-list lookup used by the token tables. -/
+def lookupTable {α : Type} : List (String × α) → String → Option α
+  | [], _ => none
+  | (key, value) :: rest, s => if s == key then some value else lookupTable rest s
+
+/-- Symbolic-token lookup. Behaviourally identical to the previous if-chain:
+    `lookupTable` scans `symbolTable` in the same first-match order. -/
 def getToken (s : String) : Token :=
-  if s == "&&" then .boolAndT
-  else if s == "||" then .boolOrT
-  else if s == "&" then .andT
-  else if s == "|" then .orT
-  else if s == "^" then .xorT
-  else if s == "==" then .eqT
-  else if s == "=>" then .arrowT
-  else if s == "!=" then .neqT
-  else if s == "<" then .lessT
-  else if s == ">" then .greaterT
-  else if s == ">=" then .geqT
-  else if s == "<=" then .leqT
-  else if s == "<+" then .lowerT
-  else if s == ">+" then .higherT
-  else if s == ">=+" then .higheqT
-  else if s == "<=+" then .loweqT
-  else if s == "!" then .notT
-  else if s == "+" then .plusT
-  else if s == "-" then .minusT
-  else if s == "*" then .starT
-  else if s == "." then .dotT
-  else if s == "<<" then .lslT
-  else if s == ">>>" then .lsrT
-  else if s == ">>" then .asrT
-  else if s == "#>>" then .rorT
-  else if s == "(" then .lParT
-  else if s == ")" then .rParT
-  else if s == "," then .commaT
-  else if s == ";" then .semiT
-  else if s == ":" then .colonT
-  else if s == "[" then .lBrakT
-  else if s == "]" then .rBrakT
-  else if s == "{" then .lCurT
-  else if s == "}" then .rCurT
-  else if s == "=" then .assignT
-  else .lexErrorT s!"Unrecognised symbolic token: {s}"
+  match lookupTable symbolTable s with
+  | some token => token
+  | none => .lexErrorT s!"Unrecognised symbolic token: {s}"
 
 /--
-Keyword lookup, mirroring `panLexer$get_keyword`. Cake maps both `@base` and
-`@top` to `BaseK`; this intentionally preserves that source behavior.
+Keyword lookup, mirroring `panLexer$get_keyword`, via the ordered table
+`keywordTable`. Cake maps both `@base` and `@top` to `BaseK`; this
+intentionally preserves that source behavior.
 -/
 def getKeyword (s : String) : Token :=
-  if s == "skip" then .keywordT .skipK
-  else if s == "st" then .keywordT .stK
-  else if s == "stw" then .keywordT .stwK
-  else if s == "st8" then .keywordT .st8K
-  else if s == "st16" then .keywordT .st16K
-  else if s == "st32" then .keywordT .st32K
-  else if s == "if" then .keywordT .ifK
-  else if s == "else" then .keywordT .elseK
-  else if s == "while" then .keywordT .whileK
-  else if s == "break" then .keywordT .brK
-  else if s == "continue" then .keywordT .contK
-  else if s == "throw" then .keywordT .throwK
-  else if s == "return" then .keywordT .retK
-  else if s == "tick" then .keywordT .ticK
-  else if s == "var" then .keywordT .varK
-  else if s == "in" then .keywordT .inK
-  else if s == "try" then .keywordT .tryK
-  else if s == "catch" then .keywordT .catchK
-  else if s == "lds" then .keywordT .ldsK
-  else if s == "ldw" then .keywordT .ldwK
-  else if s == "ld8" then .keywordT .ld8K
-  else if s == "ld16" then .keywordT .ld16K
-  else if s == "ld32" then .keywordT .ld32K
-  else if s == "@base" then .keywordT .baseK
-  else if s == "@top" then .keywordT .baseK
-  else if s == "@biw" then .keywordT .biwK
-  else if s == "true" then .keywordT .trueK
-  else if s == "false" then .keywordT .falseK
-  else if s == "fun" then .keywordT .funK
-  else if s == "export" then .keywordT .exportK
-  else if s == "inline" then .keywordT .inlineK
-  else if s == "exception" then .keywordT .exceptionK
-  else if s == "struct" then .keywordT .namedK
-  else if s == "" then .lexErrorT "Expected keyword, found empty string"
-  else if 2 ≤ s.length && s.front == '@' then .foreignIdent (String.ofList (s.toList.drop 1))
-  else .identT s
+  match lookupTable keywordTable s with
+  | some keyword => .keywordT keyword
+  | none =>
+    if s == "" then .lexErrorT "Expected keyword, found empty string"
+    else if 2 ≤ s.length && s.front == '@' then .foreignIdent (String.ofList (s.toList.drop 1))
+    else .identT s
 
 def tokenOfAtom : Atom → Token
   | .numberA value => .intT value

@@ -439,30 +439,43 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
-/-- Reviewed qualified HOL port of Cake's `fperm_name_def`
-    (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
-    function names and leaves every other name unchanged. -/
--- Qualified HOL port (names_as_string): the produced value is a keyed
--- identifier, so the declaration carries the reviewed
--- `(names_as_string := [source, target, name])` qualifier (manifest status
--- `reviewed_names_as_string`).  The Lean statement matches HOL's exactly: it
--- compares names with propositional `=` (`String`'s built-in `DecidableEq`)
--- and the three identifiers are equality/map-key-only, so no byte-boundary
--- witness is required.  The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
---
--- Clause-by-clause review (flapjack-6nn.1.1):
---   HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
---   Lean `if source = name then target else if target = name then source
---   else name`.  The clauses, branch order, comparison `=` and result names
---   match exactly with no side condition.  `globalRenameFunctionName` only
---   compares and swaps names, never inspects their bytes; every use is
---   equality/`map`-key only, so the `String`/`mlstring` carrier difference is
---   unobservable here.  Direct HOL/Lean edge-case fixtures:
---   `scripts/hol-probes/pan_globals_fperm_name_probe.out` and
---   `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
-@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"
-  (names_as_string := [source, target, name])]
+/-- Exact HOL port of Cake's `fperm_name_def`
+    (`cakeml/pancake/pan_globalsScript.sml:184-189`):
+
+    HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
+
+    HOL's `fperm_name_def` carries no type annotation, so HOL generalizes the
+    constant to the polymorphic `'a -> 'a -> 'a -> 'a` (HOL equality is defined
+    on every type, with no typeclass side condition).  The faithful Lean port is
+    therefore generic in `α` with the computable equality instance
+    `[DecidableEq α]`, following the tagged generic-`α` HOL ports `afindi_def`
+    (`Flapjack/Pancake/PanStructs.lean:20-21`) and `distinct_lists_def`
+    (`Flapjack/Pancake/PanCommon.lean:24-25`).  The clauses, branch order, the
+    comparison `=` and the result names match HOL exactly with no side
+    condition.  The production `String`-specialized form is
+    `globalRenameFunctionName` below; it is only a specialization of this
+    polymorphic original, so it is deliberately left untagged.  Direct
+    HOL/Lean edge-case fixtures: `scripts/hol-probes/pan_globals_fperm_name_probe.out`
+    and `Flapjack/Test/PanGlobalsFpermNameParity.lean`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"]
+def fpermName {α : Type u} [DecidableEq α] (f g h : α) : α :=
+  if f = h then g else if g = h then f else h
+
+/-- Production `String`-specialized form of Cake's polymorphic `fperm_name`
+    (`fpermName` above): renaming swaps the `source` and `target` function
+    names and leaves every other name unchanged. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
+-- mismatch, audit beads `flapjack-dlc.52`/`flapjack-dlc.53`): HOL's
+-- `fperm_name_def` (`pan_globalsScript.sml:184`) has no type annotation and
+-- HOL generalizes it to the polymorphic `'a -> 'a -> 'a -> 'a`.  This
+-- declaration instantiates `α := String` (`FunName`), so it is a
+-- specialization of the HOL constant rather than the constant itself; the
+-- `names_as_string` qualifier does not authorize specializing a polymorphic
+-- HOL name to `String`.  The exact polymorphic port is `fpermName` above.
+-- `globalRenameFunctionName` is retained as production infrastructure (it only
+-- compares and swaps names, never inspects their bytes).  Direct HOL/Lean
+-- edge-case fixtures: `scripts/hol-probes/pan_globals_fperm_name_probe.out`
+-- and `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
 def globalRenameFunctionName
     (source target name : FunName) : FunName :=
   if source = name then target else if target = name then source else name

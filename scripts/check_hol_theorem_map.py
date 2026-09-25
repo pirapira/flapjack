@@ -100,6 +100,20 @@ DOCUMENTED_MISMATCHES = {
         "source analogue untagged pending the exact-carrier compile port "
         "(flapjack-pxn.18.3.5.8)."
     ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalRenameFunctionName"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "fperm_name_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.52) HOL "
+        "fperm_name_def (pan_globalsScript.sml:184-189) carries no type "
+        "annotation and HOL generalizes it to the polymorphic "
+        "'a -> 'a -> 'a -> 'a (HOL equality is defined on every type). Lean "
+        "globalRenameFunctionName instantiates alpha := String (FunName), so it "
+        "is a specialization of the HOL constant, not the constant itself; the "
+        "names_as_string qualifier does not authorize specializing a "
+        "polymorphic HOL name to String. The exact polymorphic port is fpermName "
+        "(reviewed_exact); globalRenameFunctionName is retained as production "
+        "infrastructure. Direct HOL rows in pan_globals_fperm_name_probe.out."
+    ),
     ("Flapjack/Pancake/PanGlobals.lean", "globalRenameProg"): (
         "cakeml/pancake/pan_globalsScript.sml",
         "fperm_def",
@@ -597,6 +611,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "tuple_4_o"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP3"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP4"),
+        ("Flapjack/Pancake/PanGlobals.lean", "fpermName"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cancel"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cong"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),

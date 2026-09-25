@@ -421,35 +421,72 @@ theorem MEM_functions {declarations : List (Decl α)}
           declaration.returnShape) :=
   mem_functions hmem
 
-/-- Qualified HOL port of Cake's `fperm_name_cancel`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`):
-    `fperm_name f g (fperm_name f g name) = name`. Lean spells `fperm_name` as
-    `globalRenameFunctionName` (itself the `names_as_string` port of
-    `fperm_name_def`, `pan_globalsScript.sml:184`), and the Lean statement is the
-    same involutive identity. Reviewed under `names_as_string`: the identifiers
-    `source`, `target`, and `name` are function names compared and swapped but
-    never byte-inspected, so all three are equality/map-key-only. There is no
-    byte-observable use, hence no boundary witness. Direct HOL rows are in
+/-- Exact HOL port of Cake's `fperm_name_cancel`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1626`):
+    `fperm_name f g (fperm_name f g name) = name`.
+
+    HOL's `fperm_name_cancel` carries no type annotation, so HOL states it
+    polymorphically (`!f g name. fperm_name f g (fperm_name f g name) = name`
+    at `'a -> 'a -> 'a -> 'a`).  The faithful Lean port is correspondingly
+    generic in `α` with `[DecidableEq α]`, and uses the exact polymorphic
+    `fpermName` (`Flapjack/Pancake/PanGlobals.lean`).  There is no side
+    condition.  The production `String`-specialized `fperm_name_cancel` below
+    is only an instance of this polymorphic original and is left untagged.
+    Direct HOL/Lean edge-case fixtures:
     `scripts/hol-probes/pan_globals_fperm_name_probe.out`. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cancel"
-  (names_as_string := [source, target, name])]
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cancel"]
+theorem fpermName_cancel {α : Type u} [DecidableEq α] (f g name : α) :
+    fpermName f g (fpermName f g name) = name := by
+  unfold fpermName
+  repeat' split <;> simp_all
+
+/-- Exact HOL port of Cake's `fperm_name_cong`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629-1632`):
+    `fperm_name f g x = fperm_name f g y ⇔ x = y`, i.e. the source/target
+    renaming is injective.
+
+    HOL's `fperm_name_cong` carries no type annotation, so HOL states it
+    polymorphically; the faithful Lean port is correspondingly generic in `α`
+    with `[DecidableEq α]` and uses the exact polymorphic `fpermName`.  There
+    is no side condition.  The production `String`-specialized
+    `fperm_name_cong` below is only an instance of this polymorphic original
+    and is left untagged.  Direct HOL/Lean edge-case fixtures:
+    `scripts/hol-probes/pan_globals_fperm_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cong"]
+theorem fpermName_cong {α : Type u} [DecidableEq α] (f g left right : α) :
+    fpermName f g left = fpermName f g right ↔ left = right := by
+  constructor
+  · intro h
+    have := congrArg (fpermName f g) h
+    rw [fpermName_cancel, fpermName_cancel] at this
+    exact this
+  · intro h
+    rw [h]
+
+/-- Production `String`-specialized form of Cake's polymorphic
+    `fperm_name_cancel`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
+-- mismatch, audit bead `flapjack-dlc.52`): HOL's `fperm_name_cancel` has no
+-- type annotation and HOL states it polymorphically, while this theorem
+-- instantiates `α := String` (`FunName`).  It is a specialization of the HOL
+-- original, not the original itself, so `names_as_string` does not justify the
+-- tag.  The exact polymorphic port is `fpermName_cancel` above; this statement
+-- is retained as production infrastructure.
 theorem fperm_name_cancel [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target
         (globalRenameFunctionName source target name) = name :=
   globalRenameFunctionName_cancel source target name
 
-/-- Qualified HOL port of Cake's `fperm_name_cong`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629`):
-    `fperm_name f g x = fperm_name f g y ⇔ x = y`, i.e. the source/target
-    renaming is injective on function names. Lean spells `fperm_name` as
-    `globalRenameFunctionName`. Reviewed under `names_as_string`: `source`,
-    `target`, `left`, and `right` are function names compared and swapped but
-    never byte-inspected, so all four are equality/map-key-only; there is no
-    byte-observable use and hence no boundary witness. Direct HOL rows are in
-    `scripts/hol-probes/pan_globals_fperm_name_probe.out`. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cong"
-  (names_as_string := [source, target, left, right])]
+/-- Production `String`-specialized form of Cake's polymorphic
+    `fperm_name_cong`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
+-- mismatch, audit bead `flapjack-dlc.53`): HOL's `fperm_name_cong` has no type
+-- annotation and HOL states it polymorphically, while this theorem
+-- instantiates `α := String` (`FunName`).  It is a specialization of the HOL
+-- original, not the original itself, so `names_as_string` does not justify the
+-- tag.  The exact polymorphic port is `fpermName_cong` above; this statement is
+-- retained as production infrastructure.
 theorem fperm_name_cong [BEq String] [LawfulBEq String]
     (source target left right : FunName) :
     globalRenameFunctionName source target left =

@@ -364,8 +364,8 @@
     "hol_name": "lookup_code",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepArithLookupCodeSimpProgW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact width-indexed statement port of crep_arithProofScript.sml:162-168: both sides use the production HOL-shaped lookupCrepHolCodeW; the code carrier stores word-valued crepLang programs, and the equation is the source FMAP_MAP2/OPTION_MAP (simp_prog ## I) commute law. Verified the Lean declaration has no extra algebraic typeclass premise (only the implicit NeZero width needed to model HOL's nonempty word index); proof specializes the separately untagged generic helper. Direct HOL probe and paired Lean fixture cover successful lookup and failure cases."
+    "statement_status": "documented_mismatch",
+    "reviewer": "FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production lookupCrepHolCodeW carrier whose function names are FunName=String, while HOL crepSemScript.sml:17 defines funname=mlstring. The equation itself matches the source FMAP_MAP2/OPTION_MAP (simp_prog ## I) commute law. The @[hol] tag was withdrawn; the exact MlString-keyed replacement (lookup_code_def and executable bridge) is tracked by flapjack-4w9, dependency flapjack-pxn.18.3.5.8."
   },
   {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
@@ -9204,6 +9204,38 @@
   "hol_name": "halt_inst_def",
   "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
   "lean_name": "haltInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progComp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "prog_comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progCompEntry",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "compile_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "compile",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
+  "hol_name": "MAP_FST_compile",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "map_fst_compile",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
 }

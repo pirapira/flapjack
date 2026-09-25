@@ -408,3 +408,12 @@ The focused Pan-to-Crep fixtures are summarized in
 CI validates that each listed direct-HOL case remains present in its committed
 probe output and in the corresponding Lean test with
 `scripts/pan-to-crep-coverage-report.py --check`.
+
+`crep_inline_alist_map_probe.out` records direct HOL EVAL of the inline-map
+input carrier at `crep_inlineScript.sml:259-269`: `alist_to_fmap` keeps the
+first duplicate association-list binding, lookups for another row are
+preserved, DOMSUB removes the selected key, and the input row order remains
+visible. The exact Lean input carrier and regressions are in
+`Flapjack.Pancake.CrepInline.Pass` and
+`Flapjack.Test.CrepInlineFmapParity`. Refresh it with
+`HOL_PROBE_ONLY=crep_inline_alist_map_probeScript.sml scripts/hol-probes/regenerate.sh`.

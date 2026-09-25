@@ -28,7 +28,7 @@ Flapjack-specific behavior and track the replacement in
 | `resort_decls_def` (:179) | `globalResortDecls` (:864) | documented mismatch: generic `Decl α` / `Exp α` payload and `String`/`Shape` carriers differ from HOL `DeclHOL width` / word-valued `ExpHOL width` / `ShapeHOL` |
 | `dec_shapes_def` (:228) | `globalDeclShapes` (:993) | documented mismatch: consumes generic `Decl α` and returns production `Shape` (`String` names), rather than HOL `DeclHOL width` and `ShapeHOL` |
 | `fresh_name_def` (:55) | `freshNameHOL` (:279) | carrier-only in shape, but constructs new names (`++ "'"`), so the `flapjack-0up` boundary witness is required |
-| `new_main_name_def` (:224) | `globalNewMainName` (:824) | carrier-only (delegates to `freshNameHOL`); needs the same boundary witness |
+| `new_main_name_def` (:224) | `globalNewMainName` (:871) | documented mismatch: takes generic `Decl α` / `Exp α` (`Const : α`) rather than HOL word-valued declarations, despite only projecting names |
 | `fresh_name_def` (:55) | `globalFreshName`/`globalFreshNameAux` (:154/:145) | **beyond carrier**: fuel-bounded search via `globalApostrophes`, not HOL's unbounded `strcat`/`strlen` recursion |
 | `compile_exp_def` (:18) | `globalCompileExp` (:32) | **beyond carrier**: `lookupInfo` on an association list with `BEq String`, not HOL `FLOOKUP` on a finite map |
 | `compile_def` (:69) | `globalCompileProg` (:304) | **beyond carrier**: inherits the `globalCompileExp` list-vs-finite-map mismatch |
@@ -45,10 +45,12 @@ The earlier proposal to retag this equality-only cluster with
 generic values. `resort_decls_def`/`fperm_decs_def` range over production
 `Decl α`, `fperm_def` ranges over `Prog α`, and their expression `Const`
 payload is `α`, not HOL's `'a word`; `dec_shapes_def` also returns production
-`Shape`, not `ShapeHOL`. Equality-only control flow does not erase these type
-differences. `fperm_name_def` remains the names-only case; the other four
-definitions stay untagged until the exact-carrier replacement is connected to
-production.
+`Shape`, not `ShapeHOL`. `new_main_name_def` takes generic production
+`Decl α` even though its body projects only function names. Equality-only or
+projection-only behavior does not erase these input type differences.
+`fperm_name_def` and `fresh_name_def` remain names-only qualified cases; the
+other five definitions stay untagged until the exact-carrier replacement is
+connected to production.
 
 Do **not** retag the executed `globalCompileExp`/`globalCompileProg`/
 `globalCompileDecsThreaded` on the strength of the qualifier alone: their

@@ -854,26 +854,23 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
     globalDeclsFilter globalDeclIsGlobal declarations ++
     globalDeclsFilter globalDeclIsFunction declarations
 
-/-- Qualified port of `pan_globals$new_main_name`
-    (`pan_globalsScript.sml:224`): `new_main_name decls =
-    fresh_name «main» (MAP FST (functions decls))`.  `freshNameHOL` is the
-    clause-for-clause port of HOL `fresh_name`, and `globalFunctionNames` is
-    `MAP FST (functions decls)` over the production declarations, so the only
-    remaining difference is the name carrier (`FunName` = `String` here versus
-    HOL `funname` = `mlstring`).  The generated entry-point name is
-    byte-observable at the compiler boundary, so it is recorded under
-    `names_as_string` with the same-module witness
-    `holMlStringWitness_globalNewMainName`; the input function names are only
-    compared for membership (`equality/map-key-only`).  Direct HOL rows:
-    `scripts/hol-probes/pan_globals_new_main_name_probe.out`. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"
-  (names_as_string := [name]) (names_as_string_boundary := [name])]
+/-! Flapjack-specific production counterpart of Cake's `new_main_name_def`
+    (`pan_globalsScript.sml:224`): it calls `freshNameHOL "main"` on the
+    function names projected from the declaration list. The direct behavior
+    fixture is `scripts/hol-probes/pan_globals_new_main_name_probe.out`. -/
+-- This definition is not tagged as HOL's `new_main_name_def`: its input is
+-- generic production `List (Decl α)`, whose expressions carry `Const : α`;
+-- HOL `new_main_name` consumes word-valued declarations with `Const : 'a word`.
+-- `names_as_string` and the generated-name boundary witness only address the
+-- String/mlstring name difference, not this input-carrier mismatch. The exact
+-- carrier replacement is tracked by `flapjack-6nn.3.1`.
 def globalNewMainName (declarations : List (Decl α)) : FunName :=
   freshNameHOL "main" (globalFunctionNames declarations)
 
-/-! Counterpart of Cake's `new_main_name_correct`
-    (`pan_globalsProofScript.sml:2073`): the synthesized `main` entry-point name
-    is never one of the program's existing function names. -/
+/-! Flapjack-specific freshness property for the synthesized `main` entry-point
+    name. The proof-level statement is over generic production `Decl α`, while
+    HOL `new_main_name_correct` ranges over word-valued declarations; see the
+    exact-carrier replacement bead `flapjack-6nn.3.1`. -/
 theorem globalNewMainName_not_mem
     (declarations : List (Decl α)) :
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
@@ -891,10 +888,11 @@ condition (and is definitionally the parser-chain `StringByteRanged`).
 
 The witnesses below are premise-aware: `freshNameHOL`, `globalFreshNameAux`, and
 `globalFreshName` may append apostrophes to an input name, so they preserve
-byte-rangedness only when the input name is byte-ranged.  `globalNewMainName`
-starts from the literal `"main"` and therefore needs no premise.  These are the
-same-module witnesses consumed by the `names_as_string` checker tooling
-(`flapjack-an4`). -/
+byte-rangedness only when the input name is byte-ranged. `globalNewMainName`
+starts from the literal `"main"` and therefore needs no premise. The witness
+for `freshNameHOL` supports its names-only `names_as_string` tag; the
+`globalNewMainName` witness remains a Flapjack production byte-safety fact and
+does not establish that its generic declaration carrier matches HOL. -/
 
 private theorem nameRanged_append {s₁ s₂ : String}
     (h₁ : Flapjack.Pancake.PanLang.NameRanged s₁)
@@ -955,8 +953,9 @@ theorem holMlStringWitness_globalFreshName [BEq String] (name : String)
     Flapjack.Pancake.PanLang.NameRanged (globalFreshName name names) :=
   holMlStringWitness_globalFreshNameAux name h names 0 names.length
 
-/-- Witness: the executed entry-point name `new_main_name` is byte-ranged (the
-    literal `"main"` needs no premise). -/
+/-- Production safety witness: `globalNewMainName` outputs a byte-ranged
+    string because its seed is the literal `"main"`. This is not evidence that
+    the generic declaration input is HOL's word-valued carrier. -/
 theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
     Flapjack.Pancake.PanLang.NameRanged (globalNewMainName declarations) := by
   unfold globalNewMainName

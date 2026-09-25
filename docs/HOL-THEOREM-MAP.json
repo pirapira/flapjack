@@ -1742,20 +1742,6 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "new_main_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalNewMainName",
-    "statement_status": "reviewed_names_as_string",
-    "names_as_string": [
-      "name"
-    ],
-    "names_as_string_boundary": [
-      "name"
-    ],
-    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.2) HOL new_main_name_def (pan_globalsScript.sml:224): new_main_name decls = fresh_name \u00abmain\u00bb (MAP FST (functions decls)). Lean globalNewMainName matches clause-for-clause (freshNameHOL is the exact fresh_name port; globalFunctionNames is MAP FST (functions decls)). Reviewed under names_as_string: name: byte-observable (the generated entry-point name crosses the compiler boundary and is byte-safe via the same-module holMlStringWitness_globalNewMainName). Direct HOL rows in pan_globals_new_main_name_probe.out."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fresh_name_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "freshNameHOL",
@@ -1886,7 +1872,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "new_main_name_correct",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex (source comparison): besides production String names versus HOL mlstring names, this theorem ranges over production Decl α whose Exp α.Const : α differs from HOL word-valued ExpHOL width.Const : 'a word. names_as_string only accounts for identifiers. The theorem is untagged; exact-carrier new_main_name work is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

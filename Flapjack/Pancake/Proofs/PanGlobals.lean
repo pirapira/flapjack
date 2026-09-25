@@ -238,8 +238,16 @@ theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulB
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- It also ranges over production `Decl α` whose `Exp α.Const` payload is a generic
+-- word `α`, not HOL's fixed-width `ExpHOL width.Const : 'a word`. `exceptionEntries`
+-- itself only walks declaration constructors and never inspects an expression
+-- payload, so the append equation is structurally source-shaped, but the carrier
+-- still differs and `(names_as_string := ...)` cannot authorize the whole
+-- declaration carrier. Keep untagged pending an exact-carrier retarget.
+-- Audit bead `flapjack-dlc.48`; dependency `flapjack-6nn.3.1` /
+-- `flapjack-pxn.18.3.5.8`. Evidence: `scripts/hol-probes/pan_lang_exceptions_probe.out`
+-- rows `empty=[]`, `exception=[(«E»,Comb [One; One])]`, sampled by
+-- `Flapjack/Test/PanGlobalsExceptionsAppendParity.lean`.
 theorem exceptions_append (declarations rest : List (Decl α)) :
     exceptionEntries (declarations ++ rest) =
       exceptionEntries declarations ++ exceptionEntries rest :=
@@ -255,8 +263,15 @@ theorem exceptions_append (declarations rest : List (Decl α)) :
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- It also ranges over production `Decl α` whose `Exp α.Const` payload is a generic
+-- word `α`, not HOL's fixed-width `ExpHOL width.Const : 'a word`. The predicate
+-- application and `FILTER` correspondence are source-shaped, but the declaration
+-- carrier differs and `(names_as_string := ...)` cannot authorize it. Keep
+-- untagged pending an exact-carrier retarget. Audit bead `flapjack-dlc.47`;
+-- dependency `flapjack-6nn.3.1` / `flapjack-pxn.18.3.5.8`. Evidence:
+-- `scripts/hol-probes/pan_lang_exceptions_probe.out` rows `empty=[]`,
+-- `exception=[(«E»,Comb [One; One])]`, sampled by
+-- `Flapjack/Test/PanGlobalsExceptionsFilterIsFunctionParity.lean`.
 theorem exceptions_FILTER_is_function (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] ∧
     exceptionEntries
@@ -780,7 +795,7 @@ theorem new_main_name_correct [BEq String] [LawfulBEq String]
     `MEM (fresh_name name names) names ⇒ F` is proved here about the production
     fuel-bounded search `globalFreshName` (`globalFreshName_not_mem`), whereas
     the `@[hol]`-tagged source-shaped port of `fresh_name` is the separate
-    recursive `freshNameHOL`, whose matching theorem is `freshNameHOL_not_mem`.
+    recursive `freshNameHOL`, whose matching theorem is `freshNameHOL_not_mem_hol`.
     The tag therefore stays withdrawn for this declaration. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): besides production String names
 -- versus HOL mlstring names (production identifiers `FunName`/`VarName`/
@@ -808,8 +823,9 @@ theorem fresh_name_correct [BEq String] [LawfulBEq String]
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
 -- As for `fresh_name_correct`, the proof is over the production `globalFreshName`
--- rather than the reviewed source-shaped `freshNameHOL`, and there is not yet a
--- `freshNameHOL` subset lemma, so the tag remains withdrawn. The exact MlString
+-- rather than the reviewed source-shaped `freshNameHOL`; the exact tagged port is
+-- the separate `freshNameHOL_not_mem_of_subset_hol`, so the tag remains
+-- withdrawn for this declaration. The exact MlString
 -- identifier carrier and executable-path unification are tracked by
 -- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem fresh_name_correct' [BEq String] [LawfulBEq String]
@@ -818,6 +834,61 @@ theorem fresh_name_correct' [BEq String] [LawfulBEq String]
     (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
     False :=
   globalFreshName_not_mem_of_subset name names names' hsubset hmem
+
+/-- `@[hol]`-tagged exact source-shaped port of Cake's `fresh_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`): a name returned by
+    the fresh-name search is not a member of the search list. HOL
+    `MEM (fresh_name name names) names ⇒ F` becomes the equivalent
+    `freshNameHOL name names ∉ names`. Statement, quantifiers, and body are
+    exact apart from the HOL `mlstring`/Lean `String` carrier of `name` and the
+    membership-only `names` list: `name` is byte-observable (the generated name
+    crosses the compiler boundary and the same-module witness
+    `holMlStringWitness_freshNameHOL_not_mem_hol` establishes
+    `NameRanged (freshNameHOL name names)` from the input premise
+    `NameRanged name`), while `names` is used only for membership equality.
+    Delegates to the untagged helper `freshNameHOL_not_mem` in the definitional
+    counterpart `Flapjack.Pancake.PanGlobals`, so the executed search runs the
+    same recursion. Direct HOL rows are in
+    `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
+theorem freshNameHOL_not_mem_hol (name : String) (names : List String) :
+    freshNameHOL name names ∉ names :=
+  freshNameHOL_not_mem name names
+
+/-- Same-module byte-rangedness witness for the tagged `fresh_name_correct`
+    port `freshNameHOL_not_mem_hol`: the generated name is byte-ranged. -/
+theorem holMlStringWitness_freshNameHOL_not_mem_hol (name : String)
+    (names : List String) (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) :=
+  holMlStringWitness_freshNameHOL name names h
+
+/-- `@[hol]`-tagged exact source-shaped port of Cake's `fresh_name_correct'`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1003`): if every member
+    of `names'` lies in `names`, then a name fresh for `names` is also fresh for
+    `names'`. HOL `set names' ⊆ set names` is stated pointwise, as HOL itself
+    uses it (`SUBSET_DEF`), and as HOL does, the proof goes through
+    `fresh_name_correct`. Statement, hypotheses, and proof are exact apart from
+    the HOL `mlstring`/Lean `String` carrier of `name` (byte-observable, witness
+    `holMlStringWitness_freshNameHOL_not_mem_of_subset_hol`) and of the
+    membership-only lists `names`/`names'`. Direct HOL rows are in
+    `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct'"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
+theorem freshNameHOL_not_mem_of_subset_hol (name : String)
+    (names names' : List String)
+    (hmem : freshNameHOL name names ∈ names')
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    False :=
+  freshNameHOL_not_mem_hol name names (hsubset _ hmem)
+
+/-- Same-module byte-rangedness witness for the tagged `fresh_name_correct'`
+    port `freshNameHOL_not_mem_of_subset_hol`: the generated name is
+    byte-ranged. -/
+theorem holMlStringWitness_freshNameHOL_not_mem_of_subset_hol (name : String)
+    (names : List String) (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) :=
+  holMlStringWitness_freshNameHOL name names h
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `FILTER_decs_fperm_decs`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2832`): renaming

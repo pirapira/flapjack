@@ -104,7 +104,7 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- Exact width-indexed port of `pan_to_crep$compile_exp_def`
+/-- Source-shaped width-indexed counterpart (Flapjack-specific; NOT an exact HOL port) of `pan_to_crep$compile_exp_def`
     (`cakeml/pancake/pan_to_crepScript.sml:39-101`).  HOL's `compile_exp` and
     `context` are indexed by the word type `'a word`
     (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
@@ -124,10 +124,10 @@ def compileExpHOLW {width : Nat} [NeZero width]
 
 /-- Kernel-checked definitional-equality bridge for `flapjack-pxn.18.3.1.3.2`:
     at the RISC-V word carrier, the generic expression compiler `compileExpHOL`
-    is definitionally the tagged width-indexed `compile_exp_def` port
+    is definitionally the width-indexed `compile_exp_def`-shaped definition (untagged since `flapjack-pxn.18.3.5.7.2`)
     `compileExpHOLW`.  This is a BRIDGE ONLY, not textual routing: the shipped
     `compileProgRiscV`/`compileProgHOL` path still calls the generic
-    `compileExpHOL`, so the executed compiler does not textually call the tagged
+    `compileExpHOL`, so the executed compiler does not textually call the width-indexed
     definition and the AGENTS.md production-path rule is NOT met here.  A
     textual width specialization of the enclosing `compileProg` chain would
     duplicate the large `compileProgHOL` equation/codeRel proof surface and is
@@ -324,8 +324,8 @@ def storeMemOpHOL : OpSize → CrepMemOp
     specialization below rather than this generic adapter.  Its expression
     compilation runs the generic `compileExpHOL`; the kernel-checked bridge
     `compileExpHOLW_eq_compileExpHOL` shows this is definitionally equal to the
-    tagged width-indexed `compileExpHOLW` at the RISC-V carrier, but the path is
-    NOT textually routed to the tagged definition (see
+    width-indexed `compileExpHOLW` at the RISC-V carrier, but the path is
+    NOT textually routed to the width-indexed definition (see
     `flapjack-pxn.18.3.5.3.1.2`). -/
 def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
@@ -485,7 +485,7 @@ termination_by structural program
     HOL port) of CakeML's `compile_def`: the word type
     fixes `bytes_in_word` to `BitVec width / 8`, and the source context retains
     the HOL finite-map fields directly. No caller-supplied stride or
-    list-backed map conversion appears in the tagged definition. -/
+    list-backed map conversion appears in this source-shaped specialization. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): `compile` consults `ctxt.vars`,
 -- `ctxt.funcs`, and `ctxt.eids`, which are keyed by `VarName`/`FunName`/
 -- `ExceptionId` = `String` here, while HOL `pan_to_crepScript.sml` keys them by
@@ -727,7 +727,7 @@ def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
 /-! Legacy list-backed `pan_to_crep$compile` implementation. It is retained
     for list-context analyses, but is not the exact HOL `compile_def` port:
     `CompileContext` admits a caller-supplied width and its maps are `InfoMap`
-    lists. The exact finite-map compiler is `compileProgHOL` below.
+    lists. The finite-map compiler used by the RISC-V specialization is `compileProgHOL` below.
 
     The recursive compiler below keeps CakeML's fallback behavior for
     malformed compiled expressions and preserves the source control-flow
@@ -1018,7 +1018,7 @@ def panToCrepGetEidsFromDeclsHOL
 
 /-! HOL `compile_to_crep_def` returns triples, not Flapjack's downstream
 `CompiledFunction` record (which additionally stores source return-shape
-metadata). Preserve that exact output boundary here and attach metadata only
+metadata). Preserve that output boundary here and attach metadata only
 in the untagged adapter below. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the output triples and the
 -- consumed declarations use `FunName`/`VarName` = `String`, while HOL
@@ -1034,7 +1034,7 @@ def compileToCrepHOL
     (name, panToCrepVars parameters,
       compFuncHOL functionMap exceptionMap parameters body)
 
-/-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
+/-! Executable metadata adapter after the `compile_to_crep`-shaped result.
 Cake's following Crep passes operate on triples; Flapjack retains the source
 return shape in `CompiledFunction` for its existing downstream interfaces. -/
 def compileToCrepHOLWithMetadata

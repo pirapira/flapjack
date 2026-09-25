@@ -716,8 +716,8 @@ theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word
 
 /-! ### Structured `.load` word-node bridge (flapjack-pxn.18.3.6.9.2.2)
 
-The executed structured `.load` uses `panValueFlatLoad`; the tagged exact
-`panMemLoadHOL` reads the same nodes.  The `One` clause is proved here; the
+The executed structured `.load` uses `panValueFlatLoad`; the HOL-shaped
+(core currently untagged) `panMemLoadHOL` reads the same nodes.  The `One` clause is proved here; the
 `Comb`/`Named` clauses require the fuel/context/offset machinery and are tracked
 by the child bead `flapjack-pxn.18.3.6.9.2.2.1`. -/
 
@@ -749,7 +749,7 @@ theorem panValueFlatLoad_one_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
 /-! ### Structured `.load` fuel/offset helpers (flapjack-pxn.18.3.6.9.2.2/.2.2.1)
 
 These untagged helpers connect the production fuel-indexed flattening load to the
-tagged exact `panMemLoadHOL`: the production context-size agrees with the exact
+HOL-shaped (core currently untagged) `panMemLoadHOL`: the production context-size agrees with the exact
 `sizeOfShWithCtxt` over `StructContext.toHOL`, and the production offset
 `panValueFlatOffset` agrees with the exact `address + bytes_in_word * n` step.
 They are prerequisites for the remaining `Comb`/`Named` widening adapter
@@ -795,7 +795,8 @@ The production flattening load passes the same fuel to each sub-shape; these
 untagged Nat bounds show the freezer's initial fuel
 `panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1` suffices for
 every nested `Comb`/`Named` field. They are the remaining prerequisites for the
-`Comb`/`Named` widening adapter to the tagged exact `panMemLoadHOL`. -/
+`Comb`/`Named` widening adapter to the HOL-shaped (core currently
+untagged) `panMemLoadHOL`. -/
 
 theorem panValueFlatShapeFuel_le_listFuel {shape : Shape} {shapes : List Shape}
     (h : shape ∈ shapes) :
@@ -879,7 +880,8 @@ theorem panValueFlatReadWord_eq_panValueWordHOL
 /-! ### Structured `.load` Comb/Named induction prerequisites (flapjack-pxn.18.3.6.9.2.2.1)
 
 Fuel positivity facts for the production flattening load and the not-found named-scan
-agreement between `lookupInfoWithRest` and the tagged exact `panMemLoadHOL`. -/
+agreement between `lookupInfoWithRest` and the HOL-shaped (core currently
+untagged) `panMemLoadHOL`. -/
 
 /-- Fuel positivity: the shape fuel is always at least one. -/
 theorem panValueFlatShapeFuel_pos (shape : Shape) : 1 ≤ panValueFlatShapeFuel shape := by
@@ -899,8 +901,9 @@ theorem panValueFlatFieldsFuel_pos (field : FieldName × Shape)
   simp only [panValueFlatFieldsFuel]
   omega
 
-/-- Named-scan agreement: when `lookupInfoWithRest` fails to find the name, the tagged exact
-structured load of `.named name` over the HOL-shaped context is `none` as well. -/
+/-- Named-scan agreement: when `lookupInfoWithRest` fails to find the name, the HOL-shaped
+(core currently untagged) structured load of `.named name` over the HOL-shaped context is `none`
+as well. -/
 theorem panMemLoadHOL_named_none (name : StructName) (structs : StructContext)
     (address : RiscV.Word 64) (domain : RiscV.Word 64 → Prop) [DecidablePred domain]
     (memory : RiscV.Word 64 → HolWordLab 64)
@@ -919,7 +922,7 @@ theorem panMemLoadHOL_named_none (name : StructName) (structs : StructContext)
         exact ih hrest
 
 /-- Named-scan agreement, found case: when `lookupInfoWithRest` finds the name with tail `rest`,
-the tagged exact structured load of `.named name` over the HOL-shaped context loads the fields of
+the HOL-shaped (core currently untagged) structured load of `.named name` over the HOL-shaped context loads the fields of
 the found `info` under the tail context `rest`.  The result is stated through `Option.map` (rather
 than a `match`) so that the equality is well-defined for `rfl`/`simp` comparisons. -/
 theorem panMemLoadHOL_named_some (name : StructName) (structs : StructContext)
@@ -1162,30 +1165,22 @@ theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) f
       (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)).1
     structs shape address (by omega)
 
-/-! ## Exact HOL `panSem$eval_def` expression evaluator (flapjack-pxn.18.3.6.9.3)
+/-! ## HOL-shaped `panSem$eval_def` expression adapter (flapjack-pxn.18.3.6.9.3)
 
-Statement-exact port of Cake's expression evaluator `eval_def`
-(`cakeml/pancake/semantics/panSemScript.sml:209-283`).  The state is the
-HOL-shaped source state: `locals`/`globals` are finite maps into the exact
-`v` carrier, `structs` is the HOL `(stcname # struct_info) list`, the memory is
-HOL's total `'a word -> 'a word_lab`, and `memaddrs` is the source word set
-(rendered as a `Prop` predicate, exactly as in the tagged `mem_load_*`
-definitions).  Every clause reuses the tagged exact helpers
-(`panMemLoadHOL`/`panMemLoad32HOL`/`panMemLoadByteHOL`/`wordOpHOL`/
-`wordShiftHOL`/`wordCmpHOL`/`isWfShapeHOL`/`panOpHOL`/`holShapeOf`/
-`holValueIsWord`/`panBytesInWord`).
+The clauses below follow Cake's `eval_def`
+(`cakeml/pancake/semantics/panSemScript.sml:209-283`), but the adapter is not
+an exact HOL port and is untagged: its `HolValue` and struct context still use
+Lean `String` where HOL uses `mlstring`. In particular, lawful `String`
+equality proves only the adapter's own field-name comparisons, not the
+corresponding HOL statement. The exact value carrier is being introduced in
+`PanSem/ValueHOL.lean`; an exact source-state/evaluator route remains tracked
+by `flapjack-0lj` and `flapjack-pxn.18.3.5.8`.
 
-HOL's `NStruct` field-name equality `field_names' = field_names` is rendered as
-the propositional list equality `info.fields.map Prod.fst = fields.map Prod.fst`
-(decided by the lawful `String` equality instance), and the field-shape check
-`EVERY (\(s,v). s = shape_of v)` is rendered as `panShapeMatches s (holShapeOf v)`,
-whose truth is exactly `s = shape_of v` by `panShapeMatches_eq_true`; hence
-`[LawfulBEq String]` is required, tying the Boolean `ALOOKUP`/equality uses to
-HOL `=`.
-
-`bytes_in_word` is HOL's global `n2w (dimindex(:'a) DIV 8)`; the `word set`
-domain carries the classical `[DecidablePred]` instance that HOL membership
-has implicitly. -/
+The structured-load helper `panMemLoadHOL` is likewise untagged pending the
+exact MlString-keyed shape/context carrier (`flapjack-pxn.18.5.17.1.3`).
+`bytes_in_word` is modeled by `n2w (dimindex(:'a) DIV 8)`, and the domain
+predicate's `[DecidablePred]` supplies Lean decision evidence for HOL set
+membership; neither removes the identifier-carrier gap. -/
 
 /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): clause-for-clause the
     same as HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`), but

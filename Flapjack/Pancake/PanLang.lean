@@ -368,12 +368,17 @@ def inlinable : Decl α → Bool
   | _ => false
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
-    `panLang$exceptions` (`panLangScript.sml:328`), the exception table of a
-    declaration list in declaration order, dropping every non-exception
-    declaration. The tag is WITHDRAWN because the result keys are
-    `ExceptionId := String` (PanLang.lean:18) while HOL `eid = ``:mlstring```
-    (`panLangScript.sml:29`); an exact port needs the MlString carrier
-    (bead `flapjack-pxn.18.3.5.8`). -/
+    `panLang$exceptions` (`panLangScript.sml:328-337`), preserving exception
+    declaration order and dropping all other constructors. HOL takes its
+    word-indexed `decl list` and returns `(mlstring # shape) list` (`eid` is
+    `mlstring`, `panLangScript.sml:29`). This function instead takes generic
+    `Decl α` and returns `(ExceptionId × Shape)` entries with
+    `ExceptionId := String`; `Decl α` and monomorphic `Shape` are not the
+    reviewed exact HOL carriers either. The direct HOL-EVAL fixture and Lean
+    parity guard exercise the five selection clauses, not byte-level carrier
+    equivalence. The `@[hol]` tag therefore remains WITHDRAWN; an exact
+    counterpart needs the MlString/ShapeHOL declaration carrier (bead
+    `flapjack-pxn.18.3.5.8`). -/
 def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | [] => []
   | .exnDecl exception shape :: declarations =>

@@ -911,6 +911,36 @@ theorem loopAssignPairs_cons (name : Nat) (names : List Nat)
       .assign name expression :: loopAssignPairs names expressions := by
   simp [loopAssignPairs]
 
+/-- The `loopTempNames` numbering with `loopAssignPairs` is Cake's
+    `MAPi (λn. Assign (n + offset)) les`.  This bridge lets the exact
+    `crep_to_loopProofScript.sml` `assigned_vars_MAPi_Assign` statement be
+    phrased with `List.mapIdx`, the direct counterpart of HOL's `MAPi`. -/
+theorem loopAssignPairs_loopTempNames_eq_mapIdx {α : Type}
+    (les : List (LoopExp α)) (offset : Nat) :
+    les.mapIdx (fun n e => LoopProg.assign (n + offset) e) =
+      loopAssignPairs (loopTempNames offset les.length) les := by
+  induction les generalizing offset with
+  | nil => simp [loopTempNames, loopAssignPairs]
+  | cons a as ih =>
+      simp only [List.length_cons]
+      rw [List.mapIdx_cons]
+      rw [show loopTempNames offset (as.length + 1) =
+            offset :: loopTempNames (offset + 1) as.length by
+        simp only [loopTempNames, List.range_succ_eq_map, List.map_cons, List.map_map]
+        congr 1
+        apply List.map_congr_left
+        intro x _
+        show offset + (x + 1) = offset + 1 + x
+        omega]
+      rw [loopAssignPairs_cons]
+      have hfun : (fun (i : Nat) (e : LoopExp α) => LoopProg.assign (i + 1 + offset) e) =
+          (fun (n : Nat) (e : LoopExp α) => LoopProg.assign (n + (offset + 1)) e) := by
+        funext i e
+        congr 1
+        omega
+      rw [hfun, ih (offset + 1)]
+      simp
+
 theorem loopAssignedVars_loopAssignPairs (names : List Nat)
     (expressions : List (LoopExp α)) (hlen : names.length = expressions.length) :
     loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) =
@@ -929,6 +959,15 @@ theorem loopAssignedVars_loopAssignPairs (names : List Nat)
           rw [← loopAssignedVars_nestedSeq (loopAssignPairs names expressions)]
           rw [ih expressions (by simpa using hlen)]
           rfl
+
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "assigned_vars_MAPi_Assign"]
+theorem loopAssignedVars_mapIdxAssign {width : Nat} [NeZero width]
+    (les : List (LoopExp (BitVec width))) (offset : Nat) :
+    loopAssignedVars (loopNestedSeq (les.mapIdx (fun n e => LoopProg.assign (n + offset) e))) =
+      (List.range les.length).map (fun n => n + offset) := by
+  rw [loopAssignPairs_loopTempNames_eq_mapIdx]
+  rw [loopAssignedVars_loopAssignPairs _ _ (by simp [loopTempNames])]
+  simp [loopTempNames, Nat.add_comm]
 
 /-! Cake `loopPropsScript.sml:40` `cut_sets_def`: the list-backed live set
     after executing a Loop statement.  Cake's HOL `insert`/`num_set` is

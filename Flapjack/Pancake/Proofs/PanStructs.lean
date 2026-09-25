@@ -42,11 +42,29 @@ theorem structCompileShapesFuel_eq_map (fuel : Nat) (context : StructContext) :
   | cons shape shapes ih =>
       simp [structCompileShapeFuel.structCompileShapesFuel, ih]
 
-/-- Exact no-fuel port of HOL `compile_shapes_eq_map`
-    (`pan_structsProofScript.sml:310`). The production mutually recursive
-    compiler decreases on the HOL context-suffix/syntax-size measure, so this
-    statement keeps the source theorem's context and list arguments unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- No-fuel analogue of HOL `compile_shapes_eq_map`
+    (`pan_structsProofScript.sml:310`), stated over the production compiler
+    `structCompileShapeWF`. The production mutually recursive compiler
+    decreases on the HOL context-suffix/syntax-size measure, so this statement
+    keeps the source theorem's context and list arguments unchanged, but it is
+    not an exact port of the HOL carriers (see the FLAPJACK-SPECIFIC note
+    below). -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL's
+-- `compile_shapes_eq_map` (`pan_structsProofScript.sml:310`) is stated over a
+-- fields-only context `(stcname # (fldname # shape) list) list` with
+-- `stcname`/`fldname` = `mlstring`, and its `compile_shapes`/`compile_shape`
+-- both consume exactly that list. This Lean statement uses the production
+-- carrier `StructContext = List (StructName × StructInfo)`, whose
+-- `StructName` and `FieldName` are `String` and whose `StructInfo` adds the
+-- production-only `shapedFields` cache (HOL `struct_info` is fields and size
+-- only), so the context carrier differs in arity, not only in name
+-- representation. This theorem only passes the context through, but a tag on
+-- it would still record the compiled functions' carriers, and a
+-- `(names_as_string := ...)` qualifier does not authorize the extra
+-- `StructInfo` field. The exact MlString carriers are available and the
+-- faithful port is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsCompileShapeParity.structCompileShapes_eq_map_fixture`.
 theorem structCompileShapes_eq_map (context : StructContext) :
     (structCompileShapeWF.structCompileShapesWF context : List Shape → List Shape) =
       fun shapes => shapes.map (structCompileShapeWF context) := by

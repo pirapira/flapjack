@@ -4264,7 +4264,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structCompileShapes_eq_map",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.65): HOL compile_shapes_eq_map (pan_structsProofScript.sml:310) is !sctxt shs. compile_shapes sctxt shs = MAP (compile_shape sctxt) shs, over the fields-only context (stcname # (fldname # shape) list) list with stcname/fldname = mlstring; the production functions consume exactly that list. The Lean statement quantifies the production StructContext = List (StructName x StructInfo) with StructName/FieldName = String and StructInfo carrying the extra shapedFields cache (HOL struct_info is fields+size only), so the context carrier differs in arity, not only name representation; this theorem only passes the context through but a tag would still record the compiled functions' carriers, and (names_as_string := ...) does not authorize the extra field. Tag stays withdrawn; faithful MlString carrier port tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2). Fixture: Flapjack.Test.PanStructsCompileShapeParity.structCompileShapes_eq_map_fixture."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

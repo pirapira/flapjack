@@ -373,6 +373,23 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_observational_semantics_hook_mismatch_is_documented(self):
+        key = ("Flapjack/PanObservationalSemantics.lean", "panSemantics")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panSemScript.sml", "semantics_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("PanSemanticsHooks", record["reviewer"])
+        self.assertIn("flapjack-pxn.18.4.4", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_pan_props_res_var_flookup_mismatches_are_documented(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record

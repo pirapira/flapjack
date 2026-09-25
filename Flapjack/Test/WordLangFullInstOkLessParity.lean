@@ -15,9 +15,9 @@ private abbrev W := BitVec 8
 
 private def w8 (n : Nat) : W := BitVec.ofNat 8 n
 
-private def emptySet : WordLangNumSet := fun _ => none
+private def emptySet : WordLangNumSetHOL := .ln
 
-private def cutsets : WordLangCutsets := (emptySet, emptySet)
+private def cutsets : WordLangCutsetsHOL := (emptySet, emptySet)
 
 private def cfg : AsmConfig 8 :=
   { isa := .riscv
@@ -37,59 +37,59 @@ private def cfg : AsmConfig 8 :=
     cjumpOffset := (w8 0, w8 100)
     locOffset := (w8 0, w8 100) }
 
-private def goodInstProg : WordLangProg W := .inst (.const 1 0)
+private def goodInstProg : WordLangProgHOL W := .inst (.const 1 0)
 
-private def immOkProg : WordLangProg W :=
+private def immOkProg : WordLangProgHOL W :=
   .inst (.arith (.binop .add 1 2 (.imm 1)))
 
-private def badProg : WordLangProg W :=
+private def badProg : WordLangProgHOL W :=
   .inst (.arith (.binop .add 1 2 (.imm 2)))
 
-private def seqBadProg : WordLangProg W := .seq goodInstProg badProg
+private def seqBadProg : WordLangProgHOL W := .seq goodInstProg badProg
 
-private def loopProg : WordLangProg W := .loop emptySet goodInstProg emptySet
+private def loopProg : WordLangProgHOL W := .loop emptySet goodInstProg emptySet
 
-private def ifProg : WordLangProg W :=
+private def ifProg : WordLangProgHOL W :=
   .ite .equal 1 (.reg 2) goodInstProg goodInstProg
 
-private def mustTerminateProg : WordLangProg W := .mustTerminate goodInstProg
+private def mustTerminateProg : WordLangProgHOL W := .mustTerminate goodInstProg
 
-private def callRetBadProg : WordLangProg W :=
+private def callRetBadProg : WordLangProgHOL W :=
   .call (some ([1], cutsets, badProg, 10, 11)) none [] none
 
-private def callHandlerBadProg : WordLangProg W :=
+private def callHandlerBadProg : WordLangProgHOL W :=
   .call (some ([1], cutsets, goodInstProg, 10, 11)) none []
     (some (2, badProg, 20, 21))
 
-private def callNoneHandlerBadProg : WordLangProg W :=
+private def callNoneHandlerBadProg : WordLangProgHOL W :=
   .call none none [] (some (2, badProg, 20, 21))
 
-private def callOkProg : WordLangProg W := .call none none [] none
+private def callOkProg : WordLangProgHOL W := .call none none [] none
 
-private def shareLoadProg : WordLangProg W := .shareInst .load 1 (.var 3)
+private def shareLoadProg : WordLangProgHOL W := .shareInst .load 1 (.var 3)
 
-private def shareLoadBigProg : WordLangProg W :=
+private def shareLoadBigProg : WordLangProgHOL W :=
   .shareInst .load 1 (.op .add [.var 3, .const (150 : W)])
 
-private def shareLoad16Prog : WordLangProg W := .shareInst .load16 1 (.var 3)
+private def shareLoad16Prog : WordLangProgHOL W := .shareInst .load16 1 (.var 3)
 
-private def shareStore8Prog : WordLangProg W := .shareInst .store8 1 (.var 3)
+private def shareStore8Prog : WordLangProgHOL W := .shareInst .store8 1 (.var 3)
 
-private def shareConstProg : WordLangProg W :=
+private def shareConstProg : WordLangProgHOL W :=
   .shareInst .load 1 (.const (5 : W))
 
-private def assignProg : WordLangProg W := .assign 1 (.const 0)
+private def assignProg : WordLangProgHOL W := .assign 1 (.const 0)
 
-private def allocProg : WordLangProg W := .alloc 1 cutsets
+private def allocProg : WordLangProgHOL W := .alloc 1 cutsets
 
 -- `exp_to_addr` rows (definitional, matching the HOL eval).
-example : expToAddr (WordLangExp.var 3 : WordLangExp W) =
+example : expToAddrHOL (WordLangExpHOL.var 3 : WordLangExpHOL W) =
     some (WordLangAddr.addr 3 0) := rfl
-example : expToAddr ((.op .add [.var 3, .const (5 : W)] : WordLangExp W)) =
+example : expToAddrHOL ((.op .add [.var 3, .const (5 : W)] : WordLangExpHOL W)) =
     some (WordLangAddr.addr 3 5) := rfl
-example : expToAddr ((.op .add [.const (5 : W), .var 3] : WordLangExp W)) =
+example : expToAddrHOL ((.op .add [.const (5 : W), .var 3] : WordLangExpHOL W)) =
     none := rfl
-example : expToAddr ((.const (5 : W) : WordLangExp W)) = none := rfl
+example : expToAddrHOL ((.const (5 : W) : WordLangExpHOL W)) = none := rfl
 
 -- `full_inst_ok_less` rows.
 example : fullInstOkLess cfg goodInstProg = true := by decide

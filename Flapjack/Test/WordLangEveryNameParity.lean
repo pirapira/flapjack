@@ -72,6 +72,20 @@ example : everyName pOdd emptyCut :=
 
 -- every_var rows ------------------------------------------------------------
 
+-- Exact-carrier HOL expression predicate rows --------------------------------
+
+private def exprExact : WordLangExpHOL W :=
+  .op .add [.load (.var 2), .shift .lsl (.var 4) (.var 6)]
+
+example : everyVarExpHOL pEven exprExact := by
+  simp [everyVarExpHOL, everyVarExpsHOL, pEven, exprExact]
+
+example : ¬ everyVarExpHOL pEven (.load (.var 3) : WordLangExpHOL W) := by
+  simp [everyVarExpHOL, pEven]
+
+example : everyVarExpHOL pEven (.lookup .currHeap : WordLangExpHOL W) := by
+  simp [everyVarExpHOL]
+
 private def skipProg : WordLangProg W := .skip
 private def assignOk : WordLangProg W := .assign 2 (.const 0)
 private def assignBad : WordLangProg W := .assign 3 (.const 0)

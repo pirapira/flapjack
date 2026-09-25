@@ -226,6 +226,28 @@ theorem isWfShapeValueHOLExact_shapeOfHOLExact {width : Nat} [NeZero width]
     Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true :=
   isWfShapeValueHOLExact_shapeOf_val context value h
 
+/-- Exact port of HOL `panProps$pan_primop_is_wf_shape_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:162`):
+    `!sctxt pop args value. pan_primop pop args = SOME value ==>
+    is_wf_shape_v sctxt value`.  Both `pan_primop` and `is_wf_shape_v` are the
+    already-reviewed exact ports `panPrimopHOLExact` and
+    `isWfShapeValueHOLExact` over `ValueHOL width`; the Bool predicate is
+    rendered as `= true`, matching the accepted port style. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "pan_primop_is_wf_shape_v"]
+theorem panPrimopHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (operator : PrimOp)
+    (values : List (ValueHOL width)) (value : ValueHOL width)
+    (h : panPrimopHOLExact operator values = some value) :
+    isWfShapeValueHOLExact context value = true := by
+  unfold panPrimopHOLExact at h
+  split at h
+  · simp only [Option.some.injEq] at h
+    subst value
+    simp only [isWfShapeValueHOLExact.eq_1, isWfShapeValueHOLExact.eq_2,
+      isWfShapeValuesHOLExact.eq_1, isWfShapeValuesHOLExact.eq_2]
+    rfl
+  · simp at h
+
 /-! Exact port of HOL `panProps$every_exp` (`panPropsScript.sml:1311-1333`) and
     `panProps$exps_of` (`panPropsScript.sml:1336-1358`) over the exact
     MlString/width-indexed `ExpHOL width`/`ProgHOL width` carriers.

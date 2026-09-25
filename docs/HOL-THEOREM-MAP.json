@@ -4496,7 +4496,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "Codex (P0 source review: HOL size_of_sh_with_ctxt_drop has exactly the same two premises—shape well-formedness in DROP n and distinct structure keys—and equality conclusion as this production theorem. It remains untagged because HOL uses ShapeHOL and StructContextExact over MlS identifiers and the exact fields/size-only struct record; Lean uses String-backed production Shape/StructContext with cache-augmented StructInfo.shapedFields and String-keyed lookups. names_as_string cannot cover the context/record carrier difference. The exact size definition sizeOfShapeWithContextHOL already exists, but the drop theorem over exact carriers does not; tracked by flapjack-pxn.18.3.5.8.16. No byte-observable output is present."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

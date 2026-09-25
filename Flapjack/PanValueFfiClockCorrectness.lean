@@ -1340,24 +1340,19 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                     simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                     obtain ⟨_, hc⟩ := hrun; omega
                   | returned l g m f vs =>
-                    by_cases hret : panValueReturnValid structs contracts function vs = true
-                    · simp only [hret, if_true, Option.bind_eq_bind, Option.bind_some] at hrun
-                      cases info with
-                      | none =>
+                    cases info with
+                    | none =>
+                      simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+                      obtain ⟨_, hc⟩ := hrun; omega
+                    | some ipair =>
+                      obtain ⟨destination, sndOpt⟩ := ipair
+                      simp only [Option.bind_eq_bind, Option.bind_some] at hrun
+                      cases hassign : assignPanValueCallResult locals g destination vs structs with
+                      | none => simp only [hassign, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+                      | some apair =>
+                        simp only [hassign, Option.bind_eq_bind, Option.bind_some] at hrun
                         simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                         obtain ⟨_, hc⟩ := hrun; omega
-                      | some ipair =>
-                        obtain ⟨destination, sndOpt⟩ := ipair
-                        simp only [Option.bind_eq_bind, Option.bind_some] at hrun
-                        cases hassign : assignPanValueCallResult locals g destination vs structs with
-                        | none => simp only [hassign, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-                        | some apair =>
-                          simp only [hassign, Option.bind_eq_bind, Option.bind_some] at hrun
-                          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
-                          obtain ⟨_, hc⟩ := hrun; omega
-                    · simp only [hret, if_false, Option.pure_def, Option.some.injEq,
-                        Prod.mk.injEq] at hrun
-                      obtain ⟨_, hc⟩ := hrun; omega
                   | raised l g m f ex v =>
                     by_cases hexc : (panValueExceptionValid structs contracts ex v && panValuePayloadWithinLimit structs v) = true
                     · simp only [hexc, if_true, Option.bind_eq_bind, Option.bind_some] at hrun

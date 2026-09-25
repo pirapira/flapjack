@@ -459,6 +459,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only full evaluator-state equality for the exact finite-map carrier through canonical Fin width to the direct BitVec view. It does not establish arbitrary HOL finite_index or native eval_def correspondence."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepHolState_eq_of_fields",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only record extensionality helper for CrepHolState; it has no HOL theorem counterpart."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_exactCrepSemHOLState_projection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor evaluator transport from the exact-state expression projection to the direct BitVec-state evaluator. The bridge still specializes the HOL finite_index carrier to canonical Fin width."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepSemHOLStateSource_load32_eq_memLoad32HOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."

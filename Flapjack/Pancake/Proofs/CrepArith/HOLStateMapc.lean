@@ -13,6 +13,25 @@ namespace Flapjack
 
 open Flapjack.Basis.Pure.MlString
 
+/-- Flapjack-only record extensionality for the evaluator-state carrier. -/
+private theorem crepHolState_eq_of_fields {α σ : Type}
+    {left right : CrepHolState α σ}
+    (hLocals : left.locals = right.locals)
+    (hGlobals : left.globals = right.globals)
+    (hCode : left.code = right.code)
+    (hMemory : left.memory = right.memory)
+    (hMemaddrs : left.memaddrs = right.memaddrs)
+    (hShMemaddrs : left.shMemaddrs = right.shMemaddrs)
+    (hClock : left.clock = right.clock)
+    (hBigEndian : left.bigEndian = right.bigEndian)
+    (hFfi : left.ffi = right.ffi)
+    (hBaseAddress : left.baseAddress = right.baseAddress)
+    (hTopAddress : left.topAddress = right.topAddress) :
+    left = right := by
+  cases left
+  cases right
+  simp_all
+
 /-- HOL's local `mapc f` state update, using `FMAP_MAP2` on the code map. -/
 def CrepSemHOLState.mapc {width : Nat} [NeZero width] {σ : Type}
     (f : MlString × (List Nat × CrepProgHOL width) →
@@ -239,6 +258,57 @@ theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_topAdd
     (bitVecToHolWordBits state.topAddr) = state.topAddr
   change holWordBitsToBitVec (bitVecToHolWordBits state.topAddr) = state.topAddr
   exact holWordBitsToBitVec_bitVecToHolWordBits state.topAddr
+
+/-- The expression projection followed by the canonical finite-index
+transport equals the direct BitVec projection of the same exact state. This
+is representation support for all-width evaluator proofs; arbitrary HOL
+`finite_index` isomorphism remains a separate requirement. -/
+theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    (state.toExpressionEvaluatorState).toHolFiniteBitVecState
+      (instFinHolFiniteDimension (width := width)) =
+    state.toBitVecEvaluatorState := by
+  apply crepHolState_eq_of_fields
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_locals state
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_globals state
+  · rfl
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memory state
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memaddrs state
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_shMemaddrs state
+  · rfl
+  · rfl
+  · rfl
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_baseAddress state
+  · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_topAddress state
+
+/-- Full all-width evaluator transport from the exact-state expression
+projection to production `evalCrepRuntimeExp`, related to the direct BitVec
+HOL-state evaluator. This still uses canonical `Fin width`; it does not claim
+the arbitrary HOL `finite_index` instance has been reindexed. -/
+theorem evalCrepRuntimeExp_exactCrepSemHOLState_projection
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExp (Fin width → Bool)) :
+    evalCrepRuntimeExp
+      (state.toExpressionEvaluatorState.toHolFiniteWordRuntime
+        (instFinHolFiniteDimension (width := width))) expression =
+    (evalCrepHolExp state.toBitVecEvaluatorState
+      (mapCrepExpWord
+        (holWordToBitVec (instFinHolFiniteDimension (width := width)))
+        expression)).map
+    (bitVecToHolWord (instFinHolFiniteDimension (width := width))) := by
+  calc
+    _ = evalCrepHolFiniteDimensionExp
+          (instFinHolFiniteDimension (width := width))
+          state.toExpressionEvaluatorState expression :=
+      evalCrepRuntimeExp_finiteDimension_eq
+        (dimension := instFinHolFiniteDimension (width := width))
+        (state := state.toExpressionEvaluatorState)
+        (expression := expression)
+    _ = _ := by
+      simp [evalCrepHolFiniteDimensionExp,
+        CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState]
 
 /-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
 state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec

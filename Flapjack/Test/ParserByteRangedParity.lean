@@ -240,4 +240,8 @@ example (r : Option (Option (Flapjack.VarKind × String)))
     (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) r h vk name hr
 
 
+/-- Annotation comment text is included in the byte-ranged token invariant. -/
+example (text : String) (h : StringByteRanged text) :
+    TokenNameByteRanged (Token.annotCommentT text) := h
+
 end Flapjack.Test.ParserByteRangedParity

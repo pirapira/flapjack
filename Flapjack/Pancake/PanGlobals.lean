@@ -1726,7 +1726,7 @@ termination_by shape => sizeOf shape
     canonical HOL-shaped `CakeContext`: the association-list `globals` become a
 finite-map lookup through `lookupInfo`, keeping the size fields.  This is
     the production-to-canonical direction of the adapter required by
-    `flapjack-pxn.18.5.2.20.2`. The fixed-width executed path calls tagged
+    `flapjack-pxn.18.5.2.20.2`. The fixed-width executed path calls the (currently untagged)
     `compileDecsCake`; equality of the context field's data representation
     remains to be proved. -/
 def cakeContextOfPass [BEq String] {width : Nat}
@@ -1850,7 +1850,7 @@ termination_by expressions => sizeOf expressions
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /- Adapter for the expression compiler: on the `cakeContextOfPass` view of a
-    canonical production context, the tagged canonical `compileExpCake` agrees
+    canonical production context, the `compileExpCake` helper (currently untagged) agrees
     with the production `globalCompileExp`.  Only the two fallback spots
     (`fromNat 0` vs `n2w 0`) need the canonical-word hypothesis; the global
     lookup is `lookupInfo` on both sides. -/
@@ -2065,7 +2065,7 @@ theorem compileProgCake_shMemLoad_eq [BEq String] {width : Nat} [NeZero width]
       cases shape <;> cases kind <;>
         simp_all [compileExpCake_cakeContextOfPass context hcanonical, hcanonical.2]
 
-/-- Production `globalCompileProg` agrees with the tagged canonical
+/-- Production `globalCompileProg` agrees with the
     `compileProgCake` under the canonical word-context view. This is the
     program half of the executed-path adapter for
     `flapjack-pxn.18.5.2.20.2`. -/
@@ -2374,7 +2374,7 @@ theorem globalCompileDecs_exceptions_eq_filter [BEq String] [Add α] [Mul α]
     (globalCollect context code) code
 
 /-! Fieldwise link between the executed polymorphic `globalCompileDecs` and the
-    tagged canonical `compileDecsCake`. The three declaration-list fields agree
+    `compileDecsCake` helper (currently untagged). The three declaration-list fields agree
     under the canonical context view; the contexts themselves are deliberately
     not compared as data because `CakeContext.globals` is a finite map while the
     production context keeps an association list. -/
@@ -2665,14 +2665,14 @@ def globalCompileTopForStartSome [BEq String] [Add α] [Mul α]
 /-! Generalized total compiler analogue. Its word size and natural-number
     conversion are explicit so Flapjack callers can use different targets; it
     is not itself the exact HOL `compile_top` interface. The fixed-word
-    `globalCompileTopCake` wrapper below is the exact-shaped interface. -/
+    `globalCompileTopCake` wrapper below is the source-shaped interface. -/
 def globalCompileTopForStart [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
     (start : FunName) : List (Decl α) :=
   (globalCompileTopForStartSome bytesInWord fromNat declarations start).getD []
 
 /-! Canonical fixed-word top-level compiler. Its global pass runs through the
-    tagged `compileDecsCake` over a `CakeContext`; the polymorphic
+    `compileDecsCake` over a `CakeContext` (currently untagged); the polymorphic
     `globalCompileTopForStartSome` above remains available for arbitrary word
     types. `globalCompileTopForStartSomeCake_eq` proves the two compute the same
     output list, so the executed fixed-word path below can use the canonical

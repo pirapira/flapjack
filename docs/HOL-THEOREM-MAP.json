@@ -373,7 +373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_eq_shift",
     "statement_status": "documented_mismatch",
-    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_thm quantifies over its polymorphic word type. No @[hol] tag until the finite-index generic theorem is proved."
+    "reviewer": "All-positive-width support now also covers the canonical Fin width -> Bool carrier and natural-exponent shift. Still documented_mismatch: Lean uses an explicit Fin index, while HOL uses its implicit finite_index type/instance; no @[hol] tag until that carrier correspondence is established."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -718,6 +718,14 @@
     "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_2exp_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolWordBits_eq_lsl_support",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width support over Fin width -> Bool; kept untagged because HOL uses its implicit finite_index carrier and the explicit Fin representation has not been identified with that instance."
   },
   {
     "hol_path": null,
@@ -4441,14 +4449,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "shape_of_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "panSemShapeOf",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "nb_op_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "nbOpHOL",
@@ -4478,22 +4478,6 @@
     "lean_name": "HolWordLab",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "empty_locals_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "panEmptyLocals",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (production state update comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "evaluate_decls_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "evaluateDecls",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -8233,14 +8217,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "v",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "HolValue",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Datatype v (panSemScript.sml:22, Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list))) is width-indexed over BitVec width in the panSemScript.sml counterpart; production PanValue related by checked round-trip isomorphism theorems PanValue.toHolValue_toPanValue / HolValue.toPanValue_toHolValue)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "mem_load_byte_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemLoadByteHOL",
@@ -9143,84 +9119,84 @@
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-two (independent HOL/Lean comparison: all 24 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
   },
-{
-  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
-  "hol_name": "left_shift_inst",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "leftShiftInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
-  "hol_name": "right_shift_inst",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "rightShiftInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
-  "hol_name": "const_inst",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "constInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
-  "hol_name": "load_inst",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "loadInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
-  "hol_name": "store_inst",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "storeInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
-  "hol_name": "halt_inst_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
-  "lean_name": "haltInst",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "comp_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "progComp",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "prog_comp_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "progCompEntry",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
-  "hol_name": "compile_def",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "compile",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
-  "hol_name": "MAP_FST_compile",
-  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
-  "lean_name": "map_fst_compile",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "left_shift_inst",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "leftShiftInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "right_shift_inst",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "rightShiftInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "const_inst",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "constInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "load_inst",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "loadInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "store_inst",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "storeInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+    "hol_name": "halt_inst_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+    "lean_name": "haltInst",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "comp_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "progComp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "prog_comp_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "progCompEntry",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "compile",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
+    "hol_name": "MAP_FST_compile",
+    "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+    "lean_name": "map_fst_compile",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  }
 ]

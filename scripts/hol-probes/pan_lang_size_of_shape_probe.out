@@ -1,4 +1,4 @@
-one=1
-empty_comb=0
-named=1
-nested_comb=4
+ss_one=1
+ss_comb=3
+ss_named=1
+ss_eq=T

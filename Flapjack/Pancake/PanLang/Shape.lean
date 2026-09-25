@@ -110,4 +110,40 @@ def shapeOfHOL : ShapeHOL → Flapjack.Shape
     simp [shapeOfHOL, shapeToHOL,
       Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hbytes]
 
+/-! HOL `panLang$size_of_shape` (`cakeml/pancake/panLangScript.sml:174-177`):
+    `One -> 1`, `Comb shapes -> SUM (MAP size_of_shape shapes)`, and
+    `Named name -> 1` (the HOL comment notes the named case "should not happen").
+    This is the context-free counterpart of `size_of_sh_with_ctxt`; it never
+    inspects the structure context, so it lives over the exact `ShapeHOL`
+    carrier. -/
+mutual
+  @[hol "cakeml/pancake/panLangScript.sml" "size_of_shape_def"]
+  def sizeOfShapeHOL : ShapeHOL → Nat
+    | .one => 1
+    | .comb shapes => sizeOfShapesHOL shapes
+    | .named _ => 1
+  def sizeOfShapesHOL : List ShapeHOL → Nat
+    | [] => 0
+    | shape :: shapes => sizeOfShapeHOL shape + sizeOfShapesHOL shapes
+end
+
+@[simp] theorem sizeOfShapeHOL_one : sizeOfShapeHOL (.one : ShapeHOL) = 1 := by
+  simp only [sizeOfShapeHOL]
+
+@[simp] theorem sizeOfShapeHOL_comb (shapes : List ShapeHOL) :
+    sizeOfShapeHOL (.comb shapes) = sizeOfShapesHOL shapes := by
+  simp only [sizeOfShapeHOL]
+
+@[simp] theorem sizeOfShapeHOL_named (name : MlS) :
+    sizeOfShapeHOL (.named name) = 1 := by
+  simp only [sizeOfShapeHOL]
+
+@[simp] theorem sizeOfShapesHOL_nil : sizeOfShapesHOL ([] : List ShapeHOL) = 0 := by
+  simp only [sizeOfShapesHOL]
+
+@[simp] theorem sizeOfShapesHOL_cons (shape : ShapeHOL) (shapes : List ShapeHOL) :
+    sizeOfShapesHOL (shape :: shapes) =
+      sizeOfShapeHOL shape + sizeOfShapesHOL shapes := by
+  simp only [sizeOfShapesHOL]
+
 end Flapjack.Pancake.PanLang

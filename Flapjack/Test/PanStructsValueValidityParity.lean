@@ -393,4 +393,15 @@ example (domain : BitVec 8 → Prop) [DecidablePred domain]
     Flapjack.Pancake.PanLang.ShapeHOL.one 0 ([] : Flapjack.StructContextHOLM)
     (.val (memory 0)) h
 
+/-- `mem_load_some_shape_eq`: a loaded `.one` value has shape `.one`. -/
+example (domain : BitVec 8 → Prop) [DecidablePred domain]
+    (memory : BitVec 8 → HolWordLab 8)
+    (h : memLoadHOLExact Flapjack.Pancake.PanLang.ShapeHOL.one 0 domain memory
+        ([] : Flapjack.StructContextHOLM) = some (.val (memory 0))) :
+    shapeOfHOLExact (.val (memory 0) : ValueHOL 8) =
+      Flapjack.Pancake.PanLang.ShapeHOL.one :=
+  memLoadHOLExact_some_shapeOf_eq domain memory
+    Flapjack.Pancake.PanLang.ShapeHOL.one 0 ([] : Flapjack.StructContextHOLM)
+    (.val (memory 0)) h
+
 end Flapjack.Test

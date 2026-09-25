@@ -10438,6 +10438,22 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_loads_some_shape_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_shape_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.17; exact HOL panProps$mem_loads_some_shape_eq (panPropsScript.sml:194): the triple conjunction (!sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> shape_of v = sh) /\\ (!shs ... mem_loads ... = SOME vs ==> MAP shape_of vs = shs) /\\ (!flds ... mem_load_flds ... = SOME vs ==> MAP (shape_of o SND) vs = MAP SND flds). Lean `{width : Nat} [NeZero width] (domain : BitVec width → Prop) [DecidablePred domain] (memory : BitVec width → HolWordLab width)` returns the same triple conjunction over the exact memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact carriers and shapeOfHOLExact (panSemScript.sml shape_of_def); HOL MAP is Lean List.map, `shape_of o SND` is `fun pair => shapeOfHOLExact pair.2`, and the named-hit case reduces to the identity via shapeOfHOLExact's .nStruct clause. No extra hypotheses beyond [DecidablePred domain]; [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/comb_hit/named_hit in pan_mem_load_probe.out and ml_* in pan_sem_mem_load_exact_probe.out; the shape-equality conjunct is source-only. Parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_some_shape_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_some_shapeOf_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.18; exact HOL panProps$mem_load_some_shape_eq (panPropsScript.sml:212): !sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> shape_of v = sh, proved in HOL by metis_tac[mem_loads_some_shape_eq]. Lean `{width : Nat} [NeZero width] (domain : BitVec width → Prop) [DecidablePred domain] (memory : BitVec width → HolWordLab width) (shape : ShapeHOL) (address : BitVec width) (context : StructContextHOLM) (value : ValueHOL width) (h : memLoadHOLExact shape address domain memory context = some value) : shapeOfHOLExact value = shape` is exactly the first conjunct of the tagged memLoadHOLExact_shape_eq (mem_loads_some_shape_eq); no extra hypotheses. [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/named_hit in pan_mem_load_probe.out; parity example in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "everyExpHOL",

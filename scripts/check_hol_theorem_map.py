@@ -1062,6 +1062,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
          "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_drop"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_shape_eq"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_some_shapeOf_eq"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),

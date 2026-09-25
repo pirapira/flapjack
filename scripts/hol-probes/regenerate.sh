@@ -1479,3 +1479,23 @@ run_probe pan_lang_prog_probeScript.sml pan_lang_prog_probe.out \
   pg_skip pg_annot_len \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The num_set toAList probe observes the exact HOL sptree enumeration order
+# (mixed order, but deterministic).
+run_probe num_set_to_alist_probeScript.sml num_set_to_alist_probe.out \
+  toalist_ln toalist_four \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"
+# The panLang decl probe pins the `fun_decl` / `decl` / `struct_info` field
+# shapes (mlstring names, bool flags, param lists, record size) at word type 64.
+run_probe pan_lang_decl_probeScript.sml pan_lang_decl_probe.out \
+  fd_name_len si_size \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The word_to_stack copy_ret_aux/copy_ret probe pins the return-slot copy
+# fragments (list_Seq of StackLoad/StackStore, SeqStackFree) at word type 64.
+run_probe word_to_stack_copy_ret_probeScript.sml word_to_stack_copy_ret_probe.out \
+  cra_zero cr_handle \
+  "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

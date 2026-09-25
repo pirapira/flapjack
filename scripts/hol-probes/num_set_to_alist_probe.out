@@ -1,0 +1,6 @@
+toalist_ln=[]
+toalist_zero=[(0,())]
+toalist_two=[(1,()); (0,())]
+toalist_three=[(1,()); (0,()); (2,())]
+toalist_five=[(5,()); (0,())]
+toalist_four=[(3,()); (1,()); (0,()); (2,())]

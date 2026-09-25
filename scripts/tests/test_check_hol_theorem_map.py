@@ -49,6 +49,42 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_globals_transformation_carrier_mismatches_are_documented(self):
+        cases = {
+            ("Flapjack/Pancake/PanGlobals.lean", "globalRenameProg"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalRenameDecls"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_decs_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalResortDecls"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "resort_decls_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalNewMainName"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "new_main_name_def",
+            ),
+        }
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        tagged = MAP["tagged_declarations"]()
+        for key, (hol_path, hol_name) in cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("flapjack-6nn.3.1", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, tagged)
+
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (
             "Flapjack/Pancake/Semantics/CrepProps.lean",

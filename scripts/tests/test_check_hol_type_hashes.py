@@ -66,6 +66,44 @@ class HolTypeHashesTest(unittest.TestCase):
         without_body = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
         self.assertNotEqual(with_body, without_body)
 
+    def test_reviewed_names_as_string_qualifiers_are_locked(self):
+        manifest = [{
+            **self.manifest[0],
+            "statement_status": "reviewed_names_as_string",
+            "names_as_string": ["key", "generated"],
+            "names_as_string_boundary": ["generated"],
+        }]
+        export = [{
+            **self.export[0],
+            "qualifiers": {
+                "list_as_array": [],
+                "names_as_string": ["key", "generated"],
+                "names_as_string_boundary": ["generated"],
+            },
+        }]
+        lock = MODULE.expected_lock(manifest, export, "leanprover/lean4:v4")
+        self.assertEqual(lock["records"][0]["qualifiers"], {
+            "list_as_array": [],
+            "names_as_string": ["key", "generated"],
+            "names_as_string_boundary": ["generated"],
+        })
+        changed = [{
+            **export[0],
+            "qualifiers": {
+                **export[0]["qualifiers"],
+                "names_as_string_boundary": [],
+            },
+        }]
+        with self.assertRaisesRegex(ValueError, "manifest qualifiers differ"):
+            MODULE.lock_records(manifest, changed)
+
+    def test_qualifier_changes_reviewed_hash(self):
+        plain = {**self.export[0], "qualifiers": {}}
+        qualified = {**self.export[0], "qualifiers": {"names_as_string": ["key"]}}
+        self.assertNotEqual(
+            MODULE.reviewed_payload(plain), MODULE.reviewed_payload(qualified)
+        )
+
     def test_reviewed_payload_covers_only_type_and_body(self):
         item = {**self.export[0], "value_expr": "Lean.Expr.const `True []"}
         self.assertEqual(
@@ -104,6 +142,24 @@ class HolTypeHashesTest(unittest.TestCase):
         record = {"lean_name": "n", "hol_path": "p", "hol_name": "h",
                   "type_expr": "t", "value_expr": "v"}
         self.assertEqual(MODULE.validate_export_record(record, 1), record)
+
+    def test_valid_export_record_with_qualifiers(self):
+        record = {
+            "lean_name": "n", "hol_path": "p", "hol_name": "h", "type_expr": "t",
+            "qualifiers": {
+                "list_as_array": [], "names_as_string": ["key"],
+                "names_as_string_boundary": [],
+            },
+        }
+        self.assertEqual(MODULE.validate_export_record(record, 1), record)
+
+    def test_malformed_export_qualifier_fails_closed(self):
+        record = {
+            "lean_name": "n", "hol_path": "p", "hol_name": "h", "type_expr": "t",
+            "qualifiers": {"names_as_string": "key"},
+        }
+        with self.assertRaisesRegex(ValueError, "malformed qualifier"):
+            MODULE.validate_export_record(record, 1)
 
     def test_ambiguous_reference_fails_closed(self):
         duplicate = [{**self.export[0], "lean_name": "Other.exampleCorrect"}]

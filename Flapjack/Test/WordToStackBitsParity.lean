@@ -641,6 +641,27 @@ example : copyRet (α := BitVec 64) (β := BitVec 64) false false (2, 7, 9) [] .
 example : copyRet (α := BitVec 64) (β := Nat) false false (2, 7, 9) [] .skip =
     (copyRet (α := BitVec 64) (β := Nat) false false (2, 7, 9) [] .skip) := rfl
 
+/-- Structural analogue of HOL `wLive_def` (`word_to_stackScript.sml:252`).
+    `f = 0` returns `Skip` and the bitmaps unchanged; otherwise it composes
+    `write_bitmap`/`insert_bitmap` (oracle rows `wb_empty = [16w]`, `ib_flat`)
+    with the exact `Seq`/`Inst`/`Const`/`StackStore` fragment. -/
+def wLiveParityGuard : Bool :=
+  (match wLiveW (width := 64) [] (Flapjack.AppList.nil, 0) 0 0 4 with
+   | (prog, (bitmaps, i)) =>
+       (match prog with | .skip => true | _ => false) &&
+       (Flapjack.appListAppend bitmaps == []) && (i == 0)) &&
+  (match wLiveW (width := 64) [] (Flapjack.AppList.nil, 0) 0 1 4 with
+   | (prog, (bitmaps, i)) =>
+       (Flapjack.appListAppend bitmaps == [(16 : BitVec 64)]) &&
+       (i == 1) &&
+       (match prog with
+        | .seq (.inst (.const k v)) (.stackStore r off) =>
+            (k == 0) && (v == (1 : BitVec 64)) && (r == 0) && (off == 0)
+        | _ => false))
+
+#eval wLiveParityGuard
+#guard wLiveParityGuard
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -650,6 +671,6 @@ def runChecks : IO Bool := do
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
-    copyRetIndependentGuard)
+    copyRetIndependentGuard && wLiveParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

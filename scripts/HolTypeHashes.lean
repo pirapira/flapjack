@@ -106,7 +106,11 @@ elab "#emit_hol_type_hashes" : command => do
           ("lean_name", toJson name.toString),
           ("hol_path", toJson ref.path),
           ("hol_name", toJson ref.name),
-          ("type_expr", toJson (reprStr (canonicalExpr info.type)))]
+          ("type_expr", toJson (reprStr (canonicalExpr info.type))),
+          ("qualifiers", Json.mkObj [
+            ("list_as_array", toJson ref.listAsArray),
+            ("names_as_string", toJson ref.namesAsString),
+            ("names_as_string_boundary", toJson ref.namesAsStringBoundary)])]
         match definitionBody? info with
         | some body =>
             fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]

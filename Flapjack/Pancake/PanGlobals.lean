@@ -474,14 +474,16 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
   · intro h
     rw [h]
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_def`
+/-- Qualified HOL port (`names_as_string`) of Cake's `fperm_def`
     (`pan_globalsScript.sml:191`): rename `source` to `target` and vice versa
     in every function occurrence and nested handler/body, leaving the other
-    program constructs structurally unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+    program constructs structurally unchanged.  The Lean statement matches HOL's
+    with no side condition and propositional name equality. -/
+-- Qualified HOL port (names_as_string).  The production identifiers
+-- `FunName`/`VarName` are `String` while HOL `pan_globalsScript.sml` keys names
+-- by `funname`/`varname` = `mlstring`; the qualifier records that this
+-- difference is limited to the identifier carrier.  The exact MlString
+-- identifier carrier is tracked separately by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
 --
 -- Qualified-tag review evidence (`flapjack-6nn.1.2`), clause by clause against
@@ -497,14 +499,17 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
 --     renames the callee with `fperm_name` and recurses on the body;
 --   * catch-all `fperm _ _ p = p` -> the `| program => program` arm.
 -- Every name use here is an equality/map-key comparison via
--- `globalRenameFunctionName`/`LawfulBEq String`; `globalRenameProg` never
--- inspects the bytes of a name, so the `String`-vs-`mlstring` carrier
--- difference is unobservable and the declaration is a carrier-only candidate
--- for the `names_as_string` qualifier once the `flapjack-an4.3` checker gates
--- land.  Direct original-HOL rows: `pan_globals_fperm_probeScript.sml` /
+-- `globalRenameFunctionName` (propositional equality, no side condition);
+-- `globalRenameProg` never inspects the bytes of a name, so the
+-- `String`-vs-`mlstring` carrier difference is unobservable
+-- (`source`/`target`: equality/map-key-only) and the declaration carries the
+-- reviewed `(names_as_string := [source, target])` qualifier.
+-- Direct original-HOL rows: `pan_globals_fperm_probeScript.sml` /
 -- `pan_globals_fperm_probe.out`; Lean fixtures:
 -- `Flapjack/Test/PanGlobalsFpermParity.lean`.
-def globalRenameProg [LawfulBEq String]
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_def"
+  (names_as_string := [source, target])]
+def globalRenameProg
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>
       .dec name shape value (globalRenameProg source target body)
@@ -538,7 +543,7 @@ termination_by program => sizeOf program
 -- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
 -- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
-def globalRenameDecls [LawfulBEq String]
+def globalRenameDecls
     (source target : FunName) : List (Decl α) → List (Decl α)
   | [] => []
   | .function declaration :: declarations =>

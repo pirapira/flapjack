@@ -230,6 +230,11 @@ private def recursiveExact
     [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
   evalPanSemRecursiveCallHOLExact program state
 
+private def recursiveExact8
+    (program : ProgHOL 8) (state : PanSemStateExact 8 Unit)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
+  evalPanSemRecursiveCallHOLExact program state
+
 private def primitiveState : PanSemStateExact 64 Unit :=
   { baseState with
     locals := fun name =>
@@ -267,6 +272,46 @@ private def badReadState : PanSemStateExact 8 Unit :=
 private instance : DecidablePred badReadState.memaddrs := fun _ => isFalse id
 
 private instance : DecidablePred badReadState.shMemaddrs := fun _ => isFalse id
+
+private def returnedExtCallState : PanSemStateExact 8 Unit :=
+  PanSemExtCallExactParity.baseState returningFfi memory8 domain8
+
+private instance : DecidablePred returnedExtCallState.memaddrs := by
+  intro address
+  dsimp [returnedExtCallState, PanSemExtCallExactParity.baseState, domain8]
+  infer_instance
+
+private instance : DecidablePred returnedExtCallState.shMemaddrs := by
+  intro address
+  dsimp [returnedExtCallState, PanSemExtCallExactParity.baseState]
+  infer_instance
+
+private def recursiveShMemState : PanSemStateExact 8 Unit :=
+  { PanSemExtCallExactParity.baseState returningFfi memory8 domain8 with
+    locals := fun name =>
+      if name = ml "v" then some (.val (.word 0)) else none
+    shMemaddrs := fun address => address = 8 }
+
+private instance : DecidablePred recursiveShMemState.memaddrs := by
+  intro address
+  dsimp [recursiveShMemState, PanSemExtCallExactParity.baseState, domain8]
+  infer_instance
+
+private instance : DecidablePred recursiveShMemState.shMemaddrs := by
+  intro address
+  dsimp [recursiveShMemState]
+  infer_instance
+
+private def recursiveShMemOutOfDomainState : PanSemStateExact 8 Unit :=
+  { recursiveShMemState with shMemaddrs := fun _ => False }
+
+private instance : DecidablePred recursiveShMemOutOfDomainState.memaddrs := by
+  intro address
+  change Decidable (recursiveShMemState.memaddrs address)
+  infer_instance
+
+private instance : DecidablePred recursiveShMemOutOfDomainState.shMemaddrs :=
+  fun _ => isFalse id
 
 def skipBreakTickRows : Bool :=
   let skipOk := match exactDispatch .skip baseState with
@@ -324,6 +369,18 @@ def storeRows : Bool :=
     | _ => false
   storeOk && store32Ok && storeByteOk && storeErr
 
+/-! Direct recursive-dispatch checks for the HOL `store_clause_hit` and
+`store_clause_out_of_domain` rows in `pan_sem_e2e_probe.out`. -/
+def recursiveStoreRows : Bool :=
+  let storeOk := match recursiveExact (.store (.const 0) (.const 7)) baseState with
+    | some (none, state) => memoryWord state 0 == some 7
+    | _ => false
+  let outside := { baseState with memaddrs := fun _ => False }
+  let storeErr := match recursiveExact (.store (.const 0) (.const 7)) outside with
+    | some (some .error, state) => memoryWord state 0 == some 0
+    | _ => false
+  storeOk && storeErr
+
 def returnRaiseRows : Bool :=
   let returnOk := match exactDispatch (.return (.const 41)) baseState with
     | some (some (.returned (.val (.word value))), state) =>
@@ -360,6 +417,56 @@ def extCallRows : Bool :=
         (match state.memory 0 with
         | .word byte => byte.toNat == 0xAB)
   | none => false
+
+/-! The recursive dispatcher must return the exact ExtCall clause result and
+thread its post-state through the context. These guards reuse the original
+HOL `extcall_clause_returned` and `extcall_clause_bad_read` rows. -/
+def recursiveExtCallRows : Bool :=
+  let program : ProgHOL 8 :=
+    .extCall (ml "x") (.const 0) (.const 2) (.const 0) (.const 2)
+  let returned := recursiveExact8 program returnedExtCallState
+  let badRead := recursiveExact8 program badReadState
+  let returnedOk := match returned with
+    | some (none, state) =>
+        match state.memory 0 with
+        | .word byte => byte.toNat == 0x42
+    | _ => false
+  let badReadOk := match badRead with
+    | some (some .error, state) =>
+        match state.memory 0 with
+        | .word byte => byte.toNat == 0xAB
+    | _ => false
+  returnedOk && badReadOk
+
+/-! Recursive dispatcher rows for the original HOL ShMem load/store probes:
+`shmemload_returned`, `shmemload_out_of_domain`, `shmemstore_returned`, and
+`shmemstore_out_of_domain` in `pan_sem_e2e_probe.out`. -/
+def recursiveShMemRows : Bool :=
+  let loadProgram : ProgHOL 8 := .shMemLoad .opW .local (ml "v") (.const 8)
+  let storeProgram : ProgHOL 8 := .shMemStore .opW (.const 8) (.const 0xAB)
+  let loadReturned := recursiveExact8 loadProgram recursiveShMemState
+  let loadOutside := recursiveExact8 loadProgram recursiveShMemOutOfDomainState
+  let storeReturned := recursiveExact8 storeProgram recursiveShMemState
+  let storeOutside := recursiveExact8 storeProgram recursiveShMemOutOfDomainState
+  let loadReturnedOk := match loadReturned with
+    | some (none, state) =>
+        match state.locals (ml "v") with
+        | some (.val (.word value)) => value.toNat == 0x42
+        | _ => false
+    | _ => false
+  let loadOutsideOk := match loadOutside with
+    | some (some .error, state) =>
+        match state.locals (ml "v") with
+        | some (.val (.word value)) => value.toNat == 0
+        | _ => false
+    | _ => false
+  let storeReturnedOk := match storeReturned with
+    | some (none, _) => true
+    | _ => false
+  let storeOutsideOk := match storeOutside with
+    | some (some .error, _) => true
+    | _ => false
+  loadReturnedOk && loadOutsideOk && storeReturnedOk && storeOutsideOk
 
 def stateOwnedCallRows : Bool :=
   let direct := recursiveExact (.call none (ml "id") [.const 7]) (idCodeState 10)
@@ -674,9 +781,12 @@ def recursiveDecRows : Bool :=
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
 #guard storeRows
+#guard recursiveStoreRows
 #guard returnRaiseRows
 #guard sharedMemoryRows
 #guard extCallRows
+#guard recursiveExtCallRows
+#guard recursiveShMemRows
 #guard stateOwnedCallRows
 #guard stateOwnedCallNegativeRows
 #guard stateOwnedCallDestinationRows
@@ -704,6 +814,9 @@ def runChecks : IO Bool := do
   if storeRows then
     IO.println "PASS exact-state dispatcher Store/Store32/StoreByte rows match HOL"
   else IO.println "FAIL exact-state dispatcher Store/Store32/StoreByte rows match HOL"
+  if recursiveStoreRows then
+    IO.println "PASS exact-state recursive Store hit/out-of-domain rows match HOL"
+  else IO.println "FAIL exact-state recursive Store hit/out-of-domain rows match HOL"
   if returnRaiseRows then
     IO.println "PASS exact-state dispatcher Return/Raise rows match HOL"
   else IO.println "FAIL exact-state dispatcher Return/Raise rows match HOL"
@@ -713,6 +826,12 @@ def runChecks : IO Bool := do
   if extCallRows then
     IO.println "PASS exact-state dispatcher ExtCall bad-read row matches HOL"
   else IO.println "FAIL exact-state dispatcher ExtCall bad-read row matches HOL"
+  if recursiveExtCallRows then
+    IO.println "PASS exact-state recursive ExtCall returned/bad-read rows match HOL"
+  else IO.println "FAIL exact-state recursive ExtCall returned/bad-read rows match HOL"
+  if recursiveShMemRows then
+    IO.println "PASS exact-state recursive ShMem load/store return and domain-error rows match HOL"
+  else IO.println "FAIL exact-state recursive ShMem load/store return and domain-error rows match HOL"
   if stateOwnedCallRows then
     IO.println "PASS exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"
   else IO.println "FAIL exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"
@@ -762,7 +881,8 @@ def runChecks : IO Bool := do
     IO.println "PASS exact recursive dispatcher Primitive rows match HOL"
   else IO.println "FAIL exact recursive dispatcher Primitive rows match HOL"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
-    sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
+    sharedMemoryRows && extCallRows && recursiveExtCallRows && recursiveShMemRows &&
+    recursiveStoreRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
     stateOwnedCallDestinationRows &&
     stateOwnedCallControlNegativeRows && stateOwnedCallExceptionNegativeRows &&
     stateOwnedSeqCallRows && stateOwnedLookupErrorRows &&

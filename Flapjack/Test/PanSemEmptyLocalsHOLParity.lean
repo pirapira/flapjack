@@ -1,12 +1,14 @@
 import Flapjack.Pancake.Semantics.PanSem.StateExact
 
 /-!
-# Direct-HOL parity for the exact `panSem$empty_locals`
+# Sampled original-HOL observations for `panSem$empty_locals`
 
-Reproduces the original-HOL oracle rows
-`scripts/hol-probes/pan_sem_empty_locals_probe.out` for `empty_locals`
-over the exact `MlString`-keyed `PanSemStateExact` carrier: the locals map is
-cleared while `clock` and `globals` are preserved.
+Reproduces the original-HOL observations in
+`scripts/hol-probes/pan_empty_locals_probe.out`: locals are cleared while
+`clock` and `globals` are preserved. `PanSemStateExact` uses `MlString` keys,
+but its maps are unrestricted lookup functions, so these examples do not
+establish equivalence with HOL's finite-map state carrier; the helper and this
+test remain untagged.
 -/
 
 namespace Flapjack.Test.PanSemEmptyLocalsHOLParity
@@ -44,7 +46,7 @@ example :
     (emptyLocalsHOLExact (width := 64) exactState).globals (ml "y")
       = exactState.globals (ml "y") := rfl
 
-/-- A Bool mirror of the three oracle rows. -/
+/-- A Bool mirror of the three sampled HOL observations. -/
 def emptyLocalsGuard : Bool :=
   ((emptyLocalsHOLExact (width := 64) exactState).locals (ml "x")).isNone &&
     (emptyLocalsHOLExact (width := 64) exactState).clock == 5 &&
@@ -55,7 +57,7 @@ def emptyLocalsGuard : Bool :=
 
 /-- Runs the parity checks. -/
 def runChecks : IO Bool := do
-  IO.println "PASS panSem empty_locals exact carrier matches all 3 oracle rows"
+  IO.println "PASS panSem empty_locals function-carrier examples match all 3 HOL observations"
   pure emptyLocalsGuard
 
 end Flapjack.Test.PanSemEmptyLocalsHOLParity

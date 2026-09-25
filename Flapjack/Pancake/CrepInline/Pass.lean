@@ -1,6 +1,8 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.CrepInline
+import Flapjack.Pancake.CrepLang.Prog
+import Flapjack.Basis.Pure.MlString
 import Std.Data.HashSet.Lemmas
 
 /-!
@@ -336,6 +338,131 @@ theorem lookup_insert [BEq FunName] [LawfulBEq FunName]
       rfl
 
 end CrepInlineFmap
+
+/-! ## Exact HOL inline-map input carrier
+
+`compile_inl_top_def` starts from a list of function triples, filters by the
+inline-name list, then applies HOL `alist_to_fmap`. Its map keys are `mlstring`
+and its values contain `crepLang$prog` at one fixed word width. The generic
+`CrepInlineFmap` above is useful for the untagged executable traversal, but it
+does not model those carriers. This exact input map keeps HOL's first-binding
+behavior for duplicate association-list keys and retains the selected source
+list separately so the later `compile_inl_prog` boundary can preserve order.
+-/
+
+abbrev CrepInlineMapHOLName := Flapjack.Basis.Pure.MlString.MlString
+
+structure CrepInlineFmapHOL (width : Nat) [NeZero width] where
+  entries : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width))
+  nodupKeys : (entries.map Prod.fst).Nodup
+
+namespace CrepInlineFmapHOL
+
+variable {width : Nat} [NeZero width]
+
+def empty : CrepInlineFmapHOL width :=
+  { entries := [], nodupKeys := by simp }
+
+def lookup [BEq CrepInlineMapHOLName] (name : CrepInlineMapHOLName)
+    (fs : CrepInlineFmapHOL width) :
+    Option (List Nat × CrepProgHOL width) := List.lookup name fs.entries
+
+def remove [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName]
+    (name : CrepInlineMapHOLName) (fs : CrepInlineFmapHOL width) :
+    CrepInlineFmapHOL width :=
+  { entries := fs.entries.filter (fun e => e.1 != name)
+    nodupKeys := fs.nodupKeys.sublist
+      ((List.filter_sublist (l := fs.entries)).map Prod.fst) }
+
+private theorem not_mem_fst_filter_bne [BEq CrepInlineMapHOLName]
+    [LawfulBEq CrepInlineMapHOLName] (name : CrepInlineMapHOLName)
+    (entries : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width))) :
+    name ∉ (entries.filter (fun e => e.1 != name)).map Prod.fst := by
+  intro h
+  rw [List.mem_map] at h
+  obtain ⟨entry, he, hfst⟩ := h
+  rw [List.mem_filter] at he
+  rw [← hfst] at he
+  simpa using he.2
+
+def insert [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName]
+    (name : CrepInlineMapHOLName) (value : List Nat × CrepProgHOL width)
+    (fs : CrepInlineFmapHOL width) : CrepInlineFmapHOL width :=
+  { entries := (name, value) :: fs.entries.filter (fun e => e.1 != name)
+    nodupKeys := by
+      rw [List.map_cons]
+      exact List.nodup_cons.mpr
+        ⟨not_mem_fst_filter_bne name fs.entries,
+          fs.nodupKeys.sublist
+            ((List.filter_sublist (l := fs.entries)).map Prod.fst)⟩ }
+
+/-- HOL `alist_to_fmap`: right-fold updates make the first association-list
+    binding win in the resulting finite map. -/
+def ofAList [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName] :
+    List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width)) →
+      CrepInlineFmapHOL width
+  | [] => empty
+  | (name, value) :: rest => insert name value (ofAList rest)
+
+theorem lookup_insert [BEq CrepInlineMapHOLName]
+    [LawfulBEq CrepInlineMapHOLName] (key name : CrepInlineMapHOLName)
+    (value : List Nat × CrepProgHOL width) (fs : CrepInlineFmapHOL width) :
+    (insert name value fs).lookup key =
+      if key == name then some value else fs.lookup key := by
+  unfold insert lookup
+  rw [List.lookup_cons]
+  cases h : key == name with
+  | true => simp
+  | false =>
+    have hn : ¬ (key == name) = true := by rw [h]; simp
+    rw [CrepInlineFmap.lookup_filter_bne]
+    · simp [h]
+    · exact fs.nodupKeys
+
+theorem lookup_remove [BEq CrepInlineMapHOLName]
+    [LawfulBEq CrepInlineMapHOLName] (key name : CrepInlineMapHOLName)
+    (fs : CrepInlineFmapHOL width) :
+    (remove name fs).lookup key =
+      if key == name then none else fs.lookup key := by
+  unfold remove lookup
+  exact CrepInlineFmap.lookup_filter_bne key name fs.entries fs.nodupKeys
+
+theorem lookup_ofAList [BEq CrepInlineMapHOLName]
+    [LawfulBEq CrepInlineMapHOLName] (key : CrepInlineMapHOLName)
+    (entries : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width))) :
+    (ofAList entries).lookup key = List.lookup key entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry rest ih =>
+    obtain ⟨name, value⟩ := entry
+    rw [ofAList, lookup_insert, ih]
+    cases h : key == name <;> simp [h, List.lookup_cons]
+
+end CrepInlineFmapHOL
+
+/-- Source-order filtering and the exact HOL `alist_to_fmap` carrier bridge
+    used as the input to `compile_inl_prog`. -/
+def crepInlineSelectedHOLRows {width : Nat} [NeZero width]
+    [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName]
+    (inlineNames : List CrepInlineMapHOLName)
+    (functions : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width))) :=
+  functions.filter (fun row => inlineNames.contains row.1)
+
+def crepInlineMapHOL {width : Nat} [NeZero width]
+    [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName]
+    (inlineNames : List CrepInlineMapHOLName)
+    (functions : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width))) :
+    CrepInlineFmapHOL width :=
+  CrepInlineFmapHOL.ofAList (crepInlineSelectedHOLRows inlineNames functions)
+
+theorem crepInlineMapHOL_lookup {width : Nat} [NeZero width]
+    [BEq CrepInlineMapHOLName] [LawfulBEq CrepInlineMapHOLName]
+    (inlineNames : List CrepInlineMapHOLName)
+    (functions : List (CrepInlineMapHOLName × (List Nat × CrepProgHOL width)))
+    (name : CrepInlineMapHOLName) :
+    (crepInlineMapHOL inlineNames functions).lookup name =
+      List.lookup name (crepInlineSelectedHOLRows inlineNames functions) :=
+  CrepInlineFmapHOL.lookup_ofAList name _
 
 /-- Exact shape of Cake `crep_inline$inline_prog`
     (`cakeml/pancake/crep_inlineScript.sml:203-257`) over the genuine

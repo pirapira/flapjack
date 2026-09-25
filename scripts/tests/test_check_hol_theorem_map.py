@@ -32,6 +32,455 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_pan_globals_compile_prog_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/pan_globalsScript.sml", "compile_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("ProgHOL width", record["reviewer"])
+        self.assertIn("No byte-range premise", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_globals_transformation_carrier_mismatches_are_documented(self):
+        cases = {
+            ("Flapjack/Pancake/PanGlobals.lean", "globalRenameProg"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalRenameDecls"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_decs_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalResortDecls"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "resort_decls_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalNewMainName"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "new_main_name_def",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalDeclShapes"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "dec_shapes_def",
+            ),
+        }
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        tagged = MAP["tagged_declarations"]()
+        for key, (hol_path, hol_name) in cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("flapjack-6nn.3.1", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, tagged)
+
+    def test_pan_globals_exception_carrier_mismatches_are_documented(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        cases = {
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "exceptions_append"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "exceptions_append",
+                "flapjack-dlc.48",
+            ),
+            (
+                "Flapjack/Pancake/Proofs/PanGlobals.lean",
+                "exceptions_FILTER_is_function",
+            ): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "exceptions_FILTER_is_function",
+                "flapjack-dlc.47",
+            ),
+        }
+        tagged = MAP["tagged_declarations"]()
+        for key, (hol_path, hol_name, bead) in cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("Exp α.Const", record["reviewer"])
+                self.assertIn(bead, record["reviewer"])
+                self.assertNotIn(key, tagged)
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            ("Flapjack/Pancake/PanGlobals.lean", "fpermName"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_name_def",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cancel"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "fperm_name_cancel",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cong"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "fperm_name_cong",
+            ),
+        }
+        for key, (hol_path, hol_name) in exact_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn("polymorphic", record["reviewer"])
+                self.assertIn(key, tagged)
+        mismatch_cases = {
+            ("Flapjack/Pancake/PanGlobals.lean", "globalRenameFunctionName"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "fperm_name_def",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_name_cancel"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "fperm_name_cancel",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_name_cong"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "fperm_name_cong",
+            ),
+        }
+        for key, (hol_path, hol_name) in mismatch_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("specialization", record["reviewer"])
+                self.assertNotIn(key, tagged)
+
+    def test_pan_globals_fresh_name_exact_ports_and_production_forms(self):
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "freshNameHOL_not_mem_hol"): (
+                "fresh_name_correct",
+            ),
+            (
+                "Flapjack/Pancake/Proofs/PanGlobals.lean",
+                "freshNameHOL_not_mem_of_subset_hol",
+            ): (
+                "fresh_name_correct'",
+            ),
+        }
+        for key, (hol_name,) in exact_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/proofs/pan_globalsProofScript.sml", hol_name),
+                )
+                self.assertEqual(
+                    record["statement_status"], "reviewed_names_as_string"
+                )
+                self.assertEqual(record["names_as_string"], ["name"])
+                self.assertEqual(record["names_as_string_boundary"], ["name"])
+                self.assertIn("byte-observable", record["reviewer"])
+                self.assertIn(key, tagged)
+        mismatch_cases = {
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct"): (
+                "fresh_name_correct",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct'"): (
+                "fresh_name_correct'",
+            ),
+        }
+        for key, (hol_name,) in mismatch_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/proofs/pan_globalsProofScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("globalFreshName", record["reviewer"])
+                self.assertNotIn(key, tagged)
+
+    def test_crep_sem_state_exact_helpers_are_held_for_fmap_qualifier(self):
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            "decClockCrepSemHOL": "dec_clock_def",
+            "fixClockCrepSemHOL": "fix_clock_def",
+            "fixClockCrepSemHOL_IMP_LESS_EQ": "fix_clock_IMP_LESS_EQ",
+            "memLoadCrepSemHOL": "mem_load_def",
+        }
+        for lean_name, hol_name in exact_cases.items():
+            key = ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", lean_name)
+            with self.subTest(lean_name=lean_name):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("fmap_as_finite_support", record["reviewer"])
+                self.assertNotIn(key, tagged)
+
+    def test_crep_sem_holstate_update_helpers_are_held_for_fmap_qualifier(self):
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            "setVar": "set_var_def",
+            "setGlobals": "set_globals_def",
+            "updLocals": "upd_locals_def",
+            "emptyLocals": "empty_locals_def",
+            "resVarEq": "res_var_def",
+        }
+        for lean_name, hol_name in exact_cases.items():
+            key = ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", lean_name)
+            with self.subTest(lean_name=lean_name):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", record["reviewer"])
+                self.assertNotIn(key, tagged)
+
+    def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
+        key = (
+            "Flapjack/Pancake/Semantics/CrepProps.lean",
+            "crepAssignedVars_nestedSeq_assign_zipWithW",
+        )
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            (
+                "cakeml/pancake/semantics/crepPropsScript.sml",
+                "nested_seq_assigned_vars_eq",
+            ),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("Call/ExtCall names are String", record["reviewer"])
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crep_res_var_definition_mismatch_is_in_review_inventory(self):
+        key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/crepSemScript.sml", "res_var_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("infinite support", record["reviewer"])
+        self.assertIn(key, MAP["data_declarations"]())
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_struct_convert_value_carrier_mismatch_is_documented(self):
+        key = (
+            "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+            "panStructConvertValue",
+        )
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/proofs/pan_structsProofScript.sml", "convert_v_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("word_lab wrapper", record["reviewer"])
+        self.assertIn("flapjack-pxn.18.3.5.8.19", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
+        self,
+    ):
+        key = ("Flapjack/Pancake/PanGlobals.lean", "globalRenameFunctionName")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/pan_globalsScript.sml", "fperm_name_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertNotIn("names_as_string", record)
+        self.assertIn("polymorphic", record["reviewer"])
+        self.assertIn("flapjack-pxn.18.3.5.8", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crep_set_globals_state_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/crepSemScript.sml", "set_globals_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("unrestricted Nat-to-Option locals", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crep_set_var_state_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolVarW")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/crepSemScript.sml", "set_var_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("infinite", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crep_clock_and_locals_carrier_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            "decCrepHolClockW": "dec_clock_def",
+            "emptyCrepHolLocalsW": "empty_locals_def",
+            "fixCrepHolClockW": "fix_clock_def",
+            "fixCrepHolClock_IMP_LESS_EQW": "fix_clock_IMP_LESS_EQ",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/CrepSem.lean", lean_name)
+            with self.subTest(key=key):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("infinite", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crepprops_simp_and_nested_seq_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            "decCrepHolClock_simp": "dec_clock_simp",
+            "emptyCrepHolLocals_simp": "empty_locals_simp",
+            "crepAssignedFreeVars_nestedSeq_assign_zipWithW": "nested_seq_assigned_free_vars_eq",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/CrepProps.lean", lean_name)
+            with self.subTest(key=key):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepPropsScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("withdrawn", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_crepprops_globals_and_assigned_var_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            "flookup_setCrepHolGlobals_localsW": "FLOOKUP_set_globals",
+            "crepAssignedFreeVars_nestedSeq_storeGlobalsW":
+                "assigned_free_vars_store_globals_empty",
+            "crepAssignedVars_nestedSeq_storeGlobalsW":
+                "assigned_vars_store_globals_empty",
+            "mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW":
+                "assigned_free_vars_IMP_assigned_vars",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/CrepProps.lean", lean_name)
+            with self.subTest(key=key):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepPropsScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("String", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_empty_locals_definition_mismatch_is_in_review_inventory(self):
+        key = (
+            "Flapjack/Pancake/Semantics/PanSem.lean",
+            "panEmptyLocals",
+        )
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panSemScript.sml", "empty_locals_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("finite-map bridge", record["reviewer"])
+        self.assertIn(key, MAP["data_declarations"]())
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_crep_state_shape_mismatch_is_not_mapped_as_exact(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record
@@ -169,6 +618,79 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                       (record["lean_path"], record["lean_name"]) == key)
         self.assertEqual(record["hol_name"], "compile_exp_not_mem_load_glob")
         self.assertEqual(record["statement_status"], "documented_mismatch")
+
+    def test_is_wf_shape_drop_carrier_mismatch_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop")
+        self.assertEqual(inventory[key]["hol_name"], "is_wf_shape_drop")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "is_wf_shape_drop")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("unrestricted String", record["reviewer"])
+        self.assertIn("shapedFields", record["reviewer"])
+
+    def test_old_exp_shapes_map_analogue_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "structOldExpShapes_eq_map")
+        self.assertEqual(inventory[key]["hol_name"], "old_exp_shapes_eq")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "old_exp_shapes_eq")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("byte-observable", record["reviewer"])
+        self.assertIn("String", record["reviewer"])
+
+    def test_fperm_decs_decls_carrier_mismatch_stays_untagged(self):
+        key = ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_decls")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        self.assertEqual(inventory[key]["hol_name"], "fperm_decs_decls")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "fperm_decs_decls")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        review = MAP["DOCUMENTED_MISMATCHES"][key][2]
+        self.assertIn("unused ys binder", review)
+        self.assertIn("arbitrary α global values", review)
+        self.assertIn("no NameRanged premise", review)
+        self.assertIn("arbitrary α global values", record["reviewer"])
+
+
+    def test_fields_in_order_reorder_analogue_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop")
+        self.assertEqual(inventory[key]["hol_name"], "fields_in_order_reorder_noop")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "fields_in_order_reorder_noop")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("byte-observable", record["reviewer"])
+        self.assertIn("No NameRanged premise", record["reviewer"])
 
 
 class ValidateInventoryTest(unittest.TestCase):
@@ -427,6 +949,251 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertEqual(MAP["validate_inventory"]([record], {key}, {}), [])
         errors = MAP["validate_inventory"]([record], {key}, {key: reference})
         self.assertTrue(any("must not carry an @[hol] tag" in error for error in errors))
+
+    def test_res_var_hol_equality_forms_are_documented_mismatch(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        hol_forms = {
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "foldl_res_var_zip_lookup_var_hol"): "FOLDL_res_var_ZIP_lookup_var",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "foldl_res_var_zip_lookup_hol"): "FOLDL_res_var_ZIP_lookup",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_fupdate_submap_hol"): "SUBMAP_IMP_FUPDATE_SUBMAP",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_domsub_submap_hol"): "SUBMAP_IMP_DOMSUB_SUBMAP",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_domsub_fupdate_hol"): "SUBMAP_IMP_DOMSUB_FUPDATE",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_commutes_strong_hol"): "res_var_commutes_strong",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_foldl_commutes_strong_hol"): "res_var_foldl_commutes_strong",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "flookup_res_var_is_mem_zip_eq_hol"): "flookup_res_var_is_mem_zip_eq",
+            ("Flapjack/Pancake/Semantics/CrepProps.lean",
+             "flookup_res_var_distinct_zip_eq_hol"): "flookup_res_var_distinct_zip_eq",
+        }
+        for key, hol_name in hol_forms.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(record["hol_name"], hol_name)
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("infinite-support", record["reviewer"])
+                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.3.1",
+                              record["reviewer"])
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
+        production = {
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "FOLDL_res_var_ZIP_lookup_var"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "FOLDL_res_var_ZIP_lookup"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_FUPDATE_SUBMAP"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_DOMSUB_SUBMAP"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_DOMSUB_FUPDATE"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_commutes_strong"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_foldl_commutes_strong"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "flookup_res_var_is_mem_zip_eq"),
+        }
+        for key in production:
+            with self.subTest(key=key):
+                self.assertEqual(by_key[key]["statement_status"],
+                                 "documented_mismatch")
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_globals_lookup_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "globalsLookup")
+        self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+        hol_path, hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+        self.assertEqual(
+            (hol_path, hol_name),
+            (
+                "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+                "globals_lookup_def",
+            ),
+        )
+        self.assertIn("flapjack-pxn.18.3.5.8.8", reviewer)
+
+    def test_pan_to_crep_definition_cluster_mismatches_are_documented(self):
+        expected = {
+            "excpRel": "excp_rel_def",
+            "ctxtFc": "ctxt_fc_def",
+            "codeRel": "code_rel_def",
+            "stateRel": "state_rel_def",
+            "localsRel": "locals_rel_def",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", lean_name)
+            self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+            hol_path, got_hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+            self.assertEqual(hol_path, "cakeml/pancake/proofs/pan_to_crepProofScript.sml")
+            self.assertEqual(got_hol_name, hol_name)
+            self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
+
+    def test_pan_value_evaluator_stability_mismatches_are_documented(self):
+        expected = {
+            "evalPanValueExps_update_local_not_mem": "update_locals_not_vars_eval_mmap",
+            "evalPanValueExps_update_locals_not_mem": "opt_mmap_eval_distinct_lists_not_affect",
+            "evalPanValueExp_update_locals_not_mem": "eval_distinct_lists_not_affect",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/PanValueEvaluatorStability.lean", lean_name)
+            self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+            hol_path, got_hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+            self.assertEqual(hol_path, "cakeml/pancake/proofs/pan_to_crepProofScript.sml")
+            self.assertEqual(got_hol_name, hol_name)
+            self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
+
+
+    def test_panlang_functions_append_filter_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/PanLang/Decl.lean", "isDeclHOL"): (
+                "cakeml/pancake/panLangScript.sml", "is_decl_def"),
+            ("Flapjack/Pancake/PanLang/Decl.lean", "isFunctionHOL"): (
+                "cakeml/pancake/panLangScript.sml", "is_function_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_append"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_append"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "functionsHOL_filter_isFunction"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_FILTER"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "functionsHOL_filter_isDecl"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "functions_FILTER'"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+        # The ARB-carrying functions_eq_FILTER is deliberately not tagged.
+        eq_filter = ("Flapjack/Pancake/Semantics/PanProps.lean",
+                     "functionsHOL_eq_filter")
+        self.assertNotIn(eq_filter, MAP["tagged_declarations"]())
+        self.assertNotIn(eq_filter, by_key)
+
+    def test_panprops_is_wf_shape_of_v_exact_port(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        key = ("Flapjack/Pancake/Semantics/PanProps.lean",
+               "isWfShapeValueHOLExact_shapeOfHOLExact")
+        record = next(
+            (r for r in manifest
+             if (r["lean_path"], r["lean_name"]) == key), None)
+        self.assertIsNotNone(record)
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "is_wf_shape_of_v"))
+        self.assertEqual(record["statement_status"], "reviewed_exact")
+        self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_pan_primop_is_wf_shape_v_exact_port(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        key = ("Flapjack/Pancake/Semantics/PanProps.lean",
+               "panPrimopHOLExact_isWfShapeValueHOLExact")
+        record = next(
+            (r for r in manifest
+             if (r["lean_path"], r["lean_name"]) == key), None)
+        self.assertIsNotNone(record)
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml",
+             "pan_primop_is_wf_shape_v"))
+        self.assertEqual(record["statement_status"], "reviewed_exact")
+        self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_shape_wf_nil_and_drop_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeValueHOLExact_nil_step1"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_nil_step1"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_nil"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeValueHOLExact_drop"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_drop"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_every_exp_and_exps_of_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "every_exp_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "exps_of_def"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+
+    def test_panprops_localised_and_mmap_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "localised_exp_real_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "namelessExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "nameless_exp_real_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedProgHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "localised_prog_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "opt_mmap_eq_some_helper"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+        # The production String-carrier predicate keeps the withdrawn tag.
+        mismatch = ("Flapjack/PanLocalised.lean", "localisedProg")
+        record = by_key[mismatch]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "localised_prog_def"))
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("String", record["reviewer"])
+        self.assertNotIn(mismatch, MAP["tagged_declarations"]())
 
 
 if __name__ == "__main__":

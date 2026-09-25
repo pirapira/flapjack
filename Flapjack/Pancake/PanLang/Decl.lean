@@ -154,6 +154,96 @@ def structInfoToHOL (d : Flapjack.StructInfoHOL) : StructInfoHOLExact :=
   obtain ⟨fields, size⟩ := d
   simp [structInfoToHOL, structInfoOfHOL, listParamToHOL_paramOfHOL]
 
+/-- Exact port of HOL `panLang$functions` (`panLangScript.sml:319-326`):
+`functions` projects the top-level function declarations of a program in source
+order, returning `(name, params, body, return)` for each `Function` and dropping
+`Decl`/`ExnDecl`/`Name` entries.  Names use `MlS`, shapes use `ShapeHOL`, and
+bodies use the word-indexed `ProgHOL width`, so this is an exact word-indexed
+port (the production `functionEntries`/`functions` use Lean `String` and generic
+`Prog α`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "functions_def"]
+def functionsHOL {width : Nat} [NeZero width] :
+    List (DeclHOL width) →
+      List (MlS × List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionsHOL declarations
+  | .decl _ _ _ :: declarations => functionsHOL declarations
+  | .exnDecl _ _ :: declarations => functionsHOL declarations
+  | .name _ _ :: declarations => functionsHOL declarations
+
+/-- Exact port of HOL `panLang$is_decl` (`panLangScript.sml:234-237`):
+`is_decl (Decl sh v e) = T`, `is_decl _ = F`.  The argument carrier
+`DeclHOL width` is the reviewed word-indexed rendering of HOL's polymorphic
+`'a decl` (see the `decl` tag above), so the body transfers clause for
+clause. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_decl_def"]
+def isDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .decl _ _ _ => true
+  | _ => false
+
+/-- Exact port of HOL `panLang$is_exn_decl` (`panLangScript.sml:239-242`):
+true only for `ExnDecl`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_exn_decl_def"]
+def isExnDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
+/-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
+`is_function (Function _) = T`, `is_function _ = F`, over the same reviewed
+`DeclHOL width` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_function_def"]
+def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .function _ => true
+  | _ => false
+
+/-- Exact port of HOL `panLang$exceptions` (`panLangScript.sml:328-333`):
+projects the top-level exception declarations of a program in source order,
+returning `(eid, shape)` for each `ExnDecl` and dropping
+`Function`/`Decl`/`Name` entries.  The exception id is an `MlS` and the shape
+uses `ShapeHOL`, so this is an exact word-indexed port (the production
+`exceptionEntries` uses Lean `String` and monomorphic `Shape`).
+
+Executable-path disposition (bead `flapjack-4ac.1.44.1`): the compiled RISC-V
+pipeline extracts exception ids through `crepGetEidsFromDecls`
+(`Flapjack/Pipeline.lean:66`, used by `pipelineCrepeContext` /
+`pipelineCrepeCompileContext` at `:315` / `:324`), which numbers `.exnDecl`
+entries directly and calls neither `exceptionEntries` nor `exceptionsHOL`.
+Production `exceptionEntries` is executed only by the untagged mirror
+`panToCrepGetEidsFromDeclsHOL`
+(`Flapjack/Pancake/PanToCrep/Compile.lean:1131`) inside `compileToCrepHOL`,
+which has no executable caller (the run path uses `compileToCrep` plus
+`panToCrepCompileInlTop`; `compileProgToCrepHOL` appears only in proofs and
+tests). Routing the executable extraction through this reviewed predicate
+additionally needs a total checked codec `declOfHOL ∘ declToHOL = id`, which
+currently holds only under byte-ranged hypotheses (`declOfHOL_declToHOL`), so
+the faithful executable route depends on the MlString/`ShapeHOL` carrier work
+tracked by `flapjack-pxn.18.3.5.8`. The proof-side bridge
+`exceptionsHOL_map_paramOfHOL` already connects the reviewed predicate to the
+production analogue. -/
+@[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
+def exceptionsHOL {width : Nat} [NeZero width] :
+    List (DeclHOL width) → List (MlS × ShapeHOL)
+  | [] => []
+  | .function _ :: declarations => exceptionsHOL declarations
+  | .decl _ _ _ :: declarations => exceptionsHOL declarations
+  | .exnDecl exceptionName shape :: declarations =>
+      (exceptionName, shape) :: exceptionsHOL declarations
+  | .name _ _ :: declarations => exceptionsHOL declarations
+
+/-- The exact `exceptionsHOL` projects exactly the same `(name, shape)` pairs as
+the production `exceptionEntries` after the carrier bridge `paramOfHOL` /
+`declOfHOL`. -/
+@[simp] theorem exceptionsHOL_map_paramOfHOL {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width)) :
+    (exceptionsHOL declarations).map paramOfHOL =
+      exceptionEntries (declarations.map declOfHOL) := by
+  induction declarations with
+  | nil => simp [exceptionsHOL, exceptionEntries]
+  | cons d ds ih =>
+    cases d <;> simp [exceptionsHOL, exceptionEntries, declOfHOL, paramOfHOL, ih]
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production
@@ -339,6 +429,21 @@ end
     (info : StructInfoHOLExact) (rest : StructContextExact) :
     structContextLookupHOL name ((candidate, info) :: rest) =
       (if name = candidate then some info else structContextLookupHOL name rest) := rfl
+
+/-- `ALOOKUP` of an appended context is the first match in the prefix, or else
+    the lookup in the suffix (HOL `ALOOKUP_APPEND`). -/
+theorem structContextLookupHOL_append (name : MlS) (first second : StructContextExact) :
+    structContextLookupHOL name (first ++ second) =
+      (match structContextLookupHOL name first with
+        | some info => some info
+        | none => structContextLookupHOL name second) := by
+  induction first with
+  | nil => rfl
+  | cons pair rest ih =>
+      obtain ⟨candidate, info⟩ := pair
+      by_cases h : name = candidate
+      · simp [h]
+      · simp [h, ih]
 
 @[simp] theorem sizeOfShapeWithContextHOL_one (context : StructContextExact) :
     sizeOfShapeWithContextHOL context .one = 1 := rfl

@@ -123,4 +123,41 @@ decreasing_by
       List.map_congr_left (fun x hx => ih x hx)
     simpa [Function.comp_apply] using h
 
+/-! Exact width-indexed port of HOL `crepLang$load_shape_def` over the faithful
+    `CrepExpHOL` carrier. Keep the production `loadShapeBytesW` adapter
+    untagged; `loadShapeBytesHOLW_toProduction` below proves that its output is
+    the decoded result of this exact definition. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+def loadShapeBytesHOLW {width : Nat} [NeZero width]
+    (address : BitVec width) (count : Nat) (value : CrepExpHOL width) :
+    List (CrepExpHOL width) :=
+  match count with
+  | 0 => []
+  | count + 1 =>
+      let loaded := if address == 0 then .load value
+        else .load (.op .add [value, .const address])
+      loaded :: loadShapeBytesHOLW
+        (address + BitVec.ofNat width (width / 8)) count value
+termination_by count
+
+/-- The executed production width wrapper agrees with exact HOL
+    `load_shape_def` after decoding its exact `CrepExpHOL` result. -/
+theorem loadShapeBytesHOLW_toProduction {width : Nat} [NeZero width]
+    (address : BitVec width) (count : Nat) (value : CrepExpHOL width) :
+    (loadShapeBytesHOLW address count value).map crepExpOfHOL =
+    loadShapeBytesW address count (crepExpOfHOL value) := by
+  induction count generalizing address with
+  | zero => simp [loadShapeBytesHOLW, loadShapeBytesW, loadShapeBytes]
+  | succ count ih =>
+      simp only [loadShapeBytesHOLW, loadShapeBytesW, loadShapeBytes,
+        List.map_cons]
+      rw [ih]
+      congr 1
+      simp only [beq_iff_eq]
+      by_cases hzero : address = 0
+      · rw [if_pos hzero, if_pos hzero]
+        simp [crepExpOfHOL]
+      · rw [if_neg hzero, if_neg hzero]
+        simp [crepExpOfHOL]
+
 end Flapjack

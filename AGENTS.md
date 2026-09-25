@@ -40,6 +40,11 @@ commit, verification results, or exact blocked reason on the bead, and notify
 the coordinator. Keep dependency beads open until their own acceptance criteria
 are met.
 
+For an executable HOL definition, landing a tagged proof-side duplicate is
+partial progress: keep its inventory bead open until the executed compiler
+uses the reviewed definition, or a documented, measured performance exception
+is in place. Record the remaining production-path work on a linked bead.
+
 Maintain one fleet integration PR. Agents push their own branches but do not
 open separate PRs; the coordinator merges reviewed work into the integration
 branch. Merge the updated integration branch back into agent branches with
@@ -126,6 +131,9 @@ statement (or definition body) with its HOL source, run
 lock-file diff. The hash gate detects Lean declaration changes only: it does not
 hash untagged dependencies, theorem proof terms, or the HOL declarations, and it
 does not prove HOL-to-Lean equivalence or replace source-level review.
+After rebuilding a tagged declaration, run `lake build Flapjack` before the
+type-hash check: it refreshes `.lake/build/ir/Flapjack.setup.json`, which can
+otherwise still point at an older cached OLean even when `lake test` passes.
 
 **A matching name is not enough.** Before adding `@[hol]`, compare the HOL and
 Lean declarations' definitions, quantified variables, hypotheses, side
@@ -144,8 +152,17 @@ implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
 
 **Qualify only named list-to-array state fields.** An unqualified tag records a
-statement reviewed as exact and has manifest status `reviewed_exact`. The
-`(list_as_array := [field, ...])` qualifier is only for specific HOL list
+statement reviewed as exact and has manifest status `reviewed_exact`. When a
+HOL data structure uses a reviewed *different Lean representation* (for
+example, HOL list as Lean `Array`), name that standard translation in the
+`@[hol]` tag of every declaration that relies on it, using a supported
+qualifier. Ordinary constructor-for-constructor ports such as HOL list to
+Lean `List` need no qualifier. Do not treat acceptance of a representation
+difference for one declaration as a blanket exception for others or leave it
+implicit under an unqualified tag. Add a new qualifier and its checker/review
+rules before using another non-identity representation; a qualifier records
+only that translation, not unrelated statement or behavior differences.
+The `(list_as_array := [field, ...])` qualifier is only for specific HOL list
 fields represented by Lean arrays; it does not allow any other difference in
 the theorem statement or semantics. Review the fields against the surrounding
 HOL state relation, list lengths, index bounds, and update behavior. The
@@ -182,6 +199,28 @@ manifest classification, while Lake checks the proof. Neither check establishes
 HOL correspondence or premise discharge; record those in source review. The
 theorem map and type-hash lock record both qualifier lists. Do not add this
 qualifier to production declarations until checker tests and source review pass.
+
+**Qualify canonical finite-map carriers.** Use
+`(fmap_as_finite_support := [field, ...])` when a HOL `|->` finite-map field is
+represented by the reviewed canonical Lean translation `HolFiniteMapExact`
+(a `lookup` function plus a `finiteSupport` proposition). Every named field must
+be declared by ONE owning carrier structure in the same module, whose field
+types use `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
+ineligible, and fields split across several structures are rejected. When a
+module declares several structures with the same field names (for example a
+broad state and its finite-support counterpart), the tagged declaration's own
+carrier disambiguates: the owner must be named in that declaration's signature.
+The module must contain the checked canonical witness
+`holFmapAsFiniteSupportWitness`,
+whose statement names that owning structure and states a real `toX`/`ofX`
+roundtrip between it and its broad counterpart (a bare `State -> Broad -> State`
+arrow, or an unrelated counterpart mention, is rejected; the broad counterpart
+need not be declared in the same module). The
+reference checker verifies field/owner/carrier/witness shape and Lake checks the
+proof; neither establishes HOL correspondence. The qualifier is a representation
+statement only: it does not authorize changed quantifiers, hypotheses,
+conclusions, `BEq` side conditions, or word-model differences, and every tagged
+declaration still needs its own statement/side-condition review.
 
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`

@@ -16,3 +16,5 @@ fields_in_order_reorder_noop=∀eflds info_fields.   MAP FST info_fields = MAP F
 opt_mmap_eq_every=∀f xs ys P.   OPT_MMAP f xs = SOME ys ∧ (∀x y. MEM x xs ∧ f x = SOME y ⇒ P y) ⇒   EVERY P ys
 alookup_drop_helper=T
 map_fst_eq_alookup=T
+map_fst_eq_alookup_different_value_types=T
+map_fst_eq_alookup_inferred_types=v:β; nm:α; ys:(α # γ) list; xs:(α # β) list

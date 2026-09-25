@@ -137,3 +137,24 @@ val _ = print_eval "map_fst_eq_alookup"
       2 = SND (EL 1 [(strlit "a", 1); (strlit "b", 2)]) /\
       ALOOKUP [(strlit "a", 3); (strlit "b", 4)] (strlit "b") =
         SOME (SND (EL 1 [(strlit "a", 3); (strlit "b", 4)]))``;
+(* HOL's key and value types are inferred independently by the source
+   statement. This instance uses Nat values in xs and Bool values in ys. *)
+val _ = print_eval "map_fst_eq_alookup_different_value_types"
+  ``MAP FST [(strlit "a", 1); (strlit "b", 2)] =
+      MAP FST [(strlit "a", T); (strlit "b", F)] /\
+    ALOOKUP [(strlit "a", 1); (strlit "b", 2)] (strlit "b") = SOME 2 ==>
+    pan_structs$afindi (strlit "b") [(strlit "a", 1); (strlit "b", 2)] = SOME 1 /\
+      pan_structs$afindi (strlit "b") [(strlit "a", T); (strlit "b", F)] = SOME 1 /\
+      1 < LENGTH [(strlit "a", 1); (strlit "b", 2)] /\
+      1 < LENGTH [(strlit "a", T); (strlit "b", F)] /\
+      2 = SND (EL 1 [(strlit "a", 1); (strlit "b", 2)]) /\
+      ALOOKUP [(strlit "a", T); (strlit "b", F)] (strlit "b") =
+        SOME (SND (EL 1 [(strlit "a", T); (strlit "b", F)]))``;
+val map_fst_source_type_term =
+  ``MAP FST xs = MAP FST ys /\ ALOOKUP xs nm = SOME v``;
+val map_fst_inferred_types =
+  map (fn variable => term_to_string variable ^
+        type_to_string (type_of variable))
+    (free_vars map_fst_source_type_term);
+val _ = print ("map_fst_eq_alookup_inferred_types=" ^
+  String.concatWith "; " map_fst_inferred_types ^ "\n");

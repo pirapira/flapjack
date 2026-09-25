@@ -4,6 +4,7 @@ import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.CrepLang.Prog
 
 /-!
 Executable expression lowering from Flapjack to Crepe.
@@ -33,12 +34,26 @@ structure PanToCrepHOLContext (α : Type) where
   eids : FiniteMap ExceptionId α
   vmax : Nat
 
-/- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `mk_ctxt_def` keys
-   `vars`/`funcs`/`eids` by `varname`/`funname`/`eid`, which
-   `panLangScript.sml`/`crepLangScript.sml` alias to `mlstring`, while this
-   Lean carrier keys them by `VarName`/`FunName`/`ExceptionId` = `String`.
-   The exact MlString-keyed syntax is tracked in `flapjack-pxn.18.3.5.8` /
-   parent `flapjack-pxn.18.3.5.7.2`. -/
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). Source-reviewed decision
+    (`flapjack-dlc.26`): the `@[hol "cakeml/pancake/pan_to_crepScript.sml"
+    "mk_ctxt_def"]` tag stays withdrawn as a documented carrier mismatch.
+    HOL `mk_ctxt_def` (`cakeml/pancake/pan_to_crepScript.sml:310-316`) stores
+    `vars : varname |-> shape # num list`,
+    `funcs : funname |-> ((varname # shape) list # shape)`,
+    `eids : eid |-> 'a word`, `vmax : num`. There `varname`/`funname`/`eid`
+    are `mlstring` (`panLangScript.sml:24-28`) and `shape` carries `stcname =
+    mlstring` names (`panLangScript.sml:36-38`). This constructor instead takes
+    production `VarName`/`FunName`/`ExceptionId` = `String` keys, the
+    production `Shape` (whose `named` field is `String`) in the `vars`/`funcs`
+    values, a generic `α` for the `eids` value rather than HOL's
+    word-length-indexed `'a word`, and the extensional
+    `FiniteMap α β := α → Option β` encoding of HOL's `fmap` (not the literal
+    HOL carrier). The `names_as_string` qualifier cannot authorize the `Shape`
+    value carrier or the changed `α`/`'a word` quantified eids type, and no
+    `NameRanged` byte witness applies because this constructor produces a
+    context, not a name. The exact MlString/`ShapeHOL`/`BitVec width` context
+    carrier replacement is tracked by `flapjack-pxn.18.3.5.8.13` (under
+    `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`). -/
 def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
     (funcs : FiniteMap FunName (List (VarName × Shape) × Shape))
     (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
@@ -179,6 +194,90 @@ def expHdl {α : Type u} [BEq String]
 theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
+
+/-! `pan_to_crep$exp_hdl` over the `MlString`-keyed / `ShapeHOL` / `CrepProgHOL`
+    (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
+
+    HOL's equations are
+    `exp_hdl fm v = case FLOOKUP fm v of
+      | NONE => Skip
+      | SOME (vshp, ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns)))`.
+    The `@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]` tag is
+    WITHDRAWN (bead `flapjack-2s5`). HOL quantifies over a finite map
+    `varname |-> (shape # num list)`; this declaration instead takes
+    `FiniteMap MlS (ShapeHOL × List Nat)`, the production raw function
+    `MlString → Option (ShapeHOL × List Nat)`, which admits infinite support.
+    Its quantified domain is therefore strictly broader than HOL's.
+
+    The `fmap_as_finite_support` qualifier covers fields of a same-module
+    carrier structure, not a bare map parameter. A faithful finite-map port
+    is tracked by `flapjack-pxn.18.3.5.8.13.2`. This raw-map helper remains
+    untagged infrastructure. The executed production `expHdlFiniteMap` is
+    also untagged (its key is `VarName = String`); the checked bridge
+    `crepProgToHOL_expHdlFiniteMap` relates the two under byte-ranged codecs. -/
+def expHdlHOL {width : Nat} [NeZero width]
+    (fm : FiniteMap Flapjack.Pancake.PanLang.MlS
+      (Flapjack.Pancake.PanLang.ShapeHOL × List Nat))
+    (v : Flapjack.Pancake.PanLang.MlS) : CrepProgHOL width :=
+  match FLOOKUP fm v with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeqHOL
+        (panMap2 (fun destination source => .assign destination source)
+          names (loadGlobalsHOL (0 : BitVec 5) names.length))
+
+/-- Codec from the production `String`-keyed finite map to the exact
+    `MlString`-keyed HOL finite map. Names are encoded by the total
+    `MlString.ofString`, and each stored shape by `shapeToHOL`; the flattened
+    word lists are unchanged. Flapjack-only representation bridge. -/
+def finiteMapToHOL (fm : FiniteMap String (Shape × List Nat)) :
+    FiniteMap Flapjack.Pancake.PanLang.MlS
+      (Flapjack.Pancake.PanLang.ShapeHOL × List Nat) :=
+  fun key =>
+    (fm (Flapjack.Basis.Pure.MlString.toStringOfBytes key)).map
+      (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2))
+
+/-- Cake's `MAP2` commutes with the program/expression codecs: mapping the
+    production assignment list into the exact carriers equals assigning over the
+    mapped value list. -/
+theorem panMap2_assign_map {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width))) :
+    (panMap2
+        (fun destination source =>
+          (CrepProg.assign destination source : CrepProg (BitVec width)))
+        names values).map crepProgToHOL
+      = panMap2
+          (fun destination source =>
+            (CrepProgHOL.assign destination source : CrepProgHOL width))
+          names (values.map crepExpToHOL) := by
+  induction names generalizing values with
+  | nil => simp [panMap2]
+  | cons name names ih =>
+      cases values with
+      | nil => simp [panMap2]
+      | cons value values => simp [panMap2, crepProgToHOL, ih]
+
+/-- Narrow kernel bridge: on every byte-ranged variable name, encoding the
+    production finite map and running the exact `expHdlHOL` agrees with the
+    `crepProgToHOL` image of the executed `expHdlFiniteMap`. The production
+    helper remains the executed one; routing the executed handler setup through
+    the exact carrier is tracked by `flapjack-pxn.18.3.5.8.13`. -/
+theorem crepProgToHOL_expHdlFiniteMap {width : Nat} [NeZero width]
+    (fm : FiniteMap String (Shape × List Nat)) (v : String)
+    (hv : ∀ c ∈ v.toList, c.toNat < 256) :
+    crepProgToHOL (expHdlFiniteMap (α := BitVec width) fm v)
+      = expHdlHOL (finiteMapToHOL fm)
+          (Flapjack.Basis.Pure.MlString.ofString v) := by
+  unfold expHdlFiniteMap expHdlHOL finiteMapToHOL
+  simp only [FLOOKUP]
+  rw [Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes v hv]
+  cases h : fm v with
+  | none => simp [crepProgToHOL]
+  | some pair =>
+      obtain ⟨shape, names⟩ := pair
+      simp only [Option.map_some]
+      rw [crepProgToHOL_crepNestedSeqHOL, panMap2_assign_map,
+        crepExpMapToHOL_loadGlobals]
 
 /-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
@@ -334,8 +433,10 @@ def shapeVars (shapes : List Shape) (values : List α) : List (Shape × List α)
     Only a multi-word `Comb` needs a handler that copies the returned global
     words into its flattened local destinations. It uses production `Shape`
     with String-backed named fields and generic `CrepProg α`; HOL uses
-    `mlstring`-named shapes and a word-width-indexed program. It is untagged
-    until those carriers are aligned. -/
+    `mlstring`-named shapes and a word-width-indexed program. It stays untagged
+    until those carriers are aligned; the exact `mlstring`-backed port is
+    `retHdlHOL` below (tagged `ret_hdl_def`), related by the kernel bridge
+    `crepProgToHOL_retHdl`. -/
 def retHdl [OfNat α 0] [OfNat α 1] [Add α]
     (shape : Shape) (names : List Nat) : CrepProg α :=
   match shape with
@@ -344,6 +445,80 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
       if 1 < Shape.shapeSize (.comb fields) then assignRet names
       else .skip
   | .named _ => .skip
+
+/-- Exact-shaped `assign_ret` helper over `CrepProgHOL`, mirroring HOL
+    `crepLang$assign_ret_def` (`crepLangScript.sml:122-125`). The tagged
+    `assign_ret_def` port is `assignRetW` over the production carrier; this
+    helper exists so `retHdlHOL` can state `ret_hdl_def` exactly. -/
+def assignRetHOL {width : Nat} [NeZero width] (names : List Nat) :
+    CrepProgHOL width :=
+  crepNestedSeqHOL
+    (names.zipWith (fun name value => .assign name value)
+      (loadGlobalsHOL (0 : BitVec 5) names.length))
+
+/-- `crepProgToHOL` sends the production `assignRet` to the exact `assignRetHOL`. -/
+theorem crepProgToHOL_assignRet {width : Nat} [NeZero width] (names : List Nat) :
+    crepProgToHOL (assignRet (α := BitVec width) names) = assignRetHOL names := by
+  have aux : ∀ (names : List Nat) (address : BitVec 5),
+      crepProgToHOL
+          (crepNestedSeq
+            (names.zipWith (fun name value => CrepProg.assign name value)
+              (loadGlobals (α := BitVec width) address names.length))) =
+        crepNestedSeqHOL
+          (names.zipWith (fun name value => CrepProgHOL.assign name value)
+            (loadGlobalsHOL address names.length)) := by
+    intro names
+    induction names with
+    | nil =>
+        intro address
+        simp [crepNestedSeq, crepNestedSeqHOL, loadGlobals, loadGlobalsHOL,
+          crepProgToHOL]
+    | cons name names ih =>
+        intro address
+        simp [crepNestedSeq, crepNestedSeqHOL, loadGlobals, loadGlobalsHOL,
+          crepProgToHOL, crepExpToHOL, ih]
+  unfold assignRet assignRetHOL
+  exact aux names 0
+
+/-- Exact port of HOL `pan_to_crep$ret_hdl` (`pan_to_crepScript.sml:122-127`) over
+    the `mlstring`-backed `ShapeHOL` and the width-indexed `CrepProgHOL`. The
+    `One` and `Named` cases emit `Skip`; a multi-word `Comb` emits `assign_ret`,
+    which is the exact-shaped `assignRetHOL`. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_hdl_def"]
+def retHdlHOL {width : Nat} [NeZero width]
+    (shape : Flapjack.Pancake.PanLang.ShapeHOL) (names : List Nat) :
+    CrepProgHOL width :=
+  match shape with
+  | .one => .skip
+  | .comb fields =>
+      if 1 < Flapjack.Pancake.PanLang.sizeOfShapeHOL (.comb fields) then
+        assignRetHOL names
+      else .skip
+  | .named _ => .skip
+
+/-- Narrow kernel bridge: on every shape the `crepProgToHOL` image of the
+    production `retHdl` equals the exact `retHdlHOL` after the `shapeToHOL`
+    codec. Names are discarded by both, so no byte-rangedness hypothesis is
+    needed. -/
+theorem crepProgToHOL_retHdl {width : Nat} [NeZero width]
+    (shape : Shape) (names : List Nat) :
+    crepProgToHOL (retHdl (α := BitVec width) shape names) =
+      retHdlHOL (Flapjack.Pancake.PanLang.shapeToHOL shape) names := by
+  cases shape with
+  | one =>
+      simp [retHdl, retHdlHOL, Flapjack.Pancake.PanLang.shapeToHOL, crepProgToHOL]
+  | comb fields =>
+      simp only [Flapjack.Pancake.PanLang.shapeToHOL, retHdl, retHdlHOL]
+      rw [show Flapjack.Pancake.PanLang.sizeOfShapeHOL
+            (Flapjack.Pancake.PanLang.ShapeHOL.comb
+              (fields.map Flapjack.Pancake.PanLang.shapeToHOL)) =
+            List.foldl (fun total field => total + Shape.shapeSize field) 0 fields by
+          rw [Flapjack.Pancake.PanLang.sizeOfShapeHOL_comb,
+            sizeOfShapesHOL_shapeToHOL fields]]
+      simp only [Shape.shapeSize]
+      split <;> simp [crepProgToHOL, crepProgToHOL_assignRet]
+  | named name =>
+      simp [retHdl, retHdlHOL, Flapjack.Pancake.PanLang.shapeToHOL, crepProgToHOL]
 
 /-! Flapjack-specific analogue of `pan_to_crep$wrap_rt`
     (`cakeml/pancake/pan_to_crepScript.sml:131-136`).

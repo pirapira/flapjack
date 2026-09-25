@@ -345,6 +345,13 @@ the concrete `struct_infos_ok` result separately as `T` (proved from HOL's
 target `RStruct` load values, followed by their expected-value checks. The
 corresponding production fuel-loader conversion theorem is kept untagged and
 paired with a Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
+`pan_structs_shape_context_drop_probe.out` records direct HOL EVAL of
+`size_of_sh_with_ctxt_drop` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:99` for `One`, a suffix-found
+named structure, and a nested `Comb`. The exact-carrier theorem over
+`ShapeHOL`/`StructContextExact` and matching Lean rows live in
+`Flapjack.Pancake.Proofs.PanStructs.CompileCorrect` and
+`Flapjack.Test.PanStructsShapeContextDropParity`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for
@@ -373,6 +380,15 @@ The original Pancake source-level support boundary is also explicit in
 accepted by `loop_inst_ok` only for `x86_64`. Consequently, RISC-V parity must
 port the `data_to_word` helper path rather than add a direct RISC-V lowering
 for source `LLongDiv`.
+
+`pan_globals_mem_functions_probe.out` records direct HOL EVAL of the
+`panLang$functions` projection and the membership instance characterized by the
+local theorem `MEM_functions` at
+`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380-2387` (the theorem is
+`[local]`, so it has no theory-database name). The exact word-indexed port
+`Flapjack.Pancake.PanLang.functionsHOL` and its membership theorem
+`MEM_functionsHOL` are paired with the Lean regression
+`Flapjack.Test.PanGlobalsMemFunctionsHOLParity`.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:
@@ -408,3 +424,12 @@ The focused Pan-to-Crep fixtures are summarized in
 CI validates that each listed direct-HOL case remains present in its committed
 probe output and in the corresponding Lean test with
 `scripts/pan-to-crep-coverage-report.py --check`.
+
+`crep_inline_alist_map_probe.out` records direct HOL EVAL of the inline-map
+input carrier at `crep_inlineScript.sml:259-269`: `alist_to_fmap` keeps the
+first duplicate association-list binding, lookups for another row are
+preserved, DOMSUB removes the selected key, and the input row order remains
+visible. The exact Lean input carrier and regressions are in
+`Flapjack.Pancake.CrepInline.Pass` and
+`Flapjack.Test.CrepInlineFmapParity`. Refresh it with
+`HOL_PROBE_ONLY=crep_inline_alist_map_probeScript.sml scripts/hol-probes/regenerate.sh`.

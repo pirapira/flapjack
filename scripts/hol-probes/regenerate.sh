@@ -145,6 +145,11 @@ run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_c
   mem_load_conversion_named_nested \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_shape_context_drop_probeScript.sml pan_structs_shape_context_drop_probe.out \
+  size_sh_with_ctxt_drop_one size_sh_with_ctxt_drop_named \
+  size_sh_with_ctxt_drop_nested_comb \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \
@@ -380,6 +385,9 @@ run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
   "$cake_dir/pancake/semantics"
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   flookup_f skip_identity "$cake_dir/pancake/crep_inlineScript.sml" \
+  "$cake_dir/pancake"
+run_probe crep_inline_alist_map_probeScript.sml crep_inline_alist_map_probe.out \
+  alist_duplicate_first input_rows_order "$cake_dir/pancake/crep_inlineScript.sml" \
   "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
@@ -1026,6 +1034,7 @@ run_probe afindi_probeScript.sml afindi_probe.out \
   map_uncurry_zip_again struct_infos_ok_drop struct_infos_ok_append \
   struct_infos_ok_cons alookup_map_structs_ok fields_in_order_reorder_noop \
   opt_mmap_eq_every alookup_drop_helper map_fst_eq_alookup \
+  map_fst_eq_alookup_different_value_types map_fst_eq_alookup_inferred_types \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"
@@ -1784,6 +1793,16 @@ run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.ou
   empty functions_only \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
+
+# The pan_globals MEM_functions probe observes the source-shape membership
+# projection described by the local theorem MEM_functions
+# (pan_globalsProofScript.sml:2380-2387).  Since `[local]` theorems are not
+# exported to the theory database, the probe records the direct EVAL rows for
+# `functions` and the membership instance the theorem characterizes.
+run_probe pan_globals_mem_functions_probeScript.sml pan_globals_mem_functions_probe.out \
+  functions_empty mem_function_entry \
+  "$cake_dir/pancake/proofs/pan_globalsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 
 run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
   pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \

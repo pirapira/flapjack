@@ -116,9 +116,24 @@ decreasing_by
     (`cakeml/pancake/semantics/panSemScript.sml:35-38`):
     `isValWord (ValWord _) = T`, `isValWord _ = F`.
 
-    `ValWord w = Val (Word w)`, and the `word_lab` payload has a single
-    constructor, so the `Val` case is always a word value; `RStruct`/`NStruct`
-    are `F`.  No `word_lab`-free side condition or carrier coercion is needed. -/
+    Independently verified HOL inferred type (probe built in the read-only
+    submodule): `isValWord : 'a panSem$v -> bool`, i.e. polymorphic in the word
+    width; the mlstring `stcname`/`fldname` of `NStruct` are irrelevant to the
+    clauses.  Derived three-constructor form:
+    `(isValWord (ValWord v0) <=> T) /\\ (isValWord (RStruct v2) <=> F) /\\
+    (isValWord (NStruct v3 v4) <=> F)`.  This Lean definition matches
+    clause-for-clause over the exact tagged `ValueHOL` carrier (`@[hol "v"]`,
+    constructor arities 1/1/2, `HolWordLab` payload, `MlStringHOL` keys); the
+    `[NeZero width]` binder mirrors HOL's positive `dimindex`.  Direct HOL
+    oracle rows `is_valword_val=T`, `is_valword_rstruct=F`,
+    `is_valword_nstruct=F`, `is_valword_wordlab=T`
+    (`scripts/hol-probes/pan_sem_is_val_word_probe.out`) are replayed by
+    `Flapjack/Test/PanSemIsValWordHOLParity.lean`.
+
+    The production String-bearing `holValueIsWord`
+    (`Flapjack/Pancake/Semantics/PanSemStateEval.lean`) is a separate untagged
+    documented-mismatch analogue (bead `flapjack-0lj`); it is not an exact HOL
+    port and carries no `@[hol]` tag. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "isValWord_def"]
 def isValWordHOL {width : Nat} [NeZero width] : ValueHOL width → Bool
   | .val _ => true

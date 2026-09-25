@@ -4,7 +4,8 @@ namespace Flapjack.Test.PanGlobalsFpermClusterParity
 
 open Flapjack
 
-/-! Regression for the exact HOL-tagged `fperm_name`/`fperm_decs` cluster
+/-! Regression for the source-shaped (Flapjack-specific, untagged) `fperm_name`
+    counterparts and the `fperm_decs` cluster
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1711`), exercised
     on the same `foo`/`bar` fixture as `PanGlobalsFpermDecsParity`. -/
 def sourceFunction : FunDecl Nat :=
@@ -37,6 +38,17 @@ theorem fpermNameCongFixture :
         globalRenameFunctionName "foo" "bar" "bar" ↔
       ("foo" : FunName) = "bar" :=
   fperm_name_cong "foo" "bar" "foo" "bar"
+
+-- The exact HOL port is polymorphic; exercise the generic theorems at `Nat` as
+-- well, so the `String` specialization is not mistaken for the HOL original.
+theorem fpermNameCancelNatFixture :
+    fpermName (α := Nat) 1 2 (fpermName (α := Nat) 1 2 1) = 1 :=
+  fpermName_cancel 1 2 1
+
+theorem fpermNameCongNatFixture :
+    fpermName (α := Nat) 1 2 3 = fpermName (α := Nat) 1 2 4 ↔
+      (3 : Nat) = 4 :=
+  fpermName_cong 1 2 3 4
 
 theorem fpermDecsAppendFixture :
     globalRenameDecls "foo" "bar" (declarations ++ [])

@@ -3378,6 +3378,24 @@ private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
               simp [compileArgsHOL, hcompiledPair]
           | cons _ _ => simp [hcompiled] at hheadLength
 
+/-! Source review of HOL `eval_map_comp_exp_flat_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1055`). Its statement
+    takes `MAP (eval s) expressions = MAP SOME values`, HOL `state_rel`,
+    `code_rel`, `locals_rel`, and `EVERY localised_exp expressions`, then proves
+    target evaluation of all flattened `compile_exp` outputs. The theorem below
+    is not that port: it quantifies production `PanSemState` and
+    `CrepRuntimeState`, uses Flapjack's `stateRel`/`codeRel`/`localsRel`, and
+    additionally assumes a per-expression `heach` relation containing target
+    evaluation plus shape/length/well-formedness facts. Those stronger premises
+    and different state/evaluator carriers change the theorem statement; the
+    helper must not receive the HOL tag.
+
+    `compileArgsHOL` is a useful flattening adapter, but it does not close this
+    gap. The finite-support PanSem evaluator is now tagged; a faithful port
+    still needs exact Pan-to-Crep state/context/local relations, tracked by
+    `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.22` open until the
+    exact HOL premises and conclusion are stated and proved. -/
+
 /-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
 the `compile_args` evaluator boundary. The target evaluation premise consumed
 by the list induction is projected from the expression IH itself; callers do
@@ -10254,19 +10272,51 @@ def panToCrepClockResultRel {α σ : Type}
       targetEvent = event
   | _, _ => False
 
+/-! Compiler-generated function return destinations are a mapped `List.range`,
+so the target runtime's duplicate-destination guard follows from function
+metadata itself. -/
+private theorem allocatedNamesHOL_nodup
+    (context : PanToCrepHOLContext α) (shape : Shape) :
+    (allocatedNamesHOL context shape).Nodup := by
+  unfold allocatedNamesHOL
+  apply List.nodup_iff_pairwise_ne.mpr
+  exact (List.nodup_iff_pairwise_ne.mp
+      (List.nodup_range (n := Shape.shapeSize shape))).map
+    (fun offset => context.vmax + 1 + offset)
+    (by
+      intro left right hne heq
+      apply hne
+      omega)
+
+theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
+    (context : PanToCrepHOLContext α) (function : FunName)
+    (handler : Option (α × CrepProg α)) :
+    crepRuntimeCallInfoValid
+      (some (functionReturnNamesHOL context function, handler)) = true := by
+  cases hlookup : FLOOKUP context.funcs function with
+  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+  | some metadata =>
+      rcases metadata with ⟨_, shape⟩
+      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+      apply decide_eq_true
+      exact (eraseDups_length_eq_iff_nodup _).2
+        (allocatedNamesHOL_nodup context shape)
+
 /-! Compose a production source Call with its recursive callee and handler
     simulation hypotheses for a matching raised payload of any supported shape.
     Both recursive source evaluations use the parent Call's canonical budget
     minus its two dispatch steps; `panSemCodeEvaluateFuel_call_two_le` derives
     the source evaluator fuel equation internally. The relation boundary is
     width-indexed `codeRelW`. This is an untagged induction-case lemma: the
+    handler-entry source state is defined from the source call's callee
+    globals, memory, FFI state, and minimum clock in the proposition itself;
+    callers supply no independent intermediate state or equality premise. The
     enclosing `pc_compile_correct` theorem and its full induction remain open. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
     (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
-    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
     (sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ)
     (function sourceException handlerVariable : String)
     (handlerProgram : Prog (RiscV.Word 64))
@@ -10310,15 +10360,9 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       calleeGlobals calleeMemory calleeFfi
       (min (decPanClock source.clock) calleeClock) handlerProgram
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some sourceResult)
-    (hsourceAfterCallee : sourceAfterCallee =
-      { { { { source with globals := calleeGlobals } with memory := calleeMemory }
-          with ffi := calleeFfi }
-        with clock := min (decPanClock source.clock) calleeClock })
     (hsourceHandlerLocal : FLOOKUP source.locals handlerVariable = some old)
     (hpayloadShape : panValueShape [] payload = shape)
     (hflatten : panValueFlatten payload = values)
-    (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
-      some shape)
     (hcontextException : FLOOKUP context.eids sourceException = some exceptionCode)
     (hinitialState : stateRel source caller)
     (hcallCode : codeRelW 64 context (panSemCodeAsLookup source.code) caller.code)
@@ -10359,12 +10403,17 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           { vars := context.vars, funcs := context.funcs,
             eids := context.eids, vmax := context.vmax }
           expression).2 = true)
-    (hinfoValid : crepRuntimeCallInfoValid
-      (some (destinations, some (caught,
-        .seq (expHdlFiniteMap context.vars handlerVariable)
-          (compileCodeRelProg context handlerProgram)))) = true)
+    (hdestinations : destinations =
+      functionReturnNamesHOL context.toHOLContext function)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
+    :
+    let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
+      { { { { source with globals := calleeGlobals } with memory := calleeMemory }
+        with ffi := calleeFfi }
+        with clock := min (decPanClock source.clock) calleeClock }
+    (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
+      some shape) →
     (hcalleeTargetIH :
       sourceAfterCallee.exceptionShapes sourceException = some shape →
       FLOOKUP context.eids sourceException = some exceptionCode →
@@ -10415,7 +10464,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       codeRelW 64 context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
       excpRel context.eids sourceAfterCallee.exceptionShapes ∧
       crepRuntimeGlobalWordsRel
-        (crepRuntimeCallerState caller calleeState) 0 slots values)
+        (crepRuntimeCallerState caller calleeState) 0 slots values) →
     (hhandlerIH : ∀ targetPost,
       evalPanValueFfiClockCodeProg sourceContext sourcePrimitive sourceHandler
         source.structs source.code source.exceptionShapes source.baseAddress
@@ -10448,7 +10497,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
       localsRel context (panSemCodeStateAfter source sourceResult).locals
         handlerResult.2.locals ∧
-      panToCrepClockResultRel context sourceResult handlerResult) :
+      panToCrepClockResultRel context sourceResult handlerResult) →
     panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
       source
       (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
@@ -10470,11 +10519,15 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     localsRel context (panSemCodeStateAfter source sourceResult).locals
       handlerResult.2.locals ∧
     panToCrepClockResultRel context sourceResult handlerResult := by
-  subst sourceAfterCallee
-  let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
-    { { { { source with globals := calleeGlobals } with memory := calleeMemory }
-      with ffi := calleeFfi }
-      with clock := min (decPanClock source.clock) calleeClock }
+  intro sourceAfterCallee hsourceExceptionShape hcalleeTargetIH hhandlerIH
+  have hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable)
+          (compileCodeRelProg context handlerProgram)))) = true := by
+    rw [hdestinations]
+    exact crepRuntimeCallInfoValid_functionReturnNamesHOL context.toHOLContext function
+      (some (caught, .seq (expHdlFiniteMap context.vars handlerVariable)
+        (compileCodeRelProg context handlerProgram)))
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
   have hsourceStructs := stateRel_structs source caller hinitialState
@@ -10718,36 +10771,6 @@ is tied to `functionReturnNamesHOL`; runtime call-info validity is derived from
 that metadata. The recursive body simulations remain induction premises, so
 this is a Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
-/-! Compiler-generated function return destinations are a mapped `List.range`,
-so the target runtime's duplicate-destination guard follows from function
-metadata itself. -/
-private theorem allocatedNamesHOL_nodup
-    (context : PanToCrepHOLContext α) (shape : Shape) :
-    (allocatedNamesHOL context shape).Nodup := by
-  unfold allocatedNamesHOL
-  apply List.nodup_iff_pairwise_ne.mpr
-  exact (List.nodup_iff_pairwise_ne.mp
-      (List.nodup_range (n := Shape.shapeSize shape))).map
-    (fun offset => context.vmax + 1 + offset)
-    (by
-      intro left right hne heq
-      apply hne
-      omega)
-
-theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
-    (context : PanToCrepHOLContext α) (function : FunName)
-    (handler : Option (α × CrepProg α)) :
-    crepRuntimeCallInfoValid
-      (some (functionReturnNamesHOL context function, handler)) = true := by
-  cases hlookup : FLOOKUP context.funcs function with
-  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-  | some metadata =>
-      rcases metadata with ⟨_, shape⟩
-      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-      apply decide_eq_true
-      exact (eraseDups_length_eq_iff_nodup _).2
-        (allocatedNamesHOL_nodup context shape)
-
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))

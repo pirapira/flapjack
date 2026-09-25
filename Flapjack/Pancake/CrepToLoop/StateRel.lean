@@ -138,12 +138,27 @@ theorem memLookupFromAListSomeExact {α : Type}
 
 /-- Flapjack analogue of HOL `state_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:28-36`):
-    `state_rel s t` holds when the source and target states agree on the
-    memory/stack domains, clock, endianness, FFI state, and base/top addresses.
-    The relation is untagged because its `CrepHolState` and `LoopMachineState`
-    parameters are production carriers: their code maps use String names and
-    their memory representations differ from HOL's `mlstring` finite maps and
-    total functions. -/
+    `state_rel s t <=> s.memaddrs = t.mdomain /\ s.sh_memaddrs = t.sh_mdomain /\
+    s.clock = t.clock /\ s.be = t.be /\ s.ffi = t.ffi /\ s.base_addr = t.base_addr /\
+    s.top_addr = t.top_addr`.
+
+    The relation's seven field equations match HOL clause-for-clause, but the tag
+    stays **withdrawn** for a substantive carrier mismatch. HOL's operands are
+    `('a,'ffi) crepSem$state` and `('a,'ffi) loopSem$state`, whose code maps are
+    keyed by `mlstring` (`funname`), whose memory is a total
+    `'a word -> 'a word_lab`/`word_loc` function, and whose fields are spelled
+    `sh_memaddrs`/`be`/`base_addr`/`top_addr`. The Flapjack `CrepHolState` and
+    `LoopMachineState` are production carriers: their code maps use
+    `FunName = String` and their memory representations differ, so the
+    quantified state types (not just the fields read) are mismatched.
+    `names_as_string` cannot authorise a different state carrier (it covers only
+    identifier-representing names), and no same-module `NameRanged` byte witness
+    applies because the conclusion is a `Prop`, not a name.
+
+    Direct HOL oracle: `scripts/hol-probes/crep_to_loop_state_rel_probe.out`
+    rows `memaddrs_mdomain_mem`, `sh_memaddrs_sh_mdomain_mem`, `clock_eq`,
+    `be_eq`, `base_eq`, `top_eq`, `clock_mismatch`. Faithful exact-carrier port
+    is tracked by `flapjack-pxn.18.5.6.9.1`. -/
 def crepToLoopStateRel {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) : Prop :=
   s.memaddrs = t.mdomain ∧
@@ -154,10 +169,26 @@ def crepToLoopStateRel {width : Nat} [NeZero width] {σ : Type} (s : CrepHolStat
     s.baseAddress = t.baseAddr ∧
     s.topAddress = t.topAddr
 
-/-- Untagged field expansion of the Flapjack state relation. It has the same
-    seven equations as HOL `state_rel_intro`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`), but uses the
-    String-backed production state carriers described above. -/
+/-- Flapjack analogue of HOL `state_rel_intro`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`), the field
+    expansion of `state_rel_def` (`s.memaddrs = t.mdomain /\
+    s.sh_memaddrs = t.sh_mdomain /\ s.clock = t.clock /\ s.be = t.be /\
+    s.ffi = t.ffi /\ s.base_addr = t.base_addr /\ s.top_addr = t.top_addr`).
+
+    The seven equations match HOL clause-for-clause; like HOL (whose
+    `state_rel_intro` is an `<=>`), the Flapjack version is stated as an `↔`.
+    The tag
+    stays **withdrawn** for the same substantive carrier mismatch as
+    `crepToLoopStateRel`: HOL quantifies `mlstring`-keyed
+    `crepSem$state`/`loopSem$state`, while Flapjack quantifies the production
+    `CrepHolState`/`LoopMachineState` with `FunName = String` code maps and
+    different memory representations. `names_as_string` cannot authorise a
+    different state carrier, and no `NameRanged` byte witness applies because
+    the conclusion is a `Prop`/iff, not a name. Direct HOL oracle:
+    `scripts/hol-probes/crep_to_loop_state_rel_probe.out` rows
+    `memaddrs_mdomain_mem`, `sh_memaddrs_sh_mdomain_mem`, `clock_eq`, `be_eq`,
+    `base_eq`, `top_eq`, `clock_mismatch`. Faithful exact-carrier port is
+    tracked by `flapjack-pxn.18.5.6.9.1`. -/
 theorem crepToLoopStateRel_intro {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) :
     crepToLoopStateRel s t ↔
@@ -211,10 +242,31 @@ theorem crepToLoopGlobalsRel_iff {width : Nat} [NeZero width]
       ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value) :=
   Iff.rfl
 
-/-- Untagged Flapjack state-relation analogue of HOL `state_rel_clock_add_zero`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`). The equations
-    match, but the quantified production state carriers have String-backed code
-    names and do not match the exact HOL state types. -/
+/-- Flapjack analogue of HOL `state_rel_clock_add_zero`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`):
+    `!s t. state_rel s t ==> ?ck. state_rel s (t with clock := ck + t.clock)`.
+
+    The statement shape is identical (a single preservation implication whose
+    witness is the fresh clock `ck`), but the tag stays **withdrawn** for a
+    substantive carrier mismatch. HOL quantifies `('a,'ffi) crepSem$state` and
+    `('a,'ffi) loopSem$state`, whose code maps are keyed by `mlstring`
+    (`funname`) and whose memories are total functions/`mlstring`-keyed finite
+    maps. The Flapjack declarations quantify the production `CrepHolState` and
+    `LoopMachineState`, whose code maps use `FunName = String` and whose memory
+    representation differs; those carriers appear in the quantified state types
+    even though `state_rel` itself only reads seven fields, so per AGENTS.md the
+    general parameterisation is a mismatch. `names_as_string` cannot authorise a
+    different state carrier (only identifier-representing names), and no
+    same-module `NameRanged` byte witness applies because the conclusion is a
+    `Prop` (an existential over clocks), not a name.
+
+    Direct HOL oracle: `scripts/hol-probes/crep_to_loop_state_rel_probe.out`
+    rows `memaddrs_mdomain_mem`, `sh_memaddrs_sh_mdomain_mem`, `clock_eq`,
+    `be_eq`, `base_eq`, `top_eq`, `clock_mismatch` pin the seven-field relation;
+    the theorem is exercised by the kernel-checked example in
+    `Flapjack/Test/CrepToLoopParity.lean` (`state_rel_clock_add_zero`,
+    ~lines 363-368). Faithful exact-carrier port is tracked by
+    `flapjack-pxn.18.5.6.9.1`. -/
 theorem crepToLoopStateRel_clock_add_zero {width : Nat} [NeZero width] {σ : Type}
     (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) (h : crepToLoopStateRel s t) :
@@ -417,12 +469,37 @@ structure CrepToLoopFiniteMapContext where
   vmax : Nat
   target : Compiler.Encoders.Asm.AsmArchitecture
 
-/-- Flapjack analogue of HOL `locals_rel_def`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`). The relation
-    uses the right extensional `sptree$num_set`/`num_map` renderings, but its
-    context parameter includes `funcs : FiniteMap FunName ...` with
-    `FunName = String`; HOL context uses `mlstring` keys. The declaration is
-    intentionally untagged until the context carrier is exact. -/
+/-- Flapjack analogue of HOL `crep_to_loop$locals_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`, withdrawn tag
+    `flapjack-dlc.28`), deliberately untagged. HOL states, over a `ctxt` whose
+    `vars : num |-> num`, `vmax : num`, `funcs : (mlstring |-> ...)` and
+    `target` fields,
+
+      `locals_rel ctxt (l:sptree$num_set) (s_locals:num |-> 'a word_lab)
+        t_locals <=> distinct_vars ctxt.vars /\ ctxt_max ctxt.vmax ctxt.vars /\
+        domain l ⊆ domain t_locals /\
+        !vname v. FLOOKUP s_locals vname = SOME v ==>
+          ?n. FLOOKUP ctxt.vars vname = SOME n /\ n ∈ domain l /\
+            lookup n t_locals = SOME (wlab_wloc v)`.
+
+    The clause structure matches, but the carriers are only representations:
+    `ctxt.funcs : FiniteMap FunName (...)` with `FunName = String` versus HOL
+    `mlstring` (this field is ignored by the relation, yet still fixes the
+    quantified context's type, so it is a mismatch); `sptree$num_set` `l` with
+    `domain l`/`n ∈ domain l` versus the Boolean predicate `live`; `sptree$num_map`
+    `t_locals` with `lookup n t_locals` versus the Option-valued function
+    `tLocals`; and `'a word_lab` versus `LoopValue (BitVec width)`. The
+    `distinct_vars`/`ctxt_max` conjuncts are the parametric Flapjack renderings
+    `crepToLoopDistinctVars`/`crepToLoopCtxtMax`. `names_as_string` cannot
+    authorize the `num_set`/`num_map`/`word_lab`/`FunName` carriers, and no
+    `NameRanged` byte witness applies (`locals_rel` is a `Prop`).
+
+    Direct HOL oracle: `scripts/hol-probes/crep_to_loop_locals_rel_probe.out`
+    rows `ctxt_vars_lookup`, `distinct_component`, `ctxt_max_component`,
+    `set_domain_mem`, `map_lookup`, `subset_domain_component`; exercised by
+    `Flapjack/Test/CrepToLoopParity.lean` (`localsRelContext` and the
+    `crepToLoopLocalsRelHOL` examples/fixtures). Faithful exact-carrier port
+    tracked by `flapjack-pxn.18.5.6.9.1`. -/
 def crepToLoopLocalsRelHOL {width : Nat} [NeZero width]
     (ctxt : CrepToLoopFiniteMapContext)
     (live : Nat → Bool)

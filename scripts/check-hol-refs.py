@@ -30,6 +30,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,6 +41,9 @@ QUALIFIER_RE = re.compile(r'\(\s*list_as_array\s*:=\s*\[([^]]*)\]\s*\)')
 NAMES_AS_STRING_RE = re.compile(r'\(\s*names_as_string\s*:=\s*\[([^]]*)\]\s*\)')
 NAMES_AS_STRING_BOUNDARY_RE = re.compile(
     r'\(\s*names_as_string_boundary\s*:=\s*\[([^]]*)\]\s*\)'
+)
+FMAP_AS_FINITE_SUPPORT_RE = re.compile(
+    r'\(\s*fmap_as_finite_support\s*:=\s*\[([^]]*)\]\s*\)'
 )
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
@@ -149,6 +153,7 @@ def hol_attribute_sites(lines: list[str]):
                     fields_for(QUALIFIER_RE),
                     fields_for(NAMES_AS_STRING_RE),
                     fields_for(NAMES_AS_STRING_BOUNDARY_RE),
+                    fields_for(FMAP_AS_FINITE_SUPPORT_RE),
                 )
         start = None
         chunks = []
@@ -231,6 +236,253 @@ def structure_fields(lines: list[str]) -> set[str]:
         if field:
             fields.add(field.group(1))
     return fields
+
+
+def structure_field_types(lines: list[str]) -> dict[str, dict[str, str]]:
+    """Text of each structure field declaration's type, keyed by structure.
+
+    The type is the remainder of the declaration line; qualified finite-map
+    fields name their `HolFiniteMapExact` carrier on that line, which is enough
+    for the representation gate to reject raw `α → Option β` maps.  Keeping the
+    lookup owner-specific matters when a module declares several structures with
+    the same field names (a broad state and its finite-support counterpart): the
+    gate must read the type from the disambiguated owning carrier, not from the
+    first structure that happens to declare the field.
+    """
+    field_types: dict[str, dict[str, str]] = {}
+    structure_indent: int | None = None
+    current: str | None = None
+    for line in strip_lean_comments("\n".join(lines)).splitlines():
+        structure = re.match(
+            r"^(\s*)structure\s+([A-Za-z0-9_'.]+).*\bwhere\s*$", line
+        )
+        if structure:
+            structure_indent = len(structure.group(1))
+            current = structure.group(2)
+            field_types.setdefault(current, {})
+            continue
+        if structure_indent is None:
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= structure_indent:
+            structure_indent = None
+            current = None
+            continue
+        field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:\s*(?P<type>.+)$", line)
+        if field and current is not None:
+            field_types[current].setdefault(field.group(1), field.group("type").strip())
+    return field_types
+
+
+def structure_field_map(lines: list[str]) -> dict[str, set[str]]:
+    """Field names of every structure declared in this module."""
+    members: dict[str, set[str]] = {}
+    structure_indent: int | None = None
+    current: str | None = None
+    for line in strip_lean_comments("\n".join(lines)).splitlines():
+        structure = re.match(
+            r"^(\s*)structure\s+([A-Za-z0-9_'.]+).*\bwhere\s*$", line
+        )
+        if structure:
+            structure_indent = len(structure.group(1))
+            current = structure.group(2)
+            members.setdefault(current, set())
+            continue
+        if structure_indent is None:
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= structure_indent:
+            structure_indent = None
+            current = None
+            continue
+        field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:", line)
+        if field and current is not None:
+            members[current].add(field.group(1))
+    return members
+
+
+def identifier_token_occurs(text: str, name: str) -> bool:
+    """Whether `name` occurs in `text` as a complete Lean identifier token.
+
+    A plain substring test would let one structure name match inside a longer
+    name (for example `State` matching `FiniteState`), which could select the
+    wrong owning carrier.  Boundary characters are the complement of Lean's
+    identifier alphabet.
+    """
+    return (
+        re.search(
+            rf"(?<![A-Za-z0-9_']){re.escape(name)}(?![A-Za-z0-9_'])", text
+        )
+        is not None
+    )
+
+
+def owning_structure_for_fields(
+    members: dict[str, set[str]], fields: Iterable[str],
+    declaration_text: str = "",
+) -> str | None:
+    """The carrier structure declaring every qualified field.
+
+    The qualifier stays narrow: all named fields must live in one carrier
+    structure, so fields split across several structures are rejected.  When a
+    module declares several structures with the same field names (for example a
+    broad state and its finite-support counterpart), the tagged declaration's
+    own carrier disambiguates: the owner must be named as a whole identifier
+    token in the declaration text.
+    """
+    wanted = set(fields)
+    candidates = [name for name, names in members.items() if wanted <= names]
+    if len(candidates) == 1:
+        return candidates[0]
+    if declaration_text:
+        named = [
+            name
+            for name in candidates
+            if identifier_token_occurs(declaration_text, name)
+        ]
+        if len(named) == 1:
+            return named[0]
+    return None
+
+
+TOP_DECL_RE = re.compile(
+    r"^(?:@\[|def |theorem |lemma |abbrev |instance |structure |inductive )"
+)
+
+
+def tagged_declaration_text(lines: list[str], attribute_start: int) -> str:
+    """Source text of the declaration carrying an attribute at `attribute_start`.
+
+    Used to disambiguate the owning carrier structure when a module defines more
+    than one structure with the same fields: the tagged declaration's signature
+    names the carrier it is stated over.
+    """
+    region: list[str] = []
+    seen_declaration = False
+    for line in lines[attribute_start - 1:]:
+        stripped = line.lstrip()
+        if stripped.startswith("@["):
+            if seen_declaration:
+                break
+            region.append(line)
+            if re.search(r"(?:^|\s)(?:def|theorem|lemma|abbrev|instance) ", stripped):
+                seen_declaration = True
+                if ":=" in stripped:
+                    break
+            continue
+        if not line.strip():
+            region.append(line)
+            continue
+        if seen_declaration and TOP_DECL_RE.match(line):
+            break
+        if re.match(r"(?:def|theorem|lemma|abbrev|instance) ", stripped):
+            seen_declaration = True
+        region.append(line)
+        if seen_declaration and ":=" in line:
+            break
+    return "\n".join(region)
+
+
+TO_FUNCTION_RE = re.compile(r"\bto([A-Z][A-Za-z0-9_']*)")
+OF_FUNCTION_RE = re.compile(r"\bof([A-Z][A-Za-z0-9_']*)")
+
+
+def has_fmap_witness(
+    lines: list[str],
+    owning: str | None,
+    counterpart_names: Iterable[str],
+) -> bool:
+    """Require the canonical finite-map translation witness in this module.
+
+    The witness is named `holFmapAsFiniteSupportWitness`; its statement must
+    name the unique structure that owns every qualified field and must express a
+    genuine kernel-proved roundtrip between that carrier and a broad counterpart,
+    i.e. it applies (or names) both a `toX` project and its `ofX`
+    reconstruction for the same `X` and states an equality or equivalence.  A
+    bare `State -> Broad -> State` arrow, or an unrelated counterpart mention,
+    is NOT a canonical witness.  Lake checks the proof; this gate checks
+    presence and shape without hard-coding any one carrier module.
+    """
+    if not owning:
+        return False
+    source = strip_lean_comments("\n".join(lines))
+    pattern = re.compile(
+        rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
+        rf"(?:theorem|lemma)\s+holFmapAsFiniteSupportWitness\b"
+        rf"(?P<statement>[\s\S]*?):=",
+        re.M,
+    )
+    for match in pattern.finditer(source):
+        statement = match.group("statement")
+        if not identifier_token_occurs(statement, owning):
+            continue
+        if "=" not in statement and "\u2194" not in statement:
+            continue
+        projects = {m.group(1) for m in TO_FUNCTION_RE.finditer(statement)}
+        reconstructions = {m.group(1) for m in OF_FUNCTION_RE.finditer(statement)}
+        if projects & reconstructions:
+            return True
+    return False
+
+
+def fmap_as_finite_support_errors(
+    lines: list[str], fields: tuple[str, ...], module: str,
+    declaration_text: str = "",
+) -> list[str]:
+    """Validate the reviewed canonical HOL finite-map translation.
+
+    Each named field must be a same-module structure field whose declared type
+    uses `HolFiniteMapExact`; a raw `α → Option β` lookup map is ineligible.
+    All named fields must belong to ONE owning carrier structure (when several
+    structures declare the same fields, the tagged declaration's carrier
+    disambiguates as a whole identifier token), and the module must provide a
+    canonical witness `holFmapAsFiniteSupportWitness` naming that structure and
+    stating a real `toX`/`ofX` roundtrip with its broad counterpart (a bare arrow
+    or unrelated counterpart mention is rejected).  The field-type check reads
+    the type from the disambiguated owning carrier, so a same-named field on a
+    different structure (for example a raw function-backed broad state) neither
+    satisfies nor blocks the qualifier.
+    """
+    errors: list[str] = []
+    if len(set(fields)) != len(fields):
+        errors.append("fmap_as_finite_support fields must be distinct")
+    declared_fields = structure_fields(lines)
+    members = structure_field_map(lines)
+    owning = owning_structure_for_fields(members, fields, declaration_text) if fields else None
+    owner_types = structure_field_types(lines).get(owning, {}) if owning else {}
+    for field in fields:
+        if field not in declared_fields:
+            errors.append(
+                f"fmap_as_finite_support field `{field}` is not a field of a Lean "
+                f"structure declared in {module}"
+            )
+            continue
+        if owning is None:
+            continue
+        field_type = owner_types.get(field, "")
+        if "HolFiniteMapExact" not in field_type:
+            errors.append(
+                f"fmap_as_finite_support field `{field}` of owning structure "
+                f"`{owning}` does not use the approved HolFiniteMapExact carrier; "
+                "a raw function-backed map is ineligible"
+            )
+    if fields and owning is None:
+        errors.append(
+            "fmap_as_finite_support fields must all be declared by one owning "
+            f"carrier structure in {module} (when several structures share the "
+            "field names, the tagged declaration must name its carrier)"
+        )
+    elif fields and not has_fmap_witness(lines, owning, members.keys()):
+        errors.append(
+            "fmap_as_finite_support has no same-module checked canonical witness "
+            "`holFmapAsFiniteSupportWitness` naming the owning structure and "
+            "stating a real `toX`/`ofX` roundtrip with its broad counterpart"
+        )
+    return errors
 
 
 def has_list_array_witness(lines: list[str], field: str) -> bool:
@@ -430,7 +682,7 @@ def main(argv: list[str]) -> int:
         module = module_name(lean_path)
         module_reported = False
         for (number, hol_path, hol_name, hol_line, list_fields,
-             names_fields, boundary_fields) in hol_attribute_sites(lines):
+             names_fields, boundary_fields, fmap_fields) in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -444,6 +696,13 @@ def main(argv: list[str]) -> int:
                 errors.extend(
                     f"{where}: {error}"
                     for error in list_as_array_errors(lines, list_fields, rel)
+                )
+            if fmap_fields:
+                errors.extend(
+                    f"{where}: {error}"
+                    for error in fmap_as_finite_support_errors(
+                        lines, fmap_fields, rel, tagged_declaration_text(lines, number)
+                    )
                 )
             if names_fields or boundary_fields:
                 errors.extend(

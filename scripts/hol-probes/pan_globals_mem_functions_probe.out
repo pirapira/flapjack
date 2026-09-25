@@ -1,0 +1,7 @@
+functions_empty=[]
+
+functions_function=[(«f»,[(«x»,One)],Skip,One)]
+
+functions_global=[]
+
+mem_function_entry=T

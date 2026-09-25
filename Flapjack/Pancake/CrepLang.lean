@@ -220,11 +220,10 @@ def loadShapeBytes [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
       let loaded := if address == 0 then .load value else .load (.op .add [value, .const address])
       loaded :: loadShapeBytes (address + CrepBytesInWord.bytesInWord) count value
 
-/-- Exact width-indexed port of `crepLang$load_shape_def`
-    (`cakeml/pancake/crepLangScript.sml:82-86`).  Carrier `BitVec width` with
-    `[NeZero width]` because HOL word types have positive `dimindex`; body is the
-    fixed-stride helper instantiated at the concrete word carrier. -/
-@[hol "cakeml/pancake/crepLangScript.sml" "load_shape_def"]
+/-- Width-indexed production adapter for `loadShapeBytes`. HOL's exact
+    `load_shape_def` is tagged on `loadShapeBytesHOLW`, which uses
+    `CrepExpHOL`; this adapter still uses production `CrepExp` and is
+    Flapjack-specific. -/
 def loadShapeBytesW {width : Nat} [NeZero width]
     (address : BitVec width) (count : Nat) (value : CrepExp (BitVec width)) :
     List (CrepExp (BitVec width)) :=

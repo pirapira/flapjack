@@ -38,6 +38,23 @@ theorem quoted_target :
 theorem quoted_unchanged :
     globalRenameFunctionName "a'" "b'" "c'" = "c'" := rfl
 
+-- The reviewed exact HOL port `fpermName` is polymorphic (`'a -> 'a -> 'a -> 'a`
+-- in HOL); replay the same fixture rows at `Nat` to show the port is not
+-- specialized to the `String` carrier.
+def polymorphicGuard : Bool :=
+  fpermName (α := Nat) 1 2 1 == 2 &&
+  fpermName (α := Nat) 1 2 2 == 1 &&
+  fpermName (α := Nat) 1 2 3 == 3
+
+#guard polymorphicGuard
+
+theorem polymorphic_source_collision :
+    fpermName (α := Nat) 1 2 1 = 2 := rfl
+theorem polymorphic_target_collision :
+    fpermName (α := Nat) 1 2 2 = 1 := rfl
+theorem polymorphic_unchanged :
+    fpermName (α := Nat) 1 2 3 = 3 := rfl
+
 def runChecks : IO Bool := do
   IO.println (if parityGuard then
     "PASS pan_globals fperm_name_def parity (7 HOL rows)"

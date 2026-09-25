@@ -16,6 +16,44 @@ HOL oracle rows in `scripts/hol-probes/crep_inline_code_inl_probe.out`
 namespace Flapjack.Test.CrepInlineFmapParity
 
 open Flapjack
+open Flapjack.Basis.Pure.MlString
+
+private abbrev ExactName := Flapjack.Basis.Pure.MlString.MlString
+private def exactKey (s : String) : ExactName := ofString s
+
+private def exactRows :
+    List (ExactName × (List Nat × CrepProgHOL 8)) :=
+  [(exactKey "other", ([], .skip)),
+   (exactKey "f", ([7], .skip)),
+   (exactKey "f", ([9], .tick))]
+
+private def exactSelectedRows :=
+  crepInlineSelectedHOLRows [exactKey "f"] exactRows
+
+/-- Filtering keeps the original selected triple order, as the
+    `compile_inl_prog` input list does in HOL. -/
+theorem exactFilterPreservesOrder :
+    exactSelectedRows =
+      [(exactKey "f", ([7], CrepProgHOL.skip)),
+       (exactKey "f", ([9], CrepProgHOL.tick))] := by
+  rfl
+
+/-- HOL `alist_to_fmap` is a right fold of `|+`, so the first duplicate row is
+    the `FLOOKUP` result. The exact carrier uses the same selected source rows. -/
+theorem exactMapDuplicateFirst :
+    (crepInlineMapHOL [exactKey "f"] exactRows).lookup (exactKey "f") =
+      some ([7], CrepProgHOL.skip) := by
+  rw [crepInlineMapHOL_lookup]
+  change List.lookup (exactKey "f") exactSelectedRows = _
+  rw [exactFilterPreservesOrder]
+  simp [exactKey]
+
+/-- HOL `DOMSUB` removes the selected function's binding. -/
+theorem exactMapDomsub :
+    ((crepInlineMapHOL [exactKey "f"] exactRows).remove (exactKey "f")).lookup
+      (exactKey "f") = none := by
+  rw [CrepInlineFmapHOL.lookup_remove]
+  simp
 
 def fmapEntries : CrepInlineFmap Nat :=
   CrepInlineFmap.insert "f" ([7], CrepProg.skip) CrepInlineFmap.empty
@@ -239,16 +277,30 @@ def lookupShape : Bool :=
   (fmapEntries.lookup "f").isSome && (fmapEntries.lookup "g").isNone &&
     ((fmapEntries.remove "f").lookup "f").isNone
 
+def exactCarrierGuard : Bool :=
+  let ordered := match exactSelectedRows with
+    | [(first, ([7], .skip)), (second, ([9], .tick))] =>
+        first == exactKey "f" && second == exactKey "f"
+    | _ => false
+  let firstWins := match
+      (crepInlineMapHOL [exactKey "f"] exactRows).lookup (exactKey "f") with
+    | some ([7], .skip) => true
+    | _ => false
+  let domsubRemoves :=
+    ((crepInlineMapHOL [exactKey "f"] exactRows).remove (exactKey "f")).lookup
+      (exactKey "f") |>.isNone
+  ordered && firstWins && domsubRemoves
+
 def parityGuard : Bool :=
   inlinedShape && fmapMissShape && lookupShape && fmapNestedShape && fmapArgShape &&
-    clauseGuard
+    clauseGuard && exactCarrierGuard
 
 #guard parityGuard
 #eval parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS crep_inline exact finite-map inline_prog port"
+    IO.println "PASS crep_inline finite-map inline_prog and exact HOL input carrier"
   else
     IO.println "FAIL crep_inline exact finite-map inline_prog port"
   pure parityGuard

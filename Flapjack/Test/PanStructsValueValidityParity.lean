@@ -222,6 +222,60 @@ example : panIsWfShapeValueHOL nestedContext nestedValue = true := by
   simp [panIsWfShapeValueHOL, panIsWfShapeValuesHOL, lookupInfo,
     nestedContext, nestedValue]
 
+/-! ## Exact `is_wf_shape_v` over the exact `ValueHOL`/`StructContextExact`
+    carriers (HOL `panProps$is_wf_shape_v`, bead flapjack-pxn.18.5.17.1.3.14). -/
+
+private def wrongName : ExactName := .implode [119, 114, 111, 110, 103]
+
+private def exactPairContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
+private def exactMatchingValue : ValueHOL 8 :=
+  .nStruct pairName [(leftName, .val (.word 2)), (rightName, .rStruct [])]
+
+private def exactMismatchValue : ValueHOL 8 :=
+  .nStruct pairName [(leftName, .val (.word 2)), (wrongName, .rStruct [])]
+
+private def exactFirstMatchContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 }),
+   (pairName, { fields := [(wrongName, .one)], size := 1 })]
+
+/-- `is_wf_shape_v_word`. -/
+example : isWfShapeValueHOLExact exactPairContext (.val (.word 1) : ValueHOL 8) = true := by
+  simp [isWfShapeValueHOLExact, exactPairContext]
+
+/-- `is_wf_shape_v_named_match`. -/
+example : isWfShapeValueHOLExact exactPairContext exactMatchingValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_named_missing`. -/
+example : isWfShapeValueHOLExact ([] : Flapjack.Pancake.PanLang.StructContextExact)
+    exactMatchingValue = false := by
+  simp [isWfShapeValueHOLExact, Flapjack.Pancake.PanLang.structContextLookupHOL,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_named_mismatch`: `is_wf_shape_v` ignores field names, so the
+    renamed field still counts. -/
+example : isWfShapeValueHOLExact exactPairContext exactMismatchValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    exactMismatchValue, pairName]
+
+/-- `is_wf_shape_v_duplicate_second`: a present key suffices regardless of which
+    duplicate entry matches first. -/
+example : isWfShapeValueHOLExact exactFirstMatchContext exactMatchingValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactFirstMatchContext,
+    exactMatchingValue, pairName]
+
+/-- `is_wf_shape_v_nested_match`. -/
+example : isWfShapeValueHOLExact exactNestedContext exactNestedValue = true := by
+  simp [isWfShapeValueHOLExact, isWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactNestedContext,
+    exactNestedValue, pairName, outerName, leftName, rightName, innerName, tagName]
+
 /-! ## Adapters between the exact HOL-shaped predicates and the production
     cache-augmented-context predicates, under `StructContext.toHOL`. -/
 
@@ -274,5 +328,54 @@ example :
     (fun n : Nat => if n = 2 then some 99 else none) 2 20 0 (by
       funext k
       by_cases hk : k = 2 <;> simp [FDOM, hk]) rfl
+
+/-! ## Exact `pan_primop_is_wf_shape_v` over the exact carriers
+    (HOL `panProps$pan_primop_is_wf_shape_v`, bead flapjack-4ac.4.14). -/
+
+/-- The tagged `pan_primop_is_wf_shape_v` applies to any exact `pan_primop`
+    result. -/
+example (values : List (ValueHOL 8)) (value : ValueHOL 8)
+    (h : panPrimopHOLExact PrimOp.addCarry values = some value) :
+    isWfShapeValueHOLExact exactPairContext value = true :=
+  panPrimopHOLExact_isWfShapeValueHOLExact exactPairContext PrimOp.addCarry values value h
+
+/-- A concrete `AddCarry` triple produces a well-formed exact value. -/
+example :
+    ∃ value, panPrimopHOLExact PrimOp.addCarry
+        [.val (.word (2 : BitVec 8)), .val (.word (3 : BitVec 8)),
+         .val (.word (4 : BitVec 8))] = some value ∧
+      isWfShapeValueHOLExact exactPairContext value = true := by
+  refine ⟨_, rfl, ?_⟩
+  exact panPrimopHOLExact_isWfShapeValueHOLExact exactPairContext PrimOp.addCarry
+    [.val (.word (2 : BitVec 8)), .val (.word (3 : BitVec 8)),
+     .val (.word (4 : BitVec 8))] _ rfl
+
+/-! ## Exact `is_wf_shape_v_nil`/`is_wf_shape_v_drop` over the exact carriers
+    (HOL `panProps$is_wf_shape_v_nil`/`is_wf_shape_v_drop`, beads
+    flapjack-4ac.4.7/.4.8/.4.9). -/
+
+/-- `is_wf_shape_v_nil_step1`. -/
+example : isWfShapeValueHOLExact
+    ([] : Flapjack.Pancake.PanLang.StructContextExact)
+    (.val (.word 1) : ValueHOL 8) = true := by
+  apply isWfShapeValueHOLExact_nil_step1
+  refine ⟨rfl, ?_⟩
+  simp [shapeOfHOLExact]
+
+/-- `is_wf_shape_v_nil`: the two predicates coincide on the empty context. -/
+example : Flapjack.Pancake.PanLang.isWfShapeExactHOL
+      ([] : Flapjack.Pancake.PanLang.StructContextExact)
+      (shapeOfHOLExact (.val (.word 1) : ValueHOL 8)) =
+    isWfShapeValueHOLExact
+      ([] : Flapjack.Pancake.PanLang.StructContextExact)
+      (.val (.word 1) : ValueHOL 8) :=
+  isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil [] rfl _
+
+/-- `is_wf_shape_v_drop`: a value well-formed after dropping still is. -/
+example :
+    isWfShapeValueHOLExact exactPairContext
+      (.val (.word 1) : ValueHOL 8) = true :=
+  isWfShapeValueHOLExact_drop 1 exactPairContext
+    (.val (.word 1) : ValueHOL 8) (by simp [isWfShapeValueHOLExact])
 
 end Flapjack.Test

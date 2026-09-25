@@ -195,6 +195,60 @@ theorem crepInlineSubmapDomsubFupdate
     crepHolSubmap (FDOMSUB f x) (FUPDATE g (x, y)) :=
   SUBMAP_IMP_DOMSUB_FUPDATE f g x y h
 
+/-! HOL-equality (`=`) forms of the same cluster, tagged statement-exact with no
+`BEq`/`LawfulBEq` side conditions (bead flapjack-pxn.18.5.5.19). -/
+
+theorem crepInlineSubmapFupdateHOL
+    (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FUPDATE_HOL f (x, y)) (FUPDATE_HOL g (x, y)) :=
+  submap_imp_fupdate_submap_hol f g x y h
+
+theorem crepInlineSubmapDomsubHOL
+    (f g : FiniteMap Nat Nat) (x : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB_HOL f x) (FDOMSUB_HOL g x) :=
+  submap_imp_domsub_submap_hol f g x h
+
+theorem crepInlineSubmapDomsubFupdateHOL
+    (f g : FiniteMap Nat Nat) (x y : Nat) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB_HOL f x) (FUPDATE_HOL g (x, y)) :=
+  submap_imp_domsub_fupdate_hol f g x y h
+
+theorem crepInlineResVarHOLCommutesStrong (lc lc' : FiniteMap Nat Nat) (n h : Nat) :
+    resVarHOL (resVarHOL lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+      resVarHOL (resVarHOL lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) :=
+  res_var_commutes_strong_hol lc lc' n h
+
+theorem crepInlineResVarHOLFoldl (h : Nat) (vs : List Nat) (lc1 lc2 : FiniteMap Nat Nat) :
+    resVarHOL ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVarHOL lc1) (h, FLOOKUP lc2 h) =
+      (vs.zip (vs.map (FLOOKUP lc2))).foldl resVarHOL (resVarHOL lc1 (h, FLOOKUP lc2 h)) :=
+  res_var_foldl_commutes_strong_hol h vs lc1 lc2
+
+theorem crepInlineFlookupResVarHOLIsMemZip :
+    FLOOKUP ((crepInlineResVarKeys.zip (crepInlineResVarKeys.map (FLOOKUP crepInlineResVarLc2))).foldl
+        resVarHOL crepInlineResVarLc1) 2 =
+      FLOOKUP crepInlineResVarLc2 2 :=
+  flookup_res_var_is_mem_zip_eq_hol crepInlineResVarKeys 2 crepInlineResVarLc1 crepInlineResVarLc2
+    (by decide)
+
+def crepInlineResVarHOLBase : FiniteMap Nat Nat :=
+  fun n => if n = 1 then some 3 else none
+
+theorem crepInlineResVarHOLDeleteHit :
+    FLOOKUP (resVarHOL crepInlineResVarHOLBase (1, (none : Option Nat))) 1 = none := rfl
+
+theorem crepInlineResVarHOLUpdateHit :
+    FLOOKUP (resVarHOL crepInlineResVarHOLBase (1, some 7)) 1 = some 7 := rfl
+
+def crepInlineResVarHOLGuard : Bool :=
+  (match FLOOKUP (resVarHOL crepInlineResVarHOLBase (1, (none : Option Nat))) 1 with
+    | some _ => false
+    | none => true) &&
+    (match FLOOKUP (resVarHOL crepInlineResVarHOLBase (1, some 7)) 1 with
+      | some v => v == 7
+      | none => false)
+
+#guard crepInlineResVarHOLGuard
+
 def crepInlineFdomGuard : Bool :=
   (match FLOOKUP crepInlineFdomMap 1 with
     | some v => v == 10

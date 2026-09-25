@@ -18,7 +18,7 @@ class HolAttributeSitesTest(unittest.TestCase):
     def test_single_line(self):
         self.assertEqual(
             list(SITES(['@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]'])),
-            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), ())],
+            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), ())],
         )
 
     def test_multiline(self):
@@ -29,7 +29,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 'theorem compileTopShapeWf : True := trivial',
             ])),
             [(1, "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-              "compile_top_shape_wf", None, (), (), ())],
+              "compile_top_shape_wf", None, (), (), (), ())],
         )
 
     def test_comments_do_not_count(self):
@@ -39,7 +39,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '-- @[hol "cakeml/pancake/pan_globalsScript.sml" "bad"]',
                 '@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]',
             ])),
-            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), ())],
+            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), ())],
         )
 
     def test_source_line(self):
@@ -47,7 +47,7 @@ class HolAttributeSitesTest(unittest.TestCase):
             list(SITES(['@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml"',
                         '  "locals_rel_wf_shape" 2345]'])),
             [(1, "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-              "locals_rel_wf_shape", 2345, (), (), ())],
+              "locals_rel_wf_shape", 2345, (), (), (), ())],
         )
 
     def test_list_as_array_fields(self):
@@ -57,7 +57,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  "dec_deg_def" (list_as_array := [degrees, moves])]'
             ])),
             [(1, "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
-              "dec_deg_def", None, ("degrees", "moves"), (), ())],
+              "dec_deg_def", None, ("degrees", "moves"), (), (), ())],
         )
 
     def test_names_as_string_and_boundary_qualifiers(self):
@@ -68,8 +68,299 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  (names_as_string_boundary := [generated])]',
             ])),
             [(1, "cakeml/pancake/panLangScript.sml", "varname", None,
-              (), ("name", "generated"), ("generated",))],
+              (), ("name", "generated"), ("generated",), ())],
         )
+
+    def test_fmap_as_finite_support_fields(self):
+        self.assertEqual(
+            list(SITES([
+                '@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_var_def"',
+                '  (fmap_as_finite_support := [locals, globals])]'
+            ])),
+            [(1, "cakeml/pancake/semantics/panSemScript.sml",
+              "set_var_def", None, (), (), (), ("locals", "globals"))],
+        )
+
+    def test_fmap_as_finite_support_accepts_canonical_carrier(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "  globals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "structure Broad where",
+            "  clock : Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (∀ s : State width, ofExact (toExact s) = s) :=",
+            "  fun _ => rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals", "globals"), "Example.lean"
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_witness_is_carrier_agnostic(self):
+        lines = [
+            "structure CrepStateExact where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "structure CrepSemBroad where",
+            "  clock : Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (∀ s : CrepStateExact width,",
+            "      ofExact (toExact s) = s) :=",
+            "  fun _ => rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean"
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_witness_accepts_roundtrip(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (ofExact (toExact (State width)) = State width) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_rejects_raw_option_map(self):
+        lines = [
+            "structure State where",
+            "  locals : String → Option Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    State width -> State width := fun s => ofExact s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(
+            any("approved HolFiniteMapExact carrier" in error for error in errors)
+        )
+
+    def test_fmap_as_finite_support_requires_canonical_witness(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_witness_must_mention_owner(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    HolFiniteMapExact MlS (ValueHOL width) -> Unit := fun m => ()",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_rejects_split_owners(self):
+        lines = [
+            "structure A where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "structure B where",
+            "  globals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    A width -> A width := fun s => ofExact s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals", "globals"), "Example.lean"
+        )
+        self.assertTrue(
+            any("one owning carrier structure" in error for error in errors)
+        )
+
+    def test_fmap_as_finite_support_rejects_unrelated_witness(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "structure Other where",
+            "  clock : Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    Other width -> Other width := fun s => s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_witness_requires_roundtrip(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    State width -> State width := fun s => s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_rejects_counterpart_without_roundtrip(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "structure Broad where",
+            "  clock : Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    State width -> Broad width -> State width := fun s _ => s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_disambiguates_shared_fields_by_carrier(self):
+        lines = [
+            "structure CrepSemHOLState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (HolWordLab width)",
+            "  globals : HolFiniteMapExact (BitVec 5) (HolWordLab width)",
+            "structure CrepSemHOLFiniteState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (PanWordLab (ι → Bool))",
+            "  globals : HolFiniteMapExact (BitVec 5) (PanWordLab (ι → Bool))",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (∀ s : CrepSemHOLState width, ofBroad (toBroad s) = s) := by rfl",
+            "@[hol \"cakeml/pancake/semantics/crepSemScript.sml\" \"foo_def\"",
+            "  (fmap_as_finite_support := [locals, globals])]",
+            "def helper (s : CrepSemHOLState width) := s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals", "globals"),
+            "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+            "def helper (s : CrepSemHOLState width) := s",
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_rejects_ambiguous_shared_fields(self):
+        lines = [
+            "structure CrepSemHOLState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (HolWordLab width)",
+            "structure CrepSemHOLFiniteState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (PanWordLab (ι → Bool))",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (∀ s : CrepSemHOLState width, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean"
+        )
+        self.assertTrue(
+            any("one owning carrier structure" in error for error in errors)
+        )
+
+    def test_fmap_as_finite_support_rejects_carrier_naming_neither_owner(self):
+        lines = [
+            "structure CrepSemHOLState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (HolWordLab width)",
+            "structure CrepSemHOLFiniteState (width : Nat) where",
+            "  locals : HolFiniteMapExact Nat (PanWordLab (ι → Bool))",
+            "structure Other where",
+            "  clock : Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    (∀ s : CrepSemHOLState width, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",),
+            "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+            "def helper (s : Other) := s",
+        )
+        self.assertTrue(
+            any("one owning carrier structure" in error for error in errors)
+        )
+
+    def test_fmap_as_finite_support_reads_type_from_tagged_carrier(self):
+        lines = [
+            "structure BroadState where",
+            "  locals : Nat \u2192 Option Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : FiniteState) := s",
+        )
+        self.assertEqual(
+            errors, [],
+            "the type must be read from the disambiguated owning carrier, not the "
+            "first structure declaring the field",
+        )
+
+    def test_fmap_as_finite_support_rejects_raw_type_on_named_carrier(self):
+        lines = [
+            "structure BroadState where",
+            "  locals : Nat \u2192 Option Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : BroadState) := s",
+        )
+        self.assertTrue(
+            any(
+                "owning structure `BroadState`" in error
+                and "HolFiniteMapExact" in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_fmap_as_finite_support_matches_owner_as_identifier_token(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : FiniteState) := s",
+        )
+        self.assertEqual(
+            errors, [],
+            "`State` must not match inside `FiniteState`; the owner is a whole "
+            "identifier token",
+        )
+
+    def test_tagged_declaration_text_stops_before_next_declaration(self):
+        lines = [
+            '@[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"',
+            "  (fmap_as_finite_support := [locals])]",
+            "def evalHOLFinite (s : State width) : Nat := s.clock",
+            "",
+            "def other : Nat := 0",
+        ]
+        text = CHECKER["tagged_declaration_text"](lines, 1)
+        self.assertIn("State width", text)
+        self.assertNotIn("other : Nat", text)
 
     def test_representation_witness_is_checked_in_same_module(self):
         lines = [

@@ -21,8 +21,8 @@ fun print_eval label q =
     print "\n"
   end;
 
-val _ = print_eval "empty_locals" ``(empty_locals ^s).locals = FEMPTY``;
+val _ = print_eval "empty_locals" ``(panSem$empty_locals ^s).locals = FEMPTY``;
 val _ = print_eval "empty_locals_globals"
-  ``(empty_locals ^s).globals = ^s.globals``;
+  ``(panSem$empty_locals ^s).globals = ^s.globals``;
 val _ = print_eval "empty_locals_clock"
-  ``(empty_locals ^s).clock = ^s.clock``;
+  ``(panSem$empty_locals ^s).clock = ^s.clock``;

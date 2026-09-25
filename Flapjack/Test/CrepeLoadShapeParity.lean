@@ -1,4 +1,5 @@
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pipeline
 
@@ -47,6 +48,33 @@ example : loadShapeBytesW (width := 32) (0 : BitVec 32) 1 (.const (7 : BitVec 32
 example : isZeroTwoW
     (loadShapeBytesW (width := 32) (0 : BitVec 32) 2 (.const (7 : BitVec 32))) = true :=
   rfl
+
+example : loadShapeBytesHOLW (width := 32) (0 : BitVec 32) 0
+    (.const (7 : BitVec 32)) = [] := by
+  simp [loadShapeBytesHOLW]
+
+example : loadShapeBytesHOLW (width := 32) (0 : BitVec 32) 1
+    (.const (7 : BitVec 32)) = [.load (.const (7 : BitVec 32))] := by
+  simp [loadShapeBytesHOLW]
+
+example : loadShapeBytesHOLW (width := 32) (0 : BitVec 32) 2
+    (.const (7 : BitVec 32)) =
+    [.load (.const (7 : BitVec 32)),
+     .load (.op .add [.const (7 : BitVec 32), .const (4 : BitVec 32)])] := by
+  simp [loadShapeBytesHOLW]
+
+example : (loadShapeBytesHOLW (width := 32) (BitVec.ofNat 32 4) 2
+    (.const (7 : BitVec 32))).map crepExpOfHOL =
+    loadShapeBytesW (width := 32) (BitVec.ofNat 32 4) 2
+      (.const (7 : BitVec 32)) := by
+  simpa [crepExpOfHOL] using loadShapeBytesHOLW_toProduction (width := 32)
+    (BitVec.ofNat 32 4) 2 (.const (7 : BitVec 32))
+
+example : loadShapeBytesHOLW (width := 32) (BitVec.ofNat 32 4) 2
+    (.const (7 : BitVec 32)) =
+    [.load (.op .add [.const (7 : BitVec 32), .const (4 : BitVec 32)]),
+     .load (.op .add [.const (7 : BitVec 32), .const (8 : BitVec 32)])] := by
+  simp [loadShapeBytesHOLW]
 
 def parityGuard : Bool :=
   (loadShape 0 4 0 probeValue).isEmpty &&

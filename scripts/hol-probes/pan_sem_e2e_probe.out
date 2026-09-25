@@ -51,4 +51,6 @@ while_error_condition=SOME Error
 dec_clock_step=<|clock := 4|>
 fix_clock_clamps=(NONE,2)
 fix_clock_keeps_new=(NONE,4)
+isWord_def_word=T
+theWord_def_word=3w
 pan_sem_e2e_done=0

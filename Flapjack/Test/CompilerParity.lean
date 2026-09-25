@@ -149,6 +149,7 @@ import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
+import Flapjack.Test.CrepLookupCodeHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
@@ -274,6 +275,7 @@ import Flapjack.Test.ParserKeepAnnotParity
 import Flapjack.Test.ParserTryProgParity
 import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.ParserParseStatementParity
+import Flapjack.Test.ParserByteNamesParity
 import Flapjack.Test.PanLangWfShapeParity
 import Flapjack.Test.PanLangWfFieldsContextParity
 import Flapjack.Test.PanHHandleCallRetParity

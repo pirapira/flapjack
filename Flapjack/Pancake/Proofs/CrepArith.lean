@@ -188,7 +188,18 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
 /-- Width-specialized word form of CakeML's `dest_const_thm`
     (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
     `NeZero width` supplies HOL's nonempty finite-index condition. The
-    arbitrary-carrier production helper remains untagged. -/
+    arbitrary-carrier production helper remains untagged.
+
+    Type-convention note (see the direct HOL rows `word_carrier_bool`,
+    `dimindex_8`, `dimindex_pos` in
+    `scripts/hol-probes/crep_arith_dest_const_probe.out`): HOL `'a word` is
+    literally the finite boolean function space `bool[dimindex(:'a)]`, and
+    `dimindex` is always positive. Instantiating the HOL index type at
+    cardinality `width` therefore yields exactly the Lean carrier
+    `Fin width → Bool`, and `[NeZero width]` encodes `dimindex > 0`; no HOL word
+    dimension lies outside this family, so the width-indexed statement is the
+    exact HOL theorem, not a specialization. The paired Lean fixture lives in
+    `Flapjack/Test/CrepeDestConstParity.lean`. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
 theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool))
@@ -764,6 +775,26 @@ theorem crepDest2Exp_eq_shift {n : Nat} [NeZero n] (word : RiscV.Word n)
   have hword' : word.toNat = 2 ^ exponent % 2 ^ n := by simpa using hword
   rw [Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by decide) hbound)] at hword'
   simpa [Nat.shiftLeft_eq, Nat.one_mul] using hword'
+
+/-- All-width support for HOL `dest_2exp_thm` over the canonical word carrier.
+    `Fin width → Bool` is the numeric-index presentation of one HOL word
+    dimension, and the result transports `word_lsl 1w exponent` through the
+    proved bitwise `BitVec` equivalence. This remains untagged: the theorem's
+    carrier uses an explicit `Fin width` index instead of HOL's implicit
+    `finite_index` type and instance, so the polymorphic HOL statement has not
+    yet been identified with this canonical presentation. -/
+theorem crepDest2ExpHolWordBits_eq_lsl_support {width : Nat} [NeZero width]
+    (word : Fin width → Bool) (exponent : Nat)
+    (h : crepDest2Exp 0 word = some exponent) :
+    word = bitVecToHolWordBits
+      (BitVec.shiftLeft (1 : BitVec width) exponent) := by
+  have hBits : crepDest2Exp 0 (holWordBitsToBitVec word) = some exponent := by
+    rw [← crepDest2Exp_holWordBits 0 word]
+    exact h
+  have hShift := crepDest2Exp_eq_shift (holWordBitsToBitVec word)
+    exponent hBits
+  apply holWordBitsToBitVec_injective
+  simpa only [holWordBitsToBitVec_bitVecToHolWordBits] using hShift
 
 /-- Fixed-width support instance of HOL `dest_2exp_bound'`. The HOL result
     quantifies over any word type and concludes `exponent < dimindex`; this

@@ -212,7 +212,7 @@ run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_
   valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
-  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+  constant dimindex_pos "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_arith_lookup_code_probeScript.sml crep_arith_lookup_code_probe.out \
   simp_prog_after_lookup \
   "$cake_dir/pancake/proofs/crep_arithProofScript.sml" \
@@ -990,7 +990,7 @@ run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
   res_var_delete_hit res_var_update_hit \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
-  lookup_code_valid lookup_code_missing \
+  lookup_code_valid lookup_code_duplicate \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
@@ -1500,6 +1500,12 @@ run_probe word_to_stack_copy_ret_probeScript.sml word_to_stack_copy_ret_probe.ou
   "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 
+# The panLexer byte probe observes the original lexer's ASCII-only identifier
+# predicates (HOL char is 8-bit; bytes >= 128 are not alpha/digit).
+run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
+  plx_alpha_206 plx_ascii_then_high \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"
 # The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
 # initial_ffi_state and the call_FFI cases (identity, success, length
 # failure, oracle final).

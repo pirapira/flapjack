@@ -555,6 +555,22 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged BaseAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged TopAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteStateSource_load32",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged Load32 case with the recursive address premise, exact finite-state memory/domain projection, and full word_lab result via tagged mem_load_32_def. The surrounding evaluator still uses explicit HolFiniteDimension and is not native crepSem eval."
@@ -614,6 +630,22 @@
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime",
     "statement_status": "documented_mismatch",
     "reviewer": "Uses exact HOL expression and word_lab carriers over positive BitVec width and the actual mapc-shaped state, but code/FFI are fixed in the expression-only runtime projection and arbitrary HOL finite_index/native eval_def correspondence remains open. Untagged support only."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLStateHolEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Uses exact CrepSemHOLState, MlString/CrepProgHOL mapc update, and exact CrepExpHOL input with full word_lab result over every positive BitVec width. Evaluation is the source-shaped evalCrepHolExp translation, but canonical BitVec width is not yet identified with arbitrary HOL finite_index; the production-runtime theorem is separately linked by the all-constructor evaluator relation. No @[hol] tag."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Quantifies over an arbitrary HolFiniteDimension and uses exact finite-map, MlString, CrepProgHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The source evaluator still transports through the explicit dimension and word-operation adapter; its identity with HOL's implicit finite_index instances and native crepSem$eval remains open. No @[hol] tag."
   },
   {
     "hol_path": null,
@@ -5598,9 +5630,41 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateCodeState_decCallTick_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (state-owned nonempty-code DecCall/Tick source equation; untagged evaluator-case infrastructure)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panSemEvaluateRiscV64CodeState_decCallTick_ofEntry",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (fixed-RV64 specialization of the state-owned DecCall/Tick source equation; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (fixed-RV64 actual-state DecCall induction case; untagged)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepDecCallTickContinuationSeqOfSourceRunIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (untagged DecCall continuation composition helper; consumes state/code/exception/local relations and a source Tick run through a recursive IH, but does not establish the enclosing HOL pc_compile_correct case)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepDecCallTickSourceRunComposeWithTickIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (untagged DecCall/Tick source-run and target continuation-IH composition before the target Dec local restoration wrapper; the separate target callee-prefix IH and continuation-entry relations remain premises)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",

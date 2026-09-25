@@ -531,9 +531,15 @@ def findVarHOL (ctxt : CrepToLoopFiniteMapContext) (v : Nat) : Nat :=
    (`cakeml/pancake/crep_to_loopScript.sml:27-32`) keys `ctxt.funcs` by HOL
    `funname = mlstring`, while `CrepToLoopFiniteMapContext.funcs` is a
    `FiniteMap FunName (Nat × Nat)` with `FunName = String`; the key carrier
-   differs even though the lookup shape matches. The exact counterpart needs an
-   MlString-keyed loop-context carrier (dependency `flapjack-pxn.18.3.5.8` /
-   the downstream MlString audit), so no `@[hol]` tag is attached yet. -/
+   differs even though the lookup/default-0 equations match. HOL's `context`
+   record declares `funcs : funname |-> num # num`, with `funname = mlstring`;
+   this Lean definition therefore cannot be tagged by matching its equations
+   alone. Direct HOL probes cover hit/miss lookup, and Lean parity examples
+   exercise this helper, but neither establishes equality of the key carriers.
+   The exact counterpart needs an MlString-keyed loop-context carrier
+   (dependency `flapjack-pxn.18.3.5.8` / the downstream MlString audit).
+   The executed `crepFindLab` is separately tested, not an exact-carrier
+   witness for this proof-side helper; no `@[hol]` tag is attached yet. -/
 def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
   match FLOOKUP ctxt.funcs f with
   | some (n, _) => n
@@ -542,16 +548,19 @@ def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
 /-! ## Context construction
 
 `crep_to_loopScript.sml`'s `mk_ctxt`/`make_vmap` build the finite-map compiler
-context. Over `CrepToLoopFiniteMapContext` (whose `vars`/`funcs` are the same
-HOL finite maps) they need no width parameter. -/
+context. `make_vmap` has HOL's numeric-key carrier; `mk_ctxt` below still uses
+String keys for `funcs`, unlike HOL's `mlstring` keys. -/
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): `mk_ctxt_def`
    (`cakeml/pancake/crep_to_loopScript.sml:221-228`) takes `funcs` keyed by HOL
-   `funname = mlstring`, while `CrepToLoopFiniteMapContext.funcs` is keyed by
-   `FunName = String`; the record shape matches but the key carrier differs. The
-   exact counterpart needs the MlString-keyed loop-context carrier (dependency
-   `flapjack-pxn.18.3.5.8` / the downstream MlString audit), so no `@[hol]` tag
-   is attached yet. -/
+   `crepLang$funname = mlstring` (`crepLangScript.sml:21`), while
+   `CrepToLoopFiniteMapContext.funcs` is keyed by `FunName = String`; the four
+   field assignments match but the input and result carriers differ. The HOL
+   probe checks all four projected fields, and Lean examples check analogous
+   projections; these tests do not establish carrier equivalence. The exact
+   counterpart needs an MlString-keyed loop-context carrier (dependency
+   `flapjack-pxn.18.3.5.8` / the downstream MlString audit), so no `@[hol]`
+   tag is attached yet. -/
 def mkCtxtHOL (target : Compiler.Encoders.Asm.AsmArchitecture) (vmap : FiniteMap Nat Nat)
     (functions : FiniteMap FunName (Nat × Nat)) (vmax : Nat) :
     CrepToLoopFiniteMapContext :=

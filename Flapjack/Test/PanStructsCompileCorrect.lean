@@ -16,6 +16,27 @@ example :
         .rStruct [.word 3, .word 5] := by
   simp [panStructConvertValue, panStructConvertFieldValues]
 
+/-- Exact-carrier reproduction of the HOL oracle row
+    `convert_named_record=RStruct [ValWord 3w; ValWord 5w]` in
+    `scripts/hol-probes/pan_structs_compile_correct_probe.out`: the tagged exact
+    `convertV` over `ValueHOL` both evaluates the row and agrees with the
+    executable `panStructConvertValue` through the checked production bridge. -/
+def exactConvertNamedRecord : ValueHOL 64 :=
+  .nStruct (Flapjack.Basis.Pure.MlString.ofString "Pair")
+    [(Flapjack.Basis.Pure.MlString.ofString "left", .val (.word (BitVec.ofNat 64 3))),
+     (Flapjack.Basis.Pure.MlString.ofString "right", .val (.word (BitVec.ofNat 64 5)))]
+
+example :
+    convertV exactConvertNamedRecord =
+      .rStruct [.val (.word (BitVec.ofNat 64 3)),
+        .val (.word (BitVec.ofNat 64 5))] := by
+  simp [exactConvertNamedRecord, convertV]
+
+example :
+    (convertV exactConvertNamedRecord).toPanValue =
+      panStructConvertValue exactConvertNamedRecord.toPanValue :=
+  convertV_toPanValue exactConvertNamedRecord
+
 example (context : StructPassContext) :
     structCompileProg context (.skip : Prog Nat) = .skip := by
   exact panStructCompileSkip_eq_skip context

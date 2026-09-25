@@ -18,7 +18,7 @@ namespace Flapjack
 
 variable {σ : Type v}
 
-/-- Total recursive evaluation of the RV64 clock-leaf/Seq/If/Assign/Return/
+/-- Total recursive evaluation of the RV64 clock-leaf/Seq/If/Dec/Assign/Return/
     Raise fragment using the source evaluator's lexicographic measure. The
     fragment embeds into production `Prog`; the measure is therefore the same
     one used to justify recursive calls in the planned whole-program evaluator.
@@ -55,6 +55,17 @@ def panSemEvaluateExprIfFragmentRiscV64ByMeasure [NeZero 64]
           else
             panSemEvaluateExprIfFragmentRiscV64ByMeasure thenBranch state
       | _ => (some .error, state)
+  | .dec name shape expression body, state =>
+      match evalPanSemStateExp state expression with
+      | some value =>
+          if panShapeMatches shape (panSemShapeOf value) then
+            let (result, bodyState) :=
+              panSemEvaluateExprIfFragmentRiscV64ByMeasure body
+                (panSemTotalDecBind state name value)
+            (result, { bodyState with
+              locals := resVar bodyState.locals (name, state.locals name) })
+          else (some .error, state)
+      | none => (some .error, state)
   | .assign kind name expression, state =>
       panSemTotalAssignClause state kind name expression
   | .returnValue expression, state =>
@@ -79,5 +90,8 @@ decreasing_by
       (state, Prog.ite condition thenBranch.toProg elseBranch.toProg)
     exact panSemEvalMeasureRel_ite_branch state condition thenBranch.toProg
       elseBranch.toProg thenBranch.toProg (Or.inl rfl)
+  · change panSemEvalMeasureRel (panSemTotalDecBind state name value, body.toProg)
+      (state, Prog.dec name shape expression body.toProg)
+    exact panSemEvalMeasureRel_decBody state name shape expression body.toProg
 
 end Flapjack

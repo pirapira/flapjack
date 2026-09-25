@@ -23,4 +23,21 @@ example : CharsByteRanged (readWhile isAlphaNumOrWild ['a', 'b', '1', '_'] []).1
 
 example : (readWhile isDigitAscii ['1', '2', 'x'] []).1 = "12" := by decide
 
+example (l : List Char) (h : CharsByteRanged l) (n : Nat) : CharsByteRanged (l.drop n) :=
+  charsByteRanged_drop h n
+
+example (l : List Char) (h : CharsByteRanged l) (n : Nat) : CharsByteRanged (l.take n) :=
+  charsByteRanged_take h n
+
+example (c : Char) (cs : List Char) (h : CharsByteRanged (c :: cs)) : CharsByteRanged cs :=
+  charsByteRanged_tail h
+
+example (s : String) (h : StringByteRanged s) :
+    StringByteRanged (String.ofList (s.toList.drop 1)) :=
+  drop_one_stringByteRanged h
+
+example (s : String) (h : CharsByteRanged s.toList) :
+    CharsByteRanged (readWhile isAlphaNumOrWild s.toList []).1.toList :=
+  readWhile_charsByteRanged' s.toList [] h (by simp [CharsByteRanged])
+
 end Flapjack.Test.ParserByteRangedParity

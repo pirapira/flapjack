@@ -362,6 +362,48 @@ def whileGuard : Bool :=
   whileCondZeroGuard && whileCondErrorGuard && whileCondNonWordGuard &&
     whileTimeoutGuard && whileBreakGuard && whileContinueGuard
 
+/-- Evaluator stub: whatever program is run, return `result` and the state. -/
+def decCallEval (result : Option (PanSemHOLResult Word64)) :
+    Prog Word64 → PanSemState Word64 (FfiState Unit) →
+      Option (PanSemHOLResult Word64) × PanSemState Word64 (FfiState Unit) :=
+  fun _ state => (result, state)
+
+/-- Missing arguments produce an error without touching the state. -/
+def decCallNoneArgsGuard : Bool :=
+  isErrorResult (panSemTotalDecCallStep stepsState none
+    (some (.skip, (fun _ => none), Shape.one)) "r" Shape.one .skip
+    (decCallEval none)).1
+
+/-- A missing callee lookup produces an error. -/
+def decCallNoneLookupGuard : Bool :=
+  isErrorResult (panSemTotalDecCallStep stepsState (some []) none
+    "r" Shape.one .skip (decCallEval none)).1
+
+/-- Clock zero times out and clears the locals. -/
+def decCallTimeoutGuard : Bool :=
+  let result := panSemTotalDecCallStep { stepsState with clock := 0 } (some [])
+    (some (.skip, (fun _ => none), Shape.one)) "r" Shape.one .skip
+    (decCallEval none)
+  isTimeOutResult result.1 && (result.2.locals "x").isNone
+
+/-- A successful return whose shape matches runs the continuation and restores
+    the previous binding of the result name. -/
+def decCallSuccessGuard : Bool :=
+  let result := panSemTotalDecCallStep stepsState (some [])
+    (some (.skip, (fun _ => none), Shape.one)) "r" Shape.one .skip
+    (decCallEval (some (.returned (.word (BitVec.ofNat 64 11)))))
+  isReturnedWord 11 result.1 && (result.2.locals "r").isNone
+
+/-- A returned value whose shape does not match the declared result shape errors. -/
+def decCallShapeMismatchGuard : Bool :=
+  isErrorResult (panSemTotalDecCallStep stepsState (some [])
+    (some (.skip, (fun _ => none), Shape.one)) "r" Shape.one .skip
+    (decCallEval (some (.returned (.rStruct []))))).1
+
+def decCallGuard : Bool :=
+  decCallNoneArgsGuard && decCallNoneLookupGuard && decCallTimeoutGuard &&
+    decCallSuccessGuard && decCallShapeMismatchGuard
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -374,14 +416,14 @@ def stepsGuard : Bool :=
     decOkGuard && decShapeErrorGuard && decErrorGuard &&
     partialEvaluateGuard &&
     shMemLoadGuard && shMemLoadMissingGuard && shMemLoadUnsharedGuard &&
-    shMemStoreGuard && shMemStoreNonWordGuard && whileGuard
+    shMemStoreGuard && shMemStoreNonWordGuard && whileGuard && decCallGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem/While)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem/While/DecCall)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

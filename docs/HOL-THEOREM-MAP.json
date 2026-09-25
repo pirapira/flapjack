@@ -365,7 +365,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab",
     "statement_status": "documented_mismatch",
-    "reviewer": "All-width successful Word premise and complete Option word_lab result over the exact finite-map state carrier, with no RISC-V target premise. Evaluation still uses the state-derived source-memory runtime adapter; native HOL eval_def/crep_op_def and the selected finite_index operation interpretation are not yet established."
+    "reviewer": "All-width successful Word premise and complete Option word_lab result; locals/globals use finite maps and the state has no RISC-V target premise. The code-entry carrier is abstract and the source-runtime projection erases code/FFI because expression evaluation does not inspect them. Evaluation still uses a state-derived source-memory runtime adapter; native HOL eval_def/crep_op_def and the selected finite_index operation interpretation are not established."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

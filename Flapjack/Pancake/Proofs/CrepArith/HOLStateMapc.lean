@@ -1273,13 +1273,14 @@ theorem evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab
   simp [evalCrepHolFiniteWordSourceExpWordLab,
     evalCrepRuntimeExp_sourceWord_eq]
 
-/-- All-width exact-state production-runtime support for HOL
-`eval_mul_const`. The successful premise and complete `Option word_lab`
-conclusion match the source theorem's evaluation shape; the state keeps exact
-finite maps and the implicit dimension dictionary represents a chosen finite
-index. This remains untagged because evaluation still passes through the
-state-derived source-memory adapter, whose word-operation interpretation has
-not been identified with native HOL `crepSem$eval` for that finite index. -/
+/-- All-width production-runtime support for HOL `eval_mul_const`. The
+successful premise and complete `Option word_lab` conclusion match the source
+theorem's evaluation shape. Locals/globals use finite maps, while the code
+entry carrier is abstract because expression evaluation does not read code;
+the source-runtime projection also erases code and FFI observations. The
+implicit dimension dictionary represents a chosen finite index. This remains
+untagged because these projections and the source-memory word operations have
+not been proved identical to native HOL `crepSem$eval` for that finite index. -/
 theorem crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab
     {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
     (state : CrepSemHOLFiniteState ι codeEntry σ)

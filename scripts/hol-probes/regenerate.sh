@@ -1714,3 +1714,17 @@ run_probe pan_to_crep_is_wf_shape_nil_probeScript.sml pan_to_crep_is_wf_shape_ni
   iwf_val iwf_wf_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+# The pan_globals fresh_name probe observes that the source-shaped fresh-name
+# search only ever appends apostrophes (pan_globalsScript.sml:55).
+run_probe pan_globals_fresh_name_probeScript.sml pan_globals_fresh_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals new_main_name probe observes the synthesized entry-point name
+# for representative declaration lists (pan_globalsScript.sml:224).
+run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"

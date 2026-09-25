@@ -4702,22 +4702,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "dec_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
-    "lean_name": "decClockHOLExact",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$dec_clock (panSemScript.sml:441) = s with clock := s.clock - 1, over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL row dec_clock_step (clock 5 -> 4) in pan_sem_e2e_probe.out reproduced by PanSemStateExactParity)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "fix_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
-    "lean_name": "fixClockHOLExact",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$fix_clock (panSemScript.sml:446) = (res, new_s with clock := min old_s.clock new_s.clock), result-polymorphic as HOL leaves res unconstrained, over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL rows fix_clock_clamps and fix_clock_keeps_new reproduced by PanSemStateExactParity)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "fix_clock_IMP_LESS_EQ",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
     "lean_name": "fixClockHOLExact_IMP_LESS_EQ",
@@ -4755,22 +4739,6 @@
     "lean_name": "kvar_defs",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL Theorem kvar_defs (panSemScript.sml:502-503) is LIST_CONJ [set_var_def,set_global_def,set_kvar_def,is_valid_value_def,lookup_kvar_def], rendered as the five-way conjunction of those accessor equations over the exact MlString-keyed PanSemStateExact carrier, reusing the tagged setVar/setGlobal/setKvar/lookupKvar/isValidValue ports and the shapeEqHOL bridge; direct HOL rows kvar_defs_set_kvar_local/kvar_defs_set_global_update/kvar_defs_lookup_global/kvar_defs_is_valid_value in pan_sem_e2e_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "lookup_kvar_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
-    "lean_name": "lookupKvarHOLExact",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$lookup_kvar (panSemScript.sml:415) Local -> locals, Global -> globals over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); direct HOL rows lookup_kvar_local/global/missing reproduced by PanSemStateExactParity)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "set_kvar_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
-    "lean_name": "setKvarHOLExact",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL panSem$set_kvar (panSemScript.sml:408) Local -> set_var, Global -> set_global, with the =-based finite-map update over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); PanSemStateExactParity checks set-then-lookup round trip)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -9513,14 +9481,6 @@
     "hol_name": "is_wf_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfCtxtExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "empty_locals_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
-    "lean_name": "emptyLocalsHOLExact",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },

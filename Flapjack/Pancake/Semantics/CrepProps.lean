@@ -514,4 +514,43 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWithW {width : Nat} [NeZero wid
       names :=
   crepAssignedFreeVars_nestedSeq_assign_zipWith names values h
 
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_nested_decs_append"]
+theorem crepAssignedVars_nestedDecs_appendW {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width)))
+    (body : CrepProg (BitVec width)) (h : names.length = values.length) :
+    crepAssignedVarsW (nestedDecsW names values body) = names ++ crepAssignedVarsW body :=
+  crepAssignedVars_nestedDecs_append names values body h
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_nested_decs_append"]
+theorem crepAssignedFreeVars_nestedDecs_appendW {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width)))
+    (body : CrepProg (BitVec width)) (h : names.length = values.length) :
+    crepAssignedFreeVarsW (nestedDecsW names values body) =
+      (crepAssignedFreeVarsW body).filter (fun candidate => decide (candidate ∉ names)) :=
+  crepAssignedFreeVars_nestedDecs_append names values body h
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_seq_store_empty"]
+theorem crepAssignedVars_nestedSeq_storesW {width : Nat} [NeZero width]
+    (address : CrepExp (BitVec width)) (values : List (CrepExp (BitVec width)))
+    (offset : BitVec width) :
+    crepAssignedVarsW (crepNestedSeqW (storesW address values offset)) = [] := by
+  rw [storesW_eq_stores]
+  exact crepAssignedVars_nestedSeq_stores address values offset (BitVec.ofNat width (width / 8))
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_seq_store_empty"]
+theorem crepAssignedFreeVars_nestedSeq_storesW {width : Nat} [NeZero width]
+    (address : CrepExp (BitVec width)) (values : List (CrepExp (BitVec width)))
+    (offset : BitVec width) :
+    crepAssignedFreeVarsW (crepNestedSeqW (storesW address values offset)) = [] := by
+  rw [storesW_eq_stores]
+  exact crepAssignedFreeVars_nestedSeq_stores address values offset (BitVec.ofNat width (width / 8))
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "var_exp_load_shape"]
+theorem crepExpVars_of_mem_loadShapeW {width : Nat} [NeZero width]
+    (count : Nat) (address : BitVec width) (value n : CrepExp (BitVec width))
+    (h : n ∈ loadShapeBytes address count value) : crepExpVars n = crepExpVars value := by
+  rw [← loadShape_eq_loadShapeBytes_of_stride_eq address CrepBytesInWord.bytesInWord count value
+    rfl] at h
+  exact crepExpVars_of_mem_loadShape address CrepBytesInWord.bytesInWord count value n h
+
 end Flapjack

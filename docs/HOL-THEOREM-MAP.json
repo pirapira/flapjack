@@ -397,7 +397,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSource",
     "statement_status": "documented_mismatch",
-    "reviewer": "HOL-shaped mapc and finite-width state carrier, but the expression uses generic Fin-indexed syntax and the successful premise/result are evaluated through the explicit source projection rather than native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
+    "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
   },
   {
     "hol_path": null,

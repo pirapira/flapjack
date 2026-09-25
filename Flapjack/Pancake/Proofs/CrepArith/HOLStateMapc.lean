@@ -58,7 +58,8 @@ state carrier and the proof-script-local `mapc` update. The statement keeps
 the unused word_lab result binder, a successful full word_lab evaluation
 premise, the exact code-map update, the `n2w` simplifier image, and the full
 optional word_lab equality. It remains untagged because evaluation is through
-the explicit finite-width source projection rather than native HOL
+the explicit finite-width source projection after translating exact
+`CrepExpHOL` syntax to the evaluator carrier, rather than native HOL
 `crepSem$eval`; this theorem does not establish the finite-index instance or
 recursive evaluator correspondence. -/
 theorem crepSimpExpCorrect1CrepSemHOLStateSource
@@ -66,11 +67,11 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
     (update : MlString × (List Nat × CrepProgHOL width) →
       List Nat × CrepProgHOL width)
     (state : CrepSemHOLState width σ)
-    (expression : CrepExp (Fin width → Bool))
-    (_result : PanWordLab (Fin width → Bool))
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
     (h : evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := width))
-      state.toExpressionEvaluatorState expression ≠ none) :
+      state.toExpressionEvaluatorState (crepExpHOLToSourceBits expression) ≠ none) :
     evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := width))
       (state.mapc update).toExpressionEvaluatorState
@@ -78,10 +79,11 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
         (fun n => bitVecToHolWord
           (instFinHolFiniteDimension (width := width))
           (BitVec.ofNat
-            (HolFiniteDimension.width (Fin width)) n)) expression) =
+            (HolFiniteDimension.width (Fin width)) n))
+        (crepExpHOLToSourceBits expression)) =
     evalCrepHolFiniteWordSourceExpWordLab
       (instFinHolFiniteDimension (width := width))
-      state.toExpressionEvaluatorState expression := by
+      state.toExpressionEvaluatorState (crepExpHOLToSourceBits expression) := by
   rw [CrepSemHOLState.toExpressionEvaluatorState_mapc]
   letI : HolFiniteDimension (Fin width) :=
     instFinHolFiniteDimension (width := width)
@@ -94,7 +96,7 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
   have hSource := crepSimpExpCorrect1HolFiniteWordSourceWordLab
     (dimension := instFinHolFiniteDimension (width := width))
     (f := fun pair : FunName × (List Nat × CrepProg (Fin width → Bool)) => pair.2)
-    state.toExpressionEvaluatorState expression
+    state.toExpressionEvaluatorState (crepExpHOLToSourceBits expression)
     (PanWordLab.word (fun _ => false)) h
   rw [hCodeId] at hSource
   exact hSource

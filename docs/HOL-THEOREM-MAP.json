@@ -1742,6 +1742,20 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "new_main_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalNewMainName",
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "name"
+    ],
+    "names_as_string_boundary": [
+      "name"
+    ],
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.2) HOL new_main_name_def (pan_globalsScript.sml:224): new_main_name decls = fresh_name «main» (MAP FST (functions decls)). Lean globalNewMainName matches clause-for-clause (freshNameHOL is the exact fresh_name port; globalFunctionNames is MAP FST (functions decls)). Reviewed under names_as_string: name: byte-observable (the generated entry-point name crosses the compiler boundary and is byte-safe via the same-module holMlStringWitness_globalNewMainName). Direct HOL rows in pan_globals_new_main_name_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "globalRenameProg",

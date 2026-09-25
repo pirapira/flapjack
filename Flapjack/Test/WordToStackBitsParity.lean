@@ -751,18 +751,27 @@ example : popHandler (α := BitVec 64) false (1, 2, 3) .skip
 `scripts/hol-probes/word_to_stack_call_dest_probe.out`.
 -/
 
-private def callDestSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+private def callDestSomeSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
   | (.skip, .inl 3) => true
+  | _ => false
+
+private def callDestNoneRegSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
   | (.skip, .inr 1) => true
+  | _ => false
+
+private def callDestNoneStackSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
   | (.seq (.stackLoad 3 4) .skip, .inr 3) => true
+  | _ => false
+
+private def callDestEmptySum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
   | (.skip, .inl 5) => true
   | _ => false
 
 def callDestParityGuard : Bool :=
-  (callDestSum (callDest (some 3) [1, 2] (2, 7, 9))) &&
-  (callDestSum (callDest none [1, 2] (2, 7, 9))) &&
-  (callDestSum (callDest none [1, 8] (2, 7, 9))) &&
-  (callDestSum (callDest none [] (2, 7, 9))) &&
+  (callDestSomeSum (callDest (some 3) [1, 2] (2, 7, 9))) &&
+  (callDestNoneRegSum (callDest none [1, 2] (2, 7, 9))) &&
+  (callDestNoneStackSum (callDest none [1, 8] (2, 7, 9))) &&
+  (callDestEmptySum (callDest none [] (2, 7, 9))) &&
   (Flapjack.stackNumStubs == 5) &&
   (Flapjack.wordNumStubs == 7) &&
   (Flapjack.raiseStubLocation == 5) &&
@@ -772,8 +781,10 @@ def callDestParityGuard : Bool :=
 #guard callDestParityGuard
 
 example : callDest (α := Nat) (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
+example : callDest (α := Nat) none [1, 2] (2, 7, 9) = (.skip, .inr 1) := rfl
 example : callDest (α := Nat) none [1, 8] (2, 7, 9)
     = (.seq (.stackLoad 3 4) .skip, .inr 3) := rfl
+example : callDest (α := Nat) none [] (2, 7, 9) = (.skip, .inl 5) := rfl
 example : Flapjack.raiseStubLocation = 5 := rfl
 
 def runChecks : IO Bool := do

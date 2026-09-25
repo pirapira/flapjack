@@ -267,12 +267,15 @@ theorem length_le_maxNameLength {name : String} {names : List String}
         exact Nat.le_max_left _ _
       · exact Nat.le_trans (ih htail) (Nat.le_max_right _ _)
 
-/-- Exact clause-for-clause port of Cake's `fresh_name`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fresh_name`
     (`pan_globalsScript.sml:55`): while the candidate is already a member of
     `names`, append one apostrophe and retry.  Termination follows HOL's own
     measure: appending a character strictly increases the length, bounded above
     by the maximum name length. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "fresh_name_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over production
+-- `String` names, while HOL `pan_globalsScript.sml` keys `fresh_name` by
+-- `mlstring`. The exact MlString identifier carrier is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 def freshNameHOL (name : String) (names : List String) : String :=
   if name ∈ names then freshNameHOL (name ++ "'") names else name
 termination_by 1 + maxNameLength names - name.length
@@ -795,12 +798,15 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
   exact sizeOfEids_structCompileDecls declarations
     (structGetNames { structs := [], locals := [], globals := [] } declarations)
 
-/-! Counterpart of Cake's `resort_decls_def` (`pan_globalsScript.sml:179`):
+/-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `resort_decls_def` (`pan_globalsScript.sml:179`):
     declarations are regrouped as names, exceptions, value declarations, and
     functions, in that order.  `globalDeclIsName`/`globalDeclIsException`/
     `globalDeclIsGlobal`/`globalDeclIsFunction` are the HOL `is_name`/
     `is_exn_decl`/`is_decl`/`is_function` predicates. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "resort_decls_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
+-- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
+-- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
+-- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
@@ -826,10 +832,13 @@ theorem globalNewMainName_not_mem
     globalNewMainName declarations ∉ globalFunctionNames declarations :=
   freshNameHOL_not_mem "main" (globalFunctionNames declarations)
 
-/-! Counterpart of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
+/-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
     keeps the shape of each value declaration, in order. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "dec_shapes_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the `Decl` (and `Shape`) carriers
+-- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
+-- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
+-- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations
@@ -1786,14 +1795,18 @@ theorem globalShapeVal_cakeShapeVal [BEq String] {width : Nat} [NeZero width]
       congr 1
       exact List.map_congr_left ih
 
-/-- Exact clause-structured port of HOL `pan_globals$compile_exp_def`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_globals$compile_exp_def`
     (`pan_globalsScript.sml:18-46`) over the canonical word context
     `CakeContext`.  Each clause matches HOL directly: `Var Global` uses
     `FLOOKUP` (with `Const 0w` on a missing name), `NStruct`/`NField` produce
     `Const 0w`, and `TopAddr` becomes `Op Sub [TopAddr; Const max_globals_size]`.
     Clause review against the HOL definition is recorded on
     `flapjack-pxn.18.5.2.20.1.1`. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_exp_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): `CakeContext.globals` is keyed by
+-- production `String` and `Exp`/`Prog`/`Decl` names are `String`, while HOL
+-- `pan_globalsScript.sml` keys `ctxt.globals` by `mlstring`. The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 def compileExpCake {width : Nat} [NeZero width] (context : CakeContext width) :
     Exp (BitVec width) → Exp (BitVec width)
   | .var .local name => .var .local name
@@ -1916,7 +1929,7 @@ theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero 
         compileExpCake_cakeContextOfPass context hcanonical expression,
         compileExpCakeArgs_cakeContextOfPass context hcanonical expressions]
 
-/-- Exact clause-structured port of HOL `pan_globals$compile_def`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_globals$compile_def`
     (`pan_globalsScript.sml:69-149`) over the canonical word context
     `CakeContext`.  Each clause matches HOL directly; the global-return-handler
     case uses the exact `freshNameHOL` port of HOL `fresh_name`
@@ -1925,7 +1938,11 @@ theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero 
     String equality is lawful, so the `==`/`!=` comparisons implement HOL `=`.
     The finite-map `globals` is consulted only through `FLOOKUP`, as in HOL.
     See beads `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): `CakeContext.globals` is keyed by
+-- production `String` and `Exp`/`Prog`/`Decl` names are `String`, while HOL
+-- `pan_globalsScript.sml` keys `ctxt.globals` by `mlstring`. The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>
@@ -2075,7 +2092,7 @@ structure CakeCompileDecsResult (width : Nat) where
   exceptions : List (Decl (BitVec width))
   context : CakeContext width
 
-/-- Exact clause-structured port of HOL `pan_globals$compile_decs_def`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_globals$compile_decs_def`
     (`pan_globalsScript.sml:160-176`) over the canonical word context
     `CakeContext`: a function body is compiled (`compileProgCake`) under the
     context as of its own position, and a `Decl` computes
@@ -2095,7 +2112,11 @@ structure CakeCompileDecsResult (width : Nat) where
     `[NeZero width]`, as HOL `dimindex` is positive, and the name equality is
     `[LawfulBEq String]` so the `==` used by `FUPDATE`/`FLOOKUP` reflects HOL's
     `=`. -/
-@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_decs_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): `CakeContext.globals` is keyed by
+-- production `String` and `Exp`/`Prog`/`Decl` names are `String`, while HOL
+-- `pan_globalsScript.sml` keys `ctxt.globals` by `mlstring`. The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 def compileDecsCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     List (Decl (BitVec width)) → CakeCompileDecsResult width
   | [] => { initializers := [], functions := [], exceptions := [], context := context }

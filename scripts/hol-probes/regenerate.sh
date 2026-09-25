@@ -1519,6 +1519,12 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
   plx_alpha_206 plx_ascii_then_high \
   "$cake_dir/pancake/parser/panLexerScript.sml" \
   "$cake_dir/pancake/parser"
+# The get_keyword probe pins the original keyword table for every entry plus
+# the empty / foreign / plain-identifier fallbacks.
+run_probe pan_lexer_get_keyword_probeScript.sml pan_lexer_get_keyword_probe.out \
+  gk_skip gk_done \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"
 # The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
 # initial_ffi_state and the call_FFI cases (identity, success, length
 # failure, oracle final).

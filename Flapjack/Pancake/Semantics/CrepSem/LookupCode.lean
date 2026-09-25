@@ -5,16 +5,18 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Basis.Pure.MlString
 
 /-!
-Statement-exact port of HOL `crepSem$lookup_code_def`
-(`cakeml/pancake/semantics/crepSemScript.sml:76-84`).
+Flapjack-specific lookup-code bridge toward HOL `crepSem$lookup_code_def`
+(`cakeml/pancake/semantics/crepSemScript.sml:76-84`); this module does not yet
+contain an exact tagged port.
 
 HOL keys the code map by `funname = ``:mlstring`` (`crepSemScript.sml:17`) and
 stores argument/local values of type `'a word_lab` (`panSemScript.sml:17`).
 The production `Flapjack.lookupCrepHolCode` uses Lean `String` keys and
-`PanWordLab`, so it cannot carry the `lookup_code_def` tag.  This submodule
-declares the exact carrier form over `Flapjack.Basis.Pure.MlString.MlString`
-keys and the width-indexed `HolWordLab` values, and proves the kernel-checked
-relationship to the production definition.
+`PanWordLab`, so it cannot carry the `lookup_code_def` tag. This submodule
+uses `MlString` keys and width-indexed `HolWordLab` values, but its stored
+`CrepProg` still contains String-valued Call/ExtCall names. It proves a
+kernel-checked relationship to production; the exact code-value carrier and
+tagged lookup remain tracked by beads `flapjack-4w9.1` and `flapjack-4w9.2`.
 -/
 
 namespace Flapjack

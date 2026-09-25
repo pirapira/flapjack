@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.Basis.Pure.MlString
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.PanLang.Shape
 
 /-!
 # Exact `panSem$v` over the faithful `mlstring`/`word_lab` carriers
@@ -31,6 +32,8 @@ with direct original-HOL oracle rows in
 -/
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang
 
 /-- The faithful Cake `mlstring` carrier, local abbreviation. -/
 abbrev MlStringHOL := Flapjack.Basis.Pure.MlString.MlString
@@ -87,5 +90,44 @@ def panPrimopHOLExact {width : Nat} [NeZero width] :
       let (result, overflow) := wordAddCarryHOL left right carry
       some (.rStruct [.val (.word result), .val (.word overflow)])
   | _, _ => none
+
+/- HOL `panSemScript.sml:80-84` `shape_of_def` is total over `v`:
+   `shape_of (ValWord _) = One`, `shape_of (RStruct vs) = Comb (MAP shape_of vs)`,
+   `shape_of (NStruct nm _) = Named nm`.  Stated over the exact `ValueHOL`/`ShapeHOL`
+   carriers; `ValWord w` is `Val (Word w)`, so the `val` case ignores the word_lab
+   payload. -/
+mutual
+  @[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+  def shapeOfHOL {width : Nat} [NeZero width] : ValueHOL width → ShapeHOL
+    | .val _ => .one
+    | .rStruct fields => .comb (shapeOfsHOL fields)
+    | .nStruct name _ => .named name
+  def shapeOfsHOL {width : Nat} [NeZero width] : List (ValueHOL width) → List ShapeHOL
+    | [] => []
+    | value :: values => shapeOfHOL value :: shapeOfsHOL values
+end
+
+@[simp] theorem shapeOfHOL_val {width : Nat} [NeZero width] (value : HolWordLab width) :
+    shapeOfHOL (.val value : ValueHOL width) = .one := by
+  simp only [shapeOfHOL]
+
+@[simp] theorem shapeOfHOL_rStruct {width : Nat} [NeZero width]
+    (fields : List (ValueHOL width)) :
+    shapeOfHOL (.rStruct fields : ValueHOL width) = .comb (shapeOfsHOL fields) := by
+  simp only [shapeOfHOL]
+
+@[simp] theorem shapeOfHOL_nStruct {width : Nat} [NeZero width]
+    (name : MlStringHOL) (fields : List (MlStringHOL × ValueHOL width)) :
+    shapeOfHOL (.nStruct name fields : ValueHOL width) = .named name := by
+  simp only [shapeOfHOL]
+
+@[simp] theorem shapeOfsHOL_nil {width : Nat} [NeZero width] :
+    shapeOfsHOL ([] : List (ValueHOL width)) = [] := by
+  simp only [shapeOfsHOL]
+
+@[simp] theorem shapeOfsHOL_cons {width : Nat} [NeZero width]
+    (value : ValueHOL width) (values : List (ValueHOL width)) :
+    shapeOfsHOL (value :: values) = shapeOfHOL value :: shapeOfsHOL values := by
+  simp only [shapeOfsHOL]
 
 end Flapjack

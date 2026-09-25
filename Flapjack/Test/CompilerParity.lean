@@ -352,6 +352,7 @@ import Flapjack.Test.FfiBridgeParity
 import Flapjack.Test.PanLangShapeSizeWithContextParity
 import Flapjack.Test.PanLangShapeSizeParity
 import Flapjack.Test.PanLangIsWfShapeParity
+import Flapjack.Test.PanSemShapeOfHOLParity
 import Flapjack.Test.PanSemMemLoadExactParity
 
 /-!
@@ -972,6 +973,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.PanLangShapeSizeWithContextParity.runChecks,
     Flapjack.Test.PanLangShapeSizeParity.runChecks,
     Flapjack.Test.PanLangIsWfShapeParity.runChecks,
+    Flapjack.Test.PanSemShapeOfHOLParity.runChecks,
     Flapjack.Test.PanSemMemLoadExactParity.runChecks,
     Flapjack.Test.CrepSemTotalExtCallParity.runChecks
     ].mapM id

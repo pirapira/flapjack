@@ -1570,3 +1570,8 @@ run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
   iwf_one iwf_ctxt_field_miss \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The shape_of probe observes the total HOL shape_of over panSem$v.
+run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
+  so_valword so_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -3,6 +3,7 @@ import Flapjack.Pancake.Semantics.PanSem.AssignPrimitiveExact
 import Flapjack.Pancake.Semantics.PanSem.StoreExact
 import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
 import Flapjack.Pancake.Semantics.PanSem.TickShMemExact
+import Flapjack.Pancake.Semantics.PanSem.ExtCallExact
 
 /-!
 # Exact-state dispatcher for reviewed nonrecursive PanSem clauses
@@ -11,12 +12,12 @@ This dispatcher assembles the reviewed clause definitions over the exact
 `PanSemStateExact` / `ProgHOL` / `ExpHOL` carriers. It handles the
 nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 `Primitive`, the three stores, `ShMemLoad`, `ShMemStore`, `Break`, `Continue`,
-`Return`, `Raise`, `Tick`, and `Annot`.
+`Return`, `Raise`, `Tick`, `ExtCall`, and `Annot`.
 
 The outer `Option` means that a constructor has no assembled clause in this
 fragment; it is distinct from the inner HOL result option. `Dec`, `Seq`, `If`,
-`While`, `Call`, `DecCall`, and `ExtCall` remain open here. This fragment does
-not claim the recursive HOL `evaluate_def` and has no `@[hol]` tag.
+`While`, `Call`, and `DecCall` remain open here. This fragment does not claim
+the recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
 
 namespace Flapjack
@@ -55,7 +56,10 @@ def evalPanSemNonrecursiveHOLExact {width : Nat} {σ : Type}
   | .continue => some (some .continue, state)
   | .call _ _ _ => none
   | .decCall _ _ _ _ _ => none
-  | .extCall _ _ _ _ _ => none
+  | .extCall function configuration configurationLength array arrayLength =>
+      some (extCallStepHOLExact state
+        (fun _ expression => evalHOLExact state expression)
+        function configuration configurationLength array arrayLength)
   | .raise exception value =>
       some (raiseStepHOLExact state exception value
         (fun _ expression => evalHOLExact state expression))

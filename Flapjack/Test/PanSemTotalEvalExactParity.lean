@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem.TotalEvalExact
+import Flapjack.Test.PanSemExtCallExactParity
 
 /-! Direct original-HOL rows for the exact-state nonrecursive dispatcher.
     The source rows are in `scripts/hol-probes/pan_sem_e2e_probe.out`; recursive
@@ -8,6 +9,7 @@ namespace Flapjack.Test.PanSemTotalEvalExactParity
 
 open Flapjack
 open Flapjack.Pancake.PanLang (ExpHOL ProgHOL)
+open Flapjack.Test.PanSemExtCallExactParity
 
 abbrev ml (s : String) : Flapjack.Pancake.PanLang.MlS :=
   Flapjack.Basis.Pure.MlString.ofString s
@@ -64,6 +66,13 @@ private def localWord (state : PanSemStateExact 64 Unit) (name : String) : Optio
 private def memoryWord (state : PanSemStateExact 64 Unit) (address : W) : Option Nat :=
   match state.memory address with
   | .word value => some value.toNat
+
+private def badReadState : PanSemStateExact 8 Unit :=
+  PanSemExtCallExactParity.baseState returningFfi memory8 (fun _ => False)
+
+private instance : DecidablePred badReadState.memaddrs := fun _ => isFalse id
+
+private instance : DecidablePred badReadState.shMemaddrs := fun _ => isFalse id
 
 def skipBreakTickRows : Bool :=
   let skipOk := match exactDispatch .skip baseState with
@@ -138,6 +147,18 @@ def sharedMemoryRows : Bool :=
     | _ => false
   loadOutOfDomain && storeOutOfDomain
 
+def extCallRows : Bool :=
+  let result := evalPanSemNonrecursiveHOLExact
+      (.extCall (ml "x") (.const 0) (.const 2) (.const 0) (.const 2)) badReadState
+  match result with
+  | some (outcome, state) =>
+      (match outcome with
+      | some .error => true
+      | _ => false) &&
+        (match state.memory 0 with
+        | .word byte => byte.toNat == 0xAB)
+  | none => false
+
 /-- The outer `none` is the documented fragment gap, not HOL `SOME Error`. -/
 def recursiveGapRows : Bool :=
   let seqOpen := exactDispatch (.seq .skip .skip) baseState
@@ -151,6 +172,7 @@ def recursiveGapRows : Bool :=
 #guard storeRows
 #guard returnRaiseRows
 #guard sharedMemoryRows
+#guard extCallRows
 #guard recursiveGapRows
 
 def runChecks : IO Bool := do
@@ -169,10 +191,13 @@ def runChecks : IO Bool := do
   if sharedMemoryRows then
     IO.println "PASS exact-state dispatcher ShMem out-of-domain rows match HOL"
   else IO.println "FAIL exact-state dispatcher ShMem out-of-domain rows match HOL"
+  if extCallRows then
+    IO.println "PASS exact-state dispatcher ExtCall bad-read row matches HOL"
+  else IO.println "FAIL exact-state dispatcher ExtCall bad-read row matches HOL"
   if recursiveGapRows then
     IO.println "PASS exact-state dispatcher leaves recursive clauses explicitly open"
   else IO.println "FAIL exact-state dispatcher leaves recursive clauses explicitly open"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
-    sharedMemoryRows && recursiveGapRows)
+    sharedMemoryRows && extCallRows && recursiveGapRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

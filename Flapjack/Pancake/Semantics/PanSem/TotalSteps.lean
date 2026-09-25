@@ -1156,4 +1156,106 @@ theorem panSemTotalDecCallStep_timeout [BEq String] [LawfulBEq String]
       (some .timeOut, panEmptyLocals state) := by
   simp [panSemTotalDecCallStep, hclock]
 
+/-! ## Total `Call` clause composition step (flapjack-pxn.18.4.3.77.14)
+
+`panSemTotalCallStep` mirrors the HOL `Call` case of `evaluate_def`
+(`cakeml/pancake/semantics/panSemScript.sml:658-697`): like `DecCall` for the
+arguments/lookup/clock/body handling, plus the `caltyp` destination and
+exception-handler dispatch. It is UNTAGGED carrier-safe infrastructure. -/
+
+/-- HOL `Call` (`panSemScript.sml:658-697`). Returns handled with `caltyp`
+    `NONE` propagate as a `Return` with cleared locals; `SOME (NONE, _)` yields
+    the body state with the caller's locals; `SOME (SOME (rk, rt), _)` binds the
+    result through `is_valid_value`/`set_kvar`. Raised exceptions propagate with
+    cleared locals unless `caltyp` carries a matching handler, in which case the
+    handler program is evaluated on the exception bound in the caller's locals
+    and validated against `state.exceptionShapes`. -/
+def panSemTotalCallStep [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ))
+    (evaluatedArguments : Option (List (PanValue α)))
+    (lookup : Option (Prog α × (VarName → Option (PanValue α)) × Shape))
+    (callType : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match evaluatedArguments, lookup with
+  | some _, some (body, newLocals, returnShape) =>
+      if state.clock = 0 then (some .timeOut, panEmptyLocals state)
+      else
+        let entry : PanSemState α (FfiState σ) :=
+          { state with clock := state.clock - 1, locals := newLocals }
+        let bodyResult := evaluate body entry
+        let fixed : Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+          (bodyResult.1, panSemFixClock entry.clock bodyResult.2)
+        match fixed.1 with
+        | none => (some .error, fixed.2)
+        | some .break => (some .error, fixed.2)
+        | some .continue => (some .error, fixed.2)
+        | some (.returned value) =>
+            if panShapeMatches (panSemShapeOf value) returnShape then
+              match callType with
+              | none => (some (.returned value), panEmptyLocals fixed.2)
+              | some (none, _) => (none, { fixed.2 with locals := state.locals })
+              | some (some (kind, name), _) =>
+                  if panValueAssignmentValid state.structs state.locals state.globals
+                      kind name value then
+                    (none, match kind with
+                      | .local => { fixed.2 with
+                          locals := updatePanValueMap state.locals name value }
+                      | .global => { fixed.2 with
+                          locals := state.locals,
+                          globals := updatePanValueMap fixed.2.globals name value })
+                  else (some .error, fixed.2)
+            else (some .error, fixed.2)
+        | some (.exception exceptionId value) =>
+            match callType with
+            | none => (some (.exception exceptionId value), panEmptyLocals fixed.2)
+            | some (_, none) => (some (.exception exceptionId value), panEmptyLocals fixed.2)
+            | some (_, some (handlerId, handlerVar, handlerProg)) =>
+                if exceptionId == handlerId then
+                  match state.exceptionShapes exceptionId with
+                  | some shape =>
+                      if panShapeMatches (panSemShapeOf value) shape &&
+                          panValueAssignmentValid state.structs state.locals state.globals
+                            .local handlerVar value then
+                        evaluate handlerProg
+                          { fixed.2 with
+                            locals := updatePanValueMap state.locals handlerVar value }
+                      else (some .error, fixed.2)
+                  | none => (some .error, fixed.2)
+                else (some (.exception exceptionId value), panEmptyLocals fixed.2)
+        | some other => (some other, panEmptyLocals fixed.2)
+  | _, _ => (some .error, state)
+
+@[simp] theorem panSemTotalCallStep_none_args [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ))
+    (lookup : Option (Prog α × (VarName → Option (PanValue α)) × Shape))
+    (callType : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalCallStep state none lookup callType evaluate = (some .error, state) := rfl
+
+@[simp] theorem panSemTotalCallStep_none_lookup [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ)) (arguments : List (PanValue α))
+    (callType : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalCallStep state (some arguments) none callType evaluate =
+      (some .error, state) := rfl
+
+theorem panSemTotalCallStep_timeout [BEq String] [LawfulBEq String]
+    (state : PanSemState α (FfiState σ)) (arguments : List (PanValue α))
+    (body : Prog α) (newLocals : VarName → Option (PanValue α)) (returnShape : Shape)
+    (callType : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (evaluate : Prog α → PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (hclock : state.clock = 0) :
+    panSemTotalCallStep state (some arguments) (some (body, newLocals, returnShape))
+        callType evaluate = (some .timeOut, panEmptyLocals state) := by
+  simp [panSemTotalCallStep, hclock]
+
 end Flapjack

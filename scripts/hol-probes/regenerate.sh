@@ -1745,3 +1745,10 @@ run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out 
 run_probe word_to_stack_call_dest_probeScript.sml word_to_stack_call_dest_probe.out \
   cd_some wl_store "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+# The pan_globals fperm probe observes the source-shape program permutation
+# `fperm f g p` (pan_globalsScript.sml:191-214) for the recursive control
+# constructs, the Call handler case, the DecCall case and the catch-all.
+run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
+  recursive_control fperm_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"

@@ -481,6 +481,27 @@ theorem globalRenameFunctionName_cong [BEq String] [LawfulBEq String]
 -- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
 -- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
+--
+-- Qualified-tag review evidence (`flapjack-6nn.1.2`), clause by clause against
+-- `fperm_def` (`pan_globalsScript.sml:191-214`):
+--   * `Dec v s e p` -> `.dec name shape value body` recurs on the body only;
+--   * `Seq p p'` -> `.seq first second` recurs on both;
+--   * `If e p p'` -> `.ite condition thenBranch elseBranch` recurs on both arms;
+--   * `While e p` -> `.while condition body` recurs on the body only;
+--   * `Call rtyp e es` -> `.call info function arguments` recurses into the
+--     `SOME (eid, evar, p)` handler program and renames the callee `e` with
+--     `fperm_name`; the HOL `case rtyp` is rendered as the nested `match info`;
+--   * `DecCall v s e es p` -> `.decCall name shape function arguments body`
+--     renames the callee with `fperm_name` and recurses on the body;
+--   * catch-all `fperm _ _ p = p` -> the `| program => program` arm.
+-- Every name use here is an equality/map-key comparison via
+-- `globalRenameFunctionName`/`LawfulBEq String`; `globalRenameProg` never
+-- inspects the bytes of a name, so the `String`-vs-`mlstring` carrier
+-- difference is unobservable and the declaration is a carrier-only candidate
+-- for the `names_as_string` qualifier once the `flapjack-an4.3` checker gates
+-- land.  Direct original-HOL rows: `pan_globals_fperm_probeScript.sml` /
+-- `pan_globals_fperm_probe.out`; Lean fixtures:
+-- `Flapjack/Test/PanGlobalsFpermParity.lean`.
 def globalRenameProg [LawfulBEq String]
     (source target : FunName) : Prog α → Prog α
   | .dec name shape value body =>

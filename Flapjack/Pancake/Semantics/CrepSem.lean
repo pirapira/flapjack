@@ -882,13 +882,30 @@ def fixCrepHolClock (oldState : CrepHolState α σ)
       clock :=
         if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause is HOL's
-    `fix_clock_def` (`crepSemScript.sml:150-152`), but the carrier
-    `CrepHolState (BitVec width) σ` stores `locals`/`code` as raw functions that
-    admit infinite-support inhabitants, a strict superset of HOL's finite maps.
-    The `@[hol fix_clock_def]` tag was withdrawn in the
-    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
-    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$fix_clock_def` (`cakeml/pancake/semantics/crepSemScript.sml:150-152`),
+    which states `fix_clock old_s (res, new_s) = (res, new_s with clock := if old_s.clock < new_s.clock then old_s.clock else new_s.clock)`;
+    the Lean clamp is clause-for-clause identical, with the HOL result/state pair
+    exposed as the `β × CrepHolState ...` binder `step`. The mismatch is the
+    quantified whole-state carrier: in `CrepHolState (BitVec width) σ` the fields
+    `locals : Nat → Option _`, `globals : BitVec 5 → Option _` and
+    `code : FunName → Option _` (CrepSem.lean:102-113) are raw functions that admit
+    infinite-support inhabitants, a strict superset of HOL's finite maps
+    `varname |-> 'a word_lab`, `5 word |-> 'a word_lab` and
+    `funname |-> (varname list # prog)` (`crepSemScript.sml:20-31`), so the
+    statement ranges over states HOL cannot represent. The `names_as_string`
+    qualifier cannot authorize that carrier and no `NameRanged` byte witness
+    applies because the result is a state, not a name. Direct HOL rows
+    `fix_clock_clamps=(...)` and `fix_clock_keeps_lower=(...)` are in
+    `scripts/hol-probes/crep_fix_clock_probe.out`; the clamp is sampled by
+    `Flapjack/Test/CrepGlobalShapeParity.lean:292-296`. The `@[hol fix_clock_def]`
+    tag was withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains
+    WITHDRAWN (`docs/HOL-THEOREM-MAP.json` records `fixCrepHolClockW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1` (the `CrepSemHOLState` finite-support carrier
+    at `Flapjack/Pancake/Semantics/CrepSem/HOLState.lean` now has the `set_var`/
+    `set_globals`/`upd_locals`/`empty_locals`/`res_var` helpers but still no
+    `fix_clock` bridge). -/
 def fixCrepHolClockW {width : Nat} [NeZero width] {σ : Type} {β : Type}
     (oldState : CrepHolState (BitVec width) σ)
     (step : β × CrepHolState (BitVec width) σ) :

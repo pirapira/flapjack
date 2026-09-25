@@ -305,6 +305,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         expected = {
             "decCrepHolClockW": "dec_clock_def",
             "emptyCrepHolLocalsW": "empty_locals_def",
+            "fixCrepHolClockW": "fix_clock_def",
             "fixCrepHolClock_IMP_LESS_EQW": "fix_clock_IMP_LESS_EQ",
         }
         for lean_name, hol_name in expected.items():

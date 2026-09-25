@@ -11,6 +11,22 @@
   finite-support *by type* so those helpers can be restated faithfully and
   retagged later.
 
+  Statement/side-condition review for `flapjack-pxn.18.3.7.1.3.1.1.2`
+  (2026-09-25): the five HOL definitions
+  (`cakeml/pancake/semantics/panSemScript.sml:396-449`) quantify the state
+  component as a finite map `varname |-> v`, written with `FUPDATE`/`FLOOKUP`,
+  whereas `PanSemStateFiniteExact` carries a `HolFiniteMapExact` value (a
+  `lookup` function together with a `finiteSupport` proof).  This is a
+  representation refinement of the HOL carrier, not the HOL carrier itself,
+  and AGENTS.md admits no qualifier/witness (unlike `list_as_array` /
+  `names_as_string`) that authorizes a finite-map representation.  The five
+  `...HOLFinite` helpers therefore stay untagged and are recorded as
+  `documented_mismatch` infrastructure; the faithful-tagging decision (new
+  representation qualifier/witness vs. an exact `|->` carrier) is tracked by
+  `flapjack-pxn.18.3.7.1.3.1.1.2`.  The broad-carrier helpers over
+  `PanSemStateExact` (`StateExact.lean`) remain the `documented_mismatch`
+  analogues.
+
   Nothing here is tagged `@[hol]`: this is representation infrastructure for
   the exact-carrier rebuild tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`.
 -/

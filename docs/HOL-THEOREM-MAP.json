@@ -2145,6 +2145,22 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "load_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "loadMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.40): HOL load_op (cakeml/pancake/panLangScript.sml:300-305) maps Op8->Load8, Op16->Load16, OpW->Load, Op32->Load32. loadMemOpHOL matches clause-for-clause; OpSize is the tagged exact opsize port (constructors op8/op16/opW/op32) and the codomain CrepMemOp has the eight nullary constructors mirroring asm$memop, the representation already accepted for shMem in the reviewed HolLoopProg entry. The executable compileProg calls loadMemOpHOL directly, so the production path is routed, not merely bridged. Direct HOL-EVAL rows load_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean. store_op is the analogous tagged port storeMemOpHOL (flapjack-4ac.1.41)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "store_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "storeMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.41): HOL store_op (cakeml/pancake/panLangScript.sml:307-312) maps Op8->Store8, Op16->Store16, OpW->Store, Op32->Store32. storeMemOpHOL matches clause-for-clause over the same exact carriers as loadMemOpHOL (tagged exact OpSize; CrepMemOp mirroring asm$memop). The executable compileProg calls storeMemOpHOL directly. Direct HOL-EVAL rows store_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",

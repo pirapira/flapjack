@@ -39,6 +39,17 @@ theorem fpermNameCongFixture :
       ("foo" : FunName) = "bar" :=
   fperm_name_cong "foo" "bar" "foo" "bar"
 
+-- The exact HOL port is polymorphic; exercise the generic theorems at `Nat` as
+-- well, so the `String` specialization is not mistaken for the HOL original.
+theorem fpermNameCancelNatFixture :
+    fpermName (α := Nat) 1 2 (fpermName (α := Nat) 1 2 1) = 1 :=
+  fpermName_cancel 1 2 1
+
+theorem fpermNameCongNatFixture :
+    fpermName (α := Nat) 1 2 3 = fpermName (α := Nat) 1 2 4 ↔
+      (3 : Nat) = 4 :=
+  fpermName_cong 1 2 3 4
+
 theorem fpermDecsAppendFixture :
     globalRenameDecls "foo" "bar" (declarations ++ [])
       = globalRenameDecls "foo" "bar" declarations

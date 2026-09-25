@@ -296,6 +296,37 @@ example :
     exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
       (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
 
+/-! The recursive Cmp case preserves the full source-evaluator result under an
+    arbitrary code-map update. This exercises the all-width support theorem
+    independently of the separate native HOL evaluator correspondence. -/
+example :
+    evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+          boolDimensionHolState)
+        (crepSimpExp
+          (fun n => bitVecToHolWord boolWordDimension (BitVec.ofNat 2 n))
+          (.cmp .equal (.const boolDimensionWord) (.const boolDimensionWord))) =
+      evalCrepHolFiniteWordSourceExpWordLab boolWordDimension
+        boolDimensionHolState
+        (.cmp .equal (.const boolDimensionWord) (.const boolDimensionWord)) := by
+  apply crepSimpExpCorrect1CmpHolFiniteWordSourceCase
+  · exact .word boolDimensionWord
+  · simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMemoryModel]
+  · intro child hmem source result hsuccess
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hleft | htail
+    · have hshape : child = .const boolDimensionWord := by simpa using hleft
+      subst child
+      exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+        (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
+    · rcases htail with hright | hnil
+      · have hshape : child = .const boolDimensionWord := by simpa using hright
+        subst child
+        exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+          (f := fun (_, entry) => entry) source boolDimensionWord result hsuccess
+      · cases hnil
+
 example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension)

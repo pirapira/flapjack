@@ -160,4 +160,82 @@ mutual
                 · exact convShapeList_byteRanged fuel trees (fun t hmem => ht t (by simp [hmem])) shapes' hrec s htail
 end
 
+theorem convParams_byteRanged : ∀ (fuel : Nat) (trees : List ParseTree),
+    (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ params, convParams fuel trees = some params →
+    ∀ p ∈ params, StringByteRanged p.1 ∧ ShapeByteRanged p.2 := by
+  intro fuel trees
+  fun_induction convParams fuel trees
+  · intro ht params h p hp
+    cases h
+    simp at hp
+  · rename_i shapeTree nameTree rest ih
+    intro ht params h p hp
+    cases hs : convShape fuel shapeTree with
+    | none => simp [hs] at h
+    | some shape =>
+      simp only [hs] at h
+      cases hn : convIdent nameTree with
+      | none => simp [hn] at h
+      | some name =>
+        simp only [hn] at h
+        cases hp2 : convParams fuel rest with
+        | none => simp [hp2] at h
+        | some restParams =>
+          simp only [hp2] at h
+          cases h
+          rw [List.mem_cons] at hp
+          rcases hp with rfl | htail
+          · exact ⟨convIdent_byteRanged (ht nameTree (by simp)) hn,
+              convShape_byteRanged fuel shapeTree (ht shapeTree (by simp)) _ hs⟩
+          · exact ih (fun t hmem => ht t (by simp [hmem])) restParams hp2 p htail
+  · intro ht params h p hp
+    simp at h
+
+/-- `convFieldNameList` maps a byte-ranged tree to byte-ranged field names and
+    shapes, via `convParams`. -/
+theorem convFieldNameList_byteRanged {fuel : Nat} {tree : ParseTree}
+    (ht : ParseTreeByteRanged tree) :
+    ∀ fields, convFieldNameList fuel tree = some fields →
+      ∀ p ∈ fields, StringByteRanged p.1 ∧ ShapeByteRanged p.2 := by
+  intro fields h p hp
+  cases hargs : tree.argsNT .fieldNameList with
+  | none => simp [convFieldNameList, hargs] at h
+  | some children =>
+      simp only [convFieldNameList, hargs] at h
+      exact convParams_byteRanged fuel children (argsNT_byteRanged ht hargs) fields h p hp
+
+/-- `convStructName` maps a byte-ranged tree to a byte-ranged structure name and
+    a byte-ranged field list. -/
+theorem convStructName_byteRanged {fuel : Nat} {tree : ParseTree}
+    (ht : ParseTreeByteRanged tree) :
+    ∀ result, convStructName fuel tree = some result →
+      StringByteRanged result.1 ∧
+        ∀ p ∈ result.2, StringByteRanged p.1 ∧ ShapeByteRanged p.2 := by
+  intro result h
+  cases hargs : tree.argsNT .structName with
+  | none => simp [convStructName, hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [convStructName, hargs] at h
+    | cons nameTree rest =>
+      cases rest with
+      | nil => simp [convStructName, hargs] at h
+      | cons fieldsTree rest2 =>
+        cases rest2 with
+        | cons x xs => simp [convStructName, hargs] at h
+        | nil =>
+          simp only [convStructName, hargs] at h
+          cases hn : convIdent nameTree with
+          | none => simp [hn] at h
+          | some name =>
+            simp only [hn] at h
+            cases hf : convFieldNameList fuel fieldsTree with
+            | none => simp [hf] at h
+            | some fields =>
+              simp only [hf] at h
+              cases h
+              have ht2 := argsNT_byteRanged ht hargs
+              exact ⟨convIdent_byteRanged (ht2 nameTree (by simp)) hn,
+                convFieldNameList_byteRanged (ht2 fieldsTree (by simp)) fields hf⟩
+
 end Flapjack.Parser

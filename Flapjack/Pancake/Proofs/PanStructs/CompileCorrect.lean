@@ -21,14 +21,19 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   exact lookupInfo_eq_panPropsALookupEq key entries
 
 mutual
-  /-- Exact executable counterpart of HOL `convert_v_def`. The HOL datatype
+  /-- Source-shaped executable counterpart (Flapjack-specific; NOT an exact HOL port) of HOL `convert_v_def`. The HOL datatype
       cases are `Val (Word w)`, `RStruct xs`, and `NStruct nm flds`; these
       correspond respectively to `.word`, `.rStruct`, and `.nStruct` in
       `PanValue`. The first case is unchanged, the second maps recursively in
       order, and the third drops both record and field names while recursively
       mapping field values in order. The direct HOL-EVAL regression is recorded
       in the adjacent probe fixture. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "convert_v_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+  -- production PanValue carrier whose nStruct record/field names are
+  -- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+  -- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+  -- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+  -- (parent flapjack-pxn.18.3.5.7.2).
   def panStructConvertValue : PanValue α → PanValue α
     | .word value => .word value
     | .rStruct fields => .rStruct (panStructConvertValues fields)
@@ -72,7 +77,7 @@ mutual
 end
 
 mutual
-  /-- Exact executable port of HOL `pan_structsProof$v_flds_ok`
+  /-- Source-shaped executable port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_structsProof$v_flds_ok`
       (`cakeml/pancake/proofs/pan_structsProofScript.sml:39`). The HOL clauses
       are reproduced literally: a scalar is `T`; `RStruct vs` is
       `EVERY (v_flds_ok ctxt) vs`; `NStruct nm flds` is the conjunction of the
@@ -84,13 +89,18 @@ mutual
       `lookupInfo` is the first-match association-list lookup, i.e. the exact
       `alist$ALOOKUP` counterpart, and under `[LawfulBEq String]` its `==`
       reflects HOL's `=`. The context is the HOL-shaped `StructContextHOL`
-      (fields and size only). `panSemShapeOf` is the tagged exact port of HOL
+      (fields and size only). `panSemShapeOf` is the source-shaped (currently untagged) counterpart of HOL
       `shape_of` (`panSemScript.sml:80`), and `panStructShapeListEqBool`
       computes HOL's `=` on `shape` lists constructor-by-constructor, since
       Lean `Shape` intentionally has no `BEq`/`DecidableEq` instance. The
       direct original-HOL rows are pinned in
       `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+  -- production PanValue carrier whose nStruct record/field names are
+  -- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+  -- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+  -- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+  -- (parent flapjack-pxn.18.3.5.7.2).
   def panValueFldsOk [LawfulBEq String] (context : StructContextHOL) :
       PanValue α → Bool
     | .word _ => true
@@ -162,13 +172,18 @@ private theorem lookupInfo_append_eq_of_some [LawfulBEq String]
       have hresult := ih htailNodup
       simpa [lookupInfo, hmatch] using hresult
 
-/-- Exact HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`): extending
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`): extending
     the HOL-shaped structure context preserves Bool field validity when the
     prefix keys are distinct from the original context keys. This is the
     invariant-preservation prerequisite used by `compile_correct`. The direct
     original-HOL EVAL row and a named-value Lean regression with nonempty
     prefix are recorded in `pan_structs_value_validity_probe.out`. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_append"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+-- production PanValue carrier whose nStruct record/field names are
+-- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+-- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+-- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+-- (parent flapjack-pxn.18.3.5.7.2).
 theorem panValueFldsOk_append [LawfulBEq String]
     (pfx context : StructContextHOL) (value : PanValue α)
     (hvalue : panValueFldsOk context value = true)

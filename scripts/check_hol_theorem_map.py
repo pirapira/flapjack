@@ -618,6 +618,88 @@ DOCUMENTED_MISMATCHES = {
         "support whereas HOL res_var/FLOOKUP range over finite maps. Tag withdrawn; faithful port "
         "over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
+    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "decClockCrepSemHOL"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "dec_clock_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "fix_clock_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL_IMP_LESS_EQ"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "fix_clock_IMP_LESS_EQ",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "memLoadCrepSemHOL"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "mem_load_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "setVar"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_var_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "setGlobals"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_globals_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "updLocals"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "upd_locals_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "emptyLocals"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "empty_locals_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "statement matches but the finite-map carrier must be recorded with the "
+        "fmap_as_finite_support qualifier (fields locals/globals/code) before any exact "
+        "tag; temporarily withdrawn pending qualifier infrastructure bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "resVarEq"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "res_var_def",
+        "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
+        "HOL equality port uses DecidableEq with no BEq side condition and the carrier "
+        "is finite-support, but the declaration's carrier is HolFiniteMapExact itself "
+        "(no owning structure field), so the field-based fmap_as_finite_support qualifier "
+        "does not directly apply; exact tagging route tracked by bead "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",
@@ -835,15 +917,6 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
-        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "decClockCrepSemHOL"),
-        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL"),
-        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL_IMP_LESS_EQ"),
-        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "memLoadCrepSemHOL"),
-        ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "setVar"),
-        ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "setGlobals"),
-        ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "updLocals"),
-        ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "emptyLocals"),
-        ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "resVarEq"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

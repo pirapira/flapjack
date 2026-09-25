@@ -228,7 +228,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertIn("globalFreshName", record["reviewer"])
                 self.assertNotIn(key, tagged)
 
-    def test_crep_sem_state_exact_helpers_are_reviewed_exact(self):
+    def test_crep_sem_state_exact_helpers_are_held_for_fmap_qualifier(self):
         tagged = MAP["tagged_declarations"]()
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         manifest_by_key = {
@@ -249,11 +249,11 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     (record["hol_path"], record["hol_name"]),
                     ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
                 )
-                self.assertEqual(record["statement_status"], "reviewed_exact")
-                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.3.1", record["reviewer"])
-                self.assertIn(key, tagged)
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("fmap_as_finite_support", record["reviewer"])
+                self.assertNotIn(key, tagged)
 
-    def test_crep_sem_holstate_update_helpers_are_reviewed_exact(self):
+    def test_crep_sem_holstate_update_helpers_are_held_for_fmap_qualifier(self):
         tagged = MAP["tagged_declarations"]()
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         manifest_by_key = {
@@ -275,9 +275,9 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     (record["hol_path"], record["hol_name"]),
                     ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
                 )
-                self.assertEqual(record["statement_status"], "reviewed_exact")
-                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.3.1", record["reviewer"])
-                self.assertIn(key, tagged)
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", record["reviewer"])
+                self.assertNotIn(key, tagged)
 
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (

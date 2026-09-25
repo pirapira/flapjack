@@ -4,7 +4,6 @@ import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.FfiHOL
-import Flapjack.HolRef
 
 /-!
 # HOL-shaped state carriers for Crep expression proofs
@@ -141,11 +140,13 @@ def eraseEq [DecidableEq α] (map : HolFiniteMapExact α β) (key : α) :
     · simp [FDOMSUB_HOL, h] at hk
     · simpa [FDOMSUB_HOL, h] using hk
 
-/-- Faithful HOL-equality port of `crepSem$res_var` (`crepSemScript.sml:163`) on
-    the finite-support carrier: `NONE` subtracts the key from the domain,
-    `SOME v` updates it.  Uses `DecidableEq` (HOL `=`) so HOL's polymorphic key
-    type is preserved with no `BEq`/`LawfulBEq` side conditions. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "res_var_def"]
+/-- HOL-equality port of `crepSem$res_var` (`crepSemScript.sml:163`) on the
+    finite-support carrier: `NONE` subtracts the key from the domain, `SOME v`
+    updates it. Uses `DecidableEq` (HOL `=`) so HOL's polymorphic key type is
+    preserved with no `BEq`/`LawfulBEq` side conditions. Untagged: the carrier
+    is `HolFiniteMapExact` itself (no owning structure field), so the
+    `fmap_as_finite_support` qualifier does not directly apply; the exact
+    tagging route is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.4`. -/
 def resVarEq [DecidableEq α] (map : HolFiniteMapExact α β)
     (entry : α × Option β) : HolFiniteMapExact α β :=
   match entry.2 with
@@ -312,11 +313,23 @@ port). `upd_locals`'s `updateList`, and the Nat-keyed `FUPDATE`, agree with HOL
 bridges connect each update to the executable `CrepHolState` helper through the
 projection `toBitVecEvaluatorState`.
 
+These helpers are **temporarily untagged**: their finite-map representation must
+be recorded with the `@[hol]` qualifier `(fmap_as_finite_support := [locals,
+globals, code])` rather than a bare tag, per the standard-translation rule. That
+qualifier, its canonical witness `holFmapAsFiniteSupportWitness`, and the
+`reviewed_fmap_as_finite_support` manifest status are being added under bead
+`flapjack-pxn.18.3.7.1.3.1.1.2.4` (ds3 commits `01dae7ba5`/`bcca041b5`, not yet
+in the integration branch). Each helper is still reviewed case-by-case for
+statement/side conditions and will be re-tagged with the qualifier only once the
+checker accepts it; no exact claim is made here until then.
+
 HOL `crepSem$res_var_def` (`crepSemScript.sml:163`) is *polymorphic in the key
 type*, so it is ported as the generic `HolFiniteMapExact.resVarEq`
-(`[DecidableEq α]`, HOL `=`) above. The state-local `CrepSemHOLState.resVar`
-below is a Nat-fixed, `BEq`-based convenience wrapper kept for the `resVarW`
-bridge and carries no tag. -/
+(`[DecidableEq α]`, HOL `=`) above. Its carrier is `HolFiniteMapExact` itself,
+so the field-based `fmap_as_finite_support` qualifier does not directly apply;
+the exact tagging route is part of the same follow-up bead. The state-local
+`CrepSemHOLState.resVar` below is a Nat-fixed, `BEq`-based convenience wrapper
+kept for the `resVarW` bridge and carries no tag. -/
 
 namespace HolFiniteMapExact
 
@@ -365,38 +378,40 @@ private theorem crepHolState_eq_of_fields {α σ : Type}
 
 namespace CrepSemHOLState
 
-/-- HOL `set_var` over the exact finite-support carrier. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_var_def"]
+/-- HOL `set_var` over the exact finite-support carrier. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def setVar {width : Nat} [NeZero width] {ffiState : Type} (name : Nat)
     (value : HolWordLab width) (state : CrepSemHOLState width ffiState) :
     CrepSemHOLState width ffiState :=
   { state with locals := state.locals.update (name, value) }
 
-/-- HOL `set_globals` over the exact finite-support carrier. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "set_globals_def"]
+/-- HOL `set_globals` over the exact finite-support carrier. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def setGlobals {width : Nat} [NeZero width] {ffiState : Type} (key : BitVec 5)
     (value : HolWordLab width) (state : CrepSemHOLState width ffiState) :
     CrepSemHOLState width ffiState :=
   { state with globals := state.globals.update (key, value) }
 
 /-- HOL `upd_locals` over the exact finite-support carrier: locals are replaced
-    by `FEMPTY |++ varargs`. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "upd_locals_def"]
+    by `FEMPTY |++ varargs`. Untagged pending the `fmap_as_finite_support`
+    qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def updLocals {width : Nat} [NeZero width] {ffiState : Type}
     (varargs : List (Nat × HolWordLab width))
     (state : CrepSemHOLState width ffiState) : CrepSemHOLState width ffiState :=
   { state with locals := HolFiniteMapExact.empty.updateList varargs }
 
-/-- HOL `empty_locals` over the exact finite-support carrier. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "empty_locals_def"]
+/-- HOL `empty_locals` over the exact finite-support carrier. Untagged pending
+    the `fmap_as_finite_support` qualifier
+    (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def emptyLocals {width : Nat} [NeZero width] {ffiState : Type}
     (state : CrepSemHOLState width ffiState) : CrepSemHOLState width ffiState :=
   { state with locals := HolFiniteMapExact.empty }
 
 /-- Flapjack-specific Nat-fixed, `BEq`-based convenience wrapper around the
-    generic tagged `HolFiniteMapExact.resVarEq`, kept only to connect the
-    executable `resVarW`. It carries no `@[hol]` tag: HOL `res_var_def` is
-    polymorphic in the key type and is ported as `resVarEq`. -/
+    generic `HolFiniteMapExact.resVarEq`, kept only to connect the executable
+    `resVarW`. It carries no `@[hol]` tag: HOL `res_var_def` is polymorphic in
+    the key type and the exact tagging route is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`. -/
 def resVar {width : Nat} [NeZero width]
     (map : HolFiniteMapExact Nat (HolWordLab width))
     (entry : Nat × Option (HolWordLab width)) :

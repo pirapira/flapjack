@@ -22,6 +22,17 @@ The update helpers (`set_var`, `set_globals`, `upd_locals`, `empty_locals`,
 `res_var`) need `FUPDATE`/`FEMPTY`/`FUPDATE_LIST` on `HolFiniteMapExact` and are
 tracked as follow-up slices of `flapjack-pxn.18.3.7.1.3.1.1.3.1`.
 
+The four helpers below are **temporarily untagged**. Their finite-map
+representation (`HolFiniteMapExact` fields on `CrepSemHOLState`) must be
+recorded with the `@[hol]` qualifier `(fmap_as_finite_support := [locals,
+globals, code])` rather than a bare tag, per the standard-translation rule. That
+qualifier, its canonical witness `holFmapAsFiniteSupportWitness`, and the
+`reviewed_fmap_as_finite_support` manifest status are being added under bead
+`flapjack-pxn.18.3.7.1.3.1.1.2.4` (ds3 commits `01dae7ba5`/`bcca041b5`, not yet
+in the integration branch). Each helper is still reviewed case-by-case for
+statement/side conditions and must be re-tagged with the qualifier only after
+that checker accepts it; until then no exact claim is made here.
+
 References: `cakeml/pancake/semantics/crepSemScript.sml:48-51` (mem_load_def),
 `:145-148` (dec_clock_def), `:150-152` (fix_clock_def), `:155-158`
 (fix_clock_IMP_LESS_EQ). Direct HOL rows reproduced below live in
@@ -31,26 +42,26 @@ References: `cakeml/pancake/semantics/crepSemScript.sml:48-51` (mem_load_def),
 
 namespace Flapjack
 
-/-- Exact port of HOL `dec_clock_def` (`crepSemScript.sml:145-148`) over the
-    finite-support `CrepSemHOLState` carrier. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "dec_clock_def"]
+/-- Port of HOL `dec_clock_def` (`crepSemScript.sml:145-148`) over the
+    finite-support `CrepSemHOLState` carrier. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def decClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
     (state : CrepSemHOLState width σ) : CrepSemHOLState width σ :=
   { state with clock := state.clock - 1 }
 
-/-- Exact port of HOL `fix_clock_def` (`crepSemScript.sml:150-152`) over the
+/-- Port of HOL `fix_clock_def` (`crepSemScript.sml:150-152`) over the
     finite-support `CrepSemHOLState` carrier. The result is polymorphic in the
-    unconstrained `res` component, as in HOL. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_def"]
+    unconstrained `res` component, as in HOL. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def fixClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type} {β : Type}
     (oldState : CrepSemHOLState width σ) (step : β × CrepSemHOLState width σ) :
     β × CrepSemHOLState width σ :=
   (step.1, { step.2 with
     clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
 
-/-- Exact port of HOL `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-158`):
-    `fix_clock` never increases the clock. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "fix_clock_IMP_LESS_EQ"]
+/-- Port of HOL `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-158`):
+    `fix_clock` never increases the clock. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 theorem fixClockCrepSemHOL_IMP_LESS_EQ {width : Nat} [NeZero width] {σ : Type}
     {β : Type} (state : CrepSemHOLState width σ) (x : β × CrepSemHOLState width σ)
     (res : β) (s1 : CrepSemHOLState width σ)
@@ -63,10 +74,10 @@ theorem fixClockCrepSemHOL_IMP_LESS_EQ {width : Nat} [NeZero width] {σ : Type}
     state.clock
   split <;> omega
 
-/-- Exact port of HOL `mem_load_def` (`crepSemScript.sml:48-51`) over the
+/-- Port of HOL `mem_load_def` (`crepSemScript.sml:48-51`) over the
     finite-support `CrepSemHOLState` carrier: a total `word → word_lab` memory
-    guarded by the `memaddrs` set. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "mem_load_def"]
+    guarded by the `memaddrs` set. Untagged pending the
+    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
 def memLoadCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
     (address : BitVec width) (state : CrepSemHOLState width σ)
     [DecidablePred state.memaddrs] :

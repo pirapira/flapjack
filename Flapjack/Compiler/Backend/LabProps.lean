@@ -137,7 +137,7 @@ theorem cbwToAsm_asmConfigChecks {width : Nat}
   cases instruction <;> rfl
 
 /-- HOL `labProps$line_ok_pre_def` over a concrete assembler configuration. -/
-def lineOkPreConfig {width : Nat} {RegImm : Type}
+def lineOkPreConfig {width : Nat} {RegImm MlString : Type}
     (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (line : Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
       WordMemOp (WordLangAddr (BitVec width)))
@@ -145,7 +145,7 @@ def lineOkPreConfig {width : Nat} {RegImm : Type}
   lineOkPre (asmConfigChecks config) line
 
 /-- HOL `labProps$sec_ok_pre_def` over a concrete assembler configuration. -/
-def secOkPreConfig {width : Nat} {RegImm : Type}
+def secOkPreConfig {width : Nat} {RegImm MlString : Type}
     (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (sec : Section (Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
       WordMemOp (WordLangAddr (BitVec width)))
@@ -153,7 +153,7 @@ def secOkPreConfig {width : Nat} {RegImm : Type}
   secOkPre (asmConfigChecks config) sec
 
 /-- HOL `labProps$all_enc_ok_pre` over a concrete assembler configuration. -/
-def allEncOkPreConfig {width : Nat} {RegImm : Type}
+def allEncOkPreConfig {width : Nat} {RegImm MlString : Type}
     (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (sections : List (Section (Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)
       WordMemOp (WordLangAddr (BitVec width)))

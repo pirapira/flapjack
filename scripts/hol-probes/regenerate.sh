@@ -1593,3 +1593,9 @@ run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
 run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
   is_valword_val is_valword_wordlab \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The empty_locals probe observes the exact `panSem$empty_locals` state update:
+# the locals map is cleared while other fields are preserved.
+run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
+  el_lookup el_globals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

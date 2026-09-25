@@ -2380,16 +2380,24 @@ theorem codeRelImp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
         (names, compileCodeRelProg nextContext program) :=
   hrel function variableShapes program returnShape hlookup
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `code_rel_empty_locals` (`pan_to_crepProofScript.sml:96`).
-Both code fields belong to their production semantic states. The HOL source
-and target `empty_locals` definitions update only locals, leaving each code
-map unchanged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-! Source-shaped analogue of HOL `code_rel_empty_locals`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:96`), not an exact HOL
+port. The state updates do preserve both code fields: HOL `empty_locals_def`
+at panSemScript.sml:436 and crepSemScript.sml:71 update only `locals`, and
+the two Lean updates do the same. The relation carried across those unchanged
+fields is still production-specific, however. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `code_rel_def` at
+-- pan_to_crepProofScript.sml:30-42 relates `mlstring`-keyed finite maps whose
+-- source entries contain HOL `prog` and whose target entries contain HOL
+-- `crep_prog` compiled by `compile`. This theorem instead relates
+-- `panSemCodeAsLookup source.code` and `target.code` through production
+-- `codeRel`: its keys are `String` (`FunName`/`VarName`), its source entries
+-- use production `Prog α`, and its target entries use production `CrepProg α`
+-- / `compileCodeRelProg`. There is no `NameRanged` or same-module byte witness
+-- premise, and no proved state/code-carrier bridge in this statement. The
+-- identifier dependency is `flapjack-pxn.18.3.5.8`; exact HOL Prog/Crep code
+-- carriers and their compiler bridge are also still prerequisites. Do not tag
+-- this analogue with `code_rel_empty_locals` until those boundaries are exact.
 theorem codeRelEmptyLocals [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)

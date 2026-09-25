@@ -2113,6 +2113,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_eq_FILTER",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "functions_eq_filterMap",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; FLAPJACK-SPECIFIC, documented_mismatch): HOL functions_eq_FILTER (panPropsScript.sml:1487) states functions prog = MAP (fun x => case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB) (FILTER is_function prog) over the word-indexed 'a decl carrier with mlstring names. The Lean analogue functions_eq_filterMap (Flapjack/Pancake/PanSimp.lean:110) is generic over the production Decl alpha (FunName = String, arbitrary word element type) and states the same content with List.filterMap/none instead of MAP-with-ARB, so both the declaration carrier and the ARB fallback differ and names_as_string cannot bridge it. An exact port over List (DeclHOL width) with a reviewed ARB rendering is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8); the sibling functionsHOL_filter_isDecl entry records the same deliberate exclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "decs_stcnames_only_functions",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls",

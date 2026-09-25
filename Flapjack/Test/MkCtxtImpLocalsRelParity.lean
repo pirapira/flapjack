@@ -1,11 +1,13 @@
 import Flapjack.Pancake.Proofs.PanToCrep
 
 /-!
-Parity check for the exact HOL port of `mk_ctxt_imp_locals_rel`
+Parity check for the source-shaped port of HOL `mk_ctxt_imp_locals_rel`
 (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4677`) as
 `Flapjack.mkCtxtImpLocalsRel`: the initial compiler context (empty variable
 map, slot bound zero, function table from `make_funcs`) satisfies `locals_rel`
-against the empty source locals map and any target locals.
+against the empty source locals map and any target locals. The Lean statement
+uses the production `String`/`Shape`/`Decl` carriers, so the withdrawn tag stays
+off and the exact MlString replacement is tracked by `flapjack-pxn.18.3.5.8`.
 -/
 
 namespace Flapjack.Test.MkCtxtImpLocalsRelParity

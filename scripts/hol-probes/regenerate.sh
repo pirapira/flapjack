@@ -990,7 +990,7 @@ run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
   res_var_delete_hit res_var_update_hit \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
-  lookup_code_valid lookup_code_missing \
+  lookup_code_valid lookup_code_duplicate \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \

@@ -154,6 +154,7 @@ import Flapjack.Test.PanLangShapeHOLParity
 import Flapjack.Test.PanLangExpHOLParity
 import Flapjack.Test.PanLangProgHOLParity
 import Flapjack.Test.PanLangDeclHOLParity
+import Flapjack.Test.CrepLookupCodeHOLParity
 
 /-!
 # Flapjack regression tests

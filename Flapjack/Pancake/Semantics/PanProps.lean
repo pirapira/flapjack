@@ -4,6 +4,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
+import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -56,7 +57,8 @@ mutual
       that the production representation is the same HOL interface. Lean
       `StructInfo` also has an additional `shapedFields` cache absent from HOL.
       The separate Prop-valued convenience predicate in CompileCorrect is
-      further from the HOL Bool statement. -/
+      further from the HOL Bool statement. The exact port is the separate
+      `panIsWfShapeValueHOLExact` declaration below. -/
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values
@@ -150,6 +152,68 @@ mutual
   termination_by values => sizeOf values
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-- The `MAP SND` view of exact HOL fields does not increase `sizeOf`, which
+    justifies the well-founded recursion in `panIsWfShapeValueHOLExact`. -/
+theorem panSizeOfExactMapSndLe
+    {width : Nat} [NeZero width]
+    (fields : List (MlStringHOL × ValueHOL width)) :
+    sizeOf (fields.map Prod.snd) ≤ sizeOf fields := by
+  induction fields with
+  | nil => simp
+  | cons pair fields ih =>
+      obtain ⟨name, value⟩ := pair
+      simp only [List.map_cons]
+      simp
+      omega
+
+/-- The exact field list is smaller than the containing HOL `NStruct`. -/
+theorem sizeOfExactFieldsLtNStruct (name : MlStringHOL)
+    {width : Nat} [NeZero width]
+    (fields : List (MlStringHOL × ValueHOL width)) :
+    sizeOf fields < sizeOf (ValueHOL.nStruct name fields) := by
+  simp
+  omega
+
+/- Recursion workers for the exact `is_wf_shape_v_def` port below. These are
+    implementation details of the tagged wrapper, over exact HOL carriers. -/
+mutual
+  def panIsWfShapeValueHOLExactAux {width : Nat} [NeZero width]
+      (context : StructContextHOLM) : ValueHOL width → Bool
+    | .val _ => true
+    | .rStruct values => panIsWfShapeValuesHOLExactAux context values
+    | .nStruct name fields =>
+        (panPropsALookupEq name context).isSome &&
+          panIsWfShapeValuesHOLExactAux context (fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec
+      | decreasing_trivial
+      | (have h := panSizeOfExactMapSndLe fields
+         have h2 := sizeOfExactFieldsLtNStruct name fields
+         omega)
+
+  def panIsWfShapeValuesHOLExactAux {width : Nat} [NeZero width]
+      (context : StructContextHOLM) : List (ValueHOL width) → Bool
+    | [] => true
+    | value :: values =>
+        panIsWfShapeValueHOLExactAux context value &&
+          panIsWfShapeValuesHOLExactAux context values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+/-- Exact port of HOL `is_wf_shape_v_def` (`panPropsScript.sml:24`) over the
+    faithful carriers. `ValueHOL` matches HOL `v`, and `StructContextHOLM` is
+    the HOL `(stcname # struct_info) list`; both names are `MlStringHOL`.
+    The clauses implement `T`, `EVERY`, and `ALOOKUP <> NONE /\ EVERY ...
+    (MAP SND ...)` directly. The String-backed `panIsWfShapeValueHOL` above
+    remains an untagged adapter for production tests. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+def panIsWfShapeValueHOLExact {width : Nat} [NeZero width]
+    (context : StructContextHOLM) (value : ValueHOL width) : Bool :=
+  panIsWfShapeValueHOLExactAux context value
 
 /-! ## Adapter to the production cache-augmented struct context
 

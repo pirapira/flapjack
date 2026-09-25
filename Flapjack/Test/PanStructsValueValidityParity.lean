@@ -105,8 +105,75 @@ private def exactNestedValue : ValueHOL 8 :=
         [(leftName, .val (.word 2)), (rightName, .rStruct [])]),
      (tagName, .val (.word 3))]
 
+private def exactValueValidityContext : StructContextHOLM :=
+  [(pairName,
+    { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
+private def exactValueValidityMatch : ValueHOL 8 :=
+  .nStruct pairName
+    [(leftName, .val (.word 2)), (rightName, .rStruct [])]
+
+private def exactValueValidityMismatch : ValueHOL 8 :=
+  .nStruct pairName
+    [(leftName, .val (.word 2)), (markerName, .rStruct [])]
+
+private def exactValueValidityFirstMatchContext : StructContextHOLM :=
+  [(pairName, { fields := [(markerName, .one)], size := 1 }),
+   (pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
+private def exactValueValiditySecondMatchContext : StructContextHOLM :=
+  [(pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 }),
+   (pairName, { fields := [(markerName, .one)], size := 1 })]
+
 private def holValueValidityMismatch : PanValue Nat :=
   .nStruct "Pair" [("left", .word 2), ("wrong", .rStruct [])]
+
+/-- Exact-carrier `is_wf_shape_v_word` row from the original HOL oracle. -/
+example : panIsWfShapeValueHOLExact exactValueValidityContext
+    (.val (.word 1) : ValueHOL 8) = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux]
+
+/-- Exact-carrier `is_wf_shape_v_named_match` HOL oracle row. -/
+example : panIsWfShapeValueHOLExact exactValueValidityContext exactValueValidityMatch = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactValueValidityContext, exactValueValidityMatch]
+
+/-- Exact-carrier `is_wf_shape_v_named_missing` HOL oracle row. -/
+example : panIsWfShapeValueHOLExact ([] : StructContextHOLM)
+    exactValueValidityMatch = false := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactValueValidityMatch]
+
+/-- HOL ignores field names in `is_wf_shape_v`, so this exact-carrier mismatch
+    still follows the positive original-HOL oracle row. -/
+example : panIsWfShapeValueHOLExact exactValueValidityContext
+    exactValueValidityMismatch = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactValueValidityContext, exactValueValidityMismatch]
+
+/-- Exact-carrier duplicate-key regression. The predicate observes only whether
+    `ALOOKUP` succeeds, so either duplicate order remains positive. -/
+example : panIsWfShapeValueHOLExact exactValueValidityFirstMatchContext
+    exactValueValidityMatch = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactValueValidityFirstMatchContext, exactValueValidityMatch]
+
+example : panIsWfShapeValueHOLExact exactValueValiditySecondMatchContext
+    exactValueValidityMatch = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactValueValiditySecondMatchContext, exactValueValidityMatch]
+
+/-- Exact-carrier recursive named-struct case from the direct HOL oracle. -/
+example : panIsWfShapeValueHOLExact exactNestedContext exactNestedValue = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValueHOLExactAux,
+    panIsWfShapeValuesHOLExactAux,
+    panPropsALookupEq, exactNestedContext, exactNestedValue,
+    pairName, outerName, leftName, rightName, innerName, tagName]
 
 /-- `v_flds_ok_word` in `pan_structs_value_validity_probe.out`. -/
 example : panValueFldsOk holValueValidityContext (.word 1 : PanValue Nat) = true := by

@@ -9667,6 +9667,14 @@
     "reviewer": "Codex (source comparison; HOL panProps$shape_of_val (panPropsScript.sml:14) `shape_of (Val x) = One` over the exact ValueHOL/ShapeHOL carriers, direct HOL row spv_one in pan_props_shape_res_var_probe.out reproduced by PanPropsShapeResVarParity)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panPropsScript.sml:24: Val -> T; RStruct -> EVERY recursive predicate; NStruct -> ALOOKUP sctxt nm <> NONE and EVERY over MAP SND. Uses the exact ValueHOL carrier (panSemScript.sml:22, with mlstring names and positive-width HolWordLab) and StructContextHOLM = List (MlStringHOL × StructInfoHOLExact), where struct_info has (fldname × ShapeHOL) list and num size (panLangScript.sml:121-124). The lookup is first-match HOL equality and the field-name values are intentionally ignored by MAP SND. Direct oracle rows is_wf_shape_v_word/named_match/named_missing/named_mismatch/duplicate_second/nested_match from scripts/hol-probes/pan_structs_value_validity_probe.out are reproduced on exact carriers in PanStructsValueValidityParity.)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "flookup_fupdate_zip_not_mem",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",

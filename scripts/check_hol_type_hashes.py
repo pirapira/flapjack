@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "HOL-THEOREM-MAP.json"
 LOCK = ROOT / "docs" / "HOL-TYPE-HASHES.json"
 EXPORTER = ROOT / "scripts" / "HolTypeHashes.lean"
+LAKE_SETUP = ROOT / ".lake" / "build" / "ir" / "Flapjack.setup.json"
 
 
 def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
@@ -57,8 +58,16 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
 
 
 def exported_types() -> list[dict[str, Any]]:
+    command = ["lake", "env", "lean"]
+    # `lake env` supplies LEAN_PATH, but Lake can satisfy imports from its
+    # verified build cache without materializing each dependency under the
+    # project-local LEAN_PATH. Lean's setup file preserves that Lake module
+    # search configuration for this standalone exporter.
+    if LAKE_SETUP.is_file():
+        command.extend(["--setup", str(LAKE_SETUP)])
+    command.append(str(EXPORTER))
     result = subprocess.run(
-        ["lake", "env", "lean", str(EXPORTER)],
+        command,
         cwd=ROOT,
         text=True,
         capture_output=True,

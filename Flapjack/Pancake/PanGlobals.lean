@@ -423,13 +423,16 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_name_def`
+/-- Source-shaped port of Cake's `fperm_name_def`
     (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
     function names and leaves every other name unchanged. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
 -- production identifiers `FunName`/`VarName` = `String`, while HOL
 -- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- It carries the reviewed `(names_as_string := [source, target, name])`
+-- qualifier (manifest status `reviewed_names_as_string`); the identifiers are
+-- equality/map-key-only, so no byte-boundary witness is required.  The exact
+-- MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
 --
 -- Clause-by-clause review (flapjack-6nn.1.1):
@@ -442,8 +445,12 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
 --   only, so the `String`/`mlstring` carrier difference is unobservable here.
 --   Direct HOL/Lean edge-case fixtures: `scripts/hol-probes/
 --   pan_globals_fperm_name_probe.out` and `Flapjack/Test/
---   PanGlobalsFpermNameParity.lean`.  The qualifier is applied in
---   flapjack-6nn.1 once the `flapjack-an4.3` checker gates land.
+--   PanGlobalsFpermNameParity.lean`.  Reviewed as a `names_as_string`
+--   production declaration in `flapjack-6nn.1`: `source`, `target` and
+--   `name` are equality/map-key-only uses, with no byte-observable boundary,
+--   so no `names_as_string_boundary` qualifier or mlstring witness is needed.
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"
+  (names_as_string := [source, target, name])]
 def globalRenameFunctionName [LawfulBEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name

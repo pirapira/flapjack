@@ -9302,13 +9302,5 @@
     "lean_name": "panMemStore32HOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  },
-{
-  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-  "hol_name": "result",
-  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ResultHOL.lean",
-  "lean_name": "ResultHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  }
 ]

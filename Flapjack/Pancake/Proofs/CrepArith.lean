@@ -188,7 +188,18 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
 /-- Width-specialized word form of CakeML's `dest_const_thm`
     (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
     `NeZero width` supplies HOL's nonempty finite-index condition. The
-    arbitrary-carrier production helper remains untagged. -/
+    arbitrary-carrier production helper remains untagged.
+
+    Type-convention note (see the direct HOL rows `word_carrier_bool`,
+    `dimindex_8`, `dimindex_pos` in
+    `scripts/hol-probes/crep_arith_dest_const_probe.out`): HOL `'a word` is
+    literally the finite boolean function space `bool[dimindex(:'a)]`, and
+    `dimindex` is always positive. Instantiating the HOL index type at
+    cardinality `width` therefore yields exactly the Lean carrier
+    `Fin width → Bool`, and `[NeZero width]` encodes `dimindex > 0`; no HOL word
+    dimension lies outside this family, so the width-indexed statement is the
+    exact HOL theorem, not a specialization. The paired Lean fixture lives in
+    `Flapjack/Test/CrepeDestConstParity.lean`. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
 theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool))

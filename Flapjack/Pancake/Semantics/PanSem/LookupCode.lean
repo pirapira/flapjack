@@ -255,6 +255,47 @@ theorem panSemLookupStateCodeHOL_matches_production_entry {width : Nat}
     simp [hnames, hshape, hbind]
   exact ⟨holLocals, productionLocals, hholLookup, hproductionLookup, fun _ => rfl⟩
 
+/-- A successful production call lookup from the state's finite code map is
+    itself enough to recover the complete HOL `lookup_code` result. The
+    success equation supplies the duplicate-name and shape checks required by
+    the exact lookup, and this theorem identifies the returned production
+    locals with HOL's `FEMPTY |++ ZIP` locals pointwise. -/
+theorem panSemLookupStateCodeHOL_of_production_success {width : Nat}
+    [NeZero width] [LawfulBEq String]
+    (state : PanSemState (BitVec width) ffi) (function : FunName)
+    (arguments : List (PanValue (BitVec width)))
+    (parameters : List (VarName × Shape)) (body : Prog (BitVec width))
+    (returnShape : Shape)
+    (productionLocals : VarName → Option (PanValue (BitVec width)))
+    (hentry : panSemCodeLookup state.code function =
+      some (parameters, body, returnShape))
+    (hproduction : lookupPanSemCodeCall state.structs state.code function arguments =
+      some (body, returnShape, productionLocals)) :
+    ∃ holLocals : FiniteMap VarName (HolValue width),
+      panSemLookupStateCodeHOL state function arguments =
+        some (body, holLocals, returnShape) ∧
+      ∀ name, productionLocals name =
+        (FLOOKUP holLocals name).map HolValue.toPanValue := by
+  have hshape : panSemCodeArgumentsMatch state.structs parameters arguments = true := by
+    cases hargs : panSemCodeArgumentsMatch state.structs parameters arguments with
+    | true => rfl
+    | false => simp [lookupPanSemCodeCall, hentry, hargs] at hproduction
+  have hnames : (parameters.map Prod.fst).Nodup := by
+    by_cases hnames : (parameters.map Prod.fst).Nodup
+    · exact hnames
+    · simp [lookupPanSemCodeCall, hentry, hnames, hshape] at hproduction
+  obtain ⟨holLocals, producedLocals, hhol, hproduced, hlocals⟩ :=
+    panSemLookupStateCodeHOL_matches_production_entry state function arguments
+      parameters body returnShape hentry hnames hshape
+  have htuple : (body, returnShape, producedLocals) =
+      (body, returnShape, productionLocals) :=
+    Option.some.inj (hproduced.symm.trans hproduction)
+  have heq : producedLocals = productionLocals :=
+    congrArg (fun entry : Prog (BitVec width) × Shape ×
+      (VarName → Option (PanValue (BitVec width))) => entry.2.2) htuple
+  subst producedLocals
+  exact ⟨holLocals, hhol, hlocals⟩
+
 /-- The state-owned wrapper is definitionally the tagged lookup over exactly
     the finite `state.code` support view; this bridge does not introduce a
     detached function table. -/

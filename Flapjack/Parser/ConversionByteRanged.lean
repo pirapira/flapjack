@@ -469,5 +469,147 @@ theorem convComparison_byteRanged {width : Nat} (ofInt : Int → BitVec width) (
               · simp [hs, ExpByteRanged, hlv, hrv]
               · simp [hs, ExpByteRanged, hlv, hrv]
 
+theorem expByteRanged_op_pair {width : Nat} {op : BinOp} {a b : Exp (BitVec width)}
+    (ha : ExpByteRanged a) (hb : ExpByteRanged b) : ExpByteRanged (.op op [a, b]) := by
+  simp [ExpByteRanged, ListExpByteRanged, ha, hb]
+
+theorem ListExpByteRanged_append {width : Nat} {l1 l2 : List (Exp (BitVec width))}
+    (h1 : ListExpByteRanged l1) (h2 : ListExpByteRanged l2) : ListExpByteRanged (l1 ++ l2) := by
+  induction l1 with
+  | nil => simpa [ListExpByteRanged] using h2
+  | cons e es ih =>
+      simp only [ListExpByteRanged] at h1 ⊢
+      exact ⟨h1.1, ih h1.2⟩
+
+theorem convPanops_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e) :
+    ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convPanops ofInt fuel trees acc = some e → ExpByteRanged e := by
+  have H : ∀ n, ∀ trees, trees.length = n →
+      (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convPanops ofInt fuel trees acc = some e → ExpByteRanged e := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+    intro trees hlen ht acc hacc e h
+    cases trees with
+    | nil => simp [convPanops.eq_1] at h; subst h; exact hacc
+    | cons opTree t =>
+      cases t with
+      | nil => simp [convPanops.eq_3] at h
+      | cons operandTree rest =>
+        have hlt : rest.length < n := by simp only [List.length_cons] at hlen; omega
+        have hr : ∀ t ∈ rest, ParseTreeByteRanged t := fun t hmem => ht t (by simp [hmem])
+        simp only [convPanops.eq_2] at h
+        cases hop : convPanop opTree with
+        | none => simp [hop] at h
+        | some op' =>
+          cases hoperand : convExp ofInt fuel operandTree with
+          | none => simp [hop, hoperand] at h
+          | some operand' =>
+            simp [hop, hoperand] at h
+            have hopnd := hH fuel (by omega) operandTree (ht operandTree (by simp)) operand' hoperand
+            exact ih rest.length hlt rest rfl hr
+              (.panOp op' [acc, operand'])
+              (by simp [ExpByteRanged, ListExpByteRanged, hacc, hopnd]) e h
+  intro trees
+  exact H trees.length trees rfl
+
+theorem convShifts_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e) :
+    ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convShifts ofInt fuel trees acc = some e → ExpByteRanged e := by
+  have H : ∀ n, ∀ trees, trees.length = n →
+      (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convShifts ofInt fuel trees acc = some e → ExpByteRanged e := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+    intro trees hlen ht acc hacc e h
+    cases trees with
+    | nil => simp [convShifts.eq_1] at h; subst h; exact hacc
+    | cons opTree t =>
+      cases t with
+      | nil => simp [convShifts.eq_3] at h
+      | cons operandTree rest =>
+        have hlt : rest.length < n := by simp only [List.length_cons] at hlen; omega
+        have hr : ∀ t ∈ rest, ParseTreeByteRanged t := fun t hmem => ht t (by simp [hmem])
+        simp only [convShifts.eq_2] at h
+        cases hop : convShift opTree with
+        | none => simp [hop] at h
+        | some op' =>
+          cases hoperand : convExp ofInt fuel operandTree with
+          | none => simp [hop, hoperand] at h
+          | some operand' =>
+            simp [hop, hoperand] at h
+            have hopnd := hH fuel (by omega) operandTree (ht operandTree (by simp)) operand' hoperand
+            exact ih rest.length hlt rest rfl hr
+              (.shift op' acc operand')
+              (by simp [ExpByteRanged, hacc, hopnd]) e h
+  intro trees
+  exact H trees.length trees rfl
+
+theorem convBinaryExps_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e) :
+    ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convBinaryExps ofInt fuel trees acc = some e → ExpByteRanged e := by
+  have H : ∀ n, ∀ trees, trees.length = n →
+      (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ acc, ExpByteRanged acc →
+      ∀ e, convBinaryExps ofInt fuel trees acc = some e → ExpByteRanged e := by
+    intro n
+    induction n using Nat.strongRecOn with
+    | ind n ih =>
+    intro trees hlen ht acc hacc e h
+    cases trees with
+    | nil => simp [convBinaryExps.eq_1] at h; subst h; exact hacc
+    | cons opTree t =>
+      cases t with
+      | nil => simp [convBinaryExps.eq_3] at h
+      | cons operandTree rest =>
+        have hlt : rest.length < n := by simp only [List.length_cons] at hlen; omega
+        have hr : ∀ t ∈ rest, ParseTreeByteRanged t := fun t hmem => ht t (by simp [hmem])
+        simp only [convBinaryExps.eq_2] at h
+        cases hop : convBinop opTree with
+        | none => simp [hop] at h
+        | some op' =>
+          cases hoperand : convExp ofInt fuel operandTree with
+          | none => simp [hop, hoperand] at h
+          | some operand' =>
+            simp [hop, hoperand] at h
+            have hopnd := hH fuel (by omega) operandTree (ht operandTree (by simp)) operand' hoperand
+            cases acc with
+            | op bop args =>
+              by_cases hc : ¬bop = op' ∨ isSubOp (.op bop args) = true
+              · simp only [if_pos hc] at h
+                exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.op bop args, operand'])
+                  (expByteRanged_op_pair hacc hopnd) e h
+              · simp only [if_neg hc] at h
+                have hargs : ListExpByteRanged args := by simpa [ExpByteRanged] using hacc
+                exact ih rest.length hlt rest rfl hr (Exp.op bop (args ++ [operand']))
+                  (by
+                    simp only [ExpByteRanged]
+                    exact ListExpByteRanged_append hargs (by simp [ListExpByteRanged, hopnd]))
+                  e h
+            | const v => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.const v, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | var kind name => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.var kind name, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | rStruct fields => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.rStruct fields, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | rField index value => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.rField index value, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | nStruct name fields => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.nStruct name fields, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | nField name value => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.nField name value, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | load shape address => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.load shape address, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | load32 address => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.load32 address, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | loadByte address => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.loadByte address, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | panOp op args => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.panOp op args, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | cmp op l r => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.cmp op l r, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | shift op l r => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.shift op l r, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | baseAddr => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.baseAddr, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | topAddr => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.topAddr, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+            | bytesInWord => exact ih rest.length hlt rest rfl hr (Exp.op op' [Exp.bytesInWord, operand']) (expByteRanged_op_pair hacc hopnd) e (by simpa using h)
+  intro trees
+  exact H trees.length trees rfl
+
 
 end Flapjack.Parser

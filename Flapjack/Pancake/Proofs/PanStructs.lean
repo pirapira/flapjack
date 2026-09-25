@@ -298,10 +298,10 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
   rw [lookupInfo_eq_lookup] at hlookup ⊢
   exact (lookup_drop_helper n context name info hlookup hnodup).2
 
-/-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
-    (`pan_structsProofScript.sml:99`): a well-formed shape has the same
-    context-sensitive size in a distinct-key context and its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `size_of_sh_with_ctxt_drop`
+    (`pan_structsProofScript.sml:99`). It remains untagged because its names
+    are Lean `String`; the exact HOL-carrier port is
+    `sizeOfShapeWithContextHOL_drop` below. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)

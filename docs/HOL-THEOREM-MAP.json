@@ -2579,6 +2579,14 @@
     "reviewer": "Flapjack-only first-match lookup preservation under a distinct-key prefix; internal support for the exact v_flds_ok_append port, with no claimed standalone HOL theorem."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structContextLookupHOL_drop_eq_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only specialization of exact context lookup preservation under a prefix drop; internal support for sizeOfShapeWithContextHOL_drop, with no claimed standalone HOL theorem."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "opt_mmap_eq_every",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
@@ -4491,12 +4499,20 @@
     "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "size_of_sh_with_ctxt_drop",
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production-carrier analogue of size_of_sh_with_ctxt_drop; kept as useful String-backed infrastructure beside the exact MlString/ShapeHOL port."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "sizeOfShapeWithContextHOL_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison with pan_structsProofScript.sml:99-102: both premises are is_wf_shape (DROP n context) shape and ALL_DISTINCT (MAP FST context), and the conclusion is equality of size_of_sh_with_ctxt on dropped/full contexts. Lean uses the exact ShapeHOL, StructContextExact and MlString carriers, with identical Bool validity and first-match lookup. Direct HOL EVAL rows are in scripts/hol-probes/pan_structs_shape_context_drop_probe.out; exact-carrier kernel regressions are in Flapjack/Test/PanStructsShapeContextDropParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

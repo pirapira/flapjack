@@ -345,6 +345,13 @@ the concrete `struct_infos_ok` result separately as `T` (proved from HOL's
 target `RStruct` load values, followed by their expected-value checks. The
 corresponding production fuel-loader conversion theorem is kept untagged and
 paired with a Lean execution regression in `Flapjack.Test.PanStructsCompileCorrect`.
+`pan_structs_shape_context_drop_probe.out` records direct HOL EVAL of
+`size_of_sh_with_ctxt_drop` at
+`cakeml/pancake/proofs/pan_structsProofScript.sml:99` for `One`, a suffix-found
+named structure, and a nested `Comb`. The exact-carrier theorem over
+`ShapeHOL`/`StructContextExact` and matching Lean rows live in
+`Flapjack.Pancake.Proofs.PanStructs.CompileCorrect` and
+`Flapjack.Test.PanStructsShapeContextDropParity`.
 `pan_structs_value_validity_probe.out` records direct HOL EVAL of the word,
 matching/mismatching named-record, missing-context, and duplicate-key first
 match rows for

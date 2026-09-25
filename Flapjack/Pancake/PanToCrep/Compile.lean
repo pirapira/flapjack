@@ -482,30 +482,24 @@ def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | .annot _ _ => .skip
 termination_by structural program
 
-/-! Flapjack-specific RISC-V specialization of the `compile_def`-shaped
-    equations above; this is not an exact HOL port. Although the word carrier
-    is `BitVec width` and the finite maps have the same total-function shape,
-    the declaration accepts every `width` (including zero), and its input and
-    output are production `Prog`/`CrepProg`, not exact `ProgHOL width` /
-    `CrepProgHOL width`. The nested source expressions and shapes are likewise
-    production `Exp`/`Shape`, and all source identifiers and context map keys
-    are `String` instead of HOL `mlstring`; the target Crep function names are
-    also `String` instead of `mlstring`. Consequently the name-carrier
-    difference is only one part of the mismatch. The exact syntax carriers
-    exist in `PanLang.ProgHOL` and `CrepProgHOL`; the exact-carrier compiler
-    replacement is tracked by `flapjack-2eh`'s follow-up under
-    `flapjack-pxn.18.3.5.8`.
-
-    Generic `compileProgHOL` is also not itself the HOL declaration: its word
-    type is arbitrary `α` with caller-supplied `CrepBytesInWord`, and it lacks
-    HOL's positive word-width condition. `compileProgRiscV` fixes `α` to
-    `BitVec width` and the byte stride, but still uses the production syntax
-    carriers and admits `width = 0`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the executed equations match
--- `compile_def` structurally, but this specialization has production
--- `Prog`/`CrepProg`/`Shape`/`Exp` carriers, String identifiers and context
--- maps, and no `[NeZero width]`. See the docstring above and exact-carrier
--- replacement bead under `flapjack-pxn.18.3.5.8`.
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). Source-reviewed decision
+    (`flapjack-dlc.18`): the `@[hol]` tag stays withdrawn as a documented
+    carrier mismatch. HOL `compile_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:139-307`) is a structural recursion
+    over positive-width `ProgHOL width` / `ExpHOL width` / `ShapeHOL`, with
+    context vars/functions/eids keyed by `mlstring`, returning
+    `CrepProgHOL width`. Both `compileProgHOL` and this RISC-V specialization
+    `compileProgRiscV` instead take production `Prog (BitVec width)` / `Exp` /
+    `Shape`, String identifiers and context keys, and admit `width = 0` (no
+    `[NeZero width]`); `compileProgRiscV` only fixes `α := BitVec width` before
+    delegating to generic `compileProgHOL`. The `names_as_string` qualifier
+    cannot authorize the `Shape`/`Exp`/`Prog`/`CrepProg` carriers or the missing
+    positive-width side condition, and a `NameRanged` byte witness does not
+    apply because the output is a compiled program, not a name. Direct HOL-EVAL
+    rows for the `compile_def` equations are recorded in
+    `scripts/hol-probes/compile_def_probe.out` and reproduced by
+    `Flapjack/Test/CompileDefParity.lean`. Exact-carrier replacement is tracked
+    by `flapjack-pxn.18.3.5.8.13` (under `flapjack-pxn.18.3.5.8`). -/
 def compileProgRiscV (context : PanToCrepHOLContext (BitVec width))
     (program : Prog (BitVec width)) : CrepProg (BitVec width) :=
   compileProgHOL context program

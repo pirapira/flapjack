@@ -1053,6 +1053,22 @@ class ValidateInventoryTest(unittest.TestCase):
             self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
 
 
+    def test_pansem_word_lab_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Semantics/PanSem.lean", "HolWordLab")
+        self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+        hol_path, hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+        self.assertEqual(hol_path, "cakeml/pancake/semantics/panSemScript.sml")
+        self.assertEqual(hol_name, "word_lab")
+        self.assertIn("flapjack-0lj.5", reviewer)
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        record = by_key[key]
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+
+
     def test_panlang_functions_append_filter_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {

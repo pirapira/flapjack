@@ -5451,6 +5451,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "word_lab",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
+    "lean_name": "HolWordLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.1): HOL Datatype word_lab (panSemScript.sml:16) is Word ('a word), one constructor wrapping a word payload; HolWordLab (PanSem.lean:86) has the same single constructor .word with payload BitVec width. The mismatch is the width binder: HOL 'a word requires positive dimindex, while HolWordLab (width : Nat) admits width = 0, so Lean carries an extra width-zero instance with no HOL counterpart. Adding [NeZero width] to the inductive propagates through HolValue, CrepLocalsExact/CrepCodeMapExact, and the frozen PanSemStateEval.lean, so the @[hol] tag stays withheld until the dependency slice flapjack-0lj.5 lands. Exact-isomorphism helpers HolWordLab.toPanWordLab / PanWordLab.toHolWordLab and their roundtrips are Flapjack-specific infrastructure (production PanWordLab is generic over any alpha), not HOL ports. The exact v port ValueHOL records the same withheld-payload caveat."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "v",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
     "lean_name": "ValueHOL",

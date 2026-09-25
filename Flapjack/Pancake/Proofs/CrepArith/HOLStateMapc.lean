@@ -1298,6 +1298,89 @@ theorem evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab
   simp [evalCrepHolFiniteWordSourceExpWordLab,
     evalCrepRuntimeExp_sourceWord_eq]
 
+/-- Relate the production evaluator's direct `word_lab` result API to the
+all-width source evaluator over the exact finite-state carrier. This avoids
+recovering the HOL result through a caller-side `Option.map PanWordLab.word`.
+It remains untagged: `evalCrepRuntimeExpWordLab` still delegates recursive
+evaluation to the bare production evaluator and its runtime hooks, so this
+equation does not identify that implementation with native HOL
+`crepSem$eval`. -/
+theorem evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
+    {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι codeEntry σ)
+    (expression : CrepExp (ι → Bool)) :
+    evalCrepRuntimeExpWordLab
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression =
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression := by
+  calc
+    evalCrepRuntimeExpWordLab
+        (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+        expression =
+      (evalCrepRuntimeExp
+        (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+        expression).map PanWordLab.word :=
+          (evalCrepRuntimeExp_wordLab_projection
+            (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+            expression).symm
+    _ = evalCrepHolFiniteWordSourceExpWordLab dimension
+          state.toSourceEvaluatorState expression :=
+        evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab state expression
+
+/-- HOL-result-shaped all-width support for `simp_exp_correct1` over the
+exact finite-state carrier, using the production `word_lab` evaluator API on
+both sides. The theorem keeps the successful-evaluation premise, code-only
+`mapc` update, `n2w` simplifier image, and complete `Option word_lab`
+equality. It remains untagged because the production `word_lab` core still
+uses the bare evaluator's runtime hooks, and no theorem identifies those
+operations or the explicit finite-index adapter with native HOL
+`crepSem$eval`. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLabCore
+    {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
+    (update : MlString × codeEntry → codeEntry)
+    (state : CrepSemHOLFiniteState ι codeEntry σ)
+    (expression : CrepExp (ι → Bool))
+    (_result : PanWordLab (ι → Bool))
+    (h : evalCrepRuntimeExpWordLab
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression ≠ none) :
+    evalCrepRuntimeExpWordLab
+      ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) =
+    evalCrepRuntimeExpWordLab
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression := by
+  have hSource : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression ≠ none := by
+    simpa [evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource] using h
+  calc
+    evalCrepRuntimeExpWordLab
+        ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+          dimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression) =
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (state.mapc update).toSourceEvaluatorState
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression) :=
+          evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
+            (state.mapc update) _
+    _ = evalCrepHolFiniteWordSourceExpWordLab dimension
+          state.toSourceEvaluatorState expression :=
+        crepSimpExpCorrect1CrepSemHOLFiniteStateSourceWordLab
+          update state expression hSource
+    _ = evalCrepRuntimeExpWordLab
+          (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+          expression :=
+        (evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
+          state expression).symm
+
 /-- All-width production-runtime support for HOL `eval_mul_const`. The
 successful premise and complete `Option word_lab` conclusion match the source
 theorem's evaluation shape. Locals/globals use finite maps, while the code

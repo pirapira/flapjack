@@ -643,6 +643,22 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack support equation relating the production word_lab evaluator API to the all-width source evaluator over the finite-state adapter. The direct result wrapper is exact, but evalCrepRuntimeExpWordLab delegates recursive cases to the bare runtime evaluator and its hooks; the selected finite_index and native HOL crepSem eval_def relation are unproved."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLabCore",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width simp support over the exact finite-state carrier with HOL's complete Option word_lab result shape and production evalCrepRuntimeExpWordLab API. The word_lab core still delegates to bare evaluation/runtime hooks through a state-derived finite-index adapter, not native HOL crepSem eval_def; no HOL tag is claimed."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSource",
     "statement_status": "documented_mismatch",
     "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."

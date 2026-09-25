@@ -1659,3 +1659,11 @@ run_probe pan_common_props_zip_disjoint_probeScript.sml pan_common_props_zip_dis
   fzn_notmem ddt_disjoint \
   "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The crepProps assigned_vars / var_cexp probe observes the nested_decs append,
+# stores emptiness, and load_shape EXACT lemmas
+# (crepPropsScript.sml:390, :400, :429, :439, :215).
+run_probe crep_props_assigned_vars_probeScript.sml crep_props_assigned_vars_probe.out \
+  avnda vels \
+  "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

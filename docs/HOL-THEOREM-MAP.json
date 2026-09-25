@@ -9430,5 +9430,45 @@
     "lean_name": "disjoint_drop_take_sum",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL pan_commonProps$disjoint_drop_take_sum (pan_commonPropsScript.sml:413): !n m p ns. ALL_DISTINCT ns ==> DISJOINT (set (TAKE p (DROP (n + m) ns))) (set (TAKE n ns)), rendered as ListDisjoint ((ns.drop (n+m)).take p) (ns.take n) with ns.Nodup; direct HOL row ddt_disjoint in pan_common_props_zip_disjoint_probe.out reproduced by PanCommonPropsZipDisjointParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedDecs_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:390. Width-indexed over CrepProg/CrepExp (BitVec width) with [NeZero width], matching the crepLang 'a word carrier. Oracle row avnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedDecs_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:400. HOL FILTER (not-MEM x ns) is rendered as List.filter (fun c => decide (c notin ns)); width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_storesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:429. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row avsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedSeq_storesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:439. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "var_exp_load_shape",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepExpVars_of_mem_loadShapeW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:215. Uses the exact loadShapeBytes port of load_shape_def with the fixed stride bytes_in_word, width-indexed over CrepExp (BitVec width); var_cexp is crepExpVars. Oracle row vels in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
   }
 ]

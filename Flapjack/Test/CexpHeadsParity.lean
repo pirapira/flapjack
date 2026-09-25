@@ -24,7 +24,14 @@ def parityGuard : Bool :=
   cexpHeads ([[], [.const 5]] : List (List (CrepExp Nat))) == none &&
   cexpHeadsSimp ([[], [.const 5]] : List (List (CrepExp Nat))) == none &&
   cexpHeads ([[.const 6], []] : List (List (CrepExp Nat))) == none &&
-  cexpHeadsSimp ([[.const 6], []] : List (List (CrepExp Nat))) == none
+  cexpHeadsSimp ([[.const 6], []] : List (List (CrepExp Nat))) == none &&
+  cexpHeadsW (width := 64) ([] : List (List (CrepExp (BitVec 64)))) == some [] &&
+  cexpHeadsW (width := 64) [[.const (1 : BitVec 64)], [.var 3]] ==
+    some [.const 1, .var 3] &&
+  cexpHeadsW (width := 64) ([[], [.const (5 : BitVec 64)]] :
+    List (List (CrepExp (BitVec 64)))) == none &&
+  cexpHeadsW (width := 64) ([[.const (6 : BitVec 64)], []] :
+    List (List (CrepExp (BitVec 64)))) == none
 
 #eval parityGuard
 #guard parityGuard

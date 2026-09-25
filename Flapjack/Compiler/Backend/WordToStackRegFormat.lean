@@ -240,5 +240,32 @@ def copyRet {α β : Type} (perf isHandle : Bool) (kf : Nat × Nat × Nat)
          else kf.2.1)
         n)
       (Flapjack.Compiler.Backend.WordToStack.seqStackFree n kont)
+/-- Structural analogue of HOL `wLive_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:252`):
+
+```
+wLive (live:cutsets) (bitmaps:'a word app_list # num) k f f' =
+  if f = 0 then (Skip,bitmaps)
+  else let (new_bitmaps,i) = insert_bitmap (write_bitmap (SND live) k f') bitmaps in
+         (Seq (Inst (Const k (n2w (i+1)))) (StackStore k 0), new_bitmaps)
+```
+
+    NOT TAGGED: HOL consumes the live set as a `num_set` (`SND live`) through
+    `toAList`/`MEM`; that `sptree` carrier is outside the CakeML submodule and is
+    modelled here (as in `writeBitmapHOL`) by an order-insensitive key list.
+    `live` below is that modelled domain.  The stackLang fragment
+    `Seq`/`Inst`/`Const`/`StackStore` is stated over the exact shared-word
+    carrier `Flapjack.Compiler.Backend.StackLang.ProgM`. -/
+def wLiveW {width : Nat} [NeZero width]
+    (live : List Nat) (bitmaps : Flapjack.AppList (BitVec width) × Nat)
+    (k f f' : Nat) :
+    ProgM (BitVec width) × (Flapjack.AppList (BitVec width) × Nat) :=
+  if f = 0 then (.skip, bitmaps)
+  else
+    let inserted :=
+      Flapjack.Compiler.Backend.WordToStack.insertBitmap
+        (Flapjack.Compiler.Backend.WordToStack.writeBitmapHOL live k f') bitmaps
+    (.seq (.inst (.const k (BitVec.ofNat width (inserted.2 + 1))))
+      (.stackStore k 0), inserted.1)
 
 end Flapjack.Compiler.Backend.WordToStackRegFormat

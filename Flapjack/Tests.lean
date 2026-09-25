@@ -160,6 +160,7 @@ import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.ParserByteNamesParity
 import Flapjack.Test.ParserByteRangedParity
 import Flapjack.Test.ParserKeywordParity
+import Flapjack.Test.PanGlobalsNameByteRangedParity
 
 /-!
 # Flapjack regression tests

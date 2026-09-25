@@ -9,6 +9,7 @@ Rows reproduce `scripts/hol-probes/pan_lang_decl_probe.out`:
 -/
 import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.PanToCrep.CompileProg
+import Flapjack.Parser.ParseTopDecsByteRanged
 
 namespace Flapjack.Test.PanLangDeclHOLParity
 
@@ -131,19 +132,36 @@ example :
     simp [prodDecl, DeclByteRanged, prodFd, FunDeclByteRanged, ListParamByteRanged,
       ParamByteRanged, NameRanged, ShapeByteRanged, ProgByteRanged])
 
-/-! ### Nonbyte String-to-MlString blocker (bead .18.3.5.8.6)
+/-! ### Byte-ranged parser boundary reaches the exact carrier
 
-`ofString`/`toStringOfBytes` is a round trip only on byte-ranged names
-(codepoints `< 256`). A name with a codepoint `>= 256` (here U+1D518) is
-truncated to its low byte, so `toStringOfBytes (ofString s) != s`. The executed
-source path builds production `Decl` with `String` names in
-`Parser.parseTopDecs`, and nonbyte names therefore cannot round-trip through
-the exact MlString carrier. This is the concrete blocker preventing the
-executed parser boundary from using the exact carrier. -/
+`ofString`/`toStringOfBytes` is a round trip only on byte-ranged names; a name
+with a codepoint `>= 256` (here U+1D518) is truncated, so it still may not be
+fed to the exact carrier. The executed parser, however, is byte-faithful
+(`utf8Bytes` + HOL-exact ASCII predicates), and `parseTopDecs_declByteRanged`
+proves every declaration it returns is `DeclByteRanged`. Composing that with
+`compileProgTopHOLOfExact_declToHOL` gives
+`parseTopDecs_routes_exactBoundary`: the exact MLString-keyed compiler boundary
+applied to the parser output equals the production `compileProgTopHOL`. This is
+kernel-proved propositional equality (via the `DeclByteRanged` premise), NOT
+definitional equality. Direct original-Pancake parity for the executed boundary
+is `python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
+goldens=1, failures=0). The executed pipeline still calls
+`compileProgTopHOLWithMetadata`; textual routing/tagging is tracked separately
+under parent beads `flapjack-6nn`/`flapjack-0up`. -/
 example :
     Flapjack.Basis.Pure.MlString.toStringOfBytes
       (Flapjack.Basis.Pure.MlString.ofString (String.singleton (Char.ofNat 0x1d518))) ≠
     String.singleton (Char.ofNat 0x1d518) := by
   decide
+
+example {width : Nat} [NeZero width]
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]
+    (ofInt : Int → BitVec width) (source : String) (locations : Bool)
+    (declarations : List (Flapjack.Decl (BitVec width)))
+    (h : Parser.parseTopDecs ofInt source locations = .ok declarations) :
+    compileProgTopHOLOfExact (declarations.map declToHOL) =
+      compileProgTopHOL declarations :=
+  Parser.parseTopDecs_routes_exactBoundary ofInt source locations declarations h
 
 end Flapjack.Test.PanLangDeclHOLParity

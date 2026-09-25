@@ -748,7 +748,7 @@ run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
   ret tau return length_failure final div_ret div_tau \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe ffi_call_probeScript.sml ffi_call_probe.out \
-  oracle_return empty_extcall "$cake_dir/semantics/ffi/ffiScript.sml"
+  oracle_return extcall_name_len "$cake_dir/semantics/ffi/ffiScript.sml"
 run_probe pan_itree_trace_prefix_probeScript.sml pan_itree_trace_prefix_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_trace_prefix0_probeScript.sml pan_itree_trace_prefix0_probe.out \
@@ -1715,3 +1715,25 @@ run_probe pan_to_crep_is_wf_shape_nil_probeScript.sml pan_to_crep_is_wf_shape_ni
   iwf_val iwf_wf_struct \
   "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
   "$cake_dir/pancake/proofs"
+
+# The pan_globals fresh_name probe observes that the source-shaped fresh-name
+# search only ever appends apostrophes (pan_globalsScript.sml:55).
+run_probe pan_globals_fresh_name_probeScript.sml pan_globals_fresh_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals new_main_name probe observes the synthesized entry-point name
+# for representative declaration lists (pan_globalsScript.sml:224).
+run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals fperm_name probe observes the source-shape name permutation
+# `fperm_name f g h` (pan_globalsScript.sml:185-188) for unchanged and
+# colliding keys, including names that already carry apostrophes.
+run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.out \
+  source_collision fperm_name_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"

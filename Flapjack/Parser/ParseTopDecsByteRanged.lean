@@ -1,5 +1,6 @@
 import Flapjack.Parser
 import Flapjack.Parser.LocaliseByteRanged
+import Flapjack.Pancake.PanToCrep.CompileProg
 
 /-!
 The executed parser boundary preserves byte-rangedness.
@@ -64,5 +65,31 @@ theorem parseTopDecs_declByteRanged {width : Nat} (ofInt : Int → BitVec width)
         exact localiseDecls_byteRanged decls
           (convTopDecList_byteRanged ofInt locations (parseFuel toks.length) tree
             (runGrammar_byteRanged (safePancakeLex_tokens_byteRanged hlex) hrun) decls hconv)
+
+/-! ### Routing the executed parser boundary through the exact carrier
+
+`parseTopDecs` returns byte-ranged declarations (`parseTopDecs_declByteRanged`),
+so the exact MLString-keyed `compile_prog` boundary
+(`compileProgTopHOLOfExact`) applied to their `declToHOL` image equals the
+production String-keyed `compileProgTopHOL`. This equality is NOT definitional:
+it is kernel-proved by `compileProgTopHOLOfExact_declToHOL` using the
+`DeclByteRanged` premise, i.e. propositional (not definitional) equality.
+This is the kernel-checked bridge from the executed parser output to the exact
+carrier. Direct original-Pancake parity evidence for the executed boundary is
+`python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
+goldens=1, failures=0). The executed pipeline still calls
+`compileProgTopHOLWithMetadata` directly, so the textual-routing/tagging
+obligation remains tracked separately under parent beads `flapjack-6nn` and
+`flapjack-0up`, not claimed here. -/
+theorem parseTopDecs_routes_exactBoundary {width : Nat} [NeZero width]
+    [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
+    [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]
+    (ofInt : Int → BitVec width) (source : String) (locations : Bool)
+    (declarations : List (Decl (BitVec width)))
+    (h : parseTopDecs ofInt source locations = .ok declarations) :
+    compileProgTopHOLOfExact (declarations.map declToHOL) =
+      compileProgTopHOL declarations :=
+  compileProgTopHOLOfExact_declToHOL declarations
+    (parseTopDecs_declByteRanged ofInt source locations declarations h)
 
 end Flapjack.Parser

@@ -2112,6 +2112,22 @@
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.83): HOL functions_FILTER' (panPropsScript.sml:1510-1516) states functions (FILTER is_decl prog) = []. functionsHOL_filter_isDecl matches it over List (DeclHOL width) using the tagged functionsHOL and isDeclHOL (the exact port of is_decl); no ARB and no extra hypotheses beyond [NeZero width]. Sibling predicate/projection rows in scripts/hol-probes/pan_lang_decl_predicates_probeScript.sml and pan_lang_functions_probe.out. The ARB-carrying sibling functions_eq_FILTER (bead flapjack-4ac.4.80) is intentionally not tagged here."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "decs_stcnames_only_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; beads flapjack-4ac.4.91): HOL decs_stcnames_only_functions (panPropsScript.sml:1596-1601) states EVERY (\\x. is_function x \\/ is_decl x \\/ is_exn_decl x) code ==> decs_stcnames ctxt code = SOME ctxt. The Lean statement has the same universally quantified context and declaration list over the exact StructContextExact and List (DeclHOL width) carriers; the EVERY premise is the List.all ... = true side condition and the predicate is the exact disjunction isFunctionHOL || isDeclHOL || isExnDeclHOL of the tagged is_function/is_decl/is_exn_decl ports; [NeZero width] matches HOL's positive dimindex. No ARB, no extra hypotheses. Examples in Flapjack/Test/PanLangDeclHOLParity.lean. Sibling decs_stcnames_lemma (pan_to_crepProofScript) is ported as decsStcnamesHOLExact_of_functions_or_exnDecls."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "decs_stcnames_only_functions2",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "decsStcnamesHOLExact_of_functions",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; beads flapjack-4ac.4.92): HOL decs_stcnames_only_functions2 (panPropsScript.sml:1604-1608) is the EVERY is_function specialisation of decs_stcnames_only_functions; the Lean statement has the same context/declaration quantifiers over StructContextExact and List (DeclHOL width), premise code.all isFunctionHOL = true, conclusion decsStcnamesHOLExact context code = some context. isFunctionHOL is the exact tagged is_function port; [NeZero width] matches HOL's positive dimindex. Examples in Flapjack/Test/PanLangDeclHOLParity.lean."
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exceptions_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
@@ -5240,6 +5256,14 @@
     "lean_name": "nbOpHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "theValWord_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "holValueWord",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.7): HOL theValWord_def (panSemScript.sml:42) is the partial inverse over the exact v/word_lab carrier (theValWord (ValWord w) = w; unspecified on other constructors). The Lean helper holValueWord (PanSemStateEval.lean:1362) is the totalized production/string-backed variant returning 0 on non-word inputs, over HolValue width whose names are String and whose word carrier is the tag-withheld HolWordLab. Since the non-ValWord branch picks 0 instead of HOL's unspecified value, this is not a statement-exact port; it is used only after the EVERY isValWord guard where HOL's case is total. The @[hol] tag stays withheld; faithful-port dependency flapjack-0lj.5 (carrier umbrella flapjack-pxn.18.3.5.8)."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

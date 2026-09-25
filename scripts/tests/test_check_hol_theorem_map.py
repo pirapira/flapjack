@@ -1069,6 +1069,46 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
 
 
+    def test_panprops_decs_stcnames_only_functions_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "decs_stcnames_only_functions"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "decsStcnamesHOLExact_of_functions"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "decs_stcnames_only_functions2"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+
+    def test_pansem_the_val_word_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Semantics/PanSemStateEval.lean", "holValueWord")
+        self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+        hol_path, hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+        self.assertEqual(hol_path, "cakeml/pancake/semantics/panSemScript.sml")
+        self.assertEqual(hol_name, "theValWord_def")
+        self.assertIn("flapjack-0lj.5", reviewer)
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        record = by_key[key]
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+
+
     def test_panlang_functions_append_filter_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {

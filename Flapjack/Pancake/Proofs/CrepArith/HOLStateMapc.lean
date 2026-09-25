@@ -365,6 +365,61 @@ theorem evalCrepSemHOLStateSource_load32_eq_memLoad32HOL
     CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memaddrs]
   rfl
 
+/-- The ordinary `Load` constructor over an exact finite-support Crep state
+reduces to the source HOL `mem_load` observation (`crepSemScript.sml:48-52`)
+after the address expression succeeds. The result is transported through the
+canonical `Fin width`/BitVec representation and back to `HolWordLab`; both the
+memory function and address-domain predicate are those of the exact state.
+This remains untagged because the proof uses the explicit finite-index
+dictionary and a single evaluator clause, not the full arbitrary-index
+`crepSem$eval` correspondence needed by `simp_exp_correct1`. -/
+theorem evalCrepSemHOLStateSource_load_eq_memLoad
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ)
+    (addressExpression : CrepExp (Fin width → Bool))
+    (address : Fin width → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width))
+      state.toExpressionEvaluatorState addressExpression = some address) :
+    (state.memaddrs
+        (holWordToBitVec (instFinHolFiniteDimension (width := width)) address) →
+    (((evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width))
+      state.toExpressionEvaluatorState (.load addressExpression)).map
+        PanWordLab.word).map
+        (mapCrepHolWordLab
+          (holWordToBitVec (instFinHolFiniteDimension (width := width))))).map
+        PanWordLab.toHolWordLab =
+      some (state.memory
+        (holWordToBitVec (instFinHolFiniteDimension (width := width)) address))) ∧
+    (¬ state.memaddrs
+        (holWordToBitVec (instFinHolFiniteDimension (width := width)) address) →
+     (((evalCrepHolFiniteWordSourceExp
+       (instFinHolFiniteDimension (width := width))
+       state.toExpressionEvaluatorState (.load addressExpression)).map
+         PanWordLab.word).map
+         (mapCrepHolWordLab
+           (holWordToBitVec (instFinHolFiniteDimension (width := width))))).map
+         PanWordLab.toHolWordLab = none) := by
+  classical
+  constructor
+  · intro hDomain
+    rw [evalCrepHolFiniteWordSourceExpWordLab_load_eq_memLoadCrepHolW
+      (dimension := instFinHolFiniteDimension (width := width))
+      (state := state.toExpressionEvaluatorState)
+      (addressExpression := addressExpression) (address := address) hAddress]
+    rw [CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState]
+    simp [memLoadCrepHolW, CrepSemHOLState.toBitVecEvaluatorState,
+      hDomain]
+  · intro hDomain
+    rw [evalCrepHolFiniteWordSourceExpWordLab_load_eq_memLoadCrepHolW
+      (dimension := instFinHolFiniteDimension (width := width))
+      (state := state.toExpressionEvaluatorState)
+      (addressExpression := addressExpression) (address := address) hAddress]
+    rw [CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState]
+    simp [memLoadCrepHolW, CrepSemHOLState.toBitVecEvaluatorState,
+      hDomain]
+
 /-- All-positive-width `simp_exp_correct1` support over the HOL-shaped Crep
 state carrier and the proof-script-local `mapc` update. The statement keeps
 the unused word_lab result binder, a successful full word_lab evaluation

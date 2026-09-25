@@ -496,6 +496,14 @@
     "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepSemHOLStateSource_load_eq_memLoad",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Load constructor equation for the exact finite-support Crep state: on a successful address, the two branches return the stored HolWordLab exactly when the state memory domain contains that address, otherwise none. It follows crepSem eval_def/mem_load_def at positive BitVec widths but still uses the explicit Fin width dictionary and is not the full arbitrary-index recursive evaluator correspondence."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

@@ -2,9 +2,97 @@ import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Proofs.CrepArith
+import Flapjack.Pancake.Proofs.CrepArith.HOLStateMapc
 import Flapjack.RiscV.PanMemory
 
 namespace Flapjack.Test.CrepeSimpExpParity
+
+private def emptyHolFiniteMapExact (α β : Type) : HolFiniteMapExact α β where
+  lookup := fun _ => none
+  finiteSupport := ⟨[], by intro key h; simp at h⟩
+
+private def crepSemLoadState64 : CrepSemHOLState 64 Unit :=
+  { locals := emptyHolFiniteMapExact Nat (HolWordLab 64)
+    globals := emptyHolFiniteMapExact (BitVec 5) (HolWordLab 64)
+    code := emptyHolFiniteMapExact
+      Flapjack.Basis.Pure.MlString.MlString (List Nat × CrepProgHOL 64)
+    memory := fun _ => .word (BitVec.ofNat 64 0x1122334455667788)
+    memaddrs := fun address => address = BitVec.ofNat 64 8
+    shMemaddrs := fun _ => False
+    clock := 0
+    be := false
+    ffi := { oracle := fun _ _ _ _ => .final .failed
+             ffiState := ()
+             ioEvents := [] }
+    baseAddr := 0
+    topAddr := 0 }
+
+private def crepSemLoadAddress64 : Fin 64 → Bool :=
+  bitVecToHolWordBits (BitVec.ofNat 64 8)
+
+/-! Direct `crepSem$eval_def`/`mem_load_def` source rows for the exact-state
+Load clause: the finite-support state's stored word is returned on an address
+in `memaddrs`, and an out-of-domain address returns `NONE`. The proof uses the
+all-width source adapter theorem without claiming the complete native evaluator
+correspondence. -/
+example :
+    (((evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      crepSemLoadState64.toExpressionEvaluatorState
+      (.load (.const crepSemLoadAddress64))).map PanWordLab.word).map
+      (mapCrepHolWordLab
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64))))).map
+      PanWordLab.toHolWordLab =
+      some (.word (BitVec.ofNat 64 0x1122334455667788)) := by
+  have hAddress : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      crepSemLoadState64.toExpressionEvaluatorState
+      (.const crepSemLoadAddress64) = some crepSemLoadAddress64 := by
+    simp [evalCrepHolFiniteWordSourceExp]
+  have hAddressBitVec : holWordToBitVec
+      (instFinHolFiniteDimension (width := 64)) crepSemLoadAddress64 =
+      BitVec.ofNat 64 8 := by
+    change holWordBitsToBitVec
+      (bitVecToHolWordBits (BitVec.ofNat 64 8)) = BitVec.ofNat 64 8
+    exact holWordBitsToBitVec_bitVecToHolWordBits _
+  have hDomain : crepSemLoadState64.memaddrs
+      (holWordToBitVec (instFinHolFiniteDimension (width := 64))
+        crepSemLoadAddress64) := by
+    rw [hAddressBitVec]
+    simp [crepSemLoadState64]
+  exact (evalCrepSemHOLStateSource_load_eq_memLoad
+    crepSemLoadState64 (.const crepSemLoadAddress64)
+    crepSemLoadAddress64 hAddress).1 hDomain
+
+example :
+    (((evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      crepSemLoadState64.toExpressionEvaluatorState
+      (.load (.const (bitVecToHolWordBits (BitVec.ofNat 64 9))))).map
+        PanWordLab.word).map
+      (mapCrepHolWordLab
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64))))).map
+      PanWordLab.toHolWordLab = none := by
+  have hAddress : evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := 64))
+      crepSemLoadState64.toExpressionEvaluatorState
+      (.const (bitVecToHolWordBits (BitVec.ofNat 64 9))) =
+      some (bitVecToHolWordBits (BitVec.ofNat 64 9)) := by
+    simp [evalCrepHolFiniteWordSourceExp]
+  have hAddressBitVec : holWordToBitVec
+      (instFinHolFiniteDimension (width := 64))
+      (bitVecToHolWordBits (BitVec.ofNat 64 9)) = BitVec.ofNat 64 9 := by
+    change holWordBitsToBitVec
+      (bitVecToHolWordBits (BitVec.ofNat 64 9)) = BitVec.ofNat 64 9
+    exact holWordBitsToBitVec_bitVecToHolWordBits _
+  have hOutside : ¬ crepSemLoadState64.memaddrs
+      (holWordToBitVec (instFinHolFiniteDimension (width := 64))
+        (bitVecToHolWordBits (BitVec.ofNat 64 9))) := by
+    rw [hAddressBitVec]
+    simp [crepSemLoadState64]
+  exact (evalCrepSemHOLStateSource_load_eq_memLoad
+    crepSemLoadState64 (.const (bitVecToHolWordBits (BitVec.ofNat 64 9)))
+    (bitVecToHolWordBits (BitVec.ofNat 64 9)) hAddress).2 hOutside
 
 /-! HOL words use a finite Boolean-function carrier. This direct check
     exercises its `Fin n` encoding and conversion to the production BitVec

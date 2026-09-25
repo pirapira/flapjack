@@ -36,8 +36,9 @@ proposition). It names fields, e.g.
 The checker requires each named field to be declared in a same-module
 structure, to actually use the `HolFiniteMapExact` carrier (a raw
 `α → Option β` map is ineligible), and requires the same-module canonical
-witness `holFmapAsFiniteSupportWitness` (extensionality plus
-`toExact`/`ofExact` roundtrips). It is a representation statement only and
+witness `holFmapAsFiniteSupportWitness` (`toExact`/`ofExact` roundtrips).
+Extensionality is proved separately by `HolFiniteMapExact.ext`. This is a
+representation statement only and
 does not authorize changed quantifiers, hypotheses, conclusions, `BEq` side
 conditions, or word-model differences.
 It does not authorize any other carrier, statement, or behavior difference.

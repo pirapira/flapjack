@@ -1024,4 +1024,32 @@ theorem evalCrepRuntimeExp_toBitVecEvaluatorState_loadGlob
   change state.toBitVecEvaluatorState.globals address = _
   rfl
 
+/-- Exact positive-width state projection for the production `BaseAddr`
+    evaluator clause. It returns the source state's address unchanged, without
+    assumptions about evaluation success, code, FFI, or the runtime word
+    model. Kept untagged because this width-indexed `BitVec` representation
+    has not been related to every HOL `finite_index` word carrier. -/
+theorem evalCrepRuntimeExp_toBitVecEvaluatorState_baseAddr
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((evalCrepRuntimeExp (state.toBitVecEvaluatorState.toRuntime)
+      .baseAddr).map PanWordLab.word).map PanWordLab.toHolWordLab =
+      some (.word state.baseAddr) := by
+  simp [evalCrepRuntimeExp, CrepSemHOLState.toBitVecEvaluatorState,
+    CrepHolState.toRuntime, PanWordLab.toHolWordLab]
+
+/-- Exact positive-width state projection for the production `TopAddr`
+    evaluator clause. It returns the source state's address unchanged, without
+    assumptions about evaluation success, code, FFI, or the runtime word
+    model. Kept untagged because this width-indexed `BitVec` representation
+    has not been related to every HOL `finite_index` word carrier. -/
+theorem evalCrepRuntimeExp_toBitVecEvaluatorState_topAddr
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((evalCrepRuntimeExp (state.toBitVecEvaluatorState.toRuntime)
+      .topAddr).map PanWordLab.word).map PanWordLab.toHolWordLab =
+      some (.word state.topAddr) := by
+  simp [evalCrepRuntimeExp, CrepSemHOLState.toBitVecEvaluatorState,
+    CrepHolState.toRuntime, PanWordLab.toHolWordLab]
+
 end Flapjack

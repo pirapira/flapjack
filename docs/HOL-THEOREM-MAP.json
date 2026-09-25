@@ -754,6 +754,22 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_toBitVecEvaluatorState_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "The production BaseAddr clause returns the exact CrepSemHOLState baseAddr field after its positive-width BitVec projection and needs no evaluation-success premise. It remains untagged because arbitrary HOL finite_index reindexing for the evaluator is not established."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_toBitVecEvaluatorState_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "The production TopAddr clause returns the exact CrepSemHOLState topAddr field after its positive-width BitVec projection and needs no evaluation-success premise. It remains untagged because arbitrary HOL finite_index reindexing for the evaluator is not established."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
     "lean_name": "evalCrepSourceProjection_load",
     "statement_status": "documented_mismatch",

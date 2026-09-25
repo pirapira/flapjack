@@ -1499,3 +1499,11 @@ run_probe word_to_stack_copy_ret_probeScript.sml word_to_stack_copy_ret_probe.ou
   cra_zero cr_handle \
   "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
+# initial_ffi_state and the call_FFI cases (identity, success, length
+# failure, oracle final).
+run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
+  ffi_outcome_failed call_final_event \
+  "$cake_dir/semantics/ffi/ffiScript.sml" \
+  "$cake_dir/semantics/ffi"

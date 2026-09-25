@@ -227,6 +227,7 @@ import Flapjack.Lab
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
+import Flapjack.FfiHOL
 
 /-!
 # Flapjack in Lean

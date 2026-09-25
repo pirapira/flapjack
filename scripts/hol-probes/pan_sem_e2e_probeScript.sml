@@ -294,6 +294,69 @@ val _ = print_eval "recursive_deccall_missing_function"
        ^recursive_missing_code_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
 
+(* Negative recursive dispatch rows for Call control and exception handling. *)
+val recursive_skip_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      code := FEMPTY |+ («skip», ([], panLang$Skip, panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_callee_skip"
+  ``case panSem$evaluate (panLang$Call NONE «skip» [], ^recursive_skip_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val recursive_break_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      code := FEMPTY |+ («break», ([], panLang$Break, panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_callee_break"
+  ``case panSem$evaluate (panLang$Call NONE «break» [], ^recursive_break_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val recursive_wrong_exception_handler_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («caught», ValWord (0w:8 word));
+      eshapes := FEMPTY |+ («E», panLang$One) |+ («F», panLang$One);
+      code := FEMPTY |+ («raiseF», ([],
+        panLang$Raise «F» (panLang$Const (7w:8 word)), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_nonmatching_exception_handler"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (NONE, SOME («E», «caught», panLang$Skip)))
+        «raiseF» [], ^recursive_wrong_exception_handler_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «caught»)``
+
+val recursive_invalid_exception_target_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («caught», RStruct []);
+      eshapes := FEMPTY |+ («E», panLang$One);
+      code := FEMPTY |+ («raiseE», ([],
+        panLang$Raise «E» (panLang$Const (7w:8 word)), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_invalid_exception_target"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (NONE, SOME («E», «caught», panLang$Skip)))
+        «raiseE» [], ^recursive_invalid_exception_target_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «caught»)``
+
+val recursive_deccall_exception_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      eshapes := FEMPTY |+ («E», panLang$One);
+      code := FEMPTY |+ («raiseE», ([],
+        panLang$Raise «E» (panLang$Const (7w:8 word)), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_deccall_exception_propagates"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «raiseE» [] panLang$Skip,
+       ^recursive_deccall_exception_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
 val _ = print_eval "nested_call_code_map_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE «f» [],

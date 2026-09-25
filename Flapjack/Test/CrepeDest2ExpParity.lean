@@ -32,6 +32,25 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! The bounded production helper agrees with the unbounded recursive spec
+    on every direct HOL-EVAL row above, including the rejected odd values and
+    the width-boundary all-ones value. The theorem is generic in the BitVec
+    width; these observations keep the fixture tied to the direct HOL rows. -/
+def recursiveSpecParity : Bool :=
+  (crepDest2Exp 0 (word 0) == crepDest2ExpBitVecSpec 0 (word 0)) &&
+  (crepDest2Exp 3 (word 1) == crepDest2ExpBitVecSpec 3 (word 1)) &&
+  (crepDest2Exp 0 (word 1) == crepDest2ExpBitVecSpec 0 (word 1)) &&
+  (crepDest2Exp 0 (word 2) == crepDest2ExpBitVecSpec 0 (word 2)) &&
+  (crepDest2Exp 4 (word 4) == crepDest2ExpBitVecSpec 4 (word 4)) &&
+  (crepDest2Exp 0 (word 4) == crepDest2ExpBitVecSpec 0 (word 4)) &&
+  (crepDest2Exp 0 (word 8) == crepDest2ExpBitVecSpec 0 (word 8)) &&
+  (crepDest2Exp 0 (word 3) == crepDest2ExpBitVecSpec 0 (word 3)) &&
+  (crepDest2Exp 0 (word 6) == crepDest2ExpBitVecSpec 0 (word 6)) &&
+  (crepDest2Exp 0 (word 255) == crepDest2ExpBitVecSpec 0 (word 255))
+
+#eval recursiveSpecParity
+#guard recursiveSpecParity
+
 /-! These are the three successful input/exponent rows also recorded by the
     direct HOL destination-recognizer probe above. They exercise the wrapped
     `BitVec.ofNat` image of HOL `word_log2` on the same width-8 inputs. -/

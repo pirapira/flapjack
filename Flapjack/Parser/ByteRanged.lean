@@ -89,4 +89,53 @@ theorem readWhile_charsByteRanged {p : Char → Bool} (hp : ImpliesByte p)
       · simp only [readWhile, h]
         simpa using charsByteRanged_reverse hacc
 
+theorem charsByteRanged_tail {c : Char} {cs : List Char} (h : CharsByteRanged (c :: cs)) :
+    CharsByteRanged cs := by
+  intro d hd
+  exact h d (by simp [hd])
+
+theorem charsByteRanged_drop {l : List Char} (h : CharsByteRanged l) (n : Nat) :
+    CharsByteRanged (l.drop n) := by
+  intro c hc
+  exact h c (by simpa using List.mem_of_mem_drop hc)
+
+theorem charsByteRanged_take {l : List Char} (h : CharsByteRanged l) (n : Nat) :
+    CharsByteRanged (l.take n) := by
+  intro c hc
+  exact h c (by simpa using List.mem_of_mem_take hc)
+
+/-- Unconditional form: `readWhile` accepts only characters from `input` or `acc`. -/
+theorem readWhile_charsByteRanged' {p : Char → Bool} (input acc : List Char)
+    (hinput : CharsByteRanged input) (hacc : CharsByteRanged acc) :
+    CharsByteRanged (readWhile p input acc).1.toList := by
+  induction input generalizing acc with
+  | nil => simpa [readWhile] using charsByteRanged_reverse hacc
+  | cons c cs ih =>
+      have hcs : CharsByteRanged cs := charsByteRanged_tail hinput
+      have hc : c.toNat < 256 := hinput c (by simp)
+      by_cases h : p c
+      · simp only [readWhile, h]
+        exact ih (c :: acc) hcs (fun d hd => by
+          simp only [List.mem_cons] at hd
+          rcases hd with rfl | hd
+          · exact hc
+          · exact hacc d hd)
+      · simp only [readWhile, h]
+        simpa using charsByteRanged_reverse hacc
+
+/-- Name-carrying payloads of a lexer atom are byte-ranged. -/
+def AtomNameByteRanged : Atom → Prop
+  | .wordA text => StringByteRanged text
+  | _ => True
+
+/-- Name-carrying payloads of a lexer token are byte-ranged. -/
+def TokenNameByteRanged : Token → Prop
+  | .identT name => StringByteRanged name
+  | .foreignIdent name => StringByteRanged name
+  | _ => True
+
+theorem drop_one_stringByteRanged {s : String} (h : StringByteRanged s) :
+    StringByteRanged (String.ofList (s.toList.drop 1)) :=
+  stringByteRanged_ofList (charsByteRanged_drop h 1)
+
 end Flapjack.Parser

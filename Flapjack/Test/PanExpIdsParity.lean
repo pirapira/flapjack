@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 # Original-domain parity for `panLang$exp_ids`
@@ -55,5 +56,50 @@ def runChecks : IO Bool := do
     check "pan exp_ids call handler" (expIds callHandler) ["EC", "EH"],
     check "pan exp_ids fallback" (expIds fallback) [] ].mapM id
   pure (results.all id)
+
+/-! ## Exact-carrier parity for `exp_ids` (bead flapjack-4ac.1.33)
+
+`expIdsHOL` is the tagged port of `cakeml/pancake/panLangScript.sml:222-231`
+over the exact `ProgHOL` carrier.  The guards below replay the seven
+`pan_lang_exp_ids_probe.out` rows through the name bridge `toStringOfBytes`. -/
+
+open Flapjack.Pancake.PanLang
+open Flapjack.Basis.Pure.MlString
+
+def eEmpty : ProgHOL 8 := .skip
+def eRaise : ProgHOL 8 := .raise (ofString "E") (.const 7)
+def eSequence : ProgHOL 8 :=
+  .seq (.raise (ofString "E1") (.const 1)) (.raise (ofString "E2") (.const 2))
+def eDeclaration : ProgHOL 8 :=
+  .dec (ofString "x") .one (.const 0) (.raise (ofString "ED") (.const 3))
+def eConditionalLoop : ProgHOL 8 :=
+  .ite (.const 0)
+    (.raise (ofString "EI") (.const 4))
+    (.while (.const 0) (.raise (ofString "EW") (.const 5)))
+def eCallHandler : ProgHOL 8 :=
+  .call (some (none, some (ofString "EC", ofString "h",
+    .seq (.raise (ofString "EH") (.const 6)) .skip))) (ofString "f") []
+def eFallback : ProgHOL 8 := .assign .local (ofString "x") (.const 9)
+
+def namesOf (program : ProgHOL 8) : List String :=
+  (expIdsHOL program).map toStringOfBytes
+
+#guard namesOf eEmpty == []
+#guard namesOf eRaise == ["E"]
+#guard namesOf eSequence == ["E1", "E2"]
+#guard namesOf eDeclaration == ["ED"]
+#guard namesOf eConditionalLoop == ["EI", "EW"]
+#guard namesOf eCallHandler == ["EC", "EH"]
+#guard namesOf eFallback == []
+
+example : namesOf eRaise = ["E"] := by
+  simp only [namesOf, eRaise, expIdsHOL, List.map_cons, List.map_nil]
+  rw [toStringOfBytes_ofString_of_bytes "E" (by decide)]
+
+example : namesOf eCallHandler = ["EC", "EH"] := by
+  simp only [namesOf, eCallHandler, expIdsHOL, List.map_cons, List.map_nil,
+    List.append_nil]
+  rw [toStringOfBytes_ofString_of_bytes "EC" (by decide),
+    toStringOfBytes_ofString_of_bytes "EH" (by decide)]
 
 end Flapjack.Test.PanExpIdsParity

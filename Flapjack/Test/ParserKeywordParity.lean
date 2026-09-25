@@ -1,6 +1,6 @@
 /-
 Parity fixture for `Flapjack.Parser.getKeyword` against the direct HOL oracle
-`scripts/hol-probes/pan_lexer_keyword_probe.out` (`panLexer$get_keyword`,
+`scripts/hol-probes/pan_lexer_get_keyword_probe.out` (`panLexer$get_keyword`,
 `panLexerScript.sml:115-153`).
 
 Bead flapjack-pxn.18.3.5.8.7.1.1: the executable lexer replaced the original

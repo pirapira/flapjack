@@ -204,15 +204,20 @@ their equations to `panModelReadByte`/`panModelRead32`, are in
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
-The direct width-1 row `load32_unaligned_width1_address1=NONE` was refreshed
+The direct width-1 rows `load32_aligned_width1_address0=SOME ...` and
+`load32_unaligned_width1_address1=NONE` were refreshed
 with `HOL4=/home/zksecurity/HOL CAKEML=/home/zksecurity/flapjack2/cakeml
 HOL_PROBE_ONLY=pan_fixed_load_probeScript.sml scripts/hol-probes/regenerate.sh`
 against matching CakeML source commit `857f0d98da8f8a3580f3442338e697809308ede`.
-The accompanying `aligned_width1_address1=F` row confirms HOL rejects the
-address, and `byte_align_width1_address1` records the source `byte_align`
-definition at that carrier width. The tagged Lean `panMemLoad32HOL` now states
-the equivalent modulo-four guard directly; the matching Lean fixture checks
-that address 1 returns `none`. Direct `word_of_bytes` rows pin the four-byte
+The `aligned_width1_address0=T` and `aligned_width1_address1=F` rows confirm
+that HOL accepts address zero and rejects address one; `byte_align_width1_address1`
+records the source `byte_align` definition at that carrier width. The tagged
+Lean `panMemLoad32HOL` states the equivalent modulo-four guard directly; the
+matching Lean fixture checks that address zero returns `0x00010001` and address
+one returns `none`. HOL EVAL leaves the width-one pack as `get_byte`/shift/
+concatenation operations; the adjacent equality row records that expression
+against `0x00010001w`, while the Lean check fully computes the tagged result.
+Direct `word_of_bytes` rows pin the four-byte
 little-endian and big-endian packs to `0x44332211` and `0x11223344`; the Lean
 fixture checks the same `RiscV.panRiscVWordOfBytes` results. The probe driver
 runs this script from `pancake/semantics/.hol/objs` when that directory is

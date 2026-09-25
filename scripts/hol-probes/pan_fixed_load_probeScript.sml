@@ -61,6 +61,14 @@ val _ = print_eval "load32_hit_width8"
 val _ = print_eval "load32_unaligned_width1_address1"
   ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
       UNIV F (1w : 1 word)``
+val _ = print_eval "load32_aligned_width1_address0"
+  ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
+      UNIV F (0w : 1 word)``
+val _ = print_eval "load32_aligned_width1_address0_equals_expected"
+  ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
+      UNIV F (0w : 1 word) = SOME (0x00010001w : word32)``
+val _ = print_eval "aligned_width1_address0"
+  ``aligned 2 (0w : 1 word)``
 val _ = print_eval "aligned_width1_address1"
   ``aligned 2 (1w : 1 word)``
 val _ = print_eval "byte_align_width1_address1"

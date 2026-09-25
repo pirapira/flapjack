@@ -84,4 +84,19 @@ def memLoadCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
     Option (HolWordLab width) :=
   if state.memaddrs address then some (state.memory address) else none
 
+namespace CrepSemStateExact
+
+/-- Canonical kernel witness for the `fmap_as_finite_support` `@[hol]` qualifier
+on the helpers in this module, which are stated over `CrepSemHOLState`. It
+mirrors `CrepSemHOLState.holFmapAsFiniteSupportWitness` so that the checker
+finds a same-module witness stating the genuine `toBroad`/`ofBroad` roundtrip. -/
+theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width] {σ : Type} :
+    (∀ (state : CrepSemBroadState width σ) (h : state.FiniteSupport),
+        (CrepSemBroadState.ofBroad state h).toBroad = state) ∧
+    (∀ state : CrepSemHOLState width σ,
+        CrepSemBroadState.ofBroad state.toBroad state.toBroad_finiteSupport = state) :=
+  CrepSemHOLState.holFmapAsFiniteSupportWitness
+
+end CrepSemStateExact
+
 end Flapjack

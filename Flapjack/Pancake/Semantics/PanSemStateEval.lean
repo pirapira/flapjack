@@ -1361,7 +1361,8 @@ theorem panValueFieldsExactHOL_eq_evalHOL {width : Nat} [NeZero width] [LawfulBE
     `case ... of ValWord n => n` is also total; it carries no `@[hol]` tag.
     An exact port would have to leave the non-`ValWord` branch unspecified as
     HOL's `theValWord` does, over the exact positive-width `ValueHOL` carrier;
-    faithful-port dependency `flapjack-0lj.5` (with carrier umbrella
+    the unspecified branch is tracked separately by `flapjack-yaq`, while
+    positive-width carrier work is tracked by `flapjack-0lj.5` (under
     `flapjack-pxn.18.3.5.8`). -/
 def holValueWord {width : Nat} : HolValue width → RiscV.Word width
   | .val (.word value) => value

@@ -67,15 +67,18 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
       exact congrArg Shape.comb (List.map_congr_left ih)
   | case3 name fields => simp only [panValueShape, panSemShapeOf]
 
-/-- Statement-exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`,
+/-- Counterpart of HOL `panSem$word_lab` (`panSemScript.sml:17`,
     `word_lab = Word ('a word) End`): a single `word` constructor carrying the
-    word payload.  HOL's `'a word` is width-indexed, so the port is indexed by
-    `width` with a `BitVec width` payload.  This is declared here, in the
-    `panSemScript.sml` counterpart file, so the Datatype tag is a source-shaped
-    port; the executable code uses the generic `PanWordLab`
-    (`Flapjack/PanValues.lean`), and the two are related by the checked
-    isomorphism below at each width. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
+    word payload, indexed by `width` with a `BitVec width` payload.  The
+    executable code uses the generic `PanWordLab` (`Flapjack/PanValues.lean`),
+    and the two are related by the checked isomorphism below at each width. -/
+-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): the constructor
+-- arity/field type match, but this `width : Nat` admits `width = 0` while the
+-- HOL `'a word` carrier requires positive `dimindex`.  Adding the positive-width
+-- constraint (`[NeZero width]` on the inductive, as done for `CrepProgHOL`)
+-- would propagate through `HolValue`, `CrepLocalsExact`, and the frozen
+-- `PanSemStateEval.lean`, so the Datatype tag is withheld and the exact
+-- positive-width carrier is tracked by `flapjack-0lj.5`.
 inductive HolWordLab (width : Nat) where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr

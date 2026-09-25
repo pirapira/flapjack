@@ -1506,3 +1506,10 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
   plx_alpha_206 plx_ascii_then_high \
   "$cake_dir/pancake/parser/panLexerScript.sml" \
   "$cake_dir/pancake/parser"
+
+# The crepLang exp probe observes the exact width-indexed Crepe expression
+# carrier (word payloads and fixed 5-word LoadGlob width).
+run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
+  cexp_const cexp_topaddr \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"

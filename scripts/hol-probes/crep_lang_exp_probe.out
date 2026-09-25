@@ -1,0 +1,12 @@
+cexp_const=5
+cexp_var=7
+cexp_load=1
+cexp_load32=1
+cexp_loadbyte=1
+cexp_loadglob=7
+cexp_op_len=2
+cexp_crepop_len=1
+cexp_cmp=1
+cexp_shift=1
+cexp_baseaddr=1
+cexp_topaddr=1

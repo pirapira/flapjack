@@ -58,7 +58,7 @@ for the review rule.
 | `proofs/pan_globalsProofScript.sml` | `Flapjack/Pancake/Proofs/PanGlobals.lean`, `PanGlobals/ShapeInfrastructure.lean` |
 | `proofs/pan_to_crepProofScript.sml` | `Flapjack/Pancake/Proofs/PanToCrep.lean`, `PanToCrep/CompileExpVmax.lean`, `PanToCrep/CompileProgParams.lean`, `PanToCrep/Primop.lean` |
 | `pan_to_crepScript.sml` | `Flapjack/Pancake/PanToCrep.lean`, `PanToCrep/Compile.lean`, `PanToCrep/CompileProg.lean` |
-| `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean` |
+| `crepLangScript.sml` | `Flapjack/Pancake/CrepLang.lean`, `Flapjack/Pancake/CrepLang/Exp.lean` (exact width-indexed `CrepExpHOL`) |
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
 | `crep_inlineScript.sml` | `Flapjack/Pancake/CrepInline.lean`, `CrepInline/Pass.lean` |
 | `crep_to_loopScript.sml` | `Flapjack/Pancake/CrepToLoop.lean`, `CrepToLoop/Optimise.lean` |

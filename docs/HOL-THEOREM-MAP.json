@@ -611,6 +611,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-constructor equation from production evalCrepRuntimeExp over the exact finite-map state adapter to the finite-word source evaluator. It exposes the evaluator implementation bridge; source word operations and the HolFiniteDimension instance are not yet identified with native HOL crepSem eval_def/finite_index."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLab",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only all-width statement over production evalCrepRuntimeExp with a state-derived HOL source memory-model adapter and no target-operation premise; preserves exact mapc state update and Option word_lab result. Native HOL eval_def identity and selected finite_index correspondence remain open."

@@ -439,30 +439,29 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
     global allocation makes their name-preservation contracts reusable by the
     target-facing pipeline. -/
 
-/-- Reviewed qualified HOL port of Cake's `fperm_name_def`
+/-- Production analogue of Cake's `fperm_name_def`
     (`pan_globalsScript.sml:184`): renaming swaps the `source` and `target`
-    function names and leaves every other name unchanged. -/
--- Qualified HOL port (names_as_string): the produced value is a keyed
--- identifier, so the declaration carries the reviewed
--- `(names_as_string := [source, target, name])` qualifier (manifest status
--- `reviewed_names_as_string`).  The Lean statement matches HOL's exactly: it
--- compares names with propositional `=` (`String`'s built-in `DecidableEq`)
--- and the three identifiers are equality/map-key-only, so no byte-boundary
--- witness is required.  The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    function names and leaves every other name unchanged.  Not an exact HOL
+    port; see the FLAPJACK-SPECIFIC note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag): HOL's
+-- `fperm_name_def` is declared without a type annotation, so HOL's `fperm_name`
+-- is polymorphic (`'a -> 'a -> 'a -> 'a`), while `globalRenameFunctionName` is
+-- the `FunName = String` instance.  The `names_as_string` qualifier only
+-- authorizes a HOL `mlstring` field represented by a Lean `String`; it cannot
+-- turn a String specialization of a polymorphic HOL definition into an exact
+-- port of that definition's statement, so the tag stays withdrawn.  The exact
+-- MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`); the faithful port must match HOL's polymorphic
+-- (or mlstring-instantiated) `fperm_name_def`.
 --
 -- Clause-by-clause review (flapjack-6nn.1.1):
 --   HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
 --   Lean `if source = name then target else if target = name then source
 --   else name`.  The clauses, branch order, comparison `=` and result names
---   match exactly with no side condition.  `globalRenameFunctionName` only
---   compares and swaps names, never inspects their bytes; every use is
---   equality/`map`-key only, so the `String`/`mlstring` carrier difference is
---   unobservable here.  Direct HOL/Lean edge-case fixtures:
+--   match with no side condition at the `String` instance.  Direct
+--   HOL/Lean edge-case fixtures:
 --   `scripts/hol-probes/pan_globals_fperm_name_probe.out` and
 --   `Flapjack/Test/PanGlobalsFpermNameParity.lean`.
-@[hol "cakeml/pancake/pan_globalsScript.sml" "fperm_name_def"
-  (names_as_string := [source, target, name])]
 def globalRenameFunctionName
     (source target name : FunName) : FunName :=
   if source = name then target else if target = name then source else name

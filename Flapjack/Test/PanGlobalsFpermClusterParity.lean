@@ -4,7 +4,8 @@ namespace Flapjack.Test.PanGlobalsFpermClusterParity
 
 open Flapjack
 
-/-! Regression for the exact HOL-tagged `fperm_name`/`fperm_decs` cluster
+/-! Regression for the source-shaped (Flapjack-specific, untagged) `fperm_name`
+    counterparts and the `fperm_decs` cluster
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1711`), exercised
     on the same `foo`/`bar` fixture as `PanGlobalsFpermDecsParity`. -/
 def sourceFunction : FunDecl Nat :=

@@ -72,6 +72,23 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/PanGlobals.lean", "globalRenameFunctionName"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "fperm_name_def",
+        "flapjack-ds5 (source comparison with pan_globalsScript.sml:184, "
+        "withdrawn on flapjack-main coordinator request: HOL `fperm_name_def` "
+        "has no type annotation, so HOL's `fperm_name` is polymorphic "
+        "('a -> 'a -> 'a -> 'a), while production `globalRenameFunctionName` is "
+        "the FunName = String instance. The clauses and branch order match at "
+        "that instance, but names_as_string only authorizes a HOL mlstring field "
+        "represented by a Lean String; it cannot make a String specialization an "
+        "exact port of a polymorphic HOL definition. Keep the analogue untagged; "
+        "the faithful port must match HOL's polymorphic (or mlstring-instantiated) "
+        "fperm_name_def, tracked by flapjack-pxn.18.3.5.8 (parent "
+        "flapjack-pxn.18.3.5.7.2). Direct HOL rows in "
+        "pan_globals_fperm_name_probe.out; Lean fixture "
+        "Flapjack.Test.PanGlobalsFpermNameParity covers 7 HOL rows.)"
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "struct_infos_ok_def",

@@ -1,0 +1,8 @@
+res_error=Error
+res_timeout=TimeOut
+res_break=Break
+res_continue=Continue
+res_return=Return (ValWord 7w)
+res_exception=Exception «E» (ValWord 7w)
+res_finalffi=FinalFFI (Final_event (ExtCall «E») [] [] FFI_failed)
+res_distinct=T

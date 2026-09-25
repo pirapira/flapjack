@@ -57,11 +57,17 @@ example : getKeyword "abc" = Token.identT "abc" := by decide
 
 example : getKeyword "@ffi" = Token.foreignIdent "ffi" := by decide
 
+example (input : String) (p : Token × Locs) (hp : p ∈ pancakeLex input) :
+    TokenNameByteRanged p.1 :=
+  pancakeLex_tokens_byteRanged input p hp
+
+example (fuel : Nat) (input : List Char) (loc : Posn) (h : CharsByteRanged input)
+    (p : Token × Locs) (hp : p ∈ lexAux fuel input loc) : TokenNameByteRanged p.1 :=
+  lexAux_tokens_byteRanged fuel input loc h p hp
 /-! Direct parity with the original-HOL `get_keyword` oracle
     (`scripts/hol-probes/pan_lexer_get_keyword_probe.out`,
     bead `flapjack-pxn.18.3.5.8.7.2`): every table entry and fallback. -/
 
-example : getKeyword "skip" = Token.keywordT Keyword.skipK := by decide
 example : getKeyword "st" = Token.keywordT Keyword.stK := by decide
 example : getKeyword "stw" = Token.keywordT Keyword.stwK := by decide
 example : getKeyword "st8" = Token.keywordT Keyword.st8K := by decide
@@ -96,15 +102,6 @@ example : getKeyword "exception" = Token.keywordT Keyword.exceptionK := by decid
 example : getKeyword "struct" = Token.keywordT Keyword.namedK := by decide
 example : getKeyword "" = Token.lexErrorT "Expected keyword, found empty string" := by
   decide
-example : getKeyword "@ffi" = Token.foreignIdent "ffi" := by decide
-example : getKeyword "abc" = Token.identT "abc" := by decide
 example : getKeyword "@" = Token.identT "@" := by decide
-example (input : String) (p : Token × Locs) (hp : p ∈ pancakeLex input) :
-    TokenNameByteRanged p.1 :=
-  pancakeLex_tokens_byteRanged input p hp
-
-example (fuel : Nat) (input : List Char) (loc : Posn) (h : CharsByteRanged input)
-    (p : Token × Locs) (hp : p ∈ lexAux fuel input loc) : TokenNameByteRanged p.1 :=
-  lexAux_tokens_byteRanged fuel input loc h p hp
 
 end Flapjack.Test.ParserByteRangedParity

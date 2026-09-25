@@ -3111,6 +3111,61 @@ theorem crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase
       (.crepOp .mul [left, right])).map PanWordLab.word
   rw [hMulSource, hOriginalSource]
 
+/-! HOL's induction proof handles the complete `Crepop op es` constructor before
+    splitting `crep_op`'s defining equations. Since this language currently has
+    only `CrepOp.mul`, the source evaluator succeeds only for a two-element
+    argument list; all other shapes discharge from the same success premise.
+    This all-width source-model wrapper follows that case boundary and consumes
+    the recursive hypotheses over the original list, as in
+    `simp_exp_correct1`. It remains untagged for the evaluator correspondence
+    gap recorded above. -/
+theorem crepSimpExpCorrect1CrepOpHolFiniteWordSourceCase
+    {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
+    (f : FunName × (List Nat × CrepProg (ι → Bool)) →
+      List Nat × CrepProg (ι → Bool))
+    (state : CrepHolState (ι → Bool) σ)
+    (operator : CrepOp) (arguments : List (CrepExp (ι → Bool)))
+    (result : PanWordLab (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.crepOp operator arguments) ≠ none)
+    (ih : ∀ (subexpression : CrepExp (ι → Bool)),
+      subexpression ∈ arguments →
+      ∀ (source : CrepHolState (ι → Bool) σ)
+        (_value : PanWordLab (ι → Bool)),
+        evalCrepHolFiniteWordSourceExpWordLab dimension source subexpression ≠ none →
+        evalCrepHolFiniteWordSourceExpWordLab dimension
+          (crepArithHolFiniteDimensionMapCode f source)
+          (crepSimpExp
+            (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+            subexpression) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension source subexpression) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (.crepOp operator arguments)) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension state
+      (.crepOp operator arguments) := by
+  cases operator with
+  | mul =>
+    cases arguments with
+    | nil => simp [evalCrepHolFiniteWordSourceExpWordLab,
+        evalCrepHolFiniteWordSourceExp] at h
+    | cons left tail =>
+      cases tail with
+      | nil => simp [evalCrepHolFiniteWordSourceExpWordLab,
+          evalCrepHolFiniteWordSourceExp] at h
+      | cons right rest =>
+        cases rest with
+        | nil =>
+          exact crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase
+            (dimension := dimension) f state left right result h
+            (fun subexpression hmem source value heval =>
+              ih subexpression hmem source value heval)
+        | cons extra rest =>
+          simp [evalCrepHolFiniteWordSourceExpWordLab,
+            evalCrepHolFiniteWordSourceExp] at h
+
 /-! The source evaluator and the canonical finite-dimension evaluator both
     read LoadGlob directly from the represented HOL globals field. This bridge
     closes this evaluator constructor without assumptions about the memory

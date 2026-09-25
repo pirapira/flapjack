@@ -632,8 +632,9 @@ example :
         exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
           f state (bitVecToHolWordBits (BitVec.ofNat 4 2)) value hvalue
       · cases hnil
-  exact crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase
-    (dimension := dimension) f source left right (.word holBits4) hsuccess ih
+  exact crepSimpExpCorrect1CrepOpHolFiniteWordSourceCase
+    (dimension := dimension) f source .mul [left, right] (.word holBits4)
+    hsuccess ih
 
 example (address : BitVec 5) (value : Fin 4 → Bool) :
     evalCrepHolFiniteWordSourceExp

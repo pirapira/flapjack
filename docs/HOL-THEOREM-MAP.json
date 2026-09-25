@@ -475,6 +475,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1CrepOpHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-width whole Crepop constructor case: operator, arbitrary argument list, HOL-shaped success/result and child IHs over the original list. It reduces unsupported arities using the source evaluator equation and delegates the two-argument Mul branch. Kept untagged pending proof that the finite-dimension/state source evaluator is native HOL crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1TopAddrHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged TopAddr support case over the unverified source-model evaluator; exact HOL evaluator/state correspondence remains open."

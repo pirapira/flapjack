@@ -6106,6 +6106,22 @@
     "reviewer": "Codex (untagged DecCall/Tick source-run and target continuation-IH composition before the target Dec local restoration wrapper; the separate target callee-prefix IH and continuation-entry relations remain premises)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepDecCallReturnParameterPrefixFromCodeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (untagged actual target Call prefix for the one-word return-parameter DecCall slice; derives the compiled code lookup and continuation-entry state/code/exception/local relations from the initial relations, but is not the full HOL DecCall induction case)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepDecCallTickFromInitialCodeRel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (untagged actual-state DecCall/Tick composition for a one-word return-parameter code entry; derives the target Call prefix and uses the recursive Tick simulation, while outer local restoration and the full HOL pc_compile_correct DecCall case remain open)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",

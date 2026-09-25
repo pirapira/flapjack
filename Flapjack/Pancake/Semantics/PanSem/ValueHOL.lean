@@ -1,8 +1,8 @@
 import Flapjack.HolRef
 import Flapjack.Basis.Pure.MlString
 import Flapjack.Compiler.Backend.BackendCommon
-import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.Semantics.PanSem
 
 /-!
 # Exact `panSem$v` over the faithful `mlstring`/`word_lab` carriers
@@ -23,17 +23,16 @@ is the exact counterpart: constructor arities `1/1/2`, the `Val` payload is the
 faithful `HolWordLab`, and the `NStruct` key/field names are `mlstring`
 (`MlStringHOL`).
 
-`flattenHOL` and `panPrimopHOLExact` are the exact `flatten_def`
-(`panSemScript.sml:388`) and `pan_primop_def` (`:196`) ports over `ValueHOL`,
-with direct original-HOL oracle rows in
-`scripts/hol-probes/pan_flatten_probe.out` and
-`scripts/hol-probes/pan_sem_pan_primop_probe.out` reproduced by
+`flattenHOL`, `panPrimopHOLExact`, and `shapeOfHOLExact` are the exact
+`flatten_def` (`panSemScript.sml:388`), `pan_primop_def` (`:196`), and
+`shape_of_def` (`:80`) ports over `ValueHOL`, with direct original-HOL oracle
+rows in `scripts/hol-probes/pan_flatten_probe.out`,
+`scripts/hol-probes/pan_sem_pan_primop_probe.out`, and
+`scripts/hol-probes/pan_shape_of_probe.out` reproduced by
 `Flapjack/Test/PanSemValueHOLParity.lean`.
 -/
 
 namespace Flapjack
-
-open Flapjack.Pancake.PanLang
 
 /-- The faithful Cake `mlstring` carrier, local abbreviation. -/
 abbrev MlStringHOL := Flapjack.Basis.Pure.MlString.MlString
@@ -91,43 +90,26 @@ def panPrimopHOLExact {width : Nat} [NeZero width] :
       some (.rStruct [.val (.word result), .val (.word overflow)])
   | _, _ => none
 
-/- HOL `panSemScript.sml:80-84` `shape_of_def` is total over `v`:
-   `shape_of (ValWord _) = One`, `shape_of (RStruct vs) = Comb (MAP shape_of vs)`,
-   `shape_of (NStruct nm _) = Named nm`.  Stated over the exact `ValueHOL`/`ShapeHOL`
-   carriers; `ValWord w` is `Val (Word w)`, so the `val` case ignores the word_lab
-   payload. -/
-mutual
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
-  def shapeOfHOL {width : Nat} [NeZero width] : ValueHOL width → ShapeHOL
-    | .val _ => .one
-    | .rStruct fields => .comb (shapeOfsHOL fields)
-    | .nStruct name _ => .named name
-  def shapeOfsHOL {width : Nat} [NeZero width] : List (ValueHOL width) → List ShapeHOL
-    | [] => []
-    | value :: values => shapeOfHOL value :: shapeOfsHOL values
-end
+/-- Exact port of HOL `shape_of_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:80-84`):
+    `shape_of (ValWord _) = One`, `shape_of (RStruct vs) = Comb (MAP shape_of vs)`,
+    `shape_of (NStruct nm _) = Named nm`.
 
-@[simp] theorem shapeOfHOL_val {width : Nat} [NeZero width] (value : HolWordLab width) :
-    shapeOfHOL (.val value : ValueHOL width) = .one := by
-  simp only [shapeOfHOL]
-
-@[simp] theorem shapeOfHOL_rStruct {width : Nat} [NeZero width]
-    (fields : List (ValueHOL width)) :
-    shapeOfHOL (.rStruct fields : ValueHOL width) = .comb (shapeOfsHOL fields) := by
-  simp only [shapeOfHOL]
-
-@[simp] theorem shapeOfHOL_nStruct {width : Nat} [NeZero width]
-    (name : MlStringHOL) (fields : List (MlStringHOL × ValueHOL width)) :
-    shapeOfHOL (.nStruct name fields : ValueHOL width) = .named name := by
-  simp only [shapeOfHOL]
-
-@[simp] theorem shapeOfsHOL_nil {width : Nat} [NeZero width] :
-    shapeOfsHOL ([] : List (ValueHOL width)) = [] := by
-  simp only [shapeOfsHOL]
-
-@[simp] theorem shapeOfsHOL_cons {width : Nat} [NeZero width]
-    (value : ValueHOL width) (values : List (ValueHOL width)) :
-    shapeOfsHOL (value :: values) = shapeOfHOL value :: shapeOfsHOL values := by
-  simp only [shapeOfsHOL]
+    The `NStruct` name is a `stcname = mlstring`, so it maps to the exact
+    `ShapeHOL.named (MlS)` constructor; `Val` is ignored, so the `HolWordLab`
+    payload (tag-withheld generic carrier) does not affect the result. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+def shapeOfHOLExact {width : Nat} [NeZero width] :
+    ValueHOL width → Flapjack.Pancake.PanLang.ShapeHOL
+  | .val _ => .one
+  | .rStruct fields => .comb (fields.map shapeOfHOLExact)
+  | .nStruct name _ => .named name
+termination_by value => sizeOf value
+decreasing_by
+  all_goals
+    simp_wf
+    first
+    | sizeOf_list_dec
+    | decreasing_trivial
 
 end Flapjack

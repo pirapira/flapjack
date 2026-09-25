@@ -10270,8 +10270,8 @@
     "hol_name": "decs_stcnames_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/DeclContextExact.lean",
     "lean_name": "decsStcnamesHOLExact",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.54): exact port of HOL `decs_stcnames_def` (`panSemScript.sml:839-856`) over the exact MlString-keyed carriers `DeclHOL width`/`StructContextExact`/`StructInfoHOLExact`/`ShapeHOL`. Clause-for-clause: `[] -> some context` (= `SOME st_ctxt`); `.name struct fields` with `structContextLookupHOL` for HOL `ALOOKUP` (none -> proceed, some -> none), `fields.map Prod.fst` `.Nodup` for `ALL_DISTINCT (MAP FST flds)`, `shapes.all (isWfShapeExactHOL context)` for `EVERY (is_wf_shape st_ctxt) shs`, stored `{fields, size := sizeOfShapeWithContextHOL context (.comb shapes)}` for `<|fields; size = size_of_sh_with_ctxt st_ctxt (Comb shs)|>`, then recurse on `(struct, info) :: context`; `.decl`/`.function`/`.exnDecl` skip and recurse. `some`/`none` mirror `SOME`/`NONE`, `List.Nodup`/`List.all` mirror `ALL_DISTINCT`/`EVERY`. Reuses the tagged `isWfShapeExactHOL` (`is_wf_shape_def`) and `sizeOfShapeWithContextHOL` (`size_of_sh_with_ctxt_def`), whose own inventory reviews are tracked separately; `decsStcnamesHOLExact_nil` is the `[]` clause. Direct HOL EVAL rows reproduced by `Flapjack/Test/PanSemDecsStcnamesHOLParity.lean` against `scripts/hol-probes/pan_sem_decs_stcnames_probe.out`."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

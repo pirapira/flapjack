@@ -1120,5 +1120,39 @@ class ValidateInventoryTest(unittest.TestCase):
                 self.assertIn(key, MAP["tagged_declarations"]())
 
 
+    def test_panprops_localised_and_mmap_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "localised_exp_real_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "namelessExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "nameless_exp_real_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedProgHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "localised_prog_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "opt_mmap_eq_some_helper"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+        # The production String-carrier predicate keeps the withdrawn tag.
+        mismatch = ("Flapjack/PanLocalised.lean", "localisedProg")
+        record = by_key[mismatch]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "localised_prog_def"))
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("String", record["reviewer"])
+        self.assertNotIn(mismatch, MAP["tagged_declarations"]())
+
+
 if __name__ == "__main__":
     unittest.main()

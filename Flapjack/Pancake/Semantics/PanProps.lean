@@ -298,6 +298,102 @@ def expsOfHOL {width : Nat} [NeZero width] :
   | .shMemStore _ e1 e2 => [e1, e2]
   | _ => []
 
+/-- Exact port of HOL `panProps$localised_exp` (`panPropsScript.sml:1362-1364`)
+    over the MlString/width-indexed `ExpHOL width` carrier.
+
+    HOL defines `localised_exp = every_exp (\e. case e of Var tp _ => tp = Local
+    | _ => T)`, so the only rejecting pattern is a variable with a global
+    destination. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_exp_real_def"]
+def localisedExpHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
+  everyExpHOL (fun e =>
+    match e with
+    | .var .local _ => true
+    | .var .global _ => false
+    | _ => true)
+
+/-- Exact port of HOL `panProps$nameless_exp` (`panPropsScript.sml:1371-1373`)
+    over the MlString/width-indexed `ExpHOL width` carrier.
+
+    HOL defines `nameless_exp = every_exp (\e. case e of NStruct _ _ => F |
+    NField _ _ => F | _ => T)`, so structural name introduction is rejected. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "nameless_exp_real_def"]
+def namelessExpHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
+  everyExpHOL (fun e =>
+    match e with
+    | .nstruct _ _ => false
+    | .nfield _ _ => false
+    | _ => true)
+
+/-- Exact port of HOL `panProps$localised_prog` (`panPropsScript.sml:1380-1406`)
+    over the MlString/width-indexed `ProgHOL width` carrier, clause for clause.
+
+    HOL's `EVERY localised_exp args` folds are rendered as
+    `everyExpListHOL localisedExpHOL`; `localised_exp` is the exact
+    `localisedExpHOL` defined above. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_prog_def"]
+def localisedProgHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ProgHOL width → Bool
+  | .skip | .break | .continue | .tick | .annot _ _ => true
+  | .dec _ _ value body => localisedExpHOL value && localisedProgHOL body
+  | .seq first second => localisedProgHOL first && localisedProgHOL second
+  | .ite condition thenBranch elseBranch =>
+      localisedExpHOL condition && localisedProgHOL thenBranch &&
+        localisedProgHOL elseBranch
+  | .while condition body => localisedExpHOL condition && localisedProgHOL body
+  | .store address value | .store32 address value | .storeByte address value
+  | .shMemStore _ address value => localisedExpHOL address && localisedExpHOL value
+  | .extCall _ configuration configurationLength array arrayLength =>
+      localisedExpHOL configuration && localisedExpHOL configurationLength &&
+        localisedExpHOL array && localisedExpHOL arrayLength
+  | .raise _ value | .return value => localisedExpHOL value
+  | .shMemLoad _ .local _ address => localisedExpHOL address
+  | .shMemLoad _ .global _ _ => false
+  | .call info _ arguments =>
+      everyExpListHOL localisedExpHOL arguments &&
+        (match info with
+         | some (_, some (_, _, handler)) => localisedProgHOL handler
+         | _ => true) &&
+        (match info with
+         | some (some (.global, _), _) => false
+         | _ => true)
+  | .decCall _ _ _ arguments body =>
+      everyExpListHOL localisedExpHOL arguments && localisedProgHOL body
+  | .assign .local _ value => localisedExpHOL value
+  | .assign .global _ _ => false
+  | .primitive _ _ arguments => everyExpListHOL localisedExpHOL arguments
+
+/-- Exact port of the `[local]` HOL helper `panProps$opt_mmap_eq_some_helper`
+    (`panPropsScript.sml:1575-1582`): if two maps agree on every element that
+    the first maps successfully, the second succeeds with the same result.
+
+    HOL's `OPT_MMAP` is the repository's `List.mapM` for `Option` (cf. the
+    tagged `OPT_MMAP_MEM_IMP`); the statement is fully polymorphic, so there is
+    no carrier side condition. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "opt_mmap_eq_some_helper" 1575]
+theorem optMmapEqSomeHelper {α β : Type} (f g : α → Option β) :
+    ∀ (xs : List α) (zs : List β), xs.mapM f = some zs →
+      (∀ x ∈ xs, ∀ y, f x = some y → g x = some y) → xs.mapM g = some zs
+  | [], zs, h, _ => h
+  | x :: xs, zs, h, hfg => by
+      rw [List.mapM_cons] at h ⊢
+      cases hx : f x with
+      | none => simp [hx] at h
+      | some a =>
+          have hga : g x = some a := hfg x (by simp) a hx
+          rw [hga]
+          simp at h ⊢
+          cases hys : List.mapM f xs with
+          | none => simp [hys] at h
+          | some ys =>
+              have hz : zs = a :: ys := by simpa [hys, hx] using h.symm
+              subst hz
+              rw [optMmapEqSomeHelper f g xs ys hys
+                    (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
+              rfl
+
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
     `EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`). -/

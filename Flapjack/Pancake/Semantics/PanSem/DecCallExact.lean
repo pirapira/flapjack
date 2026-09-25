@@ -35,7 +35,9 @@ open Flapjack.Pancake.PanLang (MlS ShapeHOL ExpHOL ProgHOL)
 
 /-- Function-backed rendering of HOL `panSem$lookup_code` (`panSemScript.sml:458-467`).
     The lookup and argument checks are retained, but this helper is untagged
-    because `code` is an unrestricted function rather than a HOL finite map. -/
+    because `code` is an unrestricted function rather than a HOL finite map.
+    Exact finite-support replacement tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 def lookupCodeHOLExact {width : Nat} [NeZero width]
     (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
     (fname : MlS) (arguments : List (ValueHOL width)) :

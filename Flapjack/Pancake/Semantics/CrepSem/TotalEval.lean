@@ -337,7 +337,18 @@ def evalCrepClockLeaf {width : Nat} {σ : Type _}
     recurs only after the HOL clock decrease and handles loop-control labels.
     No fuel,
     partial result, or branch-run assumption is exposed. Remaining constructors
-    are not assigned behavior by this restricted evaluator. -/
+    are not assigned behavior by this restricted evaluator.
+
+    Source-reviewed disposition for HOL
+    `eval_nested_assign_distinct_eq` (`pan_to_crepProofScript.sml:540`):
+    despite sharing the Assign/Seq behavior, this is not the theorem's evaluator
+    carrier. It executes production `CrepClockProg`/`CrepExp` over
+    `CrepHolState`, while HOL `evaluate` consumes `CrepProgHOL`/`CrepExpHOL`
+    and `CrepSemHOLState` with finite-support locals. A theorem using this
+    evaluator would not state HOL's quantified theorem over `evaluate`; the
+    exact Assign/nested-Seq evaluator and theorem port are tracked by
+    `flapjack-4ac.5.82`, dependent on exact Crep carriers
+    `flapjack-pxn.18.3.5.8.8`. -/
 def evalCrepClockProg [NeZero width] {σ : Type _}
   : CrepClockProg width → CrepHolState (BitVec width) σ →
     Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×

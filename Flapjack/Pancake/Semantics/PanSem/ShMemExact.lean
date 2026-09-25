@@ -47,7 +47,8 @@ def panWordOfBytesHOL {width : Nat} [NeZero width] (bigEndian : Bool)
 
 /-- Function-backed rendering of HOL `sh_mem_load_def` (`panSemScript.sml:510-527`).
     Kept untagged because its whole-state input admits arbitrary function-valued
-    map fields. -/
+    map fields. Exact finite-support replacement over `PanSemStateFiniteExact`
+    is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 def shMemLoadHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
     (kind : VarKind) (name : MlS) (address : RiscV.Word width) (nb : Nat) :
@@ -75,7 +76,8 @@ def shMemLoadHOLExact {width : Nat} {σ : Type} [NeZero width]
 
 /-- Function-backed rendering of HOL `sh_mem_store_def` (`panSemScript.sml:529-547`).
     Kept untagged because its whole-state input admits arbitrary function-valued
-    map fields. -/
+    map fields. Exact finite-support replacement over `PanSemStateFiniteExact`
+    is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 def shMemStoreHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
     (word : RiscV.Word width) (address : RiscV.Word width) (nb : Nat) :

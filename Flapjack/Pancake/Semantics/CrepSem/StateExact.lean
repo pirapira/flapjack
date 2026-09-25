@@ -12,8 +12,9 @@ finite-map qualifier requires a tagged declaration and its roundtrip witness to
 be in the same module as the owning structure, so this module is now an
 import-only re-export that keeps the original import paths working.
 
-The helpers remain untagged until the owner-disambiguation checker
-(`flapjack-pxn.18.3.7.1.3.1.1.2.6`, ds3) is integrated; referring to
+The four helpers are tagged `reviewed_fmap_as_finite_support` in
+`HOLState.lean` under the qualifier
+`(fmap_as_finite_support := [locals, globals, code])`; referring to
 `Flapjack.Pancake.Semantics.CrepSem.StateExact` still brings the names into
 scope through the import.
 

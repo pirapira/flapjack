@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.PanGlobals
 import Flapjack.PanProgramSemantics
 import Flapjack.Pancake.PanSimp
@@ -338,18 +339,7 @@ theorem list_mapM_mem_exists {α β : Type} (f : α → Option β) (xs : List α
   | some x =>
       simp only [hx, Option.bind_some] at hb
       exact ⟨x, List.mem_of_getElem? hx, hb⟩
-/-- Cake's `not_mem_map_flat` (`panPropsScript.sml:1035`): an element is absent
-    from the flattening of a mapped list exactly when it is absent from every
-    image. -/
-theorem not_mem_map_flatten {α β : Type} (f : α → List β) (xs : List α)
-    (y : β) : y ∉ (xs.map f).flatten ↔ ∀ x, x ∈ xs → y ∉ f x := by
-  simp only [List.mem_flatten, List.mem_map]
-  constructor
-  · intro h x hx hy
-    exact h ⟨f x, ⟨x, hx, rfl⟩, hy⟩
-  · rintro h ⟨ys, hysmem, hy⟩
-    obtain ⟨x, hx, hfx⟩ := hysmem
-    exact h x hx (hfx.symm ▸ hy)
+
 /-- Cake's `opt_mmap_length_eq` (`pan_commonPropsScript.sml:82`): a successful
     `OPT_MMAP` preserves the list length. -/
 theorem list_mapM_length {α β : Type} (f : α → Option β) (xs : List α)

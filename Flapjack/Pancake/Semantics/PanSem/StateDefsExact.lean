@@ -47,7 +47,9 @@ open Flapjack.Pancake.PanLang (MlS)
 
 /-- Function-backed rendering of HOL `kvar_defs` (`panSemScript.sml:502-503`):
     the five accessor-definition equations as a conjunction; untagged because
-    its map fields are unrestricted functions rather than HOL finite maps. -/
+    its map fields are unrestricted functions rather than HOL finite maps.
+    Exact finite-support replacement tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 theorem kvar_defs {width : Nat} {σ : Type} [NeZero width] :
     (∀ (name : MlS) (value : ValueHOL width) (state : PanSemStateExact width σ),
         setVarHOLExact name value state =

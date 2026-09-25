@@ -2128,7 +2128,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_decs_FILTER_is_function",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.49): HOL fperm_decs (pan_globalsScript.sml:216) renames fi.name/fi.body and leaves non-function declarations unchanged, matching globalRenameDecls; the FILTER/EVERY shapes also match. Statement carriers differ beyond name representation: production FunName/VarName/ExceptionId/StructName/DeclarationName = String vs HOL funname/varname/eid/stcname = mlstring, and production Decl \u03b1 carries generic Exp \u03b1 (Const : \u03b1) and Prog \u03b1, whereas HOL decl is word-indexed (exp = Const ('a word)). names_as_string cannot cover the expression/program value-index difference, so the tag stays withdrawn. Deps: exact MlString identifier carrier flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2), exact-carrier production transformation flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

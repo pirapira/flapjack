@@ -228,7 +228,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertIn("globalFreshName", record["reviewer"])
                 self.assertNotIn(key, tagged)
 
-    def test_crep_sem_state_exact_helpers_are_held_for_fmap_qualifier(self):
+    def test_crep_sem_state_exact_helpers_are_reviewed_fmap_as_finite_support(self):
         tagged = MAP["tagged_declarations"]()
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         manifest_by_key = {
@@ -249,11 +249,13 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     (record["hol_path"], record["hol_name"]),
                     ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
                 )
-                self.assertEqual(record["statement_status"], "documented_mismatch")
-                self.assertIn("fmap_as_finite_support", record["reviewer"])
-                self.assertNotIn(key, tagged)
+                self.assertEqual(
+                    record["statement_status"], "reviewed_fmap_as_finite_support")
+                self.assertEqual(
+                    record["fmap_as_finite_support"], ["locals", "globals", "code"])
+                self.assertIn(key, tagged)
 
-    def test_crep_sem_holstate_update_helpers_are_held_for_fmap_qualifier(self):
+    def test_crep_sem_holstate_update_helpers_are_reviewed_fmap_as_finite_support(self):
         tagged = MAP["tagged_declarations"]()
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         manifest_by_key = {
@@ -265,7 +267,6 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             "setGlobals": "set_globals_def",
             "updLocals": "upd_locals_def",
             "emptyLocals": "empty_locals_def",
-            "resVarEq": "res_var_def",
         }
         for lean_name, hol_name in exact_cases.items():
             key = ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", lean_name)
@@ -275,9 +276,18 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     (record["hol_path"], record["hol_name"]),
                     ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
                 )
-                self.assertEqual(record["statement_status"], "documented_mismatch")
-                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", record["reviewer"])
-                self.assertNotIn(key, tagged)
+                self.assertEqual(
+                    record["statement_status"], "reviewed_fmap_as_finite_support")
+                self.assertEqual(
+                    record["fmap_as_finite_support"], ["locals", "globals", "code"])
+                self.assertIn(key, tagged)
+        # The Nat-fixed state-level resVar stays an untagged documented mismatch.
+        res_var_key = (
+            "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "resVarEq")
+        res_var_record = manifest_by_key[res_var_key]
+        self.assertEqual(res_var_record["statement_status"], "documented_mismatch")
+        self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", res_var_record["reviewer"])
+        self.assertNotIn(res_var_key, tagged)
 
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (

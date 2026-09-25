@@ -10851,5 +10851,17 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.5): HOL eval_def panSemScript.sml:209-283 ported over PanSemStateFiniteExact (locals/globals/code/eshapes are HolFiniteMapExact, the canonical Lean translation of HOL's `|->`, canonical witness holFmapAsFiniteSupportWitness in the same module). The body delegates through toExact to the reviewed exact evaluator and does NOT syntactically present HOL's clause-shaped body; each of the fifteen clauses was reviewed against the HOL source and is exposed by the clause-shaped equations in Flapjack/Pancake/Semantics/PanSem/EvalFinite.lean. Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "dropWhile_eq_cons_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "dropWhileEqConsImp",
+    "statement_status": "reviewed_list_as_list",
+    "list_as_list": [
+      "xs",
+      "ys"
+    ],
+    "reviewer": "Codex (direct comparison with panPropsScript.sml:74-86: HOL assumes dropWhile P xs = y::ys and concludes exists n, n < LENGTH xs, y = EL n xs, ~P y, and DROP n xs = y::ys. Lean preserves that hypothesis and conjunction over Lean List xs/ys; the dependent bound witness makes List.get exactly the bounded EL observation, P y = false is HOL boolean negation, and List.drop implements DROP. The list_as_list qualifier records only the two list carriers. The concrete fixture uses xs=[0,1,3], P=(<2), y=3, ys=[] and witness n=2."
   }
 ]

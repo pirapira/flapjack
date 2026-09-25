@@ -805,6 +805,7 @@ DOCUMENTED_MISMATCHES = {
 VALID_STATUSES = {
     "reviewed_exact",
     "reviewed_list_as_array",
+    "reviewed_list_as_list",
     "reviewed_names_as_string",
     "reviewed_list_as_array_names_as_string",
     "reviewed_fmap_as_finite_support",
@@ -928,23 +929,23 @@ def data_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
 
 def tagged_declarations(
     root: Path = ROOT,
-) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
+) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
     """Return Lean file/name to HOL file/name for every active ``@[hol]``."""
     tagged: dict[
         tuple[str, str],
-        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]],
+        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...]],
     ] = {}
     for path in REFS["lean_files"]():
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
-        for (line, hol_path, hol_name, _hol_line, list_fields,
+        for (line, hol_path, hol_name, _hol_line, list_fields, list_as_list_fields,
              names_fields, boundary_fields, fmap_fields) in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
-            value = (hol_path, hol_name, list_fields, names_fields,
+            value = (hol_path, hol_name, list_fields, list_as_list_fields, names_fields,
                      boundary_fields, fmap_fields)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
@@ -957,7 +958,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
     for (lean_path, lean_name), (
-        hol_path, hol_name, list_fields, names_fields, boundary_fields, fmap_fields
+        hol_path, hol_name, list_fields, list_as_list_fields, names_fields, boundary_fields, fmap_fields
     ) in tagged.items():
         entry = {
             "hol_path": hol_path,
@@ -969,6 +970,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         }
         if list_fields:
             entry["list_as_array"] = list(list_fields)
+        if list_as_list_fields:
+            entry["list_as_list"] = list(list_as_list_fields)
         if names_fields:
             entry["names_as_string"] = list(names_fields)
         if boundary_fields:
@@ -1093,19 +1096,25 @@ def validate_inventory(
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         tag = tagged.get(key)
-        if tag is not None and len(tag) < 6:
-            tag = tag + ((),) * (6 - len(tag))
+        if tag is not None and len(tag) < 7:
+            tag = tag + ((),) * (7 - len(tag))
         list_fields = tag[2] if tag is not None else ()
-        names_fields = tag[3] if tag is not None else ()
-        boundary_fields = tag[4] if tag is not None else ()
-        fmap_fields = tag[5] if tag is not None else ()
+        list_as_list_fields = tag[3] if tag is not None else ()
+        names_fields = tag[4] if tag is not None else ()
+        boundary_fields = tag[5] if tag is not None else ()
+        fmap_fields = tag[6] if tag is not None else ()
         manifest_list_fields = tuple(record.get("list_as_array", ()))
+        manifest_list_as_list_fields = tuple(record.get("list_as_list", ()))
         manifest_names_fields = tuple(record.get("names_as_string", ()))
         manifest_boundary_fields = tuple(record.get("names_as_string_boundary", ()))
         manifest_fmap_fields = tuple(record.get("fmap_as_finite_support", ()))
         if manifest_list_fields != list_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
+            )
+        if manifest_list_as_list_fields != list_as_list_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest list_as_list identifiers do not match its @[hol] tag"
             )
         if manifest_names_fields != names_fields:
             errors.append(
@@ -1131,6 +1140,20 @@ def validate_inventory(
         if not list_fields and status == "reviewed_list_as_array":
             errors.append(
                 f"{key[0]}:{key[1]}: reviewed_list_as_array needs a qualified @[hol] tag"
+            )
+        if list_as_list_fields and status != "reviewed_list_as_list":
+            errors.append(
+                f"{key[0]}:{key[1]}: list_as_list @[hol] tag needs reviewed_list_as_list "
+                "after source comparison"
+            )
+        if not list_as_list_fields and status == "reviewed_list_as_list":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_list_as_list needs a qualified @[hol] tag"
+            )
+        if list_as_list_fields and (list_fields or names_fields or boundary_fields or fmap_fields):
+            errors.append(
+                f"{key[0]}:{key[1]}: list_as_list combinations need their own explicit "
+                "reviewed manifest status, which is not currently supported"
             )
         if names_fields and status == "reviewed_exact":
             errors.append(

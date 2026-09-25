@@ -17,6 +17,32 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
 
+/-! Cake's local `dropWhile_eq_cons_IMP`
+(`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
+`dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which
+`P` first fails, with `y = EL n xs` and `DROP n xs = y :: ys`. Lean's
+`xs[n]? = some y` states the same selected element under the preserved bound;
+`P y = false` is HOL boolean negation. The ordinary structural translation
+from HOL lists to Lean `List` needs no representation qualifier. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "dropWhile_eq_cons_IMP"]
+theorem dropWhileEqConsImp {α : Type} (P : α → Bool) (xs : List α)
+    (y : α) (ys : List α) (h : xs.dropWhile P = y :: ys) :
+    ∃ n, n < xs.length ∧ xs[n]? = some y ∧ P y = false ∧ xs.drop n = y :: ys := by
+  induction xs generalizing y ys with
+  | nil => simp at h
+  | cons x rest ih =>
+      cases hP : P x with
+      | false =>
+          simp only [List.dropWhile_cons, hP, Bool.false_eq_true, if_false] at h
+          cases h
+          exact ⟨0, by simp, by simp, hP, by simp⟩
+      | true =>
+          simp only [List.dropWhile_cons, hP, if_true] at h
+          obtain ⟨n, hn, hget, hpy, hdrop⟩ := ih y ys h
+          refine ⟨n + 1, by simpa using hn, ?_, hpy, ?_⟩
+          · simpa [List.getElem?_cons_succ] using hget
+          · simpa [List.drop_succ_cons] using hdrop
+
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
     the HOL equality semantics explicit. -/

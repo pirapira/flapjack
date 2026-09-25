@@ -147,6 +147,20 @@ DOCUMENTED_MISMATCHES = {
         "flapjack-0lj.5. HolWordLab.toPanWordLab / PanWordLab.toHolWordLab are "
         "Flapjack-specific isomorphisms. "
     ),
+    ("Flapjack/Pancake/PanSimp.lean", "functions_eq_filterMap"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "functions_eq_FILTER",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL functions_eq_FILTER "
+        "(panPropsScript.sml:1487) writes functions prog as a MAP over "
+        "FILTER is_function with an ARB fallback, over the word-indexed decl "
+        "carrier with mlstring names. functions_eq_filterMap (PanSimp.lean:110) "
+        "is generic over production Decl alpha (FunName = String, arbitrary word "
+        "element type) and replaces MAP-with-ARB by List.filterMap/none, so the "
+        "carrier and the fallback both differ and names_as_string cannot bridge "
+        "it. Exact port over List (DeclHOL width) with a reviewed ARB rendering "
+        "is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8). "
+    ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "localised_prog_def",

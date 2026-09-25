@@ -369,4 +369,75 @@ end
       sizeOfShapeWithContextHOL context shape + sizeOfShapesWithContextHOL context rest := by
   simp only [sizeOfShapesWithContextHOL]
 
+/-! Exact port of HOL `panLang$is_wf_shape`/`is_wf_flds`/`is_wf_ctxt`
+(`cakeml/pancake/panLangScript.sml:139-163`) over the exact MlString-keyed
+`ShapeHOL`/`StructContextExact` carriers.  `Named nm` is well formed exactly
+when `nm` is present in the context (`ALOOKUP ctxt nm = SOME _`); the context
+predicate additionally requires that no earlier structure shares a name and
+that every structure's fields are well formed. -/
+mutual
+  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_shape_def"]
+  def isWfShapeExactHOL (context : StructContextExact) : ShapeHOL → Bool
+    | .one => true
+    | .comb shapes => isWfShapesExactHOL context shapes
+    | .named name => (structContextLookupHOL name context).isSome
+
+  /- `EVERY (is_wf_shape ctxt) shs` over a shape list. -/
+  def isWfShapesExactHOL (context : StructContextExact) : List ShapeHOL → Bool
+    | [] => true
+    | shape :: rest => isWfShapeExactHOL context shape && isWfShapesExactHOL context rest
+
+  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_flds_def"]
+  def isWfFldsExactHOL (context : StructContextExact) : List (MlS × ShapeHOL) → Bool
+    | [] => true
+    | (_, shape) :: rest => isWfShapeExactHOL context shape && isWfFldsExactHOL context rest
+
+  @[hol "cakeml/pancake/panLangScript.sml" "is_wf_ctxt_def"]
+  def isWfCtxtExactHOL : StructContextExact → Bool
+    | [] => true
+    | (name, info) :: rest =>
+        (structContextLookupHOL name rest).isNone &&
+          isWfFldsExactHOL rest info.fields && isWfCtxtExactHOL rest
+end
+
+@[simp] theorem isWfShapeExactHOL_one (context : StructContextExact) :
+    isWfShapeExactHOL context .one = true := rfl
+
+@[simp] theorem isWfShapeExactHOL_comb (context : StructContextExact)
+    (shapes : List ShapeHOL) :
+    isWfShapeExactHOL context (.comb shapes) = isWfShapesExactHOL context shapes := by
+  simp only [isWfShapeExactHOL]
+
+@[simp] theorem isWfShapeExactHOL_named (context : StructContextExact) (name : MlS) :
+    isWfShapeExactHOL context (.named name) = (structContextLookupHOL name context).isSome := by
+  simp only [isWfShapeExactHOL]
+
+@[simp] theorem isWfShapesExactHOL_nil (context : StructContextExact) :
+    isWfShapesExactHOL context ([] : List ShapeHOL) = true := rfl
+
+@[simp] theorem isWfShapesExactHOL_cons (context : StructContextExact)
+    (shape : ShapeHOL) (rest : List ShapeHOL) :
+    isWfShapesExactHOL context (shape :: rest) =
+      (isWfShapeExactHOL context shape && isWfShapesExactHOL context rest) := by
+  simp only [isWfShapesExactHOL]
+
+@[simp] theorem isWfFldsExactHOL_nil (context : StructContextExact) :
+    isWfFldsExactHOL context ([] : List (MlS × ShapeHOL)) = true := rfl
+
+@[simp] theorem isWfFldsExactHOL_cons (context : StructContextExact)
+    (name : MlS) (shape : ShapeHOL) (rest : List (MlS × ShapeHOL)) :
+    isWfFldsExactHOL context ((name, shape) :: rest) =
+      (isWfShapeExactHOL context shape && isWfFldsExactHOL context rest) := by
+  simp only [isWfFldsExactHOL]
+
+@[simp] theorem isWfCtxtExactHOL_nil :
+    isWfCtxtExactHOL ([] : StructContextExact) = true := rfl
+
+@[simp] theorem isWfCtxtExactHOL_cons (name : MlS) (info : StructInfoHOLExact)
+    (rest : StructContextExact) :
+    isWfCtxtExactHOL ((name, info) :: rest) =
+      ((structContextLookupHOL name rest).isNone &&
+        isWfFldsExactHOL rest info.fields && isWfCtxtExactHOL rest) := by
+  simp only [isWfCtxtExactHOL]
+
 end Flapjack.Pancake.PanLang

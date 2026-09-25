@@ -51,6 +51,13 @@ val readfail =
       (panLang$Const (0w:8 word))
       (panLang$Const (0w:8 word))``
 
+val argfail =
+  ``panLang$ExtCall «f»
+      (panLang$Var panLang$Local «missing»)
+      (panLang$Const (0w:8 word))
+      (panLang$Const (0w:8 word))
+      (panLang$Const (0w:8 word))``
+
 val _ = print_eval "ext_nonword_result"
   ``FST (panSem$evaluate (^nonword, ^baseState))``
 val _ = print_eval "ext_nonword_clock"
@@ -73,3 +80,16 @@ val _ = print_eval "ext_read_fail_ffi_state"
   ``(SND (panSem$evaluate (^readfail, ^baseState))).ffi.ffi_state``
 val _ = print_eval "ext_read_fail_ffi_io"
   ``(SND (panSem$evaluate (^readfail, ^baseState))).ffi.io_events``
+
+val _ = print_eval "ext_argfail_result"
+  ``FST (panSem$evaluate (^argfail, ^baseState))``
+val _ = print_eval "ext_argfail_clock"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).clock``
+val _ = print_eval "ext_argfail_locals"
+  ``FLOOKUP (SND (panSem$evaluate (^argfail, ^baseState))).locals «x»``
+val _ = print_eval "ext_argfail_globals"
+  ``FLOOKUP (SND (panSem$evaluate (^argfail, ^baseState))).globals «g»``
+val _ = print_eval "ext_argfail_memory"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).memory (0w:8 word)``
+val _ = print_eval "ext_argfail_ffi_io"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).ffi.io_events``

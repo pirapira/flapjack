@@ -5,12 +5,13 @@ import Flapjack.Test.PanValueFfiSemantics
 # PanSem `ExtCall` Error parity
 
 HOL `panSem` (`cakeml/pancake/semantics/panSemScript.sml:716-729`) returns
-`(SOME Error, s)` with the unchanged state when an `ExtCall` argument is not a
-word or when the byte read fails.  The byte-read failure is driven, in the
-original HOL probe, by an empty `memaddrs` set while `memory` still returns
-`Word 0w`.  These guards assert that the production source evaluators return an
-explicit Error control result for both branches, in the non-clocked
-(`evalPanValueFfiProgSteps`) and clocked
+`(SOME Error, s)` with the unchanged state when an `ExtCall` argument expression
+fails to evaluate, when an argument is not a word, or when the byte read fails.
+The byte-read failure is driven, in the original HOL probe, by an empty
+`memaddrs` set while `memory` still returns `Word 0w`; the argument-evaluation
+failure uses an unbound local.  These guards assert that the production source
+evaluators return an explicit Error control result for all three branches, in
+the non-clocked (`evalPanValueFfiProgSteps`) and clocked
 (`panSemEvaluateCodeStateWithPostState`) evaluators, and that the returned state
 preserves locals, globals, memory and observable FFI cells with an unchanged
 clock.
@@ -50,6 +51,12 @@ def nonwordProgram : Prog Word64 :=
 
 def readFailProgram : Prog Word64 :=
   .extCall "f" (.const 0) (.const 1) (.const 0) (.const 0)
+
+/-- An `ExtCall` whose first argument expression fails to evaluate (unbound
+    local).  HOL returns `(SOME Error, s)`; the production evaluator must not
+    collapse this to the fuel-exhaustion `none`. -/
+def argFailProgram : Prog Word64 :=
+  .extCall "f" (.var .local "missing") (.const 0) (.const 0) (.const 0)
 
 def clockedEvaluate (clock : Nat) (program : Prog Word64)
     (memoryAccess : Option (PanValueMemoryAccess Word64) := none) :
@@ -105,9 +112,15 @@ def nonClockedNonwordGuard : Bool :=
 def nonClockedReadFailGuard : Bool :=
   isErrorSteppedPreserving (nonClockedEvaluate readFailProgram (some emptyAccess))
 
+def clockedArgFailGuard : Bool :=
+  clockedErrorPreserving 5 (clockedEvaluate 5 argFailProgram)
+
+def nonClockedArgFailGuard : Bool :=
+  isErrorSteppedPreserving (nonClockedEvaluate argFailProgram)
+
 def extCallErrorGuard : Bool :=
-  clockedNonwordGuard && clockedReadFailGuard &&
-    nonClockedNonwordGuard && nonClockedReadFailGuard
+  clockedNonwordGuard && clockedReadFailGuard && clockedArgFailGuard &&
+    nonClockedNonwordGuard && nonClockedReadFailGuard && nonClockedArgFailGuard
 
 #guard extCallErrorGuard
 
@@ -118,12 +131,18 @@ def runChecks : IO Bool := do
   IO.println (if clockedReadFailGuard then
     "PASS panSem ExtCall failed byte read rejected with unchanged state"
     else "FAIL panSem ExtCall failed byte read rejected with unchanged state")
+  IO.println (if clockedArgFailGuard then
+    "PASS panSem ExtCall failed argument evaluation rejected with unchanged state"
+    else "FAIL panSem ExtCall failed argument evaluation rejected with unchanged state")
   IO.println (if nonClockedNonwordGuard then
     "PASS non-clocked ExtCall non-word argument rejected with unchanged state"
     else "FAIL non-clocked ExtCall non-word argument rejected with unchanged state")
   IO.println (if nonClockedReadFailGuard then
     "PASS non-clocked ExtCall failed byte read rejected with unchanged state"
     else "FAIL non-clocked ExtCall failed byte read rejected with unchanged state")
+  IO.println (if nonClockedArgFailGuard then
+    "PASS non-clocked ExtCall failed argument evaluation rejected with unchanged state"
+    else "FAIL non-clocked ExtCall failed argument evaluation rejected with unchanged state")
   pure extCallErrorGuard
 
 end Flapjack.Test.PanSemExtCallErrorParity

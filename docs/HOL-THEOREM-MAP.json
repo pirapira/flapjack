@@ -1988,8 +1988,13 @@
     "hol_name": "fperm_name_cancel",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_name_cancel",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "source",
+      "target",
+      "name"
+    ],
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.52) HOL fperm_name_cancel (pan_globalsProofScript.sml:1622): fperm_name f g (fperm_name f g name) = name. Lean fperm_name_cancel states the same involutive identity with fperm_name spelled globalRenameFunctionName (the reviewed_names_as_string port of fperm_name_def, pan_globalsScript.sml:184). source: equality/map-key-only, target: equality/map-key-only, name: equality/map-key-only; all three are compared and swapped but never byte-inspected, so no names_as_string_boundary identifier and no byte witness is required. Direct HOL rows in scripts/hol-probes/pan_globals_fperm_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -2031,8 +2036,14 @@
     "hol_name": "fperm_name_cong",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_name_cong",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "source",
+      "target",
+      "left",
+      "right"
+    ],
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.53) HOL fperm_name_cong (pan_globalsProofScript.sml:1629): fperm_name f g x = fperm_name f g y <=> x = y. Lean fperm_name_cong states the same injectivity with fperm_name spelled globalRenameFunctionName. source: equality/map-key-only, target: equality/map-key-only, left: equality/map-key-only, right: equality/map-key-only; all four are compared and swapped but never byte-inspected, so no names_as_string_boundary identifier and no byte witness is required. Direct HOL rows in scripts/hol-probes/pan_globals_fperm_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2152,7 +2163,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fresh_name_correct",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The Lean declaration named here is proved about the production fuel-bounded search globalFreshName (globalFreshName_not_mem), not the reviewed source-shaped freshNameHOL (@[hol] port of fresh_name_def, pan_globalsScript.sml:55), so the tag stays withdrawn. The exact source-shaped theorem over freshNameHOL is freshNameHOL_not_mem (PanGlobals.lean), currently untagged; unifying the executable path so the production search is the tagged definition is tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2160,7 +2171,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fresh_name_correct'",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved via fresh_name_correct. The Lean declaration named here is over the production globalFreshName (globalFreshName_not_mem_of_subset), not the reviewed freshNameHOL, and there is no freshNameHOL subset lemma yet, so the tag stays withdrawn. The exact MlString identifier carrier and executable-path unification are tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

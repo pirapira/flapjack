@@ -152,6 +152,11 @@ def sourceCallSelfCode : PanSemCodeMap Word64 :=
 def sourceDecCallSelfCode : PanSemCodeMap Word64 :=
   [("loop", ([], .decCall "nested" .one "loop" [] .skip, .one))]
 
+def sourceCalleeControlCode : PanSemCodeMap Word64 :=
+  [("skip", ([], .skip, .one)),
+    ("break", ([], .break, .one)),
+    ("continue", ([], .continue, .one))]
+
 def sourceZeroClockCallCode : PanSemCodeMap Word64 :=
   [("callee", ([], .skip, .one))]
 
@@ -315,6 +320,41 @@ def evaluateSourceRecursiveDecCallTimeout :=
     statefulTestHandler
     (emptyPanSourceState 2 sourceDecCallSelfCode)
     (.decCall "answer" .one "loop" [] .skip : Prog Word64)
+
+def sourceCalleeControlState : PanSemState Word64 (FfiState Unit) :=
+  { emptyPanSourceState 10 sourceCalleeControlCode with
+      locals := updatePanValueMap (fun _ => none) "keep"
+        (.word (BitVec.ofNat 64 42)) }
+
+def evaluateSourceCallCalleeSkip :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.call none "skip" [] : Prog Word64)
+
+def evaluateSourceCallCalleeBreak :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.call none "break" [] : Prog Word64)
+
+def evaluateSourceCallCalleeContinue :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.call none "continue" [] : Prog Word64)
+
+def evaluateSourceDecCallCalleeSkip :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.decCall "answer" .one "skip" [] .skip : Prog Word64)
+
+def evaluateSourceDecCallCalleeBreak :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.decCall "answer" .one "break" [] .skip : Prog Word64)
+
+def evaluateSourceDecCallCalleeContinue :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceCalleeControlState
+    (.decCall "answer" .one "continue" [] .skip : Prog Word64)
 
 def evaluateSourceZeroClockCallTimeout :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
@@ -518,6 +558,25 @@ def observeSourceRecursiveCallTimeout :=
 def observeSourceRecursiveDecCallTimeout :=
   isSourceTimeoutAt evaluateSourceRecursiveDecCallTimeout 0
 
+/-! Direct original-HOL rows `recursive_call_callee_{skip,break,continue}` and
+`recursive_deccall_callee_{skip,break,continue}` evaluate the state-owned code
+entries and expect `(SOME Error, 9, NONE)`. -/
+private def isSourceCalleeControlErrorAtNine
+    (result : Option (PanValueFfiClockResult Word64 Unit)) : Bool :=
+  match result with
+  | some (.control (.error locals _ _ _), 9) => (locals "keep").isNone
+  | _ => false
+
+def observeSourceCallCalleeControlErrors : Bool :=
+  isSourceCalleeControlErrorAtNine evaluateSourceCallCalleeSkip &&
+    isSourceCalleeControlErrorAtNine evaluateSourceCallCalleeBreak &&
+    isSourceCalleeControlErrorAtNine evaluateSourceCallCalleeContinue
+
+def observeSourceDecCallCalleeControlErrors : Bool :=
+  isSourceCalleeControlErrorAtNine evaluateSourceDecCallCalleeSkip &&
+    isSourceCalleeControlErrorAtNine evaluateSourceDecCallCalleeBreak &&
+    isSourceCalleeControlErrorAtNine evaluateSourceDecCallCalleeContinue
+
 def observeSourceZeroClockCallTimeout : Bool :=
   match evaluateSourceZeroClockCallTimeout with
   | some (.timeout locals _ _ _, 0) =>
@@ -601,6 +660,8 @@ def observeSourceDecCallBadArgument :=
 #guard observeSourceCodePreservedAfterRecursion
 #guard observeSourceRecursiveCallTimeout
 #guard observeSourceRecursiveDecCallTimeout
+#guard observeSourceCallCalleeControlErrors
+#guard observeSourceDecCallCalleeControlErrors
 #guard observeSourceZeroClockCallTimeout
 #guard observeSourceConstReturnCall
 #guard observeSourceCallBadReturnShape
@@ -963,6 +1024,12 @@ def runChecks : IO Bool := do
     IO.println "FAIL recursive state-owned Call times out at source clock zero"
   if observeSourceRecursiveDecCallTimeout then IO.println "PASS recursive state-owned DecCall times out at source clock zero" else
     IO.println "FAIL recursive state-owned DecCall times out at source clock zero"
+  if observeSourceCallCalleeControlErrors then
+    IO.println "PASS state-owned Call Skip/Break/Continue callee rows match direct HOL Error states"
+  else IO.println "FAIL state-owned Call Skip/Break/Continue callee rows match direct HOL Error states"
+  if observeSourceDecCallCalleeControlErrors then
+    IO.println "PASS state-owned DecCall Skip/Break/Continue callee rows match direct HOL Error states"
+  else IO.println "FAIL state-owned DecCall Skip/Break/Continue callee rows match direct HOL Error states"
   if observeSourceZeroClockCallTimeout then IO.println "PASS state-owned Call with a nonempty code map times out at zero clock and clears locals" else
     IO.println "FAIL state-owned Call with a nonempty code map times out at zero clock and clears locals"
   if observeSourceConstReturnCall then IO.println "PASS zero-argument state-owned Call returns its code-map word constant" else
@@ -1026,6 +1093,7 @@ def runChecks : IO Bool := do
     observeSourceNestedOrdinaryCall &&
     observeSourceCodePreservedAfterRecursion &&
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
+    observeSourceCallCalleeControlErrors && observeSourceDecCallCalleeControlErrors &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
     observeSourceCallBadDestination && observeSourceCallBadReturnShape &&
     observeSourceDecCallBadReturnShape && observeSourceCallMissingFunction &&

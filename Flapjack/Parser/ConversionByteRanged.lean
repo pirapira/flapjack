@@ -969,5 +969,160 @@ theorem convExp_byteRanged {width : Nat} (ofInt : Int → BitVec width) :
   exact H
 
 
+theorem convDecForm_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (nt : Nonterminal) : ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+      convDecForm ofInt fuel nt tree = some r →
+      ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ ExpByteRanged r.2.2 := by
+  intro tree ht r h
+  unfold convDecForm at h
+  cases hargs : tree.argsNT nt with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons a rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons b rest2 =>
+        cases rest2 with
+        | nil => simp [hargs] at h
+        | cons c rest3 =>
+          cases rest3 with
+          | cons d rest4 => simp [hargs] at h
+          | nil =>
+            simp only [hargs] at h
+            cases hs : convShape fuel a with
+            | none => simp [hs] at h
+            | some shape =>
+              simp only [hs] at h
+              cases hn : convIdent b with
+              | none => simp [hn] at h
+              | some name =>
+                simp only [hn] at h
+                cases hv : convExp ofInt fuel c with
+                | none => simp [hv] at h
+                | some value =>
+                  simp only [hv] at h
+                  injection h with h; subst h
+                  exact ⟨convShape_byteRanged fuel a (argsNT_byteRanged ht hargs a (by simp)) shape hs,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs b (by simp)) hn,
+                         convExp_byteRanged ofInt fuel c (argsNT_byteRanged ht hargs c (by simp)) value hv⟩
+
+theorem convExnDec_byteRanged (fuel : Nat) : ∀ (tree : ParseTree), ParseTreeByteRanged tree →
+    ∀ r, convExnDec fuel tree = some r → StringByteRanged r.1 ∧ ShapeByteRanged r.2 := by
+  intro tree ht r h
+  unfold convExnDec at h
+  cases hargs : tree.argsNT .exnDec with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons a rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons b rest2 =>
+        cases rest2 with
+        | cons c rest3 => simp [hargs] at h
+        | nil =>
+          simp only [hargs] at h
+          cases he : convIdent a with
+          | none => simp [he] at h
+          | some name =>
+            simp only [he] at h
+            cases hs : convShape fuel b with
+            | none => simp [hs] at h
+            | some shape =>
+              simp only [hs] at h
+              injection h with h; subst h
+              exact ⟨convIdent_byteRanged (argsNT_byteRanged ht hargs a (by simp)) he,
+                     convShape_byteRanged fuel b (argsNT_byteRanged ht hargs b (by simp)) shape hs⟩
+
+theorem convDecCall_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat) :
+    ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+      convDecCall ofInt fuel tree = some r →
+      ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ StringByteRanged r.2.2.1 ∧
+        ∀ e ∈ r.2.2.2, ExpByteRanged e := by
+  intro tree ht r h
+  unfold convDecCall at h
+  cases hargs : tree.argsNT .decCall with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons shapeTree rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons nameTree rest2 =>
+        cases rest2 with
+        | nil => simp [hargs] at h
+        | cons functionTree rest3 =>
+          simp only [hargs] at h
+          cases hs : convShape fuel shapeTree with
+          | none => simp [hs] at h
+          | some shape =>
+            simp only [hs] at h
+            cases hn : convIdent nameTree with
+            | none => simp [hn] at h
+            | some name =>
+              simp only [hn] at h
+              cases hf : convIdent functionTree with
+              | none => simp [hf] at h
+              | some fn =>
+                simp only [hf] at h
+                cases rest3 with
+                | nil =>
+                  simp only at h
+                  injection h with h; subst h
+                  exact ⟨convShape_byteRanged fuel shapeTree (argsNT_byteRanged ht hargs shapeTree (by simp)) shape hs,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs nameTree (by simp)) hn,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs functionTree (by simp)) hf,
+                         by intro e he; simp at he⟩
+                | cons argsTree rest4 =>
+                  simp only at h
+                  cases ha : convArgList ofInt fuel argsTree with
+                  | none => simp [ha] at h
+                  | some args =>
+                    simp only [ha] at h
+                    injection h with h; subst h
+                    exact ⟨convShape_byteRanged fuel shapeTree (argsNT_byteRanged ht hargs shapeTree (by simp)) shape hs,
+                           convIdent_byteRanged (argsNT_byteRanged ht hargs nameTree (by simp)) hn,
+                           convIdent_byteRanged (argsNT_byteRanged ht hargs functionTree (by simp)) hf,
+                           convArgList_byteRanged ofInt fuel (fun g _ => convExp_byteRanged ofInt g)
+                             argsTree (argsNT_byteRanged ht hargs argsTree (by simp)) args ha⟩
+
+theorem convRet_byteRanged : ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+    convRet tree = some r → ∀ vk name, r = some (some (vk, name)) → StringByteRanged name := by
+  intro tree ht r h vk name hr
+  unfold convRet at h
+  by_cases h1 : tree.tokcheck (.keywordT .retK) = true
+  · rw [if_pos h1] at h
+    injection h with h; subst h
+    simp at hr
+  · rw [if_neg h1] at h
+    by_cases h2 : tree.tokcheck .notT = true
+    · rw [if_pos h2] at h
+      injection h with h; subst h
+      simp at hr
+    · rw [if_neg h2] at h
+      cases hargs : tree.argsNT .ret with
+      | none => simp [hargs] at h
+      | some children =>
+        cases children with
+        | nil => simp [hargs] at h
+        | cons a rest =>
+          cases rest with
+          | cons b rest2 => simp [hargs] at h
+          | nil =>
+            simp only [hargs] at h
+            cases hn : convIdent a with
+            | none => simp [hn] at h
+            | some n =>
+              simp only [hn] at h
+              injection h with h; subst h
+              simp only [Option.some.injEq, Prod.mk.injEq] at hr
+              obtain ⟨_, rfl⟩ := hr
+              exact convIdent_byteRanged (argsNT_byteRanged ht hargs a (by simp)) hn
+
+
 
 end Flapjack.Parser

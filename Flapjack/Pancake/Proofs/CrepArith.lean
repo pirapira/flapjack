@@ -2692,9 +2692,10 @@ theorem crepSimpExpCorrect1LoadHolFiniteWordSourceCase
   rfl
 
 /-! The recursive word32-load case is proved against the source-shaped
-    finite-word evaluator. Its memory primitive still lacks a proved equation
-    to native HOL `mem_load_32` over the implicit finite_index word model, so
-    this support theorem is deliberately untagged. -/
+    finite-word evaluator. Its memory primitive has a separate all-width
+    equation to the tagged HOL `mem_load_32` result, including the `word_lab`
+    wrapper and `w2w`; the enclosing recursive evaluator remains untagged
+    until its finite-index state encoding is identified with native HOL. -/
 theorem crepSimpExpCorrect1Load32HolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2777,10 +2778,40 @@ theorem evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL
       (BitVec.ofNat dimension.width (dimension.width / 8)))
     state address
 
-/-! The byte-load case follows the same recursive address argument. It remains
-    untagged because its explicit `byteAlign`/`getByte` source model has not
-    been proved equal to native HOL `mem_load_byte` for every finite_index
-    instance. -/
+/-- Complete `word_lab` result form of the source `Load32` equation above.
+    It transports the evaluator result through the word wrapper and matches
+    the tagged HOL `mem_load_32_def` result, including the `w2w` conversion.
+    This is adapter support: it does not identify the surrounding recursive
+    source evaluator with HOL's implicit finite-index evaluator. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_load32_eq_panMemLoad32HOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression = some address) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.load32 addressExpression)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    (panMemLoad32HOL
+      (fun bitAddress =>
+        ((CrepHolState.toHolFiniteBitVecState dimension state).memory
+          bitAddress).toHolWordLab)
+      (fun bitAddress =>
+        (CrepHolState.toHolFiniteBitVecState dimension state).memaddrs
+          bitAddress = true)
+      state.bigEndian (holWordToBitVec dimension address)).map
+        (fun value => PanWordLab.word
+          (BitVec.ofNat dimension.width value.toNat)) := by
+  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab] using
+    congrArg (Option.map PanWordLab.word)
+      (evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL
+        dimension state addressExpression address hAddress)
+
+/-! The byte-load case follows the same recursive address argument. Its
+    explicit `byteAlign`/`getByte` source model has a separate all-width
+    equation to the tagged HOL `mem_load_byte` result; the enclosing recursive
+    evaluator remains untagged until its finite-index state encoding is
+    identified with native HOL. -/
 theorem crepSimpExpCorrect1LoadByteHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

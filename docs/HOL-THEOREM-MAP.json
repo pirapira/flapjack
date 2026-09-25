@@ -429,7 +429,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1Load32HolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Source-model Load32 case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension wordOfBytes32/getByte evaluator has not yet been proved identical to native HOL mem_load_32 for implicit finite_index, so it is untagged support rather than a HOL case port."
+    "reviewer": "Source-model Load32 case with the recursive address IH and full wrapped result shape. The primitive now has an all-width equation to tagged HOL mem_load_32 including the word_lab wrapper; the enclosing evaluator/state encoding is still not identified with native HOL eval_def, so the case remains untagged support."
   },
   {
     "hol_path": null,
@@ -440,12 +440,20 @@
     "reviewer": "Flapjack-only Load32 adapter equation: after successful source address evaluation, it connects the explicit finite-dimension Crep source evaluator to the imported panMemLoad32HOL primitive. No standalone HOL theorem states this representation bridge; full crepSem eval/state correspondence remains open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExpWordLab_load32_eq_panMemLoad32HOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only complete-result Load32 adapter equation: after successful address evaluation, it transports Option word_lab through BitVec and matches the tagged HOL mem_load_32 result including w2w. The enclosing recursive evaluator/state encoding remains unproved against native HOL eval_def."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1LoadByteHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
-    "reviewer": "Source-model LoadByte case with the recursive address IH and full wrapped result shape. Its explicit finite-dimension byteAlign/getByte evaluator has not yet been proved identical to native HOL mem_load_byte for implicit finite_index, so it is untagged support rather than a HOL case port."
+    "reviewer": "Source-model LoadByte case with the recursive address IH and full wrapped result shape. The primitive now has an all-width equation to tagged HOL mem_load_byte including the word_lab wrapper; the enclosing evaluator/state encoding is still not identified with native HOL eval_def, so the case remains untagged support."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

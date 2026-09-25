@@ -231,32 +231,67 @@ theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulB
   simpa [isWfShapeNil, hstructs] using hshapes
 
 /-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `exceptions_append`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2507`). `exceptionEntries`
-    is the direct source-shaped counterpart of `panLang$exceptions`; the body is
-    the existing production proof `exceptionEntries_append`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2507-2513`):
+
+    ```sml
+    Theorem exceptions_append:
+      ∀ds ds'. exceptions (ds ++ ds') = exceptions ds ++ exceptions ds'
+    ```
+
+    `exceptionEntries` is the direct source-shaped counterpart of
+    `panLang$exceptions`; the body is the existing production proof
+    `exceptionEntries_append`.
+
+    The tag stays WITHDRAWN as a documented carrier mismatch. The statement is
+    keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/
+    `StructName` = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/
+    `exceptionEntries`) and by a generic word `α` in `Decl α`, whereas HOL
+    `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/
+    `stcname` = `mlstring` over the positive-width word-indexed `decl`.
+    `names_as_string` cannot authorise the embedded `Shape`/`Decl`/`Prog`
+    carriers, and no `NameRanged` byte witness applies because the conclusion is
+    an exception-list equation, not a name. The exact MlString identifier
+    carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already records this
+    hol_name as `documented_mismatch` (reviewer Codex). Evidence: the
+    `exceptionEntries_append` regression guards and
+    `Flapjack/Test/PanGlobalsDeclPredicateParity.lean`. -/
 theorem exceptions_append (declarations rest : List (Decl α)) :
     exceptionEntries (declarations ++ rest) =
       exceptionEntries declarations ++ exceptionEntries rest :=
   exceptionEntries_append declarations rest
 
 /-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `exceptions_FILTER_is_function`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2515`). The five
-    conjuncts assemble the production filter lemmas; `globalDeclIsFunction`,
-    `globalDeclIsException`, `globalDeclIsName`, and `globalDeclIsGlobal`
-    correspond to HOL `is_function`, `is_exn_decl`, `is_name`, and `is_decl`,
-    and `globalDeclsFilter` to HOL `FILTER`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2515-2524`):
+
+    ```sml
+    Theorem exceptions_FILTER_is_function:
+      exceptions(FILTER is_function decs) = [] ∧
+      exceptions(FILTER ($¬ o is_function) decs) = exceptions decs ∧
+      exceptions(FILTER (is_exn_decl) decs) = exceptions decs ∧
+      exceptions(FILTER (is_name) decs) = [] ∧
+      exceptions(FILTER (is_decl) decs) = []
+    ```
+
+    The five conjuncts assemble the production filter lemmas;
+    `globalDeclIsFunction`, `globalDeclIsException`, `globalDeclIsName`, and
+    `globalDeclIsGlobal` correspond to HOL `is_function`, `is_exn_decl`,
+    `is_name`, and `is_decl`, and `globalDeclsFilter` to HOL `FILTER`.
+
+    The tag stays WITHDRAWN as a documented carrier mismatch. The statement is
+    keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/
+    `StructName` = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/
+    `exceptionEntries`) and by a generic word `α` in `Decl α`, whereas HOL
+    `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/
+    `stcname` = `mlstring` over the positive-width word-indexed `decl`.
+    `names_as_string` cannot authorise the embedded `Shape`/`Decl`/`Prog`
+    carriers, and no `NameRanged` byte witness applies because the conclusion is
+    a conjunction of exception-list equations, not a name. The exact MlString
+    identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already records this
+    hol_name as `documented_mismatch` (reviewer Codex). Evidence: the
+    `exceptionEntries_filter_*` regression guards and
+    `Flapjack/Test/PanGlobalsDeclPredicateParity.lean`. -/
 theorem exceptions_FILTER_is_function (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] ∧
     exceptionEntries
@@ -487,15 +522,34 @@ theorem fperm_name_cong [BEq String] [LawfulBEq String]
   globalRenameFunctionName_cong source target left right
 
 /-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_decs_append`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1663`): the source-shaped
-    `fperm_decs` (production `globalRenameDecls`) distributes over declaration
-    list concatenation. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1663-1668`):
+
+    ```sml
+    Theorem fperm_decs_append:
+      ∀f g xs ys. fperm_decs f g (xs ++ ys) = fperm_decs f g xs ++ fperm_decs f g ys
+    ```
+
+    The source-shaped `fperm_decs` (production `globalRenameDecls`) distributes
+    over declaration list concatenation, matching HOL `++`/`fperm_decs` with Lean
+    `++`/`globalRenameDecls`.
+
+    The tag stays WITHDRAWN as a documented carrier mismatch. The statement is
+    keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/
+    `StructName` = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/
+    `exceptionEntries`) and by a generic word `α` in `Decl α`, whereas HOL
+    `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/
+    `stcname` = `mlstring` over the positive-width word-indexed `decl`; it also
+    carries an executable-only `[BEq String]` argument absent in HOL, and
+    `globalRenameDecls` is a Flapjack mirror, not the tagged HOL `fperm_decs`.
+    `names_as_string` cannot authorise the embedded `Shape`/`Decl`/`Prog`
+    carriers, and no `NameRanged` byte witness applies because the conclusion is
+    a declaration-list equation, not a name. The exact MlString identifier
+    carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already records this
+    hol_name as `documented_mismatch` (reviewer Codex). Evidence: the
+    `globalRenameDecls` append regression guards and the source-shaped
+    predicate/rename facts in `Flapjack/Test/PanGlobalsDeclPredicateParity.lean`.
+    -/
 theorem fperm_decs_append [BEq String] (source target : FunName)
     (declarations rest : List (Decl α)) :
     globalRenameDecls source target (declarations ++ rest) =
@@ -713,17 +767,36 @@ theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
   globalRenameDecls_filter_function source target declarations
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_decs_decls`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2023`).  The HOL
-    statement carries an unused `ys` binder introduced by `recInduct`, which is
-    reproduced here for statement parity.  HOL `EVERY ($¬ ∘ is_function)` is
-    Lean `declarations.all (fun declaration => !globalDeclIsFunction declaration)`
-    and HOL `fperm_decs` is the reviewed production `globalRenameDecls`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2023-2029`):
+
+    ```sml
+    Theorem fperm_decs_decls:
+      ∀f g xs ys. EVERY ($¬ o is_function) xs ⇒ fperm_decs f g xs = xs
+    ```
+
+    The HOL statement carries an unused `ys` binder introduced by `recInduct`,
+    reproduced here as `_unused` for statement parity. HOL
+    `EVERY ($¬ ∘ is_function)` is Lean
+    `declarations.all (fun declaration => !globalDeclIsFunction declaration)` and
+    HOL `fperm_decs` is the source-shaped production `globalRenameDecls`.
+
+    The tag stays WITHDRAWN as a documented carrier mismatch. The statement is
+    keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/
+    `StructName` = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/
+    `exceptionEntries`) and by a generic word `α` in `Decl α`, whereas HOL
+    `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/
+    `stcname` = `mlstring` over the positive-width word-indexed `decl`; it also
+    carries an executable-only `[BEq String]` argument absent in HOL, and
+    `globalRenameDecls`/`globalDeclIsFunction` are Flapjack mirrors, not the
+    tagged HOL `fperm_decs`/`is_function`. `names_as_string` cannot authorise the
+    embedded `Shape`/`Decl`/`Prog` carriers, and no `NameRanged` byte witness
+    applies because the conclusion is a declaration-list equality, not a name.
+    The exact MlString identifier carrier is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    `docs/HOL-THEOREM-MAP.json` already records this hol_name as
+    `documented_mismatch` (reviewer Codex). Evidence: the
+    `globalRenameDecls_eq_self_of_no_functions` regression guards and
+    `Flapjack/Test/PanGlobalsDeclPredicateParity.lean`. -/
 theorem fperm_decs_decls [BEq String] (source target : FunName)
     (declarations _unused : List (Decl α))
     (hnone : declarations.all

@@ -347,6 +347,42 @@ def evaluateSourceDecCallBadReturnShape :=
           (.word (BitVec.ofNat 64 42)) })
     (.decCall "answer" (.comb []) "badret" [] .skip : Prog Word64)
 
+/-! The original HOL probe rows `recursive_call_missing_function`,
+    `recursive_deccall_missing_function`, `recursive_call_bad_argument`, and
+    `recursive_deccall_bad_argument` all observe `(Error, clock, x)`. These
+    assertions pin the untouched source state as well as the result, so the
+    Call/DecCall lookup and argument-failure branches cannot pass vacuously. -/
+def sourceMissingCallState : PanSemState Word64 (FfiState Unit) :=
+  { emptyPanSourceState 5 [] with
+      locals := updatePanValueMap (fun _ => none) "x" (.word (BitVec.ofNat 64 7)) }
+
+def evaluateSourceCallMissingFunction :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceMissingCallState
+    (.call none "missing" [] : Prog Word64)
+
+def evaluateSourceDecCallMissingFunction :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceMissingCallState
+    (.decCall "answer" .one "missing" [] .skip : Prog Word64)
+
+def sourceBadCallArgumentCode : PanSemCodeMap Word64 :=
+  [("id", ([], .skip, .one))]
+
+def sourceBadCallArgumentState : PanSemState Word64 (FfiState Unit) :=
+  { emptyPanSourceState 10 sourceBadCallArgumentCode with
+      locals := updatePanValueMap (fun _ => none) "x" (.word (BitVec.ofNat 64 7)) }
+
+def evaluateSourceCallBadArgument :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadCallArgumentState
+    (.call none "id" [.var .local "absent"] : Prog Word64)
+
+def evaluateSourceDecCallBadArgument :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler sourceBadCallArgumentState
+    (.decCall "answer" .one "id" [.var .local "absent"] .skip : Prog Word64)
+
 def sourceBadCallDestinationState : PanSemState Word64 (FfiState Unit) :=
   { emptyPanSourceState 10 sourceIdCode with
       locals := updatePanValueMap (fun _ => none) "answer"
@@ -526,6 +562,29 @@ def observeSourceDecCallBadReturnShape : Bool :=
         postState.topAddress == BitVec.ofNat 64 100
   | _ => false
 
+def isSourceErrorPreservingX
+    (result : Option (PanValueFfiClockResult Word64 Unit))
+    (expectedClock : Nat) : Bool :=
+  match result with
+  | some (.control (.error locals _ _ _), clock) =>
+      clock == expectedClock &&
+        match locals "x" with
+        | some (.word value) => value == BitVec.ofNat 64 7
+        | _ => false
+  | _ => false
+
+def observeSourceCallMissingFunction :=
+  isSourceErrorPreservingX evaluateSourceCallMissingFunction 5
+
+def observeSourceDecCallMissingFunction :=
+  isSourceErrorPreservingX evaluateSourceDecCallMissingFunction 5
+
+def observeSourceCallBadArgument :=
+  isSourceErrorPreservingX evaluateSourceCallBadArgument 10
+
+def observeSourceDecCallBadArgument :=
+  isSourceErrorPreservingX evaluateSourceDecCallBadArgument 10
+
 #guard observeSourceCodeCall
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
@@ -546,6 +605,10 @@ def observeSourceDecCallBadReturnShape : Bool :=
 #guard observeSourceConstReturnCall
 #guard observeSourceCallBadReturnShape
 #guard observeSourceDecCallBadReturnShape
+#guard observeSourceCallMissingFunction
+#guard observeSourceDecCallMissingFunction
+#guard observeSourceCallBadArgument
+#guard observeSourceDecCallBadArgument
 
 /-! The fixed-width branches must go through the explicit source memory model.
     This is the stateful evaluator path corresponding to
@@ -910,6 +973,18 @@ def runChecks : IO Bool := do
   if observeSourceDecCallBadReturnShape then
     IO.println "PASS state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
   else IO.println "FAIL state-owned DecCall returns HOL Error and callee state on return-shape mismatch"
+  if observeSourceCallMissingFunction then
+    IO.println "PASS state-owned Call missing-function branch preserves the HOL source state"
+  else IO.println "FAIL state-owned Call missing-function branch preserves the HOL source state"
+  if observeSourceDecCallMissingFunction then
+    IO.println "PASS state-owned DecCall missing-function branch preserves the HOL source state"
+  else IO.println "FAIL state-owned DecCall missing-function branch preserves the HOL source state"
+  if observeSourceCallBadArgument then
+    IO.println "PASS state-owned Call argument-evaluation failure matches the HOL source state"
+  else IO.println "FAIL state-owned Call argument-evaluation failure matches the HOL source state"
+  if observeSourceDecCallBadArgument then
+    IO.println "PASS state-owned DecCall argument-evaluation failure matches the HOL source state"
+  else IO.println "FAIL state-owned DecCall argument-evaluation failure matches the HOL source state"
   if observeNonClockedCallBadReturnShape then
     IO.println "PASS non-clocked Call returns Error with callee post-state on return-shape mismatch"
   else IO.println "FAIL non-clocked Call returns Error with callee post-state on return-shape mismatch"
@@ -953,7 +1028,9 @@ def runChecks : IO Bool := do
     observeSourceRecursiveCallTimeout && observeSourceRecursiveDecCallTimeout &&
     observeSourceZeroClockCallTimeout && observeSourceConstReturnCall &&
     observeSourceCallBadDestination && observeSourceCallBadReturnShape &&
-    observeSourceDecCallBadReturnShape &&
+    observeSourceDecCallBadReturnShape && observeSourceCallMissingFunction &&
+    observeSourceDecCallMissingFunction && observeSourceCallBadArgument &&
+    observeSourceDecCallBadArgument &&
     observeNestedRaise &&
     observeFixedLoads && observeFixedLoadDomainFailure &&
     observeExactProgramMemoryAccess && observeExactProgramDomainFailure &&

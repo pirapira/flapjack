@@ -504,6 +504,22 @@
     "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLFiniteState.toSourceEvaluatorState_mapc",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation: expression evaluation ignores the arbitrary code-entry map, so the exact finite-map map2 update projects to the same source evaluator state."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSource",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack support for HOL simp_exp_correct1 over arbitrary finite-index words and exact finite-map/set state fields, with opaque code entries. Evaluation still uses the explicit HolFiniteDimension source projection; native crepSem eval_def, HOL program/FFI carriers, and their representation relations remain unproved, so the declaration is untagged."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
@@ -1888,7 +1904,7 @@
     "names_as_string_boundary": [
       "name"
     ],
-    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.4) HOL fresh_name_def (pan_globalsScript.sml:55): fresh_name name names = if MEM name names then fresh_name (strcat name «'») names else name. Lean freshNameHOL has the same clauses (∈ = list/String equality, ++ = strcat one-character append); HOL's strlen/MAX_SET termination measure versus Lean maxNameLength is non-operational and String.length occurs only there, so the sole operational difference is the String/mlstring carrier. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL gives NameRanged (freshNameHOL name names) from the NameRanged name premise, and the executed path seeds are the empty string, vn' and main). The names list is used only for membership equality. Direct HOL rows in pan_globals_fresh_name_probe.out."
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.4) HOL fresh_name_def (pan_globalsScript.sml:55): fresh_name name names = if MEM name names then fresh_name (strcat name \u00ab'\u00bb) names else name. Lean freshNameHOL has the same clauses (\u2208 = list/String equality, ++ = strcat one-character append); HOL's strlen/MAX_SET termination measure versus Lean maxNameLength is non-operational and String.length occurs only there, so the sole operational difference is the String/mlstring carrier. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL gives NameRanged (freshNameHOL name names) from the NameRanged name premise, and the executed path seeds are the empty string, vn' and main). The names list is used only for membership equality. Direct HOL rows in pan_globals_fresh_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -1976,7 +1992,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "dec_shapes_resort_decls_def",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison): the filter/reordering clauses agree, but the Lean theorem uses production Decl α and Shape; HOL declarations contain word-valued ExpHOL width and return ShapeHOL. Production names are String while HOL identifiers are mlstring. names_as_string only covers identifiers. The theorem is untagged and exact-carrier replacement is tracked by flapjack-6nn.3.1."
+    "reviewer": "Codex (source comparison): the filter/reordering clauses agree, but the Lean theorem uses production Decl \u03b1 and Shape; HOL declarations contain word-valued ExpHOL width and return ShapeHOL. Production names are String while HOL identifiers are mlstring. names_as_string only covers identifiers. The theorem is untagged and exact-carrier replacement is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -1984,7 +2000,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "resort_decls_preserve_functions",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison): function preservation follows the same constructor partition, but the theorem ranges over production Decl α with Exp α.Const : α and String identifiers; HOL decl uses word-valued ExpHOL width and mlstring identifiers. names_as_string cannot cover the expression-carrier difference. The theorem is untagged; exact-carrier production replacement is tracked by flapjack-6nn.3.1."
+    "reviewer": "Codex (source comparison): function preservation follows the same constructor partition, but the theorem ranges over production Decl \u03b1 with Exp \u03b1.Const : \u03b1 and String identifiers; HOL decl uses word-valued ExpHOL width and mlstring identifiers. names_as_string cannot cover the expression-carrier difference. The theorem is untagged; exact-carrier production replacement is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2008,7 +2024,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "new_main_name_correct",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison): besides production String names versus HOL mlstring names, this theorem ranges over production Decl α whose Exp α.Const : α differs from HOL word-valued ExpHOL width.Const : 'a word. names_as_string only accounts for identifiers. The theorem is untagged; exact-carrier new_main_name work is tracked by flapjack-6nn.3.1."
+    "reviewer": "Codex (source comparison): besides production String names versus HOL mlstring names, this theorem ranges over production Decl \u03b1 whose Exp \u03b1.Const : \u03b1 differs from HOL word-valued ExpHOL width.Const : 'a word. names_as_string only accounts for identifiers. The theorem is untagged; exact-carrier new_main_name work is tracked by flapjack-6nn.3.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -8197,10 +8213,10 @@
   {
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileProgRiscV_eq_compileProgHOL",
-    "hol_path": null,
-    "hol_name": null,
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only bridge: compileProgRiscV unfolds to generic compileProgHOL at the production carriers; it is not itself HOL compile_def. Exact-carrier mismatch for the underlying compiler is documented beside compileProgRiscV in Compile.lean and tracked by flapjack-pxn.18.3.5.8.13."
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_def",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-only bridge, not HOL compile_def: the equations match structurally, but compileProgRiscV uses production Prog/CrepProg/Exp/Shape carriers and String identifiers, and admits width 0; HOL compile_def uses positive-width ProgHOL/CrepProgHOL/ExpHOL/ShapeHOL and mlstring identifiers. The exact-carrier replacement is tracked by flapjack-pxn.18.3.5.8.13."
   },
   {
     "hol_path": null,

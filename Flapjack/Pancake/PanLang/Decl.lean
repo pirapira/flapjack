@@ -154,4 +154,151 @@ def structInfoToHOL (d : Flapjack.StructInfoHOL) : StructInfoHOLExact :=
   obtain ⟨fields, size⟩ := d
   simp [structInfoToHOL, structInfoOfHOL, listParamToHOL_paramOfHOL]
 
+/-! ### Reverse (byte-ranged) roundtrips to production
+
+The forward codecs above recover an exact HOL carrier from any production
+value. The reverse direction `production -> HOL -> production` is exact only
+for values whose names fit in HOL's 256-character universe (`NameRanged`) and
+whose embedded shapes/exps/progs are themselves byte-ranged; those predicates
+mirror the side conditions used by `shapeOfHOL_shapeToHOL`,
+`expOfHOL_expToHOL` and `progOfHOL_progToHOL`. -/
+
+/-- A production `(fldname # shape)` pair that survives the HOL roundtrip. -/
+def ParamByteRanged (p : String × Flapjack.Shape) : Prop :=
+  NameRanged p.1 ∧ ShapeByteRanged p.2
+
+/-- Every pair of a production association list survives the HOL roundtrip. -/
+def ListParamByteRanged (l : List (String × Flapjack.Shape)) : Prop :=
+  ∀ p ∈ l, ParamByteRanged p
+
+/-- A production `fun_decl` that survives the HOL roundtrip. -/
+def FunDeclByteRanged {width : Nat} (d : FunDeclOf width) : Prop :=
+  NameRanged d.name ∧ ListParamByteRanged d.params ∧ ProgByteRanged d.body ∧
+    ShapeByteRanged d.returnShape
+
+/-- A production `decl` that survives the HOL roundtrip. -/
+def DeclByteRanged {width : Nat} : Flapjack.Decl (BitVec width) → Prop
+  | .function d => FunDeclByteRanged d
+  | .decl shape name value => ShapeByteRanged shape ∧ NameRanged name ∧ ExpByteRanged value
+  | .exnDecl exceptionName shape => NameRanged exceptionName ∧ ShapeByteRanged shape
+  | .name struct fields => NameRanged struct ∧ ListParamByteRanged fields
+
+/-- A production `struct_info` that survives the HOL roundtrip. -/
+def StructInfoByteRanged (d : Flapjack.StructInfoHOL) : Prop :=
+  ListParamByteRanged d.fields
+
+/-- Reverse codec on a byte-ranged pair. -/
+@[simp] theorem paramOfHOL_paramToHOL (p : String × Flapjack.Shape)
+    (h : ParamByteRanged p) : paramOfHOL (paramToHOL p) = p := by
+  obtain ⟨name, shape⟩ := p
+  obtain ⟨hname, hshape⟩ := h
+  simp [paramOfHOL, paramToHOL,
+    Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hname,
+    shapeOfHOL_shapeToHOL shape hshape]
+
+/-- Reverse codec on a byte-ranged association list. -/
+theorem listParamOfHOL_paramToHOL (l : List (String × Flapjack.Shape))
+    (h : ListParamByteRanged l) : l.map (paramOfHOL ∘ paramToHOL) = l := by
+  induction l with
+  | nil => rfl
+  | cons p t ih =>
+    simp only [List.map_cons, Function.comp_apply]
+    rw [paramOfHOL_paramToHOL p (h p (by simp))]
+    rw [ih (fun q hq => h q (by simp [hq]))]
+
+/-- Reverse roundtrip for production `fun_decl`. -/
+@[simp] theorem funDeclOfHOL_funDeclToHOL {width : Nat} [NeZero width]
+    (d : FunDeclOf width) (h : FunDeclByteRanged d) :
+    funDeclOfHOL (funDeclToHOL d) = d := by
+  obtain ⟨name, inline, exported, params, body, returnShape⟩ := d
+  simp only [FunDeclByteRanged] at h
+  obtain ⟨hname, hparams, hbody, hret⟩ := h
+  simp [funDeclToHOL, funDeclOfHOL,
+    Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hname,
+    listParamOfHOL_paramToHOL params hparams, progOfHOL_progToHOL body hbody,
+    shapeOfHOL_shapeToHOL returnShape hret]
+
+/-- Reverse roundtrip for production `decl`. -/
+@[simp] theorem declOfHOL_declToHOL {width : Nat} [NeZero width]
+    (d : Flapjack.Decl (BitVec width)) (h : DeclByteRanged d) :
+    declOfHOL (declToHOL d) = d := by
+  cases d with
+  | function fd =>
+    simp only [DeclByteRanged] at h
+    simp [declToHOL, declOfHOL, funDeclOfHOL_funDeclToHOL fd h]
+  | decl shape name value =>
+    simp only [DeclByteRanged] at h
+    obtain ⟨hshape, hname, hvalue⟩ := h
+    simp [declToHOL, declOfHOL, shapeOfHOL_shapeToHOL shape hshape,
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hname,
+      expOfHOL_expToHOL value hvalue]
+  | exnDecl exceptionName shape =>
+    simp only [DeclByteRanged] at h
+    obtain ⟨hname, hshape⟩ := h
+    simp [declToHOL, declOfHOL,
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes exceptionName hname,
+      shapeOfHOL_shapeToHOL shape hshape]
+  | name struct fields =>
+    simp only [DeclByteRanged] at h
+    obtain ⟨hstruct, hfields⟩ := h
+    simp [declToHOL, declOfHOL,
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes struct hstruct,
+      listParamOfHOL_paramToHOL fields hfields]
+
+/-- Reverse roundtrip for production `struct_info`. -/
+@[simp] theorem structInfoOfHOL_structInfoToHOL (d : Flapjack.StructInfoHOL)
+    (h : StructInfoByteRanged d) : structInfoOfHOL (structInfoToHOL d) = d := by
+  obtain ⟨fields, size⟩ := d
+  simp only [StructInfoByteRanged] at h
+  simp [structInfoToHOL, structInfoOfHOL, listParamOfHOL_paramToHOL fields h]
+
+/-! ### Pass-boundary bridge: the struct context
+
+`panLangScript.sml`'s compiler passes range `is_wf_shape` over a struct context
+`(stcname # struct_info) list`. The exact MlString-keyed context is bridged to
+the production `StructContextHOL` here, so an exact pass input is recoverable
+from its production image on byte-ranged contexts. -/
+
+/-- Exact MlString-keyed struct context. -/
+abbrev StructContextExact := List (MlS × StructInfoHOLExact)
+
+/-- Exact struct context to the production `StructContextHOL`. -/
+def structContextOfHOL (c : StructContextExact) : Flapjack.StructContextHOL :=
+  c.map (fun p => (toStringOfBytes p.1, structInfoOfHOL p.2))
+
+/-- Production `StructContextHOL` to the exact MlString-keyed context. -/
+def structContextToHOL (c : Flapjack.StructContextHOL) : StructContextExact :=
+  c.map (fun p => (ofString p.1, structInfoToHOL p.2))
+
+/-- Production struct context that survives the HOL roundtrip. -/
+def StructContextByteRanged (c : Flapjack.StructContextHOL) : Prop :=
+  ∀ p ∈ c, NameRanged p.1 ∧ StructInfoByteRanged p.2
+
+@[simp] theorem structContextToHOL_structContextOfHOL (c : StructContextExact) :
+    structContextToHOL (structContextOfHOL c) = c := by
+  unfold structContextToHOL structContextOfHOL
+  rw [List.map_map]
+  induction c with
+  | nil => rfl
+  | cons p t ih =>
+    obtain ⟨name, info⟩ := p
+    simp only [List.map_cons, Function.comp_apply,
+      Flapjack.Basis.Pure.MlString.ofString_toStringOfBytes,
+      structInfoToHOL_structInfoOfHOL, ih]
+
+@[simp] theorem structContextOfHOL_structContextToHOL (c : Flapjack.StructContextHOL)
+    (h : StructContextByteRanged c) : structContextOfHOL (structContextToHOL c) = c := by
+  unfold structContextOfHOL structContextToHOL
+  rw [List.map_map]
+  induction c with
+  | nil => rfl
+  | cons p t ih =>
+    have hp : NameRanged p.1 ∧ StructInfoByteRanged p.2 := h p (by simp)
+    obtain ⟨name, info⟩ := p
+    obtain ⟨hname, hinfo⟩ := hp
+    have ht : StructContextByteRanged t := fun q hq => h q (by simp [hq])
+    simp only [List.map_cons, Function.comp_apply,
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name hname,
+      structInfoOfHOL_structInfoToHOL info hinfo, ih ht]
+
 end Flapjack.Pancake.PanLang

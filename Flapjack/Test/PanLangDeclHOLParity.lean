@@ -72,4 +72,42 @@ example : declToHOL (declOfHOL (DeclHOL.function fdH : DeclHOL 64)) =
 example : structInfoToHOL (structInfoOfHOL (StructInfoHOLExact.mk [(s "f", .one)] 7)) =
     StructInfoHOLExact.mk [(s "f", .one)] 7 := structInfoToHOL_structInfoOfHOL _
 
+/-! ### Reverse byte-ranged roundtrips (bead .18.3.5.8.5)
+
+Production values over byte-ranged ASCII identifiers round-trip through the
+exact MlString carriers and back. -/
+
+private def prodFd : FunDecl (BitVec 64) :=
+  { name := "AB"
+    inline := true
+    exported := false
+    params := [("x", Shape.one), ("y", Shape.one)]
+    body := Prog.skip
+    returnShape := Shape.one }
+
+private theorem prodFdRanged : FunDeclByteRanged prodFd := by
+  simp [prodFd, FunDeclByteRanged, ListParamByteRanged, ParamByteRanged,
+    NameRanged, ShapeByteRanged, ProgByteRanged]
+
+private def prodDecl : Decl (BitVec 64) := .function prodFd
+
+private def prodSi : StructInfoHOL := { fields := [("f", Shape.one)], size := 7 }
+
+private def prodContext : StructContextHOL := [("S", prodSi)]
+
+example : funDeclOfHOL (funDeclToHOL prodFd) = prodFd :=
+  funDeclOfHOL_funDeclToHOL prodFd prodFdRanged
+example : declOfHOL (declToHOL prodDecl) = prodDecl :=
+  declOfHOL_declToHOL prodDecl (by
+    simp [prodDecl, DeclByteRanged, prodFd, FunDeclByteRanged, ListParamByteRanged,
+      ParamByteRanged, NameRanged, ShapeByteRanged, ProgByteRanged])
+example : structInfoOfHOL (structInfoToHOL prodSi) = prodSi :=
+  structInfoOfHOL_structInfoToHOL prodSi (by
+    simp [prodSi, StructInfoByteRanged, ListParamByteRanged, ParamByteRanged,
+      NameRanged, ShapeByteRanged])
+example : structContextOfHOL (structContextToHOL prodContext) = prodContext :=
+  structContextOfHOL_structContextToHOL prodContext (by
+    simp [prodContext, prodSi, StructContextByteRanged, NameRanged, StructInfoByteRanged,
+      ListParamByteRanged, ParamByteRanged, ShapeByteRanged])
+
 end Flapjack.Test.PanLangDeclHOLParity

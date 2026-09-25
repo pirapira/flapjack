@@ -1480,6 +1480,12 @@ run_probe pan_lang_prog_probeScript.sml pan_lang_prog_probe.out \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
 
+# The num_set toAList probe observes the exact HOL sptree enumeration order
+# (mixed order, but deterministic).
+run_probe num_set_to_alist_probeScript.sml num_set_to_alist_probe.out \
+  toalist_ln toalist_four \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"
 # The panLang decl probe pins the `fun_decl` / `decl` / `struct_info` field
 # shapes (mlstring names, bool flags, param lists, record size) at word type 64.
 run_probe pan_lang_decl_probeScript.sml pan_lang_decl_probe.out \

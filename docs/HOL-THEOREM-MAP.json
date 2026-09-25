@@ -419,6 +419,46 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_locals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-map lookup projection equation for exact locals through Fin width to the direct BitVec view; arbitrary HOL finite_index remains separate."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_globals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only finite-map lookup projection equation for exact globals through Fin width to the direct BitVec view; arbitrary HOL finite_index remains separate."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_shMemaddrs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only representation equation connecting the exact HOL-shaped shared-memory domain through Fin width to the direct BitVec view; arbitrary HOL finite_index remains separate."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_baseAddress",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only base-address word conversion equation for the exact HOL-shaped state under the canonical BitVec view; no native eval_def correspondence is asserted."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_topAddress",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only top-address word conversion equation for the exact HOL-shaped state under the canonical BitVec view; no native eval_def correspondence is asserted."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepSemHOLStateSource_load32_eq_memLoad32HOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."
@@ -526,6 +566,22 @@
     "lean_name": "evalCrepRuntimeExp_crepSemHOLState_loadGlob",
     "statement_status": "documented_mismatch",
     "reviewer": "Production LoadGlob result is related to the exact finite-map globals lookup under a queried-global relation, with runtime code/FFI left arbitrary and no success premise. The HOL state still uses the positive-width BitVec encoding and the theorem supplies neither a full-state relation nor arbitrary finite_index evaluator correspondence; keep untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_toBitVecEvaluatorState_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "The exact finite-map Var result equation is proved over the direct positive-width BitVec projection of CrepSemHOLState, but not for arbitrary HOL finite_index; keep untagged pending evaluator carrier reindexing."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepRuntimeExp_toBitVecEvaluatorState_loadGlob",
+    "statement_status": "documented_mismatch",
+    "reviewer": "The exact finite-map LoadGlob result equation is proved over the direct positive-width BitVec projection of CrepSemHOLState, but not for arbitrary HOL finite_index; keep untagged pending evaluator carrier reindexing."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
@@ -2337,6 +2393,22 @@
     "lean_name": "globalDeclsFilter_eq_filter",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (proof inventory)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structContextLookupHOL_mem_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only helper: a successful first-match lookup implies membership of the key in the exact struct-context list; used by the append proof, with no claimed standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structContextLookupHOL_append_eq_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only first-match lookup preservation under a distinct-key prefix; internal support for the exact v_flds_ok_append port, with no claimed standalone HOL theorem."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

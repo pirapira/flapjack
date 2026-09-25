@@ -58,3 +58,46 @@ val _ = print_eval "call_total_wrong_arity"
 val _ = print_eval "call_total_timeout"
   ``case evaluate ((Call NONE «id» [Const (9w:64 word)] : 64 crepLang$prog), ^z) of
       (SOME TimeOut, st) => st.clock = 0 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+
+val normalCode =
+  ``alist_to_fmap
+      [(«worker», ([], (Skip : 64 crepLang$prog)))] :
+      (funname, num list # 64 crepLang$prog) fmap``;
+val breakCode =
+  ``alist_to_fmap
+      [(«worker», ([], (Break 0 : 64 crepLang$prog)))] :
+      (funname, num list # 64 crepLang$prog) fmap``;
+val continueCode =
+  ``alist_to_fmap
+      [(«worker», ([], (Continue 0 : 64 crepLang$prog)))] :
+      (funname, num list # 64 crepLang$prog) fmap``;
+val exceptionCode =
+  ``alist_to_fmap
+      [(«worker», ([], (Raise (3w:64 word) : 64 crepLang$prog)))] :
+      (funname, num list # 64 crepLang$prog) fmap``;
+val oneReturnCode =
+  ``alist_to_fmap
+      [(«ret», ([], (Return [Const (9w:64 word)] : 64 crepLang$prog)))] :
+      (funname, num list # 64 crepLang$prog) fmap``;
+
+val _ = print_eval "call_total_callee_normal"
+  ``case evaluate ((Call NONE «worker» [] : 64 crepLang$prog), ^(mkState normalCode)) of
+      (SOME Error, st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+val _ = print_eval "call_total_callee_break"
+  ``case evaluate ((Call NONE «worker» [] : 64 crepLang$prog), ^(mkState breakCode)) of
+      (SOME Error, st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+val _ = print_eval "call_total_callee_continue"
+  ``case evaluate ((Call NONE «worker» [] : 64 crepLang$prog), ^(mkState continueCode)) of
+      (SOME Error, st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+val _ = print_eval "call_total_callee_exception"
+  ``case evaluate ((Call NONE «worker» [] : 64 crepLang$prog), ^(mkState exceptionCode)) of
+      (SOME (Exception (3w:64 word)), st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+val _ = print_eval "call_total_return_arity_error"
+  ``case evaluate ((Call (SOME ([1;2], NONE)) «ret» [] : 64 crepLang$prog), ^(mkState oneReturnCode)) of
+      (SOME Error, st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;
+val _ = print_eval "call_total_duplicate_destinations"
+  ``case evaluate ((Call (SOME ([1;1], NONE)) «id» [Const (9w:64 word)] : 64 crepLang$prog), ^s) of
+      (SOME Error, st) => st.clock = 5 /\ FLOOKUP st.locals 0 = SOME (Word (7w:64 word)) | _ => F``;
+val _ = print_eval "call_total_missing_destination"
+  ``case evaluate ((Call (SOME ([9], NONE)) «id» [Const (9w:64 word)] : 64 crepLang$prog), ^s) of
+      (SOME Error, st) => st.clock = 4 /\ FLOOKUP st.locals 0 = NONE | _ => F``;

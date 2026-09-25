@@ -22,6 +22,12 @@ def callState (clock : Nat) : CrepHolState (BitVec 64) Unit :=
     baseAddress := 0
     topAddress := 100 }
 
+def callStateWith (clock : Nat) (function : FunName) (parameters : List Nat)
+    (body : CrepProg (BitVec 64)) : CrepHolState (BitVec 64) Unit :=
+  { callState clock with
+    code := fun name =>
+      if name == function then some (parameters, body) else none }
+
 def callOracleRowsMatch : Bool :=
   let state := callState 5
   let zero := callState 0
@@ -46,7 +52,38 @@ def callOracleRowsMatch : Bool :=
   let timeout := match evalCrepClockProg (.call none "id" [.const 9]) zero with
     | (some .timeOut, post) => post.clock == 0 && post.locals 0 == none
     | _ => false
-  success && destinations && missing && arity && timeout
+  let normal := match evalCrepClockProg (.call none "worker" [])
+      (callStateWith 5 "worker" [] .skip) with
+    | (some .error, post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  let breaking := match evalCrepClockProg (.call none "worker" [])
+      (callStateWith 5 "worker" [] (.break 0)) with
+    | (some .error, post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  let continuing := match evalCrepClockProg (.call none "worker" [])
+      (callStateWith 5 "worker" [] (.continue 0)) with
+    | (some .error, post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  let exception := match evalCrepClockProg (.call none "worker" [])
+      (callStateWith 5 "worker" [] (.raise (BitVec.ofNat 64 3))) with
+    | (some (.exception 3), post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  let returnArity := match evalCrepClockProg
+      (.call (some [1, 2]) "ret" [])
+      (callStateWith 5 "ret" [] (.return [.const 9])) with
+    | (some .error, post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  let duplicateDestinations := match evalCrepClockProg
+      (.call (some [1, 1]) "id" [.const 9]) state with
+    | (some .error, post) => post.clock == 5 && post.locals 0 == state.locals 0
+    | _ => false
+  let missingDestination := match evalCrepClockProg
+      (.call (some [9]) "id" [.const 9]) state with
+    | (some .error, post) => post.clock == 4 && post.locals 0 == none
+    | _ => false
+  success && destinations && missing && arity && timeout && normal &&
+    breaking && continuing && exception && returnArity &&
+    duplicateDestinations && missingDestination
 
 #guard callOracleRowsMatch
 

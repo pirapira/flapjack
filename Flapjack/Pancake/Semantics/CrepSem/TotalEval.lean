@@ -4,13 +4,15 @@ import Flapjack.Pancake.Semantics.CrepSem.Eval
 # Total HOL-shaped Crep evaluator fragment
 
 This module ports the leaf clauses `Skip`, `Break`, `Continue`, and `Tick`,
-plus the `Assign`, `Store`, `If`, `Seq`, `While`, `Return`, `Raise`, and `Dec`
-clauses over its restricted recursive syntax, from `crepSem$evaluate_def` to
-the 11-field `CrepHolState`. The restricted syntax makes the implemented
-domain explicit: this is not a
-whole-program evaluator and assigns no behavior to the remaining `CrepProg`
-constructors. The result carrier is `option crepSem$result`, so ordinary
-completion is `none` and control results retain their HOL constructors.
+plus `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`, and
+`Dec` over its restricted recursive syntax, from `crepSem$evaluate_def` to the
+11-field `CrepHolState`. The restricted syntax makes the implemented domain
+explicit: this is not a whole-program evaluator and assigns no behavior to the
+remaining `CrepProg` constructors. The result carrier is `option
+crepSem$result`, so ordinary completion is `none` and control results retain
+their HOL constructors. The ShMem clause uses the executable
+`FfiState`/`UInt8` carrier; its bridge to exact HOL `ffi_state`/`word8` remains
+unclaimed.
 -/
 
 namespace Flapjack
@@ -33,8 +35,8 @@ def CrepClockLeaf.toCrepProg {width : Nat} :
   | .tick => .tick
 
 /-- Recursive program fragment for the total clock/control evaluator. Its
-    `Assign`, `Store`, and `If` nodes evaluate source `CrepExp` terms in the
-    current HOL state, and its `Seq` nodes use the HOL `fix_clock` boundary
+    `Assign`, `Store`, `ShMem`, and `If` nodes evaluate source `CrepExp` terms
+    in the current HOL state, and its `Seq` nodes use the HOL `fix_clock` boundary
     between recursively evaluated programs. `While` uses clock decrease and
     the same `fix_clock` boundary between iterations. Return nodes evaluate
     their expression list in the current HOL state. -/
@@ -43,6 +45,8 @@ inductive CrepClockProg (width : Nat) where
   | raiseException (value : BitVec width)
   | assignLocal (name : Nat) (value : CrepExp (BitVec width))
   | store (destination source : CrepExp (BitVec width))
+  | sharedMemory (operator : CrepMemOp) (name : Nat)
+      (address : CrepExp (BitVec width))
   | decLocal (name : Nat) (value : CrepExp (BitVec width))
       (body : CrepClockProg width)
   | seq (first second : CrepClockProg width)
@@ -59,6 +63,7 @@ def CrepClockProg.toCrepProg {width : Nat} :
   | .raiseException value => .raise value
   | .assignLocal name value => .assign name value
   | .store destination source => .store destination source
+  | .sharedMemory operator name address => .shMem operator name address
   | .decLocal name value body => .dec name value body.toCrepProg
   | .seq first second => .seq first.toCrepProg second.toCrepProg
   | .returnValues values => .return values
@@ -75,10 +80,74 @@ def exitCrepClockLoopResult {width : Nat} :
   | some (.continue label) => some (.continue (label - 1))
   | result => result
 
+/-- Little-endian byte projection used by HOL `word_to_bytes w F` at a fixed
+    positive word width. HOL's `F` selects increasing-address, least
+    significant byte first. -/
+def crepClockWordToBytes {width : Nat} (word : BitVec width) : List UInt8 :=
+  (List.range (width / 8)).map fun index =>
+    UInt8.ofNat ((word.toNat / 2 ^ (8 * index)) % 256)
+
+/-- HOL `word_of_bytes F 0w` over the same fixed-width word carrier. Bytes are
+    installed in increasing-address order, so the first byte is least
+    significant; `BitVec.ofNat` supplies HOL word truncation. -/
+def crepClockWordOfBytes {width : Nat} (bytes : List UInt8) : BitVec width :=
+  BitVec.ofNat width <| bytes.zipIdx.foldl
+    (fun value (byte, index) => value + byte.toNat * 256 ^ index) 0
+
+/-- Exact restricted-state ShMem clause from `crepSem$evaluate_def`, including
+    the `sh_mem_op` width dispatch and `call_FFI` state transition. This helper
+    handles only the ShMem constructor; it does not claim the full evaluator.
+    Its state uses the executable `FfiState`/`UInt8` carrier and its result uses
+    `FfiFinalEvent`; the exact `HolFfiState`/`word8` bridge is not asserted here,
+    so this definition intentionally has no `@[hol]` tag. -/
+def evalCrepClockShMem [NeZero width] {σ : Type _}
+    (operator : CrepMemOp) (name : Nat)
+    (addressExp : CrepExp (BitVec width))
+    (state : CrepHolState (BitVec width) σ) :
+    Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
+      CrepHolState (BitVec width) σ :=
+  match evalCrepHolExp state addressExp with
+  | none => (some .error, state)
+  | some address =>
+      let byteCount := crepRuntimeMemWidth operator
+      let sharedAddress :=
+        if byteCount = 0 then address else holByteAlignBitVec address
+      let inDomain := state.shMemaddrs sharedAddress
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          match state.locals name with
+          | none => (some .error, state)
+          | some _ =>
+              if !inDomain then (some .error, state)
+              else
+                match callFfi state.ffi (.sharedMem .mappedRead)
+                    [UInt8.ofNat byteCount] (crepClockWordToBytes address) with
+                | .final event =>
+                    (some (.finalFfi event), emptyCrepHolLocals state)
+                | .returned ffi bytes =>
+                    let withFfi := { state with ffi := ffi }
+                    (none, setCrepHolVarW name
+                      (.word (crepClockWordOfBytes bytes)) withFfi)
+      | .store | .store8 | .store16 | .store32 =>
+          match state.locals name with
+          | some (.word value) =>
+              if !inDomain then (some .error, state)
+              else
+                let valueBytes := crepClockWordToBytes value
+                let addressBytes := crepClockWordToBytes address
+                let payload :=
+                  if byteCount = 0 then valueBytes ++ addressBytes
+                  else valueBytes.take byteCount ++ addressBytes
+                match callFfi state.ffi (.sharedMem .mappedWrite)
+                    [UInt8.ofNat byteCount] payload with
+                | .final event => (some (.finalFfi event), state)
+                | .returned ffi _ => (none, { state with ffi := ffi })
+          | _ => (some .error, state)
+
 /-- Total result/state equations for the matching HOL `evaluate_def` leaves,
-    `Assign`, `Store`, `If`, `Seq`, `While`, `Return`, `Raise`, and `Dec`. This
-    restricted function deliberately has no `Option` fuel wrapper and does
-    not depend on `evalCrepRuntimeResult`. -/
+    `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`, and
+    `Dec`. This restricted function deliberately has no `Option` fuel wrapper
+    and does not depend on `evalCrepRuntimeResult`. -/
 def evalCrepClockLeaf {width : Nat} {σ : Type _}
     (leaf : CrepClockLeaf) (state : CrepHolState (BitVec width) σ) :
     Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
@@ -124,6 +193,8 @@ def evalCrepClockProg [NeZero width] {σ : Type _}
               if current = address then .word value else state.memory current })
           else (some .error, state)
       | _, _ => (some .error, state)
+  | .sharedMemory operator name address, state =>
+      evalCrepClockShMem operator name address state
   | .decLocal name value body, state =>
       match evalCrepHolExpWordLab state value with
       | none => (some .error, state)

@@ -1258,4 +1258,89 @@ theorem panSemTotalCallStep_timeout [BEq String] [LawfulBEq String]
         callType evaluate = (some .timeOut, panEmptyLocals state) := by
   simp [panSemTotalCallStep, hclock]
 
+/-! ## Total `ExtCall` clause composition step (flapjack-pxn.18.4.3.77.15)
+
+`panSemTotalExtCallStep` mirrors the HOL `ExtCall` case of `evaluate_def`
+(`cakeml/pancake/semantics/panSemScript.sml:711-726`): evaluate the four
+arguments, read two byte arrays through the two pointer/length pairs, call the
+FFI, and either propagate the final event (clearing locals) or write the
+returned bytes back and install the new FFI state. It is UNTAGGED
+(carrier-safe infrastructure, no `@[hol]` claim): HOL's `funname` is
+`mlstring` while Lean uses `String`, and the byte-array/memory codec is
+supplied by the caller via callbacks. -/
+
+/-- HOL `ExtCall` (`panSemScript.sml:711-726`). `readBytes address lengthWord`
+    is HOL's `read_bytearray address (w2n lengthWord) (mem_load_byte ...)`;
+    `invoke` is `call_FFI`; `writeBytes` is the total `write_bytearray` update
+    of the state's memory. -/
+def panSemTotalExtCallStep (state : PanSemState α (FfiState σ))
+    (evaluatedPtr1 evaluatedLen1 evaluatedPtr2 evaluatedLen2 : Option (PanValue α))
+    (readBytes : α → α → Option (List UInt8))
+    (invoke : FfiState σ → FfiName → List UInt8 → List UInt8 → FfiResult σ)
+    (writeBytes : PanSemState α (FfiState σ) → α → List UInt8 → PanSemState α (FfiState σ))
+    (function : FunName) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match evaluatedPtr1, evaluatedLen1, evaluatedPtr2, evaluatedLen2 with
+  | some (.word address1), some (.word length1), some (.word address2),
+      some (.word length2) =>
+      match readBytes address1 length1, readBytes address2 length2 with
+      | some bytes, some bytes2 =>
+          match invoke state.ffi (.extCall function) bytes bytes2 with
+          | .final event => (some (.finalFfi event), panEmptyLocals state)
+          | .returned newFfi newBytes =>
+              (none, { writeBytes state address2 newBytes with ffi := newFfi })
+      | _, _ => (some .error, state)
+  | _, _, _, _ => (some .error, state)
+
+@[simp] theorem panSemTotalExtCallStep_none
+    (state : PanSemState α (FfiState σ))
+    (readBytes : α → α → Option (List UInt8))
+    (invoke : FfiState σ → FfiName → List UInt8 → List UInt8 → FfiResult σ)
+    (writeBytes : PanSemState α (FfiState σ) → α → List UInt8 → PanSemState α (FfiState σ))
+    (function : FunName) :
+    panSemTotalExtCallStep state none none none none readBytes invoke writeBytes function =
+      (some .error, state) := rfl
+
+theorem panSemTotalExtCallStep_read_error
+    (state : PanSemState α (FfiState σ))
+    (address1 length1 address2 length2 : α)
+    (readBytes : α → α → Option (List UInt8))
+    (invoke : FfiState σ → FfiName → List UInt8 → List UInt8 → FfiResult σ)
+    (writeBytes : PanSemState α (FfiState σ) → α → List UInt8 → PanSemState α (FfiState σ))
+    (function : FunName) (hread : readBytes address1 length1 = none) :
+    panSemTotalExtCallStep state (some (.word address1)) (some (.word length1))
+        (some (.word address2)) (some (.word length2)) readBytes invoke writeBytes function =
+      (some .error, state) := by
+  simp [panSemTotalExtCallStep, hread]
+
+theorem panSemTotalExtCallStep_final
+    (state : PanSemState α (FfiState σ))
+    (address1 length1 address2 length2 : α) (bytes bytes2 : List UInt8)
+    (readBytes : α → α → Option (List UInt8))
+    (invoke : FfiState σ → FfiName → List UInt8 → List UInt8 → FfiResult σ)
+    (writeBytes : PanSemState α (FfiState σ) → α → List UInt8 → PanSemState α (FfiState σ))
+    (function : FunName) (event : FfiFinalEvent)
+    (hread1 : readBytes address1 length1 = some bytes)
+    (hread2 : readBytes address2 length2 = some bytes2)
+    (hinvoke : invoke state.ffi (.extCall function) bytes bytes2 = .final event) :
+    panSemTotalExtCallStep state (some (.word address1)) (some (.word length1))
+        (some (.word address2)) (some (.word length2)) readBytes invoke writeBytes function =
+      (some (.finalFfi event), panEmptyLocals state) := by
+  simp [panSemTotalExtCallStep, hread1, hread2, hinvoke]
+
+theorem panSemTotalExtCallStep_returned
+    (state : PanSemState α (FfiState σ))
+    (address1 length1 address2 length2 : α) (bytes bytes2 : List UInt8)
+    (readBytes : α → α → Option (List UInt8))
+    (invoke : FfiState σ → FfiName → List UInt8 → List UInt8 → FfiResult σ)
+    (writeBytes : PanSemState α (FfiState σ) → α → List UInt8 → PanSemState α (FfiState σ))
+    (function : FunName) (newFfi : FfiState σ) (newBytes : List UInt8)
+    (hread1 : readBytes address1 length1 = some bytes)
+    (hread2 : readBytes address2 length2 = some bytes2)
+    (hinvoke : invoke state.ffi (.extCall function) bytes bytes2 = .returned newFfi newBytes) :
+    panSemTotalExtCallStep state (some (.word address1)) (some (.word length1))
+        (some (.word address2)) (some (.word length2)) readBytes invoke writeBytes function =
+      (none, { writeBytes state address2 newBytes with ffi := newFfi }) := by
+  simp [panSemTotalExtCallStep, hread1, hread2, hinvoke]
+
 end Flapjack

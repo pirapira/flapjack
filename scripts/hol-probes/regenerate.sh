@@ -696,6 +696,11 @@ run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
 run_probe crep_store_eval_probeScript.sml crep_store_eval_probe.out \
   store_success store_address_error store_value_error store_domain_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_shmem_eval_probeScript.sml crep_shmem_eval_probe.out \
+  shmem_load_success shmem_store_success shmem_load8_success shmem_store8_success \
+  shmem_load_domain_error \
+  shmem_missing_local_error shmem_load_final \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"

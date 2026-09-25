@@ -58,4 +58,15 @@ example (width : Nat) [NeZero width] : (List.finRange width).length = width :=
 
 example : (List.finRange 8).length = 8 := rfl
 
+/-! Exact HOL-carrier parity for the tagged width-indexed definition/theorem.
+    The constructor/value shape is `CrepExpHOL`/`BitVec`, as in
+    `crepLang$exp`'s word-valued `Const`. -/
+example (value : BitVec 8) :
+    crepDestConstHOL (.const value : CrepExpHOL 8) = some value := rfl
+
+example (expression : CrepExpHOL 8) (value : BitVec 8)
+    (h : crepDestConstHOL expression = some value) :
+    expression = .const value :=
+  crepDestConstHOL_eq_const expression value h
+
 end Flapjack.Test.CrepeDestConstParity

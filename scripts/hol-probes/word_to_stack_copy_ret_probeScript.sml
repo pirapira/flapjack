@@ -26,7 +26,12 @@ fun print_eval label q =
    defined at cakeml/compiler/backend/word_to_stackScript.sml:429-451.  These
    touch only Seq/StackLoad/StackStore/StackFree/list_Seq with num fields, so
    they are word-independent and the faithful Lean ports are exact over the
-   shared-word stackLang prog carrier.
+   shared-word stackLang prog carrier.  Note that HOL `copy_ret` keeps the
+   return-value list `vs` as an independent `num list` carrier from the
+   `'a stackLang$prog` carrier of `kont` (only `LENGTH vs` is used by
+   `num_stack_ret`); `cr_plain` and `cr_handle` below already instantiate
+   `vs = [10;20;30] : num list` against a `64 stackLang$prog` continuation,
+   witnessing that independence directly.
 
    Provenance (bead flapjack-pxn.18.5.15.3.16): generated from the Flapjack
    checkout with the coordinator-approved read-only prebuilt CakeML/HOL object

@@ -48,6 +48,22 @@
     "reviewer": "Lean-only recursive soundness helper; HOL exposes only the public destination theorems"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpFuel_eq_bitVecSpec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only implementation/spec bridge: production fuel-bounded recognition agrees with a value-recursive BitVec specification under a numeric bound. It does not identify either BitVec definition with HOL's implicit finite_index word carrier, so it is not a port of dest_2exp_def."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_eq_bitVecSpec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RISC-V-width corollary of the fuel/spec bridge, using the width-derived production fuel bound. The recursive specification and recognizer are both BitVec-based, so this does not port HOL's polymorphic word-valued dest_2exp definition."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "localised_prog_def",
     "lean_path": "Flapjack/PanLocalised.lean",
@@ -235,9 +251,9 @@
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_const_def",
     "lean_path": "Flapjack/Pancake/CrepArith.lean",
-    "lean_name": "crepDestConstHolWord",
+    "lean_name": "crepDestConstHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "The tagged definition is restricted to CrepExp (Fin width → Bool) with NeZero width, so the payload is a positive-width finite word rather than an arbitrary carrier. Its const branch returns SOME of the same word and every other expression returns NONE, matching crep_arithScript.sml:10-12. The arbitrary-alpha production helper remains untagged and is definitionally equal on this carrier."
+    "reviewer": "Exact width-indexed definition over CrepExpHOL, whose Const carries BitVec width; the generic-alpha production extractor remains untagged."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -245,15 +261,23 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The faithful polymorphic word statement is separately tagged as crepDestConstHolWord_eq_const."
+    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "dest_const_thm",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged support over generic CrepExp (Fin width → Bool), not HOL's exact CrepExpHOL syntax carrier. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "dest_const_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDestConstHOL_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Width-specialized positive finite word carrier Fin width → Bool with NeZero width. Successful dest_const premise and Const conclusion match the HOL theorem; arbitrary-alpha support remains untagged."
+    "reviewer": "Exact width-indexed statement over CrepExpHOL/BitVec width with NeZero width, matching HOL's word-typed expression, successful dest_const premise, and Const conclusion."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -342,6 +366,118 @@
     "lean_name": "crepEvalMulConstHolWordBits",
     "statement_status": "documented_mismatch",
     "reviewer": "All-positive-width source-state support over canonical Fin width -> Bool words. It still interprets HOL eval_def/crep_op_def through BitVec/RISC-V operations and byte loads; no @[hol] tag until that evaluator correspondence is proved."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "panWordLabWord_panTheWord_holWordLabToCrepSourceWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only wrapper round trip for the canonical Fin-index projection; no standalone HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_codeFfiIrrel",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only equality for the expression-observation projection, which deliberately erases code and FFI. It is not a port of the HOL state datatype or an eval theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_locals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for local lookup from the named lookup-function carrier; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_globals",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for global lookup from the named lookup-function carrier; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_memaddrs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only conversion of a word-set predicate to the source evaluator's Bool membership test; no standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSourceEvalStateOfHOLFields_memory",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only projection equation for the total memory field; no standalone HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Const clause equation on a projected state, not the exact polymorphic crepSem state/evaluator statement; keep untagged until the full state/eval relation is proved."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Var clause equation over a projection from named lookup-function carriers; no exact Crep state record or native eval_def identity is established."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_load",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Load plus mem_load clause observation over the projected state; the finite-support map and native eval_def/state relation remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_loadGlob",
+    "statement_status": "documented_mismatch",
+    "reviewer": "LoadGlob clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "BaseAddr clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "evalCrepSourceProjection_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "TopAddr clause equation through the expression-observation projection; not stated over native HOL Crep state."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Var case preserves the result binder, success premise, code-map update and full Option word_lab result, but uses lookup-function carriers without finite-support witnesses and the projected source evaluator rather than native crepSem$eval. No @[hol] tag."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Const case preserves the result binder, success premise, mapc code update and complete Option word_lab equality, but uses the expression-observation projection rather than the native HOL Crep state/evaluator. No @[hol] tag."
   },
   {
     "hol_path": null,
@@ -669,7 +805,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceEvalClass",
     "statement_status": "documented_mismatch",
-    "reviewer": "The implicit HolFiniteDimension instance now mirrors HOL's finite_index constraint and the theorem has the success premise, arbitrary code-map update, simp_exp, and full Option word_lab result over every finite index carrier. It remains untagged because CrepHolState and the source operation dictionary are not yet identified theoremically with HOL crepSem state/eval and native word operations."
+    "reviewer": "The implicit HolFiniteDimension instance proves the finite_index unique-in-range property and the theorem has the success premise, arbitrary code-map update, simp_exp, and full Option word_lab result. It remains untagged: CrepHolState uses lookup functions for HOL finite-map fields, String rather than mlstring code keys, and Flapjack FfiState; its source operation dictionary/evaluator is not yet identified with native HOL eval_def and word operations."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -677,7 +813,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceWordLab",
     "statement_status": "documented_mismatch",
-    "reviewer": "This strengthens the source-evaluator theorem to equality of complete Option PanWordLab results with an implicit finite-dimension instance, unused v binder, success premise, and arbitrary code-map update. holFiniteIndex_bijective proves the dimension decoder's HOL unique-in-range property; this remains untagged because the chosen HOL finite_index instance, source evaluator/state encoding, and primitive word operations are not yet identified theoremically with crepSem eval."
+    "reviewer": "This strengthens the source-evaluator theorem to equality of complete Option PanWordLab results with an implicit finite-dimension instance, unused v binder, success premise, and arbitrary code-map update. holFiniteIndex_bijective proves the dimension decoder's unique-in-range property, but the state/evaluator representation remains different: lookup functions stand in for HOL finite maps, code keys are String rather than mlstring, and FFI uses Flapjack FfiState. The source evaluator and primitive operations are not yet identified theoremically with crepSem eval."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -685,7 +821,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolWordBitsSourceWordLab",
     "statement_status": "documented_mismatch",
-    "reviewer": "All-positive-width canonical Fin width -> Bool form of the complete source-evaluator result. This removes the arbitrary finite-index enumeration and has the local theorem's binders, success premise, code-only map update, n2w simplifier image, and Option word_lab equality. It remains untagged until the source evaluator/state encoding is identified with native HOL crepSem eval and finite maps."
+    "reviewer": "All-positive-width canonical Fin width -> Bool form of the complete source-evaluator result. It has the local theorem's binders, success premise, code-only map update, n2w simplifier image, and Option word_lab equality. It remains untagged: CrepHolState uses lookup functions rather than HOL finite maps, String rather than mlstring code keys, and Flapjack FfiState, and its evaluator is not proved equal to native HOL crepSem eval."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -709,7 +845,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1HolFiniteWordSourceFull",
     "statement_status": "documented_mismatch",
-    "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. holFiniteIndex_bijective proves the explicit decoder has HOL's unique-in-range property; it remains untagged because the selected HOL finite_index instance, source evaluator/CrepHolState encoding, and word operations are not yet identified theoremically with crepSem eval."
+    "reviewer": "This source-evaluator support theorem gives the full Option PanWordLab equality with HOL's success premise and arbitrary code-map update. holFiniteIndex_bijective proves the explicit decoder's unique-in-range property; it remains untagged because CrepHolState lookup functions/String code keys/Flapjack FfiState and the source operation dictionary have not been identified with HOL finite maps, mlstring code keys, ffi_state, and native crepSem eval/word operations."
   },
   {
     "hol_path": null,
@@ -1369,41 +1505,9 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "comp_field_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "compileField",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_panop_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "compilePanOp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "ret_hdl_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "retHdl",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "ret_var_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "retVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "wrap_rt_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
-    "lean_name": "wrapRt",
     "statement_status": "pending_statement_review",
     "reviewer": "Codex (reference inventory)"
   },
@@ -4337,22 +4441,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_free_vars_store_globals_empty",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedSeq_storeGlobalsW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_vars_store_globals_empty",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedSeq_storeGlobalsW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "length_load_shape_eq_shape",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "length_loadShape_eq_shapeW",
@@ -6528,30 +6616,6 @@
     "reviewer": "Codex (source comparison with mk_ctxt_imp_locals_rel: empty variable map, slot bound zero, make_funcs table; proof mirrors rw[locals_rel_def,no_overlap_def,mk_ctxt_def,ctxt_max_def]) Tag withdrawn (Flapjack-specific; not an exact HOL port): statement is keyed by `FunName`/`VarName`/`ExceptionId` = `String` or embeds a `PanToCrepProofContext`/`PanToCrepHOLContext` with `String`-keyed finite maps, while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`; exact MlString carrier tracked by `flapjack-pxn.18.3.5.8`."
   },
   {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_free_vars_IMP_assigned_vars",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:373; direct HOL-EVAL oracle crep_assigned_vars_probe.out imp_mem/imp_mem_absent reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "nested_seq_assigned_vars_eq",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWithW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:411; oracle row nested_av=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "nested_seq_assigned_free_vars_eq",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWithW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison against crepPropsScript.sml:420; oracle row nested_afv=[1;2] reproduced by Lean guards in Flapjack/Test/CrepAssignedVarsParity.lean) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
-  },
-  {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "fm_empty_zip_alist",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
@@ -6774,14 +6838,6 @@
     "lean_name": "setCrepHolGlobalsW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of set_globals_def crepSemScript.sml:61 at the word-length carrier 'a := BitVec width: setCrepHolGlobalsW gv w s = s with globals := s.globals |+ (gv,w), written as FUPDATE. Generic-alpha setCrepHolGlobals stays untagged as production's implementation; kernel-checked bridge setCrepHolGlobalsW_eq_setCrepHolGlobals and production routing setCrepRuntimeGlobals -> setCrepHolGlobals via CrepRuntimeState.toHolState. Direct HOL oracle crep_store_global_probe.out rows and Lean guards/examples in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "FLOOKUP_set_globals",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "flookup_setCrepHolGlobals_localsW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact 11-field CrepHolState port of FLOOKUP_set_globals crepPropsScript.sml:297 at 'a := BitVec width: FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n using tagged setCrepHolGlobalsW; kernel-checked bridge flookup_setCrepHolGlobals_localsW_eq_generic. Generic-alpha flookup_setCrepHolGlobals_locals stays untagged as production's statement; the production adapter flookup_setCrepRuntimeGlobals_locals is untagged. Direct HOL oracle row set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean; exact-shape rule requires the width-indexed carrier) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -8257,38 +8313,6 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "state_rel_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopStateRel",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (field-by-field review against state_rel_def at crep_to_loopProofScript.sml:28-36; seven compared fields over the whole CrepHolState/LoopMachineState; HOL sets memaddrs/sh_memaddrs rendered as Boolean membership maps mdomain/shMdomain; direct HOL-EVAL rows in scripts/hol-probes/crep_to_loop_state_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "state_rel_intro",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopStateRel_intro",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_intro at crep_to_loopProofScript.sml:163-174; unfolding of crepToLoopStateRel to the same seven-field conjunction, proved by Iff.rfl; Lean guard in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "dec_clock_simp",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "decCrepHolClock_simp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against dec_clock_simp at crepPropsScript.sml:267; the clock decrement is the tagged width-indexed decCrepHolClockW (dec_clock_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out (all T) reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "empty_locals_simp",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "emptyCrepHolLocals_simp",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against empty_locals_simp at crepPropsScript.sml:282; the locals clear is the tagged width-indexed emptyCrepHolLocalsW (empty_locals_def) over CrepHolState (BitVec width) σ; direct HOL-EVAL rows in scripts/hol-probes/crep_dec_clock_simp_probe.out reproduced by Lean guards in Flapjack/Test/CrepGlobalShapeParity.lean) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "wlab_wloc_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "wlabWloc",
@@ -8310,14 +8334,6 @@
     "lean_name": "crepToLoopGlobalsRel_intro",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against globals_rel_intro at crep_to_loopProofScript.sml:203-209, which is an implication from globals_rel to the universally quantified lookup agreement, NOT an iff; tagged Lean statement has the same implication shape and is proved by the relation's definition; untagged crepToLoopGlobalsRel_iff keeps the iff form; Lean guards in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "state_rel_clock_add_zero",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopStateRel_clock_add_zero",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against state_rel_clock_add_zero at crep_to_loopProofScript.sml:219-223; the existential witness 0 preserves the relation by Nat.zero_add, ported as crepToLoopStateRel s {t with clock := ck + t.clock}; Lean example in Flapjack/Test/CrepToLoopParity.lean); carriers width-specialized to BitVec width because HOL states/word_lab are word-length indexed (agreed exact-shape rule) Carrier requires positive width ([NeZero width]) because HOL word types have positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8502,14 +8518,6 @@
     "lean_name": "distinctListsHol",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "locals_rel_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopLocalsRelHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against locals_rel_def at crep_to_loopProofScript.sml:101-111; ctxt.vars is the HOL finite map num |-> num, rendered over CrepToLoopFiniteMapContext; HOL's sptree$num_set is rendered as a Boolean membership map and sptree$num_map as its extensional Option-valued lookup, the same accepted renderings used by the tagged crepToLoopStateRel/crepToLoopMemRel/crepToLoopGlobalsRel; the distinct_vars/ctxt_max conjuncts reuse the tagged crepToLoopDistinctVars/crepToLoopCtxtMax; direct HOL-EVAL rows ctxt_vars_lookup/distinct_component/ctxt_max_component/set_domain_mem/map_lookup/subset_domain_component=T in scripts/hol-probes/crep_to_loop_locals_rel_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
     "hol_path": "cakeml/misc/miscScript.sml",
@@ -8741,7 +8749,7 @@
     "hol_name": "copy_ret_def",
     "lean_name": "copyRet",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree, exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T reproduced by copyRetParityGuard.)"
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree. Corrected 2026-09-25 by flapjack-deepseek-two (bead flapjack-pxn.18.5.15.3.17): HOL `copy_ret` keeps the return-value list `vs` as an independent `num list` carrier (only `LENGTH vs` is used), so the Lean signature is now `{α β : Type} ... (vs : List β) (kont : ProgM α)`. HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T (with vs=[10;20;30] : num list against a 64-bit prog) reproduced by copyRetParityGuard and the β=Nat independent-carrier fixture copyRetIndependentGuard.)"
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
@@ -8862,38 +8870,6 @@
     "lean_name": "crepToLoopMakeFuncsHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against make_funcs_def at crep_to_loopScript.sml:247; HOL fnames=MAP FST prog, fnums=GENLIST (n. n + first_name) (LENGTH prog), lens=MAP (LENGTH o FST o SND) prog, fs=MAP2 pairs, alist_to_fmap rendered as FUPDATE_LIST FEMPTY entries.reverse with first-inserted-binding-wins; carriers alpha/beta/gamma kept polymorphic as in HOL; first_name is the tagged firstLoopName; direct HOL-EVAL rows mkf_f/mkf_g/mkf_absent/mkf_dup_first=T reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/crep_to_loopScript.sml",
-    "hol_name": "prog_if_def",
-    "lean_path": "Flapjack/Pancake/CrepToLoop.lean",
-    "lean_name": "progIfW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared clause-by-clause against prog_if_def at crep_to_loopScript.sml:34; width-indexed over List (LoopProg (BitVec width))/LoopExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex and Const 1w/Const 0w are 'a word; generic progIf stays untagged. Direct HOL-EVAL row prog_if_basic=T reproduced by the width-indexed example in Flapjack/Test/CrepProgIfParity.lean. Production-path note in the docstring: loopCompileExp's .cmp case inlines the identical statement list and is generic over the word element type, pending the deferred width-indexing migration.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "locals_rel_insert_gt_vmax",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopLocalsRelHOL_insert_gt_vmax",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against locals_rel_insert_gt_vmax at crep_to_loopProofScript.sml:228; conclusion adds a fresh num_map binding insert n w lcl' above ctxt.vmax to the tagged finite-map locals_rel carrier crepToLoopLocalsRelHOL, rendering sptree insert extensionally as fun m => if m = n then some w else tLocals m (same rendering as the tagged locals_rel_def). Direct HOL-EVAL rows insert_same/insert_other_unchanged/gt_vmax_bounded_survives/subset_preserved in scripts/hol-probes/crep_to_loop_locals_insert_probe.out reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean. Carrier is width-indexed over BitVec width with [NeZero width] because HOL word types have positive dimindex.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "locals_rel_cutset_prop",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "crepToLoopLocalsRelHOL_cutset_prop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against locals_rel_cutset_prop at crep_to_loopProofScript.sml:239-249; HOL subspt cset cset' rendered as the pointwise implication (forall n, live n = true -> live' n = true) and sptree locals/domain rendered extensionally as in crepToLoopLocalsRelHOL; the two source-local obligations are reconciled by FLOOKUP functionality on ctxt.vars; direct HOL-EVAL rows cutset_* in scripts/hol-probes/crep_to_loop_locals_cutset_probe.out reproduced by Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "mem_lookup_fromalist_some",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "memLookupFromAListSome",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",
@@ -9102,14 +9078,6 @@
     "lean_name": "panToCrepTotalSkipStateCase",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only total Skip induction-case support: uses the total measured PanSem Skip clause and total Crep HOL-state Skip clause, then carries state_rel, state-owned code_rel, excp_rel, and locals_rel to the unchanged runtime post-state. This is not a standalone HOL declaration or the full pc_compile_correct theorem."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "all_distinct_ctxt_lookup_all_distinct",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "allDistinctCtxtLookupAllDistinct",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against all_distinct_ctxt_lookup_all_distinct at crep_to_loopProofScript.sml:3345; HOL ALL_DISTINCT rendered as List.Nodup, distinct_vars as crepToLoopDistinctVars (distinct_vars_def) and rt_vars as rtVars (rt_vars_def) over the finite-map context carrier CrepToLoopFiniteMapContext.vars; direct HOL-EVAL rows acd_distinct/acd_single/acd_missing=T in scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
   {
     "hol_path": "cakeml/misc/miscScript.sml",
@@ -9408,14 +9376,6 @@
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "assigned_vars_MAPi_Assign",
-    "lean_path": "Flapjack/Pancake/LoopLive.lean",
-    "lean_name": "loopAssignedVars_mapIdxAssign",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against assigned_vars_MAPi_Assign at crep_to_loopProofScript.sml:355: HOL !les offset. assigned_vars (nested_seq (MAPi (\\n. loopLang$Assign (n + offset)) les)) = GENLIST ($+ offset) (LENGTH les); loopLang assigned_vars/nested_seq rendered as the untagged loopAssignedVars/loopNestedSeq ports, HOL MAPi rendered literally as List.mapIdx and GENLIST ($+ offset) as (List.range les.length).map (fun n => n + offset); width-indexed over List (LoopExp (BitVec width)) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; the untagged bridge loopAssignPairs_loopTempNames_eq_mapIdx relates mapIdx to the loopAssignPairs/loopTempNames numbering. Direct HOL-EVAL rows avma_nil/avma_one/avma_two/avma_three/avma_offset_zero in scripts/hol-probes/crep_to_loop_assigned_vars_mapidx_probe.out reproduced by the width-indexed examples in Flapjack/Test/LoopAssignedVarsParity.lean)"
-  },
-  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "sh_mem_load_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
@@ -9430,30 +9390,6 @@
     "lean_name": "shMemStoreHOLExact",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "assigned_vars_seq_split",
-    "lean_path": "Flapjack/Pancake/LoopLive.lean",
-    "lean_name": "loopAssignedVars_seqW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against assigned_vars_seq_split at loopPropsScript.sml:890: HOL !q p. assigned_vars (Seq p q) = assigned_vars p ++ assigned_vars q; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "assigned_vars_nested_seq_split",
-    "lean_path": "Flapjack/Pancake/LoopLive.lean",
-    "lean_name": "loopAssignedVars_nestedSeq_appendW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against assigned_vars_nested_seq_split at loopPropsScript.sml:880: HOL !p q. assigned_vars (nested_seq (p ++ q)) = assigned_vars (nested_seq p) ++ assigned_vars (nested_seq q); loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
-    "hol_name": "assigned_vars_nested_assign",
-    "lean_path": "Flapjack/Pancake/LoopLive.lean",
-    "lean_name": "loopAssignedVars_loopAssignPairsW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against assigned_vars_nested_assign at loopPropsScript.sml:897: HOL !xs ys. LENGTH xs = LENGTH ys ==> assigned_vars (nested_seq (MAP2 Assign xs ys)) = xs; HOL MAP2 Assign xs ys rendered as loopAssignPairs xs ys; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -9521,38 +9457,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_vars_nested_decs_append",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedDecs_appendW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:390. Width-indexed over CrepProg/CrepExp (BitVec width) with [NeZero width], matching the crepLang 'a word carrier. Oracle row avnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_free_vars_nested_decs_append",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedDecs_appendW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:400. HOL FILTER (not-MEM x ns) is rendered as List.filter (fun c => decide (c notin ns)); width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_vars_seq_store_empty",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedVars_nestedSeq_storesW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:429. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row avsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
-    "hol_name": "assigned_free_vars_seq_store_empty",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "crepAssignedFreeVars_nestedSeq_storesW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:439. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "var_exp_load_shape",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "crepExpVars_of_mem_loadShapeW",
@@ -9606,5 +9510,21 @@
     "hol_name": "not_mem_fst_zip_flookup_empty",
     "lean_name": "not_mem_fst_zip_flookup_empty",
     "reviewer": "Codex (source comparison; pan_commonPropsScript.sml:575 `~MEM x xs /\\ ALL_DISTINCT xs /\\ LENGTH xs = LENGTH ys ==> FLOOKUP (FEMPTY |++ ZIP (xs,ys)) x = NONE` ported over `FUPDATE_LIST FEMPTY (xs.zip ys)`/`FLOOKUP`; oracle rows nmfz_absent/nmfz_hit in pan_common_props_take_drop_el_zip_probe.out reproduced by PanCommonPropsZipDisjointParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "length_flatten_eq_size_of_shape",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "flattenHOL_length_eq_sizeOfShapeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panPropsScript.sml:171 states !v. is_wf_shape_nil (shape_of v) ==> LENGTH (flatten v) = size_of_shape (shape_of v). Lean renders is_wf_shape_nil as isWfShapeExactHOL [] over the exact ShapeHOL/StructContextExact carriers, flatten as flattenHOL, shape_of as shapeOfHOLExact and size_of_shape as sizeOfShapeHOL; oracle rows lfs_val/lfs_two/lfs_nested/lfs_val_len/lfs_nested_len/lfs_wf_nested in scripts/hol-probes/pan_props_length_flatten_probe.out, reproduced by Flapjack/Test/PanPropsShapeResVarParity.lean)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "is_wf_shape_nil_length_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "isWfShapeExactHOL_length_flatten",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact ValueHOL/ShapeHOL rendering: is_wf_shape_nil rendered as isWfShapeExactHOL ([] : StructContextExact), shape_of as shapeOfHOLExact, size_of_shape as sizeOfShapeHOL, flatten as flattenHOL, LENGTH as .length; both HOL side conditions preserved; reused the exact flattenHOL_length_eq_sizeOfShapeHOL (panPropsScript.sml:171); oracle rows iwf_val/iwf_struct/iwf_nested/iwf_val_len/iwf_size_val/iwf_wf_val/iwf_wf_struct in scripts/hol-probes/pan_to_crep_is_wf_shape_nil_probe.out, reproduced by Flapjack/Test/PanToCrepStateRelParity.lean)"
   }
 ]

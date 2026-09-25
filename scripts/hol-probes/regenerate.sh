@@ -1698,3 +1698,19 @@ run_probe pan_common_props_take_drop_el_zip_probeScript.sml pan_common_props_tak
   atdd_disjoint nmfz_hit \
   "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The panProps length_flatten_eq_size_of_shape probe observes that under the
+# empty-constructor context the flattened length of a well-formed value equals
+# its shape size (panPropsScript.sml:171).
+run_probe pan_props_length_flatten_probeScript.sml pan_props_length_flatten_probe.out \
+  lfs_val lfs_wf_nested \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The pan_to_crep is_wf_shape_nil_length_flatten probe observes the exact
+# flatten/size_of_shape relationship under the empty constructor context
+# (pan_to_crepProofScript.sml:2469).
+run_probe pan_to_crep_is_wf_shape_nil_probeScript.sml pan_to_crep_is_wf_shape_nil_probe.out \
+  iwf_val iwf_wf_struct \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"

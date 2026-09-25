@@ -6,17 +6,20 @@ import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.Sptree
 
 /-!
-State relation of the Crepe-to-Loop lowering, ported from
+State relation analogue for the Crepe-to-Loop lowering, based on
 `cakeml/pancake/proofs/crep_to_loopProofScript.sml` (the proof counterpart of
-`crep_to_loopScript.sml`).  It relates the whole 11-field `crepSem$state`
-(Lean `CrepHolState`) to the `loopSem$state` (Lean `LoopMachineState`).
+`crep_to_loopScript.sml`). The production-state relation below is not an exact
+HOL `state_rel` port: `CrepHolState` and `LoopMachineState` have String-backed
+code names, and the latter uses list/option fields where HOL uses finite maps
+and total functions. Standalone memory/global relations over exact field
+carriers remain tagged where appropriate.
 
 Only the fields the relation constrains are compared; HOL's `memaddrs`/
 `sh_memaddrs` are `set`s, rendered here as Boolean-valued membership maps
 (`BitVec width → Bool`), matching the `mdomain`/`shMdomain` fields of
 `LoopMachineState`.
 
-Tagged declarations that compare word-typed state fields are width-specialized
+Tagged declarations that compare word-typed fields directly are width-specialized
 to `BitVec width`, because HOL `crepSem$state`/`loopSem$state` are word-length
 indexed (`'a word` fields) and a generic-`α` carrier would not be an exact
 counterpart; those declarations carry `[NeZero width]`, because HOL word types
@@ -28,13 +31,14 @@ counterpart.  The relations over pure `num`/`num` finite maps (`distinct_funcs`,
 
 namespace Flapjack
 
-/-- Exact port of HOL `state_rel_def`
+/-- Flapjack analogue of HOL `state_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:28-36`):
     `state_rel s t` holds when the source and target states agree on the
     memory/stack domains, clock, endianness, FFI state, and base/top addresses.
-    The remaining `CrepHolState` fields (`locals`, `globals`, `code`, `memory`)
-    are related separately by `locals_rel`/`code_rel`/`mem_rel`/`globals_rel`. -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_def"]
+    The relation is untagged because its `CrepHolState` and `LoopMachineState`
+    parameters are production carriers: their code maps use String names and
+    their memory representations differ from HOL's `mlstring` finite maps and
+    total functions. -/
 def crepToLoopStateRel {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) : Prop :=
   s.memaddrs = t.mdomain ∧
@@ -45,10 +49,10 @@ def crepToLoopStateRel {width : Nat} [NeZero width] {σ : Type} (s : CrepHolStat
     s.baseAddress = t.baseAddr ∧
     s.topAddress = t.topAddr
 
-/-- Exact port of HOL `state_rel_intro`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`): the relation
-    unfolds to the same seven-field conjunction. -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_intro"]
+/-- Untagged field expansion of the Flapjack state relation. It has the same
+    seven equations as HOL `state_rel_intro`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:163-174`), but uses the
+    String-backed production state carriers described above. -/
 theorem crepToLoopStateRel_intro {width : Nat} [NeZero width] {σ : Type} (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) :
     crepToLoopStateRel s t ↔
@@ -102,10 +106,10 @@ theorem crepToLoopGlobalsRel_iff {width : Nat} [NeZero width]
       ∀ address value, sglobals address = some value → tglobals address = some (wlabWloc value) :=
   Iff.rfl
 
-/-- Exact port of HOL `state_rel_clock_add_zero`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`): a state
-    relation is preserved when the target clock is advanced by zero. -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "state_rel_clock_add_zero"]
+/-- Untagged Flapjack state-relation analogue of HOL `state_rel_clock_add_zero`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:219-223`). The equations
+    match, but the quantified production state carriers have String-backed code
+    names and do not match the exact HOL state types. -/
 theorem crepToLoopStateRel_clock_add_zero {width : Nat} [NeZero width] {σ : Type}
     (s : CrepHolState (BitVec width) σ)
     (t : LoopMachineState (BitVec width) σ) (h : crepToLoopStateRel s t) :
@@ -221,7 +225,7 @@ theorem crepToLoopCtxtMax_iff {κ : Type} (n : Nat) (fm : FiniteMap κ Nat) :
     crepToLoopCtxtMax n fm ↔ ∀ (v : κ) (m : Nat), FLOOKUP fm v = some m → m ≤ n :=
   Iff.rfl
 
-/-! ## `locals_rel` (UNTTAGGED — carrier gap)
+/-! ## `locals_rel` (untagged production analogue)
 
 HOL `locals_rel_def`
 (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) is stated over
@@ -249,10 +253,10 @@ counterparts:
   `domain l ⊆ domain t_locals` becomes `live n = true → (tLocals n).isSome`
   and `lookup n t_locals = SOME w` becomes `tLocals n = some w`.
 
-The exact tagged port is `crepToLoopLocalsRelHOL` below over the finite-map
-`CrepToLoopFiniteMapContext` carrier (`sptree$num_set`/`num_map` rendered
-extensionally); this untagged rendering over the production list-backed
-`LoopContext` is kept for production-side clients. -/
+The finite-map-shaped analogue `crepToLoopLocalsRelHOL` below uses
+`CrepToLoopFiniteMapContext`; it still has the `funcs` key mismatch documented
+below and is also untagged. This list-backed rendering remains for production
+clients. -/
 
 /-- Untagged faithful-shape rendering of HOL `crep_to_loop$locals_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`); see the
@@ -286,7 +290,7 @@ theorem crepToLoopLocalsRel_iff {width : Nat} [NeZero width] {α : Type} (contex
         tLocals n = some (wlabWloc v)) :=
   Iff.rfl
 
-/-! ## Exact carriers for `locals_rel_def`
+/-! ## Finite-map-shaped support for `locals_rel_def`
 
 HOL `crep_to_loop$ctxt` carries `vars : num |-> num` (a finite map), whereas the
 production `LoopContext.vars` is a list-backed association list.  The
@@ -294,23 +298,26 @@ proof-side carrier below uses the repo's `FiniteMap` (the same rendering of
 HOL's `|->` as `PanToCrepProofContext.vars`).  HOL's `sptree$num_set`
 (`domain l`, `n ∈ domain l`) is rendered as a Boolean membership map and
 `sptree$num_map` (`lookup n t_locals`) as its extensional Option-valued
-lookup — the same set-as-membership-map / finite-map-as-function renderings
-already accepted for the tagged `crepToLoopStateRel`, `crepToLoopMemRel` and
-`crepToLoopGlobalsRel`. -/
+lookup. The standalone memory/global relations use these renderings over exact
+fields; whole-state and context relations stay untagged until their
+String-backed code-name carriers are aligned. -/
 
-/-- Proof-side carrier for Cake's `crep_to_loop` context, with HOL's finite-map
-    `vars : num |-> num`; field names mirror the HOL record. -/
+/-- Proof-side context analogue for Cake's `crep_to_loop` context. Its `vars`
+    field uses HOL's finite-map shape, but `funcs` remains keyed by production
+    `FunName = String` rather than HOL `mlstring`, so declarations quantifying
+    over this whole record remain untagged. -/
 structure CrepToLoopFiniteMapContext where
   vars : FiniteMap Nat Nat
   funcs : FiniteMap FunName (Nat × Nat)
   vmax : Nat
   target : Compiler.Encoders.Asm.AsmArchitecture
 
-/-- Exact width-indexed port of HOL `locals_rel_def`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`) over the
-    finite-map context carrier.  The `sptree$num_set`/`num_map` arguments are
-    rendered extensionally (Boolean membership map and Option-valued lookup). -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_def"]
+/-- Flapjack analogue of HOL `locals_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`). The relation
+    uses the right extensional `sptree$num_set`/`num_map` renderings, but its
+    context parameter includes `funcs : FiniteMap FunName ...` with
+    `FunName = String`; HOL context uses `mlstring` keys. The declaration is
+    intentionally untagged until the context carrier is exact. -/
 def crepToLoopLocalsRelHOL {width : Nat} [NeZero width]
     (ctxt : CrepToLoopFiniteMapContext)
     (live : Nat → Bool)
@@ -348,9 +355,10 @@ preserved. The `sptree` `insert` is rendered as the function update
 `fun m => if m = n then some w else tLocals m`, matching the extensional
 `num_map` rendering used by `crepToLoopLocalsRelHOL`. -/
 
-/-- Exact port of HOL `locals_rel_insert_gt_vmax`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:228-238`). -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_insert_gt_vmax"]
+/-- Preservation lemma for the untagged production `locals_rel` analogue,
+    corresponding to HOL `locals_rel_insert_gt_vmax`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:228-238`). It retains
+    the same context-carrier mismatch and therefore has no HOL tag. -/
 theorem crepToLoopLocalsRelHOL_insert_gt_vmax {width : Nat} [NeZero width]
     (ctxt : CrepToLoopFiniteMapContext)
     (live : Nat → Bool)
@@ -374,14 +382,11 @@ theorem crepToLoopLocalsRelHOL_insert_gt_vmax {width : Nat} [NeZero width]
     have hmn : m ≠ n := by omega
     exact ⟨m, hvar, hlive, by simp [hmn, ht]⟩
 
-/-- Exact port of HOL `locals_rel_cutset_prop`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:239-249`): shrinking the
-    live `num_set` from `cset'` to `cset` (with `cset ⊆ cset'`) preserves the
-    relation against the same source locals, because `sptree$subspt` only
-    restricts the live domain. `subspt cset cset'` is rendered as the pointwise
-    implication `∀ n, live n = true → live' n = true`, and the two source-local
-    obligations are reconciled by `FLOOKUP` functionality on `ctxt.vars`. -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "locals_rel_cutset_prop"]
+/-- Preservation lemma for the untagged production `locals_rel` analogue,
+    corresponding to HOL `locals_rel_cutset_prop`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:239-249`). Shrinking
+    the live domain preserves the relation, but the context parameter still
+    carries String keys where HOL uses `mlstring`, so no HOL tag is attached. -/
 theorem crepToLoopLocalsRelHOL_cutset_prop {width : Nat} [NeZero width]
     (ctxt : CrepToLoopFiniteMapContext)
     (live live' : Nat → Bool)
@@ -512,16 +517,14 @@ def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
 
 /-! ## Association-list lookup
 
-`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`): a member
-of a duplicate-free association list is returned by looking up its key in the
-`fromAList` tree.  HOL `sptree$fromAList`/`lookup` on a duplicate-free list is
-rendered as `List.lookup` on that list (equivalently `FLOOKUP` of the standard
-alist→finite-map encoding), and `ALL_DISTINCT (MAP FST xs)` as
-`(entries.map Prod.fst).Nodup`; the key type is fixed to `num` as in HOL. -/
+`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`) concludes
+`lookup n (fromAList xs) = SOME x` for an HOL sptree. The helper below instead
+concludes `List.lookup n xs = some x`. Although that is useful for association
+lists, it is not the HOL theorem: `fromAList` has not yet been ported. The exact
+sptree statement is tracked by bead `flapjack-b0s`. -/
 
-/-- Exact port of HOL `mem_lookup_fromalist_some`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_lookup_fromalist_some"]
+/-- Flapjack-only association-list lemma. It is not HOL's
+    `mem_lookup_fromalist_some`, whose conclusion uses sptree `fromAList`. -/
 theorem memLookupFromAListSome {β : Type} [BEq Nat] [LawfulBEq Nat]
     {entries : List (Nat × β)} {n : Nat} {x : β}
     (hnodup : (entries.map Prod.fst).Nodup) (hmem : (n, x) ∈ entries) :
@@ -647,9 +650,11 @@ private theorem nodup_of_mapM_of_inj {ι α : Type} (f : ι → Option α)
                 hinj a (List.mem_cons_self) b (List.mem_cons_of_mem a hb) (hfa.trans hfb.symm)
               exact hanot (hab ▸ hb)
 
-/-- Exact port of HOL `all_distinct_ctxt_lookup_all_distinct`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3345`). -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "all_distinct_ctxt_lookup_all_distinct"]
+/-- Flapjack analogue of HOL `all_distinct_ctxt_lookup_all_distinct`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3345`). Its context uses
+    `FunName = String` as the function-map key, whereas HOL context functions are
+    keyed by `mlstring`; the theorem is intentionally untagged until that context
+    carrier is exact. -/
 theorem allDistinctCtxtLookupAllDistinct (ctxt : CrepToLoopFiniteMapContext)
     (rts : List Nat) (n : Nat)
     (hrts : rts.Nodup) (hinj : crepToLoopDistinctVars ctxt.vars) :

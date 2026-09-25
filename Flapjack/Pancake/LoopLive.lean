@@ -840,9 +840,11 @@ theorem loopAssignedVars_seq (first second : LoopProg α) :
       loopAssignedVars first ++ loopAssignedVars second := by
   simp [loopAssignedVars]
 
-/-- Width-indexed exact port of Cake's `assigned_vars_seq_split`
-    (`cakeml/pancake/semantics/loopPropsScript.sml:890`). -/
-@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_seq_split"]
+/-- Width-specialized Flapjack analogue of Cake's `assigned_vars_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:890`). It quantifies over
+    production `LoopProg`, whose `ffi` constructor uses Lean `String`; HOL's
+    `loopLang$prog` uses `mlstring`, so this theorem is intentionally untagged.
+    The exact carrier is `HolLoopProg` in `LoopLang.lean`. -/
 theorem loopAssignedVars_seqW {width : Nat} [NeZero width]
     (first second : LoopProg (BitVec width)) :
     loopAssignedVars (.seq first second) =
@@ -869,9 +871,9 @@ theorem loopAssignedVars_nestedSeq (statements : List (LoopProg α)) :
 /-- Cake's `assigned_vars_nested_seq_split`
     (`cakeml/pancake/semantics/loopPropsScript.sml:880`): the variables
     assigned by a nested sequence of two statement lists is the concatenation
-    of the two lists' assigned variables.  This generic statement is the
-    untagged Flapjack helper; the exact width-indexed HOL port is
-    `loopAssignedVars_nestedSeq_appendW`. -/
+    of the two lists' assigned variables. This generic production helper and
+    its width-specialized counterpart are untagged because both use
+    String-backed production `LoopProg`; exact HOL proofs can use `HolLoopProg`. -/
 theorem loopAssignedVars_nestedSeq_append (statements rest : List (LoopProg α)) :
     loopAssignedVars (loopNestedSeq (statements ++ rest)) =
       loopAssignedVars (loopNestedSeq statements) ++
@@ -879,9 +881,12 @@ theorem loopAssignedVars_nestedSeq_append (statements rest : List (LoopProg α))
   rw [loopAssignedVars_nestedSeq, loopAssignedVars_nestedSeq,
     loopAssignedVars_nestedSeq, List.flatMap_append]
 
-/-- Width-indexed exact port of Cake's `assigned_vars_nested_seq_split`
-    (`cakeml/pancake/semantics/loopPropsScript.sml:880`). -/
-@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_nested_seq_split"]
+/-- Width-specialized Flapjack analogue of Cake's
+    `assigned_vars_nested_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:880`). It quantifies over
+    production `LoopProg`, whose `ffi` constructor uses Lean `String`; HOL's
+    `loopLang$prog` uses `mlstring`, so this theorem is intentionally untagged.
+    The exact carrier is `HolLoopProg` in `LoopLang.lean`. -/
 theorem loopAssignedVars_nestedSeq_appendW {width : Nat} [NeZero width]
     (statements rest : List (LoopProg (BitVec width))) :
     loopAssignedVars (loopNestedSeq (statements ++ rest)) =
@@ -981,17 +986,23 @@ theorem loopAssignedVars_loopAssignPairs (names : List Nat)
           rw [ih expressions (by simpa using hlen)]
           rfl
 
-/-- Width-indexed exact port of Cake's `assigned_vars_nested_assign`
+/-- Width-specialized Flapjack analogue of Cake's
+    `assigned_vars_nested_assign`
     (`cakeml/pancake/semantics/loopPropsScript.sml:897`); HOL's
-    `MAP2 Assign xs ys` is `loopAssignPairs`. -/
-@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_nested_assign"]
+    `MAP2 Assign xs ys` is `loopAssignPairs`. The production `LoopProg` carrier
+    has a String-backed `ffi` name, unlike HOL's `mlstring`, so this theorem is
+    intentionally untagged. The exact carrier is `HolLoopProg` in `LoopLang.lean`.
+    -/
 theorem loopAssignedVars_loopAssignPairsW {width : Nat} [NeZero width]
     (names : List Nat) (expressions : List (LoopExp (BitVec width)))
     (hlen : names.length = expressions.length) :
     loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) = names :=
   loopAssignedVars_loopAssignPairs names expressions hlen
 
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "assigned_vars_MAPi_Assign"]
+/-- Flapjack analogue of `crep_to_loopProof$assigned_vars_MAPi_Assign`
+    (`crep_to_loopProofScript.sml:355`). The production `LoopProg` carrier has
+    a String-backed `ffi` name, unlike HOL's `mlstring`; this theorem is
+    intentionally untagged. An exact version can quantify over `HolLoopProg`. -/
 theorem loopAssignedVars_mapIdxAssign {width : Nat} [NeZero width]
     (les : List (LoopExp (BitVec width))) (offset : Nat) :
     loopAssignedVars (loopNestedSeq (les.mapIdx (fun n e => LoopProg.assign (n + offset) e))) =

@@ -2,12 +2,11 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.CrepSem.Eval
+import Flapjack.Pancake.Proofs.CrepArith.ExactStateProjection
 
 /-! Theorem counterparts and Flapjack support for CakeML's
-    `crep_arithProofScript.sml`. The tagged `dest_const_def` and
-    `dest_const_thm` statements use the canonical positive-width HOL word
-    carrier `Fin width → Bool`, with `[NeZero width]`. They do not quantify
-    over arbitrary value carriers or arbitrary finite-index types. Separate
+    `crep_arithProofScript.sml`. The tagged `dest_const_thm` uses the exact
+    width-indexed `CrepExpHOL` carrier with `[NeZero width]`. Separate
     untagged helpers support explicit `HolFiniteDimension` transports and
     executable RISC-V `BitVec` arithmetic. -/
 
@@ -177,30 +176,28 @@ private theorem crepMulConst_holFiniteDimension {ι : Type}
 /-- Generic Flapjack support lemma: a successful destination test identifies
     the expression as exactly that constant. This is not tagged as HOL's
     `dest_const_thm`, whose expression and value are restricted to the HOL
-    word type. The faithful positive-width word specialization is tagged below;
-    this arbitrary-carrier helper remains untagged for the local simp proof. -/
+    word type. This arbitrary-carrier helper remains untagged for the local
+    simp proof. -/
 theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     (value : α)
     (h : crepDestConst expression = some value) :
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Width-specialized word form of CakeML's `dest_const_thm`
-    (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
-    `NeZero width` supplies HOL's nonempty finite-index condition. The
-    arbitrary-carrier production helper remains untagged.
-
-    Type-convention note (see the direct HOL rows `word_carrier_bool`,
-    `dimindex_8`, `dimindex_pos` in
-    `scripts/hol-probes/crep_arith_dest_const_probe.out`): HOL `'a word` is
-    literally the finite boolean function space `bool[dimindex(:'a)]`, and
-    `dimindex` is always positive. Instantiating the HOL index type at
-    cardinality `width` therefore yields exactly the Lean carrier
-    `Fin width → Bool`, and `[NeZero width]` encodes `dimindex > 0`; no HOL word
-    dimension lies outside this family, so the width-indexed statement is the
-    exact HOL theorem, not a specialization. The paired Lean fixture lives in
-    `Flapjack/Test/CrepeDestConstParity.lean`. -/
+/-- Exact width-indexed port of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`) over HOL's expression carrier
+    `CrepExpHOL`. `[NeZero width]` supplies HOL's nonempty word dimension.
+    The generic production AST helper above remains untagged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+theorem crepDestConstHOL_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExpHOL width)
+    (value : BitVec width)
+    (h : crepDestConstHOL expression = some value) :
+    expression = .const value := by
+  cases expression <;> simp_all [crepDestConstHOL]
+
+/-- Untagged extraction helper over the generic `CrepExp` syntax, retained for
+    existing support proofs. It is wider than HOL's exact `CrepExpHOL` carrier. -/
 theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool))
     (value : Fin width → Bool)
@@ -696,6 +693,78 @@ private theorem crepDest2ExpFuel_sound {n : Nat} [NeZero n]
                 omega
               _ = 2 ^ (result - start) % 2 ^ n := by
                 rw [hdiff, Nat.mod_eq_of_lt hpowlt]
+
+/-! This theorem connects the bounded production recognizer to the
+    value-recursive BitVec specification. It isolates the finite-fuel
+    implementation detail before relating either representation to HOL's
+    implicit finite-index word carrier. -/
+private theorem crepDest2ExpFuel_eq_bitVecSpec {n : Nat} [NeZero n]
+    (fuel start : Nat) (word : RiscV.Word n)
+    (hbound : word.toNat < 2 ^ fuel) :
+    crepDest2ExpFuel fuel start word = crepDest2ExpBitVecSpec start word := by
+  induction fuel generalizing start word with
+  | zero =>
+      have hzero : word.toNat = 0 := by simpa using hbound
+      have hword : word = 0 := BitVec.eq_of_toNat_eq (by simpa using hzero)
+      rw [crepDest2ExpFuel, crepDest2ExpBitVecSpec, hword]
+      simp
+  | succ fuel ih =>
+      rw [crepDest2ExpFuel, crepDest2ExpBitVecSpec]
+      have hshift :
+          ShiftRight.shiftRight word (1 : RiscV.Word n) =
+            BitVec.ushiftRight word 1 := by
+        change BitVec.ushiftRight word
+          (1 : RiscV.Word n).toNat = BitVec.ushiftRight word 1
+        rw [bitVec_one_toNat]
+      have hshiftBound : (BitVec.ushiftRight word 1).toNat < 2 ^ fuel := by
+        rw [BitVec.ushiftRight_eq, BitVec.toNat_ushiftRight,
+          Nat.shiftRight_eq_div_pow]
+        have hbound' : word.toNat < 2 * 2 ^ fuel := by
+          calc
+            word.toNat < 2 ^ (fuel + 1) := hbound
+            _ = 2 ^ fuel * 2 := by rw [Nat.pow_succ]
+            _ = 2 * 2 ^ fuel := by omega
+        omega
+      by_cases hzero : word = 0
+      · have hzeroB : (word == 0) = true := by
+          cases hb : (word == 0) <;> simp_all
+        simp only [hzeroB, if_true]
+      · by_cases hone : word = 1
+        · change word ≠ (0 : BitVec n) at hzero
+          change word = (1 : BitVec n) at hone
+          have hzeroB : (word == 0) = false := by
+            cases hb : (word == 0) <;> simp_all
+          have honeB : (word == 1) = true := by
+            cases hb : (word == 1) <;> simp_all
+          simp only [hzeroB, honeB, if_true]
+        · by_cases hlow : AndOp.and word 1 = 0
+          · change word ≠ (0 : BitVec n) at hzero
+            change word ≠ (1 : BitVec n) at hone
+            change AndOp.and word (1 : BitVec n) = (0 : BitVec n) at hlow
+            have hzeroB : (word == 0) = false := by
+              cases hb : (word == 0) <;> simp_all
+            have honeB : (word == 1) = false := by
+              cases hb : (word == 1) <;> simp_all
+            simp only [hzeroB, honeB, hlow]
+            rw [hshift]
+            exact ih (start + 1) (BitVec.ushiftRight word 1) hshiftBound
+          · change word ≠ (0 : BitVec n) at hzero
+            change word ≠ (1 : BitVec n) at hone
+            have hzeroB : (word == 0) = false := by
+              cases hb : (word == 0) <;> simp_all
+            have honeB : (word == 1) = false := by
+              cases hb : (word == 1) <;> simp_all
+            have hoddB : (AndOp.and word 1 != 0) = true := by
+              cases hb : (AndOp.and word 1 != 0) <;> simp_all
+            simp only [hzeroB, honeB, hoddB, if_true]
+
+theorem crepDest2Exp_eq_bitVecSpec {n : Nat} [NeZero n]
+    (start : Nat) (word : RiscV.Word n) :
+    crepDest2Exp start word = crepDest2ExpBitVecSpec start word := by
+  change crepDest2ExpFuel (n + 1) start word = _
+  apply crepDest2ExpFuel_eq_bitVecSpec
+  exact Nat.lt_trans word.isLt
+    (Nat.pow_lt_pow_right (by decide) (by omega))
 
 /-- Width-parametric BitVec support for HOL's `dest_2exp_bound`
     (`crep_arithProofScript.sml:10`). HOL defines `word_log2 w` as
@@ -2548,7 +2617,12 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
     with the concrete HOL `crepSem$eval` equations and the selected HOL
     `finite_index` instance. `holFiniteIndex_bijective` proves the defining
     unique-in-range property for the Lean dimension dictionary, but does not
-    establish that instance identity. -/
+    establish that instance identity. `CrepHolState.locals` and `globals`
+    are arbitrary lookup functions rather than HOL finite maps; `code` uses
+    `FunName = String` rather than HOL `mlstring`; and `ffi` uses Flapjack's
+    `FfiState`. Expression evaluation does not inspect `code` or `ffi`, but the
+    state and code-update binders still need an exact representation relation
+    before this support theorem can carry the HOL tag. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2581,7 +2655,13 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
     code-only update, `n2w` simplifier image, and full `Option word_lab`
     equality match HOL's local theorem shape. It remains untagged because the
     source evaluator/state representation has not yet been proved identical
-    to native HOL `crepSem$eval` and its finite-map state. -/
+    to native HOL `crepSem$eval`. `CrepHolState.locals` and `globals` are
+    arbitrary lookup functions rather than HOL finite maps, `code` uses
+    `FunName = String` rather than HOL `mlstring`, and `ffi` uses Flapjack's
+    `FfiState`. The canonical `Fin width` word-index carrier still has not
+    been identified with HOL's selected `finite_index` instance. The evaluator
+    does not read `code` or `ffi`, but the theorem's state and code-update
+    binders need an exact representation relation before attaching a tag. -/
 theorem crepSimpExpCorrect1HolWordBitsSourceWordLab
     {width : Nat} [NeZero width] {σ : Type}
     (f : FunName × (List Nat × CrepProg (Fin width → Bool)) →

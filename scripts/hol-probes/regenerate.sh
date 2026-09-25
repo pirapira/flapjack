@@ -291,6 +291,10 @@ run_probe crep_to_loop_assigned_vars_mapidx_probeScript.sml crep_to_loop_assigne
   avma_nil avma_offset_zero \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe loop_props_assigned_vars_probeScript.sml loop_props_assigned_vars_probe.out \
+  avs_seq_split avs_nested_assign_three \
+  "$cake_dir/pancake/semantics/loopPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"

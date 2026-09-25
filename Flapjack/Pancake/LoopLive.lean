@@ -840,6 +840,15 @@ theorem loopAssignedVars_seq (first second : LoopProg α) :
       loopAssignedVars first ++ loopAssignedVars second := by
   simp [loopAssignedVars]
 
+/-- Width-indexed exact port of Cake's `assigned_vars_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:890`). -/
+@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_seq_split"]
+theorem loopAssignedVars_seqW {width : Nat} [NeZero width]
+    (first second : LoopProg (BitVec width)) :
+    loopAssignedVars (.seq first second) =
+      loopAssignedVars first ++ loopAssignedVars second :=
+  loopAssignedVars_seq first second
+
 theorem loopAccVars_skip (names : List Nat) :
     loopAccVars (.skip : LoopProg α) names = names := by
   rfl
@@ -860,13 +869,25 @@ theorem loopAssignedVars_nestedSeq (statements : List (LoopProg α)) :
 /-- Cake's `assigned_vars_nested_seq_split`
     (`cakeml/pancake/semantics/loopPropsScript.sml:880`): the variables
     assigned by a nested sequence of two statement lists is the concatenation
-    of the two lists' assigned variables. -/
+    of the two lists' assigned variables.  This generic statement is the
+    untagged Flapjack helper; the exact width-indexed HOL port is
+    `loopAssignedVars_nestedSeq_appendW`. -/
 theorem loopAssignedVars_nestedSeq_append (statements rest : List (LoopProg α)) :
     loopAssignedVars (loopNestedSeq (statements ++ rest)) =
       loopAssignedVars (loopNestedSeq statements) ++
         loopAssignedVars (loopNestedSeq rest) := by
   rw [loopAssignedVars_nestedSeq, loopAssignedVars_nestedSeq,
     loopAssignedVars_nestedSeq, List.flatMap_append]
+
+/-- Width-indexed exact port of Cake's `assigned_vars_nested_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:880`). -/
+@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_nested_seq_split"]
+theorem loopAssignedVars_nestedSeq_appendW {width : Nat} [NeZero width]
+    (statements rest : List (LoopProg (BitVec width))) :
+    loopAssignedVars (loopNestedSeq (statements ++ rest)) =
+      loopAssignedVars (loopNestedSeq statements) ++
+        loopAssignedVars (loopNestedSeq rest) :=
+  loopAssignedVars_nestedSeq_append statements rest
 
 def loopAssignNames (names : List Nat) (expression : LoopExp α) :
     List (LoopProg α) :=
@@ -959,6 +980,16 @@ theorem loopAssignedVars_loopAssignPairs (names : List Nat)
           rw [← loopAssignedVars_nestedSeq (loopAssignPairs names expressions)]
           rw [ih expressions (by simpa using hlen)]
           rfl
+
+/-- Width-indexed exact port of Cake's `assigned_vars_nested_assign`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:897`); HOL's
+    `MAP2 Assign xs ys` is `loopAssignPairs`. -/
+@[hol "cakeml/pancake/semantics/loopPropsScript.sml" "assigned_vars_nested_assign"]
+theorem loopAssignedVars_loopAssignPairsW {width : Nat} [NeZero width]
+    (names : List Nat) (expressions : List (LoopExp (BitVec width)))
+    (hlen : names.length = expressions.length) :
+    loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) = names :=
+  loopAssignedVars_loopAssignPairs names expressions hlen
 
 @[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "assigned_vars_MAPi_Assign"]
 theorem loopAssignedVars_mapIdxAssign {width : Nat} [NeZero width]

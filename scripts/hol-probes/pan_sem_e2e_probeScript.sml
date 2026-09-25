@@ -342,6 +342,12 @@ val _ = print_eval "recursive_call_callee_skip"
   ``case panSem$evaluate (panLang$Call NONE «skip» [], ^recursive_skip_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
 
+val _ = print_eval "recursive_deccall_callee_skip"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «skip» [] panLang$Skip,
+       ^recursive_skip_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
 val recursive_break_state =
   ``((ARB:((8),unit) panSem$state) with <|
       locals := FEMPTY |+ («keep», ValWord (42w:8 word));
@@ -350,6 +356,12 @@ val recursive_break_state =
 
 val _ = print_eval "recursive_call_callee_break"
   ``case panSem$evaluate (panLang$Call NONE «break» [], ^recursive_break_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val _ = print_eval "recursive_deccall_callee_break"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «break» [] panLang$Skip,
+       ^recursive_break_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
 
 val recursive_continue_state =

@@ -521,4 +521,8 @@ val _ = print_eval "fix_clock_keeps_new"
       (NONE, ((ARB:((8),unit) panSem$state) with <| clock := 4 |>)) of
       (res,s') => (res, s'.clock)``
 
+val _ = print_eval "isWord_def_word" ``panSem$isWord (Word (3w:8 word))``
+
+val _ = print_eval "theWord_def_word" ``panSem$theWord (Word (3w:8 word))``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

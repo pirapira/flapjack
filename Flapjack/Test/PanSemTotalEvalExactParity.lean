@@ -14,9 +14,9 @@ import Flapjack.Test.PanSemExtCallExactParity
     `scripts/hol-probes/pan_sem_e2e_probe.out`; matching exception handling
     corresponds to `call_handles_exception_7`. If rows correspond to
     `exact_if_nonzero_*`, `exact_if_zero_*`, `exact_if_nonword_*`, and
-    `exact_if_failed_*` in `pan_sem_ite_e2e_probe.out`. Dec success and shape
-    mismatch correspond to `dec_restores_locals` and `dec_shape_mismatch` in
-    `pan_sem_e2e_probe.out`. -/
+    `exact_if_failed_*` in `pan_sem_ite_e2e_probe.out`. Dec success, shape
+    mismatch, missing old binding, and Break restoration correspond to the
+    `dec_*` rows in `pan_sem_e2e_probe.out`. -/
 
 namespace Flapjack.Test.PanSemTotalEvalExactParity
 
@@ -569,6 +569,10 @@ def recursiveDecRows : Bool :=
   let success := recursiveExact
     (.dec (ml "x") .one (.const 9)
       (.return (.var .local (ml "x")))) baseState
+  let missingOld := recursiveExact
+    (.dec (ml "fresh") .one (.const 9) .skip) baseState
+  let breakBody := recursiveExact
+    (.dec (ml "x") .one (.const 9) .break) baseState
   let mismatch := recursiveExact
     (.dec (ml "x") (.comb []) (.const 9) .skip) baseState
   let initializerFailure := recursiveExact
@@ -577,13 +581,19 @@ def recursiveDecRows : Bool :=
     | some (some (.returned (.val (.word value))), post) =>
         value.toNat == 9 && localWord post "x" == some 7
     | _ => false
+  let missingOldOk := match missingOld with
+    | some (none, post) => localWord post "fresh" == none && localWord post "x" == some 7
+    | _ => false
+  let breakBodyOk := match breakBody with
+    | some (some .break, post) => localWord post "x" == some 7
+    | _ => false
   let mismatchOk := match mismatch with
     | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
     | _ => false
   let initializerFailureOk := match initializerFailure with
     | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
     | _ => false
-  successOk && mismatchOk && initializerFailureOk
+  successOk && missingOldOk && breakBodyOk && mismatchOk && initializerFailureOk
 
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
@@ -666,8 +676,8 @@ def runChecks : IO Bool := do
     IO.println "PASS exact-state recursive If selects nonzero/zero branches and preserves state on Error"
   else IO.println "FAIL exact-state recursive If selects nonzero/zero branches and preserves state on Error"
   if recursiveDecRows then
-    IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, and local restoration rows"
-  else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, and local restoration rows"
+    IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
+  else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
   if recursiveGapRows then
     IO.println "PASS exact-state dispatcher keeps unassembled constructors explicitly open"
   else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"

@@ -645,7 +645,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval",
     "statement_status": "documented_mismatch",
-    "reviewer": "Quantifies over an arbitrary HolFiniteDimension and uses exact finite-map, MlString, CrepProgHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The source evaluator still transports through the explicit dimension and word-operation adapter; its identity with HOL's implicit finite_index instances and native crepSem$eval remains open. No @[hol] tag."
+    "reviewer": "Uses an implicit HolFiniteDimension instance for an arbitrary word-index carrier and exact finite-map, MlString, CrepProgHOL, CrepExpHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The source evaluator still transports through the dimension and word-operation adapter; its identity with HOL's selected finite_index instance and native crepSem$eval remains open. No @[hol] tag."
   },
   {
     "hol_path": null,

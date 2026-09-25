@@ -847,14 +847,15 @@ theorem crepSimpExpCorrect1CrepSemHOLStateHolEval
 /-- Arbitrary finite-index support over the exact HOL-shaped state/code
 carriers. The state retains finite-map locals/globals/code, the HOL
 `MlString`/`CrepProgHOL` code-entry type, total memory and set domains, and
-`HolFfiState`; `dimension` supplies the explicit finite-index enumeration.
+`HolFfiState`; the implicit `HolFiniteDimension` instance supplies the
+finite-index enumeration.
 Expressions and word-lab results are transported between the exact
 `CrepExpHOL`/`BitVec` syntax and the dimension-indexed `ι → Bool` source
 evaluator. This remains untagged because that source evaluator's dimension
 and word-operation adapters have not yet been proved identical to HOL's
 implicit `finite_index` instances and native `crepSem$eval`. -/
 theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
-    {ι : Type} (dimension : HolFiniteDimension ι) {σ : Type}
+    {ι : Type} [dimension : HolFiniteDimension ι] {σ : Type}
     (update : MlString ×
       (List Nat × CrepProgHOL dimension.width) →
       List Nat × CrepProgHOL dimension.width)
@@ -873,7 +874,6 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
     evalCrepHolFiniteWordSourceExpWordLab dimension
       state.toSourceEvaluatorState
       (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) := by
-  letI : HolFiniteDimension ι := dimension
   let source := state.toSourceEvaluatorState
   let sourceExpression :=
     mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)

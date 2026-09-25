@@ -1551,3 +1551,8 @@ run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with
   sswc_one sswc_comb_miss \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The mem_load probe observes the exact HOL mem_load over the faithful carriers.
+run_probe pan_sem_mem_load_exact_probeScript.sml pan_sem_mem_load_exact_probe.out \
+  ml_one_hit ml_comb_offset \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -160,4 +160,35 @@ mutual
                 · exact convShapeList_byteRanged fuel trees (fun t hmem => ht t (by simp [hmem])) shapes' hrec s htail
 end
 
+theorem convParams_byteRanged : ∀ (fuel : Nat) (trees : List ParseTree),
+    (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ params, convParams fuel trees = some params →
+    ∀ p ∈ params, StringByteRanged p.1 ∧ ShapeByteRanged p.2 := by
+  intro fuel trees
+  fun_induction convParams fuel trees
+  · intro ht params h p hp
+    cases h
+    simp at hp
+  · rename_i shapeTree nameTree rest ih
+    intro ht params h p hp
+    cases hs : convShape fuel shapeTree with
+    | none => simp [hs] at h
+    | some shape =>
+      simp only [hs] at h
+      cases hn : convIdent nameTree with
+      | none => simp [hn] at h
+      | some name =>
+        simp only [hn] at h
+        cases hp2 : convParams fuel rest with
+        | none => simp [hp2] at h
+        | some restParams =>
+          simp only [hp2] at h
+          cases h
+          rw [List.mem_cons] at hp
+          rcases hp with rfl | htail
+          · exact ⟨convIdent_byteRanged (ht nameTree (by simp)) hn,
+              convShape_byteRanged fuel shapeTree (ht shapeTree (by simp)) _ hs⟩
+          · exact ih (fun t hmem => ht t (by simp [hmem])) restParams hp2 p htail
+  · intro ht params h p hp
+    simp at h
+
 end Flapjack.Parser

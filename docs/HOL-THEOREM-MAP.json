@@ -2260,12 +2260,13 @@
      "lean_name": "freshNameHOL_not_mem_hol",
      "statement_status": "reviewed_names_as_string",
      "names_as_string": [
-       "name"
+       "name",
+       "names"
      ],
      "names_as_string_boundary": [
        "name"
      ],
-     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The tagged theorem freshNameHOL_not_mem_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and the equivalent conclusion freshNameHOL name names not-in names; it delegates to the untagged helper freshNameHOL_not_mem in Flapjack/Pancake/PanGlobals.lean, which is stated over the reviewed @[hol] port freshNameHOL (fresh_name_def, pan_globalsScript.sml:55). Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names list is used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The tagged theorem freshNameHOL_not_mem_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and the equivalent conclusion freshNameHOL name names not-in names; it delegates to the untagged helper freshNameHOL_not_mem in Flapjack/Pancake/PanGlobals.lean, which is stated over the reviewed @[hol] port freshNameHOL (fresh_name_def, pan_globalsScript.sml:55). Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names list is used only for membership equality, never inspected. flapjack-ds5 (bead flapjack-cz2): names: equality/map-key-only (the HOL `mlstring list` is represented by Lean `List String` and is used only for membership equality), while name: byte-observable remains the only byte-observable identifier. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
    },
    {
      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2274,12 +2275,14 @@
      "lean_name": "freshNameHOL_not_mem_of_subset_hol",
      "statement_status": "reviewed_names_as_string",
      "names_as_string": [
-       "name"
+       "name",
+       "names",
+       "names'"
      ],
      "names_as_string_boundary": [
        "name"
      ],
-     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved in HOL via fresh_name_correct. The tagged theorem freshNameHOL_not_mem_of_subset_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and hypotheses (set inclusion stated pointwise, as HOL uses SUBSET_DEF) and the same conclusion, over the reviewed @[hol] port freshNameHOL; its proof goes through the tagged freshNameHOL_not_mem_hol, mirroring HOL's use of fresh_name_correct. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_of_subset_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names and names' lists are used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved in HOL via fresh_name_correct. The tagged theorem freshNameHOL_not_mem_of_subset_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and hypotheses (set inclusion stated pointwise, as HOL uses SUBSET_DEF) and the same conclusion, over the reviewed @[hol] port freshNameHOL; its proof goes through the tagged freshNameHOL_not_mem_hol, mirroring HOL's use of fresh_name_correct. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_of_subset_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names and names' lists are used only for membership equality, never inspected. flapjack-ds5 (bead flapjack-cz2): names: equality/map-key-only and names': equality/map-key-only (the HOL `mlstring list`s are represented by Lean `List String` and are used only for membership equality), while name: byte-observable remains the only byte-observable identifier. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
    },
   {
     "hol_path": null,

@@ -187,15 +187,17 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         exact_cases = {
             ("Flapjack/Pancake/Proofs/PanGlobals.lean", "freshNameHOL_not_mem_hol"): (
                 "fresh_name_correct",
+                ["name", "names"],
             ),
             (
                 "Flapjack/Pancake/Proofs/PanGlobals.lean",
                 "freshNameHOL_not_mem_of_subset_hol",
             ): (
                 "fresh_name_correct'",
+                ["name", "names", "names'"],
             ),
         }
-        for key, (hol_name,) in exact_cases.items():
+        for key, (hol_name, names_fields) in exact_cases.items():
             with self.subTest(lean_name=key[1]):
                 record = manifest_by_key[key]
                 self.assertEqual(
@@ -205,9 +207,17 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertEqual(
                     record["statement_status"], "reviewed_names_as_string"
                 )
-                self.assertEqual(record["names_as_string"], ["name"])
+                self.assertEqual(record["names_as_string"], names_fields)
                 self.assertEqual(record["names_as_string_boundary"], ["name"])
                 self.assertIn("byte-observable", record["reviewer"])
+                for identifier in names_fields:
+                    classification = (
+                        "byte-observable" if identifier == "name"
+                        else "equality/map-key-only"
+                    )
+                    self.assertIn(
+                        f"{identifier}: {classification}", record["reviewer"]
+                    )
                 self.assertIn(key, tagged)
         mismatch_cases = {
             ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct"): (

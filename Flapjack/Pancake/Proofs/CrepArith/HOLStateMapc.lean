@@ -1254,6 +1254,64 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceWordLab
   rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
   exact hPreserved
 
+/-- Production-evaluator view of the arbitrary-index exact-state theorem
+above. The adapter is constructed solely from the HOL-observable state fields
+and the explicit word-dimension representation; it uses the source memory
+model, not the canonical RISC-V target. Thus the theorem has no target-success
+or target-operation premise and preserves the complete `Option word_lab`
+result at every positive width. It remains untagged until this state-derived
+runtime adapter is proved identical to native HOL `crepSem$eval`. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLab
+    {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
+    (update : MlString × codeEntry → codeEntry)
+    (state : CrepSemHOLFiniteState ι codeEntry σ)
+    (expression : CrepExp (ι → Bool))
+    (h : (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression).map PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression)).map PanWordLab.word =
+    (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      expression).map PanWordLab.word := by
+  have hRuntimeSource (source : CrepSemHOLFiniteState ι codeEntry σ)
+      (e : CrepExp (ι → Bool)) :
+      (evalCrepRuntimeExp
+        (source.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+        e).map PanWordLab.word =
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        source.toSourceEvaluatorState e := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepRuntimeExp_sourceWord_eq]
+  have hSource : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression ≠ none := by
+    simpa [hRuntimeSource] using h
+  calc
+    (evalCrepRuntimeExp
+        ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+          dimension)
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression)).map PanWordLab.word =
+      evalCrepHolFiniteWordSourceExpWordLab dimension
+        (state.mapc update).toSourceEvaluatorState
+        (crepSimpExp
+          (fun n => bitVecToHolWord dimension
+            (BitVec.ofNat dimension.width n)) expression) :=
+          hRuntimeSource (state.mapc update) _
+    _ = evalCrepHolFiniteWordSourceExpWordLab dimension
+          state.toSourceEvaluatorState expression :=
+        crepSimpExpCorrect1CrepSemHOLFiniteStateSourceWordLab
+          update state expression hSource
+    _ = (evalCrepRuntimeExp
+          (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+          expression).map PanWordLab.word :=
+        (hRuntimeSource state expression).symm
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

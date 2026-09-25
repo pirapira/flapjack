@@ -608,6 +608,14 @@
     "reviewer": "Flapjack-only arbitrary-index expression/state source support with exact finite-map code update and complete Option word_lab result; syntax and state use the same ι → Bool word carrier. The evaluator still uses HolFiniteDimension and is not identified with native HOL crepSem$eval."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLab",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-width statement over production evalCrepRuntimeExp with a state-derived HOL source memory-model adapter and no target-operation premise; preserves exact mapc state update and Option word_lab result. Native HOL eval_def identity and selected finite_index correspondence remain open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

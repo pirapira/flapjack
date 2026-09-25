@@ -430,6 +430,21 @@ end
     structContextLookupHOL name ((candidate, info) :: rest) =
       (if name = candidate then some info else structContextLookupHOL name rest) := rfl
 
+/-- `ALOOKUP` of an appended context is the first match in the prefix, or else
+    the lookup in the suffix (HOL `ALOOKUP_APPEND`). -/
+theorem structContextLookupHOL_append (name : MlS) (first second : StructContextExact) :
+    structContextLookupHOL name (first ++ second) =
+      (match structContextLookupHOL name first with
+        | some info => some info
+        | none => structContextLookupHOL name second) := by
+  induction first with
+  | nil => rfl
+  | cons pair rest ih =>
+      obtain ⟨candidate, info⟩ := pair
+      by_cases h : name = candidate
+      · simp [h]
+      · simp [h, ih]
+
 @[simp] theorem sizeOfShapeWithContextHOL_one (context : StructContextExact) :
     sizeOfShapeWithContextHOL context .one = 1 := rfl
 

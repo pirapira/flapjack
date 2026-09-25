@@ -209,6 +209,97 @@ structure CrepSemHOLState (width : Nat) [NeZero width] (ffiState : Type) where
   baseAddr : BitVec width
   topAddr : BitVec width
 
+/-- Broad (unrestricted) counterpart of `CrepSemHOLState`: the three map fields
+are plain lookup functions, a strict superset of HOL's finite maps. It exists
+only to state the canonical finite-map translation witness
+`holFmapAsFiniteSupportWitness`; `FiniteSupport` cuts out the HOL-image
+subcarrier. -/
+structure CrepSemBroadState (width : Nat) [NeZero width] (ffiState : Type) where
+  locals : Nat → Option (HolWordLab width)
+  globals : BitVec 5 → Option (HolWordLab width)
+  code : MlString → Option (List Nat × CrepProgHOL width)
+  memory : BitVec width → HolWordLab width
+  memaddrs : BitVec width → Prop
+  shMemaddrs : BitVec width → Prop
+  clock : Nat
+  be : Bool
+  ffi : HolFfiState ffiState
+  baseAddr : BitVec width
+  topAddr : BitVec width
+
+/-- Field-wise finite support of `CrepSemBroadState`, matching HOL's `|->`
+fields. -/
+def CrepSemBroadState.FiniteSupport {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemBroadState width ffiState) : Prop :=
+  (∃ keys : List Nat, ∀ key, state.locals key ≠ none → key ∈ keys) ∧
+  (∃ keys : List (BitVec 5), ∀ key, state.globals key ≠ none → key ∈ keys) ∧
+  (∃ keys : List MlString, ∀ key, state.code key ≠ none → key ∈ keys)
+
+/-- Forget the finite-support witnesses, reading every map through `.lookup`. -/
+def CrepSemHOLState.toBroad {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemHOLState width ffiState) : CrepSemBroadState width ffiState where
+  locals := state.locals.lookup
+  globals := state.globals.lookup
+  code := state.code.lookup
+  memory := state.memory
+  memaddrs := state.memaddrs
+  shMemaddrs := state.shMemaddrs
+  clock := state.clock
+  be := state.be
+  ffi := state.ffi
+  baseAddr := state.baseAddr
+  topAddr := state.topAddr
+
+/-- The projection lands in the finite-support subtype. -/
+theorem CrepSemHOLState.toBroad_finiteSupport {width : Nat} [NeZero width]
+    {ffiState : Type} (state : CrepSemHOLState width ffiState) :
+    state.toBroad.FiniteSupport :=
+  ⟨state.locals.finiteSupport, state.globals.finiteSupport, state.code.finiteSupport⟩
+
+/-- Rebuild the finite-map carrier from a broad state together with a
+finite-support proof; the inverse of `toBroad` on the finite-support subtype. -/
+def CrepSemBroadState.ofBroad {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemBroadState width ffiState) (h : state.FiniteSupport) :
+    CrepSemHOLState width ffiState where
+  locals := { lookup := state.locals, finiteSupport := h.1 }
+  globals := { lookup := state.globals, finiteSupport := h.2.1 }
+  code := { lookup := state.code, finiteSupport := h.2.2 }
+  memory := state.memory
+  memaddrs := state.memaddrs
+  shMemaddrs := state.shMemaddrs
+  clock := state.clock
+  be := state.be
+  ffi := state.ffi
+  baseAddr := state.baseAddr
+  topAddr := state.topAddr
+
+/-- `toBroad` after `ofBroad` is the identity on a finite-support broad state. -/
+theorem CrepSemBroadState.toBroad_ofBroad {width : Nat} [NeZero width]
+    {ffiState : Type} (state : CrepSemBroadState width ffiState)
+    (h : state.FiniteSupport) : (ofBroad state h).toBroad = state := rfl
+
+/-- `ofBroad` after `toBroad` is the identity on the finite-map carrier. -/
+theorem CrepSemBroadState.ofBroad_toBroad {width : Nat} [NeZero width]
+    {ffiState : Type} (state : CrepSemHOLState width ffiState) :
+    ofBroad state.toBroad state.toBroad_finiteSupport = state := by
+  cases state
+  rfl
+
+namespace CrepSemHOLState
+
+/-- Canonical kernel witness for the `fmap_as_finite_support` `@[hol]`
+qualifier on `CrepSemHOLState`: `HolFiniteMapExact` is extensional and the
+finite-map carrier is invertibly related to the broad one. -/
+theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width] {ffiState : Type} :
+    (∀ (state : CrepSemBroadState width ffiState) (h : state.FiniteSupport),
+        (CrepSemBroadState.ofBroad state h).toBroad = state) ∧
+    (∀ state : CrepSemHOLState width ffiState,
+        CrepSemBroadState.ofBroad state.toBroad state.toBroad_finiteSupport = state) :=
+  ⟨fun state h => CrepSemBroadState.toBroad_ofBroad state h,
+    fun state => CrepSemBroadState.ofBroad_toBroad state⟩
+
+end CrepSemHOLState
+
 /-- Arbitrary-index HOL-shaped expression state for polymorphic evaluator
 support. The word index is abstract as `ι`, with words represented by
 `ι → Bool`; evaluator proofs supply a `HolFiniteDimension ι` dictionary.
@@ -495,6 +586,51 @@ theorem lookup_resVarW {width : Nat} [NeZero width]
         HolFiniteMapExact.update, resVarW, Flapjack.resVar, FUPDATE, h]
 
 end CrepSemHOLState
+
+/-- Port of HOL `dec_clock_def` (`crepSemScript.sml:145-148`) over the
+    finite-support `CrepSemHOLState` carrier. Now declared in the same module as
+    the owning structure and its canonical `holFmapAsFiniteSupportWitness`, so
+    it can carry `(fmap_as_finite_support := [locals, globals, code])` once the
+    owner-disambiguation checker is integrated. Tags withheld pending
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4` / `flapjack-pxn.18.3.7.1.3.1.1.2.6`. -/
+def decClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) : CrepSemHOLState width σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Port of HOL `fix_clock_def` (`crepSemScript.sml:150-152`) over the
+    finite-support `CrepSemHOLState` carrier. The result is polymorphic in the
+    unconstrained `res` component, as in HOL. Tags withheld pending the
+    owner-disambiguation checker. -/
+def fixClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type} {β : Type}
+    (oldState : CrepSemHOLState width σ) (step : β × CrepSemHOLState width σ) :
+    β × CrepSemHOLState width σ :=
+  (step.1, { step.2 with
+    clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- Port of HOL `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-158`):
+    `fix_clock` never increases the clock. Tags withheld pending the
+    owner-disambiguation checker. -/
+theorem fixClockCrepSemHOL_IMP_LESS_EQ {width : Nat} [NeZero width] {σ : Type}
+    {β : Type} (state : CrepSemHOLState width σ) (x : β × CrepSemHOLState width σ)
+    (res : β) (s1 : CrepSemHOLState width σ)
+    (h : fixClockCrepSemHOL state x = (res, s1)) : s1.clock ≤ state.clock := by
+  obtain ⟨value, stepState⟩ := x
+  simp only [fixClockCrepSemHOL, Prod.mk.injEq] at h
+  obtain ⟨_, hstate⟩ := h
+  subst hstate
+  change (if state.clock < stepState.clock then state.clock else stepState.clock) ≤
+    state.clock
+  split <;> omega
+
+/-- Port of HOL `mem_load_def` (`crepSemScript.sml:48-51`) over the
+    finite-support `CrepSemHOLState` carrier: a total `word → word_lab` memory
+    guarded by the `memaddrs` set. Tags withheld pending the
+    owner-disambiguation checker. -/
+def memLoadCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
+    (address : BitVec width) (state : CrepSemHOLState width σ)
+    [DecidablePred state.memaddrs] :
+    Option (HolWordLab width) :=
+  if state.memaddrs address then some (state.memory address) else none
 
 /-- Project expression-observable fields of the arbitrary-index state to the
 existing source evaluator. Code and FFI observations are fixed because

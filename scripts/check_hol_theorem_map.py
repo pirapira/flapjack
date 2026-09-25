@@ -767,7 +767,7 @@ DOCUMENTED_MISMATCHES = {
         "support whereas HOL res_var/FLOOKUP range over finite maps. Tag withdrawn; faithful port "
         "over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
-    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "decClockCrepSemHOL"): (
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "decClockCrepSemHOL"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "dec_clock_def",
         "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
@@ -776,7 +776,7 @@ DOCUMENTED_MISMATCHES = {
         "tag; temporarily withdrawn pending qualifier infrastructure bead "
         "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
     ),
-    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL"): (
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "fixClockCrepSemHOL"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "fix_clock_def",
         "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
@@ -785,7 +785,7 @@ DOCUMENTED_MISMATCHES = {
         "tag; temporarily withdrawn pending qualifier infrastructure bead "
         "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
     ),
-    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL_IMP_LESS_EQ"): (
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "fixClockCrepSemHOL_IMP_LESS_EQ"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "fix_clock_IMP_LESS_EQ",
         "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
@@ -794,7 +794,7 @@ DOCUMENTED_MISMATCHES = {
         "tag; temporarily withdrawn pending qualifier infrastructure bead "
         "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
     ),
-    ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "memLoadCrepSemHOL"): (
+    ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", "memLoadCrepSemHOL"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "mem_load_def",
         "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): "
@@ -1078,6 +1078,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_shapeOfHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "panPrimopHOLExact_isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_nil_step1"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean",
+         "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_drop"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),

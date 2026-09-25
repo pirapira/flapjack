@@ -248,6 +248,113 @@ theorem panPrimopHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width]
     rfl
   · simp at h
 
+/-- `[local]` step of HOL `panProps$is_wf_shape_v_nil_step1`
+    (`cakeml/pancake/semantics/panPropsScript.sml:48-54`): with the struct
+    context empty, `is_wf_shape` on the `shape_of` image implies
+    `is_wf_shape_v` on the value.  Over the exact `ValueHOL width` and
+    MlString-keyed `StructContextExact` carriers; the Bool predicate is
+    rendered as `= true`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_nil_step1"]
+theorem isWfShapeValueHOLExact_nil_step1 {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width)
+    (h : context = [] ∧
+      Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true) :
+    isWfShapeValueHOLExact context value = true := by
+  obtain ⟨hctx, hshape⟩ := h
+  subst hctx
+  induction value using isWfShapeValueHOLExact.induct
+    (motive2 := fun values =>
+      Flapjack.Pancake.PanLang.isWfShapesExactHOL
+          ([] : Flapjack.Pancake.PanLang.StructContextExact)
+          (values.map shapeOfHOLExact) = true →
+        isWfShapeValuesHOLExact
+          ([] : Flapjack.Pancake.PanLang.StructContextExact) values = true) with
+  | case1 value => simp only [isWfShapeValueHOLExact.eq_1]
+  | case2 values ih =>
+      have hshape' : Flapjack.Pancake.PanLang.isWfShapesExactHOL
+          ([] : Flapjack.Pancake.PanLang.StructContextExact)
+          (values.map shapeOfHOLExact) = true := by
+        simpa [shapeOfHOLExact, Flapjack.Pancake.PanLang.isWfShapeExactHOL] using hshape
+      simpa only [isWfShapeValueHOLExact.eq_2] using ih hshape'
+  | case3 name fields _ =>
+      simp [shapeOfHOLExact] at hshape
+  | case4 => simp only [isWfShapeValuesHOLExact.eq_1]
+  | case5 value values ihValue ihValues =>
+      rename_i hshape'
+      have hp : Flapjack.Pancake.PanLang.isWfShapeExactHOL
+            ([] : Flapjack.Pancake.PanLang.StructContextExact)
+            (shapeOfHOLExact value) = true ∧
+          Flapjack.Pancake.PanLang.isWfShapesExactHOL
+            ([] : Flapjack.Pancake.PanLang.StructContextExact)
+            (values.map shapeOfHOLExact) = true := by
+        simpa [List.map_cons, Flapjack.Pancake.PanLang.isWfShapesExactHOL.eq_2,
+          Bool.and_eq_true] using hshape'
+      rw [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true]
+      exact ⟨ihValue hp.1, ihValues hp.2⟩
+
+/-- Exact port of HOL `panProps$is_wf_shape_v_nil`
+    (`cakeml/pancake/semantics/panPropsScript.sml:56-61`): with the context
+    empty, `is_wf_shape` on the `shape_of` image is equivalent to
+    `is_wf_shape_v` on the value.  The forward direction is
+    `isWfShapeValueHOLExact_nil_step1`, the backward direction is the tagged
+    `is_wf_shape_of_v` port. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_nil" 56]
+theorem isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil
+    {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (hctx : context = [])
+    (value : ValueHOL width) :
+    Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) =
+      isWfShapeValueHOLExact context value := by
+  subst hctx
+  rw [Bool.eq_iff_iff]
+  constructor
+  · intro hshape
+    exact isWfShapeValueHOLExact_nil_step1 [] value ⟨rfl, hshape⟩
+  · intro hvalue
+    exact isWfShapeValueHOLExact_shapeOfHOLExact [] value hvalue
+
+/-- Exact port of HOL `panProps$is_wf_shape_v_drop`
+    (`cakeml/pancake/semantics/panPropsScript.sml:63-71`):
+    `!sctxt v. is_wf_shape_v (DROP k sctxt) v ==> is_wf_shape_v sctxt v`.
+    The context is the exact MlString-keyed `StructContextExact`; `DROP` is
+    `List.drop`, and `structContextLookupHOL_append` plays the role of
+    `ALOOKUP_APPEND`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_drop"]
+theorem isWfShapeValueHOLExact_drop {width : Nat} [NeZero width]
+    (taken : Nat) (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width)
+    (h : isWfShapeValueHOLExact (context.drop taken) value = true) :
+    isWfShapeValueHOLExact context value = true := by
+  induction value using isWfShapeValueHOLExact.induct
+    (motive2 := fun values =>
+      isWfShapeValuesHOLExact (context.drop taken) values = true →
+        isWfShapeValuesHOLExact context values = true) with
+  | case1 value => simp only [isWfShapeValueHOLExact.eq_1]
+  | case2 values ih =>
+      have h' : isWfShapeValuesHOLExact (context.drop taken) values = true := by
+        simpa only [isWfShapeValueHOLExact.eq_2] using h
+      simpa only [isWfShapeValueHOLExact.eq_2] using ih h'
+  | case3 name fields ihFields =>
+      simp only [isWfShapeValueHOLExact.eq_3, Bool.and_eq_true] at h ⊢
+      obtain ⟨hlook, hflds⟩ := h
+      constructor
+      · have happ : Flapjack.Pancake.PanLang.structContextLookupHOL name context =
+            (match Flapjack.Pancake.PanLang.structContextLookupHOL name (context.take taken) with
+              | some info => some info
+              | none => Flapjack.Pancake.PanLang.structContextLookupHOL name (context.drop taken)) := by
+          have h2 := Flapjack.Pancake.PanLang.structContextLookupHOL_append name
+            (context.take taken) (context.drop taken)
+          rwa [List.take_append_drop taken context] at h2
+        rw [happ]
+        cases htk : Flapjack.Pancake.PanLang.structContextLookupHOL name (context.take taken) with
+        | none => simp [hlook]
+        | some info => simp
+      · exact ihFields hflds
+  | case4 => simp only [isWfShapeValuesHOLExact.eq_1]
+  | case5 value values ihValue ihValues =>
+      rename_i h5
+      simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true] at h5 ⊢
+      exact ⟨ihValue h5.1, ihValues h5.2⟩
+
 /-! Exact port of HOL `panProps$every_exp` (`panPropsScript.sml:1311-1333`) and
     `panProps$exps_of` (`panPropsScript.sml:1336-1358`) over the exact
     MlString/width-indexed `ExpHOL width`/`ProgHOL width` carriers.

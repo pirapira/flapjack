@@ -77,6 +77,30 @@ private theorem crepExpVarsList_mem_iff
   | cons expression expressions ih =>
       simp [crepExpVars.crepExpVarsList, List.mem_append, ih]
 
+/-! Source review of HOL `eval_var_cexp_present_ctxt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:693`) finds no exact Lean
+    port in this module. Its conclusion says that each name appearing in
+    `FLAT (MAP var_cexp es)` is present in some `ct.vars` binding's `ns` list,
+    under the exact `state_rel`, successful source `eval`, `code_rel`,
+    `locals_rel`, `localised_exp`, and `compile_exp` premises. The helper below
+    proves only that names emitted by `compileExpHOL` are bounded by `vmax`;
+    that is a different conclusion and does not establish the context lookup
+    result, so it must not receive the theorem's `@[hol]` tag.
+
+    `PanSemStateFiniteExact.evalHOLFinite` is now tagged with the finite-map
+    qualifier, with its fifteen clause equations in `EvalFinite.lean`. This
+    does not port Pan-to-Crep's `state_rel`, `code_rel`, or `locals_rel`.
+    The available cross-pass `stateRel` in `PanToCrep.lean` is
+    documented there as Flapjack-specific: it uses production
+    `PanSemState`/`CrepRuntimeState`, String-backed identifiers, optional
+    `PanValue` memory, and a target relation that is not HOL's direct `word_lab`
+    state relation. These are carrier and premise-shape mismatches, not a
+    missing proof hint. A faithful port now needs exact Pan-to-Crep
+    context/state/local relations; the open prerequisites are tracked by
+    `flapjack-pxn.18.3.7.1.3.1` and `flapjack-pxn.18.3.5.8.8`. Keep bead
+    `flapjack-4ac.5.21` open until that exact statement can be assembled and
+    proved. -/
+
 /-- Flapjack-specific induction invariant for the HOL theorem below, split
     into list and expression compiler cases so Lean's compiler recursor can
     discharge its structural branches. It has no separate HOL declaration. -/

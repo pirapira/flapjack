@@ -15,10 +15,18 @@ open Flapjack.Basis.Pure.MlString
 private def identityOracle : HolOracle Unit :=
   fun _ state _ bytes => .ret state bytes
 
+private def locals8 : CrepHOLFiniteMap Nat (HolWordLab 8) :=
+  ⟨fun key => if key = 2 then some (.word 17) else none, [2], by
+    intro key hlookup
+    by_cases hkey : key = 2
+    · simp [hkey]
+    · simp [hkey] at hlookup
+  ⟩
+
 private def state8 : CrepSemStateWidthModel 8 Unit :=
-  { locals := fun _ => none
-    globals := fun _ => none
-    code := fun _ => none
+  { locals := locals8
+    globals := CrepHOLFiniteMap.empty
+    code := CrepHOLFiniteMap.empty
     memory := fun word => .word word
     memaddrs := fun _ => False
     shMemaddrs := fun _ => False
@@ -28,9 +36,12 @@ private def state8 : CrepSemStateWidthModel 8 Unit :=
     baseAddr := 3
     topAddr := 250 }
 
-example : state8.locals 4 = none := rfl
-example : state8.globals (BitVec.ofNat 5 2) = none := rfl
-example : state8.code = fun _ => none := rfl
+example : state8.locals.lookup 2 = some (.word 17) := by simp [state8, locals8]
+example : state8.locals.lookup 4 = none := by
+  apply CrepHOLFiniteMap.lookup_eq_none_of_not_mem_support
+  decide
+example : state8.globals.lookup (BitVec.ofNat 5 2) = none := rfl
+example (name : MlString) : state8.code.lookup name = none := rfl
 example : state8.memory (BitVec.ofNat 8 7) = .word (BitVec.ofNat 8 7) := rfl
 example : state8.memaddrs (BitVec.ofNat 8 7) = False := rfl
 example : state8.shMemaddrs (BitVec.ofNat 8 7) = False := rfl

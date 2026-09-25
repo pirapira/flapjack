@@ -499,6 +499,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_loadGlob_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension LoadGlob evaluator bridge to the direct BitVec state evaluator; it preserves exact global lookup success/failure but does not establish the whole native eval_def or selected HOL finite_index correspondence."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_baseAddr_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension BaseAddr leaf bridge from the finite-word source evaluator to the direct BitVec state evaluator; arbitrary HOL finite_index and recursive eval_def remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_topAddr_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension TopAddr leaf bridge from the finite-word source evaluator to the direct BitVec state evaluator; arbitrary HOL finite_index and recursive eval_def remain open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepSemHOLStateSource_load32_eq_memLoad32HOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."

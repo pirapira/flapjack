@@ -354,6 +354,56 @@ theorem evalCrepHolFiniteWordSourceExp_var_toHolEval
           CrepHolState.toHolFiniteBitVecState, hLocal, mapCrepHolWordLab,
           panTheWord]
 
+/-- All-dimension `LoadGlob` constructor correspondence to the direct BitVec
+state evaluator. This preserves the exact global lookup, including misses,
+under the finite-word-to-BitVec representation. It is Flapjack support, not a
+standalone HOL theorem: the whole recursive evaluator and selected HOL
+`finite_index` instance are not identified here. -/
+theorem evalCrepHolFiniteWordSourceExp_loadGlob_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (address : BitVec 5) :
+    ((evalCrepHolFiniteWordSourceExp dimension state (.loadGlob address)).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.loadGlob address) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hGlobal : state.globals address with
+  | none => simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+      evalCrepHolExp, CrepHolState.toHolFiniteBitVecState, hGlobal]
+  | some cell => cases cell with
+      | word value => simp [evalCrepHolFiniteWordSourceExp,
+          evalCrepHolExpWordLab, evalCrepHolExp,
+          CrepHolState.toHolFiniteBitVecState, hGlobal, mapCrepHolWordLab,
+          panTheWord]
+
+/-- All-dimension `BaseAddr` source/BitVec evaluator clause correspondence.
+This state-independent leaf is Flapjack support and carries no HOL tag while
+the enclosing arbitrary-index evaluator relation remains open. -/
+theorem evalCrepHolFiniteWordSourceExp_baseAddr_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) :
+    ((evalCrepHolFiniteWordSourceExp dimension state .baseAddr).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension) .baseAddr := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+    evalCrepHolExp, CrepHolState.toHolFiniteBitVecState,
+    mapCrepHolWordLab]
+
+/-- All-dimension `TopAddr` source/BitVec evaluator clause correspondence.
+This state-independent leaf is Flapjack support and carries no HOL tag while
+the enclosing arbitrary-index evaluator relation remains open. -/
+theorem evalCrepHolFiniteWordSourceExp_topAddr_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) :
+    ((evalCrepHolFiniteWordSourceExp dimension state .topAddr).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension) .topAddr := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+    evalCrepHolExp, CrepHolState.toHolFiniteBitVecState,
+    mapCrepHolWordLab]
+
 /-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
 state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec
 projection. This isolates the memory cell, domain, and endian fields from the

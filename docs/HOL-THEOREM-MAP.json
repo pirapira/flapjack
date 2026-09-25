@@ -48,6 +48,22 @@
     "reviewer": "Lean-only recursive soundness helper; HOL exposes only the public destination theorems"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpFuel_eq_bitVecSpec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only implementation/spec bridge: production fuel-bounded recognition agrees with a value-recursive BitVec specification under a numeric bound. It does not identify either BitVec definition with HOL's implicit finite_index word carrier, so it is not a port of dest_2exp_def."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2Exp_eq_bitVecSpec",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only RISC-V-width corollary of the fuel/spec bridge, using the width-derived production fuel bound. The recursive specification and recognizer are both BitVec-based, so this does not port HOL's polymorphic word-valued dest_2exp definition."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "localised_prog_def",
     "lean_path": "Flapjack/PanLocalised.lean",

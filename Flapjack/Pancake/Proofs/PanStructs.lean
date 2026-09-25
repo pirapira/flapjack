@@ -616,11 +616,18 @@ theorem structInfosOk_append (xs ys : StructContext)
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
   rwa [List.drop_left] at hdrop
 
-/-- Exact API translation of HOL `struct_infos_ok_cons`
+/-- Production analogue of HOL `struct_infos_ok_cons`
     (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
     fields, well-formed field shapes, and its computed size preserves the
-    structure-context invariant. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    structure-context invariant. It remains untagged because HOL uses
+    `MlS`/`ShapeHOL`/`StructContextExact` with the fields/size-only exact
+    `struct_info`, while this statement uses String-backed production
+    `StructName`, `Shape`, `StructContext`, and cache-augmented `StructInfo`.
+    Its well-formedness and size premises also use production String-keyed
+    lookup. The logical hypotheses and conclusion otherwise match HOL; no
+    byte-observable name output is present. A faithful exact-carrier invariant
+    and its cons/append theorems are tracked by
+    `flapjack-pxn.18.3.5.8.18`. -/
 theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
     (hxs : structInfosOk xs)
     (hflds : (info.fields.map Prod.fst).Nodup)

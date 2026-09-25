@@ -133,6 +133,24 @@ DOCUMENTED_MISMATCHES = {
         "cannot be covered by names_as_string. Keep the analogue untagged "
         "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
     ),
+    ("Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean", "panStructConvertValue"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "convert_v_def",
+        "flapjack-ds5 (source comparison with pan_structsProofScript.sml:31-37: the "
+        "three constructor equations match, but the carrier differs. HOL is over "
+        "panSem$v (panSemScript.sml:22) with stcname/fldname = mlstring and "
+        "Val ('a word_lab); production PanValue alpha uses StructName/FieldName = "
+        "String and stores alpha directly in the first constructor rather than a "
+        "word_lab wrapper. The constructor field-type difference is beyond name "
+        "representation, so names_as_string does not apply. Exact HolValue/HolWordLab "
+        "carriers now exist (PanSem.lean, flapjack-pxn.18.3.6.8), but no HOL-shaped "
+        "convert_v over HolValue with a production bridge is defined yet; keep this "
+        "source analogue untagged pending flapjack-pxn.18.3.5.8.19 (parent "
+        "flapjack-pxn.18.3.5.8). Direct HOL row "
+        "convert_named_record=RStruct [ValWord 3w; ValWord 5w] in "
+        "pan_structs_compile_correct_probe.out:1; paired Lean regression "
+        "Flapjack.Test.PanStructsCompileCorrect:13-17.)"
+    ),
     ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake"): (
         "cakeml/pancake/pan_globalsScript.sml",
         "compile_def",
@@ -162,7 +180,10 @@ DOCUMENTED_MISMATCHES = {
         "names_as_string qualifier does not authorize specializing a "
         "polymorphic HOL name to String. The exact polymorphic port is fpermName "
         "(reviewed_exact); globalRenameFunctionName is retained as production "
-        "infrastructure. Direct HOL rows in pan_globals_fperm_name_probe.out."
+        "infrastructure. Direct HOL rows in pan_globals_fperm_name_probe.out. "
+        "flapjack-ds5 confirms the withdrawal on the flapjack-main coordinator "
+        "request (2026-09-25); faithful-port dependency flapjack-pxn.18.3.5.8 "
+        "(parent flapjack-pxn.18.3.5.7.2)."
     ),
     ("Flapjack/Pancake/PanGlobals.lean", "globalRenameProg"): (
         "cakeml/pancake/pan_globalsScript.sml",
@@ -349,6 +370,26 @@ DOCUMENTED_MISMATCHES = {
         "Flapjack/Test/CrepGlobalShapeParity.lean:307-312. No exact "
         "finite-support carrier; tag remains withdrawn pending "
         "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "fixCrepHolClockW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "fix_clock_def",
+        "flapjack-ds4 (source comparison with crepSemScript.sml:150-152: the "
+        "clause `fix_clock old_s (res, new_s) = (res, new_s with clock := if "
+        "old_s.clock < new_s.clock then old_s.clock else new_s.clock)` matches the "
+        "Lean clamp clause for clause, with HOL's result/state pair exposed as the "
+        "explicit `step` binder. However the quantified whole-state carrier "
+        "CrepHolState (BitVec width) stores locals/globals/code as unrestricted "
+        "Nat-to-Option, BitVec-5-to-Option and FunName-to-Option functions that "
+        "admit infinite support, a strict superset of HOL's finite maps "
+        "(crepSemScript.sml:20-31). names_as_string cannot authorize that carrier "
+        "and no NameRanged byte witness applies to a state result. Direct HOL rows "
+        "fix_clock_clamps / fix_clock_keeps_lower are in crep_fix_clock_probe.out "
+        "and the clamp is sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:292-296. On the CrepSemHOLState "
+        "finite-support carrier the set_var/set_globals/upd_locals/empty_locals/"
+        "res_var bridges exist, but there is still no fix_clock bridge. Tag remains "
+        "withdrawn pending flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
     ("Flapjack/Pancake/Semantics/CrepProps.lean", "decCrepHolClock_simp"): (
         "cakeml/pancake/semantics/crepPropsScript.sml",

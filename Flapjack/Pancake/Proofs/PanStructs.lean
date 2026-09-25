@@ -12,11 +12,32 @@ translation limits are documented at the declarations.
 
 namespace Flapjack
 
-/-- HOL's local `compile_exps_eq_map` (`pan_structsProofScript.sml:11`): the
-    production recursive helper used by `structCompileExp` maps the production
-    single-expression compiler over the list. `List.map` represents HOL `MAP`;
-    `[BEq String]` is the typeclass needed by the Lean implementation's lookup. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL's local `compile_exps_eq_map`
+    (`pan_structsProofScript.sml:11`): the production recursive helper used by
+    `structCompileExp` maps the production single-expression compiler over the
+    list. `List.map` represents HOL `MAP`; `[BEq String]` is the typeclass
+    needed by the Lean implementation's lookup. Not an exact port; see the note
+    below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL's
+-- `compile_exps_eq_map` (`pan_structsProofScript.sml:11`) is over the record
+-- `context` (`pan_structsScript.sml:15-21`) whose `structs` field is the
+-- fields-only list `(stcname # (fldname # shape) list) list`, with
+-- `stcname`/`fldname` = `mlstring`, and over the same mutually recursive
+-- `compile_exp`/`compile_exps` pair (`pan_structsScript.sml:107-154`). This
+-- Lean statement is over production `StructPassContext`
+-- (`Flapjack/Pancake/PanStructs.lean:41-45`), whose `structs : StructContext`
+-- has `StructInfo` entries carrying the production-only `shapedFields` cache
+-- (HOL's `structs` field is a bare `(fldname # shape) list`, no `struct_info`)
+-- and whose `locals`/`globals` are `InfoMap Shape`. The constructors therefore
+-- differ in arity and field types, not only in name representation, and
+-- `structCompileExp` passes the full `StructContext` to `structCompileShape`,
+-- whereas HOL `compile_shape` consumes the fields-only `ctxt.structs`. A
+-- `(names_as_string := ...)` qualifier does not authorize these carrier
+-- differences. The exact MlString carriers are available and the faithful port
+-- is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- Oracle: `scripts/hol-probes/pan_structs_compile_exp_probe.out` row
+-- `list_map=T`. Fixture:
+-- `Flapjack.Test.PanStructsCompileExpParity.structCompileExps_eq_map_fixture`.
 theorem structCompileExps_eq_map {α : Type} [BEq String] (context : StructPassContext) :
     (structCompileExp.structCompileExps (α := α) context :
       List (Exp α) → List (Exp α)) =
@@ -742,10 +763,24 @@ theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : Struct
       rw [← hdropOne (.comb (info'.fields.map Prod.snd)) hwfComb]
       exact h4 (name, info') hentry
 
-/-- Exact translation of HOL's local `alookup_map_structs_ok`
+/-- Production-carrier analogue of HOL's local `alookup_map_structs_ok`
     (`pan_structsProofScript.sml:243`): a found structure in a valid context
-    has distinct field names. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    has distinct field names. Not an exact port; see the note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL keys
+-- structure/field names by `stcname`/`fldname` = `mlstring`, its context is
+-- `(stcname # struct_info) list` with `struct_info = <| fields; size |>` (exactly
+-- fields and size; see the `alookup_map_structs_ok` oracle in
+-- `scripts/hol-probes/afindi_probe.out`), and lookup is `ALOOKUP` over
+-- `mlstring`. The Lean statement quantifies the production `StructContext =
+-- List (StructName × StructInfo)` where `StructName`/`FieldName` = `String`,
+-- `StructInfo` carries the extra `shapedFields` cache, and lookup is the
+-- first-match `lookupInfo` requiring `[BEq String] [LawfulBEq String]`; the
+-- record arity, lookup, and equality side conditions differ beyond the name
+-- representation, so `(names_as_string := ...)` does not apply. The exact
+-- MlString/exact-record carrier port is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsAfindiParity` instantiates this theorem on
+-- `simpleContext`.
 theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
     (context : StructContext) (info : StructInfo)
     (hlookup : lookupInfo name context = some info)

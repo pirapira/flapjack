@@ -2620,7 +2620,12 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceEvalClass {ι : Type} {σ : Type}
     with the concrete HOL `crepSem$eval` equations and the selected HOL
     `finite_index` instance. `holFiniteIndex_bijective` proves the defining
     unique-in-range property for the Lean dimension dictionary, but does not
-    establish that instance identity. -/
+    establish that instance identity. `CrepHolState.locals` and `globals`
+    are arbitrary lookup functions rather than HOL finite maps; `code` uses
+    `FunName = String` rather than HOL `mlstring`; and `ffi` uses Flapjack's
+    `FfiState`. Expression evaluation does not inspect `code` or `ffi`, but the
+    state and code-update binders still need an exact representation relation
+    before this support theorem can carry the HOL tag. -/
 theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
     [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →
@@ -2653,7 +2658,13 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
     code-only update, `n2w` simplifier image, and full `Option word_lab`
     equality match HOL's local theorem shape. It remains untagged because the
     source evaluator/state representation has not yet been proved identical
-    to native HOL `crepSem$eval` and its finite-map state. -/
+    to native HOL `crepSem$eval`. `CrepHolState.locals` and `globals` are
+    arbitrary lookup functions rather than HOL finite maps, `code` uses
+    `FunName = String` rather than HOL `mlstring`, and `ffi` uses Flapjack's
+    `FfiState`. The canonical `Fin width` word-index carrier still has not
+    been identified with HOL's selected `finite_index` instance. The evaluator
+    does not read `code` or `ffi`, but the theorem's state and code-update
+    binders need an exact representation relation before attaching a tag. -/
 theorem crepSimpExpCorrect1HolWordBitsSourceWordLab
     {width : Nat} [NeZero width] {σ : Type}
     (f : FunName × (List Nat × CrepProg (Fin width → Bool)) →

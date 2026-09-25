@@ -113,4 +113,12 @@ example (name : String) (h : StringByteRanged name) : StringByteRanged name :=
   convFfiIdent_byteRanged (parseTreeByteRanged_lf (token := .foreignIdent name)
     (locs := unknownLoc) h) rfl
 
+example (fuel : Nat) :
+    Flapjack.Pancake.PanLang.ShapeByteRanged Flapjack.Shape.one :=
+  convShape_byteRanged (fuel + 1)
+    (ParseTree.lf Token.defaultShT unknownLoc)
+    (parseTreeByteRanged_lf (token := Token.defaultShT) (locs := unknownLoc)
+      (by simp [TokenNameByteRanged]))
+    Flapjack.Shape.one (by simp [convShape, convDefaultShape, ParseTree.destTok])
+
 end Flapjack.Test.ParserByteRangedParity

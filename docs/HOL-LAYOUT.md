@@ -67,7 +67,7 @@ for the review rule.
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |
 | `loop_liveScript.sml` | `Flapjack/Pancake/LoopLive.lean` |
 | `loop_to_wordScript.sml` | `Flapjack/Pancake/LoopToWord.lean` |
-| `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/PanValueFfiClockSemantics.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSem/Primop.lean`, `PanSemStateEval.lean` |
+| `semantics/panSemScript.sml` | `Flapjack/PanBst.lean`, `Flapjack/PanValueFfiClockSemantics.lean`, `Flapjack/Pancake/Semantics/PanSem.lean`, `PanSem/Primop.lean`, `PanSem/ValueHOL.lean`, `PanSem/MemLoadHOL.lean`, `PanSemStateEval.lean` |
 | `semantics/pan_commonPropsScript.sml` | `Flapjack/Pancake/Semantics/PanCommonProps.lean` |
 | `pan_commonScript.sml` | `Flapjack/Pancake/PanCommon.lean` |
 | `misc/miscScript.sml` (`app_list`/`append`) | `Flapjack/Misc/AppList.lean` |

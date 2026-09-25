@@ -1,6 +1,7 @@
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.Conversion
 import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.PanLang.Exp
 
 /-!
 Byte-rangedness of the concrete parse tree and of the first conversion step.
@@ -237,5 +238,65 @@ theorem convStructName_byteRanged {fuel : Nat} {tree : ParseTree}
               have ht2 := argsNT_byteRanged ht hargs
               exact ⟨convIdent_byteRanged (ht2 nameTree (by simp)) hn,
                 convFieldNameList_byteRanged (ht2 fieldsTree (by simp)) fields hf⟩
+
+
+/-- `conv_var` returns a byte-ranged expression from a byte-ranged tree. -/
+theorem convVar_byteRanged {width : Nat} {tree : ParseTree}
+    (ht : ParseTreeByteRanged tree) :
+    ∀ e, convVar (α := BitVec width) tree = some e → ExpByteRanged e := by
+  intro e h
+  unfold convVar at h
+  cases hi : convIdent tree with
+  | none => simp [hi] at h
+  | some name =>
+      simp only [hi, Option.map_some, Option.some.injEq] at h
+      subst h
+      simpa [ExpByteRanged, StringByteRanged, CharsByteRanged] using
+        convIdent_byteRanged ht hi
+
+/-- `conv_const` always returns a byte-ranged expression (only the numeric
+    payload varies, which carries no identifier). -/
+theorem convConst_byteRanged {width : Nat} (ofInt : Int → BitVec width)
+    {tree : ParseTree} :
+    ∀ e, convConst ofInt tree = some e → ExpByteRanged e := by
+  intro e h
+  unfold convConst at h
+  cases hc : convInt tree with
+  | none => simp [hc] at h
+  | some value =>
+      simp only [hc, Option.map_some, Option.some.injEq] at h
+      subst h
+      simp [ExpByteRanged]
+
+/-- `conv_accessors` preserves byte-rangedness of the accumulator, provided
+    every accessor tree is byte-ranged. -/
+theorem convAccessors_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (trees : List ParseTree) (htrees : ∀ t ∈ trees, ParseTreeByteRanged t)
+    (acc : Flapjack.Exp (BitVec width)) (hacc : ExpByteRanged acc) :
+    ∀ r, convAccessors ofInt fuel trees acc = some r → ExpByteRanged r := by
+  induction trees generalizing acc with
+  | nil =>
+      intro r h
+      simp [convAccessors] at h
+      subst h
+      exact hacc
+  | cons tree trees ih =>
+      intro r h
+      simp only [convAccessors] at h
+      cases hn : convNat tree with
+      | some index =>
+          simp only [hn] at h
+          exact ih (fun t hmem => htrees t (by simp [hmem]))
+            (.rField index acc) hacc r h
+      | none =>
+          simp only [hn] at h
+          cases hi : convIdent tree with
+          | none => simp [hi] at h
+          | some name =>
+              simp only [hi] at h
+              exact ih (fun t hmem => htrees t (by simp [hmem]))
+                (.nField name acc)
+                ⟨convIdent_byteRanged (htrees tree (by simp)) hi, hacc⟩ r h
+
 
 end Flapjack.Parser

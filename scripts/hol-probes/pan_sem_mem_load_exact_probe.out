@@ -1,0 +1,6 @@
+ml_one_hit=SOME (ValWord 7w)
+ml_one_miss=NONE
+ml_comb=SOME (RStruct [ValWord 1w; ValWord 2w])
+ml_named_hit=SOME (NStruct «A» [(«f»,ValWord 5w)])
+ml_named_miss=NONE
+ml_comb_offset=SOME (RStruct [ValWord 0w; ValWord 10w])

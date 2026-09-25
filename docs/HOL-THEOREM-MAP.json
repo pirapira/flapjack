@@ -1113,6 +1113,14 @@
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/CrepLang/Exp.lean",
+    "lean_name": "CrepExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (inductive compared constructor-by-constructor against the Datatype exp at crepLangScript.sml:26-37: all 12 constructors and field types match, the `'a word` payloads are carried by BitVec width with [NeZero width], and LoadGlob keeps the fixed 5-word address; the generic production CrepExp (alpha) stays untagged; total kernel isomorphisms crepExpToHOL/crepExpOfHOL with @[simp] roundtrips live in Flapjack/Pancake/CrepLang/Exp.lean; direct HOL oracle scripts/hol-probes/crep_lang_exp_probe.{sml,out} and guards in Flapjack/Test/CrepExpHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
     "lean_name": "storeGlobalsW",

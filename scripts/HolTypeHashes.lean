@@ -13,6 +13,7 @@ import Flapjack.Misc.AppList
 import Flapjack.Misc.Sptree
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.CrepToLoop.StateRel
 import Flapjack.Pancake.PanCommon

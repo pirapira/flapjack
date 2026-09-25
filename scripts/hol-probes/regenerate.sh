@@ -1513,3 +1513,10 @@ run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
   ffi_outcome_failed call_final_event \
   "$cake_dir/semantics/ffi/ffiScript.sml" \
   "$cake_dir/semantics/ffi"
+
+# The crepLang exp probe observes the exact width-indexed Crepe expression
+# carrier (word payloads and fixed 5-word LoadGlob width).
+run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
+  cexp_const cexp_topaddr \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"

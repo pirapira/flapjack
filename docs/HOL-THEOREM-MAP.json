@@ -5295,7 +5295,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/EvalExact.lean",
     "lean_name": "evalHOLExact",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex and flapjack-ds6 (source comparison, bead flapjack-dlc.120, with panSemScript.sml:209-283: all fifteen clauses Const, Var Local/Global, RStruct, RField, NStruct, NField, Load/Load32/LoadByte, Op/Panop, Cmp, Shift, BaseAddr/TopAddr/BytesInWord and every used subcarrier (MlS/ExpHOL/ValueHOL/ShapeHOL/StructContextExact, HolWordLab memory, memaddrs as a Prop for HOL 'a word set, [NeZero width] for HOL's positive dimindex) were compared one by one and match. The blocking mismatch is the state carrier: HOL panSem$state.locals/globals are finite maps varname |-> 'a v, while PanSemStateExact.locals/globals are unrestricted MlS -> Option _ functions, a strict superset admitting infinite support; the evaluator is faithful only on the finite-support subcarrier. Direct HOL rows are in pan_eval_probe.out, reproduced by Flapjack/Test/PanSemEvalExactParity.lean. Tag remains withdrawn pending the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 (audit flapjack-pxn.18.3.7.1.3.1.2)."
+    "reviewer": "Codex and flapjack-ds6 (source comparison, bead flapjack-dlc.120, with panSemScript.sml:209-283: all fifteen clauses Const, Var Local/Global, RStruct, RField, NStruct, NField, Load/Load32/LoadByte, Op/Panop, Cmp, Shift, BaseAddr/TopAddr/BytesInWord and every used subcarrier (MlS/ExpHOL/ValueHOL/ShapeHOL/StructContextExact, HolWordLab memory, memaddrs as a Prop for HOL 'a word set, [NeZero width] for HOL's positive dimindex) were compared one by one and match. The blocking mismatch is the state carrier: HOL panSem$state.locals/globals are finite maps varname |-> 'a v, while PanSemStateExact.locals/globals are unrestricted MlS -> Option _ functions, a strict superset admitting infinite support; the evaluator is faithful only on the finite-support subcarrier. Direct HOL rows are in pan_eval_probe.out, reproduced by Flapjack/Test/PanSemEvalExactParity.lean. This raw-function rendering stays documented_mismatch and untagged; the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 has since landed and the qualified eval_def tag is carried by evalHOLFinite over PanSemStateFiniteExact in Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean (reviewed_fmap_as_finite_support; audit flapjack-pxn.18.3.7.1.3.1.2)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -10270,8 +10270,8 @@
     "hol_name": "decs_stcnames_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/DeclContextExact.lean",
     "lean_name": "decsStcnamesHOLExact",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.54): exact port of HOL `decs_stcnames_def` (`panSemScript.sml:839-856`) over the exact MlString-keyed carriers `DeclHOL width`/`StructContextExact`/`StructInfoHOLExact`/`ShapeHOL`. Clause-for-clause: `[] -> some context` (= `SOME st_ctxt`); `.name struct fields` with `structContextLookupHOL` for HOL `ALOOKUP` (none -> proceed, some -> none), `fields.map Prod.fst` `.Nodup` for `ALL_DISTINCT (MAP FST flds)`, `shapes.all (isWfShapeExactHOL context)` for `EVERY (is_wf_shape st_ctxt) shs`, stored `{fields, size := sizeOfShapeWithContextHOL context (.comb shapes)}` for `<|fields; size = size_of_sh_with_ctxt st_ctxt (Comb shs)|>`, then recurse on `(struct, info) :: context`; `.decl`/`.function`/`.exnDecl` skip and recurse. `some`/`none` mirror `SOME`/`NONE`, `List.Nodup`/`List.all` mirror `ALL_DISTINCT`/`EVERY`. Reuses the tagged `isWfShapeExactHOL` (`is_wf_shape_def`) and `sizeOfShapeWithContextHOL` (`size_of_sh_with_ctxt_def`), whose own inventory reviews are tracked separately; `decsStcnamesHOLExact_nil` is the `[]` clause. Direct HOL EVAL rows reproduced by `Flapjack/Test/PanSemDecsStcnamesHOLParity.lean` against `scripts/hol-probes/pan_sem_decs_stcnames_probe.out`."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -10786,5 +10786,14 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the untagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.5): HOL eval_def panSemScript.sml:209-283 ported over PanSemStateFiniteExact (locals/globals/code/eshapes are HolFiniteMapExact, the canonical Lean translation of HOL's `|->`, canonical witness holFmapAsFiniteSupportWitness in the same module). The body delegates through toExact to the reviewed exact evaluator and does NOT syntactically present HOL's clause-shaped body; each of the fifteen clauses was reviewed against the HOL source and is exposed by the clause-shaped equations in Flapjack/Pancake/Semantics/PanSem/EvalFinite.lean. Qualifier is representation-only."
   }
 ]

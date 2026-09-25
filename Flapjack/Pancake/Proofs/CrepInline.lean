@@ -418,14 +418,20 @@ theorem FOLDL_res_var_ZIP_lookup [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α
 
 /-! ## HOL-equality (`=`) forms of the `res_var` cluster
 
-The HOL declarations below quantify the key type freely and use propositional
-equality.  The Boolean-`BEq` production forms above are the executable
-implementation; the `_hol` forms below are stated over the `=`-based
-`FUPDATE_HOL`/`FDOMSUB_HOL`/`resVarHOL` (`DecidableEq` is Lean's encoding of
-HOL `=`) so they are statement-exact ports with no `BEq`/`LawfulBEq` side
-conditions. -/
+FLAPJACK-SPECIFIC (not exact HOL ports).  The HOL declarations below quantify
+the key type freely and use propositional equality; `DecidableEq` is Lean's
+encoding of HOL `=`, so the `FUPDATE_HOL`/`FDOMSUB_HOL`/`resVarHOL` forms below
+remove the `BEq`/`LawfulBEq` side conditions of the production forms.  They are
+still NOT exact HOL ports, because they quantify Lean's raw function carrier
+`FiniteMap α β := α → Option β` (`Flapjack/FiniteMap/Basic.lean:19`), which
+admits infinite-support inhabitants, whereas HOL `α |-> β` is finite-support.
+`DecidableEq` alone does not repair that: the statements still range over
+functions HOL cannot represent.  A faithful port must quantify
+`HolFiniteMapExact α β` (`Flapjack/Pancake/Semantics/CrepSem/HOLState.lean`),
+which now provides `update`/`updateList`/`erase`/`resVar` and their lookup
+lemmas; that port is tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.3.1`.  The
+`_hol` declarations are kept as untagged infrastructure only. -/
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_FUPDATE_SUBMAP"]
 theorem submap_imp_fupdate_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
     (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
     crepHolSubmap (FUPDATE_HOL f (x, y)) (FUPDATE_HOL g (x, y)) := by
@@ -437,7 +443,6 @@ theorem submap_imp_fupdate_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
   · simp [hxn] at hn ⊢
     exact h n v hn
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_DOMSUB_SUBMAP"]
 theorem submap_imp_domsub_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
     (f g : κ → Option β) (x : κ) (h : crepHolSubmap f g) :
     crepHolSubmap (FDOMSUB_HOL f x) (FDOMSUB_HOL g x) := by
@@ -448,7 +453,6 @@ theorem submap_imp_domsub_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
   · simp [hxn] at hn ⊢
     exact h n v hn
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "SUBMAP_IMP_DOMSUB_FUPDATE"]
 theorem submap_imp_domsub_fupdate_hol {κ : Type} {β : Type} [DecidableEq κ]
     (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
     crepHolSubmap (FDOMSUB_HOL f x) (FUPDATE_HOL g (x, y)) := by
@@ -459,7 +463,6 @@ theorem submap_imp_domsub_fupdate_hol {κ : Type} {β : Type} [DecidableEq κ]
   · simp [hxn] at hn ⊢
     exact h n v hn
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "res_var_commutes_strong"]
 theorem res_var_commutes_strong_hol {α : Type} {β : Type} [DecidableEq α]
     (lc lc' : FiniteMap α β) (n h : α) :
     resVarHOL (resVarHOL lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
@@ -469,7 +472,6 @@ theorem res_var_commutes_strong_hol {α : Type} {β : Type} [DecidableEq α]
     rfl
   · exact resVarHOL_commutes lc lc' n h hne
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "res_var_foldl_commutes_strong"]
 theorem res_var_foldl_commutes_strong_hol {α : Type} {β : Type} [DecidableEq α]
     (h : α) (vs : List α) (lc1 lc2 : FiniteMap α β) :
     resVarHOL ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVarHOL lc1)
@@ -483,7 +485,6 @@ theorem res_var_foldl_commutes_strong_hol {α : Type} {β : Type} [DecidableEq �
       rw [ih (resVarHOL lc1 (v, FLOOKUP lc2 v)),
         (res_var_commutes_strong_hol lc1 lc2 v h).symm]
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "flookup_res_var_is_mem_zip_eq"]
 theorem flookup_res_var_is_mem_zip_eq_hol {α : Type} {β : Type} [DecidableEq α]
     (xs : List α) (x : α) (lc1 lc2 : FiniteMap α β) (hx : x ∈ xs) :
     FLOOKUP ((xs.zip (xs.map (FLOOKUP lc2))).foldl resVarHOL lc1) x =
@@ -502,7 +503,6 @@ theorem flookup_res_var_is_mem_zip_eq_hol {α : Type} {β : Type} [DecidableEq �
         · rw [if_neg hxea]
           exact ih hxas
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "FOLDL_res_var_ZIP_lookup_var"]
 theorem foldl_res_var_zip_lookup_var_hol {α : Type} {β : Type} [DecidableEq α]
     (l l' l1 : FiniteMap α β) (ns : List α) (x : α) (v : β)
     (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVarHOL l) l1)
@@ -514,7 +514,6 @@ theorem foldl_res_var_zip_lookup_var_hol {α : Type} {β : Type} [DecidableEq α
     (by simp [List.length_map]) hx]
   exact hv
 
-@[hol "cakeml/pancake/proofs/crep_inlineProofScript.sml" "FOLDL_res_var_ZIP_lookup"]
 theorem foldl_res_var_zip_lookup_hol {α : Type} {β : Type} [DecidableEq α]
     (l l' l1 : FiniteMap α β) (ns xs : List α) (vs : List β)
     (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVarHOL l) l1)

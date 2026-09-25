@@ -899,12 +899,12 @@ class ValidateInventoryTest(unittest.TestCase):
         errors = MAP["validate_inventory"]([record], {key}, {key: reference})
         self.assertTrue(any("must not carry an @[hol] tag" in error for error in errors))
 
-    def test_res_var_hol_equality_ports_are_reviewed_exact(self):
+    def test_res_var_hol_equality_forms_are_documented_mismatch(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {
             (record["lean_path"], record["lean_name"]): record for record in manifest
         }
-        exact = {
+        hol_forms = {
             ("Flapjack/Pancake/Proofs/CrepInline.lean",
              "foldl_res_var_zip_lookup_var_hol"): "FOLDL_res_var_ZIP_lookup_var",
             ("Flapjack/Pancake/Proofs/CrepInline.lean",
@@ -924,13 +924,15 @@ class ValidateInventoryTest(unittest.TestCase):
             ("Flapjack/Pancake/Semantics/CrepProps.lean",
              "flookup_res_var_distinct_zip_eq_hol"): "flookup_res_var_distinct_zip_eq",
         }
-        for key, hol_name in exact.items():
+        for key, hol_name in hol_forms.items():
             with self.subTest(key=key):
                 record = by_key[key]
                 self.assertEqual(record["hol_name"], hol_name)
-                self.assertEqual(record["statement_status"], "reviewed_exact")
-                self.assertIn("DecidableEq", record["reviewer"])
-                self.assertIn(key, MAP["tagged_declarations"]())
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("infinite-support", record["reviewer"])
+                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.3.1",
+                              record["reviewer"])
+                self.assertNotIn(key, MAP["tagged_declarations"]())
 
         production = {
             ("Flapjack/Pancake/Proofs/CrepInline.lean",

@@ -1573,7 +1573,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "FOLDL_res_var_ZIP_lookup_var",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1581,7 +1581,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "FOLDL_res_var_ZIP_lookup",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1589,7 +1589,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1597,7 +1597,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1605,7 +1605,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1613,7 +1613,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_commutes_strong",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1621,7 +1621,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_foldl_commutes_strong",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is the corresponding *_hol theorem (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form is untagged infrastructure, and even it quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
@@ -1629,79 +1629,79 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "flookup_res_var_is_mem_zip_eq",
     "statement_status": "documented_mismatch",
-    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the exact HOL-equality (=) port is flookup_res_var_is_mem_zip_eq_hol (reviewed_exact); bead flapjack-pxn.18.5.5.19."
+    "reviewer": "FLAPJACK-SPECIFIC (untagged): HOL is fully polymorphic in the key type, but this statement carries extra [BEq alpha] [LawfulBEq alpha] instances because resVar/FUPDATE use Boolean key equality; the HOL-equality (=) form (flookup_res_var_is_mem_zip_eq_hol) is untagged infrastructure and also quantifies the raw infinite-support function carrier; faithful finite-support port over HolFiniteMapExact tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1; bead flapjack-pxn.18.5.5.19."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "FOLDL_res_var_ZIP_lookup_var",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "foldl_res_var_zip_lookup_var_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) and the FiniteMap representation with no [BEq]/[LawfulBEq] side condition; statement matches FOLDL_res_var_ZIP_lookup_var."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: FOLDL_res_var_ZIP_lookup_var."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "FOLDL_res_var_ZIP_lookup",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "foldl_res_var_zip_lookup_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) and the FiniteMap representation with no [BEq]/[LawfulBEq] side condition; statement matches FOLDL_res_var_ZIP_lookup."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: FOLDL_res_var_ZIP_lookup."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_FUPDATE_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "submap_imp_fupdate_submap_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) and FUPDATE_HOL over the FiniteMap representation with no [BEq]/[LawfulBEq] side condition; statement matches SUBMAP_IMP_FUPDATE_SUBMAP."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: SUBMAP_IMP_FUPDATE_SUBMAP."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_SUBMAP",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "submap_imp_domsub_submap_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) and FDOMSUB_HOL over the FiniteMap representation with no [BEq]/[LawfulBEq] side condition; statement matches SUBMAP_IMP_DOMSUB_SUBMAP."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: SUBMAP_IMP_DOMSUB_SUBMAP."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "SUBMAP_IMP_DOMSUB_FUPDATE",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "submap_imp_domsub_fupdate_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) with FDOMSUB_HOL/FUPDATE_HOL over the FiniteMap representation and no [BEq]/[LawfulBEq] side condition; statement matches SUBMAP_IMP_DOMSUB_FUPDATE."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: SUBMAP_IMP_DOMSUB_FUPDATE."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_commutes_strong_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) with resVarHOL over the FiniteMap representation and no [BEq]/[LawfulBEq] side condition; statement matches res_var_commutes_strong."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: res_var_commutes_strong."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "res_var_foldl_commutes_strong",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "res_var_foldl_commutes_strong_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) with resVarHOL/List.foldl over the FiniteMap representation and no [BEq]/[LawfulBEq] side condition; statement matches res_var_foldl_commutes_strong."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: res_var_foldl_commutes_strong."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",
     "hol_name": "flookup_res_var_is_mem_zip_eq",
     "lean_path": "Flapjack/Pancake/Proofs/CrepInline.lean",
     "lean_name": "flookup_res_var_is_mem_zip_eq_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) with resVarHOL/List.foldl over the FiniteMap representation and no [BEq]/[LawfulBEq] side condition; statement matches flookup_res_var_is_mem_zip_eq."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: flookup_res_var_is_mem_zip_eq."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "flookup_res_var_distinct_zip_eq",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "flookup_res_var_distinct_zip_eq_hol",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): HOL is polymorphic in the key type; this port uses DecidableEq (HOL equality =) with resVarHOL/List.foldl over the FiniteMap representation and no [BEq]/[LawfulBEq] side condition; statement matches flookup_res_var_distinct_zip_eq."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.5.5.19): FLAPJACK-SPECIFIC / not an exact HOL port. DecidableEq is Lean's encoding of HOL equality and removes the [BEq]/[LawfulBEq] side conditions, but the statement still quantifies the raw function carrier FiniteMap alpha beta := alpha -> Option beta (Flapjack/FiniteMap/Basic.lean:19), which admits infinite-support inhabitants whereas HOL alpha |-> beta is finite-support. The @[hol] tag is withdrawn; faithful port over HolFiniteMapExact (Flapjack/Pancake/Semantics/CrepSem/HOLState.lean) tracked by bead flapjack-pxn.18.3.7.1.3.1.1.3.1. HOL: flookup_res_var_distinct_zip_eq."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_inlineProofScript.sml",

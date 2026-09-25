@@ -285,10 +285,20 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
   rw [lookupInfo_eq_lookup] at hlookup ⊢
   exact (lookup_drop_helper n context name info hlookup hnodup).2
 
-/-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
+/-- Production analogue of HOL `size_of_sh_with_ctxt_drop`
     (`pan_structsProofScript.sml:99`): a well-formed shape has the same
-    context-sensitive size in a distinct-key context and its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    context-sensitive size in a distinct-key context and its suffix. It is
+    untagged because HOL's `sh_ctxt` is `StructContextExact` over `MlS`,
+    `ShapeHOL`, and the exact fields/size-only struct record, whereas this
+    theorem uses production `StructContext`/`Shape`: struct and named-shape
+    identifiers use `String`, and production `StructInfo` has an additional
+    `shapedFields` cache. The body uses String-keyed production lookup. A
+    `names_as_string` qualifier cannot cover those context/record differences.
+    The statement otherwise has HOL's two premises and equality conclusion;
+    the exact context-sensitive size definition already exists as
+    `sizeOfShapeWithContextHOL`, but the drop theorem over exact carriers is
+    still missing. Exact MlString carrier and bridge work is tracked by
+    `flapjack-pxn.18.3.5.8`. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)

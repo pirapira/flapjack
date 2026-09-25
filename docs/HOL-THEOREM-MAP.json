@@ -9134,5 +9134,53 @@
     "lean_name": "HolLoopProg",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean constructor comparison: all 25 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
-  }
+  },
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "left_shift_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "leftShiftInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "right_shift_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "rightShiftInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "const_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "constInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "load_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "loadInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+  "hol_name": "store_inst",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "storeInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
+  "hol_name": "halt_inst_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
+  "lean_name": "haltInst",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

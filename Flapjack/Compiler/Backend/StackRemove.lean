@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.StackCarrier
 import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackLang.Prog
 import Flapjack.Pancake.WordLang
 import Flapjack.HolRef
 
@@ -152,53 +153,61 @@ def stackErrLab : Nat := 2
 HOL `stackLangScript.sml:80-84` declares the `left_shift_inst`,
 `right_shift_inst`, `const_inst`, `load_inst`, and `store_inst` overloads, and
 `stack_removeScript.sml:58-60` defines `halt_inst` on top of `const_inst` and
-`Halt`.  The Lean implementations below are stated over
-`StackCarrier.ProgW (BitVec width)`.
-
-These declarations are deliberately UNTAGGED. HOL's `stackLang$prog` has a
-fixed `mlstring` FFI field; our `ProgW` carrier uses Lean `String` for that
-field, so `ProgW (BitVec width)` is not yet an exact HOL carrier
-and a `@[hol]` tag on a definition using it would over-claim.  The overload
-bodies match HOL's constructors, and they are exercised by the direct HOL
-oracle and the untagged parity test.  The exact `mlstring`/program carrier and
-the bridges that would let these be re-tagged are tracked by bead
-`flapjack-pxn.18.5.15.3.11.2`.
+`Halt`.  The Lean implementations below are stated over the exact
+width-indexed carrier `StackLang.HolProg width` (whose FFI field is the faithful
+`MlString` and whose payload carriers are the exact `HolInst`/`HolRegImm`/
+`HolAddr` mirrors), so the program carrier matches `stackLang$prog` and the
+overloads can carry exact `@[hol]` tags.  The untagged production-facing
+`ProgW (BitVec width)` versions are the ones recorded by the direct HOL oracle /
+parity test; a kernel-checked bridge between the two carriers already exists via
+`MlStringBridge` for the FFI field (bead `.18.5.15.3.11.2`).
 -/
 
-/-- HOL `left_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:80`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def leftShiftInst {width : Nat} (register value : Nat) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `left_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:80`):
+`λr v. Inst (Arith (Shift Lsl r r (Imm (n2w v))))`, over the exact shared-word
+`stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "left_shift_inst"]
+def leftShiftInst {width : Nat} [NeZero width] (register value : Nat) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .inst (.arith (.shift .lsl register register (.imm (BitVec.ofNat width value))))
 
-/-- HOL `right_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:81`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def rightShiftInst {width : Nat} (register value : Nat) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `right_shift_inst` (`cakeml/compiler/backend/stackLangScript.sml:81`):
+`λr v. Inst (Arith (Shift Lsr r r (Imm (n2w v))))`, over the exact shared-word
+`stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "right_shift_inst"]
+def rightShiftInst {width : Nat} [NeZero width] (register value : Nat) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .inst (.arith (.shift .lsr register register (.imm (BitVec.ofNat width value))))
 
-/-- HOL `const_inst` (`cakeml/compiler/backend/stackLangScript.sml:82`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def constInst {width : Nat} (register : Nat) (value : BitVec width) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `const_inst` (`cakeml/compiler/backend/stackLangScript.sml:82`):
+`λr w. Inst (Const r w)`, over the exact shared-word `stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "const_inst"]
+def constInst {width : Nat} [NeZero width] (register : Nat) (value : BitVec width) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .inst (.const register value)
 
-/-- HOL `load_inst` (`cakeml/compiler/backend/stackLangScript.sml:83`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def loadInst {width : Nat} (register address : Nat) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `load_inst` (`cakeml/compiler/backend/stackLangScript.sml:83`):
+`λr a. Inst (Mem Load r (Addr a 0w))`, over the exact shared-word
+`stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "load_inst"]
+def loadInst {width : Nat} [NeZero width] (register address : Nat) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .inst (.mem .load register (.addr address 0))
 
-/-- HOL `store_inst` (`cakeml/compiler/backend/stackLangScript.sml:84`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def storeInst {width : Nat} (register address : Nat) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `store_inst` (`cakeml/compiler/backend/stackLangScript.sml:84`):
+`λr a. Inst (Mem Store r (Addr a 0w))`, over the exact shared-word
+`stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_inst"]
+def storeInst {width : Nat} [NeZero width] (register address : Nat) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .inst (.mem .store register (.addr address 0))
 
-/-- HOL `halt_inst` (`cakeml/compiler/backend/stack_removeScript.sml:58-60`),
-untagged pending the exact `mlstring` carrier (bead .18.5.15.3.11.2). -/
-def haltInst {width : Nat} (value : BitVec width) :
-    StackCarrier.ProgW (BitVec width) :=
+/-- HOL `halt_inst` (`cakeml/compiler/backend/stack_removeScript.sml:58-60`):
+`halt_inst w = Seq (const_inst 1 w) (Halt 1)`, over the exact shared-word
+`stackLang$prog` carrier. -/
+@[hol "cakeml/compiler/backend/stack_removeScript.sml" "halt_inst_def"]
+def haltInst {width : Nat} [NeZero width] (value : BitVec width) :
+    Flapjack.Compiler.Backend.StackLang.HolProg width :=
   .seq (.inst (.const 1 value)) (.halt 1)
 
 end Flapjack.Compiler.Backend.StackRemove

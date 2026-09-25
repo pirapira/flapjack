@@ -228,6 +228,31 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertIn("globalFreshName", record["reviewer"])
                 self.assertNotIn(key, tagged)
 
+    def test_crep_sem_state_exact_helpers_are_reviewed_exact(self):
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            "decClockCrepSemHOL": "dec_clock_def",
+            "fixClockCrepSemHOL": "fix_clock_def",
+            "fixClockCrepSemHOL_IMP_LESS_EQ": "fix_clock_IMP_LESS_EQ",
+            "memLoadCrepSemHOL": "mem_load_def",
+        }
+        for lean_name, hol_name in exact_cases.items():
+            key = ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", lean_name)
+            with self.subTest(lean_name=lean_name):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.3.1", record["reviewer"])
+                self.assertIn(key, tagged)
+
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (
             "Flapjack/Pancake/Semantics/CrepProps.lean",

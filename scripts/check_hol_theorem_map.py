@@ -835,6 +835,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
+        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "decClockCrepSemHOL"),
+        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL"),
+        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "fixClockCrepSemHOL_IMP_LESS_EQ"),
+        ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", "memLoadCrepSemHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

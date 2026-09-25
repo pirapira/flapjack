@@ -399,14 +399,20 @@ theorem resVarW_eq_resVar {width : Nat} [NeZero width] (f : FiniteMap Nat (PanWo
     (entry : Nat × Option (PanWordLab (BitVec width))) :
     resVarW f entry = resVar f entry := rfl
 
-/-! ## HOL-equality `res_var` cluster
+/-! ## FLAPJACK-SPECIFIC `=`-based `res_var` forms (NOT statement-exact HOL ports)
 
-`crepSem$res_var_def` (`crepSemScript.sml:163`) is stated over HOL's
-propositional equality.  `resVarHOL` is the faithful `=`-based counterpart
-(`DecidableEq` is Lean's encoding of HOL `=`); the `res_var` theorems of
-`crepPropsProofScript.sml` and `crep_inlineProofScript.sml` are ported over it
-statement-exactly, with no Boolean-`BEq` side conditions.  The Boolean-`BEq`
-`resVar` above remains the executable implementation. -/
+`crepSem$res_var_def` (`crepSemScript.sml:163`) is stated over HOL's finite
+maps and HOL propositional equality.  The forms below use Lean `DecidableEq`
+(the encoding of HOL `=`) and avoid the Boolean-`BEq` side conditions of the
+executable `resVar`, but they still operate on the raw function carrier
+`FiniteMap α β = α → Option β` (`Flapjack/FiniteMap/Basic.lean:19`), which
+admits infinite-support inhabitants that HOL finite maps do not.  They are
+therefore Flapjack-specific infrastructure, not statement-exact ports of the
+`crepPropsProofScript.sml` / `crep_inlineProofScript.sml` `res_var` theorems:
+the `@[hol]` tags for these forms were withdrawn and their manifest entries are
+`documented_mismatch`.  The faithful replacement over the finite-support
+`HolFiniteMapExact` carrier is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`.
+The Boolean-`BEq` `resVar` above remains the executable implementation. -/
 
 /-- HOL-equality form of `res_var`: delete the key on `none`, insert on `some`. -/
 def resVarHOL [DecidableEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=

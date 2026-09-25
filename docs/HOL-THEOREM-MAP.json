@@ -5864,7 +5864,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "fieldsInOrderReorderNoop",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "Codex (source comparison with pan_structsProofScript.sml:218-239: the matching field-name-list and distinctness premises and reorder equation correspond, but production FieldName/StructPassContext/Exp identifiers are String while HOL uses mlstring and exact expression/context carriers. The conclusion preserves compiled expression identifiers, which are byte-observable. No NameRanged premise exists, so names_as_string cannot bridge arbitrary names. Keep @[hol] withheld pending exact carrier work flapjack-pxn.18.3.5.8.)"
   },
   {
     "hol_path": null,

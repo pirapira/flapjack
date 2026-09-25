@@ -72,6 +72,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "fields_in_order_reorder_noop",
+        "Codex (source comparison with pan_structsProofScript.sml:218-239: the "
+        "matching field-name-list and distinctness premises and reorder equation "
+        "correspond, but production FieldName/StructPassContext/Exp identifiers "
+        "are String while HOL uses mlstring and exact expression/context carriers. "
+        "The conclusion preserves compiled expression identifiers, which are "
+        "byte-observable. No NameRanged premise exists, so names_as_string cannot "
+        "bridge arbitrary names. Keep @[hol] withheld pending exact carrier work "
+        "flapjack-pxn.18.3.5.8."
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "struct_infos_ok_def",

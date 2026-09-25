@@ -724,11 +724,16 @@ theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
       · rw [if_neg hc] at hlookup
         exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
-/-- Exact production-helper translation of HOL `fields_in_order_reorder_noop`
-    (`pan_structsProofScript.sml:218`): selecting fields from compiled
-    expressions in the original field-name order yields the compiled source
-    expressions. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `fields_in_order_reorder_noop`
+    (`pan_structsProofScript.sml:218-239`): selecting compiled fields in the
+    original field-name order yields the compiled source expressions. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the field names, production
+-- StructPassContext, and expression identifiers use unrestricted `String`,
+-- while HOL uses `mlstring` names and its exact expression/context carriers.
+-- The conclusion preserves compiled expression identifiers, so they are
+-- byte-observable; there is no NameRanged premise and `names_as_string` cannot
+-- bridge arbitrary inputs. Exact carrier work is tracked by
+-- flapjack-pxn.18.3.5.8.
 theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
     (context : StructPassContext) (eflds : List (FieldName × Exp α))
     (infoFields : List (FieldName × Shape))

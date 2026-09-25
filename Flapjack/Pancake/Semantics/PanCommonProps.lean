@@ -164,8 +164,8 @@ theorem fmEmptyZipFlookup [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:512`): the slot list of
     any binding in a `no_overlap` context is duplicate-free. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_flookup_all_distinct"]
-theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat))
-    (x : String) (y : Shape) (zs : List Nat)
+theorem allDistinctFlookupAllDistinct {α β : Type} (fm : FiniteMap α (β × List Nat))
+    (x : α) (y : β) (zs : List Nat)
     (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) : zs.Nodup :=
   hno.1 x y zs hlookup
 
@@ -173,8 +173,8 @@ theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat)
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
     variables in a `no_overlap` context have `distinct_lists` slot lists. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_flookup_distinct"]
-theorem noOverlapFlookupDistinct (fm : FiniteMap String (Shape × List Nat))
-    (x y : String) (a b : Shape) (xs ys : List Nat)
+theorem noOverlapFlookupDistinct {α β : Type} (fm : FiniteMap α (β × List Nat))
+    (x y : α) (a b : β) (xs ys : List Nat)
     (hno : noOverlap fm) (hxy : x ≠ y)
     (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
     distinctListsHol xs ys = true :=

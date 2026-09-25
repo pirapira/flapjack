@@ -10271,9 +10271,17 @@
    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
    "lean_name": "crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith",
    "statement_status": "reviewed_exact",
-   "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL nested_seq_assigned_free_vars_eq (cakeml/pancake/semantics/crepPropsScript.sml:420-427) is !ns vs. LENGTH ns = LENGTH vs ==> assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns. crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith has the same length premise and the same equation over the exact CrepProgHOL carrier, with MAP2 as List.zipWith and Assign as crepProgHOL.assign; no mlstring identifier is inspected. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the equation; direct HOL row nested_afv=[1; 2] in crep_assigned_vars_probe.out. The production-carrier W analogue remains a documented mismatch."
- },
- {
+    "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL nested_seq_assigned_free_vars_eq (cakeml/pancake/semantics/crepPropsScript.sml:420-427) is !ns vs. LENGTH ns = LENGTH vs ==> assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns. crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith has the same length premise and the same equation over the exact CrepProgHOL carrier, with MAP2 as List.zipWith and Assign as crepProgHOL.assign; no mlstring identifier is inspected. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the equation; direct HOL row nested_afv=[1; 2] in crep_assigned_vars_probe.out. The production-carrier W analogue remains a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_IMP_assigned_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.3): HOL assigned_free_vars_IMP_assigned_vars (cakeml/pancake/semantics/crepPropsScript.sml:373-378) is !prog x. MEM x (assigned_free_vars prog) ==> MEM x (assigned_vars prog). The Lean theorem has the same quantified program and natural varname and the same membership implication over the exact CrepProgHOL carrier (MlString function names, width-indexed words) using the exact crepAssignedFreeVarsHOL/crepAssignedVarsHOL ports; no mlstring identifier is inspected, only Nat varnames. The production bridge crepAssignedFreeVars_imp_crepAssignedVars_via_HOL transports the result across crepProgToHOL; the String/width-indexed production analogue mem_crepAssignedFreeVars_imp_mem_crepAssignedVars stays untagged. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the exact theorem and the bridge."
+  },
+  {
    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
   "hol_name": "exp_hdl_def",
   "lean_path": "Flapjack/Pancake/PanToCrep.lean",

@@ -5,16 +5,15 @@ namespace Flapjack.Test.StackNamesParity
 open Flapjack
 open Flapjack.Compiler.Backend.StackLang
 open Flapjack.Compiler.Backend.StackNames
+open Flapjack.Compiler.Encoders.Asm
 
 private abbrev W := BitVec 8
 
-private abbrev PT :=
-  Flapjack.Compiler.Backend.StackLang.Prog
-    (WordLangInst W) Cmp (WordRegImm W) BinOp WordMemOp (WordLangAddr W) String
+private abbrev PT := HolProg 8
 
 private def pSeq (first second : PT) : PT :=
   Flapjack.Compiler.Backend.StackLang.Prog.seq first second
-private def pInst (instruction : WordLangInst W) : PT :=
+private def pInst (instruction : HolInst 8) : PT :=
   Flapjack.Compiler.Backend.StackLang.Prog.inst instruction
 private def pHalt (register : Nat) : PT :=
   Flapjack.Compiler.Backend.StackLang.Prog.halt register
@@ -77,8 +76,8 @@ example : destFindName names (.inr 3 : Sum Nat Nat) = .inr 7 := rfl
 example : destFindName names (.inl 2 : Sum Nat Nat) = .inl 2 := rfl
 
 -- `comp` / `prog_comp` / `compile`
-example : progComp names (pSeq (pInst (iConst 3 0)) (pHalt 3)) =
-    pSeq (pInst (iConst 7 0)) (pHalt 7) := rfl
+example : progComp names (pSeq (pInst (HolInst.const 3 0)) (pHalt 3)) =
+    pSeq (pInst (HolInst.const 7 0)) (pHalt 7) := rfl
 example : progComp names (pCall (some (pRaise 3, 4, 5, 6)) (.inr 3) (some (pHalt 4, 8, 9))) =
     pCall (some (pRaise 7, 4, 5, 6)) (.inr 7) (some (pHalt 4, 8, 9)) := rfl
 example : progCompEntry names (1, pHalt 3) = (1, pHalt 7) := rfl

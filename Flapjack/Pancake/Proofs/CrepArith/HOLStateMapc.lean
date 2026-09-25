@@ -453,6 +453,35 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSource
   rw [hCodeId] at hPres
   exact hPres
 
+/-- Arbitrary-index finite-state `Load` clause for the source evaluator,
+matching the `Load` branch of HOL `crepSem$eval_def`
+(`crepSemScript.sml:93-98`) and its `mem_load_def` dependency. It retains the
+recursive address evaluation, exact total-memory field, address-domain test,
+and complete `Option word_lab` result. It stays untagged because evaluation is
+still transported through the explicit `HolFiniteDimension` source adapter;
+the complete native HOL evaluator/state relation remains open. -/
+theorem evalCrepHolFiniteStateSource_load
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState addressExpression = some address) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.load addressExpression) =
+    if state.toSourceEvaluatorState.memaddrs address then
+      some (state.memory address) else none := by
+  let projected := state.toSourceEvaluatorState
+  change (evalCrepHolFiniteWordSourceExp dimension projected
+      (.load addressExpression)).map PanWordLab.word =
+    if projected.memaddrs address then some (state.memory address) else none
+  rw [evalCrepHolFiniteWordSourceExp, hAddress]
+  simp [panTheWord, projected,
+    CrepSemHOLFiniteState.toSourceEvaluatorState]
+  cases hMemory : state.memory address with
+  | word value =>
+      by_cases hDomain : decide (state.memaddrs address) = true <;>
+        simp [hDomain]
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

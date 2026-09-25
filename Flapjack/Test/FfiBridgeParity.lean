@@ -230,10 +230,42 @@ example : FfiNameRel (FfiName.extCall "foo")
     [1] [2] (0 + 1) [2] (by simp [prodEchoState, prodEchoOracle]) (by simp)
   simpa [prodEchoState, prodEchoOracle] using h
 
+/-! ## Production `ProgByteRanged` name boundary (flapjack-0up.2.1)
+
+The byte-rangedness premise is exactly the `ExtCall` clause of the production
+`PanLang.ProgByteRanged` predicate, not an unconditional claim about arbitrary
+`String`s. -/
+
+/-- A `ProgByteRanged` `ExtCall` node has a byte-ranged name. -/
+example : FfiNameByteRanged (FfiName.extCall "foo") :=
+  ffiNameByteRanged_extCall_of_progByteRanged (width := 64) "foo" (.const 0) (.const 0) (.const 0) (.const 0)
+    ⟨by decide, trivial, trivial, trivial, trivial⟩
+
+/-- The `ProgByteRanged` premise feeds the executed event-name boundary. -/
+example : FfiNameRel (FfiName.extCall "foo")
+      (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString "foo")) ∧
+    callFfi prodEchoState (FfiName.extCall "foo") [1] [2] =
+      FfiResult.returned
+        { prodEchoState with
+            state := 0 + 1
+            ioEvents := prodEchoState.ioEvents ++
+              [{ name := FfiName.extCall "foo", configuration := [1],
+                 bytes := [(2, 2)] }] } [2] := by
+  have hprog : Flapjack.Pancake.PanLang.ProgByteRanged
+      (Flapjack.Prog.extCall "foo" (.const 0) (.const 0) (.const 0) (.const 0) :
+        Flapjack.Prog (BitVec 64)) :=
+    ⟨by decide, trivial, trivial, trivial, trivial⟩
+  refine ⟨(ffiNameRel_extCall_byteBoundary (name := "foo") (by decide)).1, ?_⟩
+  have h := callFfi_extCall_success_eventNameBoundary_of_progByteRanged
+    prodEchoState "foo" (.const 0) (.const 0) (.const 0) (.const 0) hprog (by decide)
+    [1] [2] (0 + 1) [2] (by simp [prodEchoState, prodEchoOracle]) (by simp)
+  simpa [prodEchoState, prodEchoOracle] using h.2.2
+
 def runChecks : IO Bool := do
 
   IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, shared-mem, shared-mem HOL rows, append/zip)"
   IO.println "PASS ExtCall FFI-name byte boundary witness (flapjack-0up.2)"
+  IO.println "PASS production ProgByteRanged ExtCall name boundary (flapjack-0up.2.1)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

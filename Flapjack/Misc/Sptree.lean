@@ -145,4 +145,12 @@ def sptToAList {α : Type} (tree : Spt α) : List (Nat × α) :=
 @[simp] theorem sptToAList_ln {α : Type} :
     sptToAList (.ln : Spt α) = [] := by simp [sptToAList, sptFoldi]
 
+/-- HOL sptree `list_insert` (`HOL/src/finite_maps/sptreeScript.sml:2031-2034`):
+    insert each key (with unit value) into the tree, left to right. The HOL
+    source lives in the HOL installation's `src/finite_maps`, outside `cakeml/`,
+    so this rendering is Flapjack infrastructure and carries no `@[hol]` tag. -/
+def sptListInsert : List Nat → NumSet → NumSet
+  | [], tree => tree
+  | key :: keys, tree => sptListInsert keys (sptInsert key () tree)
+
 end Flapjack

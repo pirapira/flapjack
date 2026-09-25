@@ -815,4 +815,31 @@ example : (rtVars rtVarsCtxtFm [1, 2] 0).Nodup :=
 example : (rtVars rtVarsCtxtFm [1, 3] 0).Nodup :=
   allDistinctCtxtLookupAllDistinct rtVarsCtxt [1, 3] 0 (by decide) rtVarsCtxtFm_distinct
 
+/-- HOL `list_insert_SNOC` oracle rows (`li_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert_probe.out`): `list_insert [3;4]`
+    records 3 and 4 but not 5; appending 5 records it; and the SNOC form agrees
+    with `insert 5 ()` after `list_insert [3;4]`. -/
+example : sptLookup 3 (sptListInsert [3, 4] (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 4 (sptListInsert [3, 4] (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 5 (sptListInsert [3, 4] (Spt.ln : NumSet)) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 5 (sptListInsert ([3, 4] ++ [5]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 9 (sptListInsert ([3, 4] ++ [5]) (Spt.ln : NumSet)) =
+      sptLookup 9 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_SNOC` (`crep_to_loopProofScript.sml:386`): appending a key
+    to a key list is the same as inserting it into the resulting set. -/
+example (x : Nat) (ys : List Nat) (tree : NumSet) :
+    sptListInsert (ys ++ [x]) tree = sptInsert x () (sptListInsert ys tree) :=
+  sptListInsert_snoc x ys tree
+
 end Flapjack.Test.CrepToLoopParity

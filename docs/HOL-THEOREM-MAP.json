@@ -2057,20 +2057,20 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-    "hol_name": "exceptions_append",
-    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
-    "lean_name": "exceptions_append",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
-  },
+     "hol_name": "exceptions_append",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "exceptions_append",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.48) HOL exceptions_append (pan_globalsProofScript.sml:2507-2513) exceptions (ds ++ ds') = exceptions ds ++ exceptions ds' holds structurally for the source-shaped exceptionEntries, which only walks declaration constructors and never inspects an expression payload. The mismatch is the imported declaration carrier: Lean ranges over production Decl α with Exp α.Const : α (a generic word, not HOL's fixed-width ExpHOL width.Const : 'a word) and String FunName/VarName/ExceptionId/StructName, while HOL uses 'a word and mlstring. names_as_string cannot authorize the whole declaration carrier, so the tag remains withdrawn pending the exact MlString/exact-carrier retarget (flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8). Direct HOL rows empty=[] and exception=[(«E»,Comb [One; One])] are in pan_lang_exceptions_probe.out and sampled by Flapjack/Test/PanGlobalsExceptionsAppendParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-    "hol_name": "exceptions_FILTER_is_function",
-    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
-    "lean_name": "exceptions_FILTER_is_function",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
-  },
+     "hol_name": "exceptions_FILTER_is_function",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "exceptions_FILTER_is_function",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.47) HOL exceptions_FILTER_is_function (pan_globalsProofScript.sml:2515-2525) is the five-clause conjunction over FILTER is_function, FILTER ($¬ o is_function), FILTER is_exn_decl, FILTER is_name, and FILTER is_decl; the Lean theorem assembles the same five clauses with globalDeclsFilter and globalDeclIsFunction/globalDeclIsException/globalDeclIsName/globalDeclIsGlobal. The mismatch is the imported declaration carrier: Lean ranges over production Decl α with Exp α.Const : α (a generic word, not HOL's fixed-width ExpHOL width.Const : 'a word) and String FunName/VarName/ExceptionId/StructName, while HOL uses 'a word and mlstring. names_as_string cannot authorize the whole declaration carrier, so the tag remains withdrawn pending the exact MlString/exact-carrier retarget (flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8). Direct HOL rows empty=[] and exception=[(«E»,Comb [One; One])] are in pan_lang_exceptions_probe.out and sampled by Flapjack/Test/PanGlobalsExceptionsFilterIsFunctionParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "not_is_function",
@@ -2173,8 +2173,16 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "globalNewMainName",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.15) against pan_globalsScript.sml:224: new_main_name decls = fresh_name «main» (MAP FST (functions decls)) matches freshNameHOL \"main\" (globalFunctionNames declarations) once the production projections stand for HOL functions/fresh_name. The mismatch is the input carrier: this consumes generic production List (Decl α) with Const : α and String identifiers/Shape, while HOL consumes word-valued declarations with Const : 'a word and mlstring identifiers. names_as_string and the generated-name boundary witness only address the name difference, not this input carrier, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty / two_collisions / mixed / absent are in pan_globals_new_main_name_probe.out and sampled by Flapjack/Test/PanGlobalsNewMainNameParity.lean."
-  },
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.15) against pan_globalsScript.sml:224: new_main_name decls = fresh_name «main» (MAP FST (functions decls)) matches freshNameHOL \"main\" (globalFunctionNames declarations) once the production projections stand for HOL functions/fresh_name. The mismatch is the input carrier: this consumes generic production List (Decl α) with Const : α and String identifiers/Shape, while HOL consumes word-valued declarations with Const : 'a word and mlstring identifiers. names_as_string and the generated-name boundary witness only address the name difference, not this input carrier, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty / two_collisions / mixed / absent are in pan_globals_new_main_name_probe.out and sampled by Flapjack/Test/PanGlobalsNewMainNameParity.lean."
+   },
+   {
+     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+     "hol_name": "dec_shapes_def",
+     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+     "lean_name": "globalDeclShapes",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.12) against pan_globalsScript.sml:228-234: HOL dec_shapes is the five-clause projection Function _::ds |-> dec_shapes ds, Decl sh _ _::ds |-> sh::dec_shapes ds, Name _ _::ds |-> dec_shapes ds, ExnDecl _ _::ds |-> dec_shapes ds, [] |-> []; the Lean globalDeclShapes clauses match this order and shape selection clause-for-clause. The mismatch is the imported declaration carrier: the executed function consumes production Decl α whose Exp α.Const payload is a generic word α (not HOL's fixed-width ExpHOL width.Const : 'a word) and whose identifiers/Shape are String (not mlstring), so the statement ranges over inputs HOL cannot represent. names_as_string cannot authorize a whole declaration carrier and no byte witness applies, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty=[] / mixed=[Comb [One; Named «S»]; One] / functions_only=[] are in pan_globals_dec_shapes_probe.out and sampled by Flapjack/Test/PanGlobalsDecShapesParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",
@@ -2204,6 +2212,50 @@
       "name"
     ],
     "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.4) HOL fresh_name_def (pan_globalsScript.sml:55): fresh_name name names = if MEM name names then fresh_name (strcat name \u00ab'\u00bb) names else name. Lean freshNameHOL has the same clauses (\u2208 = list/String equality, ++ = strcat one-character append); HOL's strlen/MAX_SET termination measure versus Lean maxNameLength is non-operational and String.length occurs only there, so the sole operational difference is the String/mlstring carrier. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL gives NameRanged (freshNameHOL name names) from the NameRanged name premise, and the executed path seeds are the empty string, vn' and main). The names list is used only for membership equality. Direct HOL rows in pan_globals_fresh_name_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+     "hol_name": "fresh_name_correct",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "freshNameHOL_not_mem_hol",
+     "statement_status": "reviewed_names_as_string",
+     "names_as_string": [
+       "name"
+     ],
+     "names_as_string_boundary": [
+       "name"
+     ],
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The tagged theorem freshNameHOL_not_mem_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and the equivalent conclusion freshNameHOL name names not-in names; it delegates to the untagged helper freshNameHOL_not_mem in Flapjack/Pancake/PanGlobals.lean, which is stated over the reviewed @[hol] port freshNameHOL (fresh_name_def, pan_globalsScript.sml:55). Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names list is used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+   },
+   {
+     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+     "hol_name": "fresh_name_correct'",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "freshNameHOL_not_mem_of_subset_hol",
+     "statement_status": "reviewed_names_as_string",
+     "names_as_string": [
+       "name"
+     ],
+     "names_as_string_boundary": [
+       "name"
+     ],
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved in HOL via fresh_name_correct. The tagged theorem freshNameHOL_not_mem_of_subset_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and hypotheses (set inclusion stated pointwise, as HOL uses SUBSET_DEF) and the same conclusion, over the reviewed @[hol] port freshNameHOL; its proof goes through the tagged freshNameHOL_not_mem_hol, mirroring HOL's use of fresh_name_correct. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_of_subset_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names and names' lists are used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+   },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "holMlStringWitness_freshNameHOL_not_mem_hol",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only same-module NameRanged witness for the tagged fresh_name_correct port freshNameHOL_not_mem_hol; no CakeML HOL declaration."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "holMlStringWitness_freshNameHOL_not_mem_of_subset_hol",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Lean-only same-module NameRanged witness for the tagged fresh_name_correct' port freshNameHOL_not_mem_of_subset_hol; no CakeML HOL declaration."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2323,7 +2375,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_decs_decls",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex (source comparison with pan_globalsProofScript.sml:2023-2029): the unused ys binder, non-function premise, and rename-to-self equation correspond. Lean quantifies over production Decl α, with String names and arbitrary α global values; HOL uses mlstring names and word-valued globals. Although the premise makes each renamer a no-op, it does not equate declaration carriers. There is no NameRanged premise or checked declaration bridge for names_as_string; keep documented_mismatch pending the exact carrier (flapjack-pxn.18.3.5.8)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2339,7 +2391,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fresh_name_correct",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The Lean declaration named here is proved about the production fuel-bounded search globalFreshName (globalFreshName_not_mem), not the reviewed source-shaped freshNameHOL (@[hol] port of fresh_name_def, pan_globalsScript.sml:55), so the tag stays withdrawn. The exact source-shaped theorem over freshNameHOL is freshNameHOL_not_mem (PanGlobals.lean), currently untagged; unifying the executable path so the production search is the tagged definition is tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The Lean declaration named here is proved about the production fuel-bounded search globalFreshName (globalFreshName_not_mem), not the reviewed source-shaped freshNameHOL (@[hol] port of fresh_name_def, pan_globalsScript.sml:55), so this production-form tag stays withdrawn. The exact source-shaped port is now freshNameHOL_not_mem_hol (Flapjack/Pancake/Proofs/PanGlobals.lean), tagged with the names_as_string classification; unifying the executable path so the production search is the tagged definition is tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2347,7 +2399,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fresh_name_correct'",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved via fresh_name_correct. The Lean declaration named here is over the production globalFreshName (globalFreshName_not_mem_of_subset), not the reviewed freshNameHOL, and there is no freshNameHOL subset lemma yet, so the tag stays withdrawn. The exact MlString identifier carrier and executable-path unification are tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved via fresh_name_correct. The Lean declaration named here is over the production globalFreshName (globalFreshName_not_mem_of_subset), not the reviewed freshNameHOL, so this production-form tag stays withdrawn. The exact source-shaped port is now freshNameHOL_not_mem_of_subset_hol (Flapjack/Pancake/Proofs/PanGlobals.lean), tagged with the names_as_string classification. The executable-path unification is tracked by flapjack-pxn.18.3.5.8. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2764,6 +2816,14 @@
     "lean_name": "structContextLookupHOL_append_eq_of_some",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only first-match lookup preservation under a distinct-key prefix; internal support for the exact v_flds_ok_append port, with no claimed standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structContextLookupHOL_drop_eq_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only specialization of exact context lookup preservation under a prefix drop; internal support for sizeOfShapeWithContextHOL_drop, with no claimed standalone HOL theorem."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4678,12 +4738,20 @@
     "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "size_of_sh_with_ctxt_drop",
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (P0 source review: HOL size_of_sh_with_ctxt_drop has exactly the same two premises—shape well-formedness in DROP n and distinct structure keys—and equality conclusion as this production theorem. It remains untagged because HOL uses ShapeHOL and StructContextExact over MlS identifiers and the exact fields/size-only struct record; Lean uses String-backed production Shape/StructContext with cache-augmented StructInfo.shapedFields and String-keyed lookups. names_as_string cannot cover the context/record carrier difference. The exact size definition sizeOfShapeWithContextHOL already exists, but the drop theorem over exact carriers does not; tracked by flapjack-pxn.18.3.5.8.16. No byte-observable output is present."
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production-carrier analogue of size_of_sh_with_ctxt_drop; kept as useful String-backed infrastructure beside the exact MlString/ShapeHOL port."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "sizeOfShapeWithContextHOL_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison with pan_structsProofScript.sml:99-102: both premises are is_wf_shape (DROP n context) shape and ALL_DISTINCT (MAP FST context), and the conclusion is equality of size_of_sh_with_ctxt on dropped/full contexts. Lean uses the exact ShapeHOL, StructContextExact and MlString carriers, with identical Bool validity and first-match lookup. Direct HOL EVAL rows are in scripts/hol-probes/pan_structs_shape_context_drop_probe.out; exact-carrier kernel regressions are in Flapjack/Test/PanStructsShapeContextDropParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

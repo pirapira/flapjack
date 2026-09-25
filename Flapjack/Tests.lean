@@ -156,6 +156,7 @@ import Flapjack.Test.PanLangProgHOLParity
 import Flapjack.Test.PanLangDeclHOLParity
 import Flapjack.Test.CrepLookupCodeHOLParity
 import Flapjack.Test.CrepExpHOLParity
+import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.ParserByteNamesParity
 
 /-!

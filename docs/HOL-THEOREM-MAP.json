@@ -1153,6 +1153,14 @@
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
+    "lean_name": "CrepProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (inductive compared constructor-by-constructor against the Datatype prog at crepLangScript.sml:41-66: all 19 constructors and field types match, the `'a word` payloads are carried by BitVec width with [NeZero width], StoreGlob keeps the fixed 5-word address, Call/ExtCall names are MlString (HOL funname=mlstring), and varnames/Break/Continue stay num; the generic production CrepProg (alpha) with String function names stays untagged; total kernel isomorphisms crepProgToHOL/crepProgOfHOL with @[simp] forward roundtrip and a byte-ranged reverse roundtrip live in Flapjack/Pancake/CrepLang/Prog.lean; direct HOL oracle scripts/hol-probes/crep_lang_prog_probe.{sml,out} and guards in Flapjack/Test/CrepProgHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
     "lean_name": "storeGlobalsW",

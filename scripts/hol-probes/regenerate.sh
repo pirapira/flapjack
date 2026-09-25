@@ -1513,3 +1513,10 @@ run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
   cexp_const cexp_topaddr \
   "$cake_dir/pancake/crepLangScript.sml" \
   "$cake_dir/pancake"
+
+# The crepLang prog probe observes the exact width-indexed Crepe program
+# carrier (MlString Call/ExtCall names, word payloads, fixed 5-word StoreGlob).
+run_probe crep_lang_prog_probeScript.sml crep_lang_prog_probe.out \
+  prg_skip prg_tick \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"

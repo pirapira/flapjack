@@ -151,6 +151,7 @@ import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
 import Flapjack.Test.CrepLookupCodeHOLParity
 import Flapjack.Test.CrepExpHOLParity
+import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity

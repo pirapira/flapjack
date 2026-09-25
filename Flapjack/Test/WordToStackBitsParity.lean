@@ -787,6 +787,92 @@ example : callDest (α := Nat) none [1, 8] (2, 7, 9)
 example : callDest (α := Nat) none [] (2, 7, 9) = (.skip, .inl 5) := rfl
 example : Flapjack.raiseStubLocation = 5 := rfl
 
+/-!
+## `perf_call_prefix`/`perf_call_suffix` and stub oracle parity
+
+`perf_call_prefix_def` (`word_to_stackScript.sml:319`), `perf_call_suffix_def`
+(`:336`), `raise_stub_def` (`:557`) and `store_consts_stub_def` (`:578`),
+checked in `scripts/hol-probes/word_to_stack_stub_probe.out`.
+-/
+
+private def stubAddrsBEq : WordLangAddr (BitVec 64) → WordLangAddr (BitVec 64) → Bool
+  | .addr b o, .addr b' o' => b == b' && o == o'
+
+private def stubInstsBEq : WordLangInst (BitVec 64) → WordLangInst (BitVec 64) → Bool
+  | .const r v, .const r' v' => r == r' && v == v'
+  | .mem op r a, .mem op' r' a' => op == op' && r == r' && stubAddrsBEq a a'
+  | .arith (.binop op d s (.imm v)), .arith (.binop op' d' s' (.imm v')) =>
+      op == op' && d == d' && s == s' && v == v'
+  | .arith (.binop op d s (.reg n)), .arith (.binop op' d' s' (.reg n')) =>
+      op == op' && d == d' && s == s' && n == n'
+  | _, _ => false
+
+private def stubProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => stubProgBEq a c && stubProgBEq b d
+  | .inst i, .inst j => stubInstsBEq i j
+  | .locValue r a b, .locValue r' a' b' => r == r' && a == a' && b == b'
+  | .get r .handler, .get r' .handler => r == r'
+  | .set .handler r, .set .handler r' => r == r'
+  | .stackSetSize r, .stackSetSize s => r == s
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackFree n, .stackFree m => n == m
+  | .raise r, .raise r' => r == r'
+  | .storeConsts s b o, .storeConsts s' b' o' => s == s' && b == b' && o == o'
+  | .ret r, .ret r' => r == r'
+  | _, _ => false
+
+private def spSkip : StackMoveProg := .skip
+private def spSeq (a b : StackMoveProg) : StackMoveProg := .seq a b
+private def spLoc (k l1 l2 : Nat) : StackMoveProg := .locValue k l1 l2
+private def spMemStore (r base : Nat) (off : Int) : StackMoveProg :=
+  .inst (.mem .store r (.addr base (BitVec.ofInt 64 off)))
+private def spMemLoad (r base : Nat) (off : Int) : StackMoveProg :=
+  .inst (.mem .load r (.addr base (BitVec.ofInt 64 off)))
+private def spArithImm (op : BinOp) (d s : Nat) (v : Int) : StackMoveProg :=
+  .inst (.arith (.binop op d s (.imm (BitVec.ofInt 64 v))))
+private def spArithReg (op : BinOp) (d s r : Nat) : StackMoveProg :=
+  .inst (.arith (.binop op d s (.reg r)))
+private def spStackLoad (r i : Nat) : StackMoveProg := .stackLoad r i
+private def spStackFree (n : Nat) : StackMoveProg := .stackFree n
+private def spStackSetSize (k : Nat) : StackMoveProg := .stackSetSize k
+private def spGet (k : Nat) : StackMoveProg := .get k .handler
+private def spSet (k : Nat) : StackMoveProg := .set .handler k
+private def spRaise (k : Nat) : StackMoveProg := .raise k
+
+private def spRaiseStubTail (k : Nat) (perfPart : StackMoveProg) (slots : Nat) : StackMoveProg :=
+  spSeq (spGet k) (spSeq (spStackSetSize k) (spSeq perfPart
+    (spSeq (spStackLoad k 2) (spSeq (spSet k) (spSeq (spStackLoad k 1)
+      (spSeq (spStackFree slots) (spRaise k)))))))
+
+private def spRaisePerfPart : StackMoveProg :=
+  spSeq (spStackLoad 3 3) (spSeq (spArithReg .or 14 3 3)
+    (spSeq (spStackLoad 3 4) (spArithReg .or 15 3 3)))
+
+private def spPrefixTree : StackMoveProg :=
+  spSeq (spLoc 3 1 2) (spSeq (spMemStore 3 14 (-8)) (spSeq (spMemStore 15 14 (-16))
+    (spSeq (spArithImm .sub 14 14 16) (spArithReg .or 15 14 14))))
+
+private def spSuffixTree : StackMoveProg :=
+  spSeq (spMemLoad 15 14 0) (spArithImm .add 14 14 16)
+
+def stubParityGuard : Bool :=
+  stubProgBEq (perfCallPrefixW (width := 64) 1 2 3) spPrefixTree &&
+  stubProgBEq (perfCallSuffixW (width := 64)) spSuffixTree &&
+  stubProgBEq (raiseStub (α := BitVec 64) false 3) (spRaiseStubTail 3 spSkip 3) &&
+  stubProgBEq (raiseStub (α := BitVec 64) true 3) (spRaiseStubTail 3 spRaisePerfPart 5) &&
+  stubProgBEq (storeConstsStub (α := BitVec 64) 3)
+    (spSeq (.storeConsts 3 4 none) (.ret 0))
+
+#eval stubParityGuard
+#guard stubParityGuard
+
+example : storeConstsStub (α := BitVec 64) 3
+    = .seq (.storeConsts 3 4 none) (.ret 0) := rfl
+example : raiseStub (α := BitVec 64) false 3
+    = spRaiseStubTail 3 spSkip 3 := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -797,6 +883,6 @@ def runChecks : IO Bool := do
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
     copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
-    callDestParityGuard)
+    callDestParityGuard && stubParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

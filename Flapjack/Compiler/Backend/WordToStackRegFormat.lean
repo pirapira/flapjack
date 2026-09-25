@@ -368,4 +368,72 @@ def callDest {α : Type} (pos : Option Nat) (args : List Nat)
       let w := wReg2 last kf
       (Flapjack.Compiler.Backend.WordToStack.wStackLoad w.1 .skip, .inr w.2)
 
+/-- HOL `word_to_stack$perf_call_prefix`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:319-334`): the performance
+    frame-setup prefix.  It writes the return address with `LocValue`, stores the
+    old frame pointers relative to `perf_rsp`, and then atomically commits the
+    new frame before syncing `perf_rbp`.  The immediates are concrete words, so
+    the port is width-indexed. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_call_prefix_def"]
+def perfCallPrefixW {width : Nat} [NeZero width]
+    (l1 l2 k : Nat) : ProgM (BitVec width) :=
+  Flapjack.Compiler.Backend.StackLang.listSeq
+    [ .locValue k l1 l2,
+      .inst (.mem .store k
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+          (-8 : BitVec width))),
+      .inst (.mem .store (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+          (-16 : BitVec width))),
+      .inst (.arith (.binop .sub (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp) (.imm (16 : BitVec width)))),
+      .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (.reg (Flapjack.Compiler.Backend.WordToStack.perfRsp)))) ]
+
+/-- HOL `word_to_stack$perf_call_suffix`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:336-343`): pops the saved
+    frame pointer and discards both frame slots in one atomic step.  Width-indexed
+    because of the concrete `0w`/`16w` immediates. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_call_suffix_def"]
+def perfCallSuffixW {width : Nat} [NeZero width] : ProgM (BitVec width) :=
+  Flapjack.Compiler.Backend.StackLang.listSeq
+    [ .inst (.mem .load (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp) (0 : BitVec width))),
+      .inst (.arith (.binop .add (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp) (.imm (16 : BitVec width)))) ]
+
+/-- HOL `word_to_stack$raise_stub`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:557-576`): restores the
+    handler and (when `perf`) the performance frame pointers from slots 3/4, then
+    hands off to the next handler.  HOL is polymorphic in the word type and the
+    body contains no word literal, so the port is generic in the carrier
+    parameter `α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "raise_stub_def"]
+def raiseStub {α : Type} (perf : Bool) (k : Nat) : ProgM α :=
+  .seq (.get k .handler)
+    (.seq (.stackSetSize k)
+      (.seq
+        (if perf then
+          Flapjack.Compiler.Backend.StackLang.listSeq
+            [ .stackLoad k 3,
+              .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+                k (.reg k))),
+              .stackLoad k 4,
+              .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+                k (.reg k))) ]
+        else .skip)
+        (.seq (.stackLoad k 2)
+          (.seq (.set .handler k)
+            (.seq (.stackLoad k 1)
+              (.seq (.stackFree (Flapjack.Compiler.Backend.WordToStack.handlerSlots perf))
+                (.raise k)))))))
+
+/-- HOL `word_to_stack$store_consts_stub`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:578-580`): stores the
+    constant pool and returns.  Word-independent, so generic in `α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "store_consts_stub_def"]
+def storeConstsStub {α : Type} (k : Nat) : ProgM α :=
+  .seq (.storeConsts k (k + 1) none) (.ret 0)
+
 end Flapjack.Compiler.Backend.WordToStackRegFormat

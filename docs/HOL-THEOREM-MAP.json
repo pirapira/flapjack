@@ -6741,9 +6741,25 @@
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "convert_v_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "convertV",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.19): exact port of HOL convert_v_def (pan_structsProofScript.sml:31-37) over the exact panSem$v carrier ValueHOL (panSemScript.sml:22), whose constructor arities 1/1/2, Val payload HolWordLab width, and MlStringHOL stcname/fldname names match HOL; the [NeZero width] binder mirrors HOL's positive dimindex. The clauses convertV (Val x) = Val x, convertV (RStruct xs) = RStruct (MAP convertV xs), convertV (NStruct nm flds) = RStruct (MAP (\\(nm,v). convertV v) flds) match clause-for-clause; the NStruct record and field names are discarded, so the exact mlstring carrier is carried but never inspected. Regressions: Flapjack.Test.PanStructsCompileCorrect exactConvertNamedRecord reproduces the pan_structs_compile_correct_probe.out:1 row convert_named_record=RStruct [ValWord 3w; ValWord 5w]; the kernel-checked production bridge convertV_toPanValue goes through the Flapjack-specific ValueHOL.toPanValue map."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "convertV_toPanValue",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific production bridge: the exact HOL convert_v (convertV over ValueHOL, see above) transported through the name-forgetful ValueHOL.toPanValue map (MlStringHOL -> String via toStringOfBytes) equals production panStructConvertValue. No HOL declaration corresponds to the String-keyed bridge; HOL's convert_v already has an exact port (convertV)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "convert_v_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panStructConvertValue",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.66): the three constructor equations match HOL convert_v_def (pan_structsProofScript.sml:31-37), but the carrier differs: HOL panSem$v (panSemScript.sml:22) has stcname/fldname = mlstring and Val ('a word_lab), while production PanValue alpha has StructName/FieldName = String and stores alpha directly in the first constructor, not a word_lab wrapper. That constructor field-type difference is beyond name representation, so names_as_string does not apply. Exact HolValue/HolWordLab carriers now exist (PanSem.lean, flapjack-pxn.18.3.6.8); no HOL-shaped convert_v over HolValue with a production bridge is defined yet, tracked by flapjack-pxn.18.3.5.8.19 (parent flapjack-pxn.18.3.5.8). Direct HOL row convert_named_record=RStruct [ValWord 3w; ValWord 5w] in pan_structs_compile_correct_probe.out:1; paired Lean regression Flapjack.Test.PanStructsCompileCorrect:13-17."
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.66): the three constructor equations match HOL convert_v_def (pan_structsProofScript.sml:31-37), but the carrier differs: HOL panSem$v (panSemScript.sml:22) has stcname/fldname = mlstring and Val ('a word_lab), while production PanValue alpha has StructName/FieldName = String and stores alpha directly in the first constructor, not a word_lab wrapper. That constructor field-type difference is beyond name representation, so names_as_string does not apply. The exact HOL-shaped convert_v is now ported as convertV over ValueHOL (reviewed_exact, above) with the kernel-checked production bridge convertV_toPanValue; this executable counterpart stays untagged until the executable path itself runs over the exact carriers, tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2). Direct HOL row convert_named_record=RStruct [ValWord 3w; ValWord 5w] in pan_structs_compile_correct_probe.out:1; paired Lean regression Flapjack.Test.PanStructsCompileCorrect:13-17."
   },
   {
     "hol_path": null,

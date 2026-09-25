@@ -32,11 +32,14 @@ mutual
       mapping field values in order. The direct HOL-EVAL regression is recorded
       in the adjacent probe fixture. -/
   -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
-  -- production PanValue carrier whose nStruct record/field names are
-  -- StructName/FieldName = String and over StructContextHOL (String-keyed), while
-  -- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
-  -- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
-  -- (parent flapjack-pxn.18.3.5.7.2).
+  -- production PanValue α carrier, whose word payload is the generic α and whose
+  -- nStruct record/field names are StructName/FieldName = String, while HOL
+  -- pan_structsProofScript.sml is over panSem$v with a word-labelled payload and
+  -- stcname/fldname = mlstring. The exact HOL definition is `convertV` over the
+  -- exact `ValueHOL` carrier (tagged with this HOL name above); the kernel-checked
+  -- production bridge is `convertV_toPanValue`. This executable counterpart stays
+  -- untagged until the executable path itself runs over the exact carriers,
+  -- tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2).
   def panStructConvertValue : PanValue α → PanValue α
     | .word value => .word value
     | .rStruct fields => .rStruct (panStructConvertValues fields)
@@ -57,6 +60,32 @@ mutual
   termination_by fields => sizeOf fields
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-- Exact port of HOL `convert_v_def`
+    (`cakeml/pancake/proofs/pan_structsProofScript.sml:31-37`):
+    `convert_v (Val x) = Val x`,
+    `convert_v (RStruct xs) = RStruct (MAP convert_v xs)`, and
+    `convert_v (NStruct nm flds) = RStruct (MAP (\(nm,v). convert_v v) flds)`,
+    over the exact `panSem$v` carrier `ValueHOL` (MlString names and an indexed
+    word payload). The `NStruct` branch drops the record and field names, so the
+    exact `mlstring` name carrier is carried but never inspected. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "convert_v_def"]
+def convertV {width : Nat} [NeZero width] : ValueHOL width → ValueHOL width
+  | .val value => .val value
+  | .rStruct fields => .rStruct (fields.map convertV)
+  | .nStruct _ fields => .rStruct (fields.map (fun pair => convertV pair.2))
+termination_by value => sizeOf value
+decreasing_by
+  all_goals
+    simp_wf
+    first
+    | (rename_i hmem
+       have hlt := List.sizeOf_lt_of_mem hmem
+       omega)
+    | (rename_i hmem
+       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+       have hlt := List.sizeOf_lt_of_mem hmem
+       omega)
 
 /-! Structural Bool equality for the translated Shape datatype. It performs
     the HOL constructor equality cases recursively and avoids a BEq instance
@@ -873,6 +902,52 @@ private theorem panStructConvertFieldValues_eq_map
   | cons field fields ih =>
       cases field with
       | mk name value => simp [panStructConvertFieldValues, ih]
+
+/-- Flapjack-specific name-forgetful map from the exact `panSem$v` carrier to the
+    executable `PanValue`, decoding `mlstring` records/fields by their bytes. It
+    states the production bridge for the exact `convert_v` port and has no HOL
+    counterpart. -/
+def ValueHOL.toPanValue {width : Nat} [NeZero width] :
+    ValueHOL width → PanValue (BitVec width)
+  | .val (.word bits) => .word bits
+  | .rStruct fields => .rStruct (fields.map ValueHOL.toPanValue)
+  | .nStruct name fields =>
+      .nStruct (Flapjack.Basis.Pure.MlString.toStringOfBytes name)
+        (fields.map (fun pair =>
+          (Flapjack.Basis.Pure.MlString.toStringOfBytes pair.1,
+            ValueHOL.toPanValue pair.2)))
+termination_by value => sizeOf value
+decreasing_by
+  all_goals
+    simp_wf
+    first
+    | (rename_i hmem
+       have hlt := List.sizeOf_lt_of_mem hmem
+       omega)
+    | (rename_i hmem
+       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+       have hlt := List.sizeOf_lt_of_mem hmem
+       omega)
+
+theorem convertV_toPanValue {width : Nat} [NeZero width] (value : ValueHOL width) :
+    (convertV value).toPanValue = panStructConvertValue value.toPanValue := by
+  induction value using convertV.induct with
+  | case1 value => cases value with
+      | word bits => simp only [convertV, ValueHOL.toPanValue, panStructConvertValue]
+  | case2 fields ih =>
+      simp only [convertV, ValueHOL.toPanValue, panStructConvertValue,
+        panStructConvertValues_eq_map, List.map_map]
+      apply congrArg PanValue.rStruct
+      apply List.map_congr_left
+      intro x hx
+      exact ih x hx
+  | case3 name fields ih =>
+      simp only [convertV, ValueHOL.toPanValue, panStructConvertValue,
+        panStructConvertFieldValues_eq_map, List.map_map]
+      apply congrArg PanValue.rStruct
+      apply List.map_congr_left
+      intro pair hpair
+      exact ih pair hpair
 
 private theorem panValueFlatContextFuel_lookup_ge
     (name : String) (context : StructContext) (info : StructInfo)

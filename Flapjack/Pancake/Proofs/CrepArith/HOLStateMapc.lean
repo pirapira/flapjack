@@ -117,6 +117,74 @@ theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memadd
   rw [hAddress]
   rfl
 
+/-- Finite-map locals survive the expression projection and canonical
+finite-index transport unchanged in the direct BitVec view. -/
+theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_locals
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((state.toExpressionEvaluatorState).toHolFiniteBitVecState
+      (instFinHolFiniteDimension (width := width))).locals =
+    state.toBitVecEvaluatorState.locals := by
+  funext name
+  cases hLocal : state.locals.lookup name with
+  | none =>
+      simp [CrepSemHOLState.toExpressionEvaluatorState,
+        CrepSemHOLState.toBitVecEvaluatorState,
+        CrepHolState.toHolFiniteBitVecState, hLocal]
+  | some cell =>
+      cases cell with
+      | word value =>
+          dsimp only [CrepSemHOLState.toExpressionEvaluatorState,
+            CrepSemHOLState.toBitVecEvaluatorState,
+            CrepHolState.toHolFiniteBitVecState]
+          rw [hLocal]
+          simp only [Option.map_some, holWordLabToBits_word, mapCrepHolWordLab,
+            HolWordLab.toPanWordLab]
+          apply congrArg some
+          change PanWordLab.word
+            (holWordToBitVec (instFinHolFiniteDimension (width := width))
+              (bitVecToHolWordBits value)) = PanWordLab.word value
+          congr 1
+          change holWordToBitVec
+            (instFinHolFiniteDimension (width := width))
+            (bitVecToHolWordBits value) = value
+          change holWordBitsToBitVec (bitVecToHolWordBits value) = value
+          exact holWordBitsToBitVec_bitVecToHolWordBits value
+
+/-- Finite-map globals survive the expression projection and canonical
+finite-index transport unchanged in the direct BitVec view. -/
+theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_globals
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ) :
+    ((state.toExpressionEvaluatorState).toHolFiniteBitVecState
+      (instFinHolFiniteDimension (width := width))).globals =
+    state.toBitVecEvaluatorState.globals := by
+  funext name
+  cases hGlobal : state.globals.lookup name with
+  | none =>
+      simp [CrepSemHOLState.toExpressionEvaluatorState,
+        CrepSemHOLState.toBitVecEvaluatorState,
+        CrepHolState.toHolFiniteBitVecState, hGlobal]
+  | some cell =>
+      cases cell with
+      | word value =>
+          dsimp only [CrepSemHOLState.toExpressionEvaluatorState,
+            CrepSemHOLState.toBitVecEvaluatorState,
+            CrepHolState.toHolFiniteBitVecState]
+          rw [hGlobal]
+          simp only [Option.map_some, holWordLabToBits_word, mapCrepHolWordLab,
+            HolWordLab.toPanWordLab]
+          apply congrArg some
+          change PanWordLab.word
+            (holWordToBitVec (instFinHolFiniteDimension (width := width))
+              (bitVecToHolWordBits value)) = PanWordLab.word value
+          congr 1
+          change holWordToBitVec
+            (instFinHolFiniteDimension (width := width))
+            (bitVecToHolWordBits value) = value
+          change holWordBitsToBitVec (bitVecToHolWordBits value) = value
+          exact holWordBitsToBitVec_bitVecToHolWordBits value
+
 /-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
 state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec
 projection. This isolates the memory cell, domain, and endian fields from the

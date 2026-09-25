@@ -16,19 +16,24 @@
   (`cakeml/pancake/semantics/panSemScript.sml:396-449`) quantify the state
   component as a finite map `varname |-> v`, written with `FUPDATE`/`FLOOKUP`,
   whereas `PanSemStateFiniteExact` carries a `HolFiniteMapExact` value (a
-  `lookup` function together with a `finiteSupport` proof).  This is a
-  representation refinement of the HOL carrier, not the HOL carrier itself,
-  and AGENTS.md admits no qualifier/witness (unlike `list_as_array` /
-  `names_as_string`) that authorizes a finite-map representation.  The five
-  `...HOLFinite` helpers therefore stay untagged and are recorded as
-  `documented_mismatch` infrastructure; the faithful-tagging decision (new
-  representation qualifier/witness vs. an exact `|->` carrier) is tracked by
-  `flapjack-pxn.18.3.7.1.3.1.1.2`.  The broad-carrier helpers over
-  `PanSemStateExact` (`StateExact.lean`) remain the `documented_mismatch`
-  analogues.
+  `lookup` function together with a `finiteSupport` proof).  `HolFiniteMapExact`
+  is the reviewed *standard* Lean translation of HOL's finite map: it is closed,
+  extensional (see `HolFiniteMapExact.ext`), and invertible with the
+  finite-support subtype of the broad `PanSemStateExact` carrier (see
+  `PanSemStateFiniteExact.ofExact` / `toExact` and the canonical witness
+  `holFmapAsFiniteSupportWitness`).  The representation is now recorded by the
+  `@[hol ...]` qualifier `fmap_as_finite_support` implemented in
+  `Flapjack/HolRef.lean` and enforced by `scripts/check-hol-refs.py`; it is a
+  representation statement only and does not authorize changed quantifiers,
+  hypotheses, results, `BEq` side conditions, or word-model differences.  The
+  five `...HOLFinite` helpers remain untagged: each is still reviewed
+  case-by-case under `flapjack-pxn.18.3.7.1.3.1.1.2.4`.  The broad-carrier
+  helpers over `PanSemStateExact` (`StateExact.lean`) remain the
+  `documented_mismatch` analogues.
 
-  Nothing here is tagged `@[hol]`: this is representation infrastructure for
-  the exact-carrier rebuild tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`.
+  Nothing here is tagged `@[hol]` yet: this is representation infrastructure for
+  the exact-carrier rebuild tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`; the
+  tag qualifier itself is `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
 -/
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
@@ -36,6 +41,17 @@ import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL)
+
+/-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
+    equal, because the `finiteSupport` field is a proof of a proposition.  This
+    is the extensionality half of the canonical finite-map translation witness. -/
+theorem HolFiniteMapExact.ext {α β : Type} {left right : HolFiniteMapExact α β}
+    (h : left.lookup = right.lookup) : left = right := by
+  obtain ⟨lleft, pleft⟩ := left
+  obtain ⟨lright, pright⟩ := right
+  simp only at h
+  subst h
+  rfl
 
 /-- Finite-support mirror of `PanSemStateExact`.  The four map-shaped
     components are `HolFiniteMapExact` values, i.e. finite support holds by
@@ -82,8 +98,55 @@ theorem toExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   ⟨state.locals.finiteSupport, state.globals.finiteSupport,
     state.code.finiteSupport, state.eshapes.finiteSupport⟩
 
-/-- Finite-support mirror of `decClockHOLExact`.  Untagged: the exact-carrier
-    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+/-- Rebuild the finite-support carrier from a broad exact state together with a
+    finite-support proof: each unrestricted lookup function becomes a
+    `HolFiniteMapExact` using the supplied witness.  This is the inverse of
+    `toExact` on the finite-support subtype. -/
+def ofExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (h : state.FiniteSupport) :
+    PanSemStateFiniteExact width σ where
+  locals := { lookup := state.locals, finiteSupport := h.1 }
+  globals := { lookup := state.globals, finiteSupport := h.2.1 }
+  structs := state.structs
+  code := { lookup := state.code, finiteSupport := h.2.2.1 }
+  eshapes := { lookup := state.eshapes, finiteSupport := h.2.2.2 }
+  memory := state.memory
+  memaddrs := state.memaddrs
+  shMemaddrs := state.shMemaddrs
+  clock := state.clock
+  be := state.be
+  ffi := state.ffi
+  baseAddr := state.baseAddr
+  topAddr := state.topAddr
+
+/-- One roundtrip: `toExact` after `ofExact` is the identity on a finite-support
+    broad state. -/
+theorem toExact_ofExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (h : state.FiniteSupport) :
+    (ofExact state h).toExact = state :=
+  rfl
+
+/-- The other roundtrip: `ofExact` after `toExact` is the identity on the
+    finite-support carrier.  The `finiteSupport` proofs are propositionally
+    irrelevant. -/
+theorem ofExact_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) :
+    ofExact state.toExact state.toExact_finiteSupport = state := by
+  cases state
+  rfl
+
+/-- Canonical global kernel witness for the `fmap_as_finite_support` `@[hol]`
+    qualifier: `HolFiniteMapExact` is extensional and the finite-support carrier
+    is invertibly related to the broad exact one.  The checker requires this
+    declaration in the module of a `fmap_as_finite_support`-qualified tag. -/
+theorem holFmapAsFiniteSupportWitness {width : Nat} {σ : Type} [NeZero width] :
+    (∀ (state : PanSemStateExact width σ) (h : state.FiniteSupport),
+        (ofExact state h).toExact = state) ∧
+    (∀ state : PanSemStateFiniteExact width σ,
+        ofExact state.toExact state.toExact_finiteSupport = state) :=
+  ⟨fun state h => toExact_ofExact state h, fun state => ofExact_toExact state⟩
+
+
 def decClockHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
   { state with clock := state.clock - 1 }

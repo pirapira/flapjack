@@ -186,6 +186,20 @@ HOL correspondence or premise discharge; record those in source review. The
 theorem map and type-hash lock record both qualifier lists. Do not add this
 qualifier to production declarations until checker tests and source review pass.
 
+**Qualify canonical finite-map carriers.** Use
+`(fmap_as_finite_support := [field, ...])` when a HOL `|->` finite-map field is
+represented by the reviewed canonical Lean translation `HolFiniteMapExact`
+(a `lookup` function plus a `finiteSupport` proposition). Each named field must
+be declared in a same-module structure whose type uses `HolFiniteMapExact`; a
+raw function-backed `α → Option β` map is ineligible, and the module must
+contain the checked canonical witness `holFmapAsFiniteSupportWitness`
+(extensionality plus `toExact`/`ofExact` roundtrips). The reference checker
+verifies field/carrier/witness shape and Lake checks the proof; neither
+establishes HOL correspondence. The qualifier is a representation statement
+only: it does not authorize changed quantifiers, hypotheses, conclusions, `BEq`
+side conditions, or word-model differences, and every tagged declaration still
+needs its own statement/side-condition review.
+
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
 definitions. A tagged proof-only duplicate beside a different production

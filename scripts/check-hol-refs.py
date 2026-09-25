@@ -41,6 +41,9 @@ NAMES_AS_STRING_RE = re.compile(r'\(\s*names_as_string\s*:=\s*\[([^]]*)\]\s*\)')
 NAMES_AS_STRING_BOUNDARY_RE = re.compile(
     r'\(\s*names_as_string_boundary\s*:=\s*\[([^]]*)\]\s*\)'
 )
+FMAP_AS_FINITE_SUPPORT_RE = re.compile(
+    r'\(\s*fmap_as_finite_support\s*:=\s*\[([^]]*)\]\s*\)'
+)
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
     r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
@@ -149,6 +152,7 @@ def hol_attribute_sites(lines: list[str]):
                     fields_for(QUALIFIER_RE),
                     fields_for(NAMES_AS_STRING_RE),
                     fields_for(NAMES_AS_STRING_BOUNDARY_RE),
+                    fields_for(FMAP_AS_FINITE_SUPPORT_RE),
                 )
         start = None
         chunks = []
@@ -231,6 +235,96 @@ def structure_fields(lines: list[str]) -> set[str]:
         if field:
             fields.add(field.group(1))
     return fields
+
+
+def structure_field_types(lines: list[str]) -> dict[str, str]:
+    """Text of each structure field declaration's type, per module.
+
+    The type is the remainder of the declaration line; qualified finite-map
+    fields name their `HolFiniteMapExact` carrier on that line, which is enough
+    for the representation gate to reject raw `α → Option β` maps.
+    """
+    field_types: dict[str, str] = {}
+    structure_indent: int | None = None
+    for line in strip_lean_comments("\n".join(lines)).splitlines():
+        structure = re.match(r"^(\s*)structure\s+[A-Za-z0-9_'.]+.*\bwhere\s*$", line)
+        if structure:
+            structure_indent = len(structure.group(1))
+            continue
+        if structure_indent is None:
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= structure_indent:
+            structure_indent = None
+            continue
+        field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:\s*(?P<type>.+)$", line)
+        if field:
+            field_types.setdefault(field.group(1), field.group("type").strip())
+    return field_types
+
+
+def has_fmap_witness(lines: list[str]) -> bool:
+    """Require the canonical finite-map translation witness in this module.
+
+    The witness is named `holFmapAsFiniteSupportWitness` and its statement must
+    mention both `PanSemStateFiniteExact` (the finite-support carrier) and
+    `PanSemStateExact` (the broad exact carrier), i.e. the roundtrip between
+    them.  Lake checks the proof; this gate checks its presence and shape.
+    """
+    source = strip_lean_comments("\n".join(lines))
+    pattern = re.compile(
+        rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
+        rf"(?:theorem|lemma)\s+holFmapAsFiniteSupportWitness\b"
+        rf"(?P<statement>[\s\S]*?):=",
+        re.M,
+    )
+    for match in pattern.finditer(source):
+        statement = match.group("statement")
+        if (
+            "PanSemStateFiniteExact" in statement
+            and "PanSemStateExact" in statement
+        ):
+            return True
+    return False
+
+
+def fmap_as_finite_support_errors(
+    lines: list[str], fields: tuple[str, ...], module: str
+) -> list[str]:
+    """Validate the reviewed canonical HOL finite-map translation.
+
+    Each named field must be a same-module structure field whose declared type
+    uses `HolFiniteMapExact`; a raw `α → Option β` lookup map is ineligible.
+    The module must also provide the canonical witness
+    `holFmapAsFiniteSupportWitness`.
+    """
+    errors: list[str] = []
+    if len(set(fields)) != len(fields):
+        errors.append("fmap_as_finite_support fields must be distinct")
+    declared_fields = structure_fields(lines)
+    field_types = structure_field_types(lines)
+    for field in fields:
+        if field not in declared_fields:
+            errors.append(
+                f"fmap_as_finite_support field `{field}` is not a field of a Lean "
+                f"structure declared in {module}"
+            )
+            continue
+        field_type = field_types.get(field, "")
+        if "HolFiniteMapExact" not in field_type:
+            errors.append(
+                f"fmap_as_finite_support field `{field}` does not use the approved "
+                "HolFiniteMapExact carrier; a raw function-backed map is ineligible"
+            )
+    if fields and not has_fmap_witness(lines):
+        errors.append(
+            "fmap_as_finite_support has no same-module checked canonical witness "
+            "`holFmapAsFiniteSupportWitness` relating PanSemStateFiniteExact and "
+            "PanSemStateExact"
+        )
+    return errors
 
 
 def has_list_array_witness(lines: list[str], field: str) -> bool:
@@ -430,7 +524,7 @@ def main(argv: list[str]) -> int:
         module = module_name(lean_path)
         module_reported = False
         for (number, hol_path, hol_name, hol_line, list_fields,
-             names_fields, boundary_fields) in hol_attribute_sites(lines):
+             names_fields, boundary_fields, fmap_fields) in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -444,6 +538,11 @@ def main(argv: list[str]) -> int:
                 errors.extend(
                     f"{where}: {error}"
                     for error in list_as_array_errors(lines, list_fields, rel)
+                )
+            if fmap_fields:
+                errors.extend(
+                    f"{where}: {error}"
+                    for error in fmap_as_finite_support_errors(lines, fmap_fields, rel)
                 )
             if names_fields or boundary_fields:
                 errors.extend(

@@ -551,6 +551,7 @@ VALID_STATUSES = {
     "reviewed_list_as_array",
     "reviewed_names_as_string",
     "reviewed_list_as_array_names_as_string",
+    "reviewed_fmap_as_finite_support",
     "pending_statement_review",
     "documented_mismatch",
     "no_hol_reference_pending_classification",
@@ -681,13 +682,14 @@ def tagged_declarations(
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
         for (line, hol_path, hol_name, _hol_line, list_fields,
-             names_fields, boundary_fields) in HOL_ATTRIBUTE_SITES(lines):
+             names_fields, boundary_fields, fmap_fields) in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
-            value = (hol_path, hol_name, list_fields, names_fields, boundary_fields)
+            value = (hol_path, hol_name, list_fields, names_fields,
+                     boundary_fields, fmap_fields)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -699,7 +701,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
     for (lean_path, lean_name), (
-        hol_path, hol_name, list_fields, names_fields, boundary_fields
+        hol_path, hol_name, list_fields, names_fields, boundary_fields, fmap_fields
     ) in tagged.items():
         entry = {
             "hol_path": hol_path,
@@ -715,6 +717,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             entry["names_as_string"] = list(names_fields)
         if boundary_fields:
             entry["names_as_string_boundary"] = list(boundary_fields)
+        if fmap_fields:
+            entry["fmap_as_finite_support"] = list(fmap_fields)
         inventory[(lean_path, lean_name)] = entry
 
     for lean_path, lean_name in proof_theorem_declarations(root):
@@ -813,14 +817,16 @@ def validate_inventory(
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         tag = tagged.get(key)
-        if tag is not None and len(tag) < 5:
-            tag = tag + ((),) * (5 - len(tag))
+        if tag is not None and len(tag) < 6:
+            tag = tag + ((),) * (6 - len(tag))
         list_fields = tag[2] if tag is not None else ()
         names_fields = tag[3] if tag is not None else ()
         boundary_fields = tag[4] if tag is not None else ()
+        fmap_fields = tag[5] if tag is not None else ()
         manifest_list_fields = tuple(record.get("list_as_array", ()))
         manifest_names_fields = tuple(record.get("names_as_string", ()))
         manifest_boundary_fields = tuple(record.get("names_as_string_boundary", ()))
+        manifest_fmap_fields = tuple(record.get("fmap_as_finite_support", ()))
         if manifest_list_fields != list_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
@@ -832,6 +838,10 @@ def validate_inventory(
         if manifest_boundary_fields != boundary_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest names_as_string_boundary fields do not match its @[hol] tag"
+            )
+        if manifest_fmap_fields != fmap_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest fmap_as_finite_support fields do not match its @[hol] tag"
             )
         if not set(boundary_fields) <= set(names_fields):
             errors.append(
@@ -862,6 +872,21 @@ def validate_inventory(
         if not names_fields and status == "reviewed_names_as_string":
             errors.append(
                 f"{key[0]}:{key[1]}: reviewed_names_as_string needs a names_as_string @[hol] tag"
+            )
+        if fmap_fields and status == "reviewed_exact":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support @[hol] tag cannot have reviewed_exact "
+                "status; use reviewed_fmap_as_finite_support after source comparison"
+            )
+        if fmap_fields and status != "reviewed_fmap_as_finite_support":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support @[hol] tag needs a reviewed "
+                "source classification (reviewed_fmap_as_finite_support)"
+            )
+        if not fmap_fields and status == "reviewed_fmap_as_finite_support":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_fmap_as_finite_support needs a "
+                "fmap_as_finite_support @[hol] tag"
             )
         if list_fields and names_fields:
             if status == "reviewed_list_as_array" or status == "reviewed_names_as_string":

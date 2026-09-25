@@ -235,6 +235,7 @@ import Flapjack.Test.PanSemEvalExactParity
 import Flapjack.Test.PanSemStoreExactParity
 import Flapjack.Test.PanSemTickShMemExactParity
 import Flapjack.Test.PanSemExtCallExactParity
+import Flapjack.Test.PanSemDecCallExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.PanSemDecErrorExactParity
 import Flapjack.Test.PanSemPrimitiveErrorExactParity
@@ -896,6 +897,7 @@ Flapjack.Test.PanSemReturnRaiseMemoryParity.runChecks,
   Flapjack.Test.PanSemStoreExactParity.runChecks,
   Flapjack.Test.PanSemTickShMemExactParity.runChecks,
   Flapjack.Test.PanSemExtCallExactParity.runChecks,
+  Flapjack.Test.PanSemDecCallExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
 Flapjack.Test.PanSemDecErrorExactParity.runChecks,
 Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,

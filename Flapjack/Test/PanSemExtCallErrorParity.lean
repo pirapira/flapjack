@@ -17,12 +17,11 @@ preserves locals, globals, memory and observable FFI cells with an unchanged
 clock.
 
 Beyond the sampled `Bool` guards (which can only inspect decidable cells, as
-`PanSemState` has no `DecidableEq`), the module also proves the full extensional
-post-state statement as `Prop` theorems: `extCallError_preserves_full_state`
-(`SameState` spells out all thirteen state fields) and the six
-`clocked*_full`/`nonClocked*_full` reduction theorems, each establishing that
-the Error branch returns exactly the input state (or its control result's
-fields).
+`PanSemState` has no `DecidableEq`), six kernel-checked
+`clocked*_full`/`nonClocked*_full` reduction theorems establish the exact Error
+result. The clocked theorems equate the entire post-state record, including all
+function fields, with the input state; the non-clocked theorems equate the
+complete control-result payload with its input values.
 
 The HOL oracle is `scripts/hol-probes/pan_sem_extcall_error_probe.out`.
 -/
@@ -53,17 +52,6 @@ def extState (clock : Nat) : PanSemState Word64 (FfiState Unit) :=
 
 def emptyAccess : PanValueMemoryAccess Word64 :=
   panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel (domain := fun _ => false)
-
-/-- Extensional equality of two PanSem source states.  `PanSemState` has
-    function fields and therefore no `DecidableEq`/`BEq` instance, so the full
-    post-state claim is a `Prop`; `SameState` spells out all thirteen fields. -/
-def SameState (left right : PanSemState Word64 (FfiState Unit)) : Prop :=
-  left.locals = right.locals ∧ left.globals = right.globals ∧
-    left.structs = right.structs ∧ left.code = right.code ∧
-    left.exceptionShapes = right.exceptionShapes ∧ left.memory = right.memory ∧
-    left.memaddrs = right.memaddrs ∧ left.sharedMemaddrs = right.sharedMemaddrs ∧
-    left.clock = right.clock ∧ left.be = right.be ∧ left.ffi = right.ffi ∧
-    left.baseAddress = right.baseAddress ∧ left.topAddress = right.topAddress
 
 /-- With an empty read domain every byte read fails, so reading `n + 1` bytes
     yields `none`. -/
@@ -172,19 +160,6 @@ theorem nonClockedArgFail_full :
     evalPanValueFfiProgSteps, panValueFfiExtCallSteps, evalPanValueExpsCounted,
     evalPanValueExps, evalPanValueExp.evalPanValueExps, evalPanValueExp, extState,
     argFailProgram]
-
-/-- All three clocked Error branches return the complete input state. -/
-theorem extCallError_preserves_full_state :
-    SameState (((clockedEvaluate 5 nonwordProgram).map Prod.snd).getD (extState 5)) (extState 5) ∧
-    SameState (((clockedEvaluate 5 readFailProgram (some emptyAccess)).map Prod.snd).getD (extState 5)) (extState 5) ∧
-    SameState (((clockedEvaluate 5 argFailProgram).map Prod.snd).getD (extState 5)) (extState 5) := by
-  refine ⟨?_, ?_, ?_⟩
-  · rw [clockedNonword_full]
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · rw [clockedReadFail_full]
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  · rw [clockedArgFail_full]
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 private def ffiObservable (ffi : FfiState Unit) : Bool :=
   ffi.state == () && decide (ffi.ioEvents = ([] : List FfiEvent))

@@ -95,9 +95,11 @@ private theorem crepExpVarsList_mem_iff
     `PanSemState`/`CrepRuntimeState`, String-backed identifiers, optional
     `PanValue` memory, and a target relation that is not HOL's direct `word_lab`
     state relation. These are carrier and premise-shape mismatches, not a
-    missing proof hint. The remaining exact Pan-to-Crep context/state/local
-    relations are tracked by `flapjack-pxn.18.3.5.8.8`. Keep bead
-    `flapjack-4ac.5.21` open until the HOL statement can be proved. -/
+    missing proof hint. A faithful port now needs exact Pan-to-Crep
+    context/state/local relations; the open prerequisites are tracked by
+    `flapjack-pxn.18.3.7.1.3.1` and `flapjack-pxn.18.3.5.8.8`. Keep bead
+    `flapjack-4ac.5.21` open until that exact statement can be assembled and
+    proved. -/
 
 /-- Flapjack-specific induction invariant for the HOL theorem below, split
     into list and expression compiler cases so Lean's compiler recursor can

@@ -209,5 +209,46 @@ example {width : Nat} (l : List (String × Flapjack.Exp (BitVec width)))
     (h : ∀ p ∈ l, (∀ c ∈ p.1.toList, c.toNat < 256) ∧ ExpByteRanged p.2) :
     ListFieldByteRanged l :=
   listFieldByteRanged_iff l |>.mpr h
+/-! ## Declaration-conversion byte-rangedness (bead 18.3.5.8.7.1.1.1) -/
+
+example {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat) (nt : Nonterminal)
+    (r : Shape × (String × Flapjack.Exp (BitVec width)))
+    (h : Flapjack.Parser.convDecForm ofInt fuel nt (ParseTree.lf Token.semiT unknownLoc) = some r) :
+    ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ ExpByteRanged r.2.2 :=
+  convDecForm_byteRanged ofInt fuel nt _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) r h
+
+example (fuel : Nat) (r : String × Shape)
+    (h : Flapjack.Parser.convExnDec fuel (ParseTree.lf Token.semiT unknownLoc) = some r) :
+    StringByteRanged r.1 ∧ ShapeByteRanged r.2 :=
+  convExnDec_byteRanged fuel _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) r h
+
+example {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (r : Shape × (String × (String × List (Flapjack.Exp (BitVec width)))))
+    (h : Flapjack.Parser.convDecCall ofInt fuel (ParseTree.lf Token.semiT unknownLoc) = some r) :
+    ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ StringByteRanged r.2.2.1 ∧
+      ∀ e ∈ r.2.2.2, ExpByteRanged e :=
+  convDecCall_byteRanged ofInt fuel _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) r h
+
+example (r : Option (Option (Flapjack.VarKind × String)))
+    (h : Flapjack.Parser.convRet (ParseTree.lf Token.semiT unknownLoc) = some r)
+    (vk : Flapjack.VarKind) (name : String) (hr : r = some (some (vk, name))) :
+    StringByteRanged name :=
+  convRet_byteRanged _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) r h vk name hr
+
+
+/-- Annotation comment text is included in the byte-ranged token invariant. -/
+example (text : String) (h : StringByteRanged text) :
+    TokenNameByteRanged (Token.annotCommentT text) := h
+
+example {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (p : Flapjack.Prog (BitVec width))
+    (h : Flapjack.Parser.convNonRecStmt ofInt fuel (ParseTree.lf Token.semiT unknownLoc) = some p) :
+    ProgByteRanged p :=
+  convNonRecStmt_byteRanged ofInt fuel _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) p h
 
 end Flapjack.Test.ParserByteRangedParity

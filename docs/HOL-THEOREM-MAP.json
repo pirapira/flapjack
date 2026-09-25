@@ -4544,6 +4544,22 @@
     "reviewer": "Codex (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "is_wf_shape_nil_length_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "isWfShapeNil_length_flatten",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "flatten_nil_no_size",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "flattenNilNoSize",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -4574,22 +4590,6 @@
     "lean_name": "resVarCommutesPrime",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (finite-map equation comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "is_wf_shape_nil_length_flatten",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "isWfShapeNil_length_flatten",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: HOL flatten_nil_no_size[local] (pan_to_crepProofScript.sml:3001) and is_wf_shape_nil_length_flatten (:2469) quantify HOL v (mlstring names); this Lean statement quantifies production PanValue (StructName = String). Withheld under the String/MlString carrier rule (flapjack-0lj); exact-carrier port tracked by flapjack-0lj.7.1."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "flatten_nil_no_size",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "flattenNilNoSize",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Untagged: HOL flatten_nil_no_size[local] (pan_to_crepProofScript.sml:3001) and is_wf_shape_nil_length_flatten (:2469) quantify HOL v (mlstring names); this Lean statement quantifies production PanValue (StructName = String). Withheld under the String/MlString carrier rule (flapjack-0lj); exact-carrier port tracked by flapjack-0lj.7.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

@@ -168,14 +168,15 @@ theorem globalsLookup_wordCell {state : CrepRuntimeState (RiscV.Word 64) σ}
   rw [houtput] at hpoint
   exact hpoint
 
-/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL
-    `flatten_nil_no_size[local]` quantifies `x : v`, whose `NStruct` carries
-    mlstring names (`stcname`), while this statement quantifies production
-    `PanValue α`, whose `.nStruct` carries `StructName = String`. Withholding
-    the tag under the String/MlString carrier rule (`flapjack-0lj`); exact
-    carrier port tracked by `flapjack-0lj.7.1`. Body: flattening a value of
-    well-formed empty-structure shape is empty exactly when its shape has
-    size zero. -/
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `flatten_nil_no_size[local]`: flattening a value of well-formed
+    empty-structure shape is empty exactly when its shape has size zero. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+-- production `PanValue` carrier whose `nStruct` record/field names are
+-- `StructName`/`FieldName` = `String`, while HOL `pan_to_crepProofScript.sml`
+-- is over `panSem$v` with `stcname`/`fldname` = `mlstring`. The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 theorem flattenNilNoSize (value : PanValue α)
     (hwf : isWfShape [] (panSemShapeOf value) = true) :
     panValueFlatten value = [] ↔ Shape.shapeSize (panSemShapeOf value) = 0 := by
@@ -258,13 +259,15 @@ theorem loadShapeBytes_getElem_rel {width : Nat} [NeZero width]
   rw [List.getElem?_eq_getElem hvalid] at hopt
   exact Option.some.inj hopt
 
-/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL
-    `is_wf_shape_nil_length_flatten` quantifies `v : v` (mlstring names), while
-    this statement quantifies production `PanValue α` (`String` names).
-    Withholding the tag under the String/MlString carrier rule (`flapjack-0lj`);
-    exact carrier port tracked by `flapjack-0lj.7.1`. Body: a word list chosen
-    by the zero-size or positive-size branch has the size prescribed by the
-    source value shape. -/
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `is_wf_shape_nil_length_flatten`: a word list chosen by the zero-size
+    or positive-size branch has the size prescribed by the source value shape. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+-- production `PanValue` carrier whose `nStruct` record/field names are
+-- `StructName`/`FieldName` = `String`, while HOL `pan_to_crepProofScript.sml`
+-- is over `panSem$v` with `stcname`/`fldname` = `mlstring`. The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
     (hwf : isWfShape [] (panSemShapeOf value) = true)
     (hzero : Shape.shapeSize (panSemShapeOf value) = 0 → words = [])

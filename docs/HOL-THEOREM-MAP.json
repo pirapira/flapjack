@@ -555,6 +555,22 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged BaseAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged TopAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteStateSource_load32",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged Load32 case with the recursive address premise, exact finite-state memory/domain projection, and full word_lab result via tagged mem_load_32_def. The surrounding evaluator still uses explicit HolFiniteDimension and is not native crepSem eval."

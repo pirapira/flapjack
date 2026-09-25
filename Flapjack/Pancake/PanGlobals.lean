@@ -304,13 +304,42 @@ decreasing_by
   rw [hone]
   omega
 
-/-- Internal freshness support for `globalNewMainName`; the proof-script
-    theorem `fresh_name_correct` is tracked separately from this helper. -/
+/-- Exact source-shaped port of Cake's `fresh_name_correct`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`): a name returned by
+    the fresh-name search is not a member of the search list. HOL
+    `MEM (fresh_name name names) names ⇒ F` becomes the equivalent
+    `freshNameHOL name names ∉ names`. Statement, quantifiers, and body are
+    exact apart from the HOL `mlstring`/Lean `String` carrier of `name` and the
+    membership-only `names` list: `name` is byte-observable (the generated name
+    crosses the compiler boundary and the same-module witness
+    `holMlStringWitness_freshNameHOL_not_mem` establishes
+    `NameRanged (freshNameHOL name names)` from the input premise
+    `NameRanged name`), while `names` is used only for membership equality.
+    Direct HOL rows are in `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
 theorem freshNameHOL_not_mem (name : String) (names : List String) :
     freshNameHOL name names ∉ names := by
   fun_induction freshNameHOL name names with
   | case1 name names ih => exact ih
   | case2 name names => assumption
+
+/-- Exact source-shaped port of Cake's `fresh_name_correct'`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1003`): if every member
+    of `names'` lies in `names`, then a name fresh for `names` is also fresh for
+    `names'`. HOL `set names' ⊆ set names` is stated pointwise, as HOL itself
+    uses it (`SUBSET_DEF`). Statement, hypotheses, and proof are exact apart
+    from the HOL `mlstring`/Lean `String` carrier of `name` (byte-observable,
+    witness `holMlStringWitness_freshNameHOL_not_mem_of_subset`) and of the
+    membership-only lists `names`/`names'`. Direct HOL rows are in
+    `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct'"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
+theorem freshNameHOL_not_mem_of_subset (name : String) (names names' : List String)
+    (hmem : freshNameHOL name names ∈ names')
+    (hsubset : ∀ candidate, candidate ∈ names' → candidate ∈ names) :
+    False :=
+  freshNameHOL_not_mem name names (hsubset _ hmem)
 
 def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
   | .one => .const (context.fromNat 0)
@@ -986,6 +1015,20 @@ theorem holMlStringWitness_freshNameHOL (name : String) (names : List String)
   | case1 name names ih =>
       exact ih (nameRanged_append h nameRanged_quote)
   | case2 name names => exact h
+
+/-- Witness for the byte-observable `name` of the `fresh_name_correct` port
+    `freshNameHOL_not_mem`: the generated name is byte-ranged. -/
+theorem holMlStringWitness_freshNameHOL_not_mem (name : String) (names : List String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) :=
+  holMlStringWitness_freshNameHOL name names h
+
+/-- Witness for the byte-observable `name` of the `fresh_name_correct'` port
+    `freshNameHOL_not_mem_of_subset`: the generated name is byte-ranged. -/
+theorem holMlStringWitness_freshNameHOL_not_mem_of_subset (name : String)
+    (names : List String) (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) :=
+  holMlStringWitness_freshNameHOL name names h
 
 /-- Witness: the fuel-bounded production fresh-name search preserves
     byte-rangedness of the input name. -/

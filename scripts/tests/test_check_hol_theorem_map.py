@@ -141,6 +141,54 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertIn("specialization", record["reviewer"])
                 self.assertNotIn(key, tagged)
 
+    def test_pan_globals_fresh_name_exact_ports_and_production_forms(self):
+        tagged = MAP["tagged_declarations"]()
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        exact_cases = {
+            ("Flapjack/Pancake/PanGlobals.lean", "freshNameHOL_not_mem"): (
+                "fresh_name_correct",
+            ),
+            ("Flapjack/Pancake/PanGlobals.lean", "freshNameHOL_not_mem_of_subset"): (
+                "fresh_name_correct'",
+            ),
+        }
+        for key, (hol_name,) in exact_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/proofs/pan_globalsProofScript.sml", hol_name),
+                )
+                self.assertEqual(
+                    record["statement_status"], "reviewed_names_as_string"
+                )
+                self.assertEqual(record["names_as_string"], ["name"])
+                self.assertEqual(record["names_as_string_boundary"], ["name"])
+                self.assertIn("byte-observable", record["reviewer"])
+                self.assertIn(key, tagged)
+        mismatch_cases = {
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct"): (
+                "fresh_name_correct",
+            ),
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct'"): (
+                "fresh_name_correct'",
+            ),
+        }
+        for key, (hol_name,) in mismatch_cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/proofs/pan_globalsProofScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("globalFreshName", record["reviewer"])
+                self.assertNotIn(key, tagged)
+
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (
             "Flapjack/Pancake/Semantics/CrepProps.lean",

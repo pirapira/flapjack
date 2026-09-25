@@ -2264,6 +2264,108 @@ theorem panToCrepPcCompileCorrectDecCallWordSkipCodeStateRiscV64
   · simpa [panSemCodeStateAfter, sourceResult, targetPost, decCrepClock] using hlocals
   · simp [targetPost, decPanClock, decCrepClock, hclockRel]
 
+/-! The DecCall compiler lowers its continuation after the target Call in a
+`seq`.  This bridge is the recursive continuation step: the source continuation
+must actually run, and its source-run-to-target-run IH supplies the target
+continuation execution and all post-state relations.  The target Call prefix
+is the result of the separate callee IH.  This is intentionally untagged: it
+composes the two recursive hypotheses but does not claim the whole HOL
+`pc_compile_correct` theorem. -/
+theorem panToCrepDecCallTickContinuationSeqOfSourceRunIH
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (fuel : Nat)
+    (sourceContinuationResult : PanValueFfiClockResult (RiscV.Word 64) σ)
+    (sourceContinuationState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetCallStart targetCallPost targetContinuationState :
+      CrepRuntimeState (RiscV.Word 64) σ)
+    (slots : List Nat) (function : FunName)
+    (arguments : List (CrepExp (RiscV.Word 64)))
+    (hsourceContinuation :
+      panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+        sourceContinuationState .tick = some sourceContinuationResult)
+    (hstate : stateRel sourceContinuationState targetContinuationState)
+    (hcode : codeRel context
+      (panSemCodeAsLookup sourceContinuationState.code) targetContinuationState.code)
+    (hexcp : excpRel context.eids sourceContinuationState.exceptionShapes)
+    (hlocals : localsRel context sourceContinuationState.locals
+      targetContinuationState.locals)
+    (hcallPrefix :
+      evalCrepRuntimeResult targetHandler targetPrimitive fuel targetCallStart
+        (.call (some (slots, none)) function arguments) =
+          some (.normal, targetCallPost))
+    (hcallClockRestore :
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2 =
+        targetContinuationState)
+    (hcontinuationIH :
+      stateRel sourceContinuationState targetContinuationState →
+      codeRel context (panSemCodeAsLookup sourceContinuationState.code)
+        targetContinuationState.code →
+      excpRel context.eids sourceContinuationState.exceptionShapes →
+      localsRel context sourceContinuationState.locals targetContinuationState.locals →
+      panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+          sourceContinuationState .tick = some sourceContinuationResult →
+        ∃ targetResult targetPost,
+          evalCrepRuntimeResult targetHandler targetPrimitive fuel
+            targetContinuationState (compileCodeRelProg context .tick) =
+              some (targetResult, targetPost) ∧
+          stateRel (panSemCodeStateAfter sourceContinuationState
+            sourceContinuationResult) targetPost ∧
+          codeRel context (panSemCodeAsLookup
+            (panSemCodeStateAfter sourceContinuationState
+              sourceContinuationResult).code) targetPost.code ∧
+          excpRel context.eids
+            (panSemCodeStateAfter sourceContinuationState
+              sourceContinuationResult).exceptionShapes ∧
+          localsRel context
+            (panSemCodeStateAfter sourceContinuationState
+              sourceContinuationResult).locals targetPost.locals ∧
+          (sourceContinuationState.clock = 0 → targetResult = .timeout) ∧
+          (sourceContinuationState.clock ≠ 0 → targetResult = .normal)) :
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1) targetCallStart
+        (.seq (.call (some (slots, none)) function arguments)
+          (compileCodeRelProg context .tick)) =
+            some (targetResult, targetPost) ∧
+      stateRel (panSemCodeStateAfter sourceContinuationState
+        sourceContinuationResult) targetPost ∧
+      codeRel context (panSemCodeAsLookup
+        (panSemCodeStateAfter sourceContinuationState
+          sourceContinuationResult).code) targetPost.code ∧
+      excpRel context.eids
+        (panSemCodeStateAfter sourceContinuationState
+          sourceContinuationResult).exceptionShapes ∧
+      localsRel context
+        (panSemCodeStateAfter sourceContinuationState
+          sourceContinuationResult).locals targetPost.locals ∧
+      (sourceContinuationState.clock = 0 → targetResult = .timeout) ∧
+      (sourceContinuationState.clock ≠ 0 → targetResult = .normal) := by
+  obtain ⟨targetResult, targetPost, hcontinuationRun, hpostState,
+    hpostCode, hpostExcp, hpostLocals, hresultZero, hresultPositive⟩ :=
+      hcontinuationIH hstate hcode hexcp hlocals hsourceContinuation
+  refine ⟨targetResult, targetPost, ?_, hpostState, hpostCode, hpostExcp,
+    hpostLocals, hresultZero, hresultPositive⟩
+  change evalCrepRuntimeProg targetHandler targetPrimitive (fuel + 1)
+    targetCallStart
+    (.seq (.call (some (slots, none)) function arguments)
+      (compileCodeRelProg context .tick)) = some (targetResult, targetPost)
+  change evalCrepRuntimeProg targetHandler targetPrimitive fuel targetCallStart
+    (.call (some (slots, none)) function arguments) =
+      some (.normal, targetCallPost) at hcallPrefix
+  change evalCrepRuntimeProg targetHandler targetPrimitive fuel targetContinuationState
+    (compileCodeRelProg context .tick) = some (targetResult, targetPost)
+    at hcontinuationRun
+  rw [← hcallClockRestore] at hcontinuationRun
+  simp only [fixCrepRuntimeClock] at hcontinuationRun
+  rw [evalCrepRuntimeProg, hcallPrefix]
+  simp only [fixCrepRuntimeClock]
+  simp only [hcontinuationRun]
+
 /-! Actual-state Call exception propagation with a one-word payload. The
 source code entry and compiled target entry are obtained from `code_rel`; the
 target exception code comes from the context's exception map, and the payload

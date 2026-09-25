@@ -529,9 +529,28 @@ decreasing_by
   all_goals decreasing_trivial
 
 /-! Split a flat value list according to the source shape sizes.  This is the
-    direct Lean counterpart of `panLang$with_shape`; values left over after
-    the requested shapes are intentionally ignored, and short inputs are
-    handled by `List.take`/`List.drop` just like CakeML's `TAKE`/`DROP`. -/
+    direct Lean counterpart of `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:214-218`):
+
+      `(with_shape [] _ = []) ∧`
+      `(with_shape (sh::shs) e = TAKE (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e))`
+
+    The clause structure matches clause-for-clause (`List.take`/`List.drop` model
+    HOL `TAKE`/`DROP`, and drops the leftover tail exactly like HOL).  The
+    carrier, however, is the production pair: this definition uses the
+    production `Shape` (`Shape.named : String`) and the untagged
+    `Shape.shapeSize`, and is polymorphic in the list element type `α`, whereas
+    HOL `with_shape` uses the exact `shape` (`named : mlstring`, tagged
+    `ShapeHOL`) and the reviewed `size_of_shape` (`sizeOfShapeHOL`,
+    `Flapjack/Pancake/PanLang/Shape.lean`).  No supported qualifier authorizes a
+    `Shape`/`shapeSize` substitution, so this declaration is deliberately
+    untagged with a documented carrier mismatch; the faithful port over
+    `ShapeHOL`/`sizeOfShapeHOL` is tracked by `flapjack-pxn.18.3.5.8`.  Values
+    left over after the requested shapes are intentionally ignored, and short
+    inputs are handled by `List.take`/`List.drop` just like CakeML's
+    `TAKE`/`DROP`.  Direct HOL oracle rows are
+    `scripts/hol-probes/pan_lang_with_shape_probe.out`
+    (`empty_shapes=[]`, `one_comb_named=[[1]; [2; 3]; [4]]`,
+    `short_input=[[7]; []]`), replayed by `Flapjack/Test/PanWithShapeParity.lean`. -/
 def withShape : List Shape → List α → List (List α)
   | [], _ => []
   | shape :: shapes, values =>
@@ -1383,10 +1402,17 @@ theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : N
     word-indexed `exp` (including `mlstring` names and HOL `shape`) and returns
     `mlstring list`; this function takes generic `Exp α` with String-backed
     names/fields and monomorphic `Shape`, and returns `List VarName` with
-    `VarName := String`. The 17 constructor clauses agree structurally, but
-    the direct HOL-EVAL rows and Lean guard test only selected values, not
-    these carrier differences. The `@[hol]` tag remains WITHDRAWN pending an
-    exact MlString/ShapeHOL expression carrier (bead `flapjack-pxn.18.3.5.8`). -/
+    `VarName := String`. The 17 constructor clauses agree structurally, and the
+    kernel bridge `Flapjack.Pancake.PanLang.varExpHOL_expToHOL` in `PanLang/Exp.lean`
+    proves this helper is the reviewed HOL `var_exp` under the checked
+    `expToHOL` name codec: `varExpHOL (expToHOL e) = (expLocalVars e).map ofString`
+    for width-indexed expressions. This declaration stays untagged because its
+    carrier is the broader generic `Exp α`; the exact-port declaration is the
+    tagged `varExpHOL` over `ExpHOL width`. The executable compiler's call sites
+    (`globalCompileExp`/`globalCompileProg`) are generic in `α` with no `width`,
+    so the width-indexed `expToHOL` codec is not threaded through them;
+    production routing is tracked on bead `flapjack-4ac.1.38.1`. The faithful
+    MlString/ShapeHOL carrier work is tracked by `flapjack-pxn.18.3.5.8`. -/
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

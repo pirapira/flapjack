@@ -370,6 +370,14 @@
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "eval_mul_const",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeHOLExp",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width support with exact CrepExpHOL input and exact-width CrepProgHOL code entries transported to the arbitrary-index word carrier. The premise/conclusion still evaluate through a source-memory runtime adapter rather than native HOL crepSem eval_def; finite_index and primitive-operation identity remain open."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "eval_mul_const",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepEvalMulConstHolWordBits",
     "statement_status": "documented_mismatch",

@@ -1305,6 +1305,34 @@ theorem crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab
   exact (evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab state _).trans
     hSourceMul
 
+/-- Exact-syntax corollary of the all-width `eval_mul_const` support theorem.
+It keeps HOL's `CrepExpHOL` input and the state code-entry type, while
+transporting the expression into the arbitrary-index word carrier selected by
+`HolFiniteDimension`. It remains untagged for the same native evaluator gap as
+the underlying source-runtime theorem. -/
+theorem crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeHOLExp
+    {ι σ : Type} [dimension : HolFiniteDimension ι]
+    [NeZero dimension.width]
+    (state : CrepSemHOLFiniteState ι
+      (List Nat × CrepProgHOL dimension.width) σ)
+    (expression : CrepExpHOL dimension.width)
+    (constant value : ι → Bool)
+    (h : (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression))).map PanWordLab.word = some (.word value)) :
+    (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (crepMulConst
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n))
+        (mapCrepExpWord (bitVecToHolWord dimension)
+          (crepExpOfHOL expression)) constant)).map PanWordLab.word =
+      some (.word (value * constant)) := by
+  exact crepEvalMulConstCrepSemHOLFiniteStateSourceRuntimeWordLab state
+    (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression))
+    constant value h
+
 /-- Production-evaluator view of the arbitrary-index exact-state theorem
 above. The adapter is constructed solely from the HOL-observable state fields
 and the explicit word-dimension representation; it uses the source memory

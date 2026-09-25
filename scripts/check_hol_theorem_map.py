@@ -82,6 +82,18 @@ DOCUMENTED_MISMATCHES = {
         "functions, unlike HOL finite maps. Keep the tag withdrawn pending "
         "finite-support state carrier flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedVars_nestedSeq_assign_zipWithW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "nested_seq_assigned_vars_eq",
+        "Codex (source comparison with crepPropsScript.sml:410-415: the list-length "
+        "premise and assigned-variable equation match. The Lean theorem and its "
+        "...W wrapper use production CrepProg, whose Call/ExtCall names are "
+        "String; HOL prog uses mlstring. CrepProgHOL is available, but no "
+        "assigned_vars helper or nested-seq theorem is ported over that exact "
+        "carrier. Existing direct HOL rows check concrete observations, not a "
+        "carrier bridge. Keep this analogue untagged until the exact-carrier "
+        "port is added."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "set_var_def",
@@ -292,11 +304,14 @@ def strip_comments(text: str) -> str:
 
 
 def lean_definition_exists(root: Path, lean_path: str, lean_name: str) -> bool:
-    """Check that a registered untagged mismatch still names a Lean definition."""
-    source = (root / lean_path).read_text(encoding="utf-8")
+    """Check that a registered untagged mismatch names a Lean declaration."""
+    source = strip_comments((root / lean_path).read_text(encoding="utf-8"))
     return any(
-        (match := DEFINITION_RE.match(line)) and match.group(1) == lean_name
-        for line in strip_comments(source).splitlines()
+        (match := DATA_DECLARATION_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
+    ) or any(
+        (match := THEOREM_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
     )
 
 
@@ -395,7 +410,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
 
     for (lean_path, lean_name), (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
         if not lean_definition_exists(root, lean_path, lean_name):
-            raise ValueError(f"documented mismatch is not a current definition: {lean_path}:{lean_name}")
+            raise ValueError(f"documented mismatch is not a current declaration: {lean_path}:{lean_name}")
         inventory[(lean_path, lean_name)] = {
             "hol_path": hol_path,
             "hol_name": hol_name,

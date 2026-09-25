@@ -4868,6 +4868,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWithW",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison with crepPropsScript.sml:410-415: the list-length premise and assigned-variable equation match. The Lean theorem and its ...W wrapper use production CrepProg, whose Call/ExtCall names are String; HOL prog uses mlstring. CrepProgHOL is available, but no assigned_vars helper or nested-seq theorem is ported over that exact carrier. Existing direct HOL rows check concrete observations, not a carrier bridge. Keep this analogue untagged until the exact-carrier port is added."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "length_load_shape_eq_shape",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "length_loadShape_eq_shapeW",

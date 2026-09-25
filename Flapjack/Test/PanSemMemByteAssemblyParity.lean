@@ -22,15 +22,24 @@ def zeroHighByteGuard : Bool :=
         ||| (BitVec.setWidth 32 (255 : BitVec 8)) <<< 24)
       = BitVec.ofNat 32 (256 ^ 3 * 255))
 
+def beAssemblyGuard : Bool :=
+  decide
+    (((BitVec.setWidth 32 (0x12 : BitVec 8)) <<< 24 ||| (BitVec.setWidth 32 (0x34 : BitVec 8)) <<< 16
+        ||| (BitVec.setWidth 32 (0x56 : BitVec 8)) <<< 8 ||| (BitVec.setWidth 32 (0x78 : BitVec 8)))
+      = RiscV.panRiscVWordOfBytes (width := 32) true
+          [BitVec.setWidth 32 (0x12 : BitVec 8), BitVec.setWidth 32 (0x34 : BitVec 8),
+           BitVec.setWidth 32 (0x56 : BitVec 8), BitVec.setWidth 32 (0x78 : BitVec 8)])
+
 #guard leAssemblyGuard
 #guard zeroHighByteGuard
+#guard beAssemblyGuard
 
 def runChecks : IO Bool := do
-  if leAssemblyGuard && zeroHighByteGuard then
-    IO.println "PASS exact panSem 32-bit little-endian byte OR/shift = base-256 assembly"
+  if leAssemblyGuard && zeroHighByteGuard && beAssemblyGuard then
+    IO.println "PASS exact panSem 32-bit little/big-endian byte OR/shift = base-256 assembly"
     pure true
   else
-    IO.println "FAIL exact panSem 32-bit little-endian byte OR/shift = base-256 assembly"
+    IO.println "FAIL exact panSem 32-bit little/big-endian byte OR/shift = base-256 assembly"
     pure false
 
 end Flapjack.Test.PanSemMemByteAssemblyParity

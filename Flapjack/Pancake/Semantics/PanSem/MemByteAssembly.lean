@@ -142,6 +142,17 @@ theorem memByte32_orShift_eq_base256 (b0 b1 b2 b3 : BitVec 8) :
   rw [Nat.mod_eq_of_lt hs]
   exact memByte_nat_orShift_eq_base256 b0.toNat b1.toNat b2.toNat b3.toNat hb0 hb1 hb2 hb3
 
+/-- **Big-endian 4-byte equality.** Sibling of `memByte32_orShift_eq_base256`: the
+zero-extended shifted OR of four bytes (`BitVec 8`) equals the big-endian base-256
+assembly as a `BitVec 32`, with no side conditions. -/
+theorem memByte32_orShift_eq_base256_be (b0 b1 b2 b3 : BitVec 8) :
+    (b0.setWidth 32) <<< 24 ||| (b1.setWidth 32) <<< 16 ||| (b2.setWidth 32) <<< 8
+        ||| (b3.setWidth 32)
+      = BitVec.ofNat 32
+          (b3.toNat + 256 * b2.toNat + 256 ^ 2 * b1.toNat + 256 ^ 3 * b0.toNat) := by
+  simpa only [BitVec.or_assoc, BitVec.or_comm]
+    using memByte32_orShift_eq_base256 b3 b2 b1 b0
+
 -- Concrete regression fixtures (the `panRiscVWordOfBytes` tie-in is checked by
 -- kernel `decide`; the base-256 value check uses the general theorem).
 
@@ -159,5 +170,12 @@ example : (BitVec.setWidth 32 (0 : BitVec 8) ||| (BitVec.setWidth 32 (0 : BitVec
     = BitVec.ofNat 32 (256 ^ 3 * 255) := by
   rw [memByte32_orShift_eq_base256]
   rfl
+
+example : ((BitVec.setWidth 32 (0x12 : BitVec 8)) <<< 24 ||| (BitVec.setWidth 32 (0x34 : BitVec 8)) <<< 16
+    ||| (BitVec.setWidth 32 (0x56 : BitVec 8)) <<< 8 ||| (BitVec.setWidth 32 (0x78 : BitVec 8)))
+    = RiscV.panRiscVWordOfBytes (width := 32) true
+        [BitVec.setWidth 32 (0x12 : BitVec 8), BitVec.setWidth 32 (0x34 : BitVec 8),
+         BitVec.setWidth 32 (0x56 : BitVec 8), BitVec.setWidth 32 (0x78 : BitVec 8)] := by
+  decide
 
 end Flapjack

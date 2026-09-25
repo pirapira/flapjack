@@ -12,28 +12,6 @@ namespace Flapjack
 /-! These helpers and the exact shape-size theorem now live in the Pancake
     proof counterpart. -/
 
-/-- Cake's `dropWhile_eq_cons_IMP`
-(`cakeml/pancake/semantics/panPropsScript.sml:74-86`): if `dropWhile P xs`
-returns a nonempty list headed by `y`, then `y` is some element of `xs` at
-which `P` first fails, and `drop` at that index yields the same tail. -/
-theorem dropWhile_eq_cons_imp {α : Type} (P : α → Bool) (xs : List α)
-    (y : α) (ys : List α) (h : xs.dropWhile P = y :: ys) :
-    ∃ n, n < xs.length ∧ xs[n]? = some y ∧ P y = false ∧ xs.drop n = y :: ys := by
-  induction xs generalizing y ys with
-  | nil => simp at h
-  | cons x rest ih =>
-      cases hP : P x with
-      | false =>
-          simp only [List.dropWhile_cons, hP, Bool.false_eq_true, if_false] at h
-          cases h
-          exact ⟨0, by simp, by simp, hP, by simp⟩
-      | true =>
-          simp only [List.dropWhile_cons, hP, if_true] at h
-          obtain ⟨n, hn, hget, hpy, hdrop⟩ := ih y ys h
-          refine ⟨n + 1, by simpa using hn, ?_, hpy, ?_⟩
-          · simpa [List.getElem?_cons_succ] using hget
-          · simpa [List.drop_succ_cons] using hdrop
-
 theorem lookupInfoWithRest_length_lt [BEq String] {name : String}
     {context : StructContext} {info : StructInfo} {rest : StructContext}
     (h : lookupInfoWithRest name context = some (info, rest)) :

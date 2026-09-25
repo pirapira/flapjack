@@ -399,6 +399,79 @@ theorem resVarW_eq_resVar {width : Nat} [NeZero width] (f : FiniteMap Nat (PanWo
     (entry : Nat × Option (PanWordLab (BitVec width))) :
     resVarW f entry = resVar f entry := rfl
 
+/-! ## FLAPJACK-SPECIFIC `=`-based `res_var` forms (NOT statement-exact HOL ports)
+
+`crepSem$res_var_def` (`crepSemScript.sml:163`) is stated over HOL's finite
+maps and HOL propositional equality.  The forms below use Lean `DecidableEq`
+(the encoding of HOL `=`) and avoid the Boolean-`BEq` side conditions of the
+executable `resVar`, but they still operate on the raw function carrier
+`FiniteMap α β = α → Option β` (`Flapjack/FiniteMap/Basic.lean:19`), which
+admits infinite-support inhabitants that HOL finite maps do not.  They are
+therefore Flapjack-specific infrastructure, not statement-exact ports of the
+`crepPropsProofScript.sml` / `crep_inlineProofScript.sml` `res_var` theorems:
+the `@[hol]` tags for these forms were withdrawn and their manifest entries are
+`documented_mismatch`.  The faithful replacement over the finite-support
+`HolFiniteMapExact` carrier is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`.
+The Boolean-`BEq` `resVar` above remains the executable implementation. -/
+
+/-- HOL-equality form of `res_var`: delete the key on `none`, insert on `some`. -/
+def resVarHOL [DecidableEq α] (f : FiniteMap α β) (entry : α × Option β) : FiniteMap α β :=
+  match entry.2 with
+  | none => FDOMSUB_HOL f entry.1
+  | some v => FUPDATE_HOL f (entry.1, v)
+
+/-- HOL-equality form of `flookup_res_var_thm`. -/
+theorem FLOOKUP_resVarHOL [DecidableEq α] (f : FiniteMap α β) (m n : α) (v : Option β) :
+    FLOOKUP (resVarHOL f (m, v)) n = if n = m then v else FLOOKUP f n := by
+  cases v with
+  | none => simp only [resVarHOL, FLOOKUP_FDOMSUB_HOL]
+  | some w => simp only [resVarHOL, FLOOKUP_FUPDATE_HOL]
+
+/-- HOL-equality form of `res_var_commutes`. -/
+theorem resVarHOL_commutes [DecidableEq α] (lc lc' : FiniteMap α β) (n h : α)
+    (hne : n ≠ h) :
+    resVarHOL (resVarHOL lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+      resVarHOL (resVarHOL lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  cases hh : FLOOKUP lc' h with
+  | none =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVarHOL]
+      rw [FDOMSUB_HOL_commutes lc h n hne.symm]
+    | some vn =>
+      simp only [resVarHOL]
+      rw [FDOMSUB_HOL_FUPDATE_HOL_neq lc h n vn hne.symm]
+  | some vh =>
+    cases hn : FLOOKUP lc' n with
+    | none =>
+      simp only [resVarHOL]
+      rw [FDOMSUB_HOL_FUPDATE_HOL_neq lc n h vh hne]
+    | some vn =>
+      simp only [resVarHOL]
+      rw [FUPDATE_HOL_comm lc h vh n vn hne.symm]
+
+/-- HOL-equality form of `flookup_res_var_distinct_eq`. -/
+theorem FLOOKUP_foldl_resVarHOL_not_mem [DecidableEq α]
+    (entries : List (α × Option β)) (f : FiniteMap α β) (x : α)
+    (h : x ∉ entries.map Prod.fst) :
+    FLOOKUP (entries.foldl resVarHOL f) x = FLOOKUP f x := by
+  induction entries generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at h
+    obtain ⟨hne, hrest⟩ := h
+    rw [List.foldl_cons, ih (resVarHOL f entry) hrest, FLOOKUP_resVarHOL]
+    simp [hne]
+
+/-- HOL-equality form of `flookup_res_var_distinct_zip_eq`. -/
+theorem FLOOKUP_foldl_resVarHOL_zip_not_mem [DecidableEq α]
+    (xs : List α) (ys : List (Option β)) (f : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (h : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVarHOL f) x = FLOOKUP f x := by
+  apply FLOOKUP_foldl_resVarHOL_not_mem
+  rw [List.map_fst_zip (by omega)]
+  exact h
+
 /-! HOL crep_op has exactly one operator constructor, Mul. This generic helper
 is Flapjack production support; the exact word-typed HOL counterpart below is
 specialized to every positive BitVec width. -/

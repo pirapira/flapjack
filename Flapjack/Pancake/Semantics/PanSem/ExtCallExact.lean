@@ -83,6 +83,33 @@ def extCallStepHOLExact {width : Nat} {σ : Type} [NeZero width]
       | _, _ => (some .error, state)
   | _, _, _, _ => (some .error, state)
 
+/-- The exact HOL `ExtCall` clause does not change the ordinary memory domain.
+    Its returned-byte branch updates only memory and FFI; the final branch
+    clears only locals. This lets the recursive evaluator reuse the existing
+    `memaddrs` decision procedure after the call. -/
+theorem extCallStepHOLExact_memaddrs {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
+    (function : MlS) (ptr1 len1 ptr2 len2 : ExpHOL width) :
+    (extCallStepHOLExact state evalExpression function ptr1 len1 ptr2 len2).2.memaddrs =
+      state.memaddrs := by
+  unfold extCallStepHOLExact
+  split <;> try rfl
+  split <;> try rfl
+  split <;> rfl
+
+/-- The exact HOL `ExtCall` clause leaves the shared-memory domain unchanged. -/
+theorem extCallStepHOLExact_shMemaddrs {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
+    (function : MlS) (ptr1 len1 ptr2 len2 : ExpHOL width) :
+    (extCallStepHOLExact state evalExpression function ptr1 len1 ptr2 len2).2.shMemaddrs =
+      state.shMemaddrs := by
+  unfold extCallStepHOLExact
+  split <;> try rfl
+  split <;> try rfl
+  split <;> rfl
+
 /-- If any of the four argument evaluations fails, the clause returns `Error`. -/
 theorem extCallStepHOLExact_eval_error {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]

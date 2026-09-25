@@ -47,10 +47,44 @@ values.  The mutual list helpers `evalListHOLExact`/`evalListFieldsHOLExact` and
 (`word_op_def`), `panOpHOL` (`pan_op_def`), `wordCmpHOL` (`word_cmp_def`) and
 `wordShiftHOL` (`word_sh_def`).
 
+Direct source review of the HOL state-invariance cluster
+`panPropsScript.sml:644 eval_upd_clock_eq` (`eval (t with clock := ck) e = eval t e`),
+`:654 eval_upd_code_eq` (`eval (t with code := code) e = eval t e`),
+`:664 eval_upd_eshapes_eq`, and the list-level `:674 opt_mmap_eval_upd_clock_eq`
+/ `:686 opt_mmap_eval_upd_clock_eq1` (clock advanced by `ck + s.clock` resp. `ck`
+under `OPT_MMAP eval`) finds no separate Lean declaration: HOL `eval` carries the
+whole `panSem$state`, whereas this rendering reads none of `state.clock`,
+`state.code`, or `state.eshapes`, so all five invariances are consequences of the
+clauses above (the list forms through `evalListHOLExact`, the `OPT_MMAP` rendering)
+and are simply not stated yet.  They stay untagged together with the evaluator
+because the blocking mismatch is the `PanSemStateExact` `locals`/`globals`/`code`/
+`eshapes` carrier (unrestricted `MlS → Option _` functions instead of HOL finite
+maps) -- not those individual fields.  Restoration of the invariance lemmas over
+the faithful finite-support state is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`;
+these dispositions are recorded by beads `flapjack-4ac.4.40`, `.41`, `.43`, `.44`.
+
 The recursive `evaluate` dispatcher over this evaluator is separate and not yet
 assembled.  Direct original-HOL rows are in
 `scripts/hol-probes/pan_eval_probe.out` and are reproduced by
 `Flapjack/Test/PanSemEvalExactParity.lean`.
+
+Direct source review of `panPropsScript.sml:621`
+`eval_some_var_exp_local_lookup`
+(`∀s e v n. eval s e = SOME v ∧ MEM n (var_exp e) ⇒ ∃w. FLOOKUP s.locals n = SOME w`)
+finds no statement-exact Lean declaration.  The HOL statement reads the exact
+`eval` (`eval_def`) together with the exact `panLang$var_exp`
+(`panLangScript.sml:253-270`), whose input is the word-indexed `exp` with
+`mlstring` names and whose result is `mlstring list`.  The Lean analogue of the
+evaluator is this untagged `evalHOLExact` (blocked on the
+`PanSemStateExact` raw-function state carrier, see above), and the analogue of
+`var_exp` is the untagged String-backed `expLocalVars`
+(`Flapjack/Pancake/PanLang.lean:1380`, whose HOL tag is withdrawn for the same
+carrier reason).  Both sides of the implication are therefore expressible only
+over carriers that are not exact HOL ports, so the premise/conclusion shape
+cannot be reproduced faithfully here.  The lookup invariant over the faithful
+finite-support state is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`, and the
+exact `mlstring`-keyed expression/variable carriers by
+`flapjack-pxn.18.3.5.8`.  Recorded by bead `flapjack-4ac.4.39`.
 -/
 import Flapjack.Pancake.WordLang
 import Flapjack.Compiler.Encoders.Asm

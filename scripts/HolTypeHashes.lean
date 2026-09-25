@@ -39,6 +39,7 @@ import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepSem.LookupCode
+import Flapjack.Pancake.Semantics.CrepSem.StateExact
 import Flapjack.Pancake.Semantics.CrepSem.Primop
 import Flapjack.Pancake.LoopLang
 import Flapjack.Pancake.Semantics.LoopProps
@@ -52,12 +53,14 @@ import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.StateExact
+import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
 import Flapjack.Pancake.Semantics.PanSem.DecExact
 import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
 import Flapjack.Pancake.Semantics.PanSem.DecCallExact
+import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.PanSem.EvaluateDeclsExact
 import Flapjack.Pancake.Semantics.PanSem.ClockExact
 import Flapjack.Pancake.Semantics.PanSem.StateSimpExact
@@ -110,7 +113,8 @@ elab "#emit_hol_type_hashes" : command => do
           ("qualifiers", Json.mkObj [
             ("list_as_array", toJson ref.listAsArray),
             ("names_as_string", toJson ref.namesAsString),
-            ("names_as_string_boundary", toJson ref.namesAsStringBoundary)])]
+            ("names_as_string_boundary", toJson ref.namesAsStringBoundary),
+            ("fmap_as_finite_support", toJson ref.fmapAsFiniteSupport)])]
         match definitionBody? info with
         | some body =>
             fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]

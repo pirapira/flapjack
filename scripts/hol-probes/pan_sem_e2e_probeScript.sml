@@ -794,4 +794,69 @@ val _ = print_eval "call_clause_clock_zero"
       (panLang$Call NONE «f» [panLang$Const (3w:8 word)], ^call_state_0) of
       (res, s') => (res, FLOOKUP s'.locals «a»)``
 
+
+val _ = print_eval "seq_two_assigns"
+  ``case panSem$evaluate
+      (panLang$Seq (panLang$Assign Local «x» (panLang$Const (1w:8 word)))
+         (panLang$Assign Local «x» (panLang$Const (2w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (0w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x», s'.clock)``
+
+val _ = print_eval "seq_first_errors"
+  ``case panSem$evaluate
+      (panLang$Seq (panLang$Assign Local «x» (panLang$Var Local «missing»))
+         (panLang$Assign Local «x» (panLang$Const (2w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (0w:8 word)); structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "if_true"
+  ``case panSem$evaluate
+      (panLang$If (panLang$Var Local «c»)
+         (panLang$Assign Local «x» (panLang$Const (1w:8 word)))
+         (panLang$Assign Local «x» (panLang$Const (2w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («c», ValWord (1w:8 word)) |+ («x», ValWord (0w:8 word));
+          structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "if_false"
+  ``case panSem$evaluate
+      (panLang$If (panLang$Var Local «c»)
+         (panLang$Assign Local «x» (panLang$Const (1w:8 word)))
+         (panLang$Assign Local «x» (panLang$Const (2w:8 word))),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («c», ValWord (0w:8 word)) |+ («x», ValWord (0w:8 word));
+          structs := []; clock := 5 |>)) of
+      (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "if_error"
+  ``case panSem$evaluate
+      (panLang$If (panLang$Var Local «missing») panLang$Skip panLang$Skip,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => res``
+
+val _ = print_eval "break_clause"
+  ``case panSem$evaluate
+      (panLang$Break,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock)``
+
+val _ = print_eval "continue_clause"
+  ``case panSem$evaluate
+      (panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock)``
+
+val _ = print_eval "annot_clause"
+  ``case panSem$evaluate
+      (panLang$Annot (strlit "t") (strlit "u"),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY; structs := []; clock := 5 |>)) of
+      (res,s') => (res, s'.clock)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

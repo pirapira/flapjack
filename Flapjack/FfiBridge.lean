@@ -1,6 +1,7 @@
 import Flapjack.Ffi
 import Flapjack.FfiHOL
 import Flapjack.HolRef
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 # Bridge between the executable FFI state and the exact HOL `ffi_state`
@@ -619,5 +620,54 @@ theorem callFfi_extCall_success_eventNameBoundary {σ : Type} (state : FfiState 
                  bytes := bytes.zip nextBytes }] } nextBytes :=
   ⟨(ffiNameRel_extCall_byteBoundary hr).1, (ffiNameRel_extCall_byteBoundary hr).2,
     callFfi_extCall_success state name hne configuration bytes nextState nextBytes ho hlen⟩
+
+/-! ## Connecting the executed `ProgByteRanged` premise to the FFI event bytes
+    (flapjack-0up.2.1)
+
+The byte-level premise above is not unconditional: it is exactly the
+`NameRanged` requirement that the production `PanLang.ProgByteRanged` predicate
+imposes on the `ExtCall` function name (`Flapjack/Pancake/PanLang/Prog.lean`).
+The following theorems take that production premise, rather than an arbitrary
+String, as the hypothesis. -/
+
+/-- The executed `ExtCall` name is byte-ranged exactly when the production name
+    satisfies `PanLang.NameRanged`. -/
+theorem ffiNameByteRanged_extCall_iff_nameRanged (name : String) :
+    FfiNameByteRanged (.extCall name) ↔ Flapjack.Pancake.PanLang.NameRanged name :=
+  Iff.rfl
+
+/-- A production program whose `ExtCall` node is `ProgByteRanged` has a
+    byte-ranged FFI name. -/
+theorem ffiNameByteRanged_extCall_of_progByteRanged {width : Nat}
+    (function : String) (configuration configurationLength array arrayLength : Exp (BitVec width))
+    (hprog : Flapjack.Pancake.PanLang.ProgByteRanged
+      (.extCall function configuration configurationLength array arrayLength)) :
+    FfiNameByteRanged (.extCall function) :=
+  hprog.1
+
+/-- The executed `callFfi` `ExtCall` success event name is the exact `mlstring`
+    encoding of a `ProgByteRanged` function name, connecting the production
+    byte-rangedness premise to the appended `ioEvents` entry. -/
+theorem callFfi_extCall_success_eventNameBoundary_of_progByteRanged {width : Nat} {σ : Type}
+    (state : FfiState σ) (function : String)
+    (configuration configurationLength array arrayLength : Exp (BitVec width))
+    (hprog : Flapjack.Pancake.PanLang.ProgByteRanged
+      (.extCall function configuration configurationLength array arrayLength))
+    (hne : function ≠ "") (configurationBytes bytes : List UInt8)
+    (nextState : σ) (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall function) state.state configurationBytes bytes =
+      .returned nextState nextBytes)
+    (hlen : nextBytes.length = bytes.length) :
+    FfiNameRel (.extCall function) (.extCall (Flapjack.Basis.Pure.MlString.ofString function)) ∧
+      (Flapjack.Basis.Pure.MlString.ofString function).explode.map BitVec.toNat =
+        function.toList.map (fun c => c.toNat) ∧
+      callFfi state (.extCall function) configurationBytes bytes =
+        .returned { state with
+            state := nextState
+            ioEvents := state.ioEvents ++
+              [{ name := .extCall function, configuration := configurationBytes,
+                 bytes := bytes.zip nextBytes }] } nextBytes :=
+  callFfi_extCall_success_eventNameBoundary state function hne hprog.1 configurationBytes bytes
+    nextState nextBytes ho hlen
 
 end Flapjack

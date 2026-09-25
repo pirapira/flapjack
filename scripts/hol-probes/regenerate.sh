@@ -108,7 +108,7 @@ run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
-  pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+  pan_valid crep_primop_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"

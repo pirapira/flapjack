@@ -404,6 +404,59 @@ theorem evalCrepHolFiniteWordSourceExp_topAddr_toHolEval
     evalCrepHolExp, CrepHolState.toHolFiniteBitVecState,
     mapCrepHolWordLab]
 
+/-- All-dimension `Const` constructor correspondence to the direct BitVec
+state evaluator, preserving the full `Option word_lab` result. -/
+theorem evalCrepHolFiniteWordSourceExp_const_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (value : ι → Bool) :
+    ((evalCrepHolFiniteWordSourceExp dimension state (.const value)).map
+      PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.const (holWordToBitVec dimension value)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+    evalCrepHolExp, CrepHolState.toHolFiniteBitVecState,
+    mapCrepHolWordLab]
+
+/-- Recursive all-dimension `Load` constructor correspondence. The single
+premise is the evaluator relation for its address subexpression, as supplied
+by induction; after that, both sides consult the same original state memory
+and address-domain fields, and preserve the complete `Option word_lab` result.
+This is Flapjack support only: it does not assert the arbitrary finite-index
+instance or complete native `eval_def` relation. -/
+theorem evalCrepHolFiniteWordSourceExp_load_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool))
+    (hAddress : (evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression).map (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) addressExpression)) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.load addressExpression)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.load (mapCrepExpWord (holWordToBitVec dimension) addressExpression)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hEval : evalCrepHolFiniteWordSourceExp dimension state addressExpression with
+  | none =>
+      have hNative : evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) addressExpression) = none := by
+        simpa [hEval] using hAddress.symm
+      simp only [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab, hEval]
+      rw [evalCrepHolExp]
+      simp [hNative]
+  | some address =>
+      have hNative : evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) addressExpression) =
+            some (holWordToBitVec dimension address) := by
+        simpa [hEval] using hAddress.symm
+      simp only [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab, hEval]
+      rw [evalCrepHolExp]
+      rw [hNative]
+      simp [CrepHolState.toHolFiniteBitVecState, mapCrepHolWordLab,
+        panTheWord, bitVecToHolWord_holWordToBitVec]
+
 /-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
 state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec
 projection. This isolates the memory cell, domain, and endian fields from the

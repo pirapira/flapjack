@@ -417,6 +417,34 @@ example :
     boolWordDimension boolDimensionHolState
 
 example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.const boolDimensionZero)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.const (holWordToBitVec boolWordDimension boolDimensionZero)) :=
+  evalCrepHolFiniteWordSourceExp_const_toHolEval
+    boolWordDimension boolDimensionHolState boolDimensionZero
+
+example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.load (.const boolDimensionZero))).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.load (.const (holWordToBitVec boolWordDimension boolDimensionZero))) := by
+  have hAddress :
+      (evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+        (.const boolDimensionZero)).map (holWordToBitVec boolWordDimension) =
+      evalCrepHolExp
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (mapCrepExpWord (holWordToBitVec boolWordDimension)
+          (.const boolDimensionZero)) := by
+    simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExp, mapCrepExpWord]
+  simpa [mapCrepExpWord] using evalCrepHolFiniteWordSourceExp_load_toHolEval
+    boolWordDimension boolDimensionHolState (.const boolDimensionZero) hAddress
+
+example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) =
       evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.loadGlob 0) :=

@@ -2133,7 +2133,15 @@
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
     "lean_name": "loadMemOpHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.40): HOL load_op (cakeml/pancake/panLangScript.sml:300-305) maps Op8 to Load8, Op16 to Load16, OpW to Load, Op32 to Load32. loadMemOpHOL matches clause-for-clause over the exact OpSize carrier (the tagged opsize port) into CrepMemOp, whose eight nullary constructors are the asm$memop mirror already accepted for shMem in the reviewed HolLoopProg entry (the independently reviewed asm-side carrier is HolMemop = WordMemOp). Direct HOL-EVAL rows load_op8/load_op16/load_opw/load_op32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangLoadStoreOpParity.lean, and the kernel-checked loadMemOp_eq_loadMemOpHOL (rfl) shows the production loadMemOp is definitionally this reviewed function, so the executed pan-to-crep path uses it. store_op is tracked separately (flapjack-4ac.1.41)."
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.40): HOL load_op (cakeml/pancake/panLangScript.sml:300-305) maps Op8 to Load8, Op16 to Load16, OpW to Load, Op32 to Load32. loadMemOpHOL matches clause-for-clause over the exact OpSize carrier (the tagged opsize port) into CrepMemOp, whose eight nullary constructors are the asm$memop mirror already accepted for shMem in the reviewed HolLoopProg entry (the independently reviewed asm-side carrier is HolMemop = WordMemOp). Direct HOL-EVAL rows load_op8/load_op16/load_opw/load_op32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangLoadStoreOpParity.lean, and the kernel-checked loadMemOp_eq_loadMemOpHOL (rfl) shows the production loadMemOp is definitionally this reviewed function, so the executed pan-to-crep path uses it. store_op is the analogous tagged port storeMemOpHOL (flapjack-4ac.1.41)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "store_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "storeMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.41): HOL store_op (cakeml/pancake/panLangScript.sml:307-312) maps Op8 to Store8, Op16 to Store16, OpW to Store, Op32 to Store32. storeMemOpHOL matches clause-for-clause over the exact OpSize carrier (the tagged opsize port) into CrepMemOp, whose eight nullary constructors are the asm$memop mirror already accepted for shMem in the reviewed HolLoopProg entry (the independently reviewed asm-side carrier is HolMemop = WordMemOp). Direct HOL-EVAL rows store_op8/store_op16/store_opw/store_op32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangLoadStoreOpParity.lean, and the kernel-checked storeMemOp_eq_storeMemOpHOL (rfl) shows the production storeMemOp is definitionally this reviewed function, so the executed pan-to-crep path uses it."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

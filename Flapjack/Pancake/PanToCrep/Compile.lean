@@ -339,6 +339,15 @@ def loadMemOpHOL : OpSize → CrepMemOp
   | .op32 => .load32
   | .op16 => .load16
 
+/-- Exact `panLang$store_op` (`cakeml/pancake/panLangScript.sml:307-312`):
+`Op8 ↦ Store8`, `Op16 ↦ Store16`, `OpW ↦ Store`, `Op32 ↦ Store32`.
+The `OpSize` domain is the exact `opsize` carrier and the `CrepMemOp`
+codomain mirrors `asm$memop` by its eight nullary constructors, the same
+representation accepted for `shMem` in the reviewed `HolLoopProg` entry.
+The production `storeMemOp` below is definitionally this function
+(`storeMemOp_eq_storeMemOpHOL`), so the executed pan-to-crep path uses this
+mapping. -/
+@[hol "cakeml/pancake/panLangScript.sml" "store_op_def"]
 def storeMemOpHOL : OpSize → CrepMemOp
   | .op8 => .store8
   | .opW => .store
@@ -659,6 +668,11 @@ def storeMemOp : OpSize → CrepMemOp
   | .opW => .store
   | .op32 => .store32
   | .op16 => .store16
+
+/-- Source-review bridge (bead flapjack-4ac.1.41): the production `storeMemOp`
+is definitionally the reviewed exact `storeMemOpHOL`, so the executed
+pan-to-crep path uses the HOL `store_op` mapping. -/
+theorem storeMemOp_eq_storeMemOpHOL : storeMemOp = storeMemOpHOL := rfl
 
 def firstCompiledExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=

@@ -52,4 +52,22 @@ example : loadMemOpHOL .op32 = .load32 := rfl
 
 example : loadMemOp = loadMemOpHOL := rfl
 
+/-! ## Exact-carrier `store_op` parity
+
+Direct HOL-EVAL oracle rows from `pan_lang_load_store_op_probe.out` replayed
+against the reviewed exact `storeMemOpHOL`, plus the kernel-checked bridge to
+the production path. -/
+
+#guard storeMemOpHOL .op8 == .store8
+#guard storeMemOpHOL .op16 == .store16
+#guard storeMemOpHOL .opW == .store
+#guard storeMemOpHOL .op32 == .store32
+
+example : storeMemOpHOL .op8 = .store8 := rfl
+example : storeMemOpHOL .op16 = .store16 := rfl
+example : storeMemOpHOL .opW = .store := rfl
+example : storeMemOpHOL .op32 = .store32 := rfl
+
+example : storeMemOp = storeMemOpHOL := rfl
+
 end Flapjack.Test.PanLangLoadStoreOpParity

@@ -5820,6 +5820,22 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "valueFldsOkHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact Bool port over ValueHOL, ShapeHOL, StructInfoHOLExact and StructContextExact: the HOL Val/RStruct/NStruct clauses, EVERY recursive field checks, first-match ALOOKUP, MAP FST equality and MAP (shape_of o SND) equality all use the corresponding faithful carriers and structural equality."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "v_flds_ok_append",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "valueFldsOkHOLExact_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact theorem over ValueHOL and StructContextExact. Its two premises are HOL v_flds_ok ctxt v and ALL_DISTINCT (MAP FST pfx ++ MAP FST ctxt), and its conclusion is HOL v_flds_ok (pfx ++ ctxt) v. StructContextExact keys and ValueHOL field/name carriers are MlString; no production String/PanValue conversion or extra premise is used. Reviewed against pan_structsProofScript.sml:522 and direct EVAL row v_flds_ok_append_nonempty_prefix_named."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
     "hol_name": "v_flds_ok_append",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panValueFldsOk_append",

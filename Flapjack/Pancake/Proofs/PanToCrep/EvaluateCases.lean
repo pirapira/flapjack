@@ -3391,9 +3391,10 @@ private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
     helper must not receive the HOL tag.
 
     `compileArgsHOL` is a useful flattening adapter, but it does not close this
-    gap. A faithful port needs the reviewed finite-support PanSem evaluator and
-    exact Pan-to-Crep state/context/local relations; these are tracked by
-    `flapjack-pxn.18.3.7.1.3.1.1.2.5` and
+    gap. `EvalFinite.evalHOLFinite` now provides the tagged finite-support
+    `eval_def` source evaluator (with `fmap_as_finite_support`); the remaining
+    gap is the exact Pan-to-Crep state/context/local relations and target
+    evaluator. These are tracked by `flapjack-pxn.18.3.7.1.3.1` and
     `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.22` open until the
     exact HOL premises and conclusion are stated and proved. -/
 

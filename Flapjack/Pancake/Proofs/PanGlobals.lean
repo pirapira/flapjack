@@ -309,15 +309,26 @@ theorem decl_distinct (declaration : Decl α) :
   cases declaration <;> simp [isDecl, isName, isExnDecl, globalDeclIsFunction]
 
 /-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `functions_filter_nil`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2967`): filtering out
-    function declarations leaves an empty function table. `globalDeclsFilter`
-    is the source-shaped `FILTER` and `globalDeclIsFunction` the
-    pass-facing `is_function`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2967-2971`):
+    `!decls. functions (FILTER ($¬ ∘ is_function) decls) = []` — filtering out
+    function declarations leaves an empty function table. The Lean statement
+    mirrors the shape clause-for-clause: `globalDeclsFilter` is the source-shaped
+    `FILTER`, `globalDeclIsFunction` the pass-facing `is_function`, and the
+    conclusion is `functions ... = []` on both sides. -/
+-- FLAPJACK-SPECIFIC (documented mismatch; tag stays withdrawn): the statement is
+-- keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName`
+-- = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`) and
+-- runs over the generic `Decl α` / `Prog α` syntax, while HOL `pan_globalsProofScript.sml`
+-- keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring` and is indexed by a
+-- positive-width `'a word`; `globalDeclsFilter`/`globalDeclIsFunction` are Flapjack
+-- mirrors, not the tagged HOL `FILTER`/`is_function`. `names_as_string` cannot
+-- authorise the embedded `Shape`/`Prog`/`Decl` carriers, and no `NameRanged` byte
+-- witness applies (the conclusion is `functions ... = []`, not a name).
+-- `docs/HOL-THEOREM-MAP.json` records this hol_name as `documented_mismatch`.
+-- Oracle/regression evidence: `Flapjack/Test/PanGlobalsFunctionsFilterNilParity.lean`
+-- (`functionsFilterNilFixture` :19 and `functionsFilterNilGuard` :33 over a mixed
+-- `.function`/`.name`/`.exnDecl`/`.decl` list, `#guard` true). The exact MlString
+-- identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem functions_filter_nil (declarations : List (Decl α)) :
     functions

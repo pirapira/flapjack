@@ -16,8 +16,11 @@ future exact `evaluate_def` port, not the port itself, and it uses the RV64
 production word carrier.
 
 The expression evaluation reuses `evalPanSemStateExp`, whose executed-path
-agreement with the untagged `evalHOL` reference evaluator is established in
-`Flapjack/Pancake/Semantics/PanSemStateEval.lean`.
+agreement with the untagged, String-backed `evalHOL` reference evaluator is
+established in `Flapjack/Pancake/Semantics/PanSemStateEval.lean`. The exact HOL
+`eval_def` tag belongs to `evalHOLExact` over the separate `PanSemStateExact`
+carrier in `PanSem/EvalExact.lean`; this production-state comparison does not
+inherit that tag.
 -/
 
 namespace Flapjack

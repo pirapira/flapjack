@@ -3065,6 +3065,24 @@ theorem evalCrepHolFiniteWordSourceExp_shift_eq_wordShiftHOL
   simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
     holFiniteWordSourceMemoryModel]
 
+/-! Adapter equation for the list-valued source `Op` clause. Once the source
+    subexpressions evaluate to `values`, the clause is exactly HOL
+    `word_op_def` transported through the explicit finite word carrier. The
+    complete argument list and HOL's `Option` arity failure are preserved. -/
+theorem evalCrepHolFiniteWordSourceExp_op_eq_wordOpHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool))) (values : List (ι → Bool))
+    (hValues : expressions.mapM (evalCrepHolFiniteWordSourceExp dimension state) =
+      some values) :
+    evalCrepHolFiniteWordSourceExp dimension state (.op operator expressions) =
+      (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, hValues,
+    holFiniteWordSourceMemoryModel]
+
 theorem crepSimpExpCorrect1CmpHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

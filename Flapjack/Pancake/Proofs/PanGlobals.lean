@@ -336,15 +336,33 @@ theorem functions_filter_nil (declarations : List (Decl α)) :
         (fun declaration => !globalDeclIsFunction declaration) declarations) = [] :=
   functions_globalDeclsFilter_not_function declarations
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `functions_FILTER_exn_decl`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2042`): keeping only
-    exception declarations leaves an empty function table. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's
+    `functions_FILTER_exn_decl`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2042-2046`):
+    ```sml
+    Theorem functions_FILTER_exn_decl:
+      ∀prog. functions (FILTER is_exn_decl prog) = []
+    ```
+    The Lean statement mirrors the shape clause-for-clause: `globalDeclsFilter`
+    is the source-shaped `FILTER`, `isExnDecl` is the source-shaped
+    `is_exn_decl`, and the conclusion `functions … = []` matches, with
+    `functions` being the source-shaped `functionEntries` table.
+
+    The tag stays WITHDRAWN as a documented carrier mismatch. The statement is
+    keyed by the production identifiers `FunName`/`VarName`/`ExceptionId`/
+    `StructName` = `String` (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/
+    `exceptionEntries`) and by a generic word `α` in `Decl α`, whereas HOL
+    `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/
+    `stcname` = `mlstring` over the positive-width word-indexed `decl`.
+    `names_as_string` cannot authorise the embedded `Shape`/`Decl`/`Prog`
+    carriers, and no `NameRanged` byte witness applies because the conclusion is
+    a membership/emptiness equation over function tables, not a name. The exact
+    MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+    (parent `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already
+    records this hol_name as `documented_mismatch` (reviewer Codex). Evidence:
+    the source-shaped predicate facts in
+    `Flapjack/Test/PanGlobalsDeclPredicateParity.lean` over a mixed
+    `.function`/`.name`/`.exnDecl`/`.decl` list. -/
 theorem functions_FILTER_exn_decl (declarations : List (Decl α)) :
     functions (globalDeclsFilter isExnDecl declarations) = [] :=
   functions_globalDeclsFilter_exnDecl declarations

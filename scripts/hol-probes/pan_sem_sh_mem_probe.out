@@ -1,0 +1,8 @@
+l_load_hit_local=SOME (ValWord 0w)
+l_load_hit_events=1
+l_load_miss=SOME Error
+l_load_aligned=SOME (ValWord 0w)
+l_load_final_locals=NONE
+l_store_hit_events=1
+l_store_miss=SOME Error
+l_store_final_unchanged=(0,FFI_failed)

@@ -126,6 +126,30 @@ def decCallMissingFunctionGuard : Bool :=
     evalArguments evaluateStub
   isErrorResult result.1 && localsWord result.2 (ml "r") == some 0
 
+/-- Concrete exact `vshapes` sample: parameters `x`,`y`, both shape `One`. -/
+def vshapesSample : List (MlS × ShapeHOL) :=
+  [(ml "x", ShapeHOL.one), (ml "y", ShapeHOL.one)]
+
+/-- Concrete exact argument sample matching `vshapesSample`. -/
+def argsSample : List (ValueHOL 8) := [.val (.word 3), .val (.word 4)]
+
+/-- The HOL `LIST_REL` instance for the concrete sample (oracle `vra_two = T`). -/
+theorem vshapesSample_rel :
+    ListRel (fun vshape arg => vshape.2 = shapeOfHOLExact arg) vshapesSample argsSample := by
+  unfold vshapesSample argsSample
+  refine .cons ?_ (.cons ?_ .nil) <;> simp [shapeOfHOLExact]
+
+/-- Fixture: HOL `vshapes_args_rel_imp_eq_len_MAP` on the concrete sample
+    (oracle rows `vra_len_one = T`, `vra_map_two = T`). -/
+theorem vshapesArgsRel_imp_eq_len_MAP_fixture :
+    vshapesSample.length = argsSample.length ∧
+      vshapesSample.map Prod.snd = argsSample.map shapeOfHOLExact :=
+  vshapesArgsRel_imp_eq_len_MAP vshapesSample argsSample vshapesSample_rel
+
+/-- Oracle `vra_one`/`vra_len_one`: the sample has length two on both sides. -/
+def vshapesRelGuard : Bool :=
+  vshapesSample.length == argsSample.length && vshapesSample.length == 2
+
 def decCallExactGuard : Bool :=
   lookupOkGuard && lookupBadArgGuard && lookupDupParamGuard && decCallOkGuard &&
     decCallClockZeroGuard && decCallBadShapeGuard && decCallMissingFunctionGuard
@@ -143,13 +167,15 @@ example : lookupCodeHOLExact (width := 8) (fun _ => none) (ml "g")
 #guard decCallBadShapeGuard
 #guard decCallMissingFunctionGuard
 #guard decCallExactGuard
+#guard vshapesRelGuard
 
 def runChecks : IO Bool := do
-  if decCallExactGuard then
-    IO.println "PASS exact panSem lookup_code/DecCall clause step (7 HOL rows)"
+  if decCallExactGuard && vshapesRelGuard then
+    IO.println
+      "PASS exact panSem lookup_code/DecCall clause step and vshapes/args LIST_REL (12 HOL rows)"
     pure true
   else
-    IO.println "FAIL exact panSem lookup_code/DecCall clause step"
+    IO.println "FAIL exact panSem lookup_code/DecCall clause step and vshapes/args LIST_REL"
     pure false
 
 end Flapjack.Test.PanSemDecCallExactParity

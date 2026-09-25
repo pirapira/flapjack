@@ -64,6 +64,23 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
 }
+DEFINITION_RE = re.compile(
+    r"^\s*(?:@\[[^\]]*\]\s*)?"
+    r"(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
+    r"(?:def|abbrev|opaque)\s+([^\s:({\[]+)"
+)
+DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_globals_def",
+        "Codex (source comparison with crepSemScript.sml:61-63: the BitVec 5 "
+        "global key and PanWordLab word_lab cell, plus the FUPDATE body, match. "
+        "The quantified whole-state carrier CrepHolState (BitVec width) still "
+        "uses unrestricted Nat-to-Option locals and FunName-to-Option code "
+        "functions, unlike HOL finite maps. Keep the tag withdrawn pending "
+        "finite-support state carrier flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+}
 VALID_STATUSES = {
     "reviewed_exact",
     "reviewed_list_as_array",
@@ -141,6 +158,15 @@ def strip_comments(text: str) -> str:
                 in_string = True
             index += 1
     return "".join(result)
+
+
+def lean_definition_exists(root: Path, lean_path: str, lean_name: str) -> bool:
+    """Check that a registered untagged mismatch still names a Lean definition."""
+    source = (root / lean_path).read_text(encoding="utf-8")
+    return any(
+        (match := DEFINITION_RE.match(line)) and match.group(1) == lean_name
+        for line in strip_comments(source).splitlines()
+    )
 
 
 def proof_theorem_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
@@ -235,6 +261,18 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
                 "reviewer": "Codex (proof inventory)",
             },
         )
+
+    for (lean_path, lean_name), (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
+        if not lean_definition_exists(root, lean_path, lean_name):
+            raise ValueError(f"documented mismatch is not a current definition: {lean_path}:{lean_name}")
+        inventory[(lean_path, lean_name)] = {
+            "hol_path": hol_path,
+            "hol_name": hol_name,
+            "lean_path": lean_path,
+            "lean_name": lean_name,
+            "statement_status": "documented_mismatch",
+            "reviewer": reviewer,
+        }
 
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
@@ -395,12 +433,18 @@ def validate_inventory(
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
             if key in tagged:
                 errors.append(f"{key[0]}:{key[1]}: documented mismatch must not carry an @[hol] tag")
-            if key not in proof_declarations and key not in WITHDRAWN_HOL_DECLARATIONS:
+            if (key not in proof_declarations
+                    and key not in WITHDRAWN_HOL_DECLARATIONS
+                    and key not in DOCUMENTED_MISMATCHES):
                 errors.append(f"{key[0]}:{key[1]}: untagged HOL mismatch is not source-reviewed")
             if key in WITHDRAWN_HOL_DECLARATIONS and hol_path is not None:
                 expected_path, expected_name, _reviewer = WITHDRAWN_HOL_DECLARATIONS[key]
                 if (hol_path, hol_name) != (expected_path, expected_name):
                     errors.append(f"{key[0]}:{key[1]}: withdrawn declaration HOL candidate differs from source review")
+            if key in DOCUMENTED_MISMATCHES and hol_path is not None:
+                expected_path, expected_name, _reviewer = DOCUMENTED_MISMATCHES[key]
+                if (hol_path, hol_name) != (expected_path, expected_name):
+                    errors.append(f"{key[0]}:{key[1]}: documented mismatch HOL candidate differs from source review")
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
@@ -425,11 +469,12 @@ def validate_inventory(
         if key not in by_key:
             errors.append(f"Proofs theorem missing from manifest: {key[0]}:{key[1]}")
 
+    documented_mismatch_keys = set(DOCUMENTED_MISMATCHES)
     for key in by_key:
         if key not in tagged and key not in proof_declarations and not (
             key in WITHDRAWN_HOL_DECLARATIONS
             and (data_declarations_ is None or key in data_declarations_)
-        ):
+        ) and key not in documented_mismatch_keys:
             errors.append(f"manifest entry is not a current declaration: {key[0]}:{key[1]}")
     return errors
 

@@ -1344,6 +1344,17 @@
     "reviewer": "Codex (statement compared against assign_ret_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "ret_var_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "retVar",
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "name"
+    ],
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-pxn.18.3.7.1.1) HOL ret_var_def (pan_to_crepScript.sml:114-119): ret_var One ns = oHD ns; ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE; ret_var (Named sh) ns = NONE. Lean retVar matches clause-for-clause, with HOL oHD (HOL/src/list/src/listScript.sml:5474, oHD l = case l of [] => NONE | h::_ => SOME h) rendered as List.head? and Shape.shapeSize rendering size_of_shape (panLangScript.sml:174) on one/comb/named. The only carrier difference is the production Shape Named field String vs HOL mlstring; ret_var never inspects or emits that name. Reviewed under names_as_string: name: equality/map-key-only (not byte-observable, so no boundary witness). Direct HOL rows in scripts/hol-probes/ret_var_probe.out; Lean guards in Flapjack/Test/RetVarParity.lean."
+  },
+  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",

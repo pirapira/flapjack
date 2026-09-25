@@ -590,13 +590,14 @@ theorem panSemCodeEvaluateFuel_call_sub_one_eq
   have htwo := panSemCodeEvaluateFuel_call_two_le state info function arguments
   omega
 
-/-- **Exact `Call` branch decomposition at canonical fuel.**  The production
+/-- Flapjack-specific `Call` branch decomposition at canonical fuel. The production
     code evaluator on a `Call` at canonical fuel equals the state-owned call
     clause evaluated at the syntactically-successor fuel `(canonical - 2) + 1`,
     which exposes the call clause's `fuel + 1` branch and hence the callee body
     recursion at exactly `canonical - 2`.  This turns the callee/handler body
     evaluation premises used by the Pan-to-Crep `Call` case into conclusions
-    rather than assumptions. -/
+    rather than assumptions. This has no HOL theorem original: HOL's evaluator
+    does not use this Flapjack canonical-fuel function. -/
 theorem panSemCodeEvaluateFuel_call_decomposition
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

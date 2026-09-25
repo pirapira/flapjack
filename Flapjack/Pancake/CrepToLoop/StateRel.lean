@@ -711,4 +711,36 @@ theorem sptInsert_insert_eq {α : Type} (a : Nat) (b : α) (tree : Spt α) :
         | bn left right => rw [sptInsert.eq_3, if_neg h0, if_neg h2, sptInsert.eq_3, if_neg h0, if_neg h2, ih ((a-1)/2) hk b right]
         | bs left existing right => rw [sptInsert.eq_4, if_neg h0, if_neg h2, sptInsert.eq_4, if_neg h0, if_neg h2, ih ((a-1)/2) hk b right]
 
+/-- Exact port of HOL `list_insert_insert`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:406`): a single `insert`
+    under `list_insert` may be moved to the front, provided it keeps the same
+    key and unit value. HOL `insert`/`list_insert` are the sptree operations,
+    rendered here by the exact `Spt` carrier. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "list_insert_insert"]
+theorem sptListInsert_insert (x : Nat) (xs : List Nat) (tree : NumSet) :
+    sptInsert x () (sptListInsert xs tree) = sptListInsert xs (sptInsert x () tree) := by
+  induction xs generalizing tree with
+  | nil => rfl
+  | cons y ys ih =>
+    simp only [sptListInsert]
+    rw [ih (sptInsert y () tree)]
+    by_cases hxy : x = y
+    · subst hxy
+      rfl
+    · rw [sptInsert_swap x y () () tree hxy]
+
+/-- Exact port of HOL `list_insert_append`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:414`): inserting a
+    concatenated key list equals inserting the two lists in turn. HOL
+    `list_insert` is the sptree operation, rendered here by the exact `Spt`
+    carrier. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "list_insert_append"]
+theorem sptListInsert_append (xs ys : List Nat) (tree : NumSet) :
+    sptListInsert (xs ++ ys) tree = sptListInsert xs (sptListInsert ys tree) := by
+  induction xs generalizing tree with
+  | nil => simp only [List.nil_append, sptListInsert]
+  | cons x xs ih =>
+    simp only [List.cons_append, sptListInsert]
+    rw [ih (sptInsert x () tree), sptListInsert_insert x ys tree]
+
 end Flapjack

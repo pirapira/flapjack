@@ -475,6 +475,24 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertIn("String", record["reviewer"])
 
 
+    def test_fields_in_order_reorder_analogue_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop")
+        self.assertEqual(inventory[key]["hol_name"], "fields_in_order_reorder_noop")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "fields_in_order_reorder_noop")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("byte-observable", record["reviewer"])
+        self.assertIn("No NameRanged premise", record["reviewer"])
+
+
 class ValidateInventoryTest(unittest.TestCase):
     path = "Flapjack/Pancake/Proofs/Example.lean"
 

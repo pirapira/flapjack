@@ -4320,7 +4320,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "EVERY_fperm_decs",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-main (source comparison with pan_globalsProofScript.sml:2436-2442): HOL uses MlString names and a quantified Prop-valued P over HOL declarations; this executable analogue uses production String names and a Bool-valued predicate. Exact theorem remains untagged and is tracked by flapjack-pxn.18.3.5.8.14."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

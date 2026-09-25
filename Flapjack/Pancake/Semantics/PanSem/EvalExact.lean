@@ -1,10 +1,12 @@
 /-
 EXACT CARRIER EXPRESSIONS (flapjack-pxn.18.3.6.9.15).
 
-Direct port of HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`,
-identical to `pan_itreeSemScript.sml:79`) over the exact `mlstring`-keyed
-`PanSemStateExact` carrier, the exact `ExpHOL` syntax, and the exact `ValueHOL`
-values.  Every lookup is `=`-keyed (`MlString` derives `DecidableEq`); the shape
+Function-backed rendering of HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`,
+identical to `pan_itreeSemScript.sml:79`) over `PanSemStateExact`, the exact
+`ExpHOL` syntax, and the exact `ValueHOL` values. `PanSemStateExact` currently
+admits arbitrary lookup functions instead of HOL finite-map fields, so this
+definition has no `@[hol]` tag. Every lookup is `=`-keyed (`MlString` derives
+`DecidableEq`); the shape
 comparisons go through `shapeEqHOL` (whose `= true` reading is proved exact in
 `IsValidValueExact.lean`); loads reuse the tagged exact `memLoadHOLExact`
 (`mem_load_def`), `panMemLoad32HOL` (`mem_load_32_def`), `panMemLoadByteHOL`
@@ -12,7 +14,7 @@ comparisons go through `shapeEqHOL` (whose `= true` reading is proved exact in
 (`word_op_def`), `panOpHOL` (`pan_op_def`), `wordCmpHOL` (`word_cmp_def`) and
 `wordShiftHOL` (`word_sh_def`).
 
-The evaluator is TAGGED as the exact `eval_def` port (`@[hol ... "eval_def"]`):
+The evaluator body is retained as a function-backed rendering of `eval_def`:
 its clauses are compared one by one against
 `cakeml/pancake/semantics/panSemScript.sml:209-283` --- `Const`, `Var
 Local`/`Global` (`=`-keyed `FLOOKUP`), `RStruct` (`OPT_MMAP`), `RField`
@@ -21,7 +23,7 @@ Local`/`Global` (`=`-keyed `FLOOKUP`), `RStruct` (`OPT_MMAP`), `RField`
 `NField`, `Load`/`Load32`/`LoadByte`, `Op`/`Panop` (`EVERY isValWord` +
 `MAP theWord`), `Cmp` (`word_cmp`), `Shift` (`word_sh`),
 `BaseAddr`/`TopAddr`/`BytesInWord` --- over the exact `mlstring`-keyed
-`PanSemStateExact` carrier, the exact `ExpHOL` syntax and the exact `ValueHOL`
+`PanSemStateExact` function-backed carrier, the exact `ExpHOL` syntax and the exact `ValueHOL`
 values.  The mutual list helpers `evalListHOLExact`/`evalListFieldsHOLExact` and
 `valueIsWord`/`valueWord`/`lookupFieldHOL` are the `OPT_MMAP`/`EVERY`/`theWord`/
 `ALOOKUP` renderings and are untagged.  The shape comparisons go through
@@ -70,8 +72,8 @@ def lookupFieldHOL {width : Nat} [NeZero width] (name : MlS) :
 /-! ## The exact `eval_def` evaluator -/
 
 mutual
-  /-- Exact carrier port of HOL `eval` (tagged `eval_def`). -/
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"]
+  /-- Function-backed rendering of HOL `eval`; untagged because its state
+      contains unrestricted functions in place of HOL finite maps. -/
   def evalHOLExact {width : Nat} {σ : Type} [NeZero width]
       (state : PanSemStateExact width σ) [DecidablePred state.memaddrs] :
       ExpHOL width → Option (ValueHOL width)

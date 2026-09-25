@@ -1,13 +1,14 @@
 /-
 EXACT DECLARATION EVALUATION (flapjack-pxn.18.3.6.9.22).
 
-Direct port of HOL `evaluate_decls_def`
-(`cakeml/pancake/semantics/panSemScript.sml:814-837`) over the exact
-`mlstring`-keyed `PanSemStateExact` carrier, the exact `DeclHOL` syntax, and the
-exact `ValueHOL` values.  Every lookup is `=`-keyed (`MlString` derives
+Function-backed rendering of HOL `evaluate_decls_def`
+(`cakeml/pancake/semantics/panSemScript.sml:814-837`) over `PanSemStateExact`,
+the exact `DeclHOL` syntax, and the exact `ValueHOL` values. The state carrier
+admits arbitrary lookup functions instead of HOL finite-map fields, so this
+definition has no `@[hol]` tag. Every lookup is `=`-keyed (`MlString` derives
 `DecidableEq`); the shape comparison goes through `shapeEqHOL` (whose `= true`
 reading is proved exact in `IsValidValueExact.lean`); the declaration bodies are
-evaluated with the tagged exact `evalHOLExact` (`eval_def`) under empty locals;
+evaluated with the untagged function-backed `evalHOLExact` under empty locals;
 the well-formedness checks reuse the tagged exact `isWfShapeExactHOL`
 (`is_wf_shape_def`); the struct context and the code/eshapes maps are updated
 `=`-keyed.
@@ -68,11 +69,9 @@ abbrev evaluateDeclsSetEshape {width : Nat} {σ : Type} [NeZero width]
   { state with eshapes :=
       fun current => if current = exceptionName then some shape else state.eshapes current }
 
-/-- Exact port of HOL `evaluate_decls`
-(`cakeml/pancake/semantics/panSemScript.sml:814-837`): evaluates declarations
-left to right, installing global bindings, function code entries and exception
-shapes in the exact `mlstring`-keyed state. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"]
+/-- Function-backed rendering of HOL `evaluate_decls_def` (`panSemScript.sml:814-837`).
+    Kept untagged because whole-state map fields are unrestricted functions
+    rather than finite maps. -/
 def evaluateDeclsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.memaddrs] :
     List (DeclHOL width) → Option (PanSemStateExact width σ)

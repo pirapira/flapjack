@@ -58,4 +58,19 @@ example : varExpHOL (.var .local xName : ExpHOL 8) = [xName] := by
 example : varExpHOL nestedHOL = [xName, yName] := by
   simp [varExpHOL, nestedHOL]
 
+/-! ## `global_var_exp` specified-fragment parity over the exact `ExpHOL`
+
+HOL's `global_var_exp_def` is partial: `Load32`, `BaseAddr`, `TopAddr` and
+`BytesInWord` are `ARB`, so `globalVarExpHOL` is untagged and extends the
+specification there.  The oracle rows below cover the specified fragment. -/
+
+#guard (globalVarExpHOL (.var .global (ofString "g") : ExpHOL 8)) == [ofString "g"]
+#guard globalVarExpHOL nestedHOL == [ofString "g", ofString "addr"]
+
+example : globalVarExpHOL (.var .global (ofString "g") : ExpHOL 8) = [ofString "g"] := by
+  simp [globalVarExpHOL]
+
+example : globalVarExpHOL nestedHOL = [ofString "g", ofString "addr"] := by
+  simp [globalVarExpHOL, nestedHOL]
+
 end Flapjack.Test.PanLangVarExpParity

@@ -381,6 +381,9 @@ run_probe pan_props_list_rel_probeScript.sml pan_props_list_rel_probe.out \
 run_probe crep_inline_code_inl_probeScript.sml crep_inline_code_inl_probe.out \
   flookup_f skip_identity "$cake_dir/pancake/crep_inlineScript.sml" \
   "$cake_dir/pancake"
+run_probe crep_inline_alist_map_probeScript.sml crep_inline_alist_map_probe.out \
+  alist_duplicate_first input_rows_order "$cake_dir/pancake/crep_inlineScript.sml" \
+  "$cake_dir/pancake"
 run_probe crep_inline_helper_probeScript.sml crep_inline_helper_probe.out \
   eoc_p unreach_p "$cake_dir/pancake/crep_inlineScript.sml" "$cake_dir/pancake"
 run_probe crep_inline_cont_res_probeScript.sml crep_inline_cont_res_probe.out \

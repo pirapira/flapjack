@@ -217,6 +217,13 @@ val _ = print_eval "deccall_restores_existing_local"
        ^deccall_existing_local_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
 
+val _ = print_eval "deccall_tick_restores_existing_local"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «id» [panLang$Const (7w:8 word)]
+        panLang$Tick,
+       ^deccall_existing_local_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
 val _ = print_eval "nested_deccall_code_map_7"
   ``FST (panSem$evaluate
       (panLang$DecCall «answer» panLang$One «f» []

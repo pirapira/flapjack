@@ -34,3 +34,4 @@ val _ = print_eval "deccall"
 val _ = print_eval "unchanged"
   ``pan_globals$fperm «foo» «bar»
       (panLang$Return (panLang$Const 9w))``;
+val _ = print_eval "fperm_done" ``0n``;

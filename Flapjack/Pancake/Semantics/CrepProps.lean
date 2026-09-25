@@ -741,6 +741,52 @@ theorem crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith {width : Nat} [NeZero w
           simp only [List.length_cons, Nat.succ.injEq] at h
           simp [List.zipWith, crepNestedSeqHOL, crepAssignedFreeVarsHOL, ih values h]
 
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_nested_decs_append"]
+theorem crepAssignedVarsHOL_nestedDecs_append {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width)) (body : CrepProgHOL width)
+    (h : names.length = values.length) :
+    crepAssignedVarsHOL (nestedDecsHOL names values body) =
+      names ++ crepAssignedVarsHOL body := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [nestedDecsHOL]
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          simp [nestedDecsHOL, crepAssignedVarsHOL, ih values (by omega)]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_nested_decs_append"]
+theorem crepAssignedFreeVarsHOL_nestedDecs_append {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width)) (body : CrepProgHOL width)
+    (h : names.length = values.length) :
+    crepAssignedFreeVarsHOL (nestedDecsHOL names values body) =
+      (crepAssignedFreeVarsHOL body).filter
+        (fun candidate => decide (candidate ∉ names)) := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil =>
+          simp only [nestedDecsHOL, List.not_mem_nil]
+          symm
+          exact List.filter_eq_self.mpr (fun _ _ => rfl)
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          rw [nestedDecsHOL, crepAssignedFreeVarsHOL, ih values (by omega), List.filter_filter]
+          congr 1
+          funext candidate
+          by_cases hc : candidate = name
+          · subst hc
+            simp
+          · simp [hc, List.mem_cons, bne_iff_ne]
+
 theorem crepAssignedVars_nestedDecs_appendW {width : Nat} [NeZero width]
     (names : List Nat) (values : List (CrepExp (BitVec width)))
     (body : CrepProg (BitVec width)) (h : names.length = values.length) :

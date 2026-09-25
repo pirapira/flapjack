@@ -8976,6 +8976,22 @@
     "reviewer": "Codex (statement compared against panSemScript.sml:309-316; tail-first recursion via panMemStoreByteHOL, a failed store keeps the original outer memory. Direct HOL-EVAL rows write_bytearray_changed/write_bytearray_other_unchanged/write_bytearray_out_of_domain reproduced by Lean guards in Flapjack/Test/PanSemStateEvalParity.lean.)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_store_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemStoreHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL mem_store addr w dm m = if addr IN dm then SOME ((addr =+ w) m) else NONE over the 'a word_lab total memory and 'a word set domain; rendered as total HolWordLab memory with a Prop/DecidablePred domain and pointwise update; direct HOL rows store_hit/store_miss in scripts/hol-probes/pan_flat_store_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_stores_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemStoresHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL mem_stores a [] dm m = SOME m and mem_stores a (w::ws) dm m advances by bytes_in_word = n2w(dimindex DIV 8), here the canonical panBytesInWord width; total HolWordLab memory + Prop/DecidablePred domain; direct HOL rows stores_hit/stores_blocked in scripts/hol-probes/pan_flat_store_probe.out)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "map_map2_fst",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

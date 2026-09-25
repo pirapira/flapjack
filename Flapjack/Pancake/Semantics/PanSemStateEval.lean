@@ -283,6 +283,68 @@ decreasing_by
 def panBytesInWord (width : Nat) : RiscV.Word width :=
   BitVec.ofNat width (width / 8)
 
+/-! Statement-exact port of HOL `panSem$mem_store` and `mem_stores`
+    (`cakeml/pancake/semantics/panSemScript.sml:373-386`).  Both operate on the
+    total `HolWordLab` memory with a `Prop` domain (HOL `'a word set`); HOL's
+    `addr =+ w` update is the pointwise function update below, and the address
+    stride is the canonical `panBytesInWord width` (HOL's global
+    `bytes_in_word = n2w (dimindex(:'a) DIV 8)`, no free parameter). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_store_def"]
+def panMemStoreHOL {width : Nat} (address : RiscV.Word width) (value : HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width) :
+    Option (RiscV.Word width → HolWordLab width) :=
+  if domain address then
+    some (fun current => if current = address then value else memory current)
+  else none
+
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_stores_def"]
+def panMemStoresHOL {width : Nat} (address : RiscV.Word width)
+    (values : List (HolWordLab width)) (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width) :
+    Option (RiscV.Word width → HolWordLab width) :=
+  match values with
+  | [] => some memory
+  | value :: rest =>
+      match panMemStoreHOL address value domain memory with
+      | some updated => panMemStoresHOL (address + panBytesInWord width) rest domain updated
+      | none => none
+
+@[simp] theorem panMemStoreHOL_hit {width : Nat} (address : RiscV.Word width)
+    (value : HolWordLab width) (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width) (h : domain address) :
+    panMemStoreHOL address value domain memory
+      = some (fun current => if current = address then value else memory current) := by
+  simp only [panMemStoreHOL, if_pos h]
+
+theorem panMemStoreHOL_miss {width : Nat} (address : RiscV.Word width)
+    (value : HolWordLab width) (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width) (h : ¬ domain address) :
+    panMemStoreHOL address value domain memory = none := by
+  simp only [panMemStoreHOL, if_neg h]
+
+@[simp] theorem panMemStoresHOL_nil {width : Nat} (address : RiscV.Word width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width) :
+    panMemStoresHOL address [] domain memory = some memory := rfl
+
+theorem panMemStoresHOL_cons_some {width : Nat} (address : RiscV.Word width)
+    (value : HolWordLab width) (rest : List (HolWordLab width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory updated : RiscV.Word width → HolWordLab width)
+    (h : panMemStoreHOL address value domain memory = some updated) :
+    panMemStoresHOL address (value :: rest) domain memory
+      = panMemStoresHOL (address + panBytesInWord width) rest domain updated := by
+  simp only [panMemStoresHOL, h]
+
+theorem panMemStoresHOL_cons_none {width : Nat} (address : RiscV.Word width)
+    (value : HolWordLab width) (rest : List (HolWordLab width))
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (memory : RiscV.Word width → HolWordLab width)
+    (h : panMemStoreHOL address value domain memory = none) :
+    panMemStoresHOL address (value :: rest) domain memory = none := by
+  simp only [panMemStoresHOL, h]
+
 /-! Statement-exact port of HOL `panSem$mem_load` (`cakeml/pancake/semantics/panSemScript.sml:137`,
     defining `mem_load`, `mem_loads`, and `mem_load_flds`).  The argument order
     follows HOL currying (`mem_load sh addr dm m stcs`), and `bytes_in_word` is

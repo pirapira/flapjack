@@ -9534,5 +9534,13 @@
     "lean_name": "fm_update_diff_vars",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL pan_commonPropsScript.sml:780 states a <> b ==> fm |+ (a,a') |+ (b,b') |+ (a,a') |+ (b,b'') = fm |+ (a,a') |+ (b,b'') over fmap; the Lean theorem is the same FUPDATE chain over FiniteMap with the distinct-key hypothesis, and the oracle rows fmdv_eq_1/fmdv_eq_2/fmdv_eq_3/fmdv_lhs_a/fmdv_lhs_b/fmdv_lhs_absent in scripts/hol-probes/pan_common_props_fm_update_diff_vars_probe.out are reproduced by Flapjack/Test/PanCommonPropsZipDisjointParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "sizeOfShapeWithContextHOL_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panPropsScript.sml:184 `!sh sctxt. is_wf_shape_nil sh ==> size_of_sh_with_ctxt sctxt sh = size_of_shape sh`; HOL is_wf_shape_nil is the overload is_wf_shape [], here rendered as isWfShapeExactHOL [] shape = true over ShapeHOL/StructContextExact with the exact tagged sizeOfShapeWithContextHOL/sizeOfShapeHOL definitions; oracle rows ssc_one/ssc_comb2/ssc_nested/ssc_wf_one/ssc_wf_nested/ssc_eq_one/ssc_eq_nested in scripts/hol-probes/pan_props_size_with_ctxt_probe.out reproduced by Flapjack/Test/PanPropsShapeResVarParity.lean)"
   }
 ]

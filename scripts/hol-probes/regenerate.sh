@@ -1675,3 +1675,11 @@ run_probe pan_common_props_fm_update_diff_vars_probeScript.sml pan_common_props_
   fmdv_eq_1 fmdv_lhs_absent \
   "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The panProps size_of_sh_with_ctxt_eq probe observes that a context-free
+# well-formed shape has the same with-context size as its plain size_of_shape
+# size (panPropsScript.sml:184, using panLang size_of_sh_with_ctxt/size_of_shape).
+run_probe pan_props_size_with_ctxt_probeScript.sml pan_props_size_with_ctxt_probe.out \
+  ssc_one ssc_eq_nested \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

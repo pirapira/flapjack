@@ -1069,6 +1069,30 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
 
 
+    def test_panprops_decs_stcnames_only_functions_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "decs_stcnames_only_functions"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "decsStcnamesHOLExact_of_functions"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "decs_stcnames_only_functions2"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+
     def test_panlang_functions_append_filter_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {

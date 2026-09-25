@@ -1515,6 +1515,14 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
   plx_alpha_206 plx_ascii_then_high \
   "$cake_dir/pancake/parser/panLexerScript.sml" \
   "$cake_dir/pancake/parser"
+
+# The panLexer keyword probe pins get_keyword's original output for every
+# keywordTable entry plus the empty / @-foreign / ordinary fallbacks (evidence
+# for the ordered-table refactor in Flapjack/Parser/Lexer.lean).
+run_probe pan_lexer_keyword_probeScript.sml pan_lexer_keyword_probe.out \
+  kw_skip kw_at_only \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"
 # The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
 # initial_ffi_state and the call_FFI cases (identity, success, length
 # failure, oracle final).

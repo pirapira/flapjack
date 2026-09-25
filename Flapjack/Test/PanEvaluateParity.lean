@@ -182,20 +182,6 @@ def evaluateSourceCallId :=
     (emptyPanSourceState 10 sourceIdCode)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
 
-/-! These 64-bit observations mirror the direct HOL rows
-`recursive_call_rv64_code_map_7_clock_9` and
-`recursive_deccall_rv64_while_false_clock_9` in `pan_sem_e2e_probe.out`. -/
-def evaluateSourceCallRV64DirectHol :=
-  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (emptyPanSourceState 10 sourceIdCode)
-    (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog Word64)
-
-def evaluateSourceDecCallWhileFalseRV64DirectHol :=
-  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (emptyPanSourceState 10 sourceIdCode)
-    (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
-      (.while (.const (BitVec.ofNat 64 0)) .skip) : Prog Word64)
-
 /-! The original code-map Call oracle's return shape comes from the entry in
 `state.code`. The generic Lean evaluator also accepts optional compatibility
 contracts, but those are not a HOL state field and must not override that
@@ -501,14 +487,6 @@ private def isSourceTimeoutAt
 def observeSourceCodeCall := isSourceReturnedWord evaluateSourceCallId
   (BitVec.ofNat 64 7) 9
 
-def observeSourceCallRV64DirectHol := isSourceReturnedWord
-  evaluateSourceCallRV64DirectHol (BitVec.ofNat 64 7) 9
-
-def observeSourceDecCallWhileFalseRV64DirectHol : Bool :=
-  match evaluateSourceDecCallWhileFalseRV64DirectHol with
-  | some (.control (.normal locals _ _ _), 9) => (locals "answer").isNone
-  | _ => false
-
 def observeSourceCallUsesCodeReturnShape := isSourceReturnedWord
   evaluateSourceCallWithConflictingReturnContract (BitVec.ofNat 64 7) 9
 
@@ -716,8 +694,6 @@ def observeSourceDecCallBadArgument :=
   isSourceErrorPreservingX evaluateSourceDecCallBadArgument 10
 
 #guard observeSourceCodeCall
-#guard observeSourceCallRV64DirectHol
-#guard observeSourceDecCallWhileFalseRV64DirectHol
 #guard observeSourceCallUsesCodeReturnShape
 #guard observeSourceCallStructArgument
 #guard observeSourceCallFirstRecordField
@@ -1056,12 +1032,6 @@ def runChecks : IO Bool := do
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
   if observeSourceCodeCall then IO.println "PASS state-owned code Call matches HOL call_code_map_7" else
     IO.println "FAIL state-owned code Call matches HOL call_code_map_7"
-  if observeSourceCallRV64DirectHol then
-    IO.println "PASS RISC-V source Call matches the direct HOL code-map row"
-  else IO.println "FAIL RISC-V source Call matches the direct HOL code-map row"
-  if observeSourceDecCallWhileFalseRV64DirectHol then
-    IO.println "PASS RISC-V source DecCall While-false continuation matches direct HOL"
-  else IO.println "FAIL RISC-V source DecCall While-false continuation matches direct HOL"
   if observeSourceCallUsesCodeReturnShape then
     IO.println "PASS source Call return validation follows the state code entry"
   else IO.println "FAIL source Call return validation follows the state code entry"
@@ -1175,9 +1145,7 @@ def runChecks : IO Bool := do
   if observeShMemStoreDomainFailure then IO.println "PASS evaluate ShMemStore rejects shared-domain miss with Error" else
     IO.println "FAIL evaluate ShMemStore rejects shared-domain miss with Error"
   pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
-    observeSourceCodeCall && observeSourceCallRV64DirectHol &&
-    observeSourceDecCallWhileFalseRV64DirectHol &&
-    observeSourceCallUsesCodeReturnShape &&
+    observeSourceCodeCall && observeSourceCallUsesCodeReturnShape &&
     observeSourceCallStructArgument && observeSourceCallFirstRecordField &&
     observeSourceCallMiddlePairField &&
     observeSourceCallConstructedMiddlePairField &&

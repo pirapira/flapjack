@@ -10441,13 +10441,4 @@
   "statement_status": "reviewed_exact",
   "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.1): HOL exp_hdl_def (cakeml/pancake/pan_to_crepScript.sml:106-112) is exp_hdl fm v = case FLOOKUP fm v of NONE => Skip | SOME (vshp,ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns))). expHdlHOL matches: the finite map is MlString-keyed with ShapeHOL values, the miss branch is Skip, and the hit branch is crepNestedSeqHOL over panMap2 Assign of the flattened word list against loadGlobalsHOL 0w (LENGTH ns), over CrepProgHOL width with [NeZero width]. Constructor arities and field types match HOL (funname mlstring, positive-width word). Direct HOL rows missing/known/three_words/dup_update/dup_list from scripts/hol-probes/exp_hdl_probe.out are replayed on the exact carriers in Flapjack/Test/ExpHdlHOLParity.lean. Kernel bridge crepProgToHOL_expHdlFiniteMap relates the executed String-keyed expHdlFiniteMap under the shape/name codecs. Production expHdlFiniteMap stays untagged; routing the executed handler through the exact function is tracked by flapjack-pxn.18.3.5.8.13."
   }
-,
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
-    "lean_name": "panToCrepPcCompileCorrectDecCallWhileFalseCodeStateRiscV64IH",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific fixed-RV64 DecCall induction helper for a state-owned one-word code entry and While(false, Skip) continuation. It derives the false-While source continuation run from the source evaluator and uses the recursive source-run IH to derive target execution plus state_rel/code_rel/excp_rel/locals_rel postconditions; no target run or post-relations are premises. It uses the helper compileCodeRelProg boundary and is not an exact standalone HOL theorem or completion of pc_compile_correct."
-  }
 ]

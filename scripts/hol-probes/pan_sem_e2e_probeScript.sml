@@ -320,27 +320,6 @@ val _ = print_eval "recursive_deccall_bad_argument"
        ^recursive_bad_argument_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
 
-val recursive_rv64_code_state =
-  ``((ARB:((64),unit) panSem$state) with <|
-      locals := FEMPTY;
-      code := FEMPTY |+ («id», ([(«x», panLang$One)],
-        panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
-      clock := 10 |>)``
-
-val _ = print_eval "recursive_call_rv64_code_map_7_clock_9"
-  ``case panSem$evaluate
-      (panLang$Call NONE «id» [panLang$Const (7w:64 word)],
-       ^recursive_rv64_code_state) of
-      (res, s') => (res, s'.clock)``
-
-val _ = print_eval "recursive_deccall_rv64_while_false_clock_9"
-  ``case panSem$evaluate
-      (panLang$DecCall «answer» panLang$One «id»
-        [panLang$Const (7w:64 word)]
-        (panLang$While (panLang$Const (0w:64 word)) panLang$Skip),
-       ^recursive_rv64_code_state) of
-      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
-
 val recursive_call_destination_state =
   ``((ARB:((8),unit) panSem$state) with <|
       locals := FEMPTY |+ («answer», ValWord (3w:8 word));

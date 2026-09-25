@@ -9574,5 +9574,21 @@
     "lean_name": "isWfShapeExactHOL_length_flatten",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; exact ValueHOL/ShapeHOL rendering: is_wf_shape_nil rendered as isWfShapeExactHOL ([] : StructContextExact), shape_of as shapeOfHOLExact, size_of_shape as sizeOfShapeHOL, flatten as flattenHOL, LENGTH as .length; both HOL side conditions preserved; reused the exact flattenHOL_length_eq_sizeOfShapeHOL (panPropsScript.sml:171); oracle rows iwf_val/iwf_struct/iwf_nested/iwf_val_len/iwf_size_val/iwf_wf_val/iwf_wf_struct in scripts/hol-probes/pan_to_crep_is_wf_shape_nil_probe.out, reproduced by Flapjack/Test/PanToCrepStateRelParity.lean)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panToCrepSourceLoadByteHOLCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-specific RISC-V source evaluator case under stateRel: reduces source LoadByte to existing panMemLoadByteHOL using source memaddrs/be and target word memory; not a standalone HOL theorem or pc_compile_correct case proof. Direct HOL EVAL rows state_rel_source_byte_little and state_rel_source_byte_domain_failure in pan_sem_state_eval_probe.out.)"
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "panToCrepSourceLoad32HOLCase",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (Flapjack-specific RISC-V source evaluator case under stateRel: reduces source Load32 to existing panMemLoad32HOL using source memaddrs/be and target word memory; not a standalone HOL theorem or pc_compile_correct case proof. Direct HOL EVAL row state_rel_source_word32_little and state_rel_source_word32_misaligned in pan_sem_state_eval_probe.out.)"
   }
 ]

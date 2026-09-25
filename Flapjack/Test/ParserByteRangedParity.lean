@@ -411,4 +411,18 @@ example (fuel : Nat) :
     Flapjack.Parser.gDecCallHead_treesSafe fuel⟩
 
 
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) :=
+  Flapjack.Parser.gProg_treesSafe fuel
+
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gTopDecList fuel) :=
+  Flapjack.Parser.gTopDecList_treesSafe fuel
+
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gFun fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gStmt fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock3_treesSafe fuel).1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.2.1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.1⟩
+
 end Flapjack.Test.ParserByteRangedParity

@@ -1082,4 +1082,208 @@ theorem gDecCallHead_treesSafe (fuel : Nat) : PTreesSafe (gDecCallHead fuel) := 
 
 
 
+theorem PTreesSafe.bind_of_stateSafe {α : Type} {p : P α} {f : α → P P.Trees}
+    (hp : PStateToksSafe p) (hf : ∀ a, PTreesSafe (f a)) :
+    PTreesSafe (P.bind' p f) := by
+  constructor
+  · intro s trees s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i a s'' heq
+      have hp1 := hp.1 s a s'' heq h
+      exact (hf a).1 s'' trees s' hs hp1
+    · rename_i s'' heq
+      exact absurd (congrArg Prod.fst hs) (by simp)
+  · intro s s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i a s'' heq
+      have hp1 := hp.1 s a s'' heq h
+      exact (hf a).2 s'' s' hs hp1
+    · rename_i s'' heq
+      simp only [Prod.mk.injEq] at hs
+      rw [← hs.2]
+      exact hp.2 s s'' heq h
+
+set_option maxHeartbeats 8000000 in
+theorem grammarBlock3_treesSafe : ∀ m,
+    PTreesSafe (gProg m) ∧ PTreesSafe (gTryProg m) ∧ PTreesSafe (gBlock m) ∧
+    PTreesSafe (gHandle m) ∧ PTreesSafe (gIf m) ∧ PTreesSafe (gWhile m) ∧
+    PTreesSafe (gStmt m) ∧ PTreesSafe (gFun m) ∧ PTreesSafe (gTopDecList m) := by
+  intro m
+  induction m using Nat.strongRecOn with
+  | ind n ih =>
+    cases n with
+    | zero =>
+      refine ⟨?_,?_,?_,?_,?_,?_,?_,?_,?_⟩ <;>
+        simp only [gProg, gTryProg, gBlock, gHandle, gIf, gWhile, gStmt, gFun, gTopDecList] <;>
+        exact PTreesSafe.fail fuelExhausted
+    | succ m =>
+      obtain ⟨hProg, hTryProg, hBlock, hHandle, hIf, hWhile, hStmt, hFun, hTopDecList⟩ := ih m (by omega)
+      refine ⟨?_,?_,?_,?_,?_,?_,?_,?_,?_⟩
+      · simp only [gProg]
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .prog ?_
+          refine PTreesSafe.bind hBlock (fun block hb => ?_)
+          refine PTreesSafe.bind hProg (fun rest hr => ?_)
+          exact PTreesSafe.pure (block ++ rest) (TreesByteRanged.append hb hr)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .decCall ?_
+          refine PTreesSafe.bind (gDecCallHead_treesSafe m) (fun declaration hd => ?_)
+          refine PTreesSafe.bind hTryProg (fun body hb => ?_)
+          exact PTreesSafe.pure (declaration ++ body) (TreesByteRanged.append hd hb)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .dec ?_
+          refine PTreesSafe.bind (gDecForm_treesSafe .dec m) (fun declaration hd => ?_)
+          refine PTreesSafe.bind hTryProg (fun body hb => ?_)
+          exact PTreesSafe.pure (declaration ++ body) (TreesByteRanged.append hd hb)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .prog ?_
+          refine PTreesSafe.bind keepAnnot_treesSafe (fun annotation ha => ?_)
+          refine PTreesSafe.bind hProg (fun rest hr => ?_)
+          exact PTreesSafe.pure (annotation ++ rest) (TreesByteRanged.append ha hr)
+        refine PTreesSafe.orElse' ?_ (consume_treesSafe .rCurT "}")
+        refine subtree_treesSafe .prog ?_
+        refine PTreesSafe.bind hStmt (fun statement hs => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .semiT ";") (fun _ _ => ?_)
+        refine PTreesSafe.bind hProg (fun rest hr => ?_)
+        exact PTreesSafe.pure (statement ++ rest) (TreesByteRanged.append hs hr)
+      · simp only [gTryProg]
+        refine PTreesSafe.orElse' ?_ hProg
+        refine subtree_treesSafe .prog ?_
+        exact PTreesSafe.bind (consume_treesSafe .rCurT "}")
+          (fun _ _ => defaultLeaf_treesSafe (.keywordT .skipK) (by simp [TokenNameByteRanged]))
+      · simp only [gBlock]
+        refine PTreesSafe.orElse' hHandle ?_
+        exact PTreesSafe.orElse' hIf hWhile
+      · simp only [gHandle]
+        refine subtree_treesSafe .handle ?_
+        refine PTreesSafe.bind (consumeKw_treesSafe .tryK "try") (fun _ _ => ?_)
+        refine PTreesSafe.bind (tryDefault_treesSafe gRet_treesSafe .notT (by simp [TokenNameByteRanged])) (fun ret hr => ?_)
+        refine PTreesSafe.bind keepIdent_treesSafe (fun function hf => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lParT "(") (fun _ _ => ?_)
+        refine PTreesSafe.bind (tryDefault_treesSafe (gArgList_treesSafe m) .notT (by simp [TokenNameByteRanged])) (fun args ha => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .rParT ")") (fun _ _ => ?_)
+        refine PTreesSafe.bind (consumeKw_treesSafe .catchK "catch") (fun _ _ => ?_)
+        refine PTreesSafe.bind keepIdent_treesSafe (fun exception he => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .arrowT "=>") (fun _ _ => ?_)
+        refine PTreesSafe.bind keepIdent_treesSafe (fun bound hb => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => ?_)
+        refine PTreesSafe.bind hTryProg (fun handler hh => ?_)
+        exact PTreesSafe.pure (ret ++ function ++ args ++ exception ++ bound ++ handler)
+          (TreesByteRanged.append (TreesByteRanged.append (TreesByteRanged.append (TreesByteRanged.append (TreesByteRanged.append hr hf) ha) he) hb) hh)
+      · simp only [gIf]
+        refine subtree_treesSafe .ifNT ?_
+        refine PTreesSafe.bind (consumeKw_treesSafe .ifK "if") (fun _ _ => ?_)
+        refine PTreesSafe.bind (gExp_treesSafe m) (fun condition hc => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => ?_)
+        refine PTreesSafe.bind hTryProg (fun thenBranch ht => ?_)
+        have helse : PTreesSafe (P.bind' (P.consumeKw .elseK "else") (fun _ => P.bind' (P.consume .lCurT "{") (fun _ => gTryProg m))) :=
+          PTreesSafe.bind (consumeKw_treesSafe .elseK "else")
+            (fun _ _ => PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => hTryProg))
+        refine PTreesSafe.bind (tryDefault_treesSafe helse (.keywordT .skipK) (by simp [TokenNameByteRanged])) (fun elseBranch he => ?_)
+        exact PTreesSafe.pure (condition ++ thenBranch ++ elseBranch)
+          (TreesByteRanged.append (TreesByteRanged.append hc ht) he)
+      · simp only [gWhile]
+        refine subtree_treesSafe .whileNT ?_
+        refine PTreesSafe.bind (consumeKw_treesSafe .whileK "while") (fun _ _ => ?_)
+        refine PTreesSafe.bind (gExp_treesSafe m) (fun condition hc => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => ?_)
+        refine PTreesSafe.bind hTryProg (fun body hb => ?_)
+        exact PTreesSafe.pure (condition ++ body) (TreesByteRanged.append hc hb)
+      · simp only [gStmt]
+        refine PTreesSafe.orElse' (keepKw_treesSafe .skipK "skip") ?_
+        refine PTreesSafe.orElse' (gCall_treesSafe m) ?_
+        refine PTreesSafe.orElse' (gAssign_treesSafe m) ?_
+        refine PTreesSafe.orElse' (gStoreForm_treesSafe .store .stK "st" m) ?_
+        refine PTreesSafe.orElse' (gStoreForm_treesSafe .storeByte .st8K "st8" m) ?_
+        refine PTreesSafe.orElse' (gStoreForm_treesSafe .store32 .st32K "st32" m) ?_
+        refine PTreesSafe.orElse' (gSharedLoad_treesSafe .sharedLoadByte .ld8K "ld8" m) ?_
+        refine PTreesSafe.orElse' (gSharedLoad_treesSafe .sharedLoad16 .ld16K "ld16" m) ?_
+        refine PTreesSafe.orElse' (gSharedLoad_treesSafe .sharedLoad32 .ld32K "ld32" m) ?_
+        refine PTreesSafe.orElse' (gSharedLoad_treesSafe .sharedLoad .ldwK "ldw" m) ?_
+        refine PTreesSafe.orElse' (gSharedStore_treesSafe .sharedStoreByte .st8K "st8" m) ?_
+        refine PTreesSafe.orElse' (gSharedStore_treesSafe .sharedStore16 .st16K "st16" m) ?_
+        refine PTreesSafe.orElse' (gSharedStore_treesSafe .sharedStore32 .st32K "st32" m) ?_
+        refine PTreesSafe.orElse' (gSharedStore_treesSafe .sharedStore .stwK "stw" m) ?_
+        refine PTreesSafe.orElse' (keepKw_treesSafe .brK "break") ?_
+        refine PTreesSafe.orElse' (keepKw_treesSafe .contK "continue") ?_
+        refine PTreesSafe.orElse' (gExtCall_treesSafe m) ?_
+        refine PTreesSafe.orElse' (gThrow_treesSafe m) ?_
+        refine PTreesSafe.orElse' (gRetCall_treesSafe m) ?_
+        refine PTreesSafe.orElse' (gReturn_treesSafe m) ?_
+        refine PTreesSafe.orElse' (keepKw_treesSafe .ticK "tick") ?_
+        exact PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => hTryProg)
+      · simp only [gFun]
+        refine subtree_treesSafe .funNT ?_
+        refine PTreesSafe.bind (tryDefault_treesSafe (keepKw_treesSafe .inlineK "inline") .noinlineT (by simp [TokenNameByteRanged])) (fun inline hi => ?_)
+        refine PTreesSafe.bind (tryDefault_treesSafe (keepKw_treesSafe .exportK "export") .staticT (by simp [TokenNameByteRanged])) (fun exported he => ?_)
+        refine PTreesSafe.bind (consumeKw_treesSafe .funK "fun") (fun _ _ => ?_)
+        refine PTreesSafe.bind (gShapedIdent_treesSafe m) (fun shapedName hs => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lParT "(") (fun _ _ => ?_)
+        refine PTreesSafe.bind (PTreesSafe.orElse' (gShapedIdentList_treesSafe .paramList m) (emptyNode_treesSafe .paramList)) (fun params hp => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .rParT ")") (fun _ _ => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun _ _ => ?_)
+        refine PTreesSafe.bind hTryProg (fun body hb => ?_)
+        exact PTreesSafe.pure (inline ++ exported ++ shapedName ++ params ++ body)
+          (TreesByteRanged.append (TreesByteRanged.append (TreesByteRanged.append (TreesByteRanged.append hi he) hs) hp) hb)
+      · simp only [gTopDecList]
+        refine PTreesSafe.orElse' ?_ ?_
+        · exact PTreesSafe.bind_of_stateSafe PStateToksSafe.atEnd (fun b => by
+            cases b with
+            | true => exact subtree_treesSafe .topDecList (PTreesSafe.pure [] TreesByteRanged.nil)
+            | false => exact PTreesSafe.fail "Expected end of input")
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .topDecList ?_
+          refine PTreesSafe.bind (hFun) (fun item hi => ?_)
+          refine PTreesSafe.bind hTopDecList (fun rest hr => ?_)
+          exact PTreesSafe.pure (item ++ rest) (TreesByteRanged.append hi hr)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .topDecList ?_
+          refine PTreesSafe.bind (gDecForm_treesSafe .globalDec m) (fun item hi => ?_)
+          refine PTreesSafe.bind hTopDecList (fun rest hr => ?_)
+          exact PTreesSafe.pure (item ++ rest) (TreesByteRanged.append hi hr)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .topDecList ?_
+          refine PTreesSafe.bind (gExnDec_treesSafe m) (fun item hi => ?_)
+          refine PTreesSafe.bind hTopDecList (fun rest hr => ?_)
+          exact PTreesSafe.pure (item ++ rest) (TreesByteRanged.append hi hr)
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine subtree_treesSafe .topDecList ?_
+          refine PTreesSafe.bind (gStructName_treesSafe m) (fun item hi => ?_)
+          refine PTreesSafe.bind hTopDecList (fun rest hr => ?_)
+          exact PTreesSafe.pure (item ++ rest) (TreesByteRanged.append hi hr)
+        refine subtree_treesSafe .topDecList ?_
+        refine PTreesSafe.bind keepAnnot_treesSafe (fun annotation ha => ?_)
+        refine PTreesSafe.bind hTopDecList (fun rest hr => ?_)
+        exact PTreesSafe.pure (annotation ++ rest) (TreesByteRanged.append ha hr)
+
+theorem gProg_treesSafe (m : Nat) : PTreesSafe (gProg m) :=
+  (grammarBlock3_treesSafe m).1
+
+theorem gTryProg_treesSafe (m : Nat) : PTreesSafe (gTryProg m) :=
+  (grammarBlock3_treesSafe m).2.1
+
+theorem gBlock_treesSafe (m : Nat) : PTreesSafe (gBlock m) :=
+  (grammarBlock3_treesSafe m).2.2.1
+
+theorem gHandle_treesSafe (m : Nat) : PTreesSafe (gHandle m) :=
+  (grammarBlock3_treesSafe m).2.2.2.1
+
+theorem gIf_treesSafe (m : Nat) : PTreesSafe (gIf m) :=
+  (grammarBlock3_treesSafe m).2.2.2.2.1
+
+theorem gWhile_treesSafe (m : Nat) : PTreesSafe (gWhile m) :=
+  (grammarBlock3_treesSafe m).2.2.2.2.2.1
+
+theorem gStmt_treesSafe (m : Nat) : PTreesSafe (gStmt m) :=
+  (grammarBlock3_treesSafe m).2.2.2.2.2.2.1
+
+theorem gFun_treesSafe (m : Nat) : PTreesSafe (gFun m) :=
+  (grammarBlock3_treesSafe m).2.2.2.2.2.2.2.1
+
+theorem gTopDecList_treesSafe (m : Nat) : PTreesSafe (gTopDecList m) :=
+  (grammarBlock3_treesSafe m).2.2.2.2.2.2.2.2
+
+
 end Flapjack.Parser

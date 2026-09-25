@@ -329,9 +329,9 @@ theorem evalPanValueFfiClockProg_fuel_mono'
               · rw [if_neg hshape] at h ⊢
                 exact h
         | raised l g m f e v => exact h
-        | normal l g m f => simp at h
-        | broke l g m f => simp at h
-        | continued l g m f => simp at h
+        | normal l g m f => dsimp only at h ⊢; exact h
+        | broke l g m f => dsimp only at h ⊢; exact h
+        | continued l g m f => dsimp only at h ⊢; exact h
         | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h

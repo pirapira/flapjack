@@ -867,14 +867,20 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
     globalDeclsFilter globalDeclIsGlobal declarations ++
     globalDeclsFilter globalDeclIsFunction declarations
 
-/-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `new_main_name_def` (`pan_globalsScript.sml:224`):
-    the synthesized entry-point name is `fresh_name "main"` over the current
-    function names (`globalFunctionNames` is `MAP FST` of the function table). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName` = `String`, while HOL
--- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Qualified port of `pan_globals$new_main_name`
+    (`pan_globalsScript.sml:224`): `new_main_name decls =
+    fresh_name «main» (MAP FST (functions decls))`.  `freshNameHOL` is the
+    clause-for-clause port of HOL `fresh_name`, and `globalFunctionNames` is
+    `MAP FST (functions decls)` over the production declarations, so the only
+    remaining difference is the name carrier (`FunName` = `String` here versus
+    HOL `funname` = `mlstring`).  The generated entry-point name is
+    byte-observable at the compiler boundary, so it is recorded under
+    `names_as_string` with the same-module witness
+    `holMlStringWitness_globalNewMainName`; the input function names are only
+    compared for membership (`equality/map-key-only`).  Direct HOL rows:
+    `scripts/hol-probes/pan_globals_new_main_name_probe.out`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "new_main_name_def"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
 def globalNewMainName (declarations : List (Decl α)) : FunName :=
   freshNameHOL "main" (globalFunctionNames declarations)
 

@@ -9294,5 +9294,29 @@
     "lean_name": "emptyLocalsHOLExact",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "list_insert_insert",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "sptListInsert_insert",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against list_insert_insert at crep_to_loopProofScript.sml:406: HOL !x xs l. insert x () (list_insert xs l) = list_insert xs (insert x () l); list_insert/insert rendered as the untagged sptListInsert/sptInsert of HOL src/finite_maps/sptreeScript.sml, with the x=y case discharged by the untagged sptInsert_insert_shadow port of HOL insert_shadow at sptreeScript.sml:1641 and the x<>y case by the untagged sptInsert_swap port of HOL insert_swap at sptreeScript.sml:2214; direct HOL-EVAL rows lii_ty_nonmember/lii_ty_member/lii_lookup_new/lii_lookup_mem/lii_absent in scripts/hol-probes/crep_to_loop_list_insert2_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "list_insert_append",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "sptListInsert_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against list_insert_append at crep_to_loopProofScript.sml:414: HOL !xs ys l. list_insert (xs ++ ys) l = list_insert xs (list_insert ys l); list_insert rendered as the untagged sptListInsert of HOL src/finite_maps/sptreeScript.sml list_insert; the proof reuses the reviewed_exact sptListInsert_insert; direct HOL-EVAL rows lia_ty/lia_lookup_new/lia_lookup_first/lia_absent in scripts/hol-probes/crep_to_loop_list_insert2_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_store_32_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+    "lean_name": "panMemStore32HOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

@@ -283,6 +283,10 @@ run_probe crep_to_loop_insert_insert_probeScript.sml crep_to_loop_insert_insert_
   iie_hit iie_agrees_deep \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_list_insert2_probeScript.sml crep_to_loop_list_insert2_probe.out \
+  lii_ty_nonmember lia_absent \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -1598,4 +1602,22 @@ run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
 # the locals map is cleared while other fields are preserved.
 run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
   el_lookup el_globals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The mem_store_32 probe observes the exact four-byte replacement (little and
+# big endian), plus the unaligned and out-of-domain NONE cases.
+run_probe pan_sem_mem_store_32_probeScript.sml pan_sem_mem_store_32_probe.out \
+  ms32_aligned ms32_other_cell \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The result probe observes the exact panSem result constructor shapes.
+run_probe pan_sem_result_probeScript.sml pan_sem_result_probe.out \
+  res_error res_distinct \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The panSem mem_store/mem_stores probe observes in-domain replacement, pointwise
+# preservation of other cells, out-of-domain failure, the bytes_in_word stride (8w
+# for 64-bit words), the empty list, and a later-list store failure.
+run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
+  ms_hit_lookup mss_second_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"

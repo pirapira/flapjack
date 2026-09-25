@@ -1737,6 +1737,14 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "ret_hdl_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "retHdlHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.2): the three clauses of ret_hdl_def (pan_to_crepScript.sml:122-127) are ret_hdl One ns = Skip, ret_hdl (Comb sh) ns = if 1 < size_of_shape (Comb sh) then assign_ret ns else Skip, and ret_hdl (Named sh) ns = Skip. retHdlHOL has the identical clauses over the exact MlString-backed ShapeHOL carrier (constructor arities 0/1/1, field types List ShapeHOL and MlS match HOL shape) with sizeOfShapeHOL the tagged size_of_shape_def and assignRetHOL the CrepProgHOL counterpart of the tagged assignRetW; the Named name is carried exactly and discarded. The kernel-checked bridge crepProgToHOL_retHdl relates production retHdl to retHdlHOL through shapeToHOL. Direct HOL rows one/comb_empty/comb_one/comb_two/named in scripts/hol-probes/ret_hdl_probe.out; replayed on the exact carrier and through the bridge in Flapjack/Test/RetHdlParity.lean. Production retHdl stays untagged until the executable path runs over the exact carriers, tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "comp_field_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "compFieldHOL",
@@ -4591,7 +4599,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_drop",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.77; confirming the earlier Codex audit): HOL struct_infos_ok_drop (pan_structsProofScript.sml:169-196) is struct_infos_ok sh_ctxt ==> struct_infos_ok (DROP n sh_ctxt) over the fields-only (stcname # struct_info) list with stcname/fldname = mlstring and struct_info = <| fields; size |>. The Lean statement is keyed by the production StructContext = List (StructName × StructInfo) with StructName/FieldName = String and StructInfo carrying the extra shapedFields cache; that constructor-arity/field-type difference from HOL's struct_info is beyond name representation, so names_as_string does not apply, and the executable structInfosOk predicate is the production analogue rather than a tagged HOL port. Tag remains withdrawn. Faithful MlString/ShapeHOL port tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2). Evidence: HOL oracle row in scripts/hol-probes/afindi_probe.out; Lean fixture Flapjack.Test.PanStructsAfindiParity.structInfosOk_drop_fixture."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4726,8 +4734,8 @@
     "hol_name": "map_fst_eq_alookup",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "map_fst_eq_lookup",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison against pan_structsProofScript.sml:278. The direct HOL statement inference probe reports nm: α, xs: (α × β) list, ys: (α × γ) list, and v: β; Lean keeps the independent generic key and value types. Premises, existential afindi index, bounds, and selected-value/ALOOKUP conclusions match; Option.map Prod.snd is the indexed Lean API form of SND (EL i ...) under the bounds. Direct HOL rows (including Nat values in xs and Bool values in ys) and inferred types are in scripts/hol-probes/afindi_probe.out; matching Lean regressions are map_fst_eq_lookup_fixture and map_fst_eq_lookup_different_value_types_fixture in Flapjack/Test/PanStructsAfindiParity."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -5023,7 +5031,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "crepAssignedVars_nestedSeq_assign_zipWithW",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison with crepPropsScript.sml:410-415: the list-length premise and assigned-variable equation match. The Lean theorem and its ...W wrapper use production CrepProg, whose Call/ExtCall names are String; HOL prog uses mlstring. CrepProgHOL is available, but no assigned_vars helper or nested-seq theorem is ported over that exact carrier. Existing direct HOL rows check concrete observations, not a carrier bridge. Keep this analogue untagged until the exact-carrier port is added."
+    "reviewer": "Codex (source comparison with crepPropsScript.sml:410-415: the list-length premise and assigned-variable equation match. The Lean theorem and its ...W wrapper use production CrepProg, whose Call/ExtCall names are String; HOL prog uses mlstring. flapjack-ds5 (bead flapjack-pxn.18.3.5.8.8.1) adds the exact-carrier port crepAssignedVarsHOL_nestedSeq_assign_zipWith over CrepProgHOL (reviewed_exact) and the exact helper crepAssignedVarsHOL; this production-carrier W analogue stays untagged because its Call/ExtCall names are String. Existing direct HOL rows check concrete observations, not a carrier bridge."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -8055,7 +8063,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "crepAssignedFreeVars_nestedSeq_assign_zipWithW",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison with crepPropsScript.sml:420-427: the equation `assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns` under LENGTH ns = LENGTH vs matches the Lean zipWith/crepNestedSeqW form pointwise. The mismatch is the imported programme carrier: HOL crepLang$prog embeds funname = mlstring in Call/ExtCall, while Lean CrepProg embeds FunName = String. The quantifiers are varname = num names and a List Nat result, so no mlstring identifier exists for names_as_string to qualify, and no NameRanged byte witness applies. Direct HOL row nested_afv=[1; 2] is in crep_assigned_vars_probe.out (probe header cites crepPropsScript.sml:420) and the equation is sampled by Flapjack/Test/CrepAssignedVarsParity.lean:103-107. Keep the tag withdrawn pending the exact mlstring-carrier port flapjack-pxn.18.3.5.8.8."
+    "reviewer": "Codex (source comparison with crepPropsScript.sml:420-427: the equation `assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns` under LENGTH ns = LENGTH vs matches the Lean zipWith/crepNestedSeqW form pointwise. The mismatch is the imported programme carrier: HOL crepLang$prog embeds funname = mlstring in Call/ExtCall, while Lean CrepProg embeds FunName = String. The quantifiers are varname = num names and a List Nat result, so no mlstring identifier exists for names_as_string to qualify, and no NameRanged byte witness applies. Direct HOL row nested_afv=[1; 2] is in crep_assigned_vars_probe.out (probe header cites crepPropsScript.sml:420) and the equation is sampled by Flapjack/Test/CrepAssignedVarsParity.lean:103-107. flapjack-ds5 (bead flapjack-pxn.18.3.5.8.8.1) adds the exact-carrier port crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith over CrepProgHOL (reviewed_exact) and the exact helper crepAssignedFreeVarsHOL; this production-carrier W analogue stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -9926,8 +9934,8 @@
     "hol_name": "isValWord_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
     "lean_name": "isValWordHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds3 (bead flapjack-dlc.121). HOL `isValWord` (panSemScript.sml:35-38) infers type `:'a panSem$v -> bool` (polymorphic word width; `stcname`/`fldname`=mlstring are irrelevant to both clauses) with derived clause form `(isValWord (ValWord v0) <=> T) /\\ (isValWord (RStruct v2) <=> F) /\\ (isValWord (NStruct v3 v4) <=> F)`. Lean `isValWordHOL {width} [NeZero width] : ValueHOL width -> Bool` (`| .val _ => true | .rStruct _ => false | .nStruct _ _ => false`) matches clause-for-clause over the tagged exact `ValueHOL` (`@[hol ... \"v\"]`, same constructor arities 1/1/2, `HolWordLab` payload, MlStringHOL keys); `[NeZero width]` mirrors HOL's positive dimindex. Direct HOL oracle rows is_valword_val=T/is_valword_rstruct=F/is_valword_nstruct=F/is_valword_wordlab=T from pan_sem_is_val_word_probe.out, reproduced by PanSemIsValWordHOLParity.lean. Production String-bearing holValueIsWord (PanSemStateEval.lean) is a separate untagged documented-mismatch analogue (bead flapjack-0lj)."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -10247,10 +10255,74 @@
   "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
   "lean_name": "loadGlobalsHOL",
   "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.1): HOL load_globals_def (cakeml/pancake/crepLangScript.sml:115-119) is load_globals _ 0 = [] and load_globals ad (SUC n) = LoadGlob ad :: load_globals (ad+1w) n. loadGlobalsHOL matches both clauses with address : BitVec 5 and result List (CrepExpHOL width) over the exact carrier. Kernel bridges crepExpMapToHOL_loadGlobals / crepExpMapOfHOL_loadGlobals relate the production loadGlobals over the codecs. The existing production-carrier tag on loadGlobalsW is unchanged."
-},
-{
-  "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+   "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.1): HOL load_globals_def (cakeml/pancake/crepLangScript.sml:115-119) is load_globals _ 0 = [] and load_globals ad (SUC n) = LoadGlob ad :: load_globals (ad+1w) n. loadGlobalsHOL matches both clauses with address : BitVec 5 and result List (CrepExpHOL width) over the exact carrier. Kernel bridges crepExpMapToHOL_loadGlobals / crepExpMapOfHOL_loadGlobals relate the production loadGlobals over the codecs. The existing production-carrier tag on loadGlobalsW is unchanged."
+ },
+ {
+   "hol_path": "cakeml/pancake/crepLangScript.sml",
+   "hol_name": "assigned_free_vars_def",
+   "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
+   "lean_name": "crepAssignedFreeVarsHOL",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL assigned_free_vars_def (cakeml/pancake/crepLangScript.sml:149-162) has clauses Skip=[], Dec n e p=FILTER ($\u2260 n) (assigned_free_vars p), Assign n e=[n], Primitive lhss pop rhss=lhss, Seq/If=append, While=body, Call (SOME (rts, SOME (_, p)))=rts ++ assigned_free_vars p, Call (SOME (rts, NONE))=rts, ShMem op r ad=[r], and _=[]. crepAssignedFreeVarsHOL matches clause-for-clause over the exact width-indexed CrepProgHOL carrier (funname MlString, varname Nat, [NeZero width]); the Dec filter and ShMem result variable are the only observed names, all num varnames. Kernel bridge crepProgToHOL_crepAssignedFreeVars relates production crepAssignedFreeVars over crepProgToHOL. Direct HOL row nested_afv=[1; 2] in crep_assigned_vars_probe.out; the production-carrier tag on crepAssignedFreeVarsW is unchanged."
+ },
+ {
+   "hol_path": "cakeml/pancake/crepLangScript.sml",
+   "hol_name": "assigned_vars_def",
+   "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
+   "lean_name": "crepAssignedVarsHOL",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL assigned_vars_def (cakeml/pancake/crepLangScript.sml:164-177) has clauses Skip=[], Dec n e p=n::assigned_vars p, Assign n e=[n], Primitive lhss pop rhss=lhss, Seq/If=append, While=body, Call (SOME (rts, SOME (_, p)))=rts ++ assigned_vars p, Call (SOME (rts, NONE))=rts, ShMem op r ad=[r], and _=[]. crepAssignedVarsHOL matches clause-for-clause over the exact width-indexed CrepProgHOL carrier; all observed names are num varnames. Kernel bridge crepProgToHOL_crepAssignedVars relates production crepAssignedVars over crepProgToHOL. Direct HOL rows in crep_assigned_vars_probe.out; the production-carrier tag on crepAssignedVarsW is unchanged."
+ },
+ {
+   "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+   "hol_name": "nested_seq_assigned_vars_eq",
+   "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+   "lean_name": "crepAssignedVarsHOL_nestedSeq_assign_zipWith",
+   "statement_status": "reviewed_exact",
+   "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL nested_seq_assigned_vars_eq (cakeml/pancake/semantics/crepPropsScript.sml:410-415) is !ns vs. LENGTH ns = LENGTH vs ==> assigned_vars (nested_seq (MAP2 Assign ns vs)) = ns. crepAssignedVarsHOL_nestedSeq_assign_zipWith has the same length premise and the same equation over the exact CrepProgHOL carrier, with MAP2 as List.zipWith and Assign as crepProgHOL.assign; the quantified keys and result are num varnames, so no mlstring identifier is inspected. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the equation; direct HOL row nested_av=[1; 2] in crep_assigned_vars_probe.out. The production-carrier W analogue remains a documented mismatch."
+ },
+ {
+   "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+   "hol_name": "nested_seq_assigned_free_vars_eq",
+   "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+   "lean_name": "crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith",
+   "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, bead flapjack-pxn.18.3.5.8.8.1): HOL nested_seq_assigned_free_vars_eq (cakeml/pancake/semantics/crepPropsScript.sml:420-427) is !ns vs. LENGTH ns = LENGTH vs ==> assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns. crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith has the same length premise and the same equation over the exact CrepProgHOL carrier, with MAP2 as List.zipWith and Assign as crepProgHOL.assign; no mlstring identifier is inspected. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the equation; direct HOL row nested_afv=[1; 2] in crep_assigned_vars_probe.out. The production-carrier W analogue remains a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_IMP_assigned_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.3): HOL assigned_free_vars_IMP_assigned_vars (cakeml/pancake/semantics/crepPropsScript.sml:373-378) is !prog x. MEM x (assigned_free_vars prog) ==> MEM x (assigned_vars prog). The Lean theorem has the same quantified program and natural varname and the same membership implication over the exact CrepProgHOL carrier (MlString function names, width-indexed words) using the exact crepAssignedFreeVarsHOL/crepAssignedVarsHOL ports; no mlstring identifier is inspected, only Nat varnames. The production bridge crepAssignedFreeVars_imp_crepAssignedVars_via_HOL transports the result across crepProgToHOL; the String/width-indexed production analogue mem_crepAssignedFreeVars_imp_mem_crepAssignedVars stays untagged. Regression Flapjack/Test/CrepAssignedVarsParity.lean samples the exact theorem and the bridge."
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "nested_decs_def",
+    "lean_path": "Flapjack/Pancake/CrepLang/Prog.lean",
+    "lean_name": "nestedDecsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.4): exact port of HOL nested_decs_def (cakeml/pancake/crepLangScript.sml:102-107) over the exact CrepProgHOL carrier: nestedDecsHOL [] [] body = body, nestedDecsHOL (name::names) (value::values) body = Dec name value (nestedDecsHOL names values body), and both length-mismatch cases are Skip, clause-for-clause. Only Nat var names and CrepExpHOL/width-indexed words are inspected; the MlString function names of CrepProgHOL are carried but never inspected. Kernel bridge crepProgToHOL_nestedDecs transports it across crepProgToHOL; the generic production nestedDecs and its width wrapper nestedDecsW keep their separate tags."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVarsHOL_nestedDecs_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.4): HOL assigned_vars_nested_decs_append (cakeml/pancake/semantics/crepPropsScript.sml:390-397) is LENGTH ns = LENGTH es ==> assigned_vars (nested_decs ns es p) = ns ++ assigned_vars p. The Lean theorem has the same length premise and the same equation over the exact CrepProgHOL carrier using the exact nestedDecsHOL and crepAssignedVarsHOL ports; no mlstring identifier is inspected. The production W analogue crepAssignedVars_nestedDecs_appendW stays a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVarsHOL_nestedDecs_append",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.4): HOL assigned_free_vars_nested_decs_append (cakeml/pancake/semantics/crepPropsScript.sml:400-407) is LENGTH ns = LENGTH es ==> assigned_free_vars (nested_decs ns es p) = FILTER (\\x. ~MEM x ns) (assigned_free_vars p). The Lean theorem has the same length premise and the same equation over the exact CrepProgHOL carrier using nestedDecsHOL and crepAssignedFreeVarsHOL, with FILTER written as List.filter (fun candidate => decide (candidate ∉ names)); no mlstring identifier is inspected. The production W analogue crepAssignedFreeVars_nestedDecs_appendW stays a documented mismatch."
+  },
+  {
+   "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
   "hol_name": "exp_hdl_def",
   "lean_path": "Flapjack/Pancake/PanToCrep.lean",
   "lean_name": "expHdlHOL",

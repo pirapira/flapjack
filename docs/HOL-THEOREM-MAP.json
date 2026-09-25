@@ -8104,7 +8104,7 @@
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "extractLabels",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
+    "reviewer": "Codex source review against wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; uses exact WordLangProgHOL including HOL num_set and mlstring fields; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out are reproduced by WordLangExtractLabelsParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -8127,16 +8127,16 @@
     "hol_name": "every_inst_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "everyInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:299-315: Inst uses P; Seq/Loop/If/MustTerminate recurse; OpCurrHeap synthesizes the Add instruction with the second register as right operand; Call NONE returns T without inspecting its handler, while SOME checks both handler bodies. Input uses exact WordLangProgHOL; direct rows in word_convs_inst_preds_probe.out are reproduced in WordLangInstPredsParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "flat_exp_conventions_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "flatExpConventions",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:179-205: Assign/Store are rejected; Set and ShareInst accept only the stated flat expression forms; Seq/Loop/If/MustTerminate recurse; Call checks return and handler independently; catch-all accepts. Uses exact WordLangProgHOL/WordLangExpHOL; direct rows in word_convs_flat_exp_probe.out are reproduced in WordLangFlatExpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -8326,17 +8326,17 @@
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "exp_to_addr_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
-    "lean_name": "expToAddr",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "expToAddrHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:323-326: exact Var and Op Add [Var,Const] clauses over WordLangExpHOL, whose Lookup field uses the fixed store_name carrier; all other expressions return none. Direct ShareInst address rows in word_convs_full_inst_ok_less_probe.out exercise this exact function."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "full_inst_ok_less_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "fullInstOkLess",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison; Call NONE handler case oracle added after review)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:318-345: Inst delegates to inst_ok_less; recursive clauses and Call NONE behavior match; ShareInst uses exact expToAddrHOL then the matching address-offset class for each memop. Uses exact WordLangProgHOL/WordLangExpHOL and the checked AsmConfig width; all direct fiol_* rows in word_convs_full_inst_ok_less_probe.out are reproduced in WordLangFullInstOkLessParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -8350,9 +8350,9 @@
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "call_arg_convention_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
-    "lean_name": "callArgConvention",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "callArgConventionHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:391-423: each scalar, list GENLIST, Inst, Call, and recursive constructor clause matches; the function uses exact WordLangProgHOL fields and remains Bool-valued like HOL. All 23 direct rows in word_convs_call_arg_probe.out are reproduced in WordLangCallArgParity.lean."
   },
   {
     "hol_path": null,
@@ -8406,9 +8406,9 @@
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_exp_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
-    "lean_name": "everyVarExp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "everyVarExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:85-91: Var applies P, Load recurses, Op applies the list traversal, Shift conjoins both operands, and all other expressions return T. Uses exact WordLangExpHOL so Lookup has the fixed store_name field."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",

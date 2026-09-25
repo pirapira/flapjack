@@ -13,52 +13,52 @@ open Flapjack
 
 private abbrev W := BitVec 8
 
-private def emptySet : WordLangNumSet := fun _ => none
+private def emptySet : WordLangNumSetHOL := .ln
 
-private def cutsets : WordLangCutsets := (emptySet, emptySet)
+private def cutsets : WordLangCutsetsHOL := (emptySet, emptySet)
 
-private def good : WordLangProg W := .set .nextFree (.var 1)
+private def good : WordLangProgHOL W := .set .nextFree (.var 1)
 
-private def bad : WordLangProg W := .assign 1 (.const 0)
+private def bad : WordLangProgHOL W := .assign 1 (.const 0)
 
-private def assignProg : WordLangProg W := .assign 1 (.const 0)
+private def assignProg : WordLangProgHOL W := .assign 1 (.const 0)
 
-private def storeProg : WordLangProg W := .store (.const 0) 1
+private def storeProg : WordLangProgHOL W := .store (.const 0) 1
 
-private def setVarProg : WordLangProg W := .set .nextFree (.var 1)
+private def setVarProg : WordLangProgHOL W := .set .nextFree (.var 1)
 
-private def setOpProg : WordLangProg W := .set .nextFree (.op .add [])
+private def setOpProg : WordLangProgHOL W := .set .nextFree (.op .add [])
 
-private def shareVarProg : WordLangProg W := .shareInst .load 1 (.var 1)
+private def shareVarProg : WordLangProgHOL W := .shareInst .load 1 (.var 1)
 
-private def shareAddProg : WordLangProg W :=
+private def shareAddProg : WordLangProgHOL W :=
   .shareInst .load 1 (.op .add [.var 1, .const 0])
 
-private def shareConstProg : WordLangProg W := .shareInst .load 1 (.const 0)
+private def shareConstProg : WordLangProgHOL W := .shareInst .load 1 (.const 0)
 
-private def seqBadProg : WordLangProg W := .seq bad .skip
+private def seqBadProg : WordLangProgHOL W := .seq bad .skip
 
-private def seqOkProg : WordLangProg W := .seq good good
+private def seqOkProg : WordLangProgHOL W := .seq good good
 
-private def callNoneProg : WordLangProg W := .call none none [] none
+private def callNoneProg : WordLangProgHOL W := .call none none [] none
 
-private def callHandlerBadProg : WordLangProg W :=
+private def callHandlerBadProg : WordLangProgHOL W :=
   .call none none [] (some (2, bad, 20, 21))
 
-private def callRetBadProg : WordLangProg W :=
+private def callRetBadProg : WordLangProgHOL W :=
   .call (some ([1], cutsets, bad, 10, 11)) none [] none
 
-private def callBothOkProg : WordLangProg W :=
+private def callBothOkProg : WordLangProgHOL W :=
   .call (some ([1], cutsets, good, 10, 11)) none [] (some (2, good, 20, 21))
 
-private def loopProg : WordLangProg W := .loop emptySet good emptySet
+private def loopProg : WordLangProgHOL W := .loop emptySet good emptySet
 
-private def ifBadProg : WordLangProg W :=
+private def ifBadProg : WordLangProgHOL W :=
   .ite .equal 0 (.reg 1) bad .skip
 
-private def mustTerminateProg : WordLangProg W := .mustTerminate good
+private def mustTerminateProg : WordLangProgHOL W := .mustTerminate good
 
-private def instProg : WordLangProg W := .inst (.skip : WordLangInst W)
+private def instProg : WordLangProgHOL W := .inst (.skip : WordLangInst W)
 
 -- The 17 kernel-checked cases, matching `word_convs_flat_exp_probe.out`.
 

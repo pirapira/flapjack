@@ -165,7 +165,9 @@ inductive WordLangInst (α : Type u) where
   | fp (operation : WordLangFp)
   deriving Repr
 
-/-- `wordLang$exp` (`cakeml/compiler/backend/wordLangScript.sml:14-21`). -/
+/-- Production `wordLang$exp` shape. Use `WordLangExpHOL` when an exact carrier
+is required: this version inherits `WordStore α`'s phantom parameter for
+`Lookup`. -/
 inductive WordLangExp (α : Type u) where
   | const (value : α)
   | var (name : Nat)
@@ -275,19 +277,27 @@ inductive WordLangProgHOL (α : Type u) where
   | shareInst (operator : WordMemOp) (name : Nat)
       (address : WordLangExpHOL α)
 
-/-- HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises a
-`Var` or `Op Add [Var; Const]` address expression. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp_to_addr_def"]
+/-- Production helper corresponding to HOL `exp_to_addr_def`; untagged because
+its input inherits `WordStore α`'s phantom parameter. -/
 def expToAddr {width : Nat} :
     WordLangExp (BitVec width) -> Option (WordLangAddr (BitVec width))
   | .var name => some (.addr name 0)
   | .op .add [.var name, .const offset] => some (.addr name offset)
   | _ => none
 
+/-- Exact HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises
+a `Var` or `Op Add [Var; Const]` address expression. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp_to_addr_def"]
+def expToAddrHOL {width : Nat} :
+    WordLangExpHOL (BitVec width) → Option (WordLangAddr (BitVec width))
+  | .var name => some (.addr name 0)
+  | .op .add [.var name, .const offset] => some (.addr name offset)
+  | _ => none
+
 mutual
-/-- HOL `wordLang$every_var_exp` (`wordLangScript.sml:85-91`): every register
-occurring in an expression satisfies `P`. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_exp_def"]
+/-- Production expression-register helper corresponding to HOL
+`every_var_exp_def`; untagged because `WordLangExp` uses the phantom-parameter
+`WordStore α`. The exact carrier version is `everyVarExpHOL`. -/
 def everyVarExp {width : Nat} (P : Nat -> Bool) :
     WordLangExp (BitVec width) -> Bool
   | .var num => P num
@@ -303,6 +313,27 @@ def everyVarExps {width : Nat} (P : Nat -> Bool) :
   | [] => true
   | expression :: expressions =>
       everyVarExp P expression && everyVarExps P expressions
+end
+
+mutual
+/-- Exact HOL `wordLang$every_var_exp` (`wordLangScript.sml:85-91`): every
+register occurring in an exact expression satisfies `P`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_exp_def"]
+def everyVarExpHOL {width : Nat} (P : Nat → Bool) :
+    WordLangExpHOL (BitVec width) → Bool
+  | .var num => P num
+  | .load exp => everyVarExpHOL P exp
+  | .op _ expressions => everyVarExpsHOL P expressions
+  | .shift _ left right => everyVarExpHOL P left && everyVarExpHOL P right
+  | _ => true
+
+/-- Flapjack helper for the HOL `EVERY (every_var_exp P)` traversal on exact
+expressions. -/
+def everyVarExpsHOL {width : Nat} (P : Nat → Bool) :
+    List (WordLangExpHOL (BitVec width)) → Bool
+  | [] => true
+  | expression :: expressions =>
+      everyVarExpHOL P expression && everyVarExpsHOL P expressions
 end
 
 /-- HOL `wordLang$every_var_imm` (`wordLangScript.sml:93-96`). -/

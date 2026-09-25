@@ -569,4 +569,50 @@ theorem sizeOfShapeWithContextHOL_eq (shape : ShapeHOL) (context : StructContext
     sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape :=
   sizeOfShapeWithContextHOL_eq_nil shape h context
 
+/-! ## Exact `length_flatten_eq_size_of_shape` over the exact carriers
+
+`panPropsScript.sml:171` states that a value whose `shape_of` is well-formed under
+the empty struct context has `LENGTH (flatten v) = size_of_shape (shape_of v)`.
+The exact Lean counterparts are `flattenHOL` (tagged `flatten_def`),
+`shapeOfHOLExact` (tagged `shape_of_def`), and `sizeOfShapeHOL` (tagged
+`size_of_shape_def`) over `ValueHOL`, with the context-less well-formedness
+rendered as `isWfShapeExactHOL [] shape = true` (HOL `is_wf_shape_nil` is the
+overload `is_wf_shape []`). -/
+
+/- Untagged support: the flattened word list of a value has length equal to the
+    plain `size_of_shape` size of its shape, for values whose shape is
+    well-formed under the empty struct context. -/
+mutual
+  theorem lengthFlattenHOL_eq_sizeOfShapeHOL {width : Nat} [NeZero width]
+      : ∀ (v : ValueHOL width),
+        isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact v) = true →
+        (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v)
+    | .val w, _ => by simp [flattenHOL, shapeOfHOLExact]
+    | .rStruct fields, h => by
+        simp only [shapeOfHOLExact, isWfShapeExactHOL_comb] at h
+        simp only [flattenHOL, shapeOfHOLExact, sizeOfShapeHOL_comb]
+        exact lengthFlattenHOLs_eq_sizeOfShapesHOL fields h
+    | .nStruct name fields, h => by
+        simp [shapeOfHOLExact, isWfShapeExactHOL_named, structContextLookupHOL_nil] at h
+  theorem lengthFlattenHOLs_eq_sizeOfShapesHOL {width : Nat} [NeZero width]
+      : ∀ (vs : List (ValueHOL width)),
+        isWfShapesExactHOL ([] : StructContextExact) (vs.map shapeOfHOLExact) = true →
+        (vs.map flattenHOL).flatten.length = sizeOfShapesHOL (vs.map shapeOfHOLExact)
+    | [], _ => by simp
+    | v :: vs, h => by
+        simp only [List.map_cons, isWfShapesExactHOL_cons, Bool.and_eq_true] at h
+        have h1 := lengthFlattenHOL_eq_sizeOfShapeHOL v h.1
+        have h2 := lengthFlattenHOLs_eq_sizeOfShapesHOL vs h.2
+        simp [List.flatten_cons, List.length_append, h1, h2]
+end
+
+/-- Exact port of HOL `panProps$length_flatten_eq_size_of_shape`
+    (`panPropsScript.sml:171`). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "length_flatten_eq_size_of_shape"]
+theorem flattenHOL_length_eq_sizeOfShapeHOL {width : Nat} [NeZero width]
+    (v : ValueHOL width)
+    (h : isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact v) = true) :
+    (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v) :=
+  lengthFlattenHOL_eq_sizeOfShapeHOL v h
+
 end Flapjack

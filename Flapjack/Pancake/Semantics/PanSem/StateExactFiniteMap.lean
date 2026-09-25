@@ -62,7 +62,7 @@ open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL ExpHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
-    is the extensionality half of the canonical finite-map translation witness. -/
+    is separate from the canonical roundtrip witness below. -/
 theorem HolFiniteMapExact.ext {α β : Type} {left right : HolFiniteMapExact α β}
     (h : left.lookup = right.lookup) : left = right := by
   obtain ⟨lleft, pleft⟩ := left
@@ -181,8 +181,9 @@ theorem ofExact_toExact {width : Nat} {σ : Type} [NeZero width]
   rfl
 
 /-- Canonical global kernel witness for the `fmap_as_finite_support` `@[hol]`
-    qualifier: `HolFiniteMapExact` is extensional and the finite-support carrier
-    is invertibly related to the broad exact one.  The checker requires this
+    qualifier: the finite-support carrier is invertibly related to the broad
+    exact one. Extensionality is the separate `HolFiniteMapExact.ext` theorem.
+    The checker requires this
     declaration in the module of a `fmap_as_finite_support`-qualified tag. -/
 theorem holFmapAsFiniteSupportWitness {width : Nat} {σ : Type} [NeZero width] :
     (∀ (state : PanSemStateExact width σ) (h : state.FiniteSupport),

@@ -601,6 +601,27 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertIn("byte-observable", record["reviewer"])
         self.assertIn("String", record["reviewer"])
 
+    def test_fperm_decs_decls_carrier_mismatch_stays_untagged(self):
+        key = ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_decls")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        self.assertEqual(inventory[key]["hol_name"], "fperm_decs_decls")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "fperm_decs_decls")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        review = MAP["DOCUMENTED_MISMATCHES"][key][2]
+        self.assertIn("unused ys binder", review)
+        self.assertIn("arbitrary α global values", review)
+        self.assertIn("no NameRanged premise", review)
+        self.assertIn("arbitrary α global values", record["reviewer"])
+
 
     def test_fields_in_order_reorder_analogue_stays_untagged(self):
         inventory = {

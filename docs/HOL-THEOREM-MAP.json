@@ -2239,7 +2239,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_decs_decls",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.51): HOL fperm_decs_decls (pan_globalsProofScript.sml:2023-2029) is over the word-indexed decl carrier (mlstring funname/varname/eid/stcname, exp = Const ('a word)) and filters with HOL is_function. The Lean theorem fperm_decs_decls ranges over the generic production Decl alpha (Exp alpha.Const : alpha, names = String) with executable-only [BEq String], and mirrors EVERY (not o is_function) by the Flapjack-specific globalDeclIsFunction rather than a tagged HOL port. The Decl alpha/word carrier difference is beyond names_as_string, so the tag stays withdrawn; exact-carrier work is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2) and flapjack-6nn.3.1. Regression evidence Flapjack/Test/PanGlobalsDeclPredicateParity.lean."
+    "reviewer": "Codex (source comparison with pan_globalsProofScript.sml:2023-2029): the unused ys binder, non-function premise, and rename-to-self equation correspond. Lean quantifies over production Decl α, with String names and arbitrary α global values; HOL uses mlstring names and word-valued globals. Although the premise makes each renamer a no-op, it does not equate declaration carriers. There is no NameRanged premise or checked declaration bridge for names_as_string; keep documented_mismatch pending the exact carrier (flapjack-pxn.18.3.5.8)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2680,6 +2680,14 @@
     "lean_name": "structContextLookupHOL_append_eq_of_some",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only first-match lookup preservation under a distinct-key prefix; internal support for the exact v_flds_ok_append port, with no claimed standalone HOL theorem."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "structContextLookupHOL_drop_eq_of_some",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only specialization of exact context lookup preservation under a prefix drop; internal support for sizeOfShapeWithContextHOL_drop, with no claimed standalone HOL theorem."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4594,12 +4602,20 @@
     "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.63): HOL alookup_map_structs_ok is a local theorem over `(stcname # struct_info) list` with `stcname`/`fldname` = mlstring and `struct_info = <|fields; size|>`, looked up with ALOOKUP, concluding `ALL_DISTINCT (MAP FST info.fields)`. Lean lookupInfo_fields_nodup concludes the same shape but over the production `StructContext = List (StructName × StructInfo)` with `StructName`/`FieldName` = String, `StructInfo` carrying the extra shapedFields cache, lookupInfo as first-match BEq, and an extra `[BEq String] [LawfulBEq String]` side condition. Record arity, lookup, and equality side conditions differ beyond names, so (names_as_string := ...) does not apply and the tag stays withdrawn. Exact MlString/exact-record port tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2); oracle row scripts/hol-probes/afindi_probe.out:14, fixture Flapjack.Test.PanStructsAfindiParity (instantiates on simpleContext)."
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
-    "hol_name": "size_of_sh_with_ctxt_drop",
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "shapeSizeWithContext_drop",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (P0 source review: HOL size_of_sh_with_ctxt_drop has exactly the same two premises—shape well-formedness in DROP n and distinct structure keys—and equality conclusion as this production theorem. It remains untagged because HOL uses ShapeHOL and StructContextExact over MlS identifiers and the exact fields/size-only struct record; Lean uses String-backed production Shape/StructContext with cache-augmented StructInfo.shapedFields and String-keyed lookups. names_as_string cannot cover the context/record carrier difference. The exact size definition sizeOfShapeWithContextHOL already exists, but the drop theorem over exact carriers does not; tracked by flapjack-pxn.18.3.5.8.16. No byte-observable output is present."
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only production-carrier analogue of size_of_sh_with_ctxt_drop; kept as useful String-backed infrastructure beside the exact MlString/ShapeHOL port."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_drop",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+    "lean_name": "sizeOfShapeWithContextHOL_drop",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison with pan_structsProofScript.sml:99-102: both premises are is_wf_shape (DROP n context) shape and ALL_DISTINCT (MAP FST context), and the conclusion is equality of size_of_sh_with_ctxt on dropped/full contexts. Lean uses the exact ShapeHOL, StructContextExact and MlString carriers, with identical Bool validity and first-match lookup. Direct HOL EVAL rows are in scripts/hol-probes/pan_structs_shape_context_drop_probe.out; exact-carrier kernel regressions are in Flapjack/Test/PanStructsShapeContextDropParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

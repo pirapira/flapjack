@@ -370,9 +370,9 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
     `names_as_string` qualifier cannot cover those context/record differences.
     The statement otherwise has HOL's two premises and equality conclusion;
     the exact context-sensitive size definition already exists as
-    `sizeOfShapeWithContextHOL`, but the drop theorem over exact carriers is
-    still missing; the exact theorem is tracked by
-    `flapjack-pxn.18.3.5.8.16` under the exact-carrier work. -/
+    `sizeOfShapeWithContextHOL`, and the exact drop theorem is now ported as
+    `sizeOfShapeWithContextHOL_drop` in the exact-carrier compile-correctness
+    module. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)

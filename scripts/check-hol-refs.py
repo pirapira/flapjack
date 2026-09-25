@@ -338,6 +338,10 @@ def tagged_declaration_text(lines: list[str], attribute_start: int) -> str:
             if seen_declaration:
                 break
             region.append(line)
+            if re.search(r"(?:^|\s)(?:def|theorem|lemma|abbrev|instance) ", stripped):
+                seen_declaration = True
+                if ":=" in stripped:
+                    break
             continue
         if not line.strip():
             region.append(line)

@@ -7,9 +7,9 @@ becomes `lParT`) so that the two can be read side by side.
 
 Upstream recurses on the remaining input and discharges termination with a
 `measure (LENGTH o FST)` relation. Here the recursion is structural on an
-explicit fuel bound instead: every step consumes at least one character, so
-seeding the fuel with the input length loses nothing, and it keeps the lexer
-free of well-founded recursion.
+explicit fuel bound instead: each lexer step consumes at least one input byte,
+so seeding the fuel with the UTF-8 byte length loses nothing and keeps the
+lexer free of well-founded recursion.
 -/
 
 namespace Flapjack.Parser
@@ -274,7 +274,7 @@ def numFromDecString (s : String) : Nat :=
 `next_atom`: read one lexeme, skipping whitespace and comments.
 
 `fuel` bounds only the whitespace- and comment-skipping recursion; each such
-step consumes at least one character, so `input.length` always suffices.
+step consumes at least one input byte, so the UTF-8 byte count always suffices.
 -/
 def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
   | 0, _, _ => none

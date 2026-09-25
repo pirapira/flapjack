@@ -3,17 +3,16 @@ import Flapjack.PanShMemStore
 import Flapjack.Pancake.Semantics.LoopSem
 
 /-!
-# HOL-shaped total statement-clause assembly steps
+# Production-state statement-clause assembly steps
 
-Interface glue for the total HOL-shaped `panSem$evaluate` fragment
-(`cakeml/pancake/semantics/panSemScript.sml:556-736`).  Every expression-bearing
-constructor of HOL `evaluate` first evaluates a source expression with `eval` and
-then either continues with the value or returns `SOME Error` with the state
-unchanged.  This module packages that shared pattern once, over the complete
-production `PanSemState`, and instantiates it for the `Assign`, `Return`, and
-`Raise` clauses.  Everything here is untagged: it is assembly support for a
-future exact `evaluate_def` port, not the port itself, and it uses the RV64
-production word carrier.
+Interface glue for selected clauses and recursive composition steps from
+HOL `panSem$evaluate` (`cakeml/pancake/semantics/panSemScript.sml:556-736`).
+It covers expression steps and clauses for assignment, return, raise,
+primitive, annotation, stores, declarations, shared memory, and external calls,
+plus composition steps for loops and calls. It does not define the complete
+recursive evaluator. Everything here is untagged production-state support: it
+uses the RV64 production word carrier and String-backed names, rather than the
+exact word-indexed, MlString-keyed HOL state.
 
 The expression evaluation reuses `evalPanSemStateExp`, whose executed-path
 agreement with the untagged, String-backed `evalHOL` reference evaluator is
@@ -1201,15 +1200,13 @@ theorem panSemTotalWhileStep_word_continue [DecidableEq α] [OfNat α 0]
 
 `panSem$dec_clock_def` and `panSem$fix_clock_def`
 (`cakeml/pancake/semantics/panSemScript.sml:441/446`) are the clock-only
-state operations used by the recursive `evaluate` clauses. The bodies here are
-clause-for-clause copies, but the `@[hol]` tags are **withdrawn**: the carrier
-`PanSemHolState` is a String-backed source projection (its `locals`/`globals`
-are `VarName`-keyed, `code` is `FunName`-keyed, `eshapes` is
-`ExceptionId`-keyed, `structs : StructContextHOL`, and `locals` values are
-`HolValue`, whose `nStruct` names/fields are `StructName`/`FieldName` = String),
-while HOL's `'a` word / `mlstring` carriers are exact only once the MlString
-state carrier lands (tracked by `flapjack-pxn.18.3.5.8`, exact port bead
-`flapjack-pxn.18.4.3.77.11.1`, carrier audit `docs/PANSEM-CARRIER-AUDIT.md`). -/
+state operations used by the recursive `evaluate` clauses. These copies are
+untagged because they operate on the older production-facing
+`PanSemHolState` projection: its names and `HolValue.nStruct` fields use
+`String`, while HOL uses `mlstring`. Exact state and clock counterparts live
+in `PanSem/ClockExact.lean` over `PanSemStateExact`; these production
+projections do not inherit those tags. See also
+`docs/PANSEM-CARRIER-AUDIT.md`. -/
 
 /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): `dec_clock s = s with
     clock := s.clock - 1` over the word-indexed source projection
@@ -1229,13 +1226,16 @@ def fixClockHOL {width : Nat} [NeZero width] {β : Type} (oldState : PanSemHolSt
 
 /-! ## Total `DecCall` clause composition step (flapjack-pxn.18.4.3.77.13)
 
-`panSemTotalDecCallStep` mirrors the HOL `DecCall` case of `evaluate_def`
+`panSemTotalDecCallStep` is a production-state analogue of the HOL `DecCall`
+case of `evaluate_def`
 (`cakeml/pancake/semantics/panSemScript.sml:679-706`): evaluate the arguments,
 look the callee up, raise a timeout at clock zero, otherwise evaluate the body
 on the decremented state with the callee's locals and the clock clamped by
-`fix_clock`, then handle the body outcome. It is UNTAGGED (carrier-safe
-infrastructure, no `@[hol]` claim): HOL's `varname`/`funname` are `mlstring`
-while Lean uses `String`. -/
+`fix_clock`, then handle the body outcome. It is untagged assembly
+infrastructure, not an exact HOL port: HOL's `varname`/`funname` are
+`mlstring`, while this production state uses `String`. The exact state carrier
+is `PanSemStateExact`; the complete recursive `evaluate_def` is still not
+ported. -/
 
 /-- HOL `DecCall` (`panSemScript.sml:679-706`). The arguments, the callee
     lookup result, the result binding name/shape, the continuation program, and

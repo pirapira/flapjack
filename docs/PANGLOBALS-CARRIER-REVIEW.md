@@ -23,8 +23,8 @@ Flapjack-specific behavior and track the replacement in
 | HOL (`pan_globalsScript.sml`) | Lean (`PanGlobals.lean`) | classification |
 | --- | --- | --- |
 | `fperm_name_def` (:184) | `globalRenameFunctionName` (:433) | carrier-only (name swap, no new bytes) |
-| `fperm_def` (:191) | `globalRenameProg` (:470) | carrier-only |
-| `fperm_decs_def` (:216) | `globalRenameDecls` (:504) | carrier-only |
+| `fperm_def` (:191) | `globalRenameProg` (:470) | documented mismatch: production `Prog α` / `Exp α` uses `Const : α`; HOL `prog` / `exp` uses `Const : 'a word`, as well as mlstring identifiers |
+| `fperm_decs_def` (:216) | `globalRenameDecls` (:504) | documented mismatch: production `Decl α` / `Prog α` / `Exp α` uses `Const : α`; HOL `decl` / `prog` / `exp` uses `Const : 'a word`, as well as mlstring identifiers |
 | `resort_decls_def` (:179) | `globalResortDecls` (:864) | documented mismatch: generic `Decl α` / `Exp α` payload and `String`/`Shape` carriers differ from HOL `DeclHOL width` / word-valued `ExpHOL width` / `ShapeHOL` |
 | `dec_shapes_def` (:228) | `globalDeclShapes` (:993) | documented mismatch: consumes generic `Decl α` and returns production `Shape` (`String` names), rather than HOL `DeclHOL width` and `ShapeHOL` |
 | `fresh_name_def` (:55) | `freshNameHOL` (:279) | carrier-only in shape, but constructs new names (`++ "'"`), so the `flapjack-0up` boundary witness is required |
@@ -40,12 +40,15 @@ Flapjack-specific behavior and track the replacement in
 
 ## Qualification boundary
 
-The earlier proposal to retag `resort_decls_def` and `dec_shapes_def` with
-`names_as_string` was incorrect: both executed definitions range over
-`Decl α`, whose `Const` payload is `α`, not HOL's `'a word`, and the shape
-projection uses the production `Shape` carrier. Equality-only behavior does
-not erase these type differences. Do not add tags until the exact-carrier
-replacement is implemented and connected to production.
+The earlier proposal to retag this equality-only cluster with
+`names_as_string` was incorrect wherever the executable declaration retains
+generic values. `resort_decls_def`/`fperm_decs_def` range over production
+`Decl α`, `fperm_def` ranges over `Prog α`, and their expression `Const`
+payload is `α`, not HOL's `'a word`; `dec_shapes_def` also returns production
+`Shape`, not `ShapeHOL`. Equality-only control flow does not erase these type
+differences. `fperm_name_def` remains the names-only case; the other four
+definitions stay untagged until the exact-carrier replacement is connected to
+production.
 
 Do **not** retag the executed `globalCompileExp`/`globalCompileProg`/
 `globalCompileDecsThreaded` on the strength of the qualifier alone: their

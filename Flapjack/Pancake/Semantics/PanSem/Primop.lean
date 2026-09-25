@@ -11,9 +11,14 @@ wrapper; these definitions retain it at the theorem-facing boundary.
 namespace Flapjack
 
 mutual
-  /-- HOL `panSem$flatten`: recursively flatten source values to `word_lab`
-      cells. `PanValue.word` represents HOL `Val (Word w)`. -/
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "flatten_def"]
+  /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port), matching the shape of
+      HOL `panSem$flatten` structurally but over the production `PanValue`
+      carrier: HOL's `flatten` is over `v`, whose `NStruct` name/fields are
+      `mlstring` (`stcname`/`fldname`) and whose `Val` holds `'a word_lab`,
+      whereas `PanValue.nStruct` uses `StructName`/`FieldName` (`String`) and
+      `PanValue.word` holds `α` directly. Tracked by `flapjack-0lj`; the exact
+      MlString-carrier port is `flapjack-0lj.3` (see
+      `docs/PANSEM-CARRIER-AUDIT.md`). -/
   def panSemFlattenHOL : PanValue α → List (PanWordLab α)
     | .word value => [.word value]
     | .rStruct values => panSemFlattenValuesHOL values
@@ -43,9 +48,13 @@ mutual
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
-/-- HOL `panSem$pan_primop`: AddCarry accepts exactly three word values and
-    returns a two-field source record containing the result and carry-out. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "pan_primop_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port), matching the shape of
+    HOL `panSem$pan_primop` clause-by-clause but over the production `PanValue`
+    carrier: HOL quantifies over `v` (whose `NStruct` names/fields are
+    `mlstring` and whose `Val` holds `'a word_lab`), whereas `PanValue` uses
+    `String` names and stores `α` in `.word`. Tracked by `flapjack-0lj`; the
+    exact MlString-carrier port is `flapjack-0lj.3` (see
+    `docs/PANSEM-CARRIER-AUDIT.md`). -/
 def panPrimopHOL {width : Nat} [NeZero width] :
     PrimOp → List (PanValue (BitVec width)) →
       Option (PanValue (BitVec width))

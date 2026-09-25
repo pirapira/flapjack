@@ -86,6 +86,13 @@ structure PanSemExactEvalContext (width : Nat) (σ : Type) [NeZero width] where
   memaddrsDecidable : DecidablePred state.memaddrs
   shMemaddrsDecidable : DecidablePred state.shMemaddrs
 
+private theorem setKvarHOLExact_memDomains {width : Nat} {σ : Type}
+    [NeZero width] (kind : VarKind) (name : Flapjack.Pancake.PanLang.MlS)
+    (value : ValueHOL width) (state : PanSemStateExact width σ) :
+    (setKvarHOLExact kind name value state).memaddrs = state.memaddrs ∧
+      (setKvarHOLExact kind name value state).shMemaddrs = state.shMemaddrs := by
+  cases kind <;> exact ⟨rfl, rfl⟩
+
 /-- Reuse exact memory-set decisions when a HOL state update preserves both
     set fields. -/
 def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
@@ -101,11 +108,12 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
       rw [hshared]
       exact context.shMemaddrsDecidable address }
 
-/-- Exact recursive Seq/Call/DecCall evaluator over the state-owned HOL code map.
+/-- Exact recursive Seq/If/Call/DecCall evaluator over the state-owned HOL code map.
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
-    results. `If` selects and recursively evaluates one branch. `Dec`, `Assign`,
+    results. `If` selects and recursively evaluates one branch. `Assign` uses
+    the exact state clause directly and from selected branches. `Dec`,
     `Primitive`, stores, `While`, `ExtCall`, and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
@@ -253,6 +261,28 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
       | other =>
           match other with
           | .skip => some (none, context)
+          | .assign kind name source =>
+              let step := assignStepHOLExact state kind name source
+                (fun _ expression => evalHOLExact state expression)
+              have hmem : step.2.memaddrs = state.memaddrs := by
+                cases hEval : evalHOLExact state source with
+                | none => simp [step, assignStepHOLExact, hEval]
+                | some value =>
+                    cases hvalid : isValidValueHOLExact state kind name value with
+                    | false => simp [step, assignStepHOLExact, hEval, hvalid]
+                    | true =>
+                        simpa [step, assignStepHOLExact, hEval, hvalid] using
+                          (setKvarHOLExact_memDomains kind name value state).1
+              have hshared : step.2.shMemaddrs = state.shMemaddrs := by
+                cases hEval : evalHOLExact state source with
+                | none => simp [step, assignStepHOLExact, hEval]
+                | some value =>
+                    cases hvalid : isValidValueHOLExact state kind name value with
+                    | false => simp [step, assignStepHOLExact, hEval, hvalid]
+                    | true =>
+                        simpa [step, assignStepHOLExact, hEval, hvalid] using
+                          (setKvarHOLExact_memDomains kind name value state).2
+              some (step.1, context.withState step.2 hmem hshared)
           | .break => some (some .break, context)
           | .continue => some (some .continue, context)
           | .return value =>
@@ -285,7 +315,7 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               else
                 some (none, context.withState (decClockHOLExact state) rfl rfl)
           | .annot _ _ => some (none, context)
-          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
+          | .dec _ _ _ _ | .primitive _ _ _ | .store _ _ |
             .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
             .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ | .extCall _ _ _ _ _ |
             .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none

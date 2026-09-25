@@ -26,3 +26,7 @@ exact_if_nonword_local=SOME (ValWord 3w)
 exact_if_failed_result=SOME Error
 exact_if_failed_clock=5
 exact_if_failed_local=SOME (ValWord 3w)
+exact_if_assign_success_result=NONE
+exact_if_assign_success_local=SOME (ValWord 9w)
+exact_if_assign_failure_result=SOME Error
+exact_if_assign_failure_local=SOME (ValWord 3w)

@@ -588,10 +588,10 @@ run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
   seq_normal_result seq_tick_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If probe observes the then/else branches, non-word and failed conditions,
-# plus Const, Var Local, and operator-expression branch selection in the
-# restricted total evaluators.
+# Const, Var Local, operator-expression branch selection, and selected Assign
+# success/error behavior in the exact-state recursive dispatcher.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result exact_if_failed_local \
+  if_true_result exact_if_assign_failure_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The measure-driven total fragment probe observes Assign/Return/Raise result
 # and state branches, plus their interaction with If selection and Seq stopping.

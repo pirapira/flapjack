@@ -158,3 +158,24 @@ val _ = print_eval "exact_if_failed_local"
   ``FLOOKUP (SND (panSem$evaluate
       (panLang$If (panLang$Var Local (strlit "z")) ^thenAssign panLang$Skip,
         ^baseState))).locals (strlit "x")``;
+
+(* Selected Assign branches exercise the recursive dispatch into the exact
+   source-state Assign clause, for both a valid and an invalid target. *)
+val _ = print_eval "exact_if_assign_success_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) ^thenAssign panLang$Skip,
+        ^baseState))``;
+val _ = print_eval "exact_if_assign_success_local"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word)) ^thenAssign panLang$Skip,
+        ^baseState))).locals (strlit "x")``;
+val _ = print_eval "exact_if_assign_failure_result"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word))
+        (panLang$Assign Local (strlit "absent") (panLang$Const (9w:8 word)))
+        panLang$Skip, ^baseState))``;
+val _ = print_eval "exact_if_assign_failure_local"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word))
+        (panLang$Assign Local (strlit "absent") (panLang$Const (9w:8 word)))
+        panLang$Skip, ^baseState))).locals (strlit "x")``;

@@ -526,6 +526,33 @@ theorem evalCrepHolFiniteStateSource_loadGlob
     CrepSemHOLFiniteState.toSourceEvaluatorState,
     panTheWord, Function.comp_def]
 
+/-- Arbitrary-index finite-state `BaseAddr` case of HOL `eval_def`. The full
+`word_lab` value comes directly from the corresponding state field. This
+case remains untagged as part of the source evaluator because the explicit
+finite-index projection is not yet identified with native HOL `eval`. -/
+theorem evalCrepHolFiniteStateSource_baseAddr
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState .baseAddr =
+    some (.word state.baseAddr) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState]
+
+/-- Arbitrary-index finite-state `TopAddr` case of HOL `eval_def`, with the
+complete `word_lab` wrapper. The enclosing evaluator is still the explicit
+finite-dimension source projection, so the case does not carry a HOL tag. -/
+theorem evalCrepHolFiniteStateSource_topAddr
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState .topAddr =
+    some (.word state.topAddr) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState]
+
 /-- Arbitrary-index finite-state `Load32` case of HOL `eval_def`, expressed
 through the tagged `mem_load_32_def` port after transporting the exact memory
 cells to the canonical `BitVec` view. The recursive address hypothesis is the

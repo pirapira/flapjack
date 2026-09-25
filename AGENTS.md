@@ -152,8 +152,17 @@ implements behavior that must be replaced. Do not merge a known mismatch as a
 claimed HOL port.
 
 **Qualify only named list-to-array state fields.** An unqualified tag records a
-statement reviewed as exact and has manifest status `reviewed_exact`. The
-`(list_as_array := [field, ...])` qualifier is only for specific HOL list
+statement reviewed as exact and has manifest status `reviewed_exact`. When a
+HOL data structure uses a reviewed *different Lean representation* (for
+example, HOL list as Lean `Array`), name that standard translation in the
+`@[hol]` tag of every declaration that relies on it, using a supported
+qualifier. Ordinary constructor-for-constructor ports such as HOL list to
+Lean `List` need no qualifier. Do not treat acceptance of a representation
+difference for one declaration as a blanket exception for others or leave it
+implicit under an unqualified tag. Add a new qualifier and its checker/review
+rules before using another non-identity representation; a qualifier records
+only that translation, not unrelated statement or behavior differences.
+The `(list_as_array := [field, ...])` qualifier is only for specific HOL list
 fields represented by Lean arrays; it does not allow any other difference in
 the theorem statement or semantics. Review the fields against the surrounding
 HOL state relation, list lengths, index bounds, and update behavior. The

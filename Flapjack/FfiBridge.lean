@@ -86,16 +86,20 @@ def FfiFinalEventRel (prod : FfiFinalEvent) (hol : HolFinalEvent) : Prop :=
     BytesRel prod.bytes hol.bytes ∧
     OutcomeRel prod.outcome hol.outcome
 
-/-- State relation: host state, observable events and the oracle function agree. -/
+/-- Persistent oracle correspondence, quantified over every pair of paired host states. -/
+def OracleRel {σ : Type} (prod : FfiOracle σ) (hol : HolOracle σ) : Prop :=
+  ∀ (name : FfiName) (holName : HolFfiName), FfiNameRel name holName →
+    ∀ (state : σ) (configuration : List UInt8) (holConfiguration : List (BitVec 8))
+      (bytes : List UInt8) (holBytes : List (BitVec 8)),
+      BytesRel configuration holConfiguration → BytesRel bytes holBytes →
+      OracleResultRel (prod name state configuration bytes)
+        (hol holName state holConfiguration holBytes)
+
+/-- State relation: host state, observable events and a persistent oracle correspondence. -/
 def FfiStateRel {σ : Type} (prod : FfiState σ) (hol : HolFfiState σ) : Prop :=
   hol.ffiState = prod.state ∧
     FfiEventListRel prod.ioEvents hol.ioEvents ∧
-    ∀ (name : FfiName) (holName : HolFfiName), FfiNameRel name holName →
-      ∀ (configuration : List UInt8) (holConfiguration : List (BitVec 8))
-        (bytes : List UInt8) (holBytes : List (BitVec 8)),
-        BytesRel configuration holConfiguration → BytesRel bytes holBytes →
-        OracleResultRel (prod.oracle name prod.state configuration bytes)
-          (hol.oracle holName hol.ffiState holConfiguration holBytes)
+    OracleRel prod.oracle hol.oracle
 
 /-- Result relation. -/
 def FfiResultRel {σ : Type} : FfiResult σ → HolFfiResult σ → Prop
@@ -229,11 +233,12 @@ theorem callFfi_extCall_oracleFinal_bridge {σ : Type} (state : FfiState σ)
     simpa only [HolFfiName.extCall.injEq] using holName_ne_empty_of_ne hne hr
   rw [callFfi_extCall_final state name hne configuration bytes outcome ho]
   have hcorr := hrel.2.2 (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
-    rfl configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
+    rfl state.state configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
     (bytesRel_map_byteToBits configuration) (bytesRel_map_byteToBits bytes)
   rw [ho] at hcorr
   generalize hy : holState.oracle (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
-    holState.ffiState (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+    state.state (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+  rw [← hrel.1] at hy
   simp only [OracleResultRel] at hcorr
   cases holRes with
   | final holOutcome =>
@@ -257,11 +262,12 @@ theorem callFfi_extCall_lengthFailure_bridge {σ : Type} (state : FfiState σ)
     simpa only [HolFfiName.extCall.injEq] using holName_ne_empty_of_ne hne hr
   rw [callFfi_extCall_return_lengthFailure state name hne configuration bytes nextState nextBytes ho hlen]
   have hcorr := hrel.2.2 (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
-    rfl configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
+    rfl state.state configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
     (bytesRel_map_byteToBits configuration) (bytesRel_map_byteToBits bytes)
   rw [ho] at hcorr
   generalize hy : holState.oracle (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
-    holState.ffiState (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+    state.state (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+  rw [← hrel.1] at hy
   simp only [OracleResultRel] at hcorr
   cases holRes with
   | final holOutcome => exact hcorr.elim
@@ -316,5 +322,44 @@ theorem ffiEventListRel_append {l1 l2 : List FfiEvent} {m1 m2 : List HolIoEvent}
       cases m1 with
       | nil => exact (h1 : False).elim
       | cons e' es' => exact ⟨h1.1, ih h1.2⟩
+
+/-- Under `FfiStateRel`, a nonempty external call with a matching return length agrees. -/
+theorem callFfi_extCall_success_bridge {σ : Type} (state : FfiState σ)
+    (holState : HolFfiState σ) (hrel : FfiStateRel state holState) (name : String)
+    (hr : ∀ c ∈ name.toList, c.toNat < 256) (hne : name ≠ "")
+    (configuration bytes : List UInt8) (nextState : σ) (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .returned nextState nextBytes)
+    (hlen : nextBytes.length = bytes.length) :
+    FfiResultRel (callFfi state (.extCall name) configuration bytes)
+      (callFFIHOL holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits)) := by
+  have hneH : ¬ (HolFfiName.extCall (Flapjack.Basis.Pure.MlString.ofString name) =
+      HolFfiName.extCall (Flapjack.Basis.Pure.MlString.MlString.implode [])) := by
+    simpa only [HolFfiName.extCall.injEq] using holName_ne_empty_of_ne hne hr
+  rw [callFfi_extCall_success state name hne configuration bytes nextState nextBytes ho hlen]
+  have hcorr := hrel.2.2 (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    rfl state.state configuration (configuration.map byteToBits) bytes (bytes.map byteToBits)
+    (bytesRel_map_byteToBits configuration) (bytesRel_map_byteToBits bytes)
+  rw [ho] at hcorr
+  generalize hy : holState.oracle (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+    state.state (configuration.map byteToBits) (bytes.map byteToBits) = holRes at hcorr
+  rw [← hrel.1] at hy
+  simp only [OracleResultRel] at hcorr
+  cases holRes with
+  | final holOutcome => exact hcorr.elim
+  | ret holState' holBytes' =>
+      obtain ⟨hstate, hbytes⟩ := hcorr
+      have hlenH : holBytes'.length = (bytes.map byteToBits).length := by
+        have hlen' := congrArg List.length hbytes
+        simp only [List.length_map] at hlen'
+        rw [hlen', hlen]
+        simp
+      rw [callFFIHOL_ret holState (.extCall (Flapjack.Basis.Pure.MlString.ofString name))
+        (configuration.map byteToBits) (bytes.map byteToBits) holState' holBytes' hneH hy]
+      rw [if_pos hlenH]
+      refine ⟨⟨hstate.symm, ?_, hrel.2.2⟩, hbytes⟩
+      exact ffiEventListRel_append hrel.2.1
+        ⟨⟨rfl, bytesRel_map_byteToBits configuration,
+          bytesPairRel_zip (bytesRel_map_byteToBits bytes) hbytes⟩, trivial⟩
 
 end Flapjack

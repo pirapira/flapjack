@@ -1729,3 +1729,11 @@ run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_pr
   empty absent \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
+
+# The pan_globals fperm_name probe observes the source-shape name permutation
+# `fperm_name f g h` (pan_globalsScript.sml:185-188) for unchanged and
+# colliding keys, including names that already carry apostrophes.
+run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.out \
+  source_collision fperm_name_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"

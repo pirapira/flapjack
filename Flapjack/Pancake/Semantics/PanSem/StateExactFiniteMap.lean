@@ -78,6 +78,97 @@ def decClockHOLFinite {width : Nat} {σ : Type} [NeZero width]
     state.decClockHOLFinite.toExact = decClockHOLExact state.toExact :=
   rfl
 
+/-- Finite-support mirror of `fixClockHOLExact`.  Untagged: the exact-carrier
+    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+def fixClockHOLFinite {width : Nat} {σ : Type} [NeZero width] {β : Type}
+    (oldState : PanSemStateFiniteExact width σ)
+    (step : β × PanSemStateFiniteExact width σ) :
+    β × PanSemStateFiniteExact width σ :=
+  (step.1, { step.2 with
+    clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
+/-- The finite-support fix-clock is compatible with the broad exact one. -/
+@[simp] theorem toExact_fixClockHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    {β : Type} (oldState : PanSemStateFiniteExact width σ)
+    (step : β × PanSemStateFiniteExact width σ) :
+    (fixClockHOLFinite oldState step).2.toExact =
+      (fixClockHOLExact oldState.toExact (step.1, step.2.toExact)).2 :=
+  rfl
+
+/-- Finite-support mirror of `lookupKvarHOLExact`.  Untagged: the exact-carrier
+    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (kind : VarKind) (name : MlS) (state : PanSemStateFiniteExact width σ) :
+    Option (ValueHOL width) :=
+  match kind with
+  | .local => state.locals.lookup name
+  | .global => state.globals.lookup name
+
+/-- The finite-support keyed-variable lookup is compatible with the broad exact
+    one. -/
+@[simp] theorem lookupKvarHOLFinite_eq {width : Nat} {σ : Type} [NeZero width]
+    (kind : VarKind) (name : MlS) (state : PanSemStateFiniteExact width σ) :
+    lookupKvarHOLFinite kind name state =
+      lookupKvarHOLExact kind name state.toExact := by
+  cases kind <;> rfl
+
+/-- Finite-support mirror of `setKvarHOLExact`.  The updated component keeps a
+    finite support by consing the written key onto the old support.  Untagged:
+    the exact-carrier retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+def setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (kind : VarKind) (name : MlS) (value : ValueHOL width)
+    (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
+  match kind with
+  | .local =>
+      { state with
+        locals :=
+          { lookup := fun current =>
+              if current = name then some value else state.locals.lookup current
+            finiteSupport := by
+              obtain ⟨keys, hkeys⟩ := state.locals.finiteSupport
+              refine ⟨name :: keys, ?_⟩
+              intro key hkey
+              by_cases h : key = name
+              · rw [← h]; exact List.mem_cons_self
+              · exact List.mem_cons_of_mem name (hkeys key (by simpa [h] using hkey)) } }
+  | .global =>
+      { state with
+        globals :=
+          { lookup := fun current =>
+              if current = name then some value else state.globals.lookup current
+            finiteSupport := by
+              obtain ⟨keys, hkeys⟩ := state.globals.finiteSupport
+              refine ⟨name :: keys, ?_⟩
+              intro key hkey
+              by_cases h : key = name
+              · rw [← h]; exact List.mem_cons_self
+              · exact List.mem_cons_of_mem name (hkeys key (by simpa [h] using hkey)) } }
+
+/-- The finite-support keyed-variable write is compatible with the broad exact
+    one. -/
+@[simp] theorem toExact_setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (kind : VarKind) (name : MlS) (value : ValueHOL width)
+    (state : PanSemStateFiniteExact width σ) :
+    (setKvarHOLFinite kind name value state).toExact =
+      setKvarHOLExact kind name value state.toExact := by
+  cases kind <;> rfl
+
+/-- Finite-support mirror of `emptyLocalsHOLExact`.  Untagged: the exact-carrier
+    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
+  { state with
+    locals :=
+      { lookup := fun _ => none
+        finiteSupport := ⟨[], by intro key hkey; exact absurd rfl hkey⟩ } }
+
+/-- The finite-support locals-clearing is compatible with the broad exact
+    one. -/
+@[simp] theorem toExact_emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) :
+    (emptyLocalsHOLFinite state).toExact = emptyLocalsHOLExact state.toExact :=
+  rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

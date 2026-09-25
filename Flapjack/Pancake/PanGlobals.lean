@@ -430,6 +430,19 @@ theorem globalCompileProg_expIds [BEq String] [Add α] [Mul α]
 -- `pan_globalsScript.sml` keys names by `funname`/`varname` = `mlstring`.
 -- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
+--
+-- Clause-by-clause review (flapjack-6nn.1.1):
+--   HOL `fperm_name f g h = if f = h then g else if g = h then f else h`.
+--   Lean `if source == name then target else if target == name then source
+--   else name`.  The clauses, branch order and result names match exactly;
+--   the `[LawfulBEq String]` instance makes `==` reflect HOL `=`, so it adds
+--   no mathematical content.  `globalRenameFunctionName` only compares and
+--   swaps names, never inspects their bytes; every use is equality/`map`-key
+--   only, so the `String`/`mlstring` carrier difference is unobservable here.
+--   Direct HOL/Lean edge-case fixtures: `scripts/hol-probes/
+--   pan_globals_fperm_name_probe.out` and `Flapjack/Test/
+--   PanGlobalsFpermNameParity.lean`.  The qualifier is applied in
+--   flapjack-6nn.1 once the `flapjack-an4.3` checker gates land.
 def globalRenameFunctionName [LawfulBEq String]
     (source target name : FunName) : FunName :=
   if source == name then target else if target == name then source else name

@@ -1627,27 +1627,44 @@ theorem panToCrepSourceLoad32HOLCase
   simp only [Option.map_map]
   rfl
 
-/-- HOL `state_rel_structs[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped port of HOL `state_rel_structs[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`. Independently of the identifier carrier:
+    (a) `stateRel` relates the source's *optional* `PanValue` memory to the target's
+    *total* `word_lab` memory (`s.memory = fun a => some (PanValue.word (panTheWord
+    (t.memory a)))`, see the `state_rel_def` note above), whereas HOL `state_rel`
+    equates two total `word_lab` memories directly; (b) the source field types are
+    `StructContext` (`StructName`/`FieldName` = `String`, `StructInfo` also carrying
+    the production-only `shapedFields`) and `PanValue α`, while HOL uses
+    `(stcname # struct_info) list` with `stcname`/`fldname` = `mlstring` and the
+    `'a v` value type; (c) finite-map keys are `VarName` = `String` vs HOL
+    `varname` = `mlstring`. The mismatch is therefore not limited to String-backed
+    names, so the `(names_as_string := ...)` qualifier does not apply. The exact
+    projection depends on an exact MlString/`word_lab` Crep target relation, tracked
+    by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.structs = [] := by
   rcases hrel with ⟨_, _, _, hstructs, _, _, _, _, _, _⟩
   exact hstructs
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `state_rel_globals[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped port of HOL `state_rel_globals[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`, and the conclusion is stated over the
+    production carrier `FiniteMap VarName (PanValue α)` rather than HOL
+    `varname |-> 'a v`. The mismatch is not limited to the String-vs-`mlstring` domain
+    key (`VarName` vs `varname`): `stateRel` also relates an optional `PanValue`
+    source memory to a total `word_lab` target memory and the value type is
+    `PanValue α` vs `'a v` (see `stateRel_structs` above and the `state_rel_def` note),
+    so the `(names_as_string := ...)` qualifier does not apply. The exact projection
+    is tracked by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩

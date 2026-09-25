@@ -392,6 +392,14 @@
     "reviewer": "Flapjack-only source evaluator invariance under the CrepArith-local mapc projection; native HOL eval correspondence remains open."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSource",
+    "statement_status": "documented_mismatch",
+    "reviewer": "HOL-shaped mapc and finite-width state carrier, but the expression uses generic Fin-indexed syntax and the successful premise/result are evaluated through the explicit source projection rather than native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
@@ -4546,7 +4554,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "stateRel_globals",
     "statement_status": "documented_mismatch",
-    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port; reviewed under flapjack-pxn.18.3.7.1.3): hypothesis is the Flapjack-specific stateRel over production PanSemState/CrepRuntimeState (optional PanValue source memory vs total word_lab target memory), not HOL state_rel; conclusion is over FiniteMap VarName (PanValue alpha) vs HOL varname-keyed value map; VarName = String vs varname = mlstring is only one of several mismatches, so the names_as_string qualifier does not apply. Exact projection tracked by flapjack-pxn.18.3.7.1.3.1 (carrier flapjack-pxn.18.3.5.8, parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4554,7 +4562,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "stateRel_structs",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (reference inventory) Tag withdrawn (Flapjack-specific; not an exact HOL port): statement is keyed by `FunName`/`VarName`/`ExceptionId` = `String` or embeds a `PanToCrepProofContext`/`PanToCrepHOLContext` with `String`-keyed finite maps, while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`; exact MlString carrier tracked by `flapjack-pxn.18.3.5.8`."
+    "reviewer": "Codex (reference inventory; reviewed under flapjack-pxn.18.3.7.1.3) Tag withdrawn (Flapjack-specific; not an exact HOL port): hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/`CrepRuntimeState` (optional `PanValue` source memory vs total `word_lab` target memory), not HOL `state_rel`; source field types are `StructContext` (`StructName`/`FieldName` = `String`, extra `shapedFields`) and `PanValue alpha` vs HOL mlstring-keyed struct context and value type; `VarName` = `String` vs `varname` = `mlstring` is only one mismatch, so the names_as_string qualifier does not apply. Exact projection tracked by `flapjack-pxn.18.3.7.1.3.1` (exact MlString carrier `flapjack-pxn.18.3.5.8`)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

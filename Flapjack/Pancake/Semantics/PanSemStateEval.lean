@@ -1236,9 +1236,10 @@ termination_by value => sizeOf value
     `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`), but over the
     String-bearing `HolValue` carrier (HOL `v` uses `stcname`/`fldname` =
     `mlstring`).  The `@[hol]` tag is therefore withheld (bead `flapjack-0lj`);
-    the exact MlString-keyed port is tracked by `flapjack-pxn.18.3.5.8`.  The
-    word-only port `isWordHOL` over `HolWordLab` below stays exact.  Carries
-    `[NeZero width]` because HOL word types have positive `dimindex`. -/
+    the exact carrier counterpart is `isValWordHOL` in
+    `PanSem/ValueHOL.lean`.  The word-only port `isWordHOL` over `HolWordLab`
+    below also stays exact.  Carries `[NeZero width]` because HOL word types
+    have positive `dimindex`. -/
 def holValueIsWord {width : Nat} [NeZero width] : HolValue width → Bool
   | .val (.word _) => true
   | _ => false

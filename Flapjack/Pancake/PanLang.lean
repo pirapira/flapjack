@@ -86,14 +86,17 @@ def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
 `panLang$is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The clauses are
 reproduced literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
 `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered with
-the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart) and
+the first-match `lookupInfo` (the String-keyed `alist$ALOOKUP` analogue) and
 `isSome` as the Bool rendering of `<> NONE`. The tag is WITHDRAWN because the
 context carrier does not match: HOL keys the association list by
 `stcname = ``:mlstring``` (`panLangScript.sml:21`) while Lean's
-`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14). Matching
-`ALOOKUP` at the concrete `BEq String` instance is not HOL `=`, so this needs an
-MlString key carrier (bead `flapjack-pxn.18.3.5.8`). The direct original-HOL
-rows are pinned in `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14).
+Likewise, `.named` in the input uses String-backed `Shape`, and the context's
+field names are String-backed, unlike HOL's `shape`/`struct_info` carriers.
+Matching `ALOOKUP` at the concrete `BEq String` instance is not HOL equality;
+the six direct HOL rows and Lean guards exercise the clauses but do not prove
+byte-level carrier equivalence. An exact port needs the MlString/ShapeHOL
+carriers (bead `flapjack-pxn.18.3.5.8`), so no `@[hol]` tag is attached. -/
 mutual
   def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
     | .one => true

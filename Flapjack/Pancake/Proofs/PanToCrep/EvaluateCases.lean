@@ -10260,13 +10260,15 @@ def panToCrepClockResultRel {α σ : Type}
     minus its two dispatch steps; `panSemCodeEvaluateFuel_call_two_le` derives
     the source evaluator fuel equation internally. The relation boundary is
     width-indexed `codeRelW`. This is an untagged induction-case lemma: the
+    handler-entry source state is defined from the source call's callee
+    globals, memory, FFI state, and minimum clock in the proposition itself;
+    callers supply no independent intermediate state or equality premise. The
     enclosing `pc_compile_correct` theorem and its full induction remain open. -/
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
     (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
     (source : PanSemState (RiscV.Word 64) (FfiState σ))
-    (sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ))
     (sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ)
     (function sourceException handlerVariable : String)
     (handlerProgram : Prog (RiscV.Word 64))
@@ -10310,15 +10312,9 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       calleeGlobals calleeMemory calleeFfi
       (min (decPanClock source.clock) calleeClock) handlerProgram
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) = some sourceResult)
-    (hsourceAfterCallee : sourceAfterCallee =
-      { { { { source with globals := calleeGlobals } with memory := calleeMemory }
-          with ffi := calleeFfi }
-        with clock := min (decPanClock source.clock) calleeClock })
     (hsourceHandlerLocal : FLOOKUP source.locals handlerVariable = some old)
     (hpayloadShape : panValueShape [] payload = shape)
     (hflatten : panValueFlatten payload = values)
-    (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
-      some shape)
     (hcontextException : FLOOKUP context.eids sourceException = some exceptionCode)
     (hinitialState : stateRel source caller)
     (hcallCode : codeRelW 64 context (panSemCodeAsLookup source.code) caller.code)
@@ -10365,6 +10361,13 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           (compileCodeRelProg context handlerProgram)))) = true)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
+    :
+    let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
+      { { { { source with globals := calleeGlobals } with memory := calleeMemory }
+        with ffi := calleeFfi }
+        with clock := min (decPanClock source.clock) calleeClock }
+    (hsourceExceptionShape : sourceAfterCallee.exceptionShapes sourceException =
+      some shape) →
     (hcalleeTargetIH :
       sourceAfterCallee.exceptionShapes sourceException = some shape →
       FLOOKUP context.eids sourceException = some exceptionCode →
@@ -10415,7 +10418,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       codeRelW 64 context (panSemCodeAsLookup sourceAfterCallee.code) calleeState.code ∧
       excpRel context.eids sourceAfterCallee.exceptionShapes ∧
       crepRuntimeGlobalWordsRel
-        (crepRuntimeCallerState caller calleeState) 0 slots values)
+        (crepRuntimeCallerState caller calleeState) 0 slots values) →
     (hhandlerIH : ∀ targetPost,
       evalPanValueFfiClockCodeProg sourceContext sourcePrimitive sourceHandler
         source.structs source.code source.exceptionShapes source.baseAddress
@@ -10448,7 +10451,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
         (panSemCodeStateAfter source sourceResult).exceptionShapes ∧
       localsRel context (panSemCodeStateAfter source sourceResult).locals
         handlerResult.2.locals ∧
-      panToCrepClockResultRel context sourceResult handlerResult) :
+      panToCrepClockResultRel context sourceResult handlerResult) →
     panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
       source
       (.call (some (none, some (sourceException, handlerVariable, handlerProgram)))
@@ -10470,11 +10473,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     localsRel context (panSemCodeStateAfter source sourceResult).locals
       handlerResult.2.locals ∧
     panToCrepClockResultRel context sourceResult handlerResult := by
-  subst sourceAfterCallee
-  let sourceAfterCallee : PanSemState (RiscV.Word 64) (FfiState σ) :=
-    { { { { source with globals := calleeGlobals } with memory := calleeMemory }
-      with ffi := calleeFfi }
-      with clock := min (decPanClock source.clock) calleeClock }
+  intro sourceAfterCallee hsourceExceptionShape hcalleeTargetIH hhandlerIH
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
   have hsourceStructs := stateRel_structs source caller hinitialState

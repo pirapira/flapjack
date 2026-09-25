@@ -2072,20 +2072,26 @@ theorem compileExpCakeArgs_cakeContextOfPass [BEq String] {width : Nat} [NeZero 
         compileExpCake_cakeContextOfPass context hcanonical expression,
         compileExpCakeArgs_cakeContextOfPass context hcanonical expressions]
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_globals$compile_def`
+/-- Flapjack analogue of HOL `pan_globals$compile_def`
     (`pan_globalsScript.sml:69-149`) over the canonical word context
-    `CakeContext`.  Each clause matches HOL directly; the global-return-handler
-    case uses the exact `freshNameHOL` port of HOL `fresh_name`
-    (`pan_globalsScript.sml:55`) and the exact `freeVarIds`/`expLocalVars`
-    ports of HOL `free_var_ids`/`var_exp` (`panLangScript.sml:347`/`:253`).
-    String equality is lawful, so the `==`/`!=` comparisons implement HOL `=`.
-    The finite-map `globals` is consulted only through `FLOOKUP`, as in HOL.
-    See beads `flapjack-pxn.18.5.2.20.1.1` and `flapjack-pxn.18.5.2.20.1.1.1`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): `CakeContext.globals` is keyed by
--- production `String` and `Exp`/`Prog`/`Decl` names are `String`, while HOL
--- `pan_globalsScript.sml` keys `ctxt.globals` by `mlstring`. The exact MlString
--- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
--- `flapjack-pxn.18.3.5.7.2`).
+    `CakeContext`. Constructor equations were compared branch-by-branch with
+    HOL; the global-return-handler branch uses `freshNameHOL`, `freeVarIds`,
+    and `expLocalVars` as their matching HOL definitions require.
+
+    This remains untagged because the carriers differ: `CakeContext.globals`
+    is `FiniteMap String (Shape × BitVec width)`, and this definition consumes
+    and returns production `Prog (BitVec width)` with String identifiers. HOL
+    `context.globals` is `mlstring |-> shape # word`, and `compile` consumes
+    and returns exact `ProgHOL width` with `MlString` identifiers. The implicit
+    `[LawfulBEq String]` supports the production map lookup/update operations;
+    it does not bridge these carriers. There is no byte-range premise on the
+    arbitrary program/context inputs, so `names_as_string` cannot qualify this
+    definition. Exact-carrier work is tracked by `flapjack-pxn.18.3.5.8`.
+    Direct HOL rows in `pan_globals_compile_probe.out` pin local/global/missing
+    assignments, sequencing, global loads, and a handled global destination. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): keep the exact-carrier gap above
+-- explicit until `compile` is defined over `ProgHOL` and an MlString-keyed
+-- context.
 def compileProgCake [LawfulBEq String] {width : Nat} [NeZero width] (context : CakeContext width) :
     Prog (BitVec width) → Prog (BitVec width)
   | .dec name shape value body =>

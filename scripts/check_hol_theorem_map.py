@@ -72,6 +72,34 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "struct_infos_ok_def",
+        "flapjack-main and flapjack-seven-luna (source comparison with "
+        "pan_structsProofScript.sml:68-76: four predicate clauses match, but "
+        "HOL uses mlstring names and a fields/size-only struct_info, while "
+        "production StructContext uses String identifiers and StructInfo "
+        "adds a shapedFields cache. The different record/context carriers "
+        "cannot be covered by names_as_string. Keep the analogue untagged "
+        "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "compile_def",
+        "Codex (source comparison with pan_globalsScript.sml:69-149: the "
+        "constructor equations, including the global Call/DecCall lowering, "
+        "were compared branch-by-branch. The Lean definition consumes and "
+        "returns production Prog (BitVec width) with String identifiers and "
+        "CakeContext.globals : FiniteMap String (Shape × BitVec width); HOL "
+        "compile consumes/returns ProgHOL width with MlString identifiers and "
+        "context.globals : mlstring |-> shape # word. No byte-range premise "
+        "constrains the arbitrary String inputs, and names_as_string cannot "
+        "bridge the program/context carriers. Direct HOL rows in "
+        "pan_globals_compile_probe.out cover local/global/missing assignments, "
+        "seq, global load, and handled global destination. Keep this useful "
+        "source analogue untagged pending the exact-carrier compile port "
+        "(flapjack-pxn.18.3.5.8)."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "set_globals_def",
@@ -81,6 +109,18 @@ DOCUMENTED_MISMATCHES = {
         "uses unrestricted Nat-to-Option locals and FunName-to-Option code "
         "functions, unlike HOL finite maps. Keep the tag withdrawn pending "
         "finite-support state carrier flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedVars_nestedSeq_assign_zipWithW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "nested_seq_assigned_vars_eq",
+        "Codex (source comparison with crepPropsScript.sml:410-415: the list-length "
+        "premise and assigned-variable equation match. The Lean theorem and its "
+        "...W wrapper use production CrepProg, whose Call/ExtCall names are "
+        "String; HOL prog uses mlstring. CrepProgHOL is available, but no "
+        "assigned_vars helper or nested-seq theorem is ported over that exact "
+        "carrier. Existing direct HOL rows check concrete observations, not a "
+        "carrier bridge. Keep this analogue untagged until the exact-carrier "
+        "port is added."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
@@ -357,11 +397,14 @@ def strip_comments(text: str) -> str:
 
 
 def lean_definition_exists(root: Path, lean_path: str, lean_name: str) -> bool:
-    """Check that a registered untagged mismatch still names a Lean definition."""
-    source = (root / lean_path).read_text(encoding="utf-8")
+    """Check that a registered untagged mismatch names a Lean declaration."""
+    source = strip_comments((root / lean_path).read_text(encoding="utf-8"))
     return any(
-        (match := DEFINITION_RE.match(line)) and match.group(1) == lean_name
-        for line in strip_comments(source).splitlines()
+        (match := DATA_DECLARATION_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
+    ) or any(
+        (match := THEOREM_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
     )
 
 
@@ -460,7 +503,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
 
     for (lean_path, lean_name), (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
         if not lean_definition_exists(root, lean_path, lean_name):
-            raise ValueError(f"documented mismatch is not a current definition: {lean_path}:{lean_name}")
+            raise ValueError(f"documented mismatch is not a current declaration: {lean_path}:{lean_name}")
         inventory[(lean_path, lean_name)] = {
             "hol_path": hol_path,
             "hol_name": hol_name,

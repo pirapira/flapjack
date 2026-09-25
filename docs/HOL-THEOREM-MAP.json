@@ -1666,10 +1666,10 @@
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_shape_def",
-    "lean_path": "Flapjack/Pancake/CrepLang.lean",
-    "lean_name": "loadShapeBytesW",
+    "lean_path": "Flapjack/Pancake/CrepLang/Exp.lean",
+    "lean_name": "loadShapeBytesHOLW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against load_shape_def at crepLangScript.sml:82-86; width-indexed wrapper loadShapeBytesW over BitVec width with [NeZero width] because HOL word types have positive dimindex; the generic-CrepExp helper loadShapeBytes stays untagged; clauses reviewed: a=0w -> Load e, else Load (Op Add [e; Const a]), stepping by bytes_in_word, count 0 -> []. HOL probe scripts/hol-probes/crep_load_shape*.out and Lean guards in Flapjack/Test/CrepeLoadShapeParity.lean)"
+    "reviewer": "Source-reviewed against crepLangScript.sml:82-86. Exact carrier is CrepExpHOL width, with BitVec width and [NeZero width]; recursion preserves both HOL branches (address=0w uses Load e, otherwise Load (Op Add [e; Const address])) and advances by width/8 bytes_in_word, with count=0 returning []. The production CrepExp helper remains untagged; loadShapeBytesHOLW_toProduction proves its width wrapper agrees after decoding. Direct HOL rows in scripts/hol-probes/crep_load_shape_probe.out are exercised in Flapjack/Test/CrepeLoadShapeParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
@@ -1990,6 +1990,14 @@
     "lean_name": "fperm_name_cancel",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "compileProgCake",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison with pan_globalsScript.sml:69-149: the constructor equations, including the global Call/DecCall lowering, were compared branch-by-branch. The Lean definition consumes and returns production Prog (BitVec width) with String identifiers and CakeContext.globals : FiniteMap String (Shape × BitVec width); HOL compile consumes/returns ProgHOL width with MlString identifiers and context.globals : mlstring |-> shape # word. No byte-range premise constrains the arbitrary String inputs, and names_as_string cannot bridge the program/context carriers. Direct HOL rows in pan_globals_compile_probe.out cover local/global/missing assignments, seq, global load, and handled global destination. Keep this useful source analogue untagged pending the exact-carrier compile port (flapjack-pxn.18.3.5.8)."
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -4320,7 +4328,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "EVERY_fperm_decs",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-main (source comparison with pan_globalsProofScript.sml:2436-2442): HOL uses MlString names and a quantified Prop-valued P over HOL declarations; this executable analogue uses production String names and a Bool-valued predicate. Exact theorem remains untagged and is tracked by flapjack-pxn.18.3.5.8.14."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -4441,6 +4449,14 @@
     "lean_name": "isWfShapeList_of_all",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Lean support lemma for the struct_infos_ok_drop proof"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
+    "hol_name": "struct_infos_ok_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
+    "lean_name": "structInfosOk",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-main and flapjack-seven-luna (source comparison with pan_structsProofScript.sml:68-76: four predicate clauses match, but HOL uses mlstring names and a fields/size-only struct_info, while production StructContext uses String identifiers and StructInfo adds a shapedFields cache. The different record/context carriers cannot be covered by names_as_string. Keep the analogue untagged pending exact-carrier work flapjack-pxn.18.3.5.8.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -4868,11 +4884,19 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "nested_seq_assigned_vars_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_assign_zipWithW",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison with crepPropsScript.sml:410-415: the list-length premise and assigned-variable equation match. The Lean theorem and its ...W wrapper use production CrepProg, whose Call/ExtCall names are String; HOL prog uses mlstring. CrepProgHOL is available, but no assigned_vars helper or nested-seq theorem is ported over that exact carrier. Existing direct HOL rows check concrete observations, not a carrier bridge. Keep this analogue untagged until the exact-carrier port is added."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
     "hol_name": "length_load_shape_eq_shape",
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
-    "lean_name": "length_loadShape_eq_shapeW",
+    "lean_name": "length_loadShapeHOLW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (statement compared against length_load_shape_eq_shape at crepPropsScript.sml; carrier is width-indexed over CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the tagged wrapper is stated over the tagged loadShapeBytesW (load_shape_def) via simpa [loadShapeBytesW]; the generic-\u03b1 helper stays untagged)"
+    "reviewer": "Source-reviewed against crepPropsScript.sml:30. Exact input/output carrier is CrepExpHOL width over BitVec width with [NeZero width]; the result is the length of exact loadShapeBytesHOLW, with no extra premises. Production CrepExp helpers and their width wrappers remain untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",

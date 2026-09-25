@@ -787,8 +787,10 @@ theorem compile_decs_preserve_functions [BEq String] [Add α] [Mul α]
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- HOL also quantifies a Prop-valued predicate `P`, whereas this executable
+-- analogue fixes a Bool-valued predicate.  The exact theorem is tracked by
+-- `flapjack-pxn.18.3.5.8.14`, depending on the MlString syntax carrier in
+-- `flapjack-pxn.18.3.5.8`.
 theorem EVERY_fperm_decs [BEq String] (source target : FunName)
     (predicate : Decl α → Bool) (declarations : List (Decl α))
     (hother : declarations.all

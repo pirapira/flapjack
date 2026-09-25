@@ -2407,10 +2407,17 @@ theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
   cases target
   rfl
 
-/-- HOL `first_compile_to_crep_all_distinct`: lowering function declarations
-    changes bodies and parameter slots but preserves every function name in
-    source order, so distinct source names stay distinct. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_to_crep_all_distinct"]
+/-- Flapjack analogue of HOL `first_compile_to_crep_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4566`). Its proof shows
+    the production `compileToCrepHOL` map preserves the names in
+    `functionEntries`, but its input is `Decl (BitVec width)` and its output
+    uses `FunName`/generic `CrepProg`. HOL quantifies over the `DeclHOL`/panLang
+    carrier (with `mlstring` identifiers and HOL expression/shape types) and
+    returns a function list with HOL `CrepProgHOL width` bodies. These input
+    and output carrier differences exceed identifier representation, so
+    `names_as_string` cannot qualify this analogue. It is intentionally
+    untagged; an exact-carrier replacement depends on `DeclHOL` and compiler
+    boundary work tracked by `flapjack-yao.1`. -/
 theorem firstCompileToCrepAllDistinct [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map

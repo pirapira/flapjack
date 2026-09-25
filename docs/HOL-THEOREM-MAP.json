@@ -4343,7 +4343,7 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
   },
-    {
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "v",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
@@ -4548,16 +4548,16 @@
     "hol_name": "is_wf_shape_nil_length_flatten",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "isWfShapeNil_length_flatten",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "flatten_nil_no_size",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "flattenNilNoSize",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
   },
   {
     "hol_path": null,

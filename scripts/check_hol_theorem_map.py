@@ -97,8 +97,10 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "matching production expGlobalVars) extends HOL's specification and cannot "
         "be an exact port. Direct HOL-EVAL rows global_var/nested_global are in "
         "pan_lang_var_exp_probe.out and replayed in Flapjack/Test/"
-        "PanLangVarExpParity.lean. The tag is withheld; ARB/partial rendering is "
-        "tracked by the child bead of flapjack-4ac.1.39."
+        "PanLangVarExpParity.lean. The tag is withheld; the precise partial "
+        "rendering is the untagged Option-valued globalVarExpHOL? (same file, "
+        "bead flapjack-4ac.1.39.1), which is none on Load32/BaseAddr/TopAddr/"
+        "BytesInWord and some of the thirteen specified clause results."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",

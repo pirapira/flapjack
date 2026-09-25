@@ -73,4 +73,29 @@ example : globalVarExpHOL (.var .global (ofString "g") : ExpHOL 8) = [ofString "
 example : globalVarExpHOL nestedHOL = [ofString "g", ofString "addr"] := by
   simp [globalVarExpHOL, nestedHOL]
 
+/-! ## `global_var_exp` Option-valued specification parity
+
+`globalVarExpHOL?` is the precise partial rendering: it returns `none` exactly
+on the four HOL `ARB` constructors and `some` of the HOL clause result on the
+thirteen specified clauses. -/
+
+#guard (globalVarExpHOL? (.var .global (ofString "g") : ExpHOL 8)) ==
+  some [ofString "g"]
+#guard globalVarExpHOL? nestedHOL == some [ofString "g", ofString "addr"]
+#guard (globalVarExpHOL? (.load32 (.var .local xName) : ExpHOL 8)) ==
+  (none : Option (List MlS))
+#guard (globalVarExpHOL? (.baseAddr : ExpHOL 8)) == (none : Option (List MlS))
+#guard (globalVarExpHOL? (.topAddr : ExpHOL 8)) == (none : Option (List MlS))
+#guard (globalVarExpHOL? (.bytesInWord : ExpHOL 8)) == (none : Option (List MlS))
+
+example : globalVarExpHOL? (.var .global (ofString "g") : ExpHOL 8) =
+    some [ofString "g"] := by
+  simp
+
+example : globalVarExpHOL? nestedHOL = some [ofString "g", ofString "addr"] := by
+  simp [nestedHOL]
+
+example : (globalVarExpHOL? (.load32 (.var .local xName) : ExpHOL 8)) = none := by
+  simp
+
 end Flapjack.Test.PanLangVarExpParity

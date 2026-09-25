@@ -372,8 +372,10 @@ clauses above.  A total Lean function must choose values for those four
 constructors, so `globalVarExpHOL` extends HOL's specification (it recurses on
 `Load32` and returns `[]` on the three nullary address constructors, matching
 production `expGlobalVars`).  The tag is therefore withheld; the exact HOL
-clause fragment agrees, but the ARB cases have no HOL equation to port.  ARB /
-partial rendering is tracked by the child bead of `flapjack-4ac.1.39`. -/
+clause fragment agrees, but the ARB cases have no HOL equation to port.  The
+precise partial rendering is `globalVarExpHOL?` below (untagged, bead
+`flapjack-4ac.1.39.1`), which is `none` on the four `ARB` constructors and
+`some` of the thirteen specified clause results. -/
 def globalVarExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
   | .const _ => []
   | .var .local _ => []
@@ -393,17 +395,212 @@ def globalVarExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
   | .topAddr => []
   | .bytesInWord => []
 termination_by expression => sizeOf expression
-decreasing_by
-  all_goals simp_wf
-  all_goals
-    first
-    | omega
-    | (rename_i mem
-       have hlt := List.sizeOf_lt_of_mem mem
-       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
-       omega)
-    | (rename_i elem mem
-       have hlt := List.sizeOf_lt_of_mem mem
-       omega)
+  decreasing_by
+    all_goals simp_wf
+    all_goals
+      first
+      | omega
+      | (rename_i mem
+         have hlt := List.sizeOf_lt_of_mem mem
+         have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+         omega)
+      | (rename_i elem mem
+         have hlt := List.sizeOf_lt_of_mem mem
+         omega)
+
+/-! ### `panLang$global_var_exp` as a partial (Option-valued) function -/
+
+/-! ### `panLang$global_var_exp` as a partial (Option-valued) function
+
+Partial, exact-carrier rendering of HOL `panLang$global_var_exp`
+(`cakeml/pancake/panLangScript.sml:278-291`).  HOL's definition is partially
+specified: the generated `global_var_exp_def_primitive` stores
+`| Load32 v => ARB | BaseAddr => ARB | TopAddr => ARB | BytesInWord => ARB`,
+and the exported `global_var_exp_def` theorem states only the thirteen clauses
+over the other constructors.
+
+`globalVarExpHOL?` is the exact fragment HOL actually specifies: it returns
+`none` on exactly those four constructors and `some` with the HOL equation's
+right hand side on the thirteen specified clauses, recursing into
+sub-expressions.  `globalVarExpHOL` below is the total extension that chooses
+concrete values for the `ARB` cases.
+
+Untagged: `global_var_exp` is a partial specification, so no total Lean
+function is an exact HOL port.  The defined fragment here is the precise
+representation of that partial specification, tracked by
+`flapjack-4ac.1.39.1`. -/
+mutual
+  /-- Option-valued exact fragment of HOL `global_var_exp`: `none` on the four
+  ARB constructors, `some` of the specified clause result elsewhere. -/
+  def globalVarExpHOL? {width : Nat} [NeZero width] :
+    ExpHOL width → Option (List MlS)
+  | .const _ => some []
+  | .var .local _ => some []
+  | .var .global name => some [name]
+  | .rstruct expressions => globalVarExpListHOL? expressions
+  | .rfield _ value => globalVarExpHOL? value
+  | .nstruct _ fields => globalVarExpFieldListHOL? fields
+  | .nfield _ value => globalVarExpHOL? value
+  | .load _ address => globalVarExpHOL? address
+  | .load32 _ => none
+  | .loadByte address => globalVarExpHOL? address
+  | .op _ arguments => globalVarExpListHOL? arguments
+  | .panop _ arguments => globalVarExpListHOL? arguments
+  | .cmp _ left right =>
+      match globalVarExpHOL? left, globalVarExpHOL? right with
+      | some leftNames, some rightNames => some (leftNames ++ rightNames)
+      | _, _ => none
+  | .shift _ left right =>
+      match globalVarExpHOL? left, globalVarExpHOL? right with
+      | some leftNames, some rightNames => some (leftNames ++ rightNames)
+      | _, _ => none
+  | .baseAddr => none
+  | .topAddr => none
+  | .bytesInWord => none
+  termination_by expression => sizeOf expression
+
+  /- `globalVarExpHOL?` on a list of sub-expressions: `some` of the
+  concatenation when every sub-expression is specified, else `none`. -/
+  def globalVarExpListHOL? {width : Nat} [NeZero width] :
+      List (ExpHOL width) → Option (List MlS)
+    | [] => some []
+    | expression :: expressions =>
+        match globalVarExpHOL? expression, globalVarExpListHOL? expressions with
+        | some head, some tail => some (head ++ tail)
+        | _, _ => none
+    termination_by expressions => sizeOf expressions
+
+  /- `globalVarExpHOL?` on a field list: `some` of the concatenation of the
+  field-value sub-expressions when all are specified, else `none`. -/
+  def globalVarExpFieldListHOL? {width : Nat} [NeZero width] :
+      List (MlS × ExpHOL width) → Option (List MlS)
+    | [] => some []
+    | (_, value) :: fields =>
+        match globalVarExpHOL? value, globalVarExpFieldListHOL? fields with
+        | some head, some tail => some (head ++ tail)
+        | _, _ => none
+    termination_by fields => sizeOf fields
+end
+
+@[simp] theorem globalVarExpHOL?_const {width : Nat} [NeZero width]
+    (word : BitVec width) :
+    globalVarExpHOL? (.const word : ExpHOL width) = some [] := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_var_local {width : Nat} [NeZero width]
+    (name : MlS) :
+    globalVarExpHOL? (.var .local name : ExpHOL width) = some [] := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_var_global {width : Nat} [NeZero width]
+    (name : MlS) :
+    globalVarExpHOL? (.var .global name : ExpHOL width) = some [name] := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_rstruct {width : Nat} [NeZero width]
+    (expressions : List (ExpHOL width)) :
+    globalVarExpHOL? (.rstruct expressions : ExpHOL width) =
+      globalVarExpListHOL? expressions := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_rfield {width : Nat} [NeZero width]
+    (index : Nat) (value : ExpHOL width) :
+    globalVarExpHOL? (.rfield index value : ExpHOL width) =
+      globalVarExpHOL? value := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_nstruct {width : Nat} [NeZero width]
+    (name : MlS) (fields : List (MlS × ExpHOL width)) :
+    globalVarExpHOL? (.nstruct name fields : ExpHOL width) =
+      globalVarExpFieldListHOL? fields := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_nfield {width : Nat} [NeZero width]
+    (name : MlS) (value : ExpHOL width) :
+    globalVarExpHOL? (.nfield name value : ExpHOL width) =
+      globalVarExpHOL? value := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_load {width : Nat} [NeZero width]
+    (shape : ShapeHOL) (address : ExpHOL width) :
+    globalVarExpHOL? (.load shape address : ExpHOL width) =
+      globalVarExpHOL? address := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_load32 {width : Nat} [NeZero width]
+    (address : ExpHOL width) :
+    globalVarExpHOL? (.load32 address : ExpHOL width) = none := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_loadByte {width : Nat} [NeZero width]
+    (address : ExpHOL width) :
+    globalVarExpHOL? (.loadByte address : ExpHOL width) =
+      globalVarExpHOL? address := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_op {width : Nat} [NeZero width]
+    (operator : BinOp) (arguments : List (ExpHOL width)) :
+    globalVarExpHOL? (.op operator arguments : ExpHOL width) =
+      globalVarExpListHOL? arguments := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_panop {width : Nat} [NeZero width]
+    (operator : PanOp) (arguments : List (ExpHOL width)) :
+    globalVarExpHOL? (.panop operator arguments : ExpHOL width) =
+      globalVarExpListHOL? arguments := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_cmp {width : Nat} [NeZero width]
+    (comparison : Cmp) (left right : ExpHOL width) :
+    globalVarExpHOL? (.cmp comparison left right : ExpHOL width) =
+      (match globalVarExpHOL? left, globalVarExpHOL? right with
+       | some leftNames, some rightNames => some (leftNames ++ rightNames)
+       | _, _ => none) := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_shift {width : Nat} [NeZero width]
+    (shift : Shift) (left right : ExpHOL width) :
+    globalVarExpHOL? (.shift shift left right : ExpHOL width) =
+      (match globalVarExpHOL? left, globalVarExpHOL? right with
+       | some leftNames, some rightNames => some (leftNames ++ rightNames)
+       | _, _ => none) := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_baseAddr {width : Nat} [NeZero width] :
+    globalVarExpHOL? (.baseAddr : ExpHOL width) = none := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_topAddr {width : Nat} [NeZero width] :
+    globalVarExpHOL? (.topAddr : ExpHOL width) = none := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpHOL?_bytesInWord {width : Nat} [NeZero width] :
+    globalVarExpHOL? (.bytesInWord : ExpHOL width) = none := by
+  simp [globalVarExpHOL?]
+
+@[simp] theorem globalVarExpListHOL?_nil {width : Nat} [NeZero width] :
+    globalVarExpListHOL? ([] : List (ExpHOL width)) = some [] := by
+  simp [globalVarExpListHOL?]
+
+@[simp] theorem globalVarExpListHOL?_cons {width : Nat} [NeZero width]
+    (expression : ExpHOL width) (expressions : List (ExpHOL width)) :
+    globalVarExpListHOL? (expression :: expressions) =
+      (match globalVarExpHOL? expression, globalVarExpListHOL? expressions with
+       | some head, some tail => some (head ++ tail)
+       | _, _ => none) := by
+  simp [globalVarExpListHOL?]
+
+@[simp] theorem globalVarExpFieldListHOL?_nil {width : Nat} [NeZero width] :
+    globalVarExpFieldListHOL? ([] : List (MlS × ExpHOL width)) = some [] := by
+  simp [globalVarExpFieldListHOL?]
+
+@[simp] theorem globalVarExpFieldListHOL?_cons {width : Nat} [NeZero width]
+    (name : MlS) (value : ExpHOL width)
+    (fields : List (MlS × ExpHOL width)) :
+    globalVarExpFieldListHOL? ((name, value) :: fields) =
+      (match globalVarExpHOL? value, globalVarExpFieldListHOL? fields with
+       | some head, some tail => some (head ++ tail)
+       | _, _ => none) := by
+  simp [globalVarExpFieldListHOL?]
 
 end Flapjack.Pancake.PanLang

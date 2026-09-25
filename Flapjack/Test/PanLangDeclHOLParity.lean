@@ -11,6 +11,7 @@ import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Parser.ParseTopDecsByteRanged
+import Flapjack.Pancake.PanGlobals
 
 namespace Flapjack.Test.PanLangDeclHOLParity
 
@@ -212,6 +213,24 @@ example :
     decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
       [ .function fdH ] = some [] := by
   apply decsStcnamesHOLExact_of_functions
+  decide
+
+/-! ## Checked codec bridge to the production predicates (bead flapjack-ni1.1) -/
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isDecl (declOfHOL declaration) = isDeclHOL declaration :=
+  isDecl_declOfHOL declaration
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration :=
+  isExnDecl_declOfHOL declaration
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) =
+    (exactDecls.filter isExnDeclHOL).length :=
+  sizeOfEids_map_declOfHOL exactDecls
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) = 1 := by
+  rw [sizeOfEids_map_declOfHOL]
   decide
 
 end Flapjack.Test.PanLangDeclHOLParity

@@ -3,6 +3,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.PanSimp
 import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 The core of Pancake's `pan_globals` pass.
@@ -889,6 +890,37 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
   dsimp only
   exact sizeOfEids_structCompileDecls declarations
     (structGetNames { structs := [], locals := [], globals := [] } declarations)
+
+/-! ### Checked codec bridge to the exact `DeclHOL` predicates (bead `flapjack-ni1.1`)
+
+`isDecl`/`isExnDecl`/`sizeOfEids` are polymorphic over the production `Decl α`
+(`String` names), while the tagged `isDeclHOL`/`isExnDeclHOL` are over the exact
+`DeclHOL width` (`MlS`/`ShapeHOL`).  The carriers differ, so the executed
+predicates cannot call the tagged ones directly; these lemmas are the reviewed
+bridge through the `declOfHOL` codec. -/
+
+section DeclHOLBridge
+
+open Flapjack.Pancake.PanLang (DeclHOL declOfHOL isDeclHOL isExnDeclHOL)
+
+theorem isDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
+    isDecl (declOfHOL declaration) = isDeclHOL declaration := by
+  cases declaration <;> rfl
+
+theorem isExnDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
+    isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration := by
+  cases declaration <;> rfl
+
+theorem sizeOfEids_map_declOfHOL {width : Nat} [NeZero width]
+    (code : List (DeclHOL width)) :
+    sizeOfEids (code.map declOfHOL) = (code.filter isExnDeclHOL).length := by
+  induction code with
+  | nil => simp [sizeOfEids]
+  | cons declaration declarations ih =>
+      rw [List.map_cons, sizeOfEids_cons, isExnDecl_declOfHOL, List.filter_cons, ih]
+      cases isExnDeclHOL declaration <;> simp [Nat.add_comm]
+
+end DeclHOLBridge
 
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `resort_decls_def` (`pan_globalsScript.sml:179`):
     declarations are regrouped as names, exceptions, value declarations, and

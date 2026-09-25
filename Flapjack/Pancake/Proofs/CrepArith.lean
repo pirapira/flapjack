@@ -2574,6 +2574,38 @@ theorem crepSimpExpCorrect1HolFiniteWordSourceWordLab {ι : Type} {σ : Type}
   exact crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     f state expression _v h
 
+/-- Canonical all-positive-width `Hol word` encoding of the complete
+    `simp_exp_correct1` source-evaluator result. The carrier is exactly
+    `Fin width → Bool`, so no user-supplied finite-index enumeration or
+    RISC-V target is present. The unused result binder, successful premise,
+    code-only update, `n2w` simplifier image, and full `Option word_lab`
+    equality match HOL's local theorem shape. It remains untagged because the
+    source evaluator/state representation has not yet been proved identical
+    to native HOL `crepSem$eval` and its finite-map state. -/
+theorem crepSimpExpCorrect1HolWordBitsSourceWordLab
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : FunName × (List Nat × CrepProg (Fin width → Bool)) →
+      List Nat × CrepProg (Fin width → Bool))
+    (state : CrepHolState (Fin width → Bool) σ)
+    (expression : CrepExp (Fin width → Bool))
+    (_v : PanWordLab (Fin width → Bool))
+    (h : (evalCrepHolFiniteWordSourceExp
+      (instFinHolFiniteDimension (width := width)) state expression).map
+        PanWordLab.word ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepArithHolFiniteDimensionMapCode f state)
+      (crepSimpExp
+        (fun n => bitVecToHolWord
+          (instFinHolFiniteDimension (width := width))
+          (BitVec.ofNat width n)) expression) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width)) state expression := by
+  letI : HolFiniteDimension (Fin width) :=
+    instFinHolFiniteDimension (width := width)
+  exact crepSimpExpCorrect1HolFiniteWordSourceWordLab
+    f state expression _v h
+
 /-- Flapjack source-model Const case corresponding to HOL's local `simp_exp_correct1`
     (`crep_arithProofScript.sml:111`). This is one case only, not the assembled
     theorem. The explicit `HolFiniteDimension` dictionary represents HOL's

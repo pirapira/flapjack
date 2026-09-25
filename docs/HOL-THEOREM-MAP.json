@@ -681,6 +681,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBitsSourceWordLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width canonical Fin width -> Bool form of the complete source-evaluator result. This removes the arbitrary finite-index enumeration and has the local theorem's binders, success premise, code-only map update, n2w simplifier image, and Option word_lab equality. It remains untagged until the source evaluator/state encoding is identified with native HOL crepSem eval and finite maps."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",
@@ -4542,6 +4550,14 @@
     "lean_name": "lookupCodeHOLExact",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL lookup_code (panSemScript.sml:458-467) over the exact mlstring-keyed code map: MlS funname key, ValueHOL arguments, ALL_DISTINCT (MAP FST vshapes) as propositional Nodup, LIST_REL as length equality plus zipped pointwise shapeEqHOL (bridge shapeEqHOL_eq_true), and FEMPTY |++ ZIP (MAP FST vshapes,args) as the left-to-right =-keyed function update; direct rows lookup_code_ok/bad_arg/dup_param in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "evaluate_decls_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/EvaluateDeclsExact.lean",
+    "lean_name": "evaluateDeclsHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSemScript.sml:814-837 evaluate_decls_def clauses [] / Name / Decl (eval under locals:=FEMPTY, requires sh = shape_of res, binds globals |+ (v,res)) / Function (EVERY is_wf_shape o SND params and is_wf_shape return, binds code |+ (name,(params,body,return))) / ExnDecl (requires eshapes lookup = NONE and is_wf_shape, binds eshapes |+ (eid,sh)); exact MlString-keyed PanSemStateExact with tagged evalHOLExact/isWfShapeExactHOL/shapeEqHOL; direct HOL rows in scripts/hol-probes/pan_evaluate_decls_probe.out reproduced by Flapjack/Test/PanSemEvaluateDeclsExactParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -9462,5 +9478,45 @@
     "lean_name": "disjoint_drop_take_sum",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL pan_commonProps$disjoint_drop_take_sum (pan_commonPropsScript.sml:413): !n m p ns. ALL_DISTINCT ns ==> DISJOINT (set (TAKE p (DROP (n + m) ns))) (set (TAKE n ns)), rendered as ListDisjoint ((ns.drop (n+m)).take p) (ns.take n) with ns.Nodup; direct HOL row ddt_disjoint in pan_common_props_zip_disjoint_probe.out reproduced by PanCommonPropsZipDisjointParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedDecs_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:390. Width-indexed over CrepProg/CrepExp (BitVec width) with [NeZero width], matching the crepLang 'a word carrier. Oracle row avnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_nested_decs_append",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedDecs_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:400. HOL FILTER (not-MEM x ns) is rendered as List.filter (fun c => decide (c notin ns)); width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvnda in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVars_nestedSeq_storesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:429. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row avsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVars_nestedSeq_storesW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:439. Uses the exact storesW port of stores_def with the fixed stride BitVec.ofNat width (width/8), width-indexed over CrepProg/CrepExp (BitVec width). Oracle row afvsse in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "var_exp_load_shape",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepExpVars_of_mem_loadShapeW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:215. Uses the exact loadShapeBytes port of load_shape_def with the fixed stride bytes_in_word, width-indexed over CrepExp (BitVec width); var_cexp is crepExpVars. Oracle row vels in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
   }
 ]

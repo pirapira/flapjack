@@ -226,6 +226,7 @@ import Flapjack.Test.PanSemStateExactParity
 import Flapjack.Test.PanSemLocalUpdatesExactParity
 import Flapjack.Test.PanPropsShapeResVarParity
 import Flapjack.Test.PanCommonPropsZipDisjointParity
+import Flapjack.Test.CrepPropsAssignedVarsParity
 import Flapjack.Test.PanSemIsValidValueExactParity
 import Flapjack.Test.PanSemDecExactParity
 import Flapjack.Test.PanSemAssignPrimitiveExactParity
@@ -239,6 +240,8 @@ import Flapjack.Test.PanSemTickShMemExactParity
 import Flapjack.Test.PanSemExtCallExactParity
 import Flapjack.Test.PanSemDecCallExactParity
 import Flapjack.Test.PanSemCallExactParity
+import Flapjack.Test.PanSemControlExactParity
+import Flapjack.Test.PanSemEvaluateDeclsExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.PanSemDecErrorExactParity
 import Flapjack.Test.PanSemPrimitiveErrorExactParity
@@ -891,6 +894,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSemLocalUpdatesExactParity.runChecks,
     Flapjack.Test.PanPropsShapeResVarParity.runChecks,
     Flapjack.Test.PanCommonPropsZipDisjointParity.runChecks,
+    Flapjack.Test.CrepPropsAssignedVarsParity.runChecks,
     Flapjack.Test.PanSemIsValidValueExactParity.runChecks,
     Flapjack.Test.PanSemDecExactParity.runChecks,
     Flapjack.Test.PanSemAssignPrimitiveExactParity.runChecks,
@@ -904,6 +908,8 @@ Flapjack.Test.PanSemReturnRaiseMemoryParity.runChecks,
   Flapjack.Test.PanSemExtCallExactParity.runChecks,
   Flapjack.Test.PanSemDecCallExactParity.runChecks,
   Flapjack.Test.PanSemCallExactParity.runChecks,
+  Flapjack.Test.PanSemControlExactParity.runChecks,
+  Flapjack.Test.PanSemEvaluateDeclsExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
 Flapjack.Test.PanSemDecErrorExactParity.runChecks,
 Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,

@@ -44,12 +44,12 @@ Note: `panMemLoadByteHOL`/`panMemLoad32HOL` are also inside the separate
 `flapjack-9x4` positive-width audit; their carrier is word-only and unaffected
 by the name mismatch.
 
-## Remaining tags requiring String/MlString carrier review
+## Withdrawn (String/MlString carrier review)
 
 | Lean module:line | HOL name | offending carrier(s) | tracking |
 |---|---|---|---|
-| `Pancake/Semantics/PanSem/Primop.lean:16` | `flatten_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |
-| `Pancake/Semantics/PanSem/Primop.lean:48` | `pan_primop_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |
+| `Pancake/Semantics/PanSem/Primop.lean` | `flatten_def` | `PanValue` (`nStruct` names `FieldName`/`StructName` `String`; `.word` payload `α` vs `'a word_lab`) | withdrawn (`flapjack-0lj.3`; exact port pending) |
+| `Pancake/Semantics/PanSem/Primop.lean` | `pan_primop_def` | `PanValue` (same carrier mismatch; body ignores names but the quantifier is not exact) | withdrawn (`flapjack-0lj.3`; exact port pending) |
 
 ## Resolution order
 
@@ -59,5 +59,6 @@ by the name mismatch.
 2. Retarget the withdrawn `HolValue`-dependent definitions once their exact
    MlString-backed carriers exist (`flapjack-0lj`, `flapjack-9x4`).
 3. Retarget `lookup_code_def` (`flapjack-4w9`).
-4. Re-review the name-ignoring tags (`flatten_def`, `pan_primop_def`) against
-   the exact carriers; do not treat name-ignoring behavior as carrier equivalence.
+4. Re-add the withdrawn name-ignoring tags (`flatten_def`, `pan_primop_def`)
+   only once stated over the exact MlString/HolWordLab carriers
+   (`flapjack-0lj.3`); name-ignoring behavior is not carrier equivalence.

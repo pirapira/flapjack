@@ -94,11 +94,29 @@ def shapeOfNamed : Bool :=
   | .named name => decide (name = Flapjack.Basis.Pure.MlString.ofString "Pair")
   | _ => false
 
+/-- Direct `isValWord_def` rows from `pan_sem_is_val_word_probe.out`:
+`ValWord` and its expanded `Val (Word _)` form return true; `RStruct` and
+`NStruct` return false. -/
+def isValWordVal : Bool :=
+  isValWordHOL (.val (.word (7 : BitVec 8)) : ValueHOL 8)
+
+def isValWordRecord : Bool :=
+  isValWordHOL (.rStruct [] : ValueHOL 8) == false
+
+def isValWordNamed : Bool :=
+  isValWordHOL
+    (.nStruct (Flapjack.Basis.Pure.MlString.ofString "A") [] : ValueHOL 8) == false
+
+def isValWordExpandedValWord : Bool :=
+  isValWordHOL (.val (.word (7 : BitVec 8)) : ValueHOL 8)
+
 def valueHOLGuard : Bool :=
   flattenWord && flattenRecord && flattenNamed &&
     primopBasic && primopOverflow && primopCarryIsBit &&
     primopWrongLength && primopNonWord &&
-    shapeOfWord && shapeOfRecord && shapeOfNamed
+    shapeOfWord && shapeOfRecord && shapeOfNamed &&
+    isValWordVal && isValWordRecord && isValWordNamed &&
+    isValWordExpandedValWord
 
 #guard flattenWord
 #guard flattenRecord
@@ -111,15 +129,19 @@ def valueHOLGuard : Bool :=
 #guard shapeOfWord
 #guard shapeOfRecord
 #guard shapeOfNamed
+#guard isValWordVal
+#guard isValWordRecord
+#guard isValWordNamed
+#guard isValWordExpandedValWord
 #guard valueHOLGuard
 
 /-- Run the exact-`ValueHOL` parity checks. -/
 def runChecks : IO Bool := do
   if valueHOLGuard then
-    IO.println "PASS exact panSem v/flatten/pan_primop/shape_of over MlString/HolWordLab carriers (11 HOL rows)"
+    IO.println "PASS exact panSem v/flatten/pan_primop/shape_of/isValWord over MlString/HolWordLab carriers (15 HOL rows)"
     pure true
   else
-    IO.println "FAIL exact panSem v/flatten/pan_primop/shape_of over MlString/HolWordLab carriers"
+    IO.println "FAIL exact panSem v/flatten/pan_primop/shape_of/isValWord over MlString/HolWordLab carriers"
     pure false
 
 end Flapjack.Test.PanSemValueHOLParity

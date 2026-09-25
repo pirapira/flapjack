@@ -86,14 +86,17 @@ def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
 `panLang$is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The clauses are
 reproduced literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
 `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered with
-the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart) and
+the first-match `lookupInfo` (the String-keyed `alist$ALOOKUP` analogue) and
 `isSome` as the Bool rendering of `<> NONE`. The tag is WITHDRAWN because the
 context carrier does not match: HOL keys the association list by
 `stcname = ``:mlstring``` (`panLangScript.sml:21`) while Lean's
-`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14). Matching
-`ALOOKUP` at the concrete `BEq String` instance is not HOL `=`, so this needs an
-MlString key carrier (bead `flapjack-pxn.18.3.5.8`). The direct original-HOL
-rows are pinned in `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14).
+Likewise, `.named` in the input uses String-backed `Shape`, and the context's
+field names are String-backed, unlike HOL's `shape`/`struct_info` carriers.
+Matching `ALOOKUP` at the concrete `BEq String` instance is not HOL equality;
+the six direct HOL rows and Lean guards exercise the clauses but do not prove
+byte-level carrier equivalence. An exact port needs the MlString/ShapeHOL
+carriers (bead `flapjack-pxn.18.3.5.8`), so no `@[hol]` tag is attached. -/
 mutual
   def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
     | .one => true
@@ -1374,12 +1377,16 @@ theorem withShape_getElem_length (shapes : List Shape) (values : List α) (n : N
   rw [hdrop]
   exact Nat.min_eq_left (shapeSize_drop_head_le shapes n hn)
 
-/-- Executable mirror of HOL `panLang$var_exp`: collect exactly the local
-    variable occurrences of an expression, preserving left-to-right order and
-    duplicates. FLAPJACK-SPECIFIC (not an exact HOL port): the result element
-    type is `VarName := String` (PanLang.lean:16) while HOL `varname` is
-    `mlstring` (`panLangScript.sml:27`); the `@[hol]` tag is WITHDRAWN pending
-    an MlString carrier (bead `flapjack-pxn.18.3.5.8`). -/
+/-- Executable mirror of HOL `panLang$var_exp` (`panLangScript.sml:253-270`):
+    collect local-variable occurrences in left-to-right order, retaining
+    duplicates. FLAPJACK-SPECIFIC (not an exact HOL port): HOL takes its
+    word-indexed `exp` (including `mlstring` names and HOL `shape`) and returns
+    `mlstring list`; this function takes generic `Exp α` with String-backed
+    names/fields and monomorphic `Shape`, and returns `List VarName` with
+    `VarName := String`. The 17 constructor clauses agree structurally, but
+    the direct HOL-EVAL rows and Lean guard test only selected values, not
+    these carrier differences. The `@[hol]` tag remains WITHDRAWN pending an
+    exact MlString/ShapeHOL expression carrier (bead `flapjack-pxn.18.3.5.8`). -/
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

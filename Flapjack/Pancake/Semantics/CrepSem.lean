@@ -213,14 +213,32 @@ theorem setCrepHolGlobalsW_eq_setCrepHolGlobals {width : Nat} [NeZero width] {σ
 def decCrepHolClock (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with clock := state.clock - 1 }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `dec_clock s = s with clock := s.clock - 1` is HOL's
-    (`crepSemScript.sml:145-148`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions (`Nat → Option _` /
-    `FunName → Option _`) which admit infinite-support inhabitants, a strict
-    superset of HOL's finite maps (`|->`). The `@[hol dec_clock_def]` tag was
-    withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support
-    carrier restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$dec_clock_def` (`cakeml/pancake/semantics/crepSemScript.sml:145-148`),
+    which states `dec_clock s = s with clock := s.clock - 1`. The Lean clause
+    matches that update (`{ state with clock := state.clock - 1 }`), and
+    `[NeZero width]` excludes the invalid zero word dimension HOL's `'a word`
+    also excludes. The mismatch is the quantified whole-state carrier: in
+    `CrepHolState (BitVec width) σ` the fields `locals : Nat → Option _`,
+    `globals : BitVec 5 → Option _` and `code : FunName → Option _`
+    (CrepSem.lean:102-113) are raw functions that admit infinite-support
+    inhabitants, a strict superset of HOL's finite maps `varname |-> 'a word_lab`,
+    `5 word |-> 'a word_lab` and `funname |-> (varname list # prog)`
+    (`crepSemScript.sml:20-31`), so the statement ranges over states HOL cannot
+    represent. The `names_as_string` qualifier cannot authorize that carrier (the
+    keys are not String-backed `mlstring` here) and no `NameRanged` byte witness
+    applies because the result is a whole state, not a name. Direct HOL rows
+    `dec_clock_clock=T`, `dec_clock_globals=T`, `dec_clock_be=T`,
+    `dec_clock_top=T` are in `scripts/hol-probes/crep_dec_clock_simp_probe.out`,
+    sampled by the bridge example in `Flapjack/Test/CrepGlobalShapeParity.lean:288-289`
+    and used by `Flapjack/Test/CrepInlineRelParity.lean:434-435`. The
+    `@[hol dec_clock_def]` tag was withdrawn in the
+    `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains WITHDRAWN
+    (`docs/HOL-THEOREM-MAP.json` records `decCrepHolClockW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1` (the `CrepSemHOLState` finite-support carrier
+    at `Flapjack/Pancake/Semantics/CrepSem/HOLState.lean` has no clock-update
+    bridge yet). -/
 def decCrepHolClockW {width : Nat} [NeZero width] {σ : Type} (state : CrepHolState (BitVec width) σ) :
     CrepHolState (BitVec width) σ :=
   { state with clock := state.clock - 1 }
@@ -239,13 +257,27 @@ def setCrepHolVar (name : Nat) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE state.locals (name, value) }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `set_var v w s = s with locals := s.locals |+ (v,w)` is HOL's
-    (`crepSemScript.sml:55-57`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions that admit infinite-support
-    inhabitants, a strict superset of HOL's finite maps. The `@[hol set_var_def]`
-    tag was withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact
-    finite-support carrier restoration is tracked by
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$set_var_def` (`cakeml/pancake/semantics/crepSemScript.sml:55-57`),
+    which states `set_var v w s = s with locals := s.locals |+ (v,w)`. The Lean
+    clause matches that update: the `Nat` key is HOL's `varname = num`, the
+    `PanWordLab (BitVec width)` value is the single-`Word` `word_lab` carrier at
+    positive width, and `FUPDATE state.locals (name, value)` is the finite-map
+    `|+` update. The mismatch is the quantified whole-state carrier: in
+    `CrepHolState (BitVec width) σ` both `locals : Nat → Option _` and
+    `code : FunName → Option _` are raw functions that admit infinite-support
+    inhabitants, a strict superset of HOL's finite maps, so the statement ranges
+    over states HOL's `num |-> 'a word_lab` cannot represent. The
+    `names_as_string` qualifier cannot authorize that carrier (the key is not a
+    String-backed `mlstring` here), and no `NameRanged` byte witness applies
+    because the result is a whole state, not a name. Direct HOL rows are recorded
+    in `scripts/hol-probes/crep_local_updates_probe.out`
+    (`set_var_hit=T`, `set_var_keeps_other=T`, `set_var_fields_preserved=T`) and
+    sampled by the `localBase` examples and `#guard` in
+    `Flapjack/Test/CrepGlobalShapeParity.lean:227-269`. The `@[hol set_var_def]`
+    tag was withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains
+    WITHDRAWN (`docs/HOL-THEOREM-MAP.json` records `setCrepHolVarW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
     `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
 def setCrepHolVarW {width : Nat} [NeZero width] {σ : Type} (name : Nat)
     (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :
@@ -266,14 +298,19 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE_LIST FEMPTY varargs }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `upd_locals varargs s = s with locals := FEMPTY |++ varargs` is HOL's
-    (`crepSemScript.sml:66-68`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions that admit infinite-support
-    inhabitants, a strict superset of HOL's finite maps. The
-    `@[hol upd_locals_def]` tag was withdrawn in the
-    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
-    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
+    `upd_locals_def` (`crepSemScript.sml:66-68`) sets `locals` to
+    `FEMPTY |++ varargs`, preserving the other state fields. This definition
+    matches that update clause, and `[NeZero width]` excludes invalid word
+    dimensions, but its full state argument is `CrepHolState (BitVec width) σ`:
+    `locals` and `code` are raw lookup functions with no finite-support
+    witnesses, so this carrier includes states HOL's finite maps cannot
+    represent. The direct rows `upd_locals_replace` and
+    `locals_upd_locals_cells` pin update behavior only; they do not close this
+    state-carrier gap. The source-shaped `CrepSemHOLState` now has finite
+    support, but its `upd_locals` helper and bridge to this executable state
+    remain in `flapjack-pxn.18.3.7.1.3.1.1.3.1.1`. The tag withdrawn by
+    `flapjack-pxn.18.3.7.1.3.1.1.3` therefore remains withheld here. -/
 def updCrepHolLocalsW {width : Nat} [NeZero width] {σ : Type}
     (varargs : List (Nat × PanWordLab (BitVec width)))
     (state : CrepHolState (BitVec width) σ) : CrepHolState (BitVec width) σ :=
@@ -293,14 +330,32 @@ theorem updCrepHolLocalsW_eq_updCrepHolLocals {width : Nat} [NeZero width] {σ :
 def emptyCrepHolLocals (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FEMPTY }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `empty_locals s = s with locals := FEMPTY` is HOL's
-    (`crepSemScript.sml:71`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions that admit infinite-support
-    inhabitants, a strict superset of HOL's finite maps. The
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$empty_locals_def` (`cakeml/pancake/semantics/crepSemScript.sml:71-74`),
+    which states `empty_locals s = s with <| locals := FEMPTY |>` and leaves the
+    other ten fields untouched. The Lean clause matches that update
+    (`{ state with locals := FEMPTY }`), where the Lean `locals` is emptied
+    pointwise. The mismatch is the quantified whole-state carrier: in
+    `CrepHolState (BitVec width) σ` the fields `locals : Nat → Option _`,
+    `globals : BitVec 5 → Option _` and `code : FunName → Option _`
+    (CrepSem.lean:102-113) are raw functions that admit infinite-support
+    inhabitants, a strict superset of HOL's finite maps `varname |-> 'a word_lab`,
+    `5 word |-> 'a word_lab` and `funname |-> (varname list # prog)`
+    (`crepSemScript.sml:20-31`), so the statement ranges over states HOL cannot
+    represent. The `names_as_string` qualifier cannot authorize that carrier and
+    no `NameRanged` byte witness applies because the result is a whole state, not
+    a name. Direct HOL rows `empty_locals_locals=T`, `empty_locals_clock=T`,
+    `empty_locals_memory=T` are in `scripts/hol-probes/crep_dec_clock_simp_probe.out`,
+    and `empty_locals_none=T`, `empty_locals_fields_preserved=T` in
+    `scripts/hol-probes/crep_local_updates_probe.out`; sampled by the bridge
+    example in `Flapjack/Test/CrepGlobalShapeParity.lean:284-285`. The
     `@[hol empty_locals_def]` tag was withdrawn in the
-    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
-    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+    `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains WITHDRAWN
+    (`docs/HOL-THEOREM-MAP.json` records `emptyCrepHolLocalsW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1` (the `CrepSemHOLState` finite-support carrier
+    at `Flapjack/Pancake/Semantics/CrepSem/HOLState.lean` has no locals-clearing
+    bridge yet). -/
 def emptyCrepHolLocalsW {width : Nat} [NeZero width] {σ : Type} (state : CrepHolState (BitVec width) σ) :
     CrepHolState (BitVec width) σ :=
   { state with locals := FEMPTY }
@@ -875,13 +930,31 @@ theorem fixCrepHolClock_IMP_LESS_EQ (oldState : CrepHolState α σ)
   rw [hfixed] at hbound
   exact hbound
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the bound is HOL's
-    `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-157`), but its carrier
-    `CrepHolState (BitVec width) σ` stores `locals`/`code` as raw functions that
-    admit infinite-support inhabitants, a strict superset of HOL's finite maps.
-    The `@[hol fix_clock_IMP_LESS_EQ]` tag was withdrawn in the
-    `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact finite-support carrier
-    restoration is tracked by `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$fix_clock_IMP_LESS_EQ` (`cakeml/pancake/semantics/crepSemScript.sml:155-160`),
+    which states `!x. fix_clock s x = (res,s1) ==> s1.clock <= s.clock`. The Lean
+    bound is the same inequality, with the HOL pair variable `x` and the implicit
+    `res`/`s1` exposed as the explicit binders `step`/`result`/`newState` (an
+    inessential binder reshaping, not a semantic difference). The mismatch is the
+    quantified whole-state carrier: in `CrepHolState (BitVec width) σ` the fields
+    `locals : Nat → Option _`, `globals : BitVec 5 → Option _` and
+    `code : FunName → Option _` (CrepSem.lean:102-113) are raw functions that admit
+    infinite-support inhabitants, a strict superset of HOL's finite maps
+    `varname |-> 'a word_lab`, `5 word |-> 'a word_lab` and
+    `funname |-> (varname list # prog)` (`crepSemScript.sml:20-31`), so the
+    statement ranges over states HOL cannot represent. The `names_as_string`
+    qualifier cannot authorize that carrier and no `NameRanged` byte witness
+    applies because the result is an inequality on a state field, not a name.
+    Direct HOL rows `fix_clock_clamps=(...)` and `fix_clock_keeps_lower=(...)` are
+    in `scripts/hol-probes/crep_fix_clock_probe.out`; the bound is sampled by
+    `Flapjack/Test/CrepGlobalShapeParity.lean:307-312`. The
+    `@[hol fix_clock_IMP_LESS_EQ]` tag was withdrawn in the
+    `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains WITHDRAWN
+    (`docs/HOL-THEOREM-MAP.json` records `fixCrepHolClock_IMP_LESS_EQW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1` (the `CrepSemHOLState` finite-support carrier
+    at `Flapjack/Pancake/Semantics/CrepSem/HOLState.lean` has no `fix_clock`
+    bridge yet). -/
 theorem fixCrepHolClock_IMP_LESS_EQW {width : Nat} [NeZero width] {σ : Type} {β : Type}
     (oldState : CrepHolState (BitVec width) σ)
     (step : β × CrepHolState (BitVec width) σ)

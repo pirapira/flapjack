@@ -4456,6 +4456,14 @@
     "reviewer": "Codex (source comparison; HOL panSem$res_var (panSemScript.sml:505) res_var lc (n,NONE) = lc \\ n and res_var lc (n,SOME v) = lc |+ (n,v) over MlS-keyed function maps; direct HOL rows delete_hit/delete_other/update_hit reproduced by PanSemLocalUpdatesExactParity"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/IsValidValueExact.lean",
+    "lean_name": "isValidValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL line 469-475: case lookup_kvar vk v s of SOME w => shape_of value = shape_of w | NONE => F over the exact MlString-keyed PanSemStateExact; the shape comparison is rendered by the untagged Bool shapeEqHOL with the proved bridge shapeEqHOL_eq_true : shapeEqHOL a b = true <-> a = b, and lookup/shape_of reuse the tagged lookupKvarHOLExact/shapeOfHOLExact; direct HOL rows in pan_sem_is_valid_value_probe.out local_shape=T/global_shape=T/mismatch=F/missing=F)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

@@ -124,11 +124,12 @@ def compileExpHOLW {width : Nat} [NeZero width]
 
 /-- Kernel-checked definitional-equality bridge for `flapjack-pxn.18.3.1.3.2`:
     at the RISC-V word carrier, the generic expression compiler `compileExpHOL`
-    is definitionally the tagged width-indexed `compile_exp_def` port
-    `compileExpHOLW`.  This is a BRIDGE ONLY, not textual routing: the shipped
+    is definitionally equal to the width-indexed `compileExpHOLW` specialization.
+    Neither String-context definition is tagged as HOL `compile_exp_def`.
+    This is a BRIDGE ONLY, not textual routing: the shipped
     `compileProgRiscV`/`compileProgHOL` path still calls the generic
-    `compileExpHOL`, so the executed compiler does not textually call the tagged
-    definition and the AGENTS.md production-path rule is NOT met here.  A
+    `compileExpHOL`, so the executed compiler does not textually call that
+    specialization and the AGENTS.md production-path rule is NOT met here. A
     textual width specialization of the enclosing `compileProg` chain would
     duplicate the large `compileProgHOL` equation/codeRel proof surface and is
     tracked by `flapjack-pxn.18.3.5.3.1.2`. -/
@@ -324,8 +325,8 @@ def storeMemOpHOL : OpSize → CrepMemOp
     specialization below rather than this generic adapter.  Its expression
     compilation runs the generic `compileExpHOL`; the kernel-checked bridge
     `compileExpHOLW_eq_compileExpHOL` shows this is definitionally equal to the
-    tagged width-indexed `compileExpHOLW` at the RISC-V carrier, but the path is
-    NOT textually routed to the tagged definition (see
+    width-indexed `compileExpHOLW` at the RISC-V carrier, but the path is
+    NOT textually routed to that specialization (see
     `flapjack-pxn.18.3.5.3.1.2`). -/
 def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α] (context : PanToCrepHOLContext α)
@@ -485,7 +486,8 @@ termination_by structural program
     HOL port) of CakeML's `compile_def`: the word type
     fixes `bytes_in_word` to `BitVec width / 8`, and the source context retains
     the HOL finite-map fields directly. No caller-supplied stride or
-    list-backed map conversion appears in the tagged definition. -/
+    list-backed map conversion appears in this specialization. Its String-keyed
+    context remains different from HOL's mlstring-keyed context. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): `compile` consults `ctxt.vars`,
 -- `ctxt.funcs`, and `ctxt.eids`, which are keyed by `VarName`/`FunName`/
 -- `ExceptionId` = `String` here, while HOL `pan_to_crepScript.sml` keys them by
@@ -1018,7 +1020,7 @@ def panToCrepGetEidsFromDeclsHOL
 
 /-! HOL `compile_to_crep_def` returns triples, not Flapjack's downstream
 `CompiledFunction` record (which additionally stores source return-shape
-metadata). Preserve that exact output boundary here and attach metadata only
+metadata). Preserve that triple-shaped output boundary here and attach metadata only
 in the untagged adapter below. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the output triples and the
 -- consumed declarations use `FunName`/`VarName` = `String`, while HOL

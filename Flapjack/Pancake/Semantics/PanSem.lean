@@ -818,6 +818,33 @@ theorem panSemEvaluateCodeStateWithPostState_eq_map
       (memoryHandler := memoryHandler) <;>
     simp [panSemEvaluateCodeStateWithPostState, hresult]
 
+/-- Recursive source-state evaluation leaves the finite, state-owned
+    `PanSemState.code` map unchanged. Call and DecCall resolve every callee from
+    this map, so this post-state invariant is available to the corresponding
+    compiler-correctness cases. -/
+theorem panSemEvaluateCodeStateWithPostState_preserves_code
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (program : Prog α)
+    (result : PanValueFfiClockResult α σ)
+    (postState : PanSemState α (FfiState σ))
+    (heval : panSemEvaluateCodeStateWithPostState context primitive handler
+      bytesInWord state program = some (result, postState)) :
+    postState.code = state.code := by
+  unfold panSemEvaluateCodeStateWithPostState at heval
+  cases hresult : panSemEvaluateCodeState context primitive handler bytesInWord
+      state program with
+  | none => simp [hresult] at heval
+  | some evaluated =>
+      simp [hresult] at heval
+      rcases heval with ⟨rfl, rfl⟩
+      exact panSemCodeStateAfter_preserves_code state evaluated
+
 /-! Production-evaluator counterpart of the HOL `evaluate_def` Tick equation
     (`cakeml/pancake/semantics/panSemScript.sml:683-685`) over the production
     source-state evaluator: at clock zero the result is `TimeOut` with cleared

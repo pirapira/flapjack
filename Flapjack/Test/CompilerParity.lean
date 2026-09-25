@@ -8,6 +8,9 @@ import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanStructsCompileCorrect
 import Flapjack.Test.PanStructsValueValidityParity
+import Flapjack.Test.PanPropsShapeOfWfParity
+import Flapjack.Test.PanPropsEveryExpParity
+import Flapjack.Test.PanPropsExpsOfParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity
@@ -161,6 +164,7 @@ import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
+import Flapjack.Test.CrepSemStateExactParity
 import Flapjack.Test.CrepFuelCutoffParity
 import Flapjack.Test.PanToCrepGlobalsLookupParity
 import Flapjack.Test.PanToCrepCallExceptionParity
@@ -1028,6 +1032,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.SptreeOrderParity.runChecks,
     Flapjack.Test.CrepLocalsWordLabParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
+    Flapjack.Test.CrepSemStateExactParity.runChecks,
     Flapjack.Test.CrepFuelCutoffParity.runChecks,
     Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
     Flapjack.Test.CrepSemTotalCallParity.runChecks,

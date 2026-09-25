@@ -53,6 +53,7 @@ import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.StateExact
+import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
 import Flapjack.Pancake.Semantics.PanSem.DecExact
@@ -137,6 +138,7 @@ import Flapjack.CrepeSemantics
 import Flapjack.CrepeGlobalAddress
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepSem.LookupCode
+import Flapjack.Pancake.Semantics.CrepSem.StateExact
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepExceptionRelation
 import Flapjack.PanToCrepMaxList

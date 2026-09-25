@@ -10254,6 +10254,36 @@ def panToCrepClockResultRel {α σ : Type}
       targetEvent = event
   | _, _ => False
 
+/-! Compiler-generated function return destinations are a mapped `List.range`,
+so the target runtime's duplicate-destination guard follows from function
+metadata itself. -/
+private theorem allocatedNamesHOL_nodup
+    (context : PanToCrepHOLContext α) (shape : Shape) :
+    (allocatedNamesHOL context shape).Nodup := by
+  unfold allocatedNamesHOL
+  apply List.nodup_iff_pairwise_ne.mpr
+  exact (List.nodup_iff_pairwise_ne.mp
+      (List.nodup_range (n := Shape.shapeSize shape))).map
+    (fun offset => context.vmax + 1 + offset)
+    (by
+      intro left right hne heq
+      apply hne
+      omega)
+
+theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
+    (context : PanToCrepHOLContext α) (function : FunName)
+    (handler : Option (α × CrepProg α)) :
+    crepRuntimeCallInfoValid
+      (some (functionReturnNamesHOL context function, handler)) = true := by
+  cases hlookup : FLOOKUP context.funcs function with
+  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+  | some metadata =>
+      rcases metadata with ⟨_, shape⟩
+      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
+      apply decide_eq_true
+      exact (eraseDups_length_eq_iff_nodup _).2
+        (allocatedNamesHOL_nodup context shape)
+
 /-! Compose a production source Call with its recursive callee and handler
     simulation hypotheses for a matching raised payload of any supported shape.
     Both recursive source evaluations use the parent Call's canonical budget
@@ -10355,10 +10385,8 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
           { vars := context.vars, funcs := context.funcs,
             eids := context.eids, vmax := context.vmax }
           expression).2 = true)
-    (hinfoValid : crepRuntimeCallInfoValid
-      (some (destinations, some (caught,
-        .seq (expHdlFiniteMap context.vars handlerVariable)
-          (compileCodeRelProg context handlerProgram)))) = true)
+    (hdestinations : destinations =
+      functionReturnNamesHOL context.toHOLContext function)
     (hclock : caller.clock ≠ 0)
     (hmatch : (caught == exceptionCode) = true)
     :
@@ -10474,6 +10502,14 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       handlerResult.2.locals ∧
     panToCrepClockResultRel context sourceResult handlerResult := by
   intro sourceAfterCallee hsourceExceptionShape hcalleeTargetIH hhandlerIH
+  have hinfoValid : crepRuntimeCallInfoValid
+      (some (destinations, some (caught,
+        .seq (expHdlFiniteMap context.vars handlerVariable)
+          (compileCodeRelProg context handlerProgram)))) = true := by
+    rw [hdestinations]
+    exact crepRuntimeCallInfoValid_functionReturnNamesHOL context.toHOLContext function
+      (some (caught, .seq (expHdlFiniteMap context.vars handlerVariable)
+        (compileCodeRelProg context handlerProgram)))
   have hsourceExceptionShape' : source.exceptionShapes sourceException = some shape := by
     simpa [sourceAfterCallee] using hsourceExceptionShape
   have hsourceStructs := stateRel_structs source caller hinitialState
@@ -10717,36 +10753,6 @@ is tied to `functionReturnNamesHOL`; runtime call-info validity is derived from
 that metadata. The recursive body simulations remain induction premises, so
 this is a Call-case composition step, not the complete
 `pc_compile_correct[Call_Ret_Exception]` theorem. -/
-/-! Compiler-generated function return destinations are a mapped `List.range`,
-so the target runtime's duplicate-destination guard follows from function
-metadata itself. -/
-private theorem allocatedNamesHOL_nodup
-    (context : PanToCrepHOLContext α) (shape : Shape) :
-    (allocatedNamesHOL context shape).Nodup := by
-  unfold allocatedNamesHOL
-  apply List.nodup_iff_pairwise_ne.mpr
-  exact (List.nodup_iff_pairwise_ne.mp
-      (List.nodup_range (n := Shape.shapeSize shape))).map
-    (fun offset => context.vmax + 1 + offset)
-    (by
-      intro left right hne heq
-      apply hne
-      omega)
-
-theorem crepRuntimeCallInfoValid_functionReturnNamesHOL
-    (context : PanToCrepHOLContext α) (function : FunName)
-    (handler : Option (α × CrepProg α)) :
-    crepRuntimeCallInfoValid
-      (some (functionReturnNamesHOL context function, handler)) = true := by
-  cases hlookup : FLOOKUP context.funcs function with
-  | none => simp [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-  | some metadata =>
-      rcases metadata with ⟨_, shape⟩
-      simp only [crepRuntimeCallInfoValid, functionReturnNamesHOL, hlookup]
-      apply decide_eq_true
-      exact (eraseDups_length_eq_iff_nodup _).2
-        (allocatedNamesHOL_nodup context shape)
-
 theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     (sourceContext : PanValueFfiContext (RiscV.Word 64))
     (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))

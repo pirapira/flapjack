@@ -21,6 +21,21 @@ is used to state where the missing whole-program invariant must come from.
 Added while auditing Cake `evaluate_add_clock_eq` against the current
 clocked evaluator; see `flapjack-pxn.11` for the structural-fuel adequacy
 framework that the full shift invariant is gated on.
+
+Direct source review of `panPropsScript.sml:698` `evaluate_add_clock_eq` and
+`:724` `evaluate_clock_sub` (beads `flapjack-4ac.4.45` / `flapjack-4ac.4.46`)
+confirms there is no statement-exact Lean counterpart.  The HOL statements
+concern the exact `evaluate` relation over `panSem$state` with a `TimeOut`
+side condition and the `dec_clock`/`state_component_equality` theory; the
+clocked evaluator here (`PanValueFfiClockSemantics`) is a structural-fuel
+indexed function over a different state and value model, and only its
+clock-arithmetic core and selected `Tick`/`While` branches are proved.  A
+faithful port needs the exact `evaluate` dispatcher over the exact `eval` and
+the finite-support `panSem$state` carrier, tracked by
+`flapjack-pxn.18.3.7.1.3.1.1.2` (state) and `flapjack-pxn.18.3.5.8`
+(mlstring carriers), with the whole-program structural-fuel shift invariant
+under `flapjack-pxn.11`.  The lemmas below remain Flapjack-specific
+prerequisites, deliberately untagged.
 -/
 
 namespace Flapjack

@@ -88,6 +88,38 @@ example : ∃ holLocals productionLocals,
     (by decide)
     (by simp [panSemCodeArgumentsMatch, panValueShape, panShapeMatches])
 
+/-- A successful lookup made by the production Call path recovers the exact
+    HOL `lookup_code` locals without separate shape or duplicate-name inputs. -/
+example : ∃ holLocals,
+    panSemLookupStateCodeHOL (lookupState singleParameterCode) "id"
+      [.word (7 : Word64)] = some (.skip, holLocals, .one) ∧
+    ∀ name,
+      (lookupPanSemCodeCall [] singleParameterCode "id" [.word (7 : Word64)]
+        |>.map (fun entry => entry.2.2 name)) =
+      some ((FLOOKUP holLocals name).map HolValue.toPanValue) := by
+  have hentry : panSemCodeLookup singleParameterCode "id" =
+      some ([ ("x", Shape.one) ], .skip, Shape.one) := by
+    simp [singleParameterCode, panSemCodeLookup, lookupInfo]
+  have hproduction : lookupPanSemCodeCall [] singleParameterCode "id"
+      [.word (7 : Word64)] =
+      some (.skip, Shape.one,
+        updatePanValueMap (fun _ => none) "x" (.word (7 : Word64))) := by
+    simp [lookupPanSemCodeCall, singleParameterCode, panSemCodeLookup, lookupInfo,
+      panSemCodeArgumentsMatch, panValueShape, panShapeMatches,
+      bindPanValueParameters]
+  obtain ⟨holLocals, hhol, hlocals⟩ :=
+    panSemLookupStateCodeHOL_of_production_success
+      (lookupState singleParameterCode) "id" [.word (7 : Word64)]
+      [("x", Shape.one)] .skip Shape.one
+      (fun name => if name == "x" then some (.word (7 : Word64)) else none)
+      hentry hproduction
+  refine ⟨holLocals, hhol, ?_⟩
+  intro name
+  rw [hproduction]
+  simp only [Option.map_some]
+  congr 1
+  simpa [updatePanValueMap] using hlocals name
+
 def runChecks : IO Bool := do
   if observesSuccessfulLookup then IO.println "PASS lookup_code binds a word argument from state-owned code"
     else IO.println "FAIL lookup_code binds a word argument from state-owned code"

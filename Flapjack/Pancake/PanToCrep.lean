@@ -153,7 +153,7 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
-/-! Qualified port of `pan_to_crep$ret_var`
+/-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
     Clause-by-clause the HOL definition is
@@ -164,12 +164,13 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
     `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
 
-    The only carrier difference is that the production `Shape` `Named` field is
-    a Lean `String` (`StructName`) whereas HOL uses `mlstring`.  `ret_var`
-    never inspects or emits that name, so it is equality/map-key-only and the
-    narrow `names_as_string` qualifier records it; the shape name is not
-    byte-observable and needs no boundary witness. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def" (names_as_string := [name])]
+    The production `Shape.Named` payload is a Lean `String` (`StructName`),
+    whereas HOL uses `mlstring`. This function discards that payload. The
+    current `names_as_string` policy classifies observed equality/map-key uses
+    and byte-observable uses, not a discarded nested carrier; therefore this
+    analogue remains untagged pending an exact-carrier port or a reviewed
+    qualifier policy for discarded names. Direct HOL/Lean cases are retained
+    in `ret_var_probe.out` and `RetVarParity.lean`. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?

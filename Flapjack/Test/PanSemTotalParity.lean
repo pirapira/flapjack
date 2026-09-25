@@ -47,8 +47,12 @@ conditions, plus failed-load and non-word errors, against the same direct HOL
 oracle. The measure-driven fragment now also covers exact `Assign`, `Return`,
 and `Raise` cases against `pan_sem_total_fragment_stmt_probe.out`: bounded
 Return/Raise clear locals; oversized Return, missing or mismatched exception
-shape, and expression failures return Error without changing the state. These
-constructors remain an explicit fragment, not the full HOL `evaluate_def` port.
+shape, and expression failures return Error without changing the state. The
+recursive `Dec` cases use direct `dec_restores_locals` and `dec_shape_mismatch`
+rows in `pan_sem_e2e_probe.out`: the result is preserved and the shadowed local
+is restored after Return clears locals, while a shape mismatch returns Error
+with the input state. These constructors remain an explicit fragment, not the
+full HOL `evaluate_def` port.
 -/
 
 namespace Flapjack.Test.PanSemTotalParity
@@ -356,6 +360,13 @@ def totalExprIfNonwordLocal : PanSemExprIfFragmentRiscV64 :=
 def totalExprIfThenSeq : PanSemExprIfFragmentRiscV64 :=
   .seq totalExprIfAddTrue (.leaf .skip)
 
+def totalDecRestoresLocals : PanSemExprIfFragmentRiscV64 :=
+  .dec "x" .one (.const (BitVec.ofNat 64 9))
+    (.returnValue (.var .local "x"))
+
+def totalDecShapeMismatch : PanSemExprIfFragmentRiscV64 :=
+  .dec "x" .one (.rStruct []) (.leaf .skip)
+
 def totalExprIfFragmentGuard : Bool :=
   (match panSemEvaluateExprIfFragmentRiscV64 totalExprIfAddTrue totalSeqFragmentState with
    | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
@@ -371,6 +382,16 @@ def totalExprIfFragmentGuard : Bool :=
    | (some .error, state) =>
        state.clock == 5 && isWordOption 3 (state.locals "x") &&
          (match state.locals "y" with | some (.rStruct []) => true | _ => false)
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalDecRestoresLocals
+      (totalState 5) with
+   | (some (.returned (.word value)), state) =>
+       value == BitVec.ofNat 64 9 && state.clock == 5 &&
+         isWordOption 7 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64 totalDecShapeMismatch
+      (totalState 5) with
+   | (some .error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
    | _ => false)
 
 /-- The measure-driven implementation is checked against the same direct HOL
@@ -397,6 +418,16 @@ def totalExprIfFragmentMeasureGuard : Bool :=
   (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
       totalExprIfThenSeq totalSeqFragmentState with
    | (none, state) => state.clock == 4 && isWordOption 3 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalDecRestoresLocals (totalState 5) with
+   | (some (.returned (.word value)), state) =>
+       value == BitVec.ofNat 64 9 && state.clock == 5 &&
+         isWordOption 7 (state.locals "x")
+   | _ => false) &&
+  (match panSemEvaluateExprIfFragmentRiscV64ByMeasure
+      totalDecShapeMismatch (totalState 5) with
+   | (some .error, state) => state.clock == 5 && isWordOption 7 (state.locals "x")
    | _ => false)
 
 /-- A state whose global `g` is bound, for the global-assignment case. -/
@@ -714,6 +745,9 @@ def runChecks : IO Bool := do
   if totalSeqAssignReturnGuard && totalSeqRaiseStopGuard then
     IO.println "PASS panSem total Seq handles Return and Raise control outcomes"
   else IO.println "FAIL panSem total Seq handles Return and Raise control outcomes"
+  if totalExprIfFragmentGuard && totalExprIfFragmentMeasureGuard then
+    IO.println "PASS panSem total Dec restores shadowed locals and rejects shape mismatch against HOL"
+  else IO.println "FAIL panSem total Dec restores shadowed locals and rejects shape mismatch against HOL"
   pure totalGuard
 
 example :

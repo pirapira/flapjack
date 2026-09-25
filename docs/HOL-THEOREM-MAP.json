@@ -681,6 +681,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1HolWordBitsSourceWordLab",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width canonical Fin width -> Bool form of the complete source-evaluator result. This removes the arbitrary finite-index enumeration and has the local theorem's binders, success premise, code-only map update, n2w simplifier image, and Option word_lab equality. It remains untagged until the source evaluator/state encoding is identified with native HOL crepSem eval and finite maps."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrectHolFiniteWordSourceEvalClass",

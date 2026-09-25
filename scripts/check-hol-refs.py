@@ -310,7 +310,8 @@ def owning_structure_for_fields(
     return None
 
 
-ROUNDTRIP_RE = re.compile(r"\b(?:to|of)[A-Z][A-Za-z0-9_']*")
+TO_FUNCTION_RE = re.compile(r"\bto([A-Z][A-Za-z0-9_']*)")
+OF_FUNCTION_RE = re.compile(r"\bof([A-Z][A-Za-z0-9_']*)")
 
 
 def has_fmap_witness(
@@ -321,14 +322,16 @@ def has_fmap_witness(
     """Require the canonical finite-map translation witness in this module.
 
     The witness is named `holFmapAsFiniteSupportWitness`; its statement must
-    name the unique structure that owns every qualified field together with its
-    broad counterpart (another structure declared in the same module) or the
-    canonical `toX`/`ofX` roundtrip.  Lake checks the proof; this gate checks
+    name the unique structure that owns every qualified field and must express a
+    genuine kernel-proved roundtrip between that carrier and a broad counterpart,
+    i.e. it applies (or names) both a `toX` project and its `ofX`
+    reconstruction for the same `X` and states an equality or equivalence.  A
+    bare `State -> Broad -> State` arrow, or an unrelated counterpart mention,
+    is NOT a canonical witness.  Lake checks the proof; this gate checks
     presence and shape without hard-coding any one carrier module.
     """
     if not owning:
         return False
-    counterparts = {name for name in counterpart_names if name and name != owning}
     source = strip_lean_comments("\n".join(lines))
     pattern = re.compile(
         rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
@@ -340,9 +343,11 @@ def has_fmap_witness(
         statement = match.group("statement")
         if owning not in statement:
             continue
-        if any(name in statement for name in counterparts):
-            return True
-        if ROUNDTRIP_RE.search(statement):
+        if "=" not in statement and "\u2194" not in statement:
+            continue
+        projects = {m.group(1) for m in TO_FUNCTION_RE.finditer(statement)}
+        reconstructions = {m.group(1) for m in OF_FUNCTION_RE.finditer(statement)}
+        if projects & reconstructions:
             return True
     return False
 
@@ -356,7 +361,8 @@ def fmap_as_finite_support_errors(
     uses `HolFiniteMapExact`; a raw `α → Option β` lookup map is ineligible.
     All named fields must belong to ONE owning carrier structure, and the module
     must provide a canonical witness `holFmapAsFiniteSupportWitness` naming that
-    structure together with its broad counterpart or `toX`/`ofX` roundtrip.
+    structure and stating a real `toX`/`ofX` roundtrip with its broad
+    counterpart (a bare arrow or unrelated counterpart mention is rejected).
     """
     errors: list[str] = []
     if len(set(fields)) != len(fields):
@@ -386,8 +392,8 @@ def fmap_as_finite_support_errors(
     elif fields and not has_fmap_witness(lines, owning, members.keys()):
         errors.append(
             "fmap_as_finite_support has no same-module checked canonical witness "
-            "`holFmapAsFiniteSupportWitness` naming the owning structure and its "
-            "broad counterpart or `toX`/`ofX` roundtrip"
+            "`holFmapAsFiniteSupportWitness` naming the owning structure and "
+            "stating a real `toX`/`ofX` roundtrip with its broad counterpart"
         )
     return errors
 

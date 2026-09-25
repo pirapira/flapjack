@@ -194,8 +194,10 @@ be declared by ONE owning carrier structure in the same module, whose field
 types use `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
 ineligible, and fields split across several structures are rejected. The module
 must contain the checked canonical witness `holFmapAsFiniteSupportWitness`,
-whose statement names that owning structure together with its broad counterpart
-(another structure declared in the same module) or a `toX`/`ofX` roundtrip. The
+whose statement names that owning structure and states a real `toX`/`ofX`
+roundtrip between it and its broad counterpart (a bare `State -> Broad -> State`
+arrow, or an unrelated counterpart mention, is rejected; the broad counterpart
+need not be declared in the same module). The
 reference checker verifies field/owner/carrier/witness shape and Lake checks the
 proof; neither establishes HOL correspondence. The qualifier is a representation
 statement only: it does not authorize changed quantifiers, hypotheses,

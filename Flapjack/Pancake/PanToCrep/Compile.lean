@@ -104,19 +104,36 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- Source-shaped width-indexed counterpart (Flapjack-specific; NOT an exact HOL port) of `pan_to_crep$compile_exp_def`
-    (`cakeml/pancake/pan_to_crepScript.sml:39-101`).  HOL's `compile_exp` and
-    `context` are indexed by the word type `'a word`
-    (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
-    conditions; following the `loadShapeBytes` versus `loadShapeBytesW` standard
-    (`Flapjack/Pancake/CrepLang.lean:210-228`), the faithful statement fixes the
-    carrier to `BitVec width` with `[NeZero width]` and delegates to the generic
-    helper instantiated at that carrier. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the context `PanToCrepHOLContext`
--- keys `vars`/`funcs`/`eids` by `VarName`/`FunName`/`ExceptionId` = `String`, while
--- HOL `pan_to_crepScript.sml` keys them by `varname`/`funname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- WITHDRAWN HOL TAG, source-reviewed documented mismatch: this width-indexed
+    counterpart of `pan_to_crep$compile_exp_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:39-101`) is NOT an exact port. Its
+    clause structure matches HOL one-for-one, but the following carrier/typing
+    differences remain:
+    (1) HOL `compile_exp` and its `context` are indexed by the word type
+        `'a word` (`pan_to_crepScript.sml:10-16`) with HOL equality and no
+        typeclass side conditions, whereas the underlying `compileExpHOL` is
+        generic in `α` carrying `[BEq α] [OfNat α 0] [Add α]
+        [CrepBytesInWord α]`; the tag was on this delegation, whose body is that
+        generic compiler and whose `bytesInWord` case returns
+        `Const CrepBytesInWord.bytesInWord` rather than HOL's `bytes_in_word`
+        theory constant;
+    (2) the context `PanToCrepHOLContext α` keys `vars`/`funcs`/`eids` by
+        `VarName`/`FunName`/`ExceptionId` = `String` (HOL keys them by
+        `varname`/`funname`/`eid` = `mlstring`);
+    (3) `Exp α`/`Shape` are the production carriers with `Named : String`
+        (HOL uses `'a panLang$exp`/`shape` with `Named : mlstring`);
+    (4) the compiled output is the production `CrepExp α`/`CrepProg α` family.
+    `names_as_string` cannot authorize the added typeclass side conditions, the
+    `CrepBytesInWord` stride abstraction, or the `Exp`/`Shape` production
+    carriers (the identifier keys themselves are map-key-only equality uses),
+    and no `NameRanged` byte witness applies: the output is a compiled
+    expression list paired with a shape. Direct HOL-EVAL rows are recorded in
+    `scripts/hol-probes/compile_exp_probe.out` and reproduced by
+    `Flapjack/Test/CompileExpParity.lean` (including through this
+    `compileExpHOLW` at the `BitVec 64` carrier). A faithful exact-carrier port
+    over `ExpHOL`/`ShapeHOL`/`CrepExpHOL width` is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; the exact
+    `compile_def` dependency path is `flapjack-pxn.18.3.5.8.13`). -/
 def compileExpHOLW {width : Nat} [NeZero width]
     (context : PanToCrepHOLContext (BitVec width)) :
     Exp (BitVec width) → List (CrepExp (BitVec width)) × Shape :=

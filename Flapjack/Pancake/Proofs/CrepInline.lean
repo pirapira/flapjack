@@ -416,6 +416,119 @@ theorem FOLDL_res_var_ZIP_lookup [BEq α] [LawfulBEq α] (l l' l1 : FiniteMap α
   rw [OPT_MMAP_ALL_EQ (FLOOKUP l1) (FLOOKUP l) xs hpt]
   exact h
 
+/-! ## HOL-equality (`=`) forms of the `res_var` cluster
+
+FLAPJACK-SPECIFIC (not exact HOL ports).  The HOL declarations below quantify
+the key type freely and use propositional equality; `DecidableEq` is Lean's
+encoding of HOL `=`, so the `FUPDATE_HOL`/`FDOMSUB_HOL`/`resVarHOL` forms below
+remove the `BEq`/`LawfulBEq` side conditions of the production forms.  They are
+still NOT exact HOL ports, because they quantify Lean's raw function carrier
+`FiniteMap α β := α → Option β` (`Flapjack/FiniteMap/Basic.lean:19`), which
+admits infinite-support inhabitants, whereas HOL `α |-> β` is finite-support.
+`DecidableEq` alone does not repair that: the statements still range over
+functions HOL cannot represent.  A faithful port must quantify
+`HolFiniteMapExact α β` (`Flapjack/Pancake/Semantics/CrepSem/HOLState.lean`),
+which now provides `update`/`updateList`/`erase`/`resVar` and their lookup
+lemmas; that port is tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.3.1`.  The
+`_hol` declarations are kept as untagged infrastructure only. -/
+
+theorem submap_imp_fupdate_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FUPDATE_HOL f (x, y)) (FUPDATE_HOL g (x, y)) := by
+  intro n v hn
+  simp only [FUPDATE_HOL] at hn ⊢
+  by_cases hxn : n = x
+  · simp [hxn] at hn ⊢
+    exact hn
+  · simp [hxn] at hn ⊢
+    exact h n v hn
+
+theorem submap_imp_domsub_submap_hol {κ : Type} {β : Type} [DecidableEq κ]
+    (f g : κ → Option β) (x : κ) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB_HOL f x) (FDOMSUB_HOL g x) := by
+  intro n v hn
+  simp only [FDOMSUB_HOL] at hn ⊢
+  by_cases hxn : n = x
+  · simp [hxn] at hn
+  · simp [hxn] at hn ⊢
+    exact h n v hn
+
+theorem submap_imp_domsub_fupdate_hol {κ : Type} {β : Type} [DecidableEq κ]
+    (f g : κ → Option β) (x : κ) (y : β) (h : crepHolSubmap f g) :
+    crepHolSubmap (FDOMSUB_HOL f x) (FUPDATE_HOL g (x, y)) := by
+  intro n v hn
+  simp only [FDOMSUB_HOL, FUPDATE_HOL] at hn ⊢
+  by_cases hxn : n = x
+  · simp [hxn] at hn
+  · simp [hxn] at hn ⊢
+    exact h n v hn
+
+theorem res_var_commutes_strong_hol {α : Type} {β : Type} [DecidableEq α]
+    (lc lc' : FiniteMap α β) (n h : α) :
+    resVarHOL (resVarHOL lc (h, FLOOKUP lc' h)) (n, FLOOKUP lc' n) =
+      resVarHOL (resVarHOL lc (n, FLOOKUP lc' n)) (h, FLOOKUP lc' h) := by
+  by_cases hne : n = h
+  · subst hne
+    rfl
+  · exact resVarHOL_commutes lc lc' n h hne
+
+theorem res_var_foldl_commutes_strong_hol {α : Type} {β : Type} [DecidableEq α]
+    (h : α) (vs : List α) (lc1 lc2 : FiniteMap α β) :
+    resVarHOL ((vs.zip (vs.map (FLOOKUP lc2))).foldl resVarHOL lc1)
+        (h, FLOOKUP lc2 h) =
+      (vs.zip (vs.map (FLOOKUP lc2))).foldl resVarHOL
+        (resVarHOL lc1 (h, FLOOKUP lc2 h)) := by
+  induction vs generalizing lc1 with
+  | nil => simp
+  | cons v vs ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [ih (resVarHOL lc1 (v, FLOOKUP lc2 v)),
+        (res_var_commutes_strong_hol lc1 lc2 v h).symm]
+
+theorem flookup_res_var_is_mem_zip_eq_hol {α : Type} {β : Type} [DecidableEq α]
+    (xs : List α) (x : α) (lc1 lc2 : FiniteMap α β) (hx : x ∈ xs) :
+    FLOOKUP ((xs.zip (xs.map (FLOOKUP lc2))).foldl resVarHOL lc1) x =
+      FLOOKUP lc2 x := by
+  induction xs with
+  | nil => simp at hx
+  | cons a as ih =>
+      simp only [List.map_cons, List.zip_cons_cons, List.foldl_cons]
+      rw [← res_var_foldl_commutes_strong_hol a as lc1 lc2, FLOOKUP_resVarHOL]
+      rcases List.mem_cons.mp hx with hxa | hxas
+      · subst hxa
+        simp
+      · by_cases hxea : x = a
+        · subst hxea
+          simp
+        · rw [if_neg hxea]
+          exact ih hxas
+
+theorem foldl_res_var_zip_lookup_var_hol {α : Type} {β : Type} [DecidableEq α]
+    (l l' l1 : FiniteMap α β) (ns : List α) (x : α) (v : β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVarHOL l) l1)
+    (hv : FLOOKUP l x = some v) (hx : x ∉ ns) :
+    FLOOKUP l1 x = some v := by
+  apply hsub x v
+  change FLOOKUP ((ns.zip (ns.map (FLOOKUP l'))).foldl resVarHOL l) x = some v
+  rw [FLOOKUP_foldl_resVarHOL_zip_not_mem ns (ns.map (FLOOKUP l')) l x
+    (by simp [List.length_map]) hx]
+  exact hv
+
+theorem foldl_res_var_zip_lookup_hol {α : Type} {β : Type} [DecidableEq α]
+    (l l' l1 : FiniteMap α β) (ns xs : List α) (vs : List β)
+    (hsub : crepHolSubmap ((ns.zip (ns.map (FLOOKUP l'))).foldl resVarHOL l) l1)
+    (h : xs.mapM (FLOOKUP l) = some vs)
+    (hx : ∀ x, x ∈ xs → x ∉ ns) :
+    xs.mapM (FLOOKUP l1) = some vs := by
+  have hpt : ∀ x, x ∈ xs → FLOOKUP l1 x = FLOOKUP l x := by
+    intro x hxmem
+    obtain ⟨y, hy⟩ := (OPT_MMAP_SOME_ALL (FLOOKUP l) xs).mp ⟨vs, h⟩ x hxmem
+    have hfl : FLOOKUP l1 x = some y :=
+      foldl_res_var_zip_lookup_var_hol l l' l1 ns x y hsub hy (hx x hxmem)
+    rw [hfl, hy]
+  rw [OPT_MMAP_ALL_EQ (FLOOKUP l1) (FLOOKUP l) xs hpt]
+  exact h
+
 /-- CakeML's `locals_rel` (`crep_inlineProofScript.sml:26`):
     `s.locals SUBMAP t.locals`. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type, while HOL

@@ -40,6 +40,11 @@ commit, verification results, or exact blocked reason on the bead, and notify
 the coordinator. Keep dependency beads open until their own acceptance criteria
 are met.
 
+For an executable HOL definition, landing a tagged proof-side duplicate is
+partial progress: keep its inventory bead open until the executed compiler
+uses the reviewed definition, or a documented, measured performance exception
+is in place. Record the remaining production-path work on a linked bead.
+
 Maintain one fleet integration PR. Agents push their own branches but do not
 open separate PRs; the coordinator merges reviewed work into the integration
 branch. Merge the updated integration branch back into agent branches with

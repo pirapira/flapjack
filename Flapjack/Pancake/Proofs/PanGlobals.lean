@@ -834,12 +834,17 @@ theorem resort_decls_preserve_functions (declarations : List (Decl α)) :
     with filtering to the function declarations. HOL `fperm_decs` is the
     production `globalRenameDecls` and HOL `FILTER is_function` is Lean
     `globalDeclsFilter globalDeclIsFunction`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides the identifier-carrier
+-- difference (production `FunName`/`VarName`/`ExceptionId`/`StructName`/`DeclarationName`
+-- are `String`, whereas HOL keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`),
+-- the statement ranges over production `Decl α`, whose `Const : α` and
+-- `Prog α`/`Exp α` payloads generalise HOL's word-indexed `'a decl`
+-- (`exp = Const ('a word)`, `panLangScript.sml`). The `names_as_string`
+-- qualifier cannot cover that expression/program value-index difference while
+-- the compiled functions `globalRenameDecls`/`globalDeclsFilter` keep their
+-- production carriers. The exact MlString identifier carrier is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`) and the
+-- exact-carrier production transformation by `flapjack-6nn.3.1`.
 theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :
     globalRenameDecls source target

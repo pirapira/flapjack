@@ -1869,7 +1869,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "globalCompileTopCake_shapes_wf_nil",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex source review against pan_globalsProofScript.sml:2495-2504: HOL premises are evaluate_decls s code = SOME s', s.structs = [], and EVERY admissible-constructor check; conclusion is one EVERY predicate over compile_top code start. Lean has the corresponding success, empty-struct, and admissibility premises, but its conclusion is membership in globalCompileTopCake plus an equality test per function output, not the HOL conclusion shape. Its Decl/FunDecl/Shape/state names are also String-backed, while HOL uses mlstring. Keep untagged as documented_mismatch; flapjack-pxn.18.3.5.8 tracks exact MlString carriers. The current Lean statement fixture is not a direct HOL oracle regression; a faithful retarget needs the reviewed compile_top definition and direct source rows."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

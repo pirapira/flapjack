@@ -436,4 +436,64 @@ def raiseStub {α : Type} (perf : Bool) (k : Nat) : ProgM α :=
 def storeConstsStub {α : Type} (k : Nat) : ProgM α :=
   .seq (.storeConsts k (k + 1) none) (.ret 0)
 
+/-- Exact port of HOL `wShareInst_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:186-224`):
+
+```
+(wShareInst Load   v (Addr ad offset) kf =
+   let (l,n2) = wReg1 ad kf in
+     wStackLoad l (wRegWrite1 (\r. ShMemOp Load r (Addr n2 offset)) v kf)) /\
+  ... Load8/Load16/Load32 likewise ...
+(wShareInst Store  v (Addr ad offset) kf =
+   let (l1,n2) = wReg1 ad kf in
+   let (l2,n1) = wReg2 v kf in
+     wStackLoad (l1 ++ l2) (ShMemOp Store n1 (Addr n2 offset))) /\
+  ... Store8/Store16/Store32 likewise ...
+```
+
+    Splits the shared-memory address register through `wReg1` (and, for stores,
+    the stored value through `wReg2`), spilling through `wStackLoad`.  HOL is
+    polymorphic in the stack word type `'a`, so this is generic in `α` over the
+    exact shared-word carrier `ProgM α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wShareInst_def"]
+def wShareInst {α : Type} (op : WordMemOp) (v : Nat)
+    (address : WordLangAddr α) (kf : Nat × Nat × Nat) : ProgM α :=
+  match op, address with
+  | .load, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load r (.addr l.2 offset)) v kf)
+  | .load8, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load8 r (.addr l.2 offset)) v kf)
+  | .load16, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load16 r (.addr l.2 offset)) v kf)
+  | .load32, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load32 r (.addr l.2 offset)) v kf)
+  | .store, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store l2.2 (.addr l1.2 offset))
+  | .store8, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store8 l2.2 (.addr l1.2 offset))
+  | .store16, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store16 l2.2 (.addr l1.2 offset))
+  | .store32, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store32 l2.2 (.addr l1.2 offset))
+
 end Flapjack.Compiler.Backend.WordToStackRegFormat

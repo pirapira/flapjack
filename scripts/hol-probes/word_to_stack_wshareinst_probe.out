@@ -1,0 +1,8 @@
+ws_load=T
+ws_load8=T
+ws_load16=T
+ws_load32=T
+ws_store=T
+ws_store8=T
+ws_store16=T
+ws_store32=T

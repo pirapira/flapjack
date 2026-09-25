@@ -41,9 +41,10 @@ abbrev MlStringHOL := Flapjack.Basis.Pure.MlString.MlString
     `HolWordLab width`, `List (ValueHOL width)`, `List (MlStringHOL × ValueHOL width)`
     match the HOL datatype (`Val ('a word_lab)`, `RStruct (v list)`,
     `NStruct stcname ((fldname # v) list)`).  Like production `PanValue` it
-    derives only `Repr`. -/
+    derives only `Repr`.  The `[NeZero width]` binder matches HOL's positive
+    `dimindex`; the payload `HolWordLab` is the (tag-withheld) generic carrier. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
-inductive ValueHOL (width : Nat) where
+inductive ValueHOL (width : Nat) [NeZero width] where
   | val (value : HolWordLab width)
   | rStruct (fields : List (ValueHOL width))
   | nStruct (name : MlStringHOL) (fields : List (MlStringHOL × ValueHOL width))
@@ -53,7 +54,7 @@ inductive ValueHOL (width : Nat) where
     `flatten (Val w) = [w]`, `flatten (RStruct vs) = FLAT (MAP flatten vs)`,
     `flatten (NStruct nm flds) = FLAT (MAP flatten (MAP SND flds))`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "flatten_def"]
-def flattenHOL {width : Nat} : ValueHOL width → List (HolWordLab width)
+def flattenHOL {width : Nat} [NeZero width] : ValueHOL width → List (HolWordLab width)
   | .val value => [value]
   | .rStruct fields => (fields.map flattenHOL).flatten
   | .nStruct _ fields => (fields.map (fun pair => flattenHOL pair.2)).flatten

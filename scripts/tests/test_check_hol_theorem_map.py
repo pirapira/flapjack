@@ -356,6 +356,23 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_simp_functions_eq_filter_map_arb_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/PanSimp.lean", "functions_eq_filterMap")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "functions_eq_FILTER"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("ARB", record["reviewer"])
+        self.assertIn("flapjack-4ac.4.109", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

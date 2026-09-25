@@ -505,7 +505,8 @@ def excpRel
       FLOOKUP compilerCodes exception' = some code' →
       code = code' → exception = exception'
 
-/-! ### Exact HOL `get_eids_imp_excp_rel`
+/-! ### HOL `get_eids_imp_excp_rel` (Flapjack-specific; tag withdrawn since
+    `flapjack-pxn.18.3.5.7.2`)
 
     Flapjack-specific list support for the port below: membership in a zip
     yields aligned indices (HOL `MEM_ZIP`). -/
@@ -545,7 +546,7 @@ theorem bitVecOfNat_inj {width i j : Nat} (hi : i < 2 ^ width) (hj : j < 2 ^ wid
     simpa [BitVec.toNat_ofNat] using this
   rwa [Nat.mod_eq_of_lt hi, Nat.mod_eq_of_lt hj] at hmod
 
-/-- Flapjack-specific unfolding of the tagged `get_eids_from_decls` port. -/
+/-- Flapjack-specific unfolding of the `get_eids_from_decls`-shaped port (currently untagged). -/
 theorem panToCrepGetEidsFromDeclsHOL_eq (declarations : List (Decl (BitVec width))) :
     panToCrepGetEidsFromDeclsHOL declarations =
       FUPDATE_LIST FEMPTY
@@ -2002,7 +2003,7 @@ def PanToCrepProofContext.toHOLContext (context : PanToCrepProofContext α) :
   { vars := context.vars, funcs := context.funcs, eids := context.eids,
     vmax := context.vmax }
 
-/-- `compileProgRiscV` is the tagged HOL `compile_def` compiler applied to a
+/-- `compileProgRiscV` is the `compile_def`-shaped HOL compiler (untagged since `flapjack-pxn.18.3.5.7.2`) applied to a
     `PanToCrepHOLContext`; it is definitionally the generic `compileProgHOL`
     on the same context. -/
 theorem compileProgRiscV_eq_compileProgHOL
@@ -2011,7 +2012,7 @@ theorem compileProgRiscV_eq_compileProgHOL
     compileProgRiscV context program = compileProgHOL context program := rfl
 
 /-- The proof-side compiler expression `compileCodeRelProg` is exactly the
-    tagged HOL `compile_def` compiler (`compileProgRiscV`) on the bridged
+    `compile_def`-shaped compiler (`compileProgRiscV`, untagged) on the bridged
     context, for EVERY proof context, not only declaration-derived ones. -/
 theorem compileCodeRelProg_eq_compileProgRiscV
     (context : PanToCrepProofContext (BitVec width))
@@ -2027,11 +2028,11 @@ theorem compileCodeRelProg_eq_compileProgRiscV
     context with `ctxt_fc`.
 
     This declaration is intentionally untagged: it is generic in the word
-    element type `α`, while the tagged `compile_def` port is the RISC-V
+    element type `α`, while the `compile_def`-shaped RISC-V
     specialization `compileProgRiscV`. The bridge
     `compileCodeRelProg_eq_compileProgRiscV` (with
     `compileProgRiscV_eq_compileProgHOL`) proves that `compileCodeRelProg` is
-    definitionally the tagged compiler for EVERY proof context at `BitVec
+    definitionally that compiler for EVERY proof context at `BitVec
     width`, not only declaration-derived ones, so the only remaining gap to an
     exact HOL `code_rel_def` tag is the width-indexing of this relation
     (tracked in the Exp/word-indexing migration beads) - not the compiler
@@ -2056,8 +2057,8 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 
 /-- Width-indexed proof-side `code_rel` interface: the HOL reference is
     word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
-    so this width-indexed form makes the compiler expression the tagged
-    `compileProgRiscV` (`compile_def`) boundary. The generic `codeRel` is its
+    so this width-indexed form makes the compiler expression the
+    `compileProgRiscV` (`compile_def`-shaped) boundary. The generic `codeRel` is its
     `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
 -- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
@@ -2205,12 +2206,12 @@ theorem compileToCrepHOL_eq_map
     `comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code)
     [] prog`.  `List.lookup` on the nested-pair triple list is HOL's `ALOOKUP`.
 
-    Tagged counterparts used here: `compileToCrepHOL` (`compile_to_crep_def`),
+    Source-shaped counterparts used here (all currently untagged since the
+    `flapjack-pxn.18.3.5.7.2` String-carrier withdrawal): `compileToCrepHOL` (`compile_to_crep_def`),
     `panToCrepVars` (`crep_vars_def`), `panToCrepGetEidsFromDeclsHOL`
     (`get_eids_from_decls_def`), `panToCrepMkCtxtHOL` (`mk_ctxt_def`),
     `panToCrepMakeVmapHOL` (`make_vmap_def`) and `compileProgRiscV`
-    (`compile_def`).  Two helpers are deliberate untagged adapters and are NOT
-    tagged counterparts:
+    (`compile_def`).  Two further helpers are deliberate untagged adapters:
     * `functionInfosHOL` computes the HOL finite-map value
       `alist_to_fmap (make_funcs (functions pan_code))`: `panToCrepMakeFuncs`
       produces the same source-order `(name, (params, return))` list as HOL
@@ -2218,7 +2219,7 @@ theorem compileToCrepHOL_eq_map
       (`FOLDR FUPDATE FEMPTY`, first duplicate wins);
     * `panToCrepCompFuncRiscV` is `comp_func` after threading the context as a
       record: it reads `context.funcs`/`context.eids` instead of HOL's separate
-      `fs`/`eids` arguments and applies the tagged `compile_def` to the tagged
+      `fs`/`eids` arguments and applies the `compile_def`-shaped compiler to the
       `mk_ctxt_def`/`make_vmap_def`. No HOL side condition or body step is
       dropped.  The HOL-vs-Lean equivalence of the statement is not proved by
       this theorem: the theorem is a within-Lean lookup fact, and the HOL
@@ -2324,7 +2325,7 @@ theorem makeFuncsHOL_lookup_of_lookup
 /-- General form of the compiled-function lookup: a source entry with
     parameters `vshs` and body `prog` is compiled to the entry whose argument
     slots are `crep_vars vshs` and whose body is `comp_func ... vshs prog`.
-    This is the parameter-general companion of the tagged
+    This is the parameter-general companion of the
     `alookupCompileToCrepCode`; HOL discharges it inside
     `mk_ctxt_code_imp_code_rel` rather than as a separate theorem, so it
     deliberately carries no `@[hol]` tag. -/
@@ -2442,8 +2443,8 @@ theorem codeRel_of_codeRelW (width : Nat)
     codeRel context sourceCode targetCode :=
   (codeRelW_iff_codeRel width context sourceCode targetCode).mp h
 
-/-- The `mk_ctxt` initial-context code relation in the width-indexed exact HOL
-    `code_rel_def` form (`codeRelW`), derived from the existing tagged
+/-- The `mk_ctxt` initial-context code relation in the width-indexed HOL
+    `code_rel_def`-shaped form (`codeRelW`, currently untagged), derived from the existing
     `mk_ctxt_code_imp_code_rel` port via `codeRelW_iff_codeRel`. This is the
     relation used at the start of the full `pc_compile_correct` statement. -/
 theorem mkCtxtCodeImpCodeRelW [NeZero width] (declarations : List (Decl (BitVec width)))

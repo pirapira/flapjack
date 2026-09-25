@@ -308,8 +308,11 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     represent. The direct rows `upd_locals_replace` and
     `locals_upd_locals_cells` pin update behavior only; they do not close this
     state-carrier gap. The source-shaped `CrepSemHOLState` now has finite
-    support, but its `upd_locals` helper and bridge to this executable state
-    remain in `flapjack-pxn.18.3.7.1.3.1.1.3.1.1`. The tag withdrawn by
+    support, and its `upd_locals` helper plus kernel-checked bridge to this
+    executable state live in `CrepSem/HOLState.lean`
+    (`CrepSemHOLState.updLocals`, `toBitVecEvaluatorState_updLocals`); they stay
+    untagged there because the word index is the positive `BitVec width`
+    representation rather than an arbitrary HOL `finite_index`. The tag withdrawn by
     `flapjack-pxn.18.3.7.1.3.1.1.3` therefore remains withheld here. -/
 def updCrepHolLocalsW {width : Nat} [NeZero width] {σ : Type}
     (varargs : List (Nat × PanWordLab (BitVec width)))

@@ -48,13 +48,11 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertNotIn(key, inventory)
 
-    def test_compile_prog_exact_ports_are_in_review_inventory(self):
+    def test_compile_prog_withdrawal_and_exact_proof_are_in_review_inventory(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
-        # compileProgTopHOL's String-keyed compile_prog_def tag was withdrawn
-        # (flapjack-pxn.18.3.5.7.2.10), so it is no longer a reviewed exact port.
         self.assertNotIn(
             ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
             inventory,
@@ -126,31 +124,35 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     inventory[key]["reviewer"], "Codex (source comparison)"
                 )
 
-    def test_locals_rel_lookup_ctxt_is_documented_mismatch_not_exact(self):
+    def test_locals_rel_lookup_ctxt_withdrawal_is_recorded(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt")
+        self.assertIsNone(inventory[key]["hol_name"])
+        self.assertEqual(inventory[key]["statement_status"],
+                         "no_hol_reference_pending_classification")
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
-        record = next(
-            r
-            for r in manifest
-            if r["lean_path"] == "Flapjack/Pancake/Proofs/PanToCrep.lean"
-            and r["lean_name"] == "localsRelLookupCtxt"
-        )
-        # The String-keyed locals_rel_lookup_ctxt tag was withdrawn
-        # (flapjack-pxn.18.3.5.7.2.12); the record stays as documented_mismatch.
-        self.assertEqual(record["statement_status"], "documented_mismatch")
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
         self.assertEqual(record["hol_name"], "locals_rel_lookup_ctxt")
-        self.assertTrue(record["reviewer"])
-
-    def test_compile_exp_not_mem_load_glob_is_documented_mismatch_not_exact(self):
-        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
-        record = next(
-            r
-            for r in manifest
-            if r["lean_path"] == "Flapjack/Pancake/Proofs/PanToCrep.lean"
-            and r["lean_name"] == "compileExpNotMemLoadGlob"
-        )
         self.assertEqual(record["statement_status"], "documented_mismatch")
+
+    def test_compile_exp_not_mem_load_glob_withdrawal_is_recorded(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "compileExpNotMemLoadGlob")
+        self.assertIsNone(inventory[key]["hol_name"])
+        self.assertEqual(inventory[key]["statement_status"],
+                         "no_hol_reference_pending_classification")
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
         self.assertEqual(record["hol_name"], "compile_exp_not_mem_load_glob")
-        self.assertTrue(record["reviewer"])
+        self.assertEqual(record["statement_status"], "documented_mismatch")
 
 
 class ValidateInventoryTest(unittest.TestCase):

@@ -2747,6 +2747,36 @@ theorem crepSimpExpCorrect1Load32HolFiniteWordSourceCase
   simp [crepArithHolFiniteDimensionMapCode]
   rfl
 
+/-! This source-evaluator constructor equation uses the exact Load32 primitive
+    bridge in `CrepSem.Eval`: after the recursive address succeeds, the
+    source-shaped Crep clause is precisely the imported HOL `mem_load_32`
+    definition with its `word32` result widened to the expression carrier.
+    It remains Flapjack adapter infrastructure because the enclosing explicit
+    finite-index evaluator has not yet been identified with native HOL
+    `crepSem$eval` as a whole. -/
+theorem evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression = some address) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.load32 addressExpression)).map (holWordToBitVec dimension) =
+    (panMemLoad32HOL
+      (fun bitAddress =>
+        ((CrepHolState.toHolFiniteBitVecState dimension state).memory
+          bitAddress).toHolWordLab)
+      (fun bitAddress =>
+        (CrepHolState.toHolFiniteBitVecState dimension state).memaddrs
+          bitAddress = true)
+      state.bigEndian (holWordToBitVec dimension address)).map
+        (fun value => BitVec.ofNat dimension.width value.toNat) := by
+  simp only [evalCrepHolFiniteWordSourceExp, hAddress]
+  exact crepHolEvalMemLoad32_source_eq_panMemLoad32HOL dimension
+    (bitVecToHolWord dimension
+      (BitVec.ofNat dimension.width (dimension.width / 8)))
+    state address
+
 /-! The byte-load case follows the same recursive address argument. It remains
     untagged because its explicit `byteAlign`/`getByte` source model has not
     been proved equal to native HOL `mem_load_byte` for every finite_index

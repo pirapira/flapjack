@@ -153,14 +153,23 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
-/-! Flapjack-specific analogue of `pan_to_crep$ret_var`
+/-! Qualified port of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
-    A return variable exists only for a one-word shape.  Pancake's `oHD`
-    operation supplies the first flattened destination when one is present.
-    This declaration consumes production `Shape`, whose `Named` field is a
-    Lean `String`; HOL's shape uses an `mlstring` name. The equations mirror
-    HOL, but the input carrier differs, so this declaration is untagged. -/
+    Clause-by-clause the HOL definition is
+    `ret_var One ns = oHD ns`,
+    `ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE`,
+    `ret_var (Named sh) ns = NONE` (comment "should never happen").
+    `oHD` (`HOL/src/list/src/listScript.sml:5474`, `oHD l = case l of [] => NONE
+    | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
+    `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
+
+    The only carrier difference is that the production `Shape` `Named` field is
+    a Lean `String` (`StructName`) whereas HOL uses `mlstring`.  `ret_var`
+    never inspects or emits that name, so it is equality/map-key-only and the
+    narrow `names_as_string` qualifier records it; the shape name is not
+    byte-observable and needs no boundary witness. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def" (names_as_string := [name])]
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?

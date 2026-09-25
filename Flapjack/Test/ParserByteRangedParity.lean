@@ -155,5 +155,45 @@ example (ofInt : Int → BitVec 64) (fuel : Nat)
     ExpByteRanged r :=
   convAccessors_byteRanged ofInt fuel [] (by simp) acc hacc r h
 
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e)
+    (trees : List ParseTree) (ht : ∀ t ∈ trees, ParseTreeByteRanged t)
+    (es : List (Flapjack.Exp (BitVec 64)))
+    (h : convExpList ofInt fuel trees = some es) :
+    ∀ e ∈ es, ExpByteRanged e :=
+  convExpList_byteRanged ofInt fuel hH trees ht es h
+
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e)
+    (left opTree right : ParseTree)
+    (hl : ParseTreeByteRanged left) (ho : ParseTreeByteRanged opTree)
+    (hr : ParseTreeByteRanged right)
+    (e : Flapjack.Exp (BitVec 64))
+    (h : convComparison ofInt fuel left opTree right = some e) :
+    ExpByteRanged e :=
+  convComparison_byteRanged ofInt fuel hH left opTree right hl ho hr e h
+
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e)
+    (acc : Flapjack.Exp (BitVec 64)) (hacc : ExpByteRanged acc) :
+    ∀ r, convPanops ofInt fuel [] acc = some r → ExpByteRanged r :=
+  convPanops_byteRanged ofInt fuel hH [] (by simp) acc hacc
+
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e)
+    (acc : Flapjack.Exp (BitVec 64)) (hacc : ExpByteRanged acc) :
+    ∀ r, convShifts ofInt fuel [] acc = some r → ExpByteRanged r :=
+  convShifts_byteRanged ofInt fuel hH [] (by simp) acc hacc
+
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (hH : ∀ g, g ≤ fuel → ∀ t, ParseTreeByteRanged t →
+      ∀ e, convExp ofInt g t = some e → ExpByteRanged e)
+    (acc : Flapjack.Exp (BitVec 64)) (hacc : ExpByteRanged acc) :
+    ∀ r, convBinaryExps ofInt fuel [] acc = some r → ExpByteRanged r :=
+  convBinaryExps_byteRanged ofInt fuel hH [] (by simp) acc hacc
 
 end Flapjack.Test.ParserByteRangedParity

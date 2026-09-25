@@ -1613,3 +1613,15 @@ run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
 run_probe pan_sem_mem_store_32_probeScript.sml pan_sem_mem_store_32_probe.out \
   ms32_aligned ms32_other_cell \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The result probe observes the exact panSem result constructor shapes.
+run_probe pan_sem_result_probeScript.sml pan_sem_result_probe.out \
+  res_error res_distinct \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The panSem mem_store/mem_stores probe observes in-domain replacement, pointwise
+# preservation of other cells, out-of-domain failure, the bytes_in_word stride (8w
+# for 64-bit words), the empty list, and a later-list store failure.
+run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
+  ms_hit_lookup mss_second_miss \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

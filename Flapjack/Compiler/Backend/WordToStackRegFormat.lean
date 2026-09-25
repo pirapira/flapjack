@@ -224,10 +224,13 @@ copy_ret perf is_handle (k,f,f') vs kont =
 ```
 
     over the exact shared-word carrier `ProgM α`; `num_stack_ret`,
-    `handler_slots` and `seq_stack_free` are the already-ported helpers. -/
+    `handler_slots` and `seq_stack_free` are the already-ported helpers.
+    HOL is polymorphic in the return-value list: `num_stack_ret k vs` only
+    measures `LENGTH vs`, so `vs : List β` is an INDEPENDENT carrier from the
+    `ProgM α` carrier of `kont`, matching the exact HOL statement. -/
 @[hol "cakeml/compiler/backend/word_to_stackScript.sml" "copy_ret_def"]
-def copyRet {α : Type} (perf isHandle : Bool) (kf : Nat × Nat × Nat)
-    (vs : List α) (kont : ProgM α) : ProgM α :=
+def copyRet {α β : Type} (perf isHandle : Bool) (kf : Nat × Nat × Nat)
+    (vs : List β) (kont : ProgM α) : ProgM α :=
   let n := Flapjack.Compiler.Backend.WordToStack.numStackRet kf.1 vs
   if n = 0 then kont
   else

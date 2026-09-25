@@ -251,4 +251,15 @@ example {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
   convNonRecStmt_byteRanged ofInt fuel _
     (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) p h
 
+/-- Location-annotation wrapping preserves byte-rangedness of a program. -/
+example {width : Nat} (locations : Bool) (tree : ParseTree)
+    (program : Flapjack.Prog (BitVec width)) (hp : ProgByteRanged program) :
+    ProgByteRanged (addLocsAnnot locations tree program) :=
+  addLocsAnnot_byteRanged locations tree hp
+
+/-- A shape converted to its value expression is byte-ranged. -/
+example {width : Nat} (ofInt : Int → BitVec width) (shape : Flapjack.Shape)
+    (hs : ShapeByteRanged shape) : ExpByteRanged (Flapjack.Parser.shapeVal ofInt shape) :=
+  shapeVal_byteRanged ofInt shape hs
+
 end Flapjack.Test.ParserByteRangedParity

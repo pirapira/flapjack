@@ -450,4 +450,31 @@ theorem all_distinct_el_fst_same_eq {α β : Type} (xs : List (α × β)) (n n' 
     n = n' :=
   getElem_fst_inj xs n n' hnodup hn hn' heq heq'
 
+/-- Exact port of HOL `flookup_fupdate_zip_not_mem`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:289`): a lookup at a
+    key absent from the update keys is unchanged by the zipped update. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "flookup_fupdate_zip_not_mem"]
+theorem flookup_fupdate_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : α)
+    (hlen : xs.length = ys.length) (h : n ∉ xs) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) n = FLOOKUP f n :=
+  FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys f n hlen h
+
+/-- Exact port of HOL `disjoint_take_drop_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:399`): a prefix and a
+    suffix separated by `m` elements of a duplicate-free list are disjoint. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_take_drop_sum"]
+theorem disjoint_take_drop_sum {α : Type} (n m p : Nat) (values : List α)
+    (h : values.Nodup) :
+    ListDisjoint (values.take n) ((values.drop (n + m)).take p) :=
+  listDisjoint_take_drop_sum values n m p h
+
+/-- Exact port of HOL `disjoint_drop_take_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:413`). -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_drop_take_sum"]
+theorem disjoint_drop_take_sum {α : Type} (n m p : Nat) (values : List α)
+    (h : values.Nodup) :
+    ListDisjoint ((values.drop (n + m)).take p) (values.take n) :=
+  listDisjoint_drop_take_sum values n m p h
+
 end Flapjack

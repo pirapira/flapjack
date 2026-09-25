@@ -1651,3 +1651,11 @@ run_probe pan_props_shape_res_var_probeScript.sml pan_props_shape_res_var_probe.
   spv_one rv_some \
   "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The pan_commonProps zip/fupdate and disjoint take/drop probe observes the
+# finite-map update-not-mem and list-disjointness lemmas
+# (pan_commonPropsScript.sml:289, :399, :413).
+run_probe pan_common_props_zip_disjoint_probeScript.sml pan_common_props_zip_disjoint_probe.out \
+  fzn_notmem ddt_disjoint \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

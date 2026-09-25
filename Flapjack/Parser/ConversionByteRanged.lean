@@ -1504,4 +1504,86 @@ theorem convNonRecStmt_byteRanged {width : Nat} (ofInt : Int → BitVec width) (
     all_goals (simp [convNonRecStmt] at h)
 
 
+theorem charsByteRanged_append {l1 l2 : List Char} (h1 : CharsByteRanged l1) (h2 : CharsByteRanged l2) :
+    CharsByteRanged (l1 ++ l2) := by
+  intro c hc; rw [List.mem_append] at hc
+  rcases hc with hc | hc
+  · exact h1 c hc
+  · exact h2 c hc
+
+theorem stringByteRanged_append {s1 s2 : String} (h1 : StringByteRanged s1) (h2 : StringByteRanged s2) :
+    StringByteRanged (s1 ++ s2) := by
+  unfold StringByteRanged at *
+  rw [String.toList_append]
+  exact charsByteRanged_append h1 h2
+
+theorem toString_eq_self (s : String) : toString s = s := rfl
+
+theorem natToString_byteRanged (n : Nat) : StringByteRanged (toString n) := by
+  rw [Nat.toString_eq_ofList_toDigits]
+  unfold StringByteRanged CharsByteRanged
+  intro c hc
+  simp only [String.toList_ofList] at hc
+  have hd := Nat.isDigit_of_mem_toDigits (b := 10) (n := n) (by decide) (by decide) hc
+  have hb := Char.isDigit_iff_toNat.mp hd
+  have h57 : ('9' : Char).toNat = 57 := by decide
+  omega
+
+theorem posnString_byteRanged : ∀ p : Posn, StringByteRanged (posnString p)
+  | .posn row col => by
+      show StringByteRanged (toString row ++ ":" ++ toString col)
+      exact stringByteRanged_append
+        (stringByteRanged_append (natToString_byteRanged row)
+          (by unfold StringByteRanged CharsByteRanged; decide))
+        (natToString_byteRanged col)
+  | .eofPt => by unfold posnString StringByteRanged CharsByteRanged; decide
+  | .unknownPt => by unfold posnString StringByteRanged CharsByteRanged; decide
+
+theorem locationTag_byteRanged : StringByteRanged locationTag := by
+  unfold locationTag StringByteRanged CharsByteRanged; decide
+
+theorem locsComment_byteRanged (locs : Locs) : StringByteRanged (locsComment locs) := by
+  rcases locs with ⟨start, stop⟩
+  show StringByteRanged (toString "(" ++ toString (posnString start) ++ toString " " ++ toString (posnString stop) ++ toString ")")
+  rw [toString_eq_self (posnString start), toString_eq_self (posnString stop)]
+  simp only [toString_eq_self]
+  exact stringByteRanged_append
+    (stringByteRanged_append
+      (stringByteRanged_append
+        (stringByteRanged_append (by unfold StringByteRanged CharsByteRanged; decide)
+          (posnString_byteRanged start))
+        (by unfold StringByteRanged CharsByteRanged; decide))
+      (posnString_byteRanged stop))
+    (by unfold StringByteRanged CharsByteRanged; decide)
+
+theorem addLocsAnnot_byteRanged {width : Nat} (locations : Bool) (tree : ParseTree)
+    {program : Flapjack.Prog (BitVec width)} (hp : ProgByteRanged program) :
+    ProgByteRanged (addLocsAnnot locations tree program) := by
+  unfold addLocsAnnot
+  by_cases h : locations = true
+  · simp only [h, if_true]
+    show ProgByteRanged (Flapjack.Prog.seq (Flapjack.Prog.annot locationTag (locsComment tree.locs)) program)
+    exact ⟨⟨locationTag_byteRanged, locsComment_byteRanged tree.locs⟩, hp⟩
+  · simp only [h]
+    exact hp
+
+mutual
+  theorem shapeVal_byteRanged {width : Nat} (ofInt : Int → BitVec width) :
+      ∀ shape, ShapeByteRanged shape → ExpByteRanged (shapeVal ofInt shape)
+    | .one, _ => by simp [shapeVal, ExpByteRanged]
+    | .named _, _ => by simp [shapeVal, ExpByteRanged]
+    | .comb shapes, hs => by
+        have hs' : ∀ s ∈ shapes, ShapeByteRanged s := by simpa [ShapeByteRanged] using hs
+        show ListExpByteRanged (shapeVal.shapeVals ofInt shapes)
+        exact shapeVals_byteRanged ofInt shapes hs'
+  theorem shapeVals_byteRanged {width : Nat} (ofInt : Int → BitVec width) :
+      ∀ shapes, (∀ s ∈ shapes, ShapeByteRanged s) → ListExpByteRanged (shapeVal.shapeVals ofInt shapes)
+    | [], _ => by simp [shapeVal.shapeVals, ListExpByteRanged]
+    | s :: ss, h => by
+        simp only [shapeVal.shapeVals, ListExpByteRanged]
+        exact ⟨shapeVal_byteRanged ofInt s (h s (by simp)),
+          shapeVals_byteRanged ofInt ss (fun x hx => h x (by simp [hx]))⟩
+end
+
+
 end Flapjack.Parser

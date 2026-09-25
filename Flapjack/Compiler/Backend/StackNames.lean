@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.StackLang
-import Flapjack.Compiler.Backend.StackCarrier
+import Flapjack.Compiler.Backend.StackLang.Prog
+import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.WordLang
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
@@ -23,11 +24,12 @@ HOL's `find_name` is the `misc$tlookup` overload, i.e.
 HOL's transformations are polymorphic in `'a`, but `'a` is an actual word type
 carried by `Reg`/`Imm`/`inst`/`addr`; the tagged ports are therefore
 width-indexed at `BitVec width` (with `[NeZero width]`), and the
-program-level transformations use the shared-word carrier
-`StackCarrier.ProgW (BitVec width)`. They remain untagged: this carrier still
-uses Lean `String` for HOL `mlstring` in the FFI constructor. An exact HOL
-program carrier and a bridge to this executable representation are required
-before the program-level tags can be restored. The executable Boolean
+program-level transformations use the exact width-indexed `HolProg width`
+carrier (namespace `Flapjack.Compiler.Backend.StackLang`), whose FFI field is
+the faithful `MlString` carrier, so those tags are exact. The earlier
+`StackCarrier.ProgW` (`String` FFI) versions are superseded; the kernel-checked
+`String`<->`MlString` bridge for the executable representation lives in
+`Flapjack/Compiler/Backend/MlStringBridge.lean`. The executable Boolean
 `namesOk` remains untagged, with the tagged proposition-valued `namesOkHOL`
 beside it.
 -/
@@ -35,7 +37,8 @@ beside it.
 namespace Flapjack.Compiler.Backend.StackNames
 
 open Flapjack
-open Flapjack.Compiler.Backend.StackCarrier
+open Flapjack.Compiler.Backend.StackLang
+open Flapjack.Compiler.Encoders.Asm
 
 /-- `misc$tlookup` instantiated at the register map: rename a register when it
 is in the domain, otherwise keep it.  HOL writes this overload as
@@ -91,21 +94,24 @@ def destFindName (names : FiniteMap Nat Nat) : Sum Nat Nat → Sum Nat Nat
   | .inr register => .inr (findName names register)
   | other => other
 
-/-- Flapjack's `comp_def` analogue (`stack_namesScript.sml:56-99`). Untagged
-because `ProgW` uses Lean `String` where HOL's program uses `mlstring`.
-The program cases otherwise follow the HOL definition. -/
+/-- HOL `comp_def` (`stack_namesScript.sml:56-99`) over the exact
+width-indexed `HolProg` carrier: rename every register of every instruction,
+leaving the `mlstring` FFI name untouched. -/
+@[hol "cakeml/compiler/backend/stack_namesScript.sml" "comp_def"]
 def progComp {width : Nat} [NeZero width] (names : FiniteMap Nat Nat) :
-    ProgW (BitVec width) → ProgW (BitVec width)
+    HolProg width → HolProg width
   | .halt register => .halt (findName names register)
   | .raise exception => .raise (findName names exception)
   | .break label => .break label
   | .continue label => .continue label
   | .ret value => .ret (findName names value)
-  | .inst instruction => .inst (instFindName names instruction)
+  | .inst instruction =>
+      .inst (HolInst.ofWordLangInst (instFindName names (HolInst.toWordLangInst instruction)))
   | .locValue destination label entry => .locValue (findName names destination) label entry
   | .seq first second => .seq (progComp names first) (progComp names second)
   | .ite operator register right thenBranch elseBranch =>
-      .ite operator (findName names register) (riFindName names right)
+      .ite operator (findName names register)
+        (HolRegImm.ofWordRegImm (riFindName names (HolRegImm.toWordRegImm right)))
         (progComp names thenBranch) (progComp names elseBranch)
   | .loop body => .loop (progComp names body)
   | .call returnHandler target handler =>
@@ -129,22 +135,23 @@ def progComp {width : Nat} [NeZero width] (names : FiniteMap Nat Nat) :
   | .jumpLower r1 r2 target => .jumpLower (findName names r1) (findName names r2) target
   | program => program
 
-/-- Flapjack's `prog_comp_def` analogue over the non-exact `ProgW` carrier;
-see `progComp` for the outstanding HOL `mlstring` carrier gap. -/
+/-- HOL `prog_comp_def` (`stack_namesScript.sml:101-103`). -/
+@[hol "cakeml/compiler/backend/stack_namesScript.sml" "prog_comp_def"]
 def progCompEntry {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
-    (entry : Nat × ProgW (BitVec width)) : Nat × ProgW (BitVec width) :=
+    (entry : Nat × HolProg width) : Nat × HolProg width :=
   (entry.1, progComp names entry.2)
 
-/-- Flapjack's `compile_def` analogue over the non-exact `ProgW` carrier;
-the exact HOL program-carrier port remains open. -/
+/-- HOL `compile_def` (`stack_namesScript.sml:105-107`). -/
+@[hol "cakeml/compiler/backend/stack_namesScript.sml" "compile_def"]
 def compile {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
-    (program : List (Nat × ProgW (BitVec width))) : List (Nat × ProgW (BitVec width)) :=
+    (program : List (Nat × HolProg width)) : List (Nat × HolProg width) :=
   program.map (progCompEntry names)
 
-/-- Flapjack-specific analogue of HOL `MAP_FST_compile`: renaming preserves
-function identifiers, but the statement uses the non-exact `ProgW` carrier. -/
+/-- HOL `MAP_FST_compile` (`stack_namesProofScript.sml:268-272`): renaming
+preserves function identifiers. -/
+@[hol "cakeml/compiler/backend/proofs/stack_namesProofScript.sml" "MAP_FST_compile"]
 theorem map_fst_compile {width : Nat} [NeZero width] (names : FiniteMap Nat Nat)
-    (program : List (Nat × ProgW (BitVec width))) :
+    (program : List (Nat × HolProg width)) :
     (compile names program).map Prod.fst = program.map Prod.fst := by
   induction program with
   | nil => rfl

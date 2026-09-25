@@ -4473,6 +4473,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
+    "lean_name": "fixClockHOLExact_IMP_LESS_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem fix_clock_IMP_LESS_EQ (panSemScript.sml:451-457) is !x. fix_clock s x = (res,s1) ==> s1.clock <= s.clock, universally quantified in the old state s, the result res of any type, the new state s1 and the pair x; over the exact MlString-keyed PanSemStateExact carrier and with no extra hypotheses; verified via the untagged fixClockHOLExact_clock_le and the build-checked fixture in PanSemClockExactParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",

@@ -104,19 +104,36 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- Source-shaped width-indexed counterpart (Flapjack-specific; NOT an exact HOL port) of `pan_to_crep$compile_exp_def`
-    (`cakeml/pancake/pan_to_crepScript.sml:39-101`).  HOL's `compile_exp` and
-    `context` are indexed by the word type `'a word`
-    (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
-    conditions; following the `loadShapeBytes` versus `loadShapeBytesW` standard
-    (`Flapjack/Pancake/CrepLang.lean:210-228`), the faithful statement fixes the
-    carrier to `BitVec width` with `[NeZero width]` and delegates to the generic
-    helper instantiated at that carrier. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the context `PanToCrepHOLContext`
--- keys `vars`/`funcs`/`eids` by `VarName`/`FunName`/`ExceptionId` = `String`, while
--- HOL `pan_to_crepScript.sml` keys them by `varname`/`funname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- WITHDRAWN HOL TAG, source-reviewed documented mismatch: this width-indexed
+    counterpart of `pan_to_crep$compile_exp_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:39-101`) is NOT an exact port. Its
+    clause structure matches HOL one-for-one, but the following carrier/typing
+    differences remain:
+    (1) HOL `compile_exp` and its `context` are indexed by the word type
+        `'a word` (`pan_to_crepScript.sml:10-16`) with HOL equality and no
+        typeclass side conditions, whereas the underlying `compileExpHOL` is
+        generic in `α` carrying `[BEq α] [OfNat α 0] [Add α]
+        [CrepBytesInWord α]`; the tag was on this delegation, whose body is that
+        generic compiler and whose `bytesInWord` case returns
+        `Const CrepBytesInWord.bytesInWord` rather than HOL's `bytes_in_word`
+        theory constant;
+    (2) the context `PanToCrepHOLContext α` keys `vars`/`funcs`/`eids` by
+        `VarName`/`FunName`/`ExceptionId` = `String` (HOL keys them by
+        `varname`/`funname`/`eid` = `mlstring`);
+    (3) `Exp α`/`Shape` are the production carriers with `Named : String`
+        (HOL uses `'a panLang$exp`/`shape` with `Named : mlstring`);
+    (4) the compiled output is the production `CrepExp α`/`CrepProg α` family.
+    `names_as_string` cannot authorize the added typeclass side conditions, the
+    `CrepBytesInWord` stride abstraction, or the `Exp`/`Shape` production
+    carriers (the identifier keys themselves are map-key-only equality uses),
+    and no `NameRanged` byte witness applies: the output is a compiled
+    expression list paired with a shape. Direct HOL-EVAL rows are recorded in
+    `scripts/hol-probes/compile_exp_probe.out` and reproduced by
+    `Flapjack/Test/CompileExpParity.lean` (including through this
+    `compileExpHOLW` at the `BitVec 64` carrier). A faithful exact-carrier port
+    over `ExpHOL`/`ShapeHOL`/`CrepExpHOL width` is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; the exact
+    `compile_def` dependency path is `flapjack-pxn.18.3.5.8.13`). -/
 def compileExpHOLW {width : Nat} [NeZero width]
     (context : PanToCrepHOLContext (BitVec width)) :
     Exp (BitVec width) → List (CrepExp (BitVec width)) × Shape :=
@@ -482,30 +499,24 @@ def compileProgHOL [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
   | .annot _ _ => .skip
 termination_by structural program
 
-/-! Flapjack-specific RISC-V specialization of the `compile_def`-shaped
-    equations above; this is not an exact HOL port. Although the word carrier
-    is `BitVec width` and the finite maps have the same total-function shape,
-    the declaration accepts every `width` (including zero), and its input and
-    output are production `Prog`/`CrepProg`, not exact `ProgHOL width` /
-    `CrepProgHOL width`. The nested source expressions and shapes are likewise
-    production `Exp`/`Shape`, and all source identifiers and context map keys
-    are `String` instead of HOL `mlstring`; the target Crep function names are
-    also `String` instead of `mlstring`. Consequently the name-carrier
-    difference is only one part of the mismatch. The exact syntax carriers
-    exist in `PanLang.ProgHOL` and `CrepProgHOL`; the exact-carrier compiler
-    replacement is tracked by `flapjack-2eh`'s follow-up under
-    `flapjack-pxn.18.3.5.8`.
-
-    Generic `compileProgHOL` is also not itself the HOL declaration: its word
-    type is arbitrary `α` with caller-supplied `CrepBytesInWord`, and it lacks
-    HOL's positive word-width condition. `compileProgRiscV` fixes `α` to
-    `BitVec width` and the byte stride, but still uses the production syntax
-    carriers and admits `width = 0`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the executed equations match
--- `compile_def` structurally, but this specialization has production
--- `Prog`/`CrepProg`/`Shape`/`Exp` carriers, String identifiers and context
--- maps, and no `[NeZero width]`. See the docstring above and exact-carrier
--- replacement bead under `flapjack-pxn.18.3.5.8`.
+/-! FLAPJACK-SPECIFIC (not an exact HOL port). Source-reviewed decision
+    (`flapjack-dlc.18`): the `@[hol]` tag stays withdrawn as a documented
+    carrier mismatch. HOL `compile_def`
+    (`cakeml/pancake/pan_to_crepScript.sml:139-307`) is a structural recursion
+    over positive-width `ProgHOL width` / `ExpHOL width` / `ShapeHOL`, with
+    context vars/functions/eids keyed by `mlstring`, returning
+    `CrepProgHOL width`. Both `compileProgHOL` and this RISC-V specialization
+    `compileProgRiscV` instead take production `Prog (BitVec width)` / `Exp` /
+    `Shape`, String identifiers and context keys, and admit `width = 0` (no
+    `[NeZero width]`); `compileProgRiscV` only fixes `α := BitVec width` before
+    delegating to generic `compileProgHOL`. The `names_as_string` qualifier
+    cannot authorize the `Shape`/`Exp`/`Prog`/`CrepProg` carriers or the missing
+    positive-width side condition, and a `NameRanged` byte witness does not
+    apply because the output is a compiled program, not a name. Direct HOL-EVAL
+    rows for the `compile_def` equations are recorded in
+    `scripts/hol-probes/compile_def_probe.out` and reproduced by
+    `Flapjack/Test/CompileDefParity.lean`. Exact-carrier replacement is tracked
+    by `flapjack-pxn.18.3.5.8.13` (under `flapjack-pxn.18.3.5.8`). -/
 def compileProgRiscV (context : PanToCrepHOLContext (BitVec width))
     (program : Prog (BitVec width)) : CrepProg (BitVec width) :=
   compileProgHOL context program
@@ -701,15 +712,32 @@ def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × 
 def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
   panToCrepMakeFuncs
 
-/-! HOL `make_funcs_def` (`cakeml/pancake/pan_to_crepScript.sml:366`) over the
-    the extracted function table: pair every name with its parameter list and
-    return shape, then build the finite map with `alist_to_fmap` (first
-    duplicate name wins; rendered as `FUPDATE_LIST FEMPTY` over the reversed
-    association list, since `FUPDATE_LIST` is a left fold). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the table is keyed by
--- `FunName` = `String`, while HOL `pan_to_crepScript.sml` keys `make_funcs` by
--- `funname` = `mlstring` (tracked by `flapjack-pxn.18.3.5.8`, parent
--- `flapjack-pxn.18.3.5.7.2`).
+/-! HOL `make_funcs_def` (`cakeml/pancake/pan_to_crepScript.sml:366-373`) over
+    the extracted function table:
+    `make_funcs prog = alist_to_fmap (MAP3 (λx y z. (x,y,z)) (MAP FST prog)
+    (MAP (FST o SND) prog) (MAP (SND o SND o SND) prog))`, keyed by
+    `funname = mlstring` and valued by `(varname # shape) list # shape`;
+    `alist_to_fmap` is a right fold of `FUPDATE`, so the first duplicate name
+    wins. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): `makeFuncsHOL` keys the table by
+-- `FunName` = `String` and stores values in the production `VarName` = `String`
+-- and `Shape` (`named : StructName` = `String`) carriers, not HOL's
+-- `funname`/`varname` = `mlstring` and `shape` (`named : mlstring`); its input
+-- also mentions the production `Prog α` body carrier even though `make_funcs`
+-- ignores bodies; and the result is a `FiniteMap` function rather than HOL's
+-- `fmap` (rendered by `FUPDATE_LIST FEMPTY` over the reversed association list,
+-- a left fold).  The `names_as_string` qualifier cannot authorize the `Shape`
+-- and `Prog` carriers, and no `NameRanged` byte witness applies because the
+-- output is a finite map of function signatures, not a name.  (The theorem
+-- map's `make_funcs_def` -> `crepToLoopMakeFuncsHOL` entry is the exact port of
+-- the *different* `crep_to_loopScript.sml` declaration, not this one.)  Direct
+-- HOL-EVAL rows `make_funcs_empty_params`/`make_funcs_param_entry`/
+-- `make_funcs_absent`/`make_funcs_duplicate_first_wins` are recorded in
+-- `scripts/hol-probes/crep_make_funcs_probe.out` and exercised by
+-- `makeFuncsGuard` (`Flapjack/Test/PanToCrepCodeRelParity.lean`) and
+-- `makeFuncsOracle` (`Flapjack/Test/CompileToCrepeParity.lean`).  The faithful
+-- exact-carrier port is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`); this analogue remains deliberately untagged.
 def makeFuncsHOL
     (functions : List (FunName × List (VarName × Shape) × Prog α × Shape)) :
     FiniteMap FunName (List (VarName × Shape) × Shape) :=
@@ -968,11 +996,29 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 /-! HOL finite-map variants used by the RISC-V production path. The parameter
     and function tables are built with `FUPDATE_LIST`; body compilation then
     uses `compileProgHOL` without converting the context to `InfoMap`. -/
-/-- HOL `make_vmap_def`: allocate consecutive flattened parameter slots and
-    update the finite map in source order, so a later duplicate name wins. -/
+/-- HOL `make_vmap_def` (`cakeml/pancake/pan_to_crepScript.sml:327-334`):
+    `make_vmap params = let pvars = MAP FST params; shs = MAP SND params;
+    ns = GENLIST I (size_of_shape (Comb shs));
+    cvars = ZIP (shs, with_shape shs ns) in FEMPTY |++ ZIP (pvars, cvars)`.
+    This Flapjack mirror follows the same consecutive slot allocation and
+    source-order finite-map update, so a later duplicate name wins. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the produced map is keyed by
--- `VarName` = `String`, while HOL `pan_to_crepScript.sml` keys `make_vmap` by
--- `varname` = `mlstring` (tracked by `flapjack-pxn.18.3.5.8`, parent
+-- `VarName` = `String` and stores the production `Shape` (`named : StructName`
+-- = `String`) rather than HOL's `varname` = `mlstring` and `shape`
+-- (`named : mlstring`); the result is a `FiniteMap` function rather than HOL's
+-- `fmap`, rendered by `FUPDATE_LIST FEMPTY` (a left fold) over the source-order
+-- allocation, which matches `FEMPTY |++ ZIP`'s later-duplicate-wins semantics.
+-- The `names_as_string` qualifier cannot authorize the `Shape` carrier, and no
+-- `NameRanged` byte witness applies (the output is a finite map of
+-- shape/slot-list entries, not a name). Direct HOL-EVAL rows are recorded in
+-- `scripts/hol-probes/crep_vmap_ctxtfc_probe.out` (`vmap_x`/`vmap_y`/
+-- `vmap_absent`/`ns_offsets`, plus `vmap_eq_ctxt`) and reproduced by
+-- `makeVmapOracle`/`makeVmapHOLOracle`/`duplicateVmapOracle` in
+-- `Flapjack/Test/CompileToCrepeParity.lean`, by `vmapCtxtFCGuard` in
+-- `Flapjack/Test/PanToCrepCodeRelParity.lean`, and by the `with_shape` rows in
+-- `Flapjack/Test/PanWithShapeParity.lean` (probe
+-- `scripts/hol-probes/pan_lang_with_shape_probe.out`). Exact-carrier
+-- replacement is tracked by `flapjack-pxn.18.3.5.8` (parent
 -- `flapjack-pxn.18.3.5.7.2`).
 def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
     FiniteMap VarName (Shape × List Nat) :=

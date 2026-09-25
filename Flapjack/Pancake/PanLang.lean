@@ -86,14 +86,17 @@ def lookupInfo [BEq κ] (key : κ) : List (κ × α) → Option α
 `panLang$is_wf_shape` (`cakeml/pancake/panLangScript.sml:139`). The clauses are
 reproduced literally: `One` is `T`; `Comb shs` is `EVERY (is_wf_shape ctxt) shs`;
 `Named nm` is `case ALOOKUP ctxt nm of SOME _ => T | NONE => F`, rendered with
-the first-match `lookupInfo` (the exact `alist$ALOOKUP` counterpart) and
+the first-match `lookupInfo` (the String-keyed `alist$ALOOKUP` analogue) and
 `isSome` as the Bool rendering of `<> NONE`. The tag is WITHDRAWN because the
 context carrier does not match: HOL keys the association list by
 `stcname = ``:mlstring``` (`panLangScript.sml:21`) while Lean's
-`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14). Matching
-`ALOOKUP` at the concrete `BEq String` instance is not HOL `=`, so this needs an
-MlString key carrier (bead `flapjack-pxn.18.3.5.8`). The direct original-HOL
-rows are pinned in `scripts/hol-probes/pan_lang_wf_shape_probe.out`. -/
+`StructContextHOL` keys it by `StructName := String` (PanLang.lean:14).
+Likewise, `.named` in the input uses String-backed `Shape`, and the context's
+field names are String-backed, unlike HOL's `shape`/`struct_info` carriers.
+Matching `ALOOKUP` at the concrete `BEq String` instance is not HOL equality;
+the six direct HOL rows and Lean guards exercise the clauses but do not prove
+byte-level carrier equivalence. An exact port needs the MlString/ShapeHOL
+carriers (bead `flapjack-pxn.18.3.5.8`), so no `@[hol]` tag is attached. -/
 mutual
   def isWfShapeHOL (context : StructContextHOL) : Shape → Bool
     | .one => true
@@ -368,12 +371,17 @@ def inlinable : Decl α → Bool
   | _ => false
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
-    `panLang$exceptions` (`panLangScript.sml:328`), the exception table of a
-    declaration list in declaration order, dropping every non-exception
-    declaration. The tag is WITHDRAWN because the result keys are
-    `ExceptionId := String` (PanLang.lean:18) while HOL `eid = ``:mlstring```
-    (`panLangScript.sml:29`); an exact port needs the MlString carrier
-    (bead `flapjack-pxn.18.3.5.8`). -/
+    `panLang$exceptions` (`panLangScript.sml:328-337`), preserving exception
+    declaration order and dropping all other constructors. HOL takes its
+    word-indexed `decl list` and returns `(mlstring # shape) list` (`eid` is
+    `mlstring`, `panLangScript.sml:29`). This function instead takes generic
+    `Decl α` and returns `(ExceptionId × Shape)` entries with
+    `ExceptionId := String`; `Decl α` and monomorphic `Shape` are not the
+    reviewed exact HOL carriers either. The direct HOL-EVAL fixture and Lean
+    parity guard exercise the five selection clauses, not byte-level carrier
+    equivalence. The `@[hol]` tag therefore remains WITHDRAWN; an exact
+    counterpart needs the MlString/ShapeHOL declaration carrier (bead
+    `flapjack-pxn.18.3.5.8`). -/
 def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | [] => []
   | .exnDecl exception shape :: declarations =>

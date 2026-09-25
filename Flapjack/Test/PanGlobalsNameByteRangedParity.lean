@@ -77,4 +77,26 @@ example : StringByteRanged
     (globalNewMainName [functionDecl "main", functionDecl "main'"]) :=
   globalNewMainName_byteRanged _
 
+/-- `NameRanged` witness API (same-module checked witnesses). -/
+example : Flapjack.Pancake.PanLang.NameRanged (freshNameHOL "x" ["x", "x'"]) :=
+  freshNameHOL_nameRanged "x" ["x", "x'"] (by
+    unfold Flapjack.Pancake.PanLang.NameRanged; decide)
+
+example : Flapjack.Pancake.PanLang.NameRanged
+    (globalNewMainName [functionDecl "main"]) :=
+  globalNewMainName_nameRanged _
+
+example {width : Nat} {function : String}
+    {configuration configurationLength array arrayLength : Flapjack.Exp (BitVec width)}
+    (h : Flapjack.Pancake.PanLang.ProgByteRanged
+      (Flapjack.Prog.extCall function configuration configurationLength array arrayLength :
+        Flapjack.Prog (BitVec width))) :
+    Flapjack.Pancake.PanLang.NameRanged function :=
+  progByteRanged_extCall_name h
+
+example {width : Nat} {fd : Flapjack.FunDecl (BitVec width)}
+    (h : Flapjack.Pancake.PanLang.DeclByteRanged (Flapjack.Decl.function fd)) :
+    Flapjack.Pancake.PanLang.NameRanged fd.name :=
+  declByteRanged_function_name h
+
 end Flapjack.Test.PanGlobalsNameByteRangedParity

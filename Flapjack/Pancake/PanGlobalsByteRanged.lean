@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Parser.ByteRanged
 
 /-!
@@ -91,5 +92,63 @@ theorem globalNewMainName_byteRanged (declarations : List (Decl α)) :
   unfold globalNewMainName
   exact freshNameHOL_byteRanged "main" (globalFunctionNames declarations)
     (by unfold StringByteRanged CharsByteRanged; decide)
+
+/-! ## `NameRanged` witness API
+
+The declarations below expose the byte-boundary facts under the `NameRanged`
+name used by `DeclByteRanged`/`ProgByteRanged` (`NameRanged` is definitionally
+`StringByteRanged`).  They are the same-module checked witnesses that the
+`names_as_string` qualifier tooling (`flapjack-an4`) consumes; every generated
+name carries an explicit `NameRanged` input premise, and the executed parser
+boundary `parseTopDecs_declByteRanged` discharges those premises. -/
+
+/-- Witness: `freshNameHOL` preserves `NameRanged` under an explicit premise. -/
+theorem freshNameHOL_nameRanged (name : String) (names : List String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) :
+    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) :=
+  freshNameHOL_byteRanged name names h
+
+/-- Witness: `globalFreshNameAux` preserves `NameRanged` under an explicit premise. -/
+theorem globalFreshNameAux_nameRanged [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String)
+    (candidate fuel : Nat) :
+    Flapjack.Pancake.PanLang.NameRanged
+      (globalFreshNameAux name names candidate fuel) :=
+  globalFreshNameAux_byteRanged name h names candidate fuel
+
+/-- Witness: production `globalFreshName` preserves `NameRanged`. -/
+theorem globalFreshName_nameRanged [BEq String] (name : String)
+    (h : Flapjack.Pancake.PanLang.NameRanged name) (names : List String) :
+    Flapjack.Pancake.PanLang.NameRanged (globalFreshName name names) :=
+  globalFreshName_byteRanged name h names
+
+/-- Witness: the executed entry-point name `new_main_name` is `NameRanged`
+    (the literal `"main"` needs no premise). -/
+theorem globalNewMainName_nameRanged (declarations : List (Decl α)) :
+    Flapjack.Pancake.PanLang.NameRanged (globalNewMainName declarations) :=
+  globalNewMainName_byteRanged declarations
+
+/-- Extraction: a byte-ranged production `ExtCall` program has a byte-ranged
+    FFI function name.  This is the precondition the production FFI boundary
+    witness (`flapjack-0up.2`) consumes. -/
+theorem progByteRanged_extCall_name {width : Nat} {function : String}
+    {configuration configurationLength array arrayLength : Flapjack.Exp (BitVec width)}
+    (h : Flapjack.Pancake.PanLang.ProgByteRanged
+      (Flapjack.Prog.extCall function configuration configurationLength array arrayLength :
+        Flapjack.Prog (BitVec width))) :
+    Flapjack.Pancake.PanLang.NameRanged function :=
+  h.1
+
+/-- Extraction: a byte-ranged function declaration has a byte-ranged name. -/
+theorem declByteRanged_function_name {width : Nat} {fd : Flapjack.FunDecl (BitVec width)}
+    (h : Flapjack.Pancake.PanLang.DeclByteRanged (Flapjack.Decl.function fd)) :
+    Flapjack.Pancake.PanLang.NameRanged fd.name :=
+  h.1
+
+/-- Extraction: a byte-ranged function declaration body has a byte-ranged name. -/
+theorem funDeclByteRanged_name {width : Nat} {fd : Flapjack.FunDecl (BitVec width)}
+    (h : Flapjack.Pancake.PanLang.FunDeclByteRanged fd) :
+    Flapjack.Pancake.PanLang.NameRanged fd.name :=
+  h.1
 
 end Flapjack

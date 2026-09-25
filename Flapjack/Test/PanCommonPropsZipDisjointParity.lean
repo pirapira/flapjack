@@ -52,13 +52,38 @@ theorem disjoint_drop_take_sum_fixture :
       (([1, 2, 3, 4] : List Nat).take 2) :=
   disjoint_drop_take_sum 2 1 1 [1, 2, 3, 4] (by decide)
 
+/-- `lhs = FEMPTY |+ (1,10) |+ (2,20) |+ (1,10) |+ (2,22)` from the HOL probe. -/
+def diffVarsLhs : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FUPDATE (FUPDATE FEMPTY (1, 10)) (2, 20)) (1, 10)) (2, 22)
+
+/-- `rhs = FEMPTY |+ (1,10) |+ (2,22)`. -/
+def diffVarsRhs : FiniteMap Nat Nat := FUPDATE (FUPDATE FEMPTY (1, 10)) (2, 22)
+
+-- HOL `fmdv_eq_1/2/3 = T`, `fmdv_lhs_a = SOME 10`, `fmdv_lhs_b = SOME 22`,
+-- `fmdv_lhs_absent = NONE`.
+def fmdvGuard : Bool :=
+  (FLOOKUP diffVarsLhs 1 == FLOOKUP diffVarsRhs 1) &&
+    (FLOOKUP diffVarsLhs 2 == FLOOKUP diffVarsRhs 2) &&
+    (FLOOKUP diffVarsLhs 3 == FLOOKUP diffVarsRhs 3) &&
+    (FLOOKUP diffVarsLhs 1 == some 10) &&
+    (FLOOKUP diffVarsLhs 2 == some 22) &&
+    (FLOOKUP diffVarsLhs 3 == none)
+
+#guard fmdvGuard
+
+/-- HOL `fm_update_diff_vars` (`pan_commonPropsScript.sml:780`). -/
+theorem fm_update_diff_vars_fixture :
+    FUPDATE (FUPDATE (FUPDATE (FUPDATE FEMPTY (1, 10)) (2, 20)) (1, 10)) (2, 22) =
+      FUPDATE (FUPDATE FEMPTY (1, 10)) (2, 22) :=
+  fm_update_diff_vars FEMPTY 1 2 10 20 22 (by decide)
+
 def runChecks : IO Bool := do
-  if zipGuard then
+  if zipGuard && fmdvGuard then
     IO.println
-      "PASS exact pan_commonProps zip fupdate not-mem and disjoint take/drop (3 HOL rows)"
+      "PASS exact pan_commonProps zip fupdate not-mem, disjoint take/drop, and fm_update_diff_vars (9 HOL rows)"
     return true
   else
-    IO.println "FAIL exact pan_commonProps zip fupdate not-mem and disjoint take/drop"
+    IO.println "FAIL exact pan_commonProps zip fupdate not-mem, disjoint take/drop, and fm_update_diff_vars"
     return false
 
 end Flapjack.Test.PanCommonPropsZipDisjointParity

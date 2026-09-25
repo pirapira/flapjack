@@ -2145,6 +2145,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "size_of_eids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "sizeOfEidsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.37): HOL size_of_eids (cakeml/pancake/panLangScript.sml:249-251) is `size_of_eids prog = LENGTH (FILTER is_exn_decl prog)` over the declaration list. sizeOfEidsHOL code = (code.filter isExnDeclHOL).length over the exact DeclHOL carrier; List.filter is the ordinary rendering of HOL FILTER and isExnDeclHOL is the tagged exact predicate. The kernel-checked sizeOfEids_map_declOfHOL (Flapjack/Pancake/PanGlobals.lean) relates it to production Flapjack.sizeOfEids; direct routing is unavailable because production is polymorphic over Decl α with String identifiers. Direct HOL-EVAL rows size_of_eids_empty=0 and size_of_eids_mixed=1 in scripts/hol-probes/pan_lang_decl_predicates_probe.out are replayed in Flapjack/Test/PanLangDeclHOLParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "varExpHOL",

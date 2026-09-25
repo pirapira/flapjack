@@ -4513,6 +4513,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "vshapes_args_rel_imp_eq_len_MAP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ListRelExact.lean",
+    "lean_name": "vshapes_args_rel_imp_eq_len_MAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem vshapes_args_rel_imp_eq_len_MAP (panSemScript.sml:740-748) states LIST_REL (fun vshape arg => SND vshape = shape_of arg) vshapes args implies LENGTH vshapes = LENGTH args and MAP SND vshapes = MAP shape_of args; rendered over the exact MlString/shape/v carriers with the FLAPJACK-specific inductive ListRelHOL as the LIST_REL carrier (Lean List.Forall2 is absent in this toolchain) and tagged shapeOfHOLExact as shape_of; direct HOL rows vshapes_args_rel_ok/vshapes_args_rel_concl/vshapes_args_rel_mismatch in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",

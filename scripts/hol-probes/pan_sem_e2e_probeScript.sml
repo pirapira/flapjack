@@ -930,4 +930,9 @@ val _ = print_eval "kvar_defs_is_valid_value"
     (panSem$shape_of (ValWord (7w:8 word)) =
      panSem$shape_of (ValWord (7w:8 word)))``
 
+val vshapes_args_ex = ``[(strlit "a", One)] : (mlstring # shape) list``;
+val vshapes_args_vals = ``[ValWord (3w : 8 word)] : 8 panSem$v list``;
+val _ = print_eval "vshapes_args_rel_ok" ``LIST_REL (\vshape arg. SND vshape = shape_of arg) ^vshapes_args_ex ^vshapes_args_vals``;
+val _ = print_eval "vshapes_args_rel_concl" ``(LENGTH ^vshapes_args_ex = LENGTH ^vshapes_args_vals) /\ (MAP SND ^vshapes_args_ex = MAP shape_of ^vshapes_args_vals)``;
+val _ = print_eval "vshapes_args_rel_mismatch" ``LIST_REL (\vshape arg. SND vshape = shape_of arg) ^vshapes_args_ex [(RStruct [] : 8 panSem$v)]``;
 val _ = print_eval "pan_sem_e2e_done" ``0``

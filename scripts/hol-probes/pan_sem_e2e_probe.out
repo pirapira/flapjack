@@ -103,4 +103,7 @@ kvar_defs_set_kvar_local=T
 kvar_defs_set_global_update=T
 kvar_defs_lookup_global=T
 kvar_defs_is_valid_value=T
+vshapes_args_rel_ok=T
+vshapes_args_rel_concl=T
+vshapes_args_rel_mismatch=F
 pan_sem_e2e_done=0

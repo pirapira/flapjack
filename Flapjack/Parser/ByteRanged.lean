@@ -138,12 +138,14 @@ theorem readWhile_rest_charsByteRanged {p : Char → Bool} (input acc : List Cha
 /-- Name-carrying payloads of a lexer atom are byte-ranged. -/
 def AtomNameByteRanged : Atom → Prop
   | .wordA text => StringByteRanged text
+  | .annotCommentA text => StringByteRanged text
   | _ => True
 
 /-- Name-carrying payloads of a lexer token are byte-ranged. -/
 def TokenNameByteRanged : Token → Prop
   | .identT name => StringByteRanged name
   | .foreignIdent name => StringByteRanged name
+  | .annotCommentT text => StringByteRanged text
   | _ => True
 
 theorem drop_one_stringByteRanged {s : String} (h : StringByteRanged s) :
@@ -201,7 +203,7 @@ theorem tokenOfAtom_nameByteRanged {a : Atom} (h : AtomNameByteRanged a) :
   | wordA text => exact getKeyword_nameByteRanged text h
   | symA text => exact getToken_nameByteRanged text
   | errA message => exact trivial
-  | annotCommentA text => exact trivial
+  | annotCommentA text => exact h
 
 theorem charsByteRanged_tail' {l : List Char} (h : CharsByteRanged l) :
     CharsByteRanged l.tail := by
@@ -263,7 +265,8 @@ theorem nextAtom_byteRanged : ∀ fuel input loc, CharsByteRanged input →
                     exact ⟨trivial, by simp [CharsByteRanged]⟩
                   · simp only [Option.some.injEq, Prod.mk.injEq] at h
                     obtain ⟨rfl, -, rfl⟩ := h
-                    exact ⟨trivial, charsByteRanged_drop hcs _⟩
+                    exact ⟨stringByteRanged_ofList (charsByteRanged_take (charsByteRanged_tail' hcs) _),
+                      charsByteRanged_drop hcs _⟩
                 · rw [if_neg h6] at h
                   by_cases h7 : (c == '/' && cs.head? == some '*') = true
                   · rw [if_pos h7] at h

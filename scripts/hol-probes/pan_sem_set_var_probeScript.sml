@@ -42,3 +42,15 @@ val _ = print_eval "set_var_globals"
   ``OPTION_MAP ^toNum (FLOOKUP (set_var (strlit "x") (ValWord (9w:8 word)) ^base).globals (strlit "g"))``
 val _ = print_eval "set_var_clock"
   ``(set_var (strlit "x") (ValWord (9w:8 word)) ^base).clock``
+
+val _ = print_eval "set_global_new"
+  ``OPTION_MAP ^toNum (FLOOKUP (set_global (strlit "h") (ValWord (9w:8 word)) ^base).globals (strlit "h"))``
+val _ = print_eval "set_global_locals"
+  ``OPTION_MAP ^toNum (FLOOKUP (set_global (strlit "h") (ValWord (9w:8 word)) ^base).locals (strlit "x"))``
+val _ = print_eval "upd_locals_x"
+  ``OPTION_MAP ^toNum (FLOOKUP (upd_locals [(strlit "x", ValWord (9w:8 word))] ^base).locals (strlit "x"))``
+val _ = print_eval "upd_locals_other"
+  ``OPTION_MAP ^toNum (FLOOKUP (upd_locals [(strlit "x", ValWord (9w:8 word))] ^base).locals (strlit "y"))``
+val _ = print_eval "upd_locals_dup"
+  ``OPTION_MAP ^toNum (FLOOKUP (upd_locals [(strlit "x", ValWord (9w:8 word)); (strlit "x", ValWord (11w:8 word))] ^base).locals (strlit "x"))``
+val _ = print_eval "set_var_done" ``0``

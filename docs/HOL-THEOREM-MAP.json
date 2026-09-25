@@ -4424,6 +4424,46 @@
     "reviewer": "Codex (source comparison; HOL panSem$set_kvar (panSemScript.sml:408) Local -> set_var, Global -> set_global, with the =-based finite-map update over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ, the exact ffiScript.sml ffi_state; not the executable FfiState); PanSemStateExactParity checks set-then-lookup round trip)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "setVarHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSem$set_var (panSemScript.sml:398) s with locals := s.locals |+ (v,value), rendered as the =-based function update over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ); direct HOL rows set_var_new/overwrite/other/globals/clock reproduced by PanSemLocalUpdatesExactParity"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_global_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "setGlobalHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSem$set_global (panSemScript.sml:403) s with globals := s.globals |+ (v,value), =-based update over the exact MlString-keyed PanSemStateExact carrier (ffi : HolFfiState σ); direct HOL rows set_global_new/set_global_locals reproduced by PanSemLocalUpdatesExactParity"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "upd_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "updLocalsHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSem$upd_locals (panSemScript.sml:431) s with locals := FEMPTY |++ varargs, List.foldl over the function map so later duplicate wins (FLOOKUP_FUPDATE_LIST uses ALOOKUP of REVERSE) and unmentioned bindings are dropped; direct HOL rows upd_locals_x/other/dup reproduced by PanSemLocalUpdatesExactParity"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "res_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LocalUpdatesExact.lean",
+    "lean_name": "resVarHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSem$res_var (panSemScript.sml:505) res_var lc (n,NONE) = lc \\ n and res_var lc (n,SOME v) = lc |+ (n,v) over MlS-keyed function maps; direct HOL rows delete_hit/delete_other/update_hit reproduced by PanSemLocalUpdatesExactParity"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/IsValidValueExact.lean",
+    "lean_name": "isValidValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL line 469-475: case lookup_kvar vk v s of SOME w => shape_of value = shape_of w | NONE => F over the exact MlString-keyed PanSemStateExact; the shape comparison is rendered by the untagged Bool shapeEqHOL with the proved bridge shapeEqHOL_eq_true : shapeEqHOL a b = true <-> a = b, and lookup/shape_of reuse the tagged lookupKvarHOLExact/shapeOfHOLExact; direct HOL rows in pan_sem_is_valid_value_probe.out local_shape=T/global_shape=T/mismatch=F/missing=F)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -9159,35 +9199,35 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against list_insert_SNOC at crep_to_loopProofScript.sml:386: HOL list_insert (SNOC x y) l = insert x () (list_insert y l); SNOC x y rendered as y ++ [x], list_insert/insert as the untagged sptListInsert/sptInsert renderings of HOL src/finite_maps/sptreeScript.sml list_insert/insert; direct HOL-EVAL rows li_mem_3/li_mem_4/li_absent_5/li_snoc_mem_5/li_snoc_agrees in scripts/hol-probes/crep_to_loop_list_insert_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
   },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_wf_shape_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isWfShapeExactHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_wf_flds_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isWfFldsExactHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_wf_ctxt_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isWfCtxtExactHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
 {
   "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
   "hol_name": "isValWord_def",
   "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
   "lean_name": "isValWordHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/panLangScript.sml",
-  "hol_name": "is_wf_shape_def",
-  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
-  "lean_name": "isWfShapeExactHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/panLangScript.sml",
-  "hol_name": "is_wf_flds_def",
-  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
-  "lean_name": "isWfFldsExactHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/panLangScript.sml",
-  "hol_name": "is_wf_ctxt_def",
-  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
-  "lean_name": "isWfCtxtExactHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
 },

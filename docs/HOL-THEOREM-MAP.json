@@ -249,41 +249,9 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameFunctionName",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameProg",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_decs_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameDecls",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "resort_decls_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "globalResortDecls",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "new_main_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalNewMainName",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (constructor-by-constructor source comparison)"
   },
@@ -1142,14 +1110,6 @@
     "lean_name": "storeGlobalsW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against store_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_top_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalCompileTopCake",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory; executed fixed-word path now routes through the tagged compileDecsCake via globalCompileTopForStartSomeCake with [NeZero width]; globalCompileTopCake_eq proves it equals the polymorphic globalCompileTopForStart output; direct HOL compile_decs/compile_top probes unchanged)"
   },
   {
     "hol_path": "cakeml/pancake/pan_structsScript.sml",

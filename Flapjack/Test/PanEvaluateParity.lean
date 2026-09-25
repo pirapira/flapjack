@@ -440,6 +440,18 @@ def observeSourceCodePreservedAfterRecursion : Bool :=
       | _, _ => false
   | none => false
 
+/-- The generic state-owned code invariant applies to the original HOL-backed
+    nested Call/DecCall case, independently of its returned result. -/
+theorem sourceNestedCallPreservesCode
+    (result : PanValueFfiClockResult Word64 Unit)
+    (postState : PanSemState Word64 (FfiState Unit))
+    (heval : evaluateSourceNestedCallWithPostState = some (result, postState)) :
+    postState.code = (emptyPanSourceState 10 sourceRecursiveCode).code := by
+  exact panSemEvaluateCodeStateWithPostState_preserves_code
+    statefulTestContext statefulTestPrimitive statefulTestHandler
+    (BitVec.ofNat 64 8) (emptyPanSourceState 10 sourceRecursiveCode)
+    (.call none "f" []) result postState heval
+
 def observeSourceRecursiveCallTimeout :=
   isSourceTimeoutAt evaluateSourceRecursiveCallTimeout 0
 

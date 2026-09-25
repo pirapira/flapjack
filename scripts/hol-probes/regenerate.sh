@@ -108,7 +108,7 @@ run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
-  pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+  pan_valid crep_primop_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -1519,7 +1519,7 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
 # initial_ffi_state and the call_FFI cases (identity, success, length
 # failure, oracle final).
 run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
-  ffi_outcome_failed call_final_event \
+  ffi_outcome_failed call_shmem_final_event \
   "$cake_dir/semantics/ffi/ffiScript.sml" \
   "$cake_dir/semantics/ffi"
 

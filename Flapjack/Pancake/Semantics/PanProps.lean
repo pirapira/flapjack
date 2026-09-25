@@ -71,7 +71,18 @@ mutual
       already connects it to the HOL-shaped `panIsWfShapeValueHOL`. The
       remaining gap to the exact `isWfShapeValueHOLExact` is the carrier
       (`String`/`StructContextHOL` vs `MlStringHOL`/`StructContextExact`),
-      tracked by bead `flapjack-pxn.18.3.5.8`. -/
+      tracked by bead `flapjack-pxn.18.3.5.8`.
+
+      The HOL side is also proof-only: a repository-wide search of the
+      read-only CakeML/Pancake sources finds `panProps$is_wf_shape_v` only in
+      `cakeml/pancake/semantics/panPropsScript.sml` (its own definition and
+      proof lemmas such as `is_wf_shape_of_v`, `mem_load_is_wf_shape_v`,
+      `eval_is_wf_shape_v`, `pan_primop_is_wf_shape_v`) and in
+      `cakeml/pancake/proofs/*ProofScript.sml`; no executable Pancake compile
+      script (`pan_to_crepScript.sml`, `pan_globalsScript.sml`, ...) calls it.
+      So there is no production call site on the HOL side either, and this
+      child bead is closed as a documented no-production-callsite disposition;
+      the exact tagged port `isWfShapeValueHOLExact` remains `reviewed_exact`. -/
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values

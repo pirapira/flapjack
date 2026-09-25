@@ -28,7 +28,6 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "HOL-THEOREM-MAP.json"
 LOCK = ROOT / "docs" / "HOL-TYPE-HASHES.json"
 EXPORTER = ROOT / "scripts" / "HolTypeHashes.lean"
-LEAN_SETUP = ROOT / ".lake" / "build" / "ir" / "Flapjack.setup.json"
 
 
 def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
@@ -58,13 +57,12 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
 
 
 def exported_types() -> list[dict[str, Any]]:
-    # Lake's setup file points Lean at the verified OLean artifacts selected
-    # for this workspace, including remote-cache artifacts that do not have a
-    # local .olean copy. A plain `lake env lean` only searches LEAN_PATH and
-    # incorrectly fails when Lake has reused such an artifact.
-    setup_args = ["--setup", str(LEAN_SETUP)] if LEAN_SETUP.is_file() else []
+    # Use Lake's native `lean` command so the exporter resolves imports from
+    # the current workspace build graph. A saved setup file can keep pointing
+    # at a shared-cache OLean from an older source revision after `lake build`
+    # has rebuilt the local module.
     result = subprocess.run(
-        ["lake", "env", "lean", *setup_args, str(EXPORTER)],
+        ["lake", "--quiet", "lean", str(EXPORTER)],
         cwd=ROOT,
         text=True,
         capture_output=True,

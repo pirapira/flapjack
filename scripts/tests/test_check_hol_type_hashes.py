@@ -5,6 +5,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "check_hol_type_hashes.py"
@@ -180,6 +181,28 @@ class HolTypeHashesTest(unittest.TestCase):
         lock = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
         self.assertEqual(json.loads(MODULE.render_lock(lock)), lock)
         self.assertEqual(len(MODULE.render_lock(lock).splitlines()), 6)
+
+    def test_exporter_uses_current_lake_build_graph(self):
+        result = type("Completed", (), {
+            "returncode": 0,
+            "stdout": json.dumps(self.export[0]) + "\n",
+            "stderr": "",
+        })()
+        with patch.object(MODULE.subprocess, "run", return_value=result) as run:
+            self.assertEqual(MODULE.exported_types(), self.export)
+        self.assertEqual(run.call_args.args[0], [
+            "lake", "--quiet", "lean", str(MODULE.EXPORTER),
+        ])
+
+    def test_native_export_sees_recent_crep_props_source_declaration(self):
+        # This exact declaration was missing from an old saved
+        # Flapjack.setup.json after Lake had rebuilt CrepProps from source.
+        # Exercise the real Lake path to ensure the fresh declaration is
+        # visible and that no local OLean import is missing.
+        names = {item["lean_name"] for item in MODULE.exported_types()}
+        self.assertIn(
+            "Flapjack.crepAssignedVarsHOL_nestedSeq_storesHOL", names
+        )
 
 
 if __name__ == "__main__":

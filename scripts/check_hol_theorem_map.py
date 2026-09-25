@@ -72,6 +72,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_decls"): (
+        "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+        "fperm_decs_decls",
+        "Codex (source comparison with pan_globalsProofScript.sml:2023-2029: "
+        "the unused ys binder, non-function premise, and rename-to-self equation "
+        "correspond. Lean quantifies over production Decl α, with String names "
+        "and arbitrary α global values; HOL uses mlstring names and word-valued "
+        "globals. The premise makes each renamer a no-op but does not equate the "
+        "declaration carriers. There is no NameRanged premise or checked "
+        "declaration bridge for names_as_string. Keep @[hol] withheld pending "
+        "exact-carrier work flapjack-pxn.18.3.5.8."
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "is_wf_shape_drop",

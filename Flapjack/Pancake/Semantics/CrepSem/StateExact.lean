@@ -3,91 +3,21 @@ import Flapjack.Pancake.Semantics.CrepSem.HOLState
 /-!
 # Exact HOL `crepSem$state` helpers over the finite-support carrier
 
-The raw `CrepHolState` (`Flapjack/Pancake/Semantics/CrepSem.lean`) stores
-`locals`/`code` as unrestricted lookup functions, a strict superset of HOL's
-finite maps, so its state-helper tags were withdrawn in the
-`flapjack-pxn.18.3.7.1.3.1.1.3` audit. This module restates the state helpers
-over `CrepSemHOLState`, whose `locals`/`globals`/`code` fields are
-`HolFiniteMapExact` (finite support by type), so the whole-state quantification
-matches HOL `('a,'ffi) crepSem$state`.
+The four helpers `decClockCrepSemHOL`, `fixClockCrepSemHOL`,
+`fixClockCrepSemHOL_IMP_LESS_EQ`, and `memLoadCrepSemHOL` live in
+`Flapjack/Pancake/Semantics/CrepSem/HOLState.lean`, the module that declares the
+owning `CrepSemHOLState` structure, its exact `HolFiniteMapExact` fields, and the
+canonical `CrepSemHOLState.holFmapAsFiniteSupportWitness`. The AGENTS/checker
+finite-map qualifier requires a tagged declaration and its roundtrip witness to
+be in the same module as the owning structure, so this module is now an
+import-only re-export that keeps the original import paths working.
 
-The word index is the canonical positive `BitVec width` model for a HOL word
-dimension, the same representation used by the accepted `word_lab`/`crepLang$prog`
-(`HolWordLab width`, `CrepProgHOL width`) ports. Statements are clause-for-clause
-HOL; only the word dimension is represented by its positive cardinality.
+The helpers remain untagged until the owner-disambiguation checker
+(`flapjack-pxn.18.3.7.1.3.1.1.2.6`, ds3) is integrated; referring to
+`Flapjack.Pancake.Semantics.CrepSem.StateExact` still brings the names into
+scope through the import.
 
-This first slice covers the helpers that do not need finite-map operations:
-`dec_clock_def`, `fix_clock_def`, `fix_clock_IMP_LESS_EQ`, and `mem_load_def`.
-The update helpers (`set_var`, `set_globals`, `upd_locals`, `empty_locals`,
-`res_var`) need `FUPDATE`/`FEMPTY`/`FUPDATE_LIST` on `HolFiniteMapExact` and are
-tracked as follow-up slices of `flapjack-pxn.18.3.7.1.3.1.1.3.1`.
-
-The four helpers below are **temporarily untagged**. Their finite-map
-representation (`HolFiniteMapExact` fields on `CrepSemHOLState`) must be
-recorded with the `@[hol]` qualifier `(fmap_as_finite_support := [locals,
-globals, code])` rather than a bare tag, per the standard-translation rule.
-
-This module is **not** the right home for those tags: `StateExact.lean` does not
-declare an owning structure with the `HolFiniteMapExact` fields, so no
-same-module `holFmapAsFiniteSupportWitness` can name the owner here (an imported
-owner is not accepted). The qualifying declarations must be relocated into
-`Flapjack/Pancake/Semantics/CrepSem/HOLState.lean`, which declares
-`CrepSemHOLState` and its canonical
-`holFmapAsFiniteSupportWitness`. That relocation is a reviewed layout change
-tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.3.1`; until it and the owner-type
-checker fix (`flapjack-pxn.18.3.7.1.3.1.1.2.6`, ds3 commits `71686968e` +
-`3c88b4bda`) land in the integration branch, no exact claim is made here and
-each helper remains case-by-case statement-reviewed only.
-
-References: `cakeml/pancake/semantics/crepSemScript.sml:48-51` (mem_load_def),
-`:145-148` (dec_clock_def), `:150-152` (fix_clock_def), `:155-158`
-(fix_clock_IMP_LESS_EQ). Direct HOL rows reproduced below live in
-`scripts/hol-probes/crep_mem_load_probe.out`, `crep_fix_clock_probe.out`, and
-`crep_dec_clock_simp_probe.out`.
+References: `cakeml/pancake/semantics/crepSemScript.sml:48-51` (`mem_load_def`),
+`:145-148` (`dec_clock_def`), `:150-152` (`fix_clock_def`), `:155-158`
+(`fix_clock_IMP_LESS_EQ`).
 -/
-
-namespace Flapjack
-
-/-- Port of HOL `dec_clock_def` (`crepSemScript.sml:145-148`) over the
-    finite-support `CrepSemHOLState` carrier. Untagged pending the
-    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
-def decClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
-    (state : CrepSemHOLState width σ) : CrepSemHOLState width σ :=
-  { state with clock := state.clock - 1 }
-
-/-- Port of HOL `fix_clock_def` (`crepSemScript.sml:150-152`) over the
-    finite-support `CrepSemHOLState` carrier. The result is polymorphic in the
-    unconstrained `res` component, as in HOL. Untagged pending the
-    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
-def fixClockCrepSemHOL {width : Nat} [NeZero width] {σ : Type} {β : Type}
-    (oldState : CrepSemHOLState width σ) (step : β × CrepSemHOLState width σ) :
-    β × CrepSemHOLState width σ :=
-  (step.1, { step.2 with
-    clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
-
-/-- Port of HOL `fix_clock_IMP_LESS_EQ` (`crepSemScript.sml:155-158`):
-    `fix_clock` never increases the clock. Untagged pending the
-    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
-theorem fixClockCrepSemHOL_IMP_LESS_EQ {width : Nat} [NeZero width] {σ : Type}
-    {β : Type} (state : CrepSemHOLState width σ) (x : β × CrepSemHOLState width σ)
-    (res : β) (s1 : CrepSemHOLState width σ)
-    (h : fixClockCrepSemHOL state x = (res, s1)) : s1.clock ≤ state.clock := by
-  obtain ⟨value, stepState⟩ := x
-  simp only [fixClockCrepSemHOL, Prod.mk.injEq] at h
-  obtain ⟨_, hstate⟩ := h
-  subst hstate
-  change (if state.clock < stepState.clock then state.clock else stepState.clock) ≤
-    state.clock
-  split <;> omega
-
-/-- Port of HOL `mem_load_def` (`crepSemScript.sml:48-51`) over the
-    finite-support `CrepSemHOLState` carrier: a total `word → word_lab` memory
-    guarded by the `memaddrs` set. Untagged pending the
-    `fmap_as_finite_support` qualifier (`flapjack-pxn.18.3.7.1.3.1.1.2.4`). -/
-def memLoadCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
-    (address : BitVec width) (state : CrepSemHOLState width σ)
-    [DecidablePred state.memaddrs] :
-    Option (HolWordLab width) :=
-  if state.memaddrs address then some (state.memory address) else none
-
-end Flapjack

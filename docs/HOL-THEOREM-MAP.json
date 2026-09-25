@@ -93,7 +93,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean",
     "lean_name": "crepPrimopHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (target cases and direct HOL-EVAL oracle)"
+    "reviewer": "Codex (independent carrier/side-condition audit; HOL crep_primop_def crepSemScript.sml:221 is over a word_lab list; Lean PanWordLab (BitVec width) matches ctor arity and fixed width payload like the reviewed loopPrimopHOL; [NeZero width] matches HOL positive dimindex; LENGTH = 3 renders as the exactly-three .word list pattern since word_lab is one-constructor so EVERY isWord is automatic; result SOME [Word res; Word co] and word_add_carry match; direct HOL rows crep_valid/overflow/invalid/zero_args/four_args/nonzero_carry in pan_crep_primop_probe.out)"
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -462,6 +462,14 @@
     "lean_name": "crepSimpExpCorrect1OpHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged support for the Op case shape, with IHs over the argument list and full Option word_lab result. It uses evalCrepHolFiniteWordSourceExpWordLab over an explicit HolFiniteDimension and CrepHolState. The word_op operation bridge is reviewed, but no proof identifies this evaluator/state encoding with native HOL crepSem eval_def for arbitrary dimensions and states; therefore it is not tagged as a HOL case."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-width Crepop Mul case with the recursive hypotheses restricted to its two children, successful premise, arbitrary code-map update, and complete Option word_lab result. It uses the explicit HolFiniteDimension/source evaluator and is not tagged until that evaluator and CrepHolState are proved to represent native HOL crepSem eval for arbitrary finite index types and states."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

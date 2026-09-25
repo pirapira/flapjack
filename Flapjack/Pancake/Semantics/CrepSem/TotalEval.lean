@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem.Eval
+import Flapjack.RiscV.PanMemory
 
 /-!
 # Total HOL-shaped Crep evaluator fragment
@@ -47,6 +48,8 @@ inductive CrepClockProg (width : Nat) where
   | store (destination source : CrepExp (BitVec width))
   | sharedMemory (operator : CrepMemOp) (name : Nat)
       (address : CrepExp (BitVec width))
+  | extCall (function : String)
+      (configuration configurationLength array arrayLength : Nat)
   | decLocal (name : Nat) (value : CrepExp (BitVec width))
       (body : CrepClockProg width)
   | seq (first second : CrepClockProg width)
@@ -64,6 +67,8 @@ def CrepClockProg.toCrepProg {width : Nat} :
   | .assignLocal name value => .assign name value
   | .store destination source => .store destination source
   | .sharedMemory operator name address => .shMem operator name address
+  | .extCall function configuration configurationLength array arrayLength =>
+      .extCall function configuration configurationLength array arrayLength
   | .decLocal name value body => .dec name value body.toCrepProg
   | .seq first second => .seq first.toCrepProg second.toCrepProg
   | .returnValues values => .return values
@@ -144,10 +149,76 @@ def evalCrepClockShMem [NeZero width] {σ : Type _}
                 | .returned ffi _ => (none, { state with ffi := ffi })
           | _ => (some .error, state)
 
+/-- Read a byte array from the state-owned memory map with the RISC-V byte
+    model, source memory domain, and HOL endianness. -/
+def crepClockReadByteArray [NeZero width] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (address : BitVec width)
+    (length : Nat) : Option (List UInt8) :=
+  (List.range length).mapM fun offset =>
+    (crepHolEvalMemLoadByte
+      (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+      (BitVec.ofNat width (width / 8)) state
+      (address + BitVec.ofNat width offset)).map fun byte => UInt8.ofNat byte.toNat
+
+/-- Store one byte through `memaddrs` and the state's RISC-V word cell. HOL
+    `mem_store_byte` returns `NONE` outside the domain, but `write_bytearray`
+    keeps the recursively updated tail memory in that case. This helper thus
+    leaves the supplied state unchanged when this byte cannot be stored. -/
+def crepClockWriteByte [NeZero width] [BEq (BitVec width)] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (address : BitVec width)
+    (byte : UInt8) : CrepHolState (BitVec width) σ := Id.run do
+  let model := RiscV.panRiscVMemoryModelForEndian state.bigEndian
+  let bytesInWord := BitVec.ofNat width (width / 8)
+  let alignedAddress := model.byteAlign bytesInWord address
+  if state.memaddrs alignedAddress then
+    let .word value := state.memory alignedAddress
+    let updated := model.setByte bytesInWord address
+      (BitVec.ofNat width byte.toNat) value state.bigEndian
+    return { state with memory := fun current =>
+      if current == alignedAddress then .word updated else state.memory current }
+  else
+    return state
+
+/-- HOL `write_bytearray` processes the tail first, then stores the head byte.
+    Each failed store preserves the recursively updated memory passed to it. -/
+def crepClockWriteByteArray [NeZero width] [BEq (BitVec width)] {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (address : BitVec width)
+    : List UInt8 → CrepHolState (BitVec width) σ
+  | [] => state
+  | byte :: bytes =>
+      let writtenTail := crepClockWriteByteArray state
+        (address + BitVec.ofNat width 1) bytes
+      crepClockWriteByte writtenTail address byte
+
+/-- Total isolated HOL `ExtCall` clause over a RISC-V `CrepHolState`. This
+    boundary uses executable `FfiState`/`UInt8` and the fixed RISC-V byte
+    model, so it intentionally has no `@[hol]` tag. Missing locals and failed
+    reads return `Error` with the input state; returned bytes use HOL's
+    tail-first `write_bytearray` state update. -/
+def evalCrepClockExtCall [NeZero width] [BEq (BitVec width)] {σ : Type _}
+    (function : String) (configuration configurationLength array arrayLength : Nat)
+    (state : CrepHolState (BitVec width) σ) :
+    Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
+      CrepHolState (BitVec width) σ :=
+  match state.locals configurationLength, state.locals configuration,
+      state.locals arrayLength, state.locals array with
+  | some (.word configLength), some (.word configAddress),
+      some (.word arrayLengthValue), some (.word arrayAddress) =>
+      match crepClockReadByteArray state configAddress configLength.toNat,
+          crepClockReadByteArray state arrayAddress arrayLengthValue.toNat with
+      | some configurationBytes, some arrayBytes =>
+          match callFfi state.ffi (.extCall function) configurationBytes arrayBytes with
+          | .final event => (some (.finalFfi event), state)
+          | .returned ffi returnedBytes =>
+              let withFfi := { state with ffi := ffi }
+              (none, crepClockWriteByteArray withFfi arrayAddress returnedBytes)
+      | _, _ => (some .error, state)
+  | _, _, _, _ => (some .error, state)
+
 /-- Total result/state equations for the matching HOL `evaluate_def` leaves,
     `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`, and
-    `Dec`. This restricted function deliberately has no `Option` fuel wrapper
-    and does not depend on `evalCrepRuntimeResult`. -/
+    `Dec`, and `ExtCall`. This restricted function deliberately has no
+    `Option` fuel wrapper and does not depend on `evalCrepRuntimeResult`. -/
 def evalCrepClockLeaf {width : Nat} {σ : Type _}
     (leaf : CrepClockLeaf) (state : CrepHolState (BitVec width) σ) :
     Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×
@@ -195,6 +266,8 @@ def evalCrepClockProg [NeZero width] {σ : Type _}
       | _, _ => (some .error, state)
   | .sharedMemory operator name address, state =>
       evalCrepClockShMem operator name address state
+  | .extCall function configuration configurationLength array arrayLength, state =>
+      evalCrepClockExtCall function configuration configurationLength array arrayLength state
   | .decLocal name value body, state =>
       match evalCrepHolExpWordLab state value with
       | none => (some .error, state)

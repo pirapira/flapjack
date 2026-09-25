@@ -63,6 +63,19 @@ def CrepSemHOLState.mapc {width : Nat} [NeZero width] {σ : Type}
     (state : CrepSemHOLState width σ) :
     (state.mapc f).toBitVecEvaluatorState = state.toBitVecEvaluatorState := rfl
 
+/-- HOL's proof-script-local `mapc` update on an arbitrary-index finite state.
+This only uses the finite-map `FMAP_MAP2` encoding; it makes no claim about
+the code-entry representation. -/
+def CrepSemHOLFiniteState.mapc {ι β σ : Type}
+    (f : MlString × β → β) (state : CrepSemHOLFiniteState ι β σ) :
+    CrepSemHOLFiniteState ι β σ :=
+  { state with code := state.code.map2 f }
+
+@[simp] theorem CrepSemHOLFiniteState.toSourceEvaluatorState_mapc
+    {ι β σ : Type} (f : MlString × β → β)
+    (state : CrepSemHOLFiniteState ι β σ) :
+    (state.mapc f).toSourceEvaluatorState = state.toSourceEvaluatorState := rfl
+
 /-- Changing only the HOL code map cannot alter expression evaluation after
 projection into the source evaluator. This is Flapjack support for the
 `simp_exp_correct1` dependency; the evaluator correspondence to native HOL
@@ -399,6 +412,46 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
     (PanWordLab.word (fun _ => false)) h
   rw [hCodeId] at hSource
   exact hSource
+
+/-- All-width `simp_exp_correct1` support over a finite-map state with an
+arbitrary finite-index word carrier. The input retains locals, globals, code,
+memory, memory domains, clock/endian fields, FFI, and base/top words; its code
+update is the actual `FMAP_MAP2`-shaped operation. The unused result binder,
+successful full `word_lab` premise, `n2w`-shaped simplifier image, and optional
+`word_lab` equality follow HOL's statement shape.
+
+This remains untagged because evaluation is still the explicit-dimension
+source projection: the generic code-entry representation and FFI projection
+are not identified with HOL's program and FFI carriers, and the recursive
+operation clauses have not been proved as a relation to native HOL
+`crepSem$eval`. This theorem narrows the state/finite-index gap but does not
+close the native evaluator correspondence. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSource
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (update : MlString × β → β)
+    (state : CrepSemHOLFiniteState ι β σ)
+    (expression : CrepExp (ι → Bool))
+    (_result : PanWordLab (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (state.mapc update).toSourceEvaluatorState
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n)) expression) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression := by
+  rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
+  let projected := state.toSourceEvaluatorState
+  let codeId := fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2
+  have hCodeId : crepArithHolFiniteDimensionMapCode codeId projected = projected := by
+    cases projected
+    simp [crepArithHolFiniteDimensionMapCode, codeId]
+  have hPres := crepSimpExpCorrect1HolFiniteWordSourceWordLab
+    (dimension := dimension) (f := codeId) projected expression
+    (PanWordLab.word (fun _ => false)) h
+  rw [hCodeId] at hPres
+  exact hPres
 
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in

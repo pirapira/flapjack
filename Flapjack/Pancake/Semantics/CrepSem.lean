@@ -654,8 +654,7 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
   · intro hn
     rw [eraseDups_eq_self_of_nodup_general l hn]
 
-/-- Exact HOL `lookup_code_def` (`cakeml/pancake/semantics/crepSemScript.sml:76-84`)
-    over the finite map: look the function up, require the declared parameter
+/-- Flapjack's executable analogue of HOL `lookup_code_def`: look the function up, require the declared parameter
     list to have the argument count and be duplicate-free, and return the body
     together with the local finite map `FEMPTY |++ ZIP (ns,args)`.
 
@@ -664,10 +663,10 @@ theorem eraseDups_length_eq_iff_nodup {α : Type} [BEq α] [LawfulBEq α] (l : L
     with `PanWordLab.word`. Its `len` argument is retained from the HOL
     `lookup_code` signature, where the definition does not inspect it.
     The generic-`α` form is deliberately UNTAGGED (HOL is word-length indexed);
-    the width-indexed exact counterpart is `lookupCrepHolCodeW` below.  No key
-    equality assumption is needed: the lookup is plain function application and
-    the duplicate check uses `List.Nodup`. Function names are concrete HOL
-    strings, so no arbitrary equality-instance parameter is needed. -/
+    the width-indexed analogue is `lookupCrepHolCodeW` below. Neither declaration
+    is tagged as a HOL port: HOL's `funname` and code-map key are `mlstring`
+    (`crepSemScript.sml:17,23`), whereas `FunName` here is Lean `String`.
+    The exact-key-carrier port remains open. -/
 def lookupCrepHolCode (code : FunName → Option (List Nat × CrepProg α))
     (fname : FunName) (args : List (PanWordLab α)) (_len : Nat) :
     Option (CrepProg α × FiniteMap Nat (PanWordLab α)) :=
@@ -678,20 +677,20 @@ def lookupCrepHolCode (code : FunName → Option (List Nat × CrepProg α))
       then some (body, FUPDATE_LIST FEMPTY (parameters.zip args))
       else none
 
-/-- Exact width-indexed HOL-shaped port of `crepSem$lookup_code_def`
+/-- Width-indexed Flapjack analogue of `crepSem$lookup_code_def`
     (`crepSemScript.sml:76-84`) at the word-length carrier `BitVec width`: the
     code lookup must find a same-length duplicate-free parameter list, and
     returns the body with locals `FEMPTY |++ ZIP (parameters, args)`.  Defined
     as the width-specialized production `lookupCrepHolCode`, so the bridge below
-    is definitional. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+    is definitional. This is not a HOL port: its `FunName = String` code-map key
+    differs from HOL's `funname = mlstring`. -/
 def lookupCrepHolCodeW {width : Nat} [NeZero width]
     (code : FunName → Option (List Nat × CrepProg (BitVec width)))
     (fname : FunName) (args : List (PanWordLab (BitVec width))) (len : Nat) :
     Option (CrepProg (BitVec width) × FiniteMap Nat (PanWordLab (BitVec width))) :=
   lookupCrepHolCode code fname args len
 
-/-- Kernel-checked bridge: the width-indexed exact `lookup_code` counterpart
+/-- Kernel-checked bridge: the width-indexed Flapjack `lookup_code` analogue
     agrees with the generic production definition at `BitVec width`. -/
 theorem lookupCrepHolCodeW_eq_lookupCrepHolCode {width : Nat} [NeZero width]
     (code : FunName → Option (List Nat × CrepProg (BitVec width)))
@@ -699,10 +698,10 @@ theorem lookupCrepHolCodeW_eq_lookupCrepHolCode {width : Nat} [NeZero width]
     lookupCrepHolCodeW code fname args len = lookupCrepHolCode code fname args len :=
   rfl
 
-/-- Executed code lookup routed literally through the exact HOL-shaped
+/-- Executed code lookup routed literally through the Flapjack
     `lookupCrepHolCode` definition: the runtime passes evaluated words as
     `PanWordLab.word` cells and reuses the same finite-map local representation.
-    The word-width-specific tagged counterpart `lookupCrepHolCodeW` is
+    The word-width-specific counterpart `lookupCrepHolCodeW` is
     definitionally equal to this helper. -/
 def lookupCrepRuntimeCode [BEq String] (name : FunName) (values : List α)
     (code : FunName → Option (List Nat × CrepProg α)) :
@@ -726,12 +725,12 @@ theorem lookupCrepRuntimeCode_eq_lookupCrepHolCode [BEq String] [LawfulBEq Strin
   rfl
 
 /-- The production call adapter is the positive-width specialization of the
-    tagged HOL `lookup_code_def` port. Runtime arguments are wrapped as HOL
+    untagged Flapjack `lookup_code` analogue. Runtime arguments are wrapped as HOL
     `word_lab` words; the returned body and finite-map locals retain exactly
     the source result representation. This bridge adds no call-success premise
     and does not depend on arithmetic simplification correctness. It is a
-    Flapjack-specific adapter lemma with no separate HOL declaration; the
-    `@[hol]` reference remains on `lookupCrepHolCodeW`. -/
+    Flapjack-specific adapter lemma with no separate HOL declaration. The
+    `mlstring` code-key mismatch described above still applies. -/
 theorem lookupCrepRuntimeCode_eq_lookupCrepHolCodeW {width : Nat}
     [NeZero width] [BEq String]
     (name : FunName) (values : List (BitVec width)) (len : Nat)

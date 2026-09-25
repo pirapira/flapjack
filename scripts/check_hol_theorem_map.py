@@ -709,6 +709,15 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "foldl_res_var_zip_lookup_var_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "foldl_res_var_zip_lookup_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "submap_imp_fupdate_submap_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "submap_imp_domsub_submap_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "submap_imp_domsub_fupdate_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "res_var_commutes_strong_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "res_var_foldl_commutes_strong_hol"),
+        ("Flapjack/Pancake/Proofs/CrepInline.lean", "flookup_res_var_is_mem_zip_eq_hol"),
+        ("Flapjack/Pancake/Semantics/CrepProps.lean", "flookup_res_var_distinct_zip_eq_hol"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

@@ -859,6 +859,63 @@ class ValidateInventoryTest(unittest.TestCase):
         errors = MAP["validate_inventory"]([record], {key}, {key: reference})
         self.assertTrue(any("must not carry an @[hol] tag" in error for error in errors))
 
+    def test_res_var_hol_equality_ports_are_reviewed_exact(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        exact = {
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "foldl_res_var_zip_lookup_var_hol"): "FOLDL_res_var_ZIP_lookup_var",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "foldl_res_var_zip_lookup_hol"): "FOLDL_res_var_ZIP_lookup",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_fupdate_submap_hol"): "SUBMAP_IMP_FUPDATE_SUBMAP",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_domsub_submap_hol"): "SUBMAP_IMP_DOMSUB_SUBMAP",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "submap_imp_domsub_fupdate_hol"): "SUBMAP_IMP_DOMSUB_FUPDATE",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_commutes_strong_hol"): "res_var_commutes_strong",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_foldl_commutes_strong_hol"): "res_var_foldl_commutes_strong",
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "flookup_res_var_is_mem_zip_eq_hol"): "flookup_res_var_is_mem_zip_eq",
+            ("Flapjack/Pancake/Semantics/CrepProps.lean",
+             "flookup_res_var_distinct_zip_eq_hol"): "flookup_res_var_distinct_zip_eq",
+        }
+        for key, hol_name in exact.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(record["hol_name"], hol_name)
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn("DecidableEq", record["reviewer"])
+                self.assertIn(key, MAP["tagged_declarations"]())
+
+        production = {
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "FOLDL_res_var_ZIP_lookup_var"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "FOLDL_res_var_ZIP_lookup"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_FUPDATE_SUBMAP"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_DOMSUB_SUBMAP"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "SUBMAP_IMP_DOMSUB_FUPDATE"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_commutes_strong"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "res_var_foldl_commutes_strong"),
+            ("Flapjack/Pancake/Proofs/CrepInline.lean",
+             "flookup_res_var_is_mem_zip_eq"),
+        }
+        for key in production:
+            with self.subTest(key=key):
+                self.assertEqual(by_key[key]["statement_status"],
+                                 "documented_mismatch")
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
 
 if __name__ == "__main__":
     unittest.main()

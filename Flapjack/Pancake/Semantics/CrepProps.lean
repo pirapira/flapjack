@@ -420,6 +420,16 @@ theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     FLOOKUP ((xs.zip ys).foldl resVar fm) x = FLOOKUP fm x :=
   FLOOKUP_foldl_resVar_zip_not_mem xs ys fm x hlen hx
 
+/-- Exact HOL `flookup_res_var_distinct_zip_eq` (`crepPropsScript.sml:777`) over
+    the `=`-based `resVarHOL` (`DecidableEq` encodes HOL `=`); no Boolean-`BEq`
+    side condition. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "flookup_res_var_distinct_zip_eq"]
+theorem flookup_res_var_distinct_zip_eq_hol {α : Type} {β : Type} [DecidableEq α]
+    (xs : List α) (ys : List (Option β)) (fm : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (hx : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVarHOL fm) x = FLOOKUP fm x :=
+  FLOOKUP_foldl_resVarHOL_zip_not_mem xs ys fm x hlen hx
+
 /-- Flapjack analogue of Cake `crepProps$dec_clock_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:267-278`), kept untagged with
     status `documented_mismatch` under audit bead `flapjack-dlc.105`.

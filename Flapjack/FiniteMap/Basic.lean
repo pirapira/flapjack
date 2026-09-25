@@ -318,4 +318,85 @@ theorem FUPDATE_FUPDATE_same [BEq α] [LawfulBEq α]
   · simp only [FUPDATE, hk, if_true]
   · simp only [FUPDATE, hk, Bool.false_eq_true, if_false]
 
+/-! ## HOL-equality (`=`) finite-map primitives
+
+HOL's `finite_mapTheory` defines `FUPDATE` (`|+`), `FUPDATE_LIST` (`|++`) and
+domain subtraction (`\\`) with the polymorphic propositional equality `=`.  The
+primitives above use the Boolean `BEq` because that is what the executable
+compiler runs.  The definitions below are the faithful `=`-based representation
+(`DecidableEq` is Lean's direct encoding of HOL equality, which is decidable at
+every type), so HOL statements that quantify the key type freely can be ported
+statement-exactly.  These are Flapjack infrastructure, not declarations of a
+CakeML script. -/
+
+/-- HOL-equality form of `FUPDATE` (`|+`). -/
+def FUPDATE_HOL [DecidableEq α] (f : FiniteMap α β) (entry : α × β) : FiniteMap α β :=
+  fun key => if key = entry.1 then some entry.2 else f key
+
+/-- HOL-equality form of `FUPDATE_LIST` (`|++`), i.e. `FOLDL FUPDATE`. -/
+def FUPDATE_LIST_HOL [DecidableEq α] (f : FiniteMap α β)
+    (entries : List (α × β)) : FiniteMap α β :=
+  entries.foldl (fun g entry => FUPDATE_HOL g entry) f
+
+/-- HOL-equality form of domain subtraction (`\\`). -/
+def FDOMSUB_HOL [DecidableEq α] (f : FiniteMap α β) (key : α) : FiniteMap α β :=
+  fun k => if k = key then none else f k
+
+@[simp] theorem FLOOKUP_FUPDATE_HOL [DecidableEq α] (f : FiniteMap α β)
+    (k1 : α) (v : β) (k2 : α) :
+    FLOOKUP (FUPDATE_HOL f (k1, v)) k2 = if k2 = k1 then some v else FLOOKUP f k2 :=
+  rfl
+
+@[simp] theorem FLOOKUP_FDOMSUB_HOL [DecidableEq α] (f : FiniteMap α β) (key k : α) :
+    FLOOKUP (FDOMSUB_HOL f key) k = if k = key then none else FLOOKUP f k :=
+  rfl
+
+@[simp] theorem FUPDATE_LIST_HOL_nil [DecidableEq α] (f : FiniteMap α β) :
+    FUPDATE_LIST_HOL f [] = f := rfl
+
+theorem FUPDATE_LIST_HOL_cons [DecidableEq α] (f : FiniteMap α β) (entry : α × β)
+    (entries : List (α × β)) :
+    FUPDATE_LIST_HOL f (entry :: entries) =
+      FUPDATE_LIST_HOL (FUPDATE_HOL f entry) entries :=
+  rfl
+
+/-- HOL-equality form of `FUPDATE` commutation at distinct keys. -/
+theorem FUPDATE_HOL_comm [DecidableEq α] (f : FiniteMap α β)
+    (k1 : α) (v1 : β) (k2 : α) (v2 : β) (h : k1 ≠ k2) :
+    FUPDATE_HOL (FUPDATE_HOL f (k1, v1)) (k2, v2) =
+      FUPDATE_HOL (FUPDATE_HOL f (k2, v2)) (k1, v1) := by
+  funext key
+  by_cases h2 : key = k2 <;> by_cases h1 : key = k1 <;>
+    simp_all [FUPDATE_HOL]
+
+/-- HOL-equality form of domain subtraction commutes at distinct keys. -/
+theorem FDOMSUB_HOL_commutes [DecidableEq α] (f : FiniteMap α β) (n m : α)
+    (h : n ≠ m) : FDOMSUB_HOL (FDOMSUB_HOL f n) m = FDOMSUB_HOL (FDOMSUB_HOL f m) n := by
+  funext k
+  by_cases hk : k = m <;> by_cases hk' : k = n <;>
+    simp_all [FDOMSUB_HOL]
+
+/-- HOL-equality form of `\\` after `|+` at a distinct key. -/
+theorem FDOMSUB_HOL_FUPDATE_HOL_neq [DecidableEq α] (f : FiniteMap α β)
+    (key m : α) (v : β) (h : key ≠ m) :
+    FDOMSUB_HOL (FUPDATE_HOL f (m, v)) key =
+      FUPDATE_HOL (FDOMSUB_HOL f key) (m, v) := by
+  funext k
+  by_cases hk : k = m <;> by_cases hk2 : k = key <;>
+    simp_all [FDOMSUB_HOL, FUPDATE_HOL]
+
+/-- HOL-equality form of `FLOOKUP_FUPDATE_LIST_NOT_MEM`. -/
+theorem FLOOKUP_FUPDATE_LIST_HOL_not_mem [DecidableEq α] (f : FiniteMap α β)
+    (entries : List (α × β)) (k : α) (h : k ∉ entries.map Prod.fst) :
+    FLOOKUP (FUPDATE_LIST_HOL f entries) k = FLOOKUP f k := by
+  induction entries generalizing f with
+  | nil => rfl
+  | cons entry entries ih =>
+    have hk : entry.1 ≠ k := fun he => h (by simp [he])
+    have htail : k ∉ entries.map Prod.fst := fun hmem => h (by simp [hmem])
+    rw [FUPDATE_LIST_HOL_cons, ih (FUPDATE_HOL f entry) htail]
+    simp only [FLOOKUP, FUPDATE_HOL]
+    have hk' : ¬ k = entry.1 := fun hc => hk hc.symm
+    simp [hk']
+
 end Flapjack

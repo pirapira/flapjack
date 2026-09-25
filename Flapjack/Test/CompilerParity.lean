@@ -788,6 +788,7 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsFunctionsFilterNilParity.runChecks,
     Flapjack.Test.PanGlobalsFpermNameParity.runChecks,
     Flapjack.Test.PanGlobalsFpermParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermDecsParity.runChecks,
     Flapjack.Test.PanGlobalsFpermClusterParity.runChecks,
     Flapjack.Test.PanGlobalsDecShapesClusterParity.runChecks,
     Flapjack.Test.PanGlobalsFunctionPreservationParity.runChecks,

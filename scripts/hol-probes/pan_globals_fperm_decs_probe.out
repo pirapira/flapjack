@@ -5,5 +5,5 @@ mixed=[Decl One «g» (Const 7w);
  Function
    <|name := «foo»; inline := T; export := F; params := [];
      body := DecCall «x» One «bar» [] Skip; return := One|>]
-
 empty=[]
+fperm_decs_done=0

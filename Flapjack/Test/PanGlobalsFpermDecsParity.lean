@@ -42,4 +42,15 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+def emptyGuard : Bool :=
+  (globalRenameDecls "foo" "bar" ([] : List (Decl Nat))).isEmpty
+
+#guard emptyGuard
+
+def runChecks : IO Bool := do
+  IO.println (if parityGuard && emptyGuard then
+    "PASS pan_globals fperm_decs_def parity (2 HOL rows)"
+    else "FAIL pan_globals fperm_decs_def parity (2 HOL rows)")
+  pure (parityGuard && emptyGuard)
+
 end Flapjack.Test.PanGlobalsFpermDecsParity

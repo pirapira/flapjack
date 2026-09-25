@@ -26,3 +26,4 @@ val _ = print_eval "mixed"
          return := panLang$One |> ]``;
 val _ = print_eval "empty"
   ``pan_globals$fperm_decs «foo» «bar» []``;
+val _ = print_eval "fperm_decs_done" ``0n``;

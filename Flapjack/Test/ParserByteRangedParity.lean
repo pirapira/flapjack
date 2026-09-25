@@ -196,4 +196,18 @@ example (ofInt : Int → BitVec 64) (fuel : Nat)
     ∀ r, convBinaryExps ofInt fuel [] acc = some r → ExpByteRanged r :=
   convBinaryExps_byteRanged ofInt fuel hH [] (by simp) acc hacc
 
+example (ofInt : Int → BitVec 64) (fuel : Nat) (tree : ParseTree)
+    (ht : ParseTreeByteRanged tree) :
+    ∀ e, convExp ofInt fuel tree = some e → ExpByteRanged e :=
+  convExp_byteRanged ofInt fuel tree ht
+
+example {width : Nat} (l : List (Flapjack.Exp (BitVec width)))
+    (h : ∀ e ∈ l, ExpByteRanged e) : ListExpByteRanged l :=
+  listExpByteRanged_iff l |>.mpr h
+
+example {width : Nat} (l : List (String × Flapjack.Exp (BitVec width)))
+    (h : ∀ p ∈ l, (∀ c ∈ p.1.toList, c.toNat < 256) ∧ ExpByteRanged p.2) :
+    ListFieldByteRanged l :=
+  listFieldByteRanged_iff l |>.mpr h
+
 end Flapjack.Test.ParserByteRangedParity

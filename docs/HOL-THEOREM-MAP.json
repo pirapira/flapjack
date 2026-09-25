@@ -9318,5 +9318,13 @@
     "lean_name": "panMemStore32HOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "assigned_vars_MAPi_Assign",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_mapIdxAssign",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_MAPi_Assign at crep_to_loopProofScript.sml:355: HOL !les offset. assigned_vars (nested_seq (MAPi (\\n. loopLang$Assign (n + offset)) les)) = GENLIST ($+ offset) (LENGTH les); loopLang assigned_vars/nested_seq rendered as the untagged loopAssignedVars/loopNestedSeq ports, HOL MAPi rendered literally as List.mapIdx and GENLIST ($+ offset) as (List.range les.length).map (fun n => n + offset); width-indexed over List (LoopExp (BitVec width)) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; the untagged bridge loopAssignPairs_loopTempNames_eq_mapIdx relates mapIdx to the loopAssignPairs/loopTempNames numbering. Direct HOL-EVAL rows avma_nil/avma_one/avma_two/avma_three/avma_offset_zero in scripts/hol-probes/crep_to_loop_assigned_vars_mapidx_probe.out reproduced by the width-indexed examples in Flapjack/Test/LoopAssignedVarsParity.lean)"
   }
 ]

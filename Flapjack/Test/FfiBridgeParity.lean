@@ -170,6 +170,29 @@ example : shmemEvents = 1 := by simp [shmemEvents, callFFIHOL, holEchoState, hol
 /-- `call_shmem_ok_bytes`: the returned byte list is the oracle output. -/
 example : shmemBytes = 1 := by simp [shmemBytes, callFFIHOL, holEchoState, holEchoOracle]
 
+/-- Direct HOL `call_shmem_length_failure` oracle row from
+    `ffi_state_carrier_probe.out`: a doubled byte result becomes FFI_failed. -/
+example : callFFIHOL holState (HolFfiName.sharedMem .mappedWrite)
+    ([7, 8].map byteToBits) ([1].map byteToBits) =
+    HolFfiResult.final
+      (HolFinalEvent.mk (HolFfiName.sharedMem HolShmemOp.mappedWrite)
+        ([7, 8].map byteToBits) ([1].map byteToBits) .failed) := by
+  simp [callFFIHOL, holState, holOracle]
+
+private def holDivergedOracle : HolOracle Nat := fun _ _ _ _ => .final .diverged
+
+private def holDivergedState : HolFfiState Nat :=
+  { oracle := holDivergedOracle, ffiState := 0, ioEvents := [] }
+
+/-- Direct HOL `call_shmem_final_event` oracle row from
+    `ffi_state_carrier_probe.out`: a terminal oracle preserves FFI_diverged. -/
+example : callFFIHOL holDivergedState (HolFfiName.sharedMem .mappedRead)
+    ([7, 8].map byteToBits) ([1].map byteToBits) =
+    HolFfiResult.final
+      (HolFinalEvent.mk (HolFfiName.sharedMem HolShmemOp.mappedRead)
+        ([7, 8].map byteToBits) ([1].map byteToBits) .diverged) := by
+  simp [callFFIHOL, holDivergedState, holDivergedOracle]
+
 /-- The shared-memory echo bridge holds for the same call. -/
 example : FfiResultRel (callFfi prodEchoState (FfiName.sharedMem .mappedRead)
       [(7 : UInt8), 8] [(1 : UInt8)])

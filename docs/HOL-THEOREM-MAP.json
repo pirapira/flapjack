@@ -9757,6 +9757,14 @@
     "reviewer": "flapjack-deepseek-three (source comparison): HOL store_consts_stub k = Seq (StoreConsts k (k+1) NONE) (Return 0); word-independent, so the exact Lean storeConstsStub {alpha} : ProgM alpha is generic in the carrier parameter; HOL row scs_eq=T in scripts/hol-probes/word_to_stack_stub_probe.out, reproduced by stubParityGuard and the rfl example in Flapjack/Test/WordToStackBitsParity.lean."
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wShareInst_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wShareInst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL wShareInst (word_to_stackScript.sml:186-224) is polymorphic in the stack word type `'a` and has the load forms wShareInst Load/Load8/Load16/Load32 v (Addr ad offset) kf = let (l,n2) = wReg1 ad kf in wStackLoad l (wRegWrite1 (\\r. ShMemOp <op> r (Addr n2 offset)) v kf) and the store forms wShareInst Store/Store8/Store16/Store32 v (Addr ad offset) kf = let (l1,n2) = wReg1 ad kf; let (l2,n1) = wReg2 v kf in wStackLoad (l1 ++ l2) (ShMemOp <op> n1 (Addr n2 offset)). Lean wShareInst {alpha} : WordMemOp -> Nat -> WordLangAddr alpha -> Nat x Nat x Nat -> ProgM alpha matches all eight clauses over the exact shared-word carrier ProgM alpha (single word type, faithful MlString FFI). Direct HOL rows ws_load..ws_store32=T in scripts/hol-probes/word_to_stack_wshareinst_probe.out, reproduced by wShareInstParityGuard and rfl examples in Flapjack/Test/WordToStackBitsParity.lean."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

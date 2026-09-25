@@ -1785,3 +1785,10 @@ run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.ou
 run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
   pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The word_to_stack wShareInst probe observes the shared-memory instruction
+# helper `wShareInst` (word_to_stackScript.sml:186-224) for all eight memop
+# forms at word type 64.
+run_probe word_to_stack_wshareinst_probeScript.sml word_to_stack_wshareinst_probe.out \
+  ws_load ws_store32 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

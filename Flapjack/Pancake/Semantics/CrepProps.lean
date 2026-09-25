@@ -199,7 +199,9 @@ theorem crepAssignedVars_nestedSeq_storeGlobals {α : Type u}
     (`cakeml/pancake/semantics/crepPropsScript.sml:373`): every free variable of
     a program is an assigned variable of that program. Its width-specialized
     counterpart below still uses String-backed function names in `CrepProg`,
-    unlike HOL's `mlstring` identifiers, so neither declaration is tagged. -/
+    unlike HOL's `mlstring` identifiers, so neither declaration is tagged; the
+    exact `mlstring`/width-indexed port is
+    `crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL` below. -/
 theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars (program : CrepProg α) (name : Nat)
     (h : name ∈ crepAssignedFreeVars program) : name ∈ crepAssignedVars program := by
   revert h
@@ -224,6 +226,48 @@ theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVars (program : CrepProg α
   | case9 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
   | case10 => intro h; simpa [crepAssignedFreeVars, crepAssignedVars] using h
   | case11 => intro h; simp [crepAssignedFreeVars] at h
+
+/-- Exact port of Cake `crepProps$assigned_free_vars_IMP_assigned_vars`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:373-378`) over the exact
+    `CrepProgHOL` carrier (MlString function names and width-indexed words):
+    every free variable of a program is an assigned variable of that program. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_IMP_assigned_vars"]
+theorem crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL {width : Nat} [NeZero width]
+    (program : CrepProgHOL width) (name : Nat)
+    (h : name ∈ crepAssignedFreeVarsHOL program) : name ∈ crepAssignedVarsHOL program := by
+  revert h
+  induction program using crepAssignedFreeVarsHOL.induct with
+  | case1 => intro h; simp [crepAssignedFreeVarsHOL] at h
+  | case2 => intro h; simp_all [crepAssignedFreeVarsHOL, crepAssignedVarsHOL]
+  | case3 => intro h; simpa [crepAssignedFreeVarsHOL, crepAssignedVarsHOL] using h
+  | case4 => intro h; simpa [crepAssignedFreeVarsHOL, crepAssignedVarsHOL] using h
+  | case5 =>
+      intro h
+      simp only [crepAssignedFreeVarsHOL, crepAssignedVarsHOL, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case6 =>
+      intro h
+      simp only [crepAssignedFreeVarsHOL, crepAssignedVarsHOL, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case7 => intro h; simp_all [crepAssignedFreeVarsHOL, crepAssignedVarsHOL]
+  | case8 =>
+      intro h
+      simp only [crepAssignedFreeVarsHOL, crepAssignedVarsHOL, List.mem_append] at h ⊢
+      rcases h with h | h <;> simp_all
+  | case9 => intro h; simpa [crepAssignedFreeVarsHOL, crepAssignedVarsHOL] using h
+  | case10 => intro h; simpa [crepAssignedFreeVarsHOL, crepAssignedVarsHOL] using h
+  | case11 => intro h; simp [crepAssignedFreeVarsHOL] at h
+
+/-- Production bridge: transporting the exact HOL theorem across `crepProgToHOL`
+    recovers the executable `CrepProg` implication, so the exact-carrier port and
+    the production property agree. -/
+theorem crepAssignedFreeVars_imp_crepAssignedVars_via_HOL {width : Nat} [NeZero width]
+    (program : CrepProg (BitVec width)) (name : Nat)
+    (h : name ∈ crepAssignedFreeVars program) : name ∈ crepAssignedVars program := by
+  have hhol : name ∈ crepAssignedFreeVarsHOL (crepProgToHOL program) := by
+    simpa [crepProgToHOL_crepAssignedFreeVars] using h
+  have hmem := crepAssignedFreeVarsHOL_imp_crepAssignedVarsHOL (crepProgToHOL program) name hhol
+  simpa [crepProgToHOL_crepAssignedVars] using hmem
 
 /-- Flapjack analogue of Cake `crepProps$nested_seq_assigned_vars_eq`
     (`cakeml/pancake/semantics/crepPropsScript.sml:411`): the assignments
@@ -696,6 +740,52 @@ theorem crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith {width : Nat} [NeZero w
       | cons value values =>
           simp only [List.length_cons, Nat.succ.injEq] at h
           simp [List.zipWith, crepNestedSeqHOL, crepAssignedFreeVarsHOL, ih values h]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_vars_nested_decs_append"]
+theorem crepAssignedVarsHOL_nestedDecs_append {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width)) (body : CrepProgHOL width)
+    (h : names.length = values.length) :
+    crepAssignedVarsHOL (nestedDecsHOL names values body) =
+      names ++ crepAssignedVarsHOL body := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil => simp [nestedDecsHOL]
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          simp [nestedDecsHOL, crepAssignedVarsHOL, ih values (by omega)]
+
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "assigned_free_vars_nested_decs_append"]
+theorem crepAssignedFreeVarsHOL_nestedDecs_append {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width)) (body : CrepProgHOL width)
+    (h : names.length = values.length) :
+    crepAssignedFreeVarsHOL (nestedDecsHOL names values body) =
+      (crepAssignedFreeVarsHOL body).filter
+        (fun candidate => decide (candidate ∉ names)) := by
+  induction names generalizing values with
+  | nil =>
+      cases values with
+      | nil =>
+          simp only [nestedDecsHOL, List.not_mem_nil]
+          symm
+          exact List.filter_eq_self.mpr (fun _ _ => rfl)
+      | cons value values => simp at h
+  | cons name names ih =>
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons] at h
+          rw [nestedDecsHOL, crepAssignedFreeVarsHOL, ih values (by omega), List.filter_filter]
+          congr 1
+          funext candidate
+          by_cases hc : candidate = name
+          · subst hc
+            simp
+          · simp [hc, List.mem_cons, bne_iff_ne]
 
 theorem crepAssignedVars_nestedDecs_appendW {width : Nat} [NeZero width]
     (names : List Nat) (values : List (CrepExp (BitVec width)))

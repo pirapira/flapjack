@@ -51,6 +51,25 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "No exact finite-map bridge; tag remains withdrawn pending "
         "flapjack-pxn.18.3.7.1.3.1.1.2."
     ),
+    ("Flapjack/Pancake/Semantics/PanSem/EvalExact.lean", "evalHOLExact"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "eval_def",
+        "Codex and flapjack-ds6 (source comparison, bead flapjack-dlc.120, with "
+        "panSemScript.sml:209-283: all fifteen clauses Const, Var Local/Global, "
+        "RStruct, RField, NStruct, NField, Load/Load32/LoadByte, Op/Panop, Cmp, "
+        "Shift, BaseAddr/TopAddr/BytesInWord and every used subcarrier "
+        "(MlS/ExpHOL/ValueHOL/ShapeHOL/StructContextExact, HolWordLab memory, "
+        "memaddrs as a Prop for HOL 'a word set, [NeZero width] for HOL's positive "
+        "dimindex) were compared one by one and match. The blocking mismatch is "
+        "the state carrier: HOL panSem$state.locals/globals are finite maps "
+        "varname |-> 'a v, while PanSemStateExact.locals/globals are unrestricted "
+        "MlS -> Option _ functions, a strict superset admitting infinite support; "
+        "the evaluator is faithful only on the finite-support subcarrier. Direct "
+        "HOL rows are in pan_eval_probe.out, reproduced by "
+        "Flapjack/Test/PanSemEvalExactParity.lean. Tag remains withdrawn pending "
+        "the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 (audit "
+        "flapjack-pxn.18.3.7.1.3.1.2)."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "res_var_def",

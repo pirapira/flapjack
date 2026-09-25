@@ -92,10 +92,12 @@ def cakeExtendWithResourceLimit' (precise : Bool)
     (behaviours : CakeBehaviourSet) : CakeBehaviourSet :=
   if precise then behaviours else cakeExtendWithResourceLimit behaviours
 
-/-- Cake's `implements'` relation over the generic behavior carrier. -/
-def cakeImplements' (precise : Bool) (source target : CakeBehaviourSet) : Prop :=
-  ¬ target .fail → ∀ result, source result →
-    cakeExtendWithResourceLimit' precise target result
+/-- Cake's `implements' precise x y`: compiled behavior `x` refines source
+    behavior `y`, modulo the resource-limit extension. This remains an
+    untagged carrier analogue until the HOL/Lean behavior relation is checked. -/
+def cakeImplements' (precise : Bool) (compiled source : CakeBehaviourSet) : Prop :=
+  ¬ source .fail → ∀ result, compiled result →
+    cakeExtendWithResourceLimit' precise source result
 
 theorem cakeExtend_not_fail (behaviours : CakeBehaviourSet)
     (result : CakeBehaviour) (hresult : cakeExtendWithResourceLimit behaviours result)
@@ -173,23 +175,23 @@ theorem cakeExtendWithResourceLimit'_mono (precise : Bool)
 /-- Structural analogue of HOL `implements'_trans` from
     `semanticsPropsScript.sml:285-295`, with the representation gap noted at
     `CakeLazyList`. -/
-theorem cakeImplements'_trans {source middle target : CakeBehaviourSet}
-    {precise : Bool} (hmiddle : cakeImplements' precise middle target)
-    (hsource : cakeImplements' precise source middle) :
-    cakeImplements' precise source target := by
-  intro htargetFail result hresult
-  have hmiddleSubset := hmiddle htargetFail
-  have hmiddleFail : ¬ middle .fail := by
+theorem cakeImplements'_trans {compiled intermediate source : CakeBehaviourSet}
+    {precise : Bool} (hintermediate : cakeImplements' precise intermediate source)
+    (hcompiled : cakeImplements' precise compiled intermediate) :
+    cakeImplements' precise compiled source := by
+  intro hsourceFail result hresult
+  have hintermediateSubset := hintermediate hsourceFail
+  have hintermediateFail : ¬ intermediate .fail := by
     intro hfail
-    have hfailExtended : cakeExtendWithResourceLimit' precise target .fail :=
-      hmiddleSubset .fail hfail
+    have hfailExtended : cakeExtendWithResourceLimit' precise source .fail :=
+      hintermediateSubset .fail hfail
     cases precise with
-    | false => exact cakeExtend_not_fail target .fail hfailExtended htargetFail rfl
-    | true => exact htargetFail hfailExtended
-  have hsourceSubset := hsource hmiddleFail
-  have hsourceExtended := cakeExtendWithResourceLimit'_mono precise hmiddleSubset result
-    (hsourceSubset result hresult)
-  exact cakeExtendWithResourceLimit'_idempotent precise target
-    result hsourceExtended
+    | false => exact cakeExtend_not_fail source .fail hfailExtended hsourceFail rfl
+    | true => exact hsourceFail hfailExtended
+  have hcompiledSubset := hcompiled hintermediateFail
+  have hcompiledExtended := cakeExtendWithResourceLimit'_mono precise hintermediateSubset result
+    (hcompiledSubset result hresult)
+  exact cakeExtendWithResourceLimit'_idempotent precise source
+    result hcompiledExtended
 
 end Flapjack

@@ -262,6 +262,18 @@ def loadGlobalsHOL {width : Nat} [NeZero width] (address : BitVec 5) (count : Na
   | 0 => []
   | count + 1 => .loadGlob address :: loadGlobalsHOL (address + 1) count
 
+/-- Exact port of HOL `crepLang$nested_decs_def`
+    (`cakeml/pancake/crepLangScript.sml:102-107`):
+    `nested_decs [] [] p = p`, `nested_decs (n::ns) (e::es) p = Dec n e (nested_decs ns es p)`,
+    and both length-mismatch clauses give `Skip`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_decs_def"]
+def nestedDecsHOL {width : Nat} [NeZero width] (names : List Nat)
+    (values : List (CrepExpHOL width)) (body : CrepProgHOL width) : CrepProgHOL width :=
+  match names, values with
+  | [], [] => body
+  | name :: names, value :: values => .dec name value (nestedDecsHOL names values body)
+  | _, _ => .skip
+
 @[simp] theorem crepProgToHOL_crepNestedSeqHOL {width : Nat} [NeZero width]
     (statements : List (CrepProg (BitVec width))) :
     crepProgToHOL (crepNestedSeq statements) =
@@ -293,6 +305,20 @@ def loadGlobalsHOL {width : Nat} [NeZero width] (address : BitVec 5) (count : Na
   induction count generalizing address with
   | zero => simp [loadGlobals, loadGlobalsHOL]
   | succ count ih => simp [loadGlobals, loadGlobalsHOL, crepExpOfHOL, ih]
+
+@[simp] theorem crepProgToHOL_nestedDecs {width : Nat} [NeZero width] (names : List Nat)
+    (values : List (CrepExp (BitVec width))) (body : CrepProg (BitVec width)) :
+    crepProgToHOL (nestedDecs names values body) =
+      nestedDecsHOL names (values.map crepExpToHOL) (crepProgToHOL body) := by
+  induction names generalizing values body with
+  | nil =>
+      cases values with
+      | nil => simp [nestedDecs, nestedDecsHOL]
+      | cons value values => simp [nestedDecs, crepProgToHOL, nestedDecsHOL]
+  | cons name names ih =>
+      cases values with
+      | nil => simp [nestedDecs, crepProgToHOL, nestedDecsHOL]
+      | cons value values => simp [nestedDecs, nestedDecsHOL, crepProgToHOL, ih]
 
 /-- Exact port of HOL `crepLang$assigned_free_vars_def`
     (`cakeml/pancake/crepLangScript.sml:149-162`) over the exact `CrepProgHOL`

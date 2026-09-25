@@ -554,4 +554,70 @@ theorem callFfi_sharedMem_success_bridge {σ : Type} (state : FfiState σ)
         ⟨⟨hop, bytesRel_map_byteToBits configuration,
           bytesPairRel_zip (bytesRel_map_byteToBits bytes) hbytes⟩, trivial⟩
 
+/-! ## Byte-boundary witness for the executed `ExtCall` name path (flapjack-0up.2)
+
+HOL `call_FFI` (`cakeml/semantics/ffi/ffiScript.sml:45-79`) receives the external
+call name as an `mlstring`, whereas production `FfiName.extCall` stores a Lean
+`String` (`Flapjack/Ffi.lean`).  The bridge `FfiNameRel` already identifies a
+production name with its `ofString` image; the theorems below record the extra
+*byte-boundary* witness: when every character of the production `String` has a
+code point below `256`, the HOL image has exactly the same character codes, so no
+information is lost or truncated at the `mlstring` boundary.  This is the
+production-side half of `flapjack-0up`; the parser-to-FFI precondition that a
+parsed program's `ExtCall` names satisfy `∀ c ∈ name.toList, c.toNat < 256` is
+tracked separately by `flapjack-0up.1` / `flapjack-an4`. -/
+
+/-- A production FFI name whose `ExtCall` payload is byte-ranged (every character
+    has a code point below `256`).  `sharedMem` operators carry no name bytes. -/
+def FfiNameByteRanged : FfiName → Prop
+  | .extCall name => ∀ c ∈ name.toList, c.toNat < 256
+  | .sharedMem _ => True
+
+/-- The byte-boundary witness: a byte-ranged production `ExtCall` name is exactly
+    its `ofString` HOL image, character code for character code. -/
+theorem ffiNameRel_extCall_byteBoundary {name : String}
+    (hr : ∀ c ∈ name.toList, c.toNat < 256) :
+    FfiNameRel (.extCall name)
+        (.extCall (Flapjack.Basis.Pure.MlString.ofString name)) ∧
+      (Flapjack.Basis.Pure.MlString.ofString name).explode.map BitVec.toNat =
+        name.toList.map (fun c => c.toNat) := by
+  refine ⟨rfl, ?_⟩
+  rw [Flapjack.Basis.Pure.MlString.explode_map_toNat_ofString]
+  apply List.map_congr_left
+  intro c hc
+  exact Nat.mod_eq_of_lt (hr c hc)
+
+/-- A byte-ranged production `ExtCall` event relates to the HOL event with the
+    same `ofString` name. -/
+theorem ffiEventRel_extCall_byteBoundary (name : String)
+    (hr : ∀ c ∈ name.toList, c.toNat < 256)
+    (configuration : List UInt8) (holConfiguration : List (BitVec 8))
+    (bytes : List (UInt8 × UInt8)) (holBytes : List (BitVec 8 × BitVec 8))
+    (hconf : BytesRel configuration holConfiguration) (hb : BytesPairRel bytes holBytes) :
+    FfiEventRel
+      { name := .extCall name, configuration := configuration, bytes := bytes }
+      { name := .extCall (Flapjack.Basis.Pure.MlString.ofString name),
+        configuration := holConfiguration, bytes := holBytes } :=
+  ⟨(ffiNameRel_extCall_byteBoundary hr).1, hconf, hb⟩
+
+/-- Production `callFfi` appends an event whose name reaches the HOL boundary
+    (`ofString`) when the input name is byte-ranged. -/
+theorem callFfi_extCall_success_eventNameBoundary {σ : Type} (state : FfiState σ)
+    (name : String) (hne : name ≠ "") (hr : ∀ c ∈ name.toList, c.toNat < 256)
+    (configuration bytes : List UInt8) (nextState : σ) (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall name) state.state configuration bytes =
+      .returned nextState nextBytes)
+    (hlen : nextBytes.length = bytes.length) :
+    FfiNameRel (.extCall name) (.extCall (Flapjack.Basis.Pure.MlString.ofString name)) ∧
+      (Flapjack.Basis.Pure.MlString.ofString name).explode.map BitVec.toNat =
+        name.toList.map (fun c => c.toNat) ∧
+      callFfi state (.extCall name) configuration bytes =
+        .returned { state with
+            state := nextState
+            ioEvents := state.ioEvents ++
+              [{ name := .extCall name, configuration := configuration,
+                 bytes := bytes.zip nextBytes }] } nextBytes :=
+  ⟨(ffiNameRel_extCall_byteBoundary hr).1, (ffiNameRel_extCall_byteBoundary hr).2,
+    callFfi_extCall_success state name hne configuration bytes nextState nextBytes ho hlen⟩
+
 end Flapjack

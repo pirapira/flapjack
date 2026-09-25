@@ -494,6 +494,43 @@ theorem holFiniteWordSourceMul_toBitVec {ι : Type u}
     holWordToBitVec_bitVecToHolWord]
   simp [holFiniteWordW2N, BitVec.ofNat_mul]
 
+/-- Source-shaped finite-word implementation of HOL `crep_op_def` for the
+    explicitly enumerated word carrier. The `.mul` clause uses the HOL
+    `word_mul_def` rendering above; every other argument shape fails exactly
+    as the tagged word-typed `crepOpCrepWord` definition does. This helper has
+    no standalone HOL declaration: it is an adapter from the source
+    `n2w`/`w2n` representation to that tagged definition. -/
+def holFiniteWordSourceCrepOp {ι : Type u}
+    (dimension : HolFiniteDimension ι) :
+    CrepOp → List (ι → Bool) → Option (ι → Bool)
+  | .mul, [left, right] =>
+      some (holFiniteWordSourceMul dimension left right)
+  | _, _ => none
+
+/-- The finite-word source implementation of CrepOp agrees with the tagged
+    HOL `crep_op_def` after transporting each word to its canonical BitVec
+    carrier, for every positive word width and every operand-list shape. -/
+theorem holFiniteWordSourceCrepOp_to_crepOpCrepWord {ι : Type u}
+    (dimension : HolFiniteDimension ι) (operator : CrepOp)
+    (values : List (ι → Bool)) :
+    (holFiniteWordSourceCrepOp dimension operator values).map
+        (holWordToBitVec dimension) =
+      crepOpCrepWord (width := dimension.width) operator
+        (values.map (holWordToBitVec dimension)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases operator
+  cases values with
+  | nil => rfl
+  | cons left rest =>
+    cases rest with
+    | nil => rfl
+    | cons right tail =>
+      cases tail with
+      | nil =>
+        simp [holFiniteWordSourceCrepOp, crepOpCrepWord,
+          holFiniteWordSourceMul_toBitVec]
+      | cons extra tail => rfl
+
 /-- HOL `word_mul_def` and the production `Mul` instance on an explicitly
     finite Boolean-index carrier compute the same word.  HOL's source-shaped
     side is `n2w (w2n left * w2n right)`; production transports `BitVec` mul
@@ -515,6 +552,29 @@ theorem holFiniteWordSourceMul_eq_mul {ι : Type u}
       _ = y := bitVecToHolWord_holWordToBitVec dimension y
   apply hInjective
   rw [holFiniteWordSourceMul_toBitVec, holFiniteWordToBitVec_mul]
+
+/-- The source finite-word CrepOp adapter also agrees with the production
+    generic helper on its actual carrier. Combined with
+    `holFiniteWordSourceCrepOp_to_crepOpCrepWord`, this relates both the
+    production evaluator clause and the tagged HOL word-typed `crep_op_def`
+    through the same source operation. -/
+theorem holFiniteWordSourceCrepOp_eq_crepOpCrep {ι : Type u}
+    (dimension : HolFiniteDimension ι) (operator : CrepOp)
+    (values : List (ι → Bool)) :
+    holFiniteWordSourceCrepOp dimension operator values =
+      crepOpCrep operator values := by
+  cases operator
+  cases values with
+  | nil => rfl
+  | cons left rest =>
+    cases rest with
+    | nil => rfl
+    | cons right tail =>
+      cases tail with
+      | nil =>
+        simp [holFiniteWordSourceCrepOp, crepOpCrep,
+          holFiniteWordSourceMul_eq_mul]
+      | cons extra tail => rfl
 
 theorem holFiniteWordSourceSub_toBitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (left right : ι → Bool) :
@@ -2792,7 +2852,7 @@ def evalCrepHolFiniteWordSourceExp {ι : Type}
   | .crepOp .mul [left, right] => do
       let left ← evalCrepHolFiniteWordSourceExp dimension state left
       let right ← evalCrepHolFiniteWordSourceExp dimension state right
-      pure (holFiniteWordSourceMul dimension left right)
+      holFiniteWordSourceCrepOp dimension .mul [left, right]
   | .crepOp _ _ => none
   | .cmp operator left right => do
       let left ← evalCrepHolFiniteWordSourceExp dimension state left
@@ -2807,6 +2867,24 @@ def evalCrepHolFiniteWordSourceExp {ι : Type}
   | .baseAddr => some state.baseAddress
   | .topAddr => some state.topAddress
 termination_by expression => sizeOf expression
+
+/-- In the source evaluator's `CrepOp` clause, successful child evaluations
+    evaluation is followed by the tagged HOL `crep_op_def` operation, with the
+    result transported back through the explicit finite-word carrier. This
+    is adapter infrastructure rather than a standalone HOL theorem: the
+    evaluator and state still use Flapjack's explicit dimension witness. -/
+theorem evalCrepHolFiniteWordSourceExp_crepOp_eq_crepOpCrepWord
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension state left = some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension state right = some rightValue) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.crepOp .mul [left, right])).map (holWordToBitVec dimension) =
+    crepOpCrepWord (width := dimension.width) .mul
+      [holWordToBitVec dimension leftValue, holWordToBitVec dimension rightValue] := by
+  simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
+    holFiniteWordSourceCrepOp_to_crepOpCrepWord]
 
 /-- Complete HOL `word_lab` result view of the explicitly finite-index
     source evaluator. Since `word_lab` has only the `Word` constructor, this
@@ -2891,19 +2969,21 @@ theorem evalCrepRuntimeExp_sourceWord_eq {ι : Type} {σ : Type}
     rw [ih.2 state]
     rfl
   case crepOp operator expressions ih =>
+    cases operator
     cases expressions with
-    | nil => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+    | nil =>
+      simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
     | cons left rest => cases rest with
-      | nil => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+      | nil =>
+        simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
       | cons right rest => cases rest with
         | nil =>
-          cases operator with
-          | mul =>
-            simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
-              Option.bind_eq_bind]
-            rw [ih.1 left (by simp) state, ih.1 right (by simp) state]
-            congr 1
-        | cons extra rest => simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
+          simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
+            ih.1 left (by simp) state, ih.1 right (by simp) state,
+            holFiniteWordSourceCrepOp,
+            crepOpCrep, holFiniteWordSourceMul_eq_mul]
+        | cons extra rest =>
+          simp [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp]
   case cmp operator left right ihLeft ihRight =>
     simp only [evalCrepRuntimeExp, evalCrepHolFiniteWordSourceExp,
       Option.bind_eq_bind]

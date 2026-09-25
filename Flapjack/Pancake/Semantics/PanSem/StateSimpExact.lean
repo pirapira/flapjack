@@ -23,7 +23,7 @@ These useful simplification statements use the function-backed
 `PanSemStateExact` and its accessor definitions. HOL state maps are finite maps,
 while these Lean fields admit arbitrary lookup functions; the theorems are
 therefore untagged pending the finite-map carrier prerequisite tracked by
-`flapjack-pxn.18.3.7.1.3.1.2`. HOL Boolean shape equality is rendered as
+`flapjack-pxn.18.3.7.1.3.1.1.2`. HOL Boolean shape equality is rendered as
 `shapeEqHOL`, with bridge `shapeEqHOL_eq_true`.
 
 Direct HOL oracle rows:

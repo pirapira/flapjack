@@ -31,7 +31,7 @@ the `mlstring`-keyed, function-backed `PanSemStateExact`. These equations remain
 useful for Lean reduction, but HOL state fields are finite maps and this carrier
 admits non-finite-support functions. The theorem is therefore untagged pending
 the finite-map carrier prerequisite tracked by
-`flapjack-pxn.18.3.7.1.3.1.2`. HOL Boolean shape equality is rendered as
+`flapjack-pxn.18.3.7.1.3.1.1.2`. HOL Boolean shape equality is rendered as
 `shapeEqHOL`, with bridge `shapeEqHOL_eq_true`.
 
 Scope: this is the conjunction of `Definition`s bundled by `LIST_CONJ`, not a

@@ -1,0 +1,61 @@
+import Flapjack.FfiBridge
+
+/-!
+# Production `FfiState` / exact `HolFfiState` bridge regression
+
+Kernel-checked fixtures pinning the untagged bridge in `Flapjack/FfiBridge.lean`:
+the `UInt8` -> `BitVec 8` byte round trips, the byte-list relation, the empty
+external-call name correspondence, a concrete `FfiStateRel` fixture whose oracle
+corresponds bytewise, and the `callFfi`/`callFFIHOL` identity-call bridge.
+-/
+
+namespace Flapjack.Test.FfiBridgeParity
+
+open Flapjack
+
+/-- Byte round trip through the exact `BitVec 8` carrier. -/
+example : bitsToByte (byteToBits (7 : UInt8)) = 7 := bitsToByte_byteToBits 7
+
+/-- The `UInt8` value is preserved by the byte embedding. -/
+example : (byteToBits (200 : UInt8)).toNat = 200 := byteToBits_toNat 200
+
+/-- Related byte lists for the all-bytes embedding. -/
+example : BytesRel [1, 2, 3] [byteToBits 1, byteToBits 2, byteToBits 3] :=
+  bytesRel_map_byteToBits [1, 2, 3]
+
+/-- The empty external-call name corresponds to the empty `MlString`. -/
+example : FfiNameRel (FfiName.extCall "") (HolFfiName.extCall (.implode [])) :=
+  ffiNameRel_empty_extCall
+
+private def prodOracle : FfiOracle Nat :=
+  fun _ state _ bytes => .returned (state + 1) (bytes ++ bytes)
+
+private def holOracle : HolOracle Nat :=
+  fun _ state _ bytes => .ret (state + 1) (bytes ++ bytes)
+
+private def prodState : FfiState Nat :=
+  { oracle := prodOracle, state := 0, ioEvents := [] }
+
+private def holState : HolFfiState Nat :=
+  { oracle := holOracle, ffiState := 0, ioEvents := [] }
+
+/-- Concrete state relation: empty event lists and bytewise oracle correspondence. -/
+theorem fixture_rel : FfiStateRel prodState holState := by
+  refine ⟨rfl, ?_, ?_⟩
+  · exact trivial
+  · intro _name _holName _hname _configuration _holConfiguration bytes holBytes _hconf hbytes
+    simp only [prodState, holState, prodOracle, holOracle, OracleResultRel, BytesRel] at hbytes ⊢
+    rw [List.map_append, List.map_append, hbytes]
+    exact ⟨trivial, rfl⟩
+
+/-- The identity external call relates the two `call` implementations. -/
+example : FfiResultRel (callFfi prodState (FfiName.extCall "") [1] [2])
+    (callFFIHOL holState (HolFfiName.extCall (.implode []))
+      ([1].map byteToBits) ([2].map byteToBits)) :=
+  callFfi_empty_extCall_bridge prodState holState fixture_rel [1] [2]
+
+def runChecks : IO Bool := do
+  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures"
+  pure true
+
+end Flapjack.Test.FfiBridgeParity

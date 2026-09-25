@@ -37,11 +37,12 @@ theorem crepDestConstHolWord_eq_production {width : Nat} [NeZero width]
     crepDestConstHolWord expression = crepDestConst expression := by
   cases expression <;> rfl
 
-/-- Exact width-indexed port of CakeML's `crep_arith$dest_const_def`
-    (`crep_arithScript.sml:10-12`) over `CrepExpHOL`, whose `Const` payload
-    is the width-indexed HOL word representation used by `crepLang$exp`. The
-    generic executable helper above stays untagged because it accepts any
-    value carrier. -/
+/-- Exact port of CakeML's `crep_arith$dest_const_def`
+    (`crep_arithScript.sml:10-12`) over `CrepExpHOL`. Its implicit `width`
+    ranges over every positive HOL word dimension; `BitVec width` is the
+    canonical `Fin width → Bool` representation, so any finite HOL word index
+    of that cardinality is transported by reindexing. The generic executable
+    helper above stays untagged because it accepts any value carrier. -/
 @[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
 def crepDestConstHOL {width : Nat} [NeZero width] :
     CrepExpHOL width → Option (BitVec width)

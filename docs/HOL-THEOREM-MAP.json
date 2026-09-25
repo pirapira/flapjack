@@ -1988,8 +1988,13 @@
     "hol_name": "fperm_name_cancel",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_name_cancel",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "statement_status": "reviewed_names_as_string",
+    "reviewer": "flapjack-ds3 (source comparison) HOL fperm_name_cancel (pan_globalsProofScript.sml:1622): fperm_name f g (fperm_name f g name) = name. Lean fperm_name_cancel matches clause-for-clause via the reviewed globalRenameFunctionName (@[hol fperm_name_def]). Source-review classification: source: equality/map-key-only, target: equality/map-key-only, name: equality/map-key-only; no byte-observable use, so no boundary witness. [BEq String] [LawfulBEq String] are executable-only instance args. Oracle rows in pan_globals_fperm_name_probe.out, replayed by PanGlobalsFpermNameParity.lean.",
+    "names_as_string": [
+      "source",
+      "target",
+      "name"
+    ]
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -2031,8 +2036,14 @@
     "hol_name": "fperm_name_cong",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_name_cong",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "statement_status": "reviewed_names_as_string",
+    "reviewer": "flapjack-ds3 (source comparison) HOL fperm_name_cong (pan_globalsProofScript.sml:1629): fperm_name f g x = fperm_name f g y <=> x = y, i.e. the renaming is injective. Lean fperm_name_cong matches clause-for-clause via the reviewed globalRenameFunctionName (@[hol fperm_name_def]). Source-review classification: source: equality/map-key-only, target: equality/map-key-only, left: equality/map-key-only, right: equality/map-key-only; no byte-observable use, so no boundary witness. [BEq String] [LawfulBEq String] are executable-only instance args. Oracle rows in pan_globals_fperm_name_probe.out, replayed by PanGlobalsFpermNameParity.lean.",
+    "names_as_string": [
+      "source",
+      "target",
+      "left",
+      "right"
+    ]
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

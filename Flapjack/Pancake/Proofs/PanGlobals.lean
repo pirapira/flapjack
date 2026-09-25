@@ -421,31 +421,64 @@ theorem MEM_functions {declarations : List (Decl α)}
           declaration.returnShape) :=
   mem_functions hmem
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_name_cancel`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`). `fperm_name`
-    (defined `pan_globalsScript.sml:184`) is the source-shaped rename of a
-    function name, spelled `globalRenameFunctionName` in the production pass. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Cake's `fperm_name_cancel` (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`):
+`fperm_name f g (fperm_name f g name) = name`.
+
+Reviewed under `(names_as_string := [source, target, name])`. The statement is
+clause-for-clause identical to HOL; the only difference is that the three
+`mlstring` names are carried by the production `FunName` (= `String`) and the
+renaming is the tagged `globalRenameFunctionName` (`@[hol fperm_name_def]`,
+`pan_globalsScript.sml:184`), whose definition already matches HOL's
+`fperm_name` clause-for-clause. The identifiers `source`, `target`, `name` are
+classified `equality/map-key-only`, exactly as for the tagged definition: the
+renaming turns equality tests and finite-map keys, and no byte-observable use
+appears in the statement, so no `names_as_string_boundary` entry or
+`holMlStringWitness_*` theorem is needed. The `[BEq String] [LawfulBEq String]`
+instance arguments are executable-only (decidable equality for the `String`
+carrier modelling `mlstring`); they add no logical side condition.
+
+Evidence: the function-level HOL oracle rows in
+`scripts/hol-probes/pan_globals_fperm_name_probe.out` (replayed by
+`Flapjack/Test/PanGlobalsFpermNameParity.lean`) pin `fperm_name`; the
+cancellation/congruence facts are exercised by
+`Flapjack/Test/PanGlobalsDecShapesParity.lean:288-289`.
+
+The alternative exact `MlString` identifier carrier remains tracked by
+`flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cancel"
+  (names_as_string := [source, target, name])]
 theorem fperm_name_cancel [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target
         (globalRenameFunctionName source target name) = name :=
   globalRenameFunctionName_cancel source target name
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fperm_name_cong`
-    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629`):
-    `fperm_name` is injective on function names. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Cake's `fperm_name_cong` (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629`):
+`fperm_name f g x = fperm_name f g y <=> x = y`, i.e. the renaming is injective.
+
+Reviewed under `(names_as_string := [source, target, left, right])`. The
+statement is clause-for-clause identical to HOL; the only difference is that
+the four `mlstring` names are carried by the production `FunName` (= `String`)
+and the renaming is the tagged `globalRenameFunctionName`
+(`@[hol fperm_name_def]`, `pan_globalsScript.sml:184`), whose definition already
+matches HOL's `fperm_name` clause-for-clause. The identifiers are classified
+`equality/map-key-only`, exactly as for the tagged definition: the statement
+only compares names for equality, and no byte-observable use appears, so no
+`names_as_string_boundary` entry or `holMlStringWitness_*` theorem is needed.
+The `[BEq String] [LawfulBEq String]` instance arguments are executable-only
+(decidable equality for the `String` carrier modelling `mlstring`); they add no
+logical side condition.
+
+Evidence: the function-level HOL oracle rows in
+`scripts/hol-probes/pan_globals_fperm_name_probe.out` (replayed by
+`Flapjack/Test/PanGlobalsFpermNameParity.lean`) pin `fperm_name`; the
+cancellation/congruence facts are exercised by
+`Flapjack/Test/PanGlobalsDecShapesParity.lean:288-289`.
+
+The alternative exact `MlString` identifier carrier remains tracked by
+`flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cong"
+  (names_as_string := [source, target, left, right])]
 theorem fperm_name_cong [BEq String] [LawfulBEq String]
     (source target left right : FunName) :
     globalRenameFunctionName source target left =

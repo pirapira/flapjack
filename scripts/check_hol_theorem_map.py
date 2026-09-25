@@ -233,7 +233,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
     }
     for key in reviewed_exact:
-        if key in inventory:
+        # A source comparison cannot claim an exact HOL port after its tag is
+        # withdrawn. Keep the untagged proof in the classification queue.
+        if key in inventory and inventory[key]["hol_name"] is not None:
             inventory[key]["statement_status"] = "reviewed_exact"
             inventory[key]["reviewer"] = "Codex (source comparison)"
 

@@ -2130,14 +2130,39 @@ theorem localRelGtVmaxPreserved
     exact (Nat.not_lt_of_ge hle) habove
   simp [beq_eq_false_iff_ne.mpr hne]
 
-/-- HOL `local_rel_le_zip_update_preserved`: replacing a source local by a
-    shape-compatible value and writing its flattened words to the associated
-    distinct slots preserves the finite-map locals relation. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `local_rel_le_zip_update_preserved`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2263-2269`): replacing a
+    source local `x` by a shape-compatible value `v'` and writing its flattened
+    words to the associated distinct slots `ns` preserves `locals_rel`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port), source-reviewed 2026-09-25:
+-- statement shape is mirrored clause-for-clause: `locals_rel ct l l'` ->
+-- `localsRel context sourceLocals targetLocals`; `FLOOKUP l x = SOME v` ->
+-- `FLOOKUP sourceLocals name = some oldValue`; `FLOOKUP ct.vars x = SOME (sh,ns)`
+-- -> `FLOOKUP context.vars name = some (shape, slots)`; `shape_of v = shape_of v'`
+-- -> `panValueShape [] oldValue = panValueShape [] newValue`; `ALL_DISTINCT ns`
+-- -> `slots.Nodup`; and `locals_rel ct (l |+ (x,v')) (l' |++ ZIP (ns,flatten v'))`
+-- -> `localsRel context (FUPDATE sourceLocals (name,newValue)) (FUPDATE_LIST
+-- targetLocals (slots.zip ((panValueFlatten newValue).map PanWordLab.word)))`.
+-- Carrier mismatch: the Lean statement is keyed by the production identifiers
+-- `FunName`/`VarName`/`ExceptionId` = `String` and embeds a
+-- `PanToCrepProofContext α` whose finite maps are `String`-keyed, while HOL
+-- keys names by `funname`/`varname`/`eid` = `mlstring`; the source-local
+-- carrier is production `PanValue α` (with embedded production `Shape`,
+-- `named : String`) over a generic word `α`, while HOL uses `panSem$v` /
+-- `shape` over a positive-width `'a word` with no typeclass side condition.
+-- `names_as_string` cannot authorize the `PanValue`/`Shape` carriers (the
+-- identifiers occur inside the local value, not at the theorem boundary), and
+-- no `NameRanged` byte witness applies because the conclusion is a `localsRel`
+-- relation. `docs/HOL-THEOREM-MAP.json` already classifies this hol_name as
+-- `documented_mismatch`; the declaration is intentionally untagged.
+-- Evidence: this theorem is exercised by the `Primitive` case of the
+-- compile-correctness proof (`Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean:1801`);
+-- the `flatten`/`shape_of` components have HOL-oracle rows in
+-- `scripts/hol-probes/pan_flatten_probe.out` (`word`/`record`/`named`), and the
+-- accompanying `locals_rel` lemmas (`locals_rel_extend_new_var`,
+-- `locals_rel_lookup_ctxt`) are tracked under the same withdrawn-tag review.
+-- The exact MlString identifier carrier is tracked by
 -- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem localRelLeZipUpdatePreserved
     (context : PanToCrepProofContext α)

@@ -2169,6 +2169,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "exp_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "expIdsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.33): HOL exp_ids_def (cakeml/pancake/panLangScript.sml:222-231) is the recursive exception-identifier collector over the word-indexed prog; a Call with metadata SOME(_, SOME(e,_,ep)) contributes e and the identifiers of ep, all other forms contribute nothing. expIdsHOL matches clause-for-clause over the exact ProgHOL/MlS carrier; the checked bridge expIdsHOL_map_toStringOfBytes relates it to the production Flapjack.expIds (direct routing unavailable because production is polymorphic over Prog α with String identifiers). Direct HOL-EVAL rows empty/raise/sequence/dec/conditional_loop/call_handler/fallback in scripts/hol-probes/pan_lang_exp_ids_probe.out are replayed in Flapjack/Test/PanExpIdsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",

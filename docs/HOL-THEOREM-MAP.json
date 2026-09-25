@@ -10074,6 +10074,14 @@
     "reviewer": "Codex (source comparison; HOL panProps$shape_of_val (panPropsScript.sml:14) `shape_of (Val x) = One` over the exact ValueHOL/ShapeHOL carriers, direct HOL row spv_one in pan_props_shape_res_var_probe.out reproduced by PanPropsShapeResVarParity)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "isWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex and flapjack-ds6 (source comparison, bead flapjack-pxn.18.5.17.1.3.14; exact HOL panProps$is_wf_shape_v (panPropsScript.sml:24-34) over the exact ValueHOL width value carrier and the exact MlString-keyed StructContextExact context: Val -> true, RStruct -> EVERY fold isWfShapeValuesHOLExact, NStruct -> structContextLookupHOL isSome (ALOOKUP <> NONE) and the EVERY fold over MAP SND; termination over v_size mirrored by sizeOf; direct HOL rows is_wf_shape_v_word/named_match/named_missing/named_mismatch/duplicate_second/nested_match in scripts/hol-probes/pan_structs_value_validity_probe.out reproduced by Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "flookup_fupdate_zip_not_mem",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",

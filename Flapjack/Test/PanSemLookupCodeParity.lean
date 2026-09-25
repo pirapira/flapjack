@@ -72,6 +72,22 @@ def observesDuplicateFormals : Bool :=
 #guard observesWrongShape
 #guard observesDuplicateFormals
 
+/-- The successful HOL lookup and the evaluator's production lookup agree on
+    the complete entry result, including fresh local bindings. -/
+example : ∃ holLocals productionLocals,
+    panSemLookupStateCodeHOL (lookupState singleParameterCode) "id"
+      [.word (7 : Word64)] = some (.skip, holLocals, .one) ∧
+    lookupPanSemCodeCall [] singleParameterCode "id" [.word (7 : Word64)] =
+      some (.skip, .one, productionLocals) ∧
+    ∀ name, productionLocals name =
+      (FLOOKUP holLocals name).map HolValue.toPanValue := by
+  exact panSemLookupStateCodeHOL_matches_production_entry
+    (lookupState singleParameterCode) "id" [.word (7 : Word64)]
+    [("x", Shape.one)] .skip Shape.one
+    (by simp [lookupState, singleParameterCode, panSemCodeLookup, lookupInfo])
+    (by decide)
+    (by simp [panSemCodeArgumentsMatch, panValueShape, panShapeMatches])
+
 def runChecks : IO Bool := do
   if observesSuccessfulLookup then IO.println "PASS lookup_code binds a word argument from state-owned code"
     else IO.println "FAIL lookup_code binds a word argument from state-owned code"

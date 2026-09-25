@@ -2113,6 +2113,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_eq_FILTER",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "functions_eq_filterMap",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; FLAPJACK-SPECIFIC, documented_mismatch): HOL functions_eq_FILTER (panPropsScript.sml:1487) states functions prog = MAP (fun x => case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB) (FILTER is_function prog) over the word-indexed 'a decl carrier with mlstring names. The Lean analogue functions_eq_filterMap (Flapjack/Pancake/PanSimp.lean:110) is generic over the production Decl alpha (FunName = String, arbitrary word element type) and states the same content with List.filterMap/none instead of MAP-with-ARB, so both the declaration carrier and the ARB fallback differ and names_as_string cannot bridge it. An exact port over List (DeclHOL width) with a reviewed ARB rendering is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8); the sibling functionsHOL_filter_isDecl entry records the same deliberate exclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "decs_stcnames_only_functions",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls",
@@ -2142,6 +2150,22 @@
     "lean_name": "varExpHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.38): HOL var_exp (cakeml/pancake/panLangScript.sml:253-276) collects the Local-variable names of an expression in order (Const/Var Global/BaseAddr/TopAddr/BytesInWord empty; Var Local singleton; RStruct/Op/Panop flatten over the list; NStruct flattens over the field values; RField/NField/Load/Load32/LoadByte recurse; Cmp/Shift concatenate), with termination over exp_size. varExpHOL matches clause-for-clause over the exact ExpHOL carrier with MlS names and MlS x ExpHOL nstruct fields, matching HOL's mlstring names, and termination_by sizeOf mirrors the HOL measure. Direct HOL-EVAL rows local_var/nested in scripts/hol-probes/pan_lang_var_exp_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangVarExpParity.lean. Production expLocalVars (String carrier) stays untagged. global_var_exp is tracked separately (flapjack-4ac.1.39)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "load_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "loadMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.40): HOL load_op (cakeml/pancake/panLangScript.sml:300-305) maps Op8->Load8, Op16->Load16, OpW->Load, Op32->Load32. loadMemOpHOL matches clause-for-clause; OpSize is the tagged exact opsize port (constructors op8/op16/opW/op32) and the codomain CrepMemOp has the eight nullary constructors mirroring asm$memop, the representation already accepted for shMem in the reviewed HolLoopProg entry. The executable compileProg calls loadMemOpHOL directly, so the production path is routed, not merely bridged. Direct HOL-EVAL rows load_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean. store_op is the analogous tagged port storeMemOpHOL (flapjack-4ac.1.41)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "store_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "storeMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.41): HOL store_op (cakeml/pancake/panLangScript.sml:307-312) maps Op8->Store8, Op16->Store16, OpW->Store, Op32->Store32. storeMemOpHOL matches clause-for-clause over the same exact carriers as loadMemOpHOL (tagged exact OpSize; CrepMemOp mirroring asm$memop). The executable compileProg calls storeMemOpHOL directly. Direct HOL-EVAL rows store_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -2260,12 +2284,13 @@
      "lean_name": "freshNameHOL_not_mem_hol",
      "statement_status": "reviewed_names_as_string",
      "names_as_string": [
-       "name"
+       "name",
+       "names"
      ],
      "names_as_string_boundary": [
        "name"
      ],
-     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The tagged theorem freshNameHOL_not_mem_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and the equivalent conclusion freshNameHOL name names not-in names; it delegates to the untagged helper freshNameHOL_not_mem in Flapjack/Pancake/PanGlobals.lean, which is stated over the reviewed @[hol] port freshNameHOL (fresh_name_def, pan_globalsScript.sml:55). Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names list is used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.54) HOL fresh_name_correct (pan_globalsProofScript.sml:993): forall name names, MEM (fresh_name name names) names => F. The tagged theorem freshNameHOL_not_mem_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and the equivalent conclusion freshNameHOL name names not-in names; it delegates to the untagged helper freshNameHOL_not_mem in Flapjack/Pancake/PanGlobals.lean, which is stated over the reviewed @[hol] port freshNameHOL (fresh_name_def, pan_globalsScript.sml:55). Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names list is used only for membership equality, never inspected. flapjack-ds5 (bead flapjack-cz2): names: equality/map-key-only (the HOL `mlstring list` is represented by Lean `List String` and is used only for membership equality), while name: byte-observable remains the only byte-observable identifier. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
    },
    {
      "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -2274,12 +2299,14 @@
      "lean_name": "freshNameHOL_not_mem_of_subset_hol",
      "statement_status": "reviewed_names_as_string",
      "names_as_string": [
-       "name"
+       "name",
+       "names",
+       "names'"
      ],
      "names_as_string_boundary": [
        "name"
      ],
-     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved in HOL via fresh_name_correct. The tagged theorem freshNameHOL_not_mem_of_subset_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and hypotheses (set inclusion stated pointwise, as HOL uses SUBSET_DEF) and the same conclusion, over the reviewed @[hol] port freshNameHOL; its proof goes through the tagged freshNameHOL_not_mem_hol, mirroring HOL's use of fresh_name_correct. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_of_subset_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names and names' lists are used only for membership equality, never inspected. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.55) HOL fresh_name_correct' (pan_globalsProofScript.sml:1003): MEM (fresh_name name names) names' => set names' subset of set names => F, proved in HOL via fresh_name_correct. The tagged theorem freshNameHOL_not_mem_of_subset_hol lives in the HOL proof counterpart Flapjack/Pancake/Proofs/PanGlobals.lean and has the same quantifiers and hypotheses (set inclusion stated pointwise, as HOL uses SUBSET_DEF) and the same conclusion, over the reviewed @[hol] port freshNameHOL; its proof goes through the tagged freshNameHOL_not_mem_hol, mirroring HOL's use of fresh_name_correct. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL_not_mem_of_subset_hol gives NameRanged (freshNameHOL name names) from the NameRanged name premise); the names and names' lists are used only for membership equality, never inspected. flapjack-ds5 (bead flapjack-cz2): names: equality/map-key-only and names': equality/map-key-only (the HOL `mlstring list`s are represented by Lean `List String` and are used only for membership equality), while name: byte-observable remains the only byte-observable identifier. Direct HOL rows in scripts/hol-probes/pan_globals_fresh_name_probe.out."
    },
   {
     "hol_path": null,
@@ -10836,12 +10863,40 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "setVarHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.26): HOL set_var_def panSemScript.sml:398-401 is `set_var v value s = s with locals := s.locals |+ (v,value)` (FUPDATE). setVarHOLFinite performs the canonical HolFiniteMapExact.update on the locals field of PanSemStateFiniteExact, so the statement matches clause for clause under the finite-map representation qualifier (canonical witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_global_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "setGlobalHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.27): HOL set_global_def panSemScript.sml:403-406 is `set_global v value s = s with globals := s.globals |+ (v,value)` (FUPDATE). setGlobalHOLFinite performs the canonical HolFiniteMapExact.update on the globals field of PanSemStateFiniteExact, so the statement matches clause for clause under the finite-map representation qualifier (canonical witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "set_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
     "lean_name": "setKvarHOLFinite",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
-    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the untagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the canonically tagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

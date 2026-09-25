@@ -187,15 +187,17 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         exact_cases = {
             ("Flapjack/Pancake/Proofs/PanGlobals.lean", "freshNameHOL_not_mem_hol"): (
                 "fresh_name_correct",
+                ["name", "names"],
             ),
             (
                 "Flapjack/Pancake/Proofs/PanGlobals.lean",
                 "freshNameHOL_not_mem_of_subset_hol",
             ): (
                 "fresh_name_correct'",
+                ["name", "names", "names'"],
             ),
         }
-        for key, (hol_name,) in exact_cases.items():
+        for key, (hol_name, names_fields) in exact_cases.items():
             with self.subTest(lean_name=key[1]):
                 record = manifest_by_key[key]
                 self.assertEqual(
@@ -205,9 +207,17 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertEqual(
                     record["statement_status"], "reviewed_names_as_string"
                 )
-                self.assertEqual(record["names_as_string"], ["name"])
+                self.assertEqual(record["names_as_string"], names_fields)
                 self.assertEqual(record["names_as_string_boundary"], ["name"])
                 self.assertIn("byte-observable", record["reviewer"])
+                for identifier in names_fields:
+                    classification = (
+                        "byte-observable" if identifier == "name"
+                        else "equality/map-key-only"
+                    )
+                    self.assertIn(
+                        f"{identifier}: {classification}", record["reviewer"]
+                    )
                 self.assertIn(key, tagged)
         mismatch_cases = {
             ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fresh_name_correct"): (
@@ -343,6 +353,23 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertEqual(record["statement_status"], "documented_mismatch")
         self.assertIn("word_lab wrapper", record["reviewer"])
         self.assertIn("flapjack-pxn.18.3.5.8.19", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
+    def test_pan_simp_functions_eq_filter_map_arb_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/PanSimp.lean", "functions_eq_filterMap")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "functions_eq_FILTER"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("ARB", record["reviewer"])
+        self.assertIn("flapjack-4ac.4.109", record["reviewer"])
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
@@ -1117,6 +1144,28 @@ class ValidateInventoryTest(unittest.TestCase):
         record = by_key[key]
         self.assertEqual(record["statement_status"], "documented_mismatch")
         self.assertEqual((record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+
+
+    def test_pansem_set_var_set_global_finite_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            "setVarHOLFinite": "set_var_def",
+            "setGlobalHOLFinite": "set_global_def",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+                   lean_name)
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual((record["hol_path"], record["hol_name"]),
+                                 ("cakeml/pancake/semantics/panSemScript.sml",
+                                  hol_name))
+                self.assertEqual(
+                    record["statement_status"], "reviewed_fmap_as_finite_support")
+                self.assertIn(key, MAP["tagged_declarations"]())
 
 
     def test_panlang_functions_append_filter_exact_ports(self):

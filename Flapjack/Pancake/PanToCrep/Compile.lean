@@ -324,12 +324,23 @@ theorem hfresh_update [BEq String] [LawfulBEq String]
   · rw [if_neg hv] at hlk
     exact hfresh v sh ns' hlk
 
+/-- HOL `panLang$load_op` (`panLangScript.sml:300-305`): `Op8 ↦ Load8`,
+    `Op16 ↦ Load16`, `OpW ↦ Load`, `Op32 ↦ Load32`. `OpSize` is the tagged
+    exact `opsize` port; `CrepMemOp`'s eight nullary constructors mirror
+    `asm$memop`, the representation accepted for `shMem` in the reviewed
+    `HolLoopProg` entry. The executable `compileProg` below calls this
+    definition directly. -/
+@[hol "cakeml/pancake/panLangScript.sml" "load_op_def"]
 def loadMemOpHOL : OpSize → CrepMemOp
   | .op8 => .load8
   | .opW => .load
   | .op32 => .load32
   | .op16 => .load16
 
+/-- HOL `panLang$store_op` (`panLangScript.sml:307-312`): `Op8 ↦ Store8`,
+    `Op16 ↦ Store16`, `OpW ↦ Store`, `Op32 ↦ Store32`. See `loadMemOpHOL`
+    for the carrier comparison. -/
+@[hol "cakeml/pancake/panLangScript.sml" "store_op_def"]
 def storeMemOpHOL : OpSize → CrepMemOp
   | .op8 => .store8
   | .opW => .store
@@ -634,18 +645,6 @@ def callDestinationNames (context : CompileContext α) (_kind : VarKind)
     (name : VarName) : Option (List Nat) :=
   (wrapRt (lookupInfo name context.vars)).map Prod.snd
 
-def loadMemOp : OpSize → CrepMemOp
-  | .op8 => .load8
-  | .opW => .load
-  | .op32 => .load32
-  | .op16 => .load16
-
-def storeMemOp : OpSize → CrepMemOp
-  | .op8 => .store8
-  | .opW => .store
-  | .op32 => .store32
-  | .op16 => .store16
-
 def firstCompiledExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=
   match compileExp context expression with
@@ -935,14 +934,15 @@ def compileProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       if Shape.shapeSize compiled.2 = 0 then .return [] else .return compiled.1
   | .shMemLoad size .local name address =>
       match lookupInfo name context.vars, firstCompiledExpAnyShape context address with
-      | some (_, destination :: _), some address => .shMem (loadMemOp size) destination address
+      | some (_, destination :: _), some address =>
+          .shMem (loadMemOpHOL size) destination address
       | _, _ => .skip
   | .shMemLoad _ .global _ _ => .skip
   | .shMemStore size address value =>
       match firstCompiledExpAnyShape context address, firstCompiledExpAnyShape context value with
       | some address, some value =>
           let temporary := maxCrepExpVar [address] + 1
-          nestedDecs [temporary] [value] (.shMem (storeMemOp size) temporary address)
+          nestedDecs [temporary] [value] (.shMem (storeMemOpHOL size) temporary address)
       | _, _ => .skip
   | .tick => .tick
   | .annot _ _ => .skip
@@ -1509,7 +1509,7 @@ theorem compileProg_shMemLoad_local_of_compiled [BEq α] [OfNat α 0] [OfNat α 
     (hlookup : lookupInfo name context.vars = some (shape, destination :: destinationRest))
     (haddress : firstCompiledExpAnyShape context address = some address') :
     compileProg context (.shMemLoad size .local name address) =
-      .shMem (loadMemOp size) destination address' := by
+      .shMem (loadMemOpHOL size) destination address' := by
   simp only [compileProg, hlookup, haddress]
 
 theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
@@ -1519,7 +1519,7 @@ theorem compileProg_shMemStore_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [A
     (hvalue : firstCompiledExpAnyShape context value = some value') :
     compileProg context (.shMemStore size address value) =
       nestedDecs [maxCrepExpVar [address'] + 1] [value']
-        (.shMem (storeMemOp size) (maxCrepExpVar [address'] + 1) address') := by
+        (.shMem (storeMemOpHOL size) (maxCrepExpVar [address'] + 1) address') := by
   simp only [compileProg, haddress, hvalue]
 
 end Flapjack

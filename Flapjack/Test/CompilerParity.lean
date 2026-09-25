@@ -11,6 +11,7 @@ import Flapjack.Test.PanStructsValueValidityParity
 import Flapjack.Test.PanPropsShapeOfWfParity
 import Flapjack.Test.PanPropsEveryExpParity
 import Flapjack.Test.PanPropsExpsOfParity
+import Flapjack.Test.PanPropsLocalisedParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity
@@ -385,6 +386,7 @@ import Flapjack.Test.PanLangShapeSizeWithContextParity
 import Flapjack.Test.PanLangShapeSizeParity
 import Flapjack.Test.PanLangIsWfShapeParity
 import Flapjack.Test.PanLangExceptionsParity
+import Flapjack.Test.PanLangVarExpParity
 import Flapjack.Test.PanSemIsValWordHOLParity
 import Flapjack.Test.PanSemEmptyLocalsHOLParity
 import Flapjack.Test.PanSemMemStore32HOLParity

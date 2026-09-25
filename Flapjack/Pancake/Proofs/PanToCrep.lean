@@ -813,12 +813,23 @@ theorem ctxtFcEidsEq
 
 /-- HOL `ctxt_fc_vmax`: the constructed context's maximum slot is the
     maximum of the supplied slot list. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL
+-- `pan_to_crepProofScript.sml:2307-2312` proves
+-- `(ctxt_fc ctxt.funcs em vs shs ns).vmax = MAX_LIST ns` with no premises
+-- (`rw [ctxt_fc_def]`); this theorem has the same no-premises projection shape
+-- and is likewise definitional (`rfl`), but is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are
+-- `String`-keyed) with production `Shape`, while HOL keys names by
+-- `funname`/`varname`/`eid` = `mlstring` and slots by `shape`. The
+-- `names_as_string` qualifier cannot cover the `Shape` carrier, and no
+-- `NameRanged` byte witness exists because the output is a `num` slot bound,
+-- not a name. Direct HOL-EVAL rows `vmax_nonempty_list=T`/`vmax_empty_list=T`
+-- in `scripts/hol-probes/ctxt_fc_probe.out` are paired with the kernel-checked
+-- instances `ctxt_fc_vmax_nonempty_fixture`/`ctxt_fc_vmax_empty_fixture` and
+-- `ctxtFcVmaxGuard` in `Flapjack/Test/PanToCrepRelationsParity.lean`. The exact
+-- MlString carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`); this analogue remains deliberately untagged.
 theorem ctxtFcVmax
     (context : PanToCrepProofContext α) (codes : FiniteMap String α)
     (variables : List String) (shapes : List Shape) (names : List Nat) :

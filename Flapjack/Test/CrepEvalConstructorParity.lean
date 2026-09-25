@@ -107,6 +107,24 @@ example : evalCrepHolFiniteWordSourceExpWordLab
         evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
         crepExpOfHOL, mapCrepExpWord,
         crepSourceEvalStateOfHOLFields, exactCrepLocals,
+        holWordLabToCrepSourceWordLab, FUPDATE, FEMPTY,
+        FLOOKUP])
+
+example : evalCrepHolFiniteWordSourceExpWordLab
+    (instFinHolFiniteDimension (width := 8)) exactCrepProjection
+    (crepSimpExpHOLToSourceBits (.const (word8 5) : CrepExpHOL 8)) =
+  evalCrepHolFiniteWordSourceExpWordLab
+    (instFinHolFiniteDimension (width := 8)) exactCrepProjection
+    (crepExpHOLToSourceBits (.const (word8 5) : CrepExpHOL 8)) := by
+  exact crepSimpExpCorrect1SourceProjection_const
+    (fun pair => pair.2) exactCrepLocals exactCrepGlobals exactCrepCode
+    exactCrepMemory exactCrepMemaddrs exactCrepShMemaddrs 0 false exactCrepFfi
+    (word8 12) (word8 13) (HolWordLab.word (word8 5)) (word8 5)
+    (by
+      simp [evalCrepHolFiniteWordSourceExpWordLab,
+        evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
+        crepExpOfHOL, mapCrepExpWord,
+        crepSourceEvalStateOfHOLFields, exactCrepLocals,
         holWordLabToCrepSourceWordLab, panTheWord, FUPDATE, FEMPTY,
         FLOOKUP])
 

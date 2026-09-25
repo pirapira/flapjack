@@ -398,4 +398,46 @@ theorem crepSimpExpCorrect1SourceProjection_var
   simp [crepSimpExpHOLToSourceBits, crepExpHOLToSourceBits,
     crepExpOfHOL, mapCrepExpWord, crepSimpExp]
 
+/-- All-width `simp_exp_correct1` Const case over the existing named Crep
+    field carriers and expression-observation projection. The unused HOL
+    result binder, successful-evaluation premise, arbitrary `mapc f` update,
+    and complete optional `word_lab` result are retained. This remains
+    untagged: the lookup aliases lack finite-support witnesses, and this
+    projected evaluator has not been identified with native `crepSem$eval`. -/
+theorem crepSimpExpCorrect1SourceProjection_const
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL width) → List Nat × CrepProgHOL width)
+    (locals : CrepLocalsExact width)
+    (globals : FiniteMap (BitVec 5) (HolWordLab width))
+    (code : CrepCodeMapExact width)
+    (memory : BitVec width → HolWordLab width)
+    (memaddrs shMemaddrs : BitVec width → Prop)
+    [DecidablePred memaddrs] [DecidablePred shMemaddrs]
+    (clock : Nat) (bigEndian : Bool) (ffi : HolFfiState σ)
+    (baseAddress topAddress : BitVec width)
+    (_result : HolWordLab width) (value : BitVec width)
+    (_h : evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits (.const value)) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals
+        (crepCodeMapMap2Exact f code) memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepSimpExpHOLToSourceBits (.const value)) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := width))
+      (crepSourceEvalStateOfHOLFields locals globals code memory memaddrs shMemaddrs
+        clock bigEndian ffi baseAddress topAddress natCrepRuntimeFfiState)
+      (crepExpHOLToSourceBits (.const value)) := by
+  have hState := crepSourceEvalStateOfHOLFields_codeFfiIrrel
+    locals globals f code memory memaddrs shMemaddrs clock bigEndian ffi ffi
+    baseAddress topAddress natCrepRuntimeFfiState natCrepRuntimeFfiState
+  rw [hState]
+  simp [crepSimpExpHOLToSourceBits, crepExpHOLToSourceBits,
+    crepExpOfHOL, mapCrepExpWord, crepSimpExp]
+
 end Flapjack

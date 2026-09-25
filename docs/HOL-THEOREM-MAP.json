@@ -472,6 +472,14 @@
     "reviewer": "All-width Var case preserves the result binder, success premise, code-map update and full Option word_lab result, but uses lookup-function carriers without finite-support witnesses and the projected source evaluator rather than native crepSem$eval. No @[hol] tag."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Const case preserves the result binder, success premise, mapc code update and complete Option word_lab equality, but uses the expression-observation projection rather than the native HOL Crep state/evaluator. No @[hol] tag."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

@@ -125,7 +125,7 @@ example : evalCrepHolFiniteWordSourceExpWordLab
         evalCrepHolFiniteWordSourceExp, crepExpHOLToSourceBits,
         crepExpOfHOL, mapCrepExpWord,
         crepSourceEvalStateOfHOLFields, exactCrepLocals,
-        holWordLabToCrepSourceWordLab, panTheWord, FUPDATE, FEMPTY,
+        holWordLabToCrepSourceWordLab, FUPDATE, FEMPTY,
         FLOOKUP])
 
 example : evalCrepHolFiniteWordSourceExpWordLab

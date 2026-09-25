@@ -164,15 +164,13 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
     `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
 
-    This declaration is untagged.  The production `Shape` `Named` constructor
-    carries a Lean `String` (`StructName`) where HOL carries `mlstring`, and
-    `ret_var` neither compares nor emits that name: the `Named` clause discards
-    it outright (`_ => NONE`).  So the carrier difference is not byte-observable,
-    but it is also not an equality/map-key use, so no truthful
-    `names_as_string` classification exists yet (dropping the tag per
-    coordinator review).  A faithful port needs either an explicit
-    unused/discarded nested-carrier classification in the qualifier policy or an
-    exact MlString-backed `ShapeHOL`; both are tracked as follow-up. -/
+    The production `Shape.Named` payload is a Lean `String` (`StructName`),
+    whereas HOL uses `mlstring`. This function discards that payload. The
+    current `names_as_string` policy classifies observed equality/map-key uses
+    and byte-observable uses, not a discarded nested carrier; therefore this
+    analogue remains untagged pending an exact-carrier port or a reviewed
+    qualifier policy for discarded names. Direct HOL/Lean cases are retained
+    in `ret_var_probe.out` and `RetVarParity.lean`. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?

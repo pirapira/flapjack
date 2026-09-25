@@ -25,3 +25,6 @@ val _ = print_eval "stable_groups"
        panLang$ExnDecl «E1» One; panLang$ExnDecl «E2» One;
        panLang$Decl One «g1» (panLang$Const 1w);
        panLang$Decl One «g2» (panLang$Const 2w)]``;
+
+val _ = print_eval "empty"
+  ``pan_globals$resort_decls ([] : (8 word) panLang$decl list)``;

@@ -5,6 +5,7 @@ import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
 import Flapjack.Pancake.Semantics.PanSem.TickShMemExact
 import Flapjack.Pancake.Semantics.PanSem.ExtCallExact
 import Flapjack.Pancake.Semantics.PanSem.DecCallExact
+import Flapjack.Pancake.Semantics.PanSem.ClockExact
 
 /-!
 # Exact-state dispatcher for reviewed nonrecursive PanSem clauses
@@ -76,12 +77,6 @@ def evalPanSemNonrecursiveHOLExact {width : Nat} {σ : Type}
         (fun _ expression => evalHOLExact state expression))
   | .tick => some (tickStepHOLExact state)
   | .annot _ _ => some (none, state)
-
-theorem fixClockHOLExact_clock_le {width : Nat} {σ : Type} [NeZero width] {β : Type}
-    (oldState : PanSemStateExact width σ) (step : β × PanSemStateExact width σ) :
-    (fixClockHOLExact oldState step).2.clock ≤ oldState.clock := by
-  by_cases h : oldState.clock < step.2.clock <;>
-    simp [fixClockHOLExact, h] <;> omega
 
 /-! Internal recursion carries decidability for the exact state's memory sets
     alongside the state. HOL states store arbitrary sets, so these instances

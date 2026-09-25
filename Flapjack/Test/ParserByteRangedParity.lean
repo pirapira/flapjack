@@ -40,4 +40,21 @@ example (s : String) (h : CharsByteRanged s.toList) :
     CharsByteRanged (readWhile isAlphaNumOrWild s.toList []).1.toList :=
   readWhile_charsByteRanged' s.toList [] h (by simp [CharsByteRanged])
 
+example (s : String) (h : StringByteRanged s) : TokenNameByteRanged (getKeyword s) :=
+  getKeyword_nameByteRanged s h
+
+example (s : String) : TokenNameByteRanged (getToken s) :=
+  getToken_nameByteRanged s
+
+example (a : Atom) (h : AtomNameByteRanged a) : TokenNameByteRanged (tokenOfAtom a) :=
+  tokenOfAtom_nameByteRanged h
+
+example : getToken "&&" = Token.boolAndT := by decide
+
+example : getKeyword "skip" = Token.keywordT Keyword.skipK := by decide
+
+example : getKeyword "abc" = Token.identT "abc" := by decide
+
+example : getKeyword "@ffi" = Token.foreignIdent "ffi" := by decide
+
 end Flapjack.Test.ParserByteRangedParity

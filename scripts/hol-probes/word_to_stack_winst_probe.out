@@ -1,0 +1,14 @@
+wi_const=T
+wi_binop_imm=T
+wi_binop_reg=T
+wi_div=T
+wi_addcarry=T
+wi_longmul=T
+wi_longdiv=T
+wi_load16_skip=T
+wi_store=T
+wi_fpless=T
+wi_fpmovtoreg=T
+wi_fpmovfromreg=T
+wi_fpadd=T
+wi_skip=T

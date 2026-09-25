@@ -910,6 +910,95 @@ example : wShareInst (α := BitVec 64) .load 5 (.addr 3 9) (2, 7, 9)
 example : wShareInst (α := BitVec 64) .store 5 (.addr 3 9) (2, 7, 9)
     = wsStore .store := rfl
 
+/-! ## `wInst` oracle parity
+
+Structural comparison and rows reproducing `word_to_stack_winst_probe.out` for
+the instruction helper `wInst` (`word_to_stackScript.sml:88-175`), including
+the width-64 `FPMovToReg`/`FPMovFromReg` clauses and the `Load16`/`Store16`
+`Skip` catch-all. -/
+
+private def winstInstBEq : WordLangInst (BitVec 64) → WordLangInst (BitVec 64) → Bool
+  | .const r v, .const r' v' => r == r' && v == v'
+  | .arith (.binop op d a (.imm v)), .arith (.binop op' d' a' (.imm v')) =>
+      op == op' && d == d' && a == a' && v == v'
+  | .arith (.binop op d a (.reg n)), .arith (.binop op' d' a' (.reg n')) =>
+      op == op' && d == d' && a == a' && n == n'
+  | .arith (.div d x y), .arith (.div d' x' y') => d == d' && x == x' && y == y'
+  | .arith (.addCarry d c l r), .arith (.addCarry d' c' l' r') =>
+      d == d' && c == c' && l == l' && r == r'
+  | .arith (.longMul a b c d), .arith (.longMul a' b' c' d') =>
+      a == a' && b == b' && c == c' && d == d'
+  | .arith (.longDiv a b c d e), .arith (.longDiv a' b' c' d' e') =>
+      a == a' && b == b' && c == c' && d == d' && e == e'
+  | .mem op dst (.addr b o), .mem op' dst' (.addr b' o') =>
+      op == op' && dst == dst' && b == b' && o == o'
+  | .fp (.fpLess r f1 f2), .fp (.fpLess r' f1' f2') =>
+      r == r' && f1 == f1' && f2 == f2'
+  | .fp (.fpMovToReg r1 r2 d), .fp (.fpMovToReg r1' r2' d') =>
+      r1 == r1' && r2 == r2' && d == d'
+  | .fp (.fpMovFromReg d r1 r2), .fp (.fpMovFromReg d' r1' r2') =>
+      d == d' && r1 == r1' && r2 == r2'
+  | .fp (.fpAdd d l r), .fp (.fpAdd d' l' r') => d == d' && l == l' && r == r'
+  | .skip, .skip => true
+  | _, _ => false
+
+private def winstProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .seq a b, .seq c d => winstProgBEq a c && winstProgBEq b d
+  | .inst i, .inst j => winstInstBEq i j
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .skip, .skip => true
+  | _, _ => false
+
+private def wiInstConst (r v : Nat) : StackMoveProg := .inst (.const r (BitVec.ofNat 64 v))
+private def wiInstBinopImm (d a v : Nat) : StackMoveProg :=
+  .inst (.arith (.binop .add d a (.imm (BitVec.ofNat 64 v))))
+private def wiInstBinopReg (d a n : Nat) : StackMoveProg :=
+  .inst (.arith (.binop .add d a (.reg n)))
+private def wiInstDiv (d x y : Nat) : StackMoveProg := .inst (.arith (.div d x y))
+private def wiInstAddCarry (d c l r : Nat) : StackMoveProg :=
+  .inst (.arith (.addCarry d c l r))
+private def wiInstLongMul : StackMoveProg := .inst (.arith (.longMul 3 0 0 2))
+private def wiInstLongDiv (q : Nat) : StackMoveProg := .inst (.arith (.longDiv 0 3 3 0 q))
+private def wiInstStore (r b : Nat) : StackMoveProg := .inst (.mem .store r (.addr b 9))
+private def wiInstFpLess (r : Nat) : StackMoveProg := .inst (.fp (.fpLess r 1 2))
+private def wiInstFpMovToReg (r1 : Nat) : StackMoveProg := .inst (.fp (.fpMovToReg r1 0 0))
+private def wiInstFpMovFromReg (d r1 : Nat) : StackMoveProg :=
+  .inst (.fp (.fpMovFromReg d r1 0))
+private def wiInstFpAdd : StackMoveProg := .inst (.fp (.fpAdd 1 2 3))
+private def wiInstSkip : StackMoveProg := .inst .skip
+
+def wInstParityGuard : Bool :=
+  winstProgBEq (wInst (width := 64) (.const 7 5) (2, 7, 9))
+    (.seq (wiInstConst 2 5) (.stackStore 2 5)) &&
+  winstProgBEq (wInst (width := 64) (.arith (.binop .add 4 3 (.imm 9))) (2, 7, 9))
+    (.seq (wiInstBinopImm 2 1 9) (.stackStore 2 6)) &&
+  winstProgBEq (wInst (width := 64) (.arith (.binop .add 4 3 (.reg 5))) (2, 7, 9))
+    (.seq (.stackLoad 3 6) (.seq (wiInstBinopReg 2 1 3) (.stackStore 2 6))) &&
+  winstProgBEq (wInst (width := 64) (.arith (.div 4 3 5)) (2, 7, 9))
+    (.seq (.stackLoad 3 6) (.seq (wiInstDiv 2 1 3) (.stackStore 2 6))) &&
+  winstProgBEq (wInst (width := 64) (.arith (.addCarry 4 3 5 6)) (2, 7, 9))
+    (.seq (.stackLoad 3 6) (.seq (wiInstAddCarry 2 1 3 6) (.stackStore 2 6))) &&
+  winstProgBEq (wInst (width := 64) (.arith (.longMul 1 2 3 4)) (2, 7, 9))
+    wiInstLongMul &&
+  winstProgBEq (wInst (width := 64) (.arith (.longDiv 1 2 3 4 5)) (2, 7, 9))
+    (.seq (.stackLoad 2 6) (wiInstLongDiv 2)) &&
+  winstProgBEq (wInst (width := 64) (.mem .load16 4 (.addr 3 9)) (2, 7, 9))
+    wiInstSkip &&
+  winstProgBEq (wInst (width := 64) (.mem .store 4 (.addr 3 9)) (2, 7, 9))
+    (.seq (.stackLoad 3 6) (wiInstStore 3 1)) &&
+  winstProgBEq (wInst (width := 64) (.fp (.fpLess 4 1 2)) (2, 7, 9))
+    (.seq (wiInstFpLess 2) (.stackStore 2 6)) &&
+  winstProgBEq (wInst (width := 64) (.fp (.fpMovToReg 4 3 0)) (2, 7, 9))
+    (.seq (wiInstFpMovToReg 2) (.stackStore 2 6)) &&
+  winstProgBEq (wInst (width := 64) (.fp (.fpMovFromReg 0 4 3)) (2, 7, 9))
+    (.seq (.stackLoad 2 6) (wiInstFpMovFromReg 0 2)) &&
+  winstProgBEq (wInst (width := 64) (.fp (.fpAdd 1 2 3)) (2, 7, 9)) wiInstFpAdd &&
+  winstProgBEq (wInst (width := 64) .skip (2, 7, 9)) wiInstSkip
+
+#eval wInstParityGuard
+#guard wInstParityGuard
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -920,6 +1009,7 @@ def runChecks : IO Bool := do
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
     copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
-    callDestParityGuard && stubParityGuard && wShareInstParityGuard)
+    callDestParityGuard && stubParityGuard && wShareInstParityGuard &&
+    wInstParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

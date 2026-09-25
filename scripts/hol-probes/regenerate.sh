@@ -1792,3 +1792,10 @@ run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
 run_probe word_to_stack_wshareinst_probeScript.sml word_to_stack_wshareinst_probe.out \
   ws_load ws_store32 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The word_to_stack wInst probe observes the instruction helper `wInst`
+# (word_to_stackScript.sml:88-175), including the width-64 FP move clauses and
+# the Load16/Store16 Skip catch-all.
+run_probe word_to_stack_winst_probeScript.sml word_to_stack_winst_probe.out \
+  wi_const wi_skip "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

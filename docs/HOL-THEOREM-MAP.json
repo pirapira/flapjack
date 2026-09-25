@@ -9795,6 +9795,14 @@
     "reviewer": "flapjack-deepseek-three (source comparison): HOL wShareInst (word_to_stackScript.sml:186-224) is polymorphic in the stack word type `'a` and has the load forms wShareInst Load/Load8/Load16/Load32 v (Addr ad offset) kf = let (l,n2) = wReg1 ad kf in wStackLoad l (wRegWrite1 (\\r. ShMemOp <op> r (Addr n2 offset)) v kf) and the store forms wShareInst Store/Store8/Store16/Store32 v (Addr ad offset) kf = let (l1,n2) = wReg1 ad kf; let (l2,n1) = wReg2 v kf in wStackLoad (l1 ++ l2) (ShMemOp <op> n1 (Addr n2 offset)). Lean wShareInst {alpha} : WordMemOp -> Nat -> WordLangAddr alpha -> Nat x Nat x Nat -> ProgM alpha matches all eight clauses over the exact shared-word carrier ProgM alpha (single word type, faithful MlString FFI). Direct HOL rows ws_load..ws_store32=T in scripts/hol-probes/word_to_stack_wshareinst_probe.out, reproduced by wShareInstParityGuard and rfl examples in Flapjack/Test/WordToStackBitsParity.lean."
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "wInst_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "wInst",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL wInst (word_to_stackScript.sml:88-175) is polymorphic in the stack word type and mirrors the asm instruction forms: Const -> wRegWrite1 (fun n. Inst (Const n c)); Arith Binop/Shift with Imm/Reg -> wReg1/wReg2 staging plus wRegWrite1; Div/AddCarry/AddOverflow/SubOverflow -> wReg1/wReg2 plus wRegWrite1; LongMul -> Inst (Arith (LongMul 3 0 0 2)); LongDiv -> wReg1 plus Inst (Arith (LongDiv 0 3 3 0 n5)); Mem Load/Store/Load8/Store8/Load32/Store32 -> wReg1/wReg2 plus wStackLoad/wRegWrite1 (Load16/Store16 intentionally fall to the Skip catch-all); FP FPLess/FPLessEqual/FPEqual -> wRegWrite1; FPMovToReg/FPMovFromReg are gated on dimindex(:'a) = 64; the remaining FP forms pass through as Inst (FP f); and wInst _ kf = Inst Skip. Lean wInst {width} [NeZero width] : WordLangInst (BitVec width) -> Nat x Nat x Nat -> ProgM (BitVec width) mirrors every clause with dimindex(:'a) = 64 read as width = 64 over the width-indexed exact carrier ProgM (BitVec width). Direct HOL rows wi_const..wi_skip=T in scripts/hol-probes/word_to_stack_winst_probe.out, reproduced by wInstParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

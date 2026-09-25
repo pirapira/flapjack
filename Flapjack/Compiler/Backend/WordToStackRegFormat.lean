@@ -496,4 +496,108 @@ def wShareInst {α : Type} (op : WordMemOp) (v : Nat)
       Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
         (.shMemOp .store32 l2.2 (.addr l1.2 offset))
 
+/-- Exact port of HOL `wInst_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:88-175`).
+
+Every clause is mirrored, with `dimindex (:'a) = 64` becoming `width = 64`.
+`Load16`/`Store16` are not handled by HOL and fall to the `Skip` catch-all, as
+in the source. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wInst_def"]
+def wInst {width : Nat} [NeZero width] (i : WordLangInst (BitVec width))
+    (kf : Nat × Nat × Nat) : ProgM (BitVec width) :=
+  match i with
+  | .const n c =>
+      wRegWrite1 (fun n => .inst (.const n c)) n kf
+  | .arith (.binop bop n1 n2 (.imm imm)) =>
+      let l := wReg1 n2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun n1 => .inst (.arith (.binop bop n1 l.2 (.imm imm)))) n1 kf)
+  | .arith (.binop bop n1 n2 (.reg n3)) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.binop bop n1 l.2 (.reg l'.2)))) n1 kf)
+  | .arith (.shift sh n1 n2 (.imm imm)) =>
+      let l := wReg1 n2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun n1 => .inst (.arith (.shift sh n1 l.2 (.imm imm)))) n1 kf)
+  | .arith (.shift sh n1 n2 (.reg n3)) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.shift sh n1 l.2 (.reg l'.2)))) n1 kf)
+  | .arith (.div n1 n2 n3) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.div n1 l.2 l'.2))) n1 kf)
+  | .arith (.addCarry n1 n2 n3 n4) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.addCarry n1 l.2 l'.2 n4))) n1 kf)
+  | .arith (.addOverflow n1 n2 n3 n4) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.addOverflow n1 l.2 l'.2 n4))) n1 kf)
+  | .arith (.subOverflow n1 n2 n3 n4) =>
+      let l := wReg1 n2 kf
+      let l' := wReg2 n3 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (wRegWrite1 (fun n1 => .inst (.arith (.subOverflow n1 l.2 l'.2 n4))) n1 kf)
+  | .arith (.longMul _ _ _ _) =>
+      .inst (.arith (.longMul 3 0 0 2))
+  | .arith (.longDiv _ _ _ _ n5) =>
+      let l := wReg1 n5 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (.inst (.arith (.longDiv 0 3 3 0 l.2)))
+  | .mem .load n1 (.addr n2 offset) =>
+      let l := wReg1 n2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun n1 => .inst (.mem .load n1 (.addr l.2 offset))) n1 kf)
+  | .mem .store n1 (.addr n2 offset) =>
+      let l1 := wReg1 n2 kf
+      let l2 := wReg2 n1 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.inst (.mem .store l2.2 (.addr l1.2 offset)))
+  | .mem .load8 n1 (.addr n2 offset) =>
+      let l := wReg1 n2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun n1 => .inst (.mem .load8 n1 (.addr l.2 offset))) n1 kf)
+  | .mem .store8 n1 (.addr n2 offset) =>
+      let l1 := wReg1 n2 kf
+      let l2 := wReg2 n1 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.inst (.mem .store8 l2.2 (.addr l1.2 offset)))
+  | .mem .load32 n1 (.addr n2 offset) =>
+      let l := wReg1 n2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun n1 => .inst (.mem .load32 n1 (.addr l.2 offset))) n1 kf)
+  | .mem .store32 n1 (.addr n2 offset) =>
+      let l1 := wReg1 n2 kf
+      let l2 := wReg2 n1 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.inst (.mem .store32 l2.2 (.addr l1.2 offset)))
+  | .fp (.fpLess r f1 f2) =>
+      wRegWrite1 (fun r => .inst (.fp (.fpLess r f1 f2))) r kf
+  | .fp (.fpLessEqual r f1 f2) =>
+      wRegWrite1 (fun r => .inst (.fp (.fpLessEqual r f1 f2))) r kf
+  | .fp (.fpEqual r f1 f2) =>
+      wRegWrite1 (fun r => .inst (.fp (.fpEqual r f1 f2))) r kf
+  | .fp (.fpMovToReg r1 r2 d) =>
+      if width = 64 then
+        wRegWrite1 (fun r1 => .inst (.fp (.fpMovToReg r1 0 d))) r1 kf
+      else
+        wRegWrite2
+          (fun r2 => wRegWrite1 (fun r1 => .inst (.fp (.fpMovToReg r1 r2 d))) r1 kf)
+          r2 kf
+  | .fp (.fpMovFromReg d r1 r2) =>
+      let l := wReg1 r1 kf
+      let l' := if width = 64 then ([], 0) else wReg2 r2 kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l.1 ++ l'.1)
+        (.inst (.fp (.fpMovFromReg d l.2 l'.2)))
+  | .fp f => .inst (.fp f)
+  | _ => .inst .skip
+
 end Flapjack.Compiler.Backend.WordToStackRegFormat

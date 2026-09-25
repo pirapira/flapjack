@@ -101,7 +101,7 @@ theorem sizeOfFieldsLtNStruct (name : StructName)
   omega
 
 /-
-Exact executable port of HOL `panProps$is_wf_shape_v`
+Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `panProps$is_wf_shape_v`
     (`cakeml/pancake/semantics/panPropsScript.sml:24`). The HOL clauses are
     reproduced literally: a scalar is `T`; `RStruct vs` is
     `EVERY (is_wf_shape_v sctxt) vs`; `NStruct nm nm_vs` is
@@ -117,7 +117,12 @@ Exact executable port of HOL `panProps$is_wf_shape_v`
     original-HOL rows are pinned in
     `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
 mutual
-  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): stated over the production
+  -- `PanValue` carrier (whose `nStruct` names are `FieldName` = `String`) and a
+  -- `StructContextHOL` keyed by `StructName` = `String`, while HOL
+  -- `panPropsScript.sml` uses `fldname`/`stcname` = `mlstring`. The exact
+  -- MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` /
+  -- `flapjack-0lj`.
   def panIsWfShapeValueHOL [LawfulBEq String] (context : StructContextHOL) :
       PanValue α → Bool
     | .word _ => true

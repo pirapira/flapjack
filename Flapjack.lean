@@ -67,7 +67,6 @@ import Flapjack.Pancake.Semantics.PanSem.CallExact
 import Flapjack.Pancake.Semantics.PanSem.ControlExact
 import Flapjack.Pancake.Semantics.PanSem.EvaluateDeclsExact
 import Flapjack.Pancake.Semantics.PanSem.ClockExact
-import Flapjack.Pancake.Semantics.PanSem.SemanticsDeclsExact
 import Flapjack.Pancake.Semantics.PanSem.StateSimpExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact

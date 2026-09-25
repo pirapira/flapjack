@@ -240,5 +240,260 @@ def copyRet {α β : Type} (perf isHandle : Bool) (kf : Nat × Nat × Nat)
          else kf.2.1)
         n)
       (Flapjack.Compiler.Backend.WordToStack.seqStackFree n kont)
+/-- Structural analogue of HOL `wLive_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:252`):
+
+```
+wLive (live:cutsets) (bitmaps:'a word app_list # num) k f f' =
+  if f = 0 then (Skip,bitmaps)
+  else let (new_bitmaps,i) = insert_bitmap (write_bitmap (SND live) k f') bitmaps in
+         (Seq (Inst (Const k (n2w (i+1)))) (StackStore k 0), new_bitmaps)
+```
+
+    NOT TAGGED: HOL consumes the live set as a `num_set` (`SND live`) through
+    `toAList`/`MEM`; that `sptree` carrier is outside the CakeML submodule and is
+    modelled here (as in `writeBitmapHOL`) by an order-insensitive key list.
+    `live` below is that modelled domain.  The stackLang fragment
+    `Seq`/`Inst`/`Const`/`StackStore` is stated over the exact shared-word
+    carrier `Flapjack.Compiler.Backend.StackLang.ProgM`. -/
+def wLiveW {width : Nat} [NeZero width]
+    (live : List Nat) (bitmaps : Flapjack.AppList (BitVec width) × Nat)
+    (k f f' : Nat) :
+    ProgM (BitVec width) × (Flapjack.AppList (BitVec width) × Nat) :=
+  if f = 0 then (.skip, bitmaps)
+  else
+    let inserted :=
+      Flapjack.Compiler.Backend.WordToStack.insertBitmap
+        (Flapjack.Compiler.Backend.WordToStack.writeBitmapHOL live k f') bitmaps
+    (.seq (.inst (.const k (BitVec.ofNat width (inserted.2 + 1))))
+      (.stackStore k 0), inserted.1)
+
+/-- Exact port of HOL `StackHandlerArgs_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:350`):
+
+```
+StackHandlerArgs perf dest arg_count (k,f,f') =
+  StackArgs dest arg_count (k, f + handler_slots perf, f' + handler_slots perf)
+```
+
+    `'a` is arbitrary in HOL (no word operation and no `dimindex (:'a)`), so the
+    generic-`α` statement over the shared-word carrier `ProgM` is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "StackHandlerArgs_def"]
+def stackHandlerArgs {α : Type} (perf : Bool) (dest : Sum Nat Nat) (arg_count : Nat)
+    (kf : Nat × Nat × Nat) : ProgM α :=
+  stackArgs dest arg_count
+    (kf.1,
+     kf.2.1 + Flapjack.Compiler.Backend.WordToStack.handlerSlots perf,
+     kf.2.2 + Flapjack.Compiler.Backend.WordToStack.handlerSlots perf)
+
+/-- Exact port of HOL `PopHandler_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:378`):
+
+```
+PopHandler perf (k,f,f') prog =
+  Seq (StackLoad k 2) (Seq (Set Handler k) (Seq (StackFree (handler_slots perf)) prog))
+```
+
+    `'a` is arbitrary in HOL, so the generic-`α` statement is exact. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "PopHandler_def"]
+def popHandler {α : Type} (perf : Bool) (kf : Nat × Nat × Nat) (prog : ProgM α) : ProgM α :=
+  .seq (.stackLoad kf.1 2)
+    (.seq (.set .handler kf.1)
+      (.seq (.stackFree (Flapjack.Compiler.Backend.WordToStack.handlerSlots perf)) prog))
+
+/-- Exact port of HOL `PushHandler_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:355`):
+
+```
+PushHandler perf l1 l2 (k,f,f') =
+  Seq (StackAlloc (handler_slots perf))
+   (Seq (Inst (Const k 1w))
+   (Seq (StackStore k 0)
+   (Seq (LocValue k l1 l2)
+   (Seq (StackStore k 1)
+   (Seq (Get k Handler)
+   (Seq (StackStore k 2)
+   (Seq (if perf then
+           list_Seq [ Inst (Arith (Binop Or k perf_rsp (Reg perf_rsp))) ;
+                      StackStore k 3 ;
+                      Inst (Arith (Binop Or k perf_rbp (Reg perf_rbp))) ;
+                      StackStore k 4 ]
+         else Skip)
+   (Seq (StackGetSize k)
+        (Set Handler k)))))))))
+```
+
+    HOL's `Const k 1w` is word-indexed (`'a word`), so the exact statement is
+    the width-indexed `ProgM (BitVec width)` with `[NeZero width]`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "PushHandler_def"]
+def pushHandlerW {width : Nat} [NeZero width]
+    (perf : Bool) (l1 l2 : Nat) (kf : Nat × Nat × Nat) : ProgM (BitVec width) :=
+  .seq (.stackAlloc (Flapjack.Compiler.Backend.WordToStack.handlerSlots perf))
+    (.seq (.inst (.const kf.1 (1 : BitVec width)))
+      (.seq (.stackStore kf.1 0)
+        (.seq (.locValue kf.1 l1 l2)
+          (.seq (.stackStore kf.1 1)
+            (.seq (.get kf.1 .handler)
+              (.seq (.stackStore kf.1 2)
+                (.seq
+                  (if perf then
+                    Flapjack.Compiler.Backend.StackLang.listSeq
+                      [ .inst (.arith (.binop .or kf.1
+                          (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+                          (.reg (Flapjack.Compiler.Backend.WordToStack.perfRsp)))),
+                        .stackStore kf.1 3,
+                        .inst (.arith (.binop .or kf.1
+                          (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+                          (.reg (Flapjack.Compiler.Backend.WordToStack.perfRbp)))),
+                        .stackStore kf.1 4 ]
+                  else .skip)
+                  (.seq (.stackGetSize kf.1)
+                        (.set .handler kf.1)))))))))
+
+/-- HOL `word_to_stack$call_dest`: the destination register/stack slot of a
+    call target.  A direct target is the `INL` position; an indirect target is
+    taken from the last argument via `wReg2`, with the target load emitted by
+    `wStackLoad`.  HOL is polymorphic in the stack program's word type, so the
+    result is `ProgM α` for an arbitrary `α`; the argument list is `num list`
+    because HOL's `LAST args` is fed to `wReg2 : num -> ...`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "call_dest_def"]
+def callDest {α : Type} (pos : Option Nat) (args : List Nat)
+    (kf : Nat × Nat × Nat) : ProgM α × Sum Nat Nat :=
+  match pos with
+  | some p => (.skip, .inl p)
+  | none =>
+    match args.getLast? with
+    | none => (.skip, .inl Flapjack.raiseStubLocation)
+    | some last =>
+      let w := wReg2 last kf
+      (Flapjack.Compiler.Backend.WordToStack.wStackLoad w.1 .skip, .inr w.2)
+
+/-- HOL `word_to_stack$perf_call_prefix`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:319-334`): the performance
+    frame-setup prefix.  It writes the return address with `LocValue`, stores the
+    old frame pointers relative to `perf_rsp`, and then atomically commits the
+    new frame before syncing `perf_rbp`.  The immediates are concrete words, so
+    the port is width-indexed. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_call_prefix_def"]
+def perfCallPrefixW {width : Nat} [NeZero width]
+    (l1 l2 k : Nat) : ProgM (BitVec width) :=
+  Flapjack.Compiler.Backend.StackLang.listSeq
+    [ .locValue k l1 l2,
+      .inst (.mem .store k
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+          (-8 : BitVec width))),
+      .inst (.mem .store (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+          (-16 : BitVec width))),
+      .inst (.arith (.binop .sub (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp) (.imm (16 : BitVec width)))),
+      .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (.reg (Flapjack.Compiler.Backend.WordToStack.perfRsp)))) ]
+
+/-- HOL `word_to_stack$perf_call_suffix`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:336-343`): pops the saved
+    frame pointer and discards both frame slots in one atomic step.  Width-indexed
+    because of the concrete `0w`/`16w` immediates. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "perf_call_suffix_def"]
+def perfCallSuffixW {width : Nat} [NeZero width] : ProgM (BitVec width) :=
+  Flapjack.Compiler.Backend.StackLang.listSeq
+    [ .inst (.mem .load (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+        (.addr (Flapjack.Compiler.Backend.WordToStack.perfRsp) (0 : BitVec width))),
+      .inst (.arith (.binop .add (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+        (Flapjack.Compiler.Backend.WordToStack.perfRsp) (.imm (16 : BitVec width)))) ]
+
+/-- HOL `word_to_stack$raise_stub`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:557-576`): restores the
+    handler and (when `perf`) the performance frame pointers from slots 3/4, then
+    hands off to the next handler.  HOL is polymorphic in the word type and the
+    body contains no word literal, so the port is generic in the carrier
+    parameter `α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "raise_stub_def"]
+def raiseStub {α : Type} (perf : Bool) (k : Nat) : ProgM α :=
+  .seq (.get k .handler)
+    (.seq (.stackSetSize k)
+      (.seq
+        (if perf then
+          Flapjack.Compiler.Backend.StackLang.listSeq
+            [ .stackLoad k 3,
+              .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRsp)
+                k (.reg k))),
+              .stackLoad k 4,
+              .inst (.arith (.binop .or (Flapjack.Compiler.Backend.WordToStack.perfRbp)
+                k (.reg k))) ]
+        else .skip)
+        (.seq (.stackLoad k 2)
+          (.seq (.set .handler k)
+            (.seq (.stackLoad k 1)
+              (.seq (.stackFree (Flapjack.Compiler.Backend.WordToStack.handlerSlots perf))
+                (.raise k)))))))
+
+/-- HOL `word_to_stack$store_consts_stub`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:578-580`): stores the
+    constant pool and returns.  Word-independent, so generic in `α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "store_consts_stub_def"]
+def storeConstsStub {α : Type} (k : Nat) : ProgM α :=
+  .seq (.storeConsts k (k + 1) none) (.ret 0)
+
+/-- Exact port of HOL `wShareInst_def`
+    (`cakeml/compiler/backend/word_to_stackScript.sml:186-224`):
+
+```
+(wShareInst Load   v (Addr ad offset) kf =
+   let (l,n2) = wReg1 ad kf in
+     wStackLoad l (wRegWrite1 (\r. ShMemOp Load r (Addr n2 offset)) v kf)) /\
+  ... Load8/Load16/Load32 likewise ...
+(wShareInst Store  v (Addr ad offset) kf =
+   let (l1,n2) = wReg1 ad kf in
+   let (l2,n1) = wReg2 v kf in
+     wStackLoad (l1 ++ l2) (ShMemOp Store n1 (Addr n2 offset))) /\
+  ... Store8/Store16/Store32 likewise ...
+```
+
+    Splits the shared-memory address register through `wReg1` (and, for stores,
+    the stored value through `wReg2`), spilling through `wStackLoad`.  HOL is
+    polymorphic in the stack word type `'a`, so this is generic in `α` over the
+    exact shared-word carrier `ProgM α`. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "wShareInst_def"]
+def wShareInst {α : Type} (op : WordMemOp) (v : Nat)
+    (address : WordLangAddr α) (kf : Nat × Nat × Nat) : ProgM α :=
+  match op, address with
+  | .load, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load r (.addr l.2 offset)) v kf)
+  | .load8, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load8 r (.addr l.2 offset)) v kf)
+  | .load16, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load16 r (.addr l.2 offset)) v kf)
+  | .load32, .addr ad offset =>
+      let l := wReg1 ad kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad l.1
+        (wRegWrite1 (fun r => .shMemOp .load32 r (.addr l.2 offset)) v kf)
+  | .store, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store l2.2 (.addr l1.2 offset))
+  | .store8, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store8 l2.2 (.addr l1.2 offset))
+  | .store16, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store16 l2.2 (.addr l1.2 offset))
+  | .store32, .addr ad offset =>
+      let l1 := wReg1 ad kf
+      let l2 := wReg2 v kf
+      Flapjack.Compiler.Backend.WordToStack.wStackLoad (l1.1 ++ l2.1)
+        (.shMemOp .store32 l2.2 (.addr l1.2 offset))
 
 end Flapjack.Compiler.Backend.WordToStackRegFormat

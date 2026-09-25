@@ -2,6 +2,8 @@ import Flapjack.HolRef
 import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
+import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.CrepLang.Exp
 
 /-!
 Executable expression lowering from Flapjack to Crepe.
@@ -55,12 +57,37 @@ def cexpHeads {β : Type u} : List (List β) → Option (List β)
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
 
+/-- Exact HOL `comp_field_def` (`cakeml/pancake/pan_to_crepScript.sml:28-32`)
+    over the MlString-backed `ShapeHOL` carrier and the positive-width
+    `CrepExpHOL`.
+
+    HOL returns `([Const 0w], One)` on an empty shape list, takes
+    `size_of_shape sh` expressions for index `0`, and otherwise skips
+    `size_of_shape sh` expressions and decrements the index. The Lean word
+    width is the HOL word index (`BitVec width` with `[NeZero width]`), the
+    zero literal is `CrepExpHOL.const 0`, and `sizeOfShapeHOL` is the already
+    tagged `size_of_shape_def` over `ShapeHOL`. All constructor arities and
+    field types match. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
+def compFieldHOL {width : Nat} [NeZero width] (index : Nat) :
+    List Flapjack.Pancake.PanLang.ShapeHOL →
+      List (CrepExpHOL width) →
+        List (CrepExpHOL width) × Flapjack.Pancake.PanLang.ShapeHOL
+  | [], _ => ([.const (0 : BitVec width)], .one)
+  | shape :: shapes, expressions =>
+      if index = 0 then
+        (expressions.take (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape), shape)
+      else
+        compFieldHOL (index - 1) shapes
+          (expressions.drop (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape))
+
 /-- Flapjack-specific analogue of HOL `comp_field_def`. This implementation
     uses production `Shape`, whose named fields are Lean `String`, and a
     generic word carrier `α`; HOL `shape` names are `mlstring` and the result
     `crepLang$exp` is indexed by a positive word width. It is therefore not an
-    exact HOL declaration and intentionally has no tag until both carriers are
-    represented exactly. -/
+    exact HOL declaration and intentionally has no tag. The exact carrier port
+    `compFieldHOL` over `ShapeHOL`/`CrepExpHOL` is tagged above, and
+    `compileField_map_codecs` is the kernel bridge from this executed helper. -/
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -156,17 +183,136 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
 /-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
-    A return variable exists only for a one-word shape.  Pancake's `oHD`
-    operation supplies the first flattened destination when one is present.
-    This declaration consumes production `Shape`, whose `Named` field is a
-    Lean `String`; HOL's shape uses an `mlstring` name. The equations mirror
-    HOL, but the input carrier differs, so this declaration is untagged. -/
+    Clause-by-clause the HOL definition is
+    `ret_var One ns = oHD ns`,
+    `ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE`,
+    `ret_var (Named sh) ns = NONE` (comment "should never happen").
+    `oHD` (`HOL/src/list/src/listScript.sml:5474`, `oHD l = case l of [] => NONE
+    | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
+    `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
+
+    The production `Shape.Named` payload is a Lean `String` (`StructName`),
+    whereas HOL uses `mlstring`. This function discards that payload. The
+    current `names_as_string` policy classifies observed equality/map-key uses
+    and byte-observable uses, not a discarded nested carrier; therefore this
+    analogue remains untagged. The exact carrier port `retVarHOL` over
+    `ShapeHOL` below is tagged, and `retVarHOL_shapeToHOL` is the kernel bridge.
+    Direct HOL/Lean cases are retained in `ret_var_probe.out` and
+    `RetVarParity.lean`. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?
   | .comb fields =>
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
+
+/-! Exact port of HOL `pan_to_crep$ret_var`
+    (`cakeml/pancake/pan_to_crepScript.sml:114-119`) over the faithful
+    MlString-backed `ShapeHOL` carrier and the tagged `sizeOfShapeHOL`
+    (`panLangScript.sml:174`).
+
+    The HOL equations are
+    `ret_var One ns = oHD ns`,
+    `ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE`,
+    and `ret_var (Named sh) ns = NONE`, where `oHD`
+    (`HOL/src/list/src/listScript.sml:5474`) is exactly `List.head?`.  The
+    `named` case discards its `mlstring` payload, and all constructor arities
+    and field types match `ShapeHOL`, so this is the exact statement.  The
+    production `retVar` above mirrors these equations over `Flapjack.Shape`
+    (String names) and stays untagged; `retVarHOL_shapeToHOL` below is the
+    narrow kernel bridge on every production shape; the name is discarded, so
+    no byte-rangedness premise is needed. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def"]
+def retVarHOL (shape : Flapjack.Pancake.PanLang.ShapeHOL) (names : List Nat) : Option Nat :=
+  match shape with
+  | .one => names.head?
+  | .comb shapes =>
+      if Flapjack.Pancake.PanLang.sizeOfShapeHOL (.comb shapes) = 1 then names.head? else none
+  | .named _ => none
+
+private theorem foldl_shapeSize_add (a : Nat) (fields : List Shape) :
+    List.foldl (fun total field => total + Shape.shapeSize field) a fields =
+      a + List.foldl (fun total field => total + Shape.shapeSize field) 0 fields := by
+  induction fields generalizing a with
+  | nil => simp
+  | cons x xs ih =>
+      simp only [List.foldl_cons]
+      rw [ih (a + Shape.shapeSize x), ih (0 + Shape.shapeSize x)]
+      omega
+
+mutual
+  /-- `sizeOfShapeHOL` and `Shape.shapeSize` agree under the shape codec
+      `shapeToHOL` (names are inert in both). -/
+  theorem sizeOfShapeHOL_shapeToHOL : (s : Shape) →
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL (Flapjack.Pancake.PanLang.shapeToHOL s) =
+        Shape.shapeSize s
+    | .one => by simp [Flapjack.Pancake.PanLang.shapeToHOL]
+    | .comb fields => by
+      simp only [Flapjack.Pancake.PanLang.shapeToHOL,
+        Flapjack.Pancake.PanLang.sizeOfShapeHOL, Shape.shapeSize]
+      rw [sizeOfShapesHOL_shapeToHOL fields]
+    | .named name => by simp [Flapjack.Pancake.PanLang.shapeToHOL]
+  theorem sizeOfShapesHOL_shapeToHOL : (fields : List Shape) →
+      Flapjack.Pancake.PanLang.sizeOfShapesHOL
+          (fields.map Flapjack.Pancake.PanLang.shapeToHOL) =
+        List.foldl (fun total field => total + Shape.shapeSize field) 0 fields
+    | [] => rfl
+    | field :: fields => by
+      simp only [List.map_cons, List.foldl_cons, Nat.zero_add,
+        Flapjack.Pancake.PanLang.sizeOfShapesHOL]
+      rw [sizeOfShapeHOL_shapeToHOL field, sizeOfShapesHOL_shapeToHOL fields,
+        foldl_shapeSize_add (Shape.shapeSize field) fields]
+end
+
+/-- Narrow kernel bridge: on every shape the exact `retVarHOL` agrees with the
+    production `retVar` after the `shapeToHOL` codec.  Names are discarded by
+    both, so no byte-rangedness hypothesis is needed. -/
+theorem retVarHOL_shapeToHOL (shape : Shape) (names : List Nat) :
+    retVarHOL (Flapjack.Pancake.PanLang.shapeToHOL shape) names = retVar shape names := by
+  cases shape with
+  | one => simp [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL]
+  | comb fields =>
+    simp only [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL,
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL, Shape.shapeSize]
+    simp only [sizeOfShapesHOL_shapeToHOL fields]
+  | named name => simp [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL]
+
+/-- Narrow kernel bridge: mapping the production `compileField` result into
+    the exact carriers agrees with `compFieldHOL`. The production helper is
+    still the executed one; routing the executed expression lowering through
+    the exact carrier is tracked by `flapjack-pxn.18.3.5.8.12`. -/
+theorem compileField_map_codecs {width : Nat} [NeZero width] (index : Nat)
+    (shapes : List Shape) (expressions : List (CrepExp (BitVec width))) :
+    (compileField (α := BitVec width) index shapes expressions).1.map crepExpToHOL
+        = (compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+            (expressions.map crepExpToHOL)).1
+    ∧ Flapjack.Pancake.PanLang.shapeToHOL
+        (compileField (α := BitVec width) index shapes expressions).2
+        = (compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+            (expressions.map crepExpToHOL)).2 := by
+  induction shapes generalizing index expressions with
+  | nil =>
+      rw [compileField.eq_1]
+      simp only [List.map_nil]
+      rw [compFieldHOL.eq_1]
+      simp [crepExpToHOL.eq_1, Flapjack.Pancake.PanLang.shapeToHOL]
+  | cons shape shapes ih =>
+      by_cases h : index = 0
+      · rw [compileField.eq_2]
+        simp only [List.map_cons]
+        rw [compFieldHOL.eq_2]
+        simp only [if_pos h]
+        constructor
+        · rw [sizeOfShapeHOL_shapeToHOL, ← List.map_take]
+        · trivial
+      · rw [compileField.eq_2]
+        simp only [List.map_cons]
+        rw [compFieldHOL.eq_2]
+        simp only [if_neg h]
+        rw [sizeOfShapeHOL_shapeToHOL]
+        rw [← List.map_drop]
+        exact ih (index - 1) (expressions.drop (Shape.shapeSize shape))
+
 
 /-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
     (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this
@@ -202,14 +348,60 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
 /-! Flapjack-specific analogue of `pan_to_crep$wrap_rt`
     (`cakeml/pancake/pan_to_crepScript.sml:131-136`).
 
-    The empty one-word return slot is normalized to no return slot; every
-    other option is preserved unchanged. The production `Shape` nested in the
-    option uses String-backed named fields, while HOL uses `mlstring`; the
-    equations match but the carriers do not, so this declaration is untagged. -/
+    Clause-by-clause the HOL definition is
+    `wrap_rt NONE = NONE`,
+    `wrap_rt (SOME (One, [])) = NONE`,
+    `wrap_rt m = m`.
+    The Lean equations match exactly: the empty one-word return slot is
+    normalized to no return slot, and every other option is preserved
+    unchanged.
+
+    This declaration is untagged.  The production `Shape` `Named` constructor
+    carries a Lean `String` (`StructName`) where HOL carries `mlstring`.
+    `wrap_rt` never compares or byte-observes that name (it only tests the
+    `One`/empty-list shape and otherwise returns its argument unchanged), so
+    the difference is not byte-observable, but it is also not an
+    equality/map-key use, and no truthful `names_as_string` classification
+    exists yet.  A faithful tag needs an explicit unused/discarded
+    nested-carrier classification in the qualifier policy (or an exact
+    MlString-backed `ShapeHOL`); tracked as follow-up with `retVar`.
+
+    Direct HOL rows (`none`/`empty_one`/`one_word`/`comb_empty`/`named`) are in
+    `scripts/hol-probes/wrap_rt_probe.out`; Lean parity guards are in
+    `Flapjack/Test/WrapRtParity.lean`.
+
+    The exact `mlstring`-backed port is `wrapRtHOL` in this file (tagged
+    `wrap_rt_def`), and `wrapRtHOL_map_shapeToHOL` relates the two through the
+    `shapeToHOL` codec. -/
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none
   | value => value
+
+/-! Exact HOL-shaped port of `pan_to_crep$wrap_rt`
+    (`cakeml/pancake/pan_to_crepScript.sml:131-136`) over the `mlstring`-backed
+    `ShapeHOL` carrier, so no String/MlString substitution remains: `NONE`
+    stays `NONE`, the empty one-word slot `SOME (One, [])` is normalized to
+    `NONE`, and every other option is returned unchanged. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "wrap_rt_def"]
+def wrapRtHOL : Option (Flapjack.Pancake.PanLang.ShapeHOL × List Nat) → Option (Flapjack.Pancake.PanLang.ShapeHOL × List Nat)
+  | none => none
+  | some (.one, []) => none
+  | value => value
+
+/-! Narrow bridge: encoding the production input shape and running the exact
+    `wrapRtHOL` gives the encoding of the production `wrapRt` result. The codec
+    preserves `One`/`Comb`/`Named`, so this direction needs no byte-rangedness
+    hypothesis. -/
+theorem wrapRtHOL_map_shapeToHOL (n : Option (Shape × List Nat)) :
+    wrapRtHOL (n.map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2))) =
+      (wrapRt n).map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2)) := by
+  cases n with
+  | none => rfl
+  | some pair =>
+      obtain ⟨shape, names⟩ := pair
+      cases shape <;> cases names <;>
+        simp [wrapRtHOL, wrapRt, Flapjack.Pancake.PanLang.shapeToHOL]
 
 /-! ## Return-path bridge (Flapjack-only)
 

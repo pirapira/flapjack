@@ -546,4 +546,23 @@ def exceptionsFunctionsGuard : Bool :=
 #eval exceptionsFunctionsGuard
 #guard exceptionsFunctionsGuard
 
+/-- Replays the direct-HOL `dec_shapes` probe rows `empty` and `functions_only`
+    (`resort_decls`-style projection: functions contribute no shape). -/
+def decShapesProbeGuard : Bool :=
+  (globalDeclShapes ([] : List (Decl Nat))).isEmpty &&
+    (match globalDeclShapes (α := Nat)
+        ([.function { name := "f", inline := false, exported := false,
+                      params := [], body := .skip, returnShape := .one }] : List (Decl Nat)) with
+     | [] => true
+     | _ => false)
+
+#eval decShapesProbeGuard
+#guard decShapesProbeGuard
+
+def runChecks : IO Bool := do
+  IO.println (if parityGuard && decShapesProbeGuard then
+    "PASS pan_globals dec_shapes_def parity (3 HOL rows)"
+    else "FAIL pan_globals dec_shapes_def parity (3 HOL rows)")
+  pure (parityGuard && decShapesProbeGuard)
+
 end Flapjack.Test.PanGlobalsDecShapesParity

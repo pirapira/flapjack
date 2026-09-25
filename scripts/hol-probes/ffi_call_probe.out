@@ -1,7 +1,6 @@
 oracle_return=([5w; 6w],(),1,ExtCall «foo»,[1w; 2w],[(3w,5w); (4w,6w)])
-
 length_failure=FFI_failed
-
 oracle_final=FFI_diverged
-
 empty_extcall=([3w; 4w],0)
+extcall_name_explode="foo"
+extcall_name_len=3

@@ -30,21 +30,33 @@ LOCK = ROOT / "docs" / "HOL-TYPE-HASHES.json"
 EXPORTER = ROOT / "scripts" / "HolTypeHashes.lean"
 
 
-def validate_export_record(record: Any, line_number: int) -> dict[str, str]:
+def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
     """Reject malformed exporter output. `value_expr` is optional and only
     emitted for definitions and `opaque` declarations."""
     if not isinstance(record, dict):
         raise ValueError(f"Lean export line {line_number} is not an object")
     required = {"lean_name", "hol_path", "hol_name", "type_expr"}
-    allowed = required | {"value_expr"}
+    allowed = required | {"value_expr", "qualifiers"}
     if not required.issubset(record) or not set(record) <= allowed:
         raise ValueError(f"Lean export line {line_number} has invalid fields")
     if not all(isinstance(record[key], str) for key in record):
-        raise ValueError(f"Lean export line {line_number} has non-string fields")
+        non_string = [key for key, value in record.items()
+                      if key != "qualifiers" and not isinstance(value, str)]
+        if non_string:
+            raise ValueError(f"Lean export line {line_number} has non-string fields {non_string}")
+    qualifiers = record.get("qualifiers", {})
+    allowed_qualifiers = {
+        "list_as_array", "names_as_string", "names_as_string_boundary"
+    }
+    if not isinstance(qualifiers, dict) or not set(qualifiers) <= allowed_qualifiers:
+        raise ValueError(f"Lean export line {line_number} has invalid qualifiers")
+    if any(not isinstance(value, list) or not all(isinstance(field, str) for field in value)
+           for value in qualifiers.values()):
+        raise ValueError(f"Lean export line {line_number} has malformed qualifier fields")
     return record
 
 
-def exported_types() -> list[dict[str, str]]:
+def exported_types() -> list[dict[str, Any]]:
     result = subprocess.run(
         ["lake", "env", "lean", str(EXPORTER)],
         cwd=ROOT,
@@ -69,20 +81,27 @@ def exported_types() -> list[dict[str, str]]:
     return records
 
 
-def reviewed_payload(item: dict[str, str]) -> str:
+def reviewed_payload(item: dict[str, Any]) -> str:
     """Serialize the reviewed part of a declaration: type and, when tagged,
     the definition body. A definition whose body appears or disappears (for
     example a change between `def` and `theorem`) changes the hash. Theorem
     records keep their original type-only hash so the lock diff isolates the
     newly covered definition bodies."""
-    if "value_expr" in item:
-        return f"{item['type_expr']}\x00{item['value_expr']}"
-    return item["type_expr"]
+    body = (
+        f"{item['type_expr']}\x00{item['value_expr']}"
+        if "value_expr" in item else item["type_expr"]
+    )
+    qualifiers = {
+        key: value for key, value in item.get("qualifiers", {}).items() if value
+    }
+    if qualifiers:
+        return json.dumps(qualifiers, sort_keys=True, separators=(",", ":")) + "\x00" + body
+    return body
 
 
 def lock_records(
-    manifest: list[dict[str, Any]], exports: list[dict[str, str]]
-) -> list[dict[str, str]]:
+    manifest: list[dict[str, Any]], exports: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Select reviewed declarations by HOL reference and Lean leaf name.
 
     Both keys are checked because one HOL theorem may have several Lean cases,
@@ -91,7 +110,12 @@ def lock_records(
     """
     result = []
     for record in manifest:
-        if record.get("statement_status") != "reviewed_exact":
+        if record.get("statement_status") not in {
+            "reviewed_exact",
+            "reviewed_list_as_array",
+            "reviewed_names_as_string",
+            "reviewed_list_as_array_names_as_string",
+        }:
             continue
         key = (record["hol_path"], record["hol_name"], record["lean_name"])
         candidates = [
@@ -105,8 +129,19 @@ def lock_records(
                 f"expected one elaborated type for {key}, found {len(candidates)}"
             )
         item = candidates[0]
-        result.append(
-            {
+        qualifiers = {
+            "list_as_array": list(record.get("list_as_array", ())),
+            "names_as_string": list(record.get("names_as_string", ())),
+            "names_as_string_boundary": list(record.get("names_as_string_boundary", ())),
+        }
+        exported_qualifiers = item.get("qualifiers", {})
+        if any(exported_qualifiers.get(key, []) != value
+               for key, value in qualifiers.items()):
+            raise ValueError(
+                f"{record['lean_path']}:{record['lean_name']}: manifest qualifiers "
+                "differ from elaborated @[hol] exporter"
+            )
+        lock_record: dict[str, Any] = {
                 "lean_path": record["lean_path"],
                 "lean_name": record["lean_name"],
                 "lean_full_name": item["lean_name"],
@@ -115,8 +150,10 @@ def lock_records(
                 "sha256": hashlib.sha256(
                     reviewed_payload(item).encode("utf-8")
                 ).hexdigest(),
-            }
-        )
+        }
+        if any(qualifiers.values()):
+            lock_record["qualifiers"] = qualifiers
+        result.append(lock_record)
     return sorted(result, key=lambda item: (item["lean_path"], item["lean_name"]))
 
 

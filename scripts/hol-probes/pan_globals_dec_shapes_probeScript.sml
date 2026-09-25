@@ -26,3 +26,8 @@ val _ = print_eval "mixed"
        panLang$Name «S» [];
        panLang$ExnDecl «E» (panLang$Named «T»);
        panLang$Decl panLang$One «h» (panLang$Const 9w)]``;
+
+val _ = print_eval "functions_only"
+  ``pan_globals$dec_shapes
+      [panLang$Function <| name := «f»; inline := F; export := F;
+         params := []; body := panLang$Skip; return := panLang$One |>]``;

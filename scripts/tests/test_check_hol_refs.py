@@ -18,7 +18,7 @@ class HolAttributeSitesTest(unittest.TestCase):
     def test_single_line(self):
         self.assertEqual(
             list(SITES(['@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]'])),
-            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, ())],
+            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), ())],
         )
 
     def test_multiline(self):
@@ -29,7 +29,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 'theorem compileTopShapeWf : True := trivial',
             ])),
             [(1, "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-              "compile_top_shape_wf", None, ())],
+              "compile_top_shape_wf", None, (), (), ())],
         )
 
     def test_comments_do_not_count(self):
@@ -39,7 +39,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '-- @[hol "cakeml/pancake/pan_globalsScript.sml" "bad"]',
                 '@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]',
             ])),
-            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, ())],
+            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), ())],
         )
 
     def test_source_line(self):
@@ -47,7 +47,7 @@ class HolAttributeSitesTest(unittest.TestCase):
             list(SITES(['@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml"',
                         '  "locals_rel_wf_shape" 2345]'])),
             [(1, "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-              "locals_rel_wf_shape", 2345, ())],
+              "locals_rel_wf_shape", 2345, (), (), ())],
         )
 
     def test_list_as_array_fields(self):
@@ -57,7 +57,18 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  "dec_deg_def" (list_as_array := [degrees, moves])]'
             ])),
             [(1, "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
-              "dec_deg_def", None, ("degrees", "moves"))],
+              "dec_deg_def", None, ("degrees", "moves"), (), ())],
+        )
+
+    def test_names_as_string_and_boundary_qualifiers(self):
+        self.assertEqual(
+            list(SITES([
+                '@[hol "cakeml/pancake/panLangScript.sml" "varname"',
+                '  (names_as_string := [name, generated])',
+                '  (names_as_string_boundary := [generated])]',
+            ])),
+            [(1, "cakeml/pancake/panLangScript.sml", "varname", None,
+              (), ("name", "generated"), ("generated",))],
         )
 
     def test_representation_witness_is_checked_in_same_module(self):
@@ -107,6 +118,63 @@ class HolAttributeSitesTest(unittest.TestCase):
         )
         self.assertTrue(any("not a field" in error for error in errors))
         self.assertTrue(any("no same-module checked witness" in error for error in errors))
+
+    def test_equality_only_mlstring_identifier_needs_no_byte_witness(self):
+        lines = ["def lookupByName (name : String) := name"]
+        self.assertEqual(
+            CHECKER["names_as_string_errors"](
+                lines, ("name",), (), "Example.lean", "lookupByName"
+            ),
+            [],
+        )
+
+    def test_parameter_boundary_accepts_premise_aware_declaration_witness(self):
+        lines = [
+            "def freshNameHOL (name : String) (names : List String) := name",
+            "theorem holMlStringWitness_freshNameHOL (name : String)",
+            "    (names : List String) (hname : NameRanged name) :",
+            "    Flapjack.Pancake.PanLang.NameRanged (freshNameHOL name names) := by",
+            "  exact freshNameHOL_nameRanged name names hname",
+        ]
+        self.assertTrue(CHECKER["has_mlstring_witness"](lines, "freshNameHOL"))
+        self.assertEqual(
+            CHECKER["names_as_string_errors"](
+                lines, ("name",), ("name",), "PanGlobals.lean", "freshNameHOL"
+            ),
+            [],
+        )
+
+    def test_boundary_requires_same_module_witness_for_tagged_declaration(self):
+        missing = ["def freshNameHOL (name : String) := name"]
+        errors = CHECKER["names_as_string_errors"](
+            missing, ("name",), ("name",), "PanGlobals.lean", "freshNameHOL"
+        )
+        self.assertTrue(any("no same-module checked witness" in error for error in errors))
+
+        wrong_name = [
+            "theorem holMlStringWitness_other (name : String) :",
+            "    NameRanged name := by",
+            "  exact h",
+        ]
+        self.assertFalse(CHECKER["has_mlstring_witness"](wrong_name, "freshNameHOL"))
+
+    def test_boundary_classifier_must_be_qualified(self):
+        lines = [
+            "theorem holMlStringWitness_freshNameHOL (name : String)",
+            "    (h : NameRanged name) : NameRanged (freshNameHOL name) := by",
+            "  exact h",
+        ]
+        errors = CHECKER["names_as_string_errors"](
+            lines, ("name",), ("generated",), "PanGlobals.lean", "freshNameHOL"
+        )
+        self.assertTrue(any("not listed by names_as_string" in error for error in errors))
+
+    def test_boundary_witness_must_conclude_name_ranged(self):
+        lines = [
+            "theorem holMlStringWitness_freshNameHOL (name : String) :",
+            "    name = name := by rfl",
+        ]
+        self.assertFalse(CHECKER["has_mlstring_witness"](lines, "freshNameHOL"))
 
     def test_duplicate_name_requires_correct_line(self):
         path = Path(__file__).resolve().parents[2] / \

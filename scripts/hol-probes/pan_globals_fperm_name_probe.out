@@ -3,3 +3,6 @@ target_collision=«foo»
 unchanged=«worker»
 same_names=«foo»
 quoted_source=«bar'»
+quoted_target=«foo'»
+quoted_unchanged=«c'»
+fperm_name_done=0

@@ -54,14 +54,16 @@ def CallMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler 
     (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
     (function : FunName) (arguments : List (Exp α))
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
-    (mh : Option (PanValueMemoryFfiHandler α σ)) : Prop :=
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (preserveReturnLocals : Bool) : Prop :=
   ∀ fuel' result, fuel ≤ fuel' →
     evalPanValueFfiCallSteps context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi info function
-      arguments (memoryAccess := ma) (contracts := c) (memoryHandler := mh) = some result →
+      arguments (memoryAccess := ma) (contracts := c) (memoryHandler := mh)
+      (preserveReturnLocals := preserveReturnLocals) = some result →
     evalPanValueFfiCallSteps context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel' locals globals memory ffi info function
-      arguments (memoryAccess := ma) (contracts := c) (memoryHandler := mh) = some result
+      arguments (memoryAccess := ma) (contracts := c) (memoryHandler := mh)
+      (preserveReturnLocals := preserveReturnLocals) = some result
 
 /-- Monotonicity statement for the program evaluator (`motive2`). -/
 def ProgMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
@@ -94,6 +96,7 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
     (function : FunName) (arguments : List (Exp α))
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
     (mh : Option (PanValueMemoryFfiHandler α σ))
+    (preserveReturnLocals : Bool)
     (ihBody : ∀ (body : Prog α) (calleeLocals : VarName → Option (PanValue α)),
       ProgMono context primitive handler structs functions baseAddress topAddress
         bytesInWord fuel calleeLocals globals memory ffi body ma c mh)
@@ -104,7 +107,8 @@ theorem call_succ_mono (context : PanValueFfiContext α) (primitive : PanPrimiti
         bytesInWord fuel (updatePanValueMap locals handlerVariable value) calleeGlobals
         calleeMemory calleeFfi handlerProgram ma c mh) :
     CallMono context primitive handler structs functions baseAddress topAddress
-      bytesInWord (fuel + 1) locals globals memory ffi info function arguments ma c mh := by
+      bytesInWord (fuel + 1) locals globals memory ffi info function arguments ma c mh
+      preserveReturnLocals := by
   unfold CallMono
   intro fuel' result hle h
   obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
@@ -184,17 +188,17 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
   intro fuel locals globals memory ffi program ma c mh
   induction fuel, locals, globals, memory, ffi, program, ma, c, mh using
     evalPanValueFfiProgSteps.induct (motive1 := fun fuel locals globals memory ffi info
-      function arguments ma c mh =>
+      function arguments ma c mh preserveReturnLocals =>
       CallMono context primitive handler structs functions baseAddress topAddress bytesInWord
-        fuel locals globals memory ffi info function arguments ma c mh) with
+        fuel locals globals memory ffi info function arguments ma c mh preserveReturnLocals) with
   | case1 =>
     intro fuel' result hle h
     rw [evalPanValueFfiCallSteps] at h
     simp at h
-  | case2 fuel locals globals memory ffi info function arguments ma c mh ihBody ihHandler =>
+  | case2 fuel locals globals memory ffi info function arguments ma c mh preserveReturnLocals ihBody ihHandler =>
     exact call_succ_mono context primitive handler structs functions baseAddress
       topAddress bytesInWord fuel locals globals memory ffi info function arguments
-            ma c mh ihBody ihHandler
+            ma c mh preserveReturnLocals ihBody ihHandler
   | case3 =>
     intro fuel' result hle h
     rw [evalPanValueFfiProgSteps] at h
@@ -355,7 +359,8 @@ theorem progMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     rw [evalPanValueFfiProgSteps]
     cases hcall : evalPanValueFfiCallSteps context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi none function arguments
-        (memoryAccess := ma) (contracts := c) (memoryHandler := mh) with
+        (memoryAccess := ma) (contracts := c) (memoryHandler := mh)
+        (preserveReturnLocals := true) with
     | none => rw [hcall] at h; simp at h
     | some p =>
       obtain ⟨callResult, callSteps⟩ := p
@@ -507,7 +512,7 @@ theorem callMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
     (mh : Option (PanValueMemoryFfiHandler α σ)),
     CallMono context primitive handler structs functions baseAddress topAddress
-      bytesInWord fuel locals globals memory ffi info function arguments ma c mh := by
+      bytesInWord fuel locals globals memory ffi info function arguments ma c mh false := by
   intro fuel locals globals memory ffi info function arguments ma c mh
   unfold CallMono
   cases fuel with
@@ -517,7 +522,7 @@ theorem callMono (context : PanValueFfiContext α) (primitive : PanPrimitiveHand
     simp at h
   | succ n =>
     exact call_succ_mono context primitive handler structs functions baseAddress topAddress
-      bytesInWord n locals globals memory ffi info function arguments ma c mh
+      bytesInWord n locals globals memory ffi info function arguments ma c mh false
       (fun body calleeLocals => progMono context primitive handler structs functions
         baseAddress topAddress bytesInWord n calleeLocals globals memory ffi body ma c mh)
       (fun cg cm cf value hv hp => progMono context primitive handler structs functions

@@ -1525,27 +1525,146 @@ def stateRel (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ) : P
     s.clock = t.clock ∧ s.be = t.bigEndian ∧ s.ffi = t.ffi ∧
     s.baseAddress = t.baseAddress ∧ s.topAddress = t.topAddress
 
-/-- HOL `state_rel_structs[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-! The executable source state's memory is optional and carries `PanValue`,
+whereas HOL `panSem$state.memory` is total and carries `word_lab`.  Under
+`stateRel`, every source cell is exactly the target's word cell and the
+`memaddrs`/endianness fields agree.  These untagged adapters expose that
+boundary for the fixed RV64 source evaluator's byte and 32-bit loads.  They are
+case lemmas, not claims that the enclosing `pc_compile_correct` proof is done. -/
+
+/-- A source `LoadByte (Const address)` under the Pan-to-Crep state relation
+uses the state-owned address domain, byte order, and total word memory found in
+the related target state.  This is a RISC-V evaluator-case adapter, not a
+standalone HOL theorem. -/
+theorem panToCrepSourceLoadByteHOLCase
+    [NeZero 64] [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)]
+    [Sub (RiscV.Word 64)] [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) (hstate : stateRel source target) :
+    evalPanSemStateExp source (.loadByte (.const address)) =
+      (panMemLoadByteHOL (width := 64)
+        (fun current => match target.memory current with
+          | .word value => .word value)
+        (fun current =>
+          (source.memaddrs current && panValueWordDefined source.memory current) = true)
+        source.be address).map
+          (fun byte => PanValue.word (BitVec.ofNat 64 byte.toNat)) := by
+  rcases hstate with ⟨hmemory, _, _, _, _, _, _, _, _, _⟩
+  simp only [evalPanSemStateExp, evalPanValueExp]
+  change ((panSemBitVec64MemoryAccess source).readByte
+      (panSemBitVec64MemoryAccess source).domain source.memory
+      panSemBitVec64BytesInWord address).map PanValue.word = _
+  rw [panSemBitVec64ReadByte_eq_panMemLoadByteHOL source source.memory address]
+  have hmemoryView :
+      (fun current => match target.memory current with
+        | .word value => .word value) = panValueWordHOL source.memory := by
+    funext current
+    simp [panValueWordHOL, hmemory, panTheWord]
+  rw [hmemoryView]
+  have hdomainView :
+      (fun current =>
+        (source.memaddrs current && decide (panValueWordDefined source.memory current = true)) = true) =
+      (fun current =>
+        (source.memaddrs current && panValueWordDefined source.memory current) = true) := by
+    funext current
+    simp
+  simp only [hdomainView]
+  simp only [Option.map_map]
+  rfl
+
+/-- A source `Load32 (Const address)` under the Pan-to-Crep state relation
+uses the related target's word cells, address domain, and byte order.  This is
+an untagged RISC-V evaluator-case adapter. -/
+theorem panToCrepSourceLoad32HOLCase
+    [NeZero 64] [BEq (RiscV.Word 64)] [OfNat (RiscV.Word 64) 0]
+    [OfNat (RiscV.Word 64) 1] [OfNat (RiscV.Word 64) 2]
+    [OfNat (RiscV.Word 64) 3] [Add (RiscV.Word 64)] [Mul (RiscV.Word 64)]
+    [Sub (RiscV.Word 64)] [AndOp (RiscV.Word 64)] [OrOp (RiscV.Word 64)]
+    [HXor (RiscV.Word 64) (RiscV.Word 64) (RiscV.Word 64)]
+    [ShiftLeft (RiscV.Word 64)] [ShiftRight (RiscV.Word 64)]
+    [LT (RiscV.Word 64)]
+    [DecidableRel (fun left right : RiscV.Word 64 => left < right)]
+    [PanCmp (RiscV.Word 64)]
+    (source : PanSemState (RiscV.Word 64) (FfiState σ))
+    (target : CrepRuntimeState (RiscV.Word 64) σ)
+    (address : RiscV.Word 64) (hstate : stateRel source target) :
+    evalPanSemStateExp source (.load32 (.const address)) =
+      (panMemLoad32HOL (width := 64)
+        (fun current => match target.memory current with
+          | .word value => .word value)
+        (fun current =>
+          (source.memaddrs current && panValueWordDefined source.memory current) = true)
+        source.be address).map
+          (fun value => PanValue.word (BitVec.ofNat 64 value.toNat)) := by
+  rcases hstate with ⟨hmemory, _, _, _, _, _, _, _, _, _⟩
+  simp only [evalPanSemStateExp, evalPanValueExp]
+  change ((panSemBitVec64MemoryAccess source).read32
+      (panSemBitVec64MemoryAccess source).domain source.memory
+      panSemBitVec64BytesInWord address).map PanValue.word = _
+  rw [panSemBitVec64Read32_eq_panMemLoad32HOL source source.memory address]
+  have hmemoryView :
+      (fun current => match target.memory current with
+        | .word value => .word value) = panValueWordHOL source.memory := by
+    funext current
+    simp [panValueWordHOL, hmemory, panTheWord]
+  rw [hmemoryView]
+  have hdomainView :
+      (fun current =>
+        (source.memaddrs current && decide (panValueWordDefined source.memory current = true)) = true) =
+      (fun current =>
+        (source.memaddrs current && panValueWordDefined source.memory current) = true) := by
+    funext current
+    simp
+  simp only [hdomainView]
+  simp only [Option.map_map]
+  rfl
+
+/-- Source-shaped port of HOL `state_rel_structs[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:59`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`. Independently of the identifier carrier:
+    (a) `stateRel` relates the source's *optional* `PanValue` memory to the target's
+    *total* `word_lab` memory (`s.memory = fun a => some (PanValue.word (panTheWord
+    (t.memory a)))`, see the `state_rel_def` note above), whereas HOL `state_rel`
+    equates two total `word_lab` memories directly; (b) the source field types are
+    `StructContext` (`StructName`/`FieldName` = `String`, `StructInfo` also carrying
+    the production-only `shapedFields`) and `PanValue α`, while HOL uses
+    `(stcname # struct_info) list` with `stcname`/`fldname` = `mlstring` and the
+    `'a v` value type; (c) finite-map keys are `VarName` = `String` vs HOL
+    `varname` = `mlstring`. The mismatch is therefore not limited to String-backed
+    names, so the `(names_as_string := ...)` qualifier does not apply. The exact
+    projection depends on an exact MlString/`word_lab` Crep target relation, tracked
+    by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.structs = [] := by
   rcases hrel with ⟨_, _, _, hstructs, _, _, _, _, _, _⟩
   exact hstructs
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `state_rel_globals[local]`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped port of HOL `state_rel_globals[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`), a projection of
+    `state_rel`.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port; review `flapjack-pxn.18.3.7.1.3`): the
+    hypothesis is the Flapjack-specific `stateRel` over production `PanSemState`/
+    `CrepRuntimeState`, not HOL `state_rel`, and the conclusion is stated over the
+    production carrier `FiniteMap VarName (PanValue α)` rather than HOL
+    `varname |-> 'a v`. The mismatch is not limited to the String-vs-`mlstring` domain
+    key (`VarName` vs `varname`): `stateRel` also relates an optional `PanValue`
+    source memory to a total `word_lab` target memory and the value type is
+    `PanValue α` vs `'a v` (see `stateRel_structs` above and the `state_rel_def` note),
+    so the `(names_as_string := ...)` qualifier does not apply. The exact projection
+    is tracked by `flapjack-pxn.18.3.7.1.3.1` (carrier work `flapjack-pxn.18.3.5.8`). -/
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩

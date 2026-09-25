@@ -45,4 +45,13 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- Replays the direct original-HOL rows of
+    `scripts/hol-probes/pan_globals_fperm_probe.out` and reports a PASS line
+    (`flapjack-6nn.1.2`). -/
+def runChecks : IO Bool := do
+  IO.println (if parityGuard then
+    "PASS pan_globals fperm_def parity (4 HOL rows)"
+    else "FAIL pan_globals fperm_def parity (4 HOL rows)")
+  pure parityGuard
+
 end Flapjack.Test.PanGlobalsFpermParity

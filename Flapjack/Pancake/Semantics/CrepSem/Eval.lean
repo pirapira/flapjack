@@ -2886,6 +2886,35 @@ theorem evalCrepHolFiniteWordSourceExp_crepOp_eq_crepOpCrepWord
   simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
     holFiniteWordSourceCrepOp_to_crepOpCrepWord]
 
+/-- Complete `word_lab` view of the source `CrepOp.mul` equation. Transporting
+    the finite-word result to BitVec preserves the outer HOL `Word` wrapper
+    and yields the tagged `crep_op_def` result. This is Flapjack adapter
+    infrastructure; the whole source evaluator/state is still not identified
+    with native HOL `crepSem$eval`. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_crepOp_eq_crepOpCrepWord
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension state left = some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension state right = some rightValue) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.crepOp .mul [left, right])).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    (crepOpCrepWord (width := dimension.width) .mul
+        [holWordToBitVec dimension leftValue, holWordToBitVec dimension rightValue]).map
+          PanWordLab.word := by
+  calc
+    ((evalCrepHolFiniteWordSourceExp dimension state
+        (.crepOp .mul [left, right])).map PanWordLab.word).map
+          (mapCrepHolWordLab (holWordToBitVec dimension)) =
+        ((evalCrepHolFiniteWordSourceExp dimension state
+          (.crepOp .mul [left, right])).map
+            (holWordToBitVec dimension)).map PanWordLab.word := by
+      simp [Option.map_map, Function.comp_def, mapCrepHolWordLab]
+    _ = _ := congrArg (Option.map PanWordLab.word)
+      (evalCrepHolFiniteWordSourceExp_crepOp_eq_crepOpCrepWord
+        dimension state left right leftValue rightValue hLeft hRight)
+
 /-- Complete HOL `word_lab` result view of the explicitly finite-index
     source evaluator. Since `word_lab` has only the `Word` constructor, this
     is the corresponding `Option (PanWordLab word)` encoding. -/

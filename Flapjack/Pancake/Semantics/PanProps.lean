@@ -524,4 +524,49 @@ theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
       have hw : some w = some value := by simpa [resVarHOLExact, hv] using h
       exact hw
 
+/-! ## Exact `size_of_sh_with_ctxt_eq` over the exact carriers
+
+`panPropsScript.sml:184` states that a shape that is well-formed under the empty
+struct context has the same size with or without a context.  The exact Lean
+counterparts are `sizeOfShapeWithContextHOL` (tagged `size_of_sh_with_ctxt_def`)
+and `sizeOfShapeHOL` (tagged `size_of_shape_def`) over `ShapeHOL`, with the
+context-less well-formedness rendered as `isWfShapeExactHOL [] shape = true`
+(HOL `is_wf_shape_nil` is the overload `is_wf_shape []`). -/
+
+open Flapjack.Pancake.PanLang
+
+/- Untagged support: context-free well-formed shapes have the same
+    with-context size as their plain `size_of_shape` size, for every context. -/
+mutual
+  theorem sizeOfShapeWithContextHOL_eq_nil : ∀ (shape : ShapeHOL),
+      isWfShapeExactHOL ([] : StructContextExact) shape = true →
+      ∀ context, sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape
+    | .one, _ => by simp
+    | .comb shapes, h => by
+        simp only [isWfShapeExactHOL_comb] at h
+        intro context
+        simp [sizeOfShapeWithContextHOL_comb, sizeOfShapeHOL_comb,
+          sizeOfShapesWithContextHOL_eq_nil shapes h context]
+    | .named name, h => by
+        simp [isWfShapeExactHOL_named, structContextLookupHOL_nil] at h
+  theorem sizeOfShapesWithContextHOL_eq_nil : ∀ (shapes : List ShapeHOL),
+      isWfShapesExactHOL ([] : StructContextExact) shapes = true →
+      ∀ context, sizeOfShapesWithContextHOL context shapes = sizeOfShapesHOL shapes
+    | [], _ => by simp
+    | shape :: shapes, h => by
+        simp only [isWfShapesExactHOL_cons, Bool.and_eq_true] at h
+        intro context
+        simp [sizeOfShapesWithContextHOL_cons, sizeOfShapesHOL_cons,
+          sizeOfShapeWithContextHOL_eq_nil shape h.1 context,
+          sizeOfShapesWithContextHOL_eq_nil shapes h.2 context]
+end
+
+/-- Exact port of HOL `panProps$size_of_sh_with_ctxt_eq`
+    (`panPropsScript.sml:184`). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "size_of_sh_with_ctxt_eq"]
+theorem sizeOfShapeWithContextHOL_eq (shape : ShapeHOL) (context : StructContextExact)
+    (h : isWfShapeExactHOL ([] : StructContextExact) shape = true) :
+    sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape :=
+  sizeOfShapeWithContextHOL_eq_nil shape h context
+
 end Flapjack

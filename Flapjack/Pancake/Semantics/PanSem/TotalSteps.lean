@@ -1044,4 +1044,30 @@ theorem panSemTotalWhileStep_word_continue [DecidableEq α] [OfNat α 0]
   rw [panSemTotalWhileStep_word_body state word hzero hclock evaluateBody recurseWhile]
   simp [hbody]
 
+/-! ## Exact HOL panSem clock helpers (flapjack-pxn.18.4.3.77.11)
+
+`panSem$dec_clock_def` and `panSem$fix_clock_def`
+(`cakeml/pancake/semantics/panSemScript.sml:441/446`) are the clock-only
+state operations used by the recursive `evaluate` clauses. They are ported
+here over the HOL-shaped source state `PanSemHolState`, with no extra
+carrier side conditions. -/
+
+/-- Exact port of Cake's `dec_clock` (`panSemScript.sml:441`):
+    `dec_clock s = s with clock := s.clock - 1` over the word-indexed
+    HOL-shaped source state `PanSemHolState width σ`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "dec_clock_def"]
+def decClockHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ) :
+    PanSemHolState width σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Exact port of Cake's `fix_clock` (`panSemScript.sml:446`): the result
+    component is threaded through unchanged, so the port is RESULT-POLYMORPHIC
+    in `β`, exactly as HOL's `fix_clock` is (HOL leaves `res` unconstrained);
+    the returned clock is clamped to the smaller of the old and new clocks. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_def"]
+def fixClockHOL {width : Nat} [NeZero width] {β : Type} (oldState : PanSemHolState width σ)
+    (step : β × PanSemHolState width σ) : β × PanSemHolState width σ :=
+  (step.1, { step.2 with
+    clock := if oldState.clock < step.2.clock then oldState.clock else step.2.clock })
+
 end Flapjack

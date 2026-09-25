@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.WordLang
 
@@ -1136,5 +1137,22 @@ example : (setKvarHOL VarKind.local "z" (.val (.word 5)) kvarState).locals "z"
 
 example : (setKvarHOL VarKind.local "z" (.val (.word 5)) kvarState).locals "x"
     = some (.val (.word 3)) := rfl
+
+/-! ## Exact HOL `dec_clock`/`fix_clock` parity
+
+`scripts/hol-probes/pan_sem_e2e_probe.out` records the direct HOL EVAL rows
+`dec_clock_step=<|clock := 4|>`, `fix_clock_clamps=(NONE,2)` and
+`fix_clock_keeps_new=(NONE,4)`. The examples below check the exact ports
+`decClockHOL`/`fixClockHOL` against those values. -/
+
+example : (decClockHOL (width := 64) { holEvalState with clock := 5 }).clock = 4 := rfl
+
+example :
+    (fixClockHOL (width := 64) { holEvalState with clock := 2 }
+      ((none : Option Nat), { holEvalState with clock := 7 })).2.clock = 2 := rfl
+
+example :
+    (fixClockHOL (width := 64) { holEvalState with clock := 9 }
+      ((none : Option Nat), { holEvalState with clock := 4 })).2.clock = 4 := rfl
 
 end Flapjack.Test.PanSemStateEvalParity

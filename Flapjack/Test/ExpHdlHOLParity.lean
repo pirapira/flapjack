@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanToCrep
+import Flapjack.Pancake.PanToCrep.ExpHdlExact
 
 /-!
 # Carrier parity fixtures for `pan_to_crep$exp_hdl`
@@ -7,10 +8,12 @@ The expected values come from the direct HOL-EVAL fixture
 `scripts/hol-probes/exp_hdl_probe.out`, sourced from
 `cakeml/pancake/pan_to_crepScript.sml:106-112`. `expHdlHOL` reproduces these
 HOL rows over `MlString`/`ShapeHOL`/`CrepProgHOL`, but its raw lookup-function
-input is broader than HOL's finite-map domain. Its `@[hol ... exp_hdl_def]`
-tag is withdrawn (bead `flapjack-2s5`; faithful finite-map port tracked by
-`flapjack-pxn.18.3.5.8.13.2`). The duplicate fixtures pin the finite-map
-behavior: the last binding wins for HOL `FLOOKUP`.
+input is broader than HOL's finite-map domain; its own `@[hol ... exp_hdl_def]`
+tag stays withdrawn (bead `flapjack-2s5`). The faithful finite-map rendering is
+`expHdlExact` in `PanToCrep/ExpHdlExact.lean`, tagged with
+`(fmap_as_finite_support := [vars])`; `exactMissingRow`/`exactKnownRow` and the
+bridge example below pin it to the same HOL rows. The duplicate fixtures pin the
+finite-map behavior: the last binding wins for HOL `FLOOKUP`.
 
 `crepProgToHOL_expHdlFiniteMap` is the kernel bridge from the executed
 `String`-keyed `expHdlFiniteMap`; the `bridge` example below checks it on a
@@ -40,6 +43,27 @@ private def threeWordFM : FiniteMap MlS (ShapeHOL × List Nat) :=
 private def dupFM : FiniteMap MlS (ShapeHOL × List Nat) :=
   fun k => if k = keyX then some (.one, [7]) else none
 
+private theorem knownSupport :
+    ∃ keys : List MlS, ∀ key, knownFM key ≠ none → key ∈ keys := by
+  refine ⟨[keyX], ?_⟩
+  intro key hk
+  by_cases h : key = keyX <;> simp [knownFM, h] at hk ⊢
+
+/-- The exact finite-map carrier driving the tagged `expHdlExact`, built from
+    the same lookup function as the raw `knownFM` with an explicit support. -/
+private def knownExact : PanToCrepVarsExact := ⟨⟨knownFM, knownSupport⟩⟩
+
+private def exactMissingRow : Bool :=
+  match expHdlExact (width := 64) knownExact (nm "missing") with
+  | .skip => true
+  | _ => false
+
+private def exactKnownRow : Bool :=
+  match expHdlExact (width := 64) knownExact keyX with
+  | .seq (.assign 3 (.loadGlob a0)) (.seq (.assign 4 (.loadGlob a1)) .skip) =>
+      a0.toNat == 0 && a1.toNat == 1
+  | _ => false
+
 private def missingRow : Bool :=
   match expHdlHOL (width := 64) knownFM (nm "missing") with
   | .skip => true
@@ -64,10 +88,19 @@ private def dupRow (fm : FiniteMap MlS (ShapeHOL × List Nat)) : Bool :=
   | _ => false
 
 def parityGuard : Bool :=
-  missingRow && knownRow && threeWordRow && dupRow dupFM
+  missingRow && knownRow && threeWordRow && dupRow dupFM &&
+    exactMissingRow && exactKnownRow
 
 #eval parityGuard
 #guard parityGuard
+
+/-- The tagged exact carrier reproduces the raw HOL row through the checked
+    consumer bridge, so `expHdlExact` is the faithful finite-map rendering of
+    `pan_to_crep$exp_hdl`. -/
+example :
+    expHdlExact (width := 64) knownExact keyX
+      = expHdlHOL (width := 64) knownFM keyX :=
+  expHdlExact_eq_expHdlHOL knownFM knownSupport keyX
 
 /-- The kernel bridge reproduces the exact carrier on a duplicate-bearing
     production map, so the executed `expHdlFiniteMap` and the untagged

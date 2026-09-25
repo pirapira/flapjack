@@ -552,6 +552,22 @@
     "reviewer": "Untagged LoadGlob clause returns the exact globals finite-map lookup, including failure, but evaluates through the explicit HolFiniteDimension source adapter rather than native HOL state/eval."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_load32",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Load32 case with the recursive address premise, exact finite-state memory/domain projection, and full word_lab result via tagged mem_load_32_def. The surrounding evaluator still uses explicit HolFiniteDimension and is not native crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_loadByte",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged LoadByte case with the recursive address premise, exact finite-state memory/domain projection, and full word_lab result via tagged mem_load_byte_def. The surrounding evaluator still uses explicit HolFiniteDimension and is not native crepSem eval."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

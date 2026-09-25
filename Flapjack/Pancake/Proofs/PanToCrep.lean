@@ -168,9 +168,14 @@ theorem globalsLookup_wordCell {state : CrepRuntimeState (RiscV.Word 64) σ}
   rw [houtput] at hpoint
   exact hpoint
 
-/-- HOL `flatten_nil_no_size[local]`: flattening a value of well-formed
-    empty-structure shape is empty exactly when its shape has size zero. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "flatten_nil_no_size"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL
+    `flatten_nil_no_size[local]` quantifies `x : v`, whose `NStruct` carries
+    mlstring names (`stcname`), while this statement quantifies production
+    `PanValue α`, whose `.nStruct` carries `StructName = String`. Withholding
+    the tag under the String/MlString carrier rule (`flapjack-0lj`); exact
+    carrier port tracked by `flapjack-0lj.7.1`. Body: flattening a value of
+    well-formed empty-structure shape is empty exactly when its shape has
+    size zero. -/
 theorem flattenNilNoSize (value : PanValue α)
     (hwf : isWfShape [] (panSemShapeOf value) = true) :
     panValueFlatten value = [] ↔ Shape.shapeSize (panSemShapeOf value) = 0 := by
@@ -253,9 +258,13 @@ theorem loadShapeBytes_getElem_rel {width : Nat} [NeZero width]
   rw [List.getElem?_eq_getElem hvalid] at hopt
   exact Option.some.inj hopt
 
-/-- HOL `is_wf_shape_nil_length_flatten`: a word list chosen by the zero-size
-    or positive-size branch has the size prescribed by the source value shape. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "is_wf_shape_nil_length_flatten"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port). HOL
+    `is_wf_shape_nil_length_flatten` quantifies `v : v` (mlstring names), while
+    this statement quantifies production `PanValue α` (`String` names).
+    Withholding the tag under the String/MlString carrier rule (`flapjack-0lj`);
+    exact carrier port tracked by `flapjack-0lj.7.1`. Body: a word list chosen
+    by the zero-size or positive-size branch has the size prescribed by the
+    source value shape. -/
 theorem isWfShapeNil_length_flatten (value : PanValue α) (words : List α)
     (hwf : isWfShape [] (panSemShapeOf value) = true)
     (hzero : Shape.shapeSize (panSemShapeOf value) = 0 → words = [])

@@ -3043,6 +3043,28 @@ theorem evalCrepHolFiniteWordSourceExp_cmp_eq_wordCmpHOL
   simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
     holFiniteWordSourceMemoryModel]
 
+/-! Adapter equation for the source `Shift` evaluator primitive. It exposes
+    HOL `word_sh_def` directly after successful child evaluations and retains
+    its `Option` failure behavior for out-of-range shifts. The source
+    evaluator/Crep-state relation remains Flapjack-specific until the complete
+    native `crepSem$eval` correspondence is proved. -/
+theorem evalCrepHolFiniteWordSourceExp_shift_eq_wordShiftHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : Shift)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension state left =
+      some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension state right =
+      some rightValue) :
+    evalCrepHolFiniteWordSourceExp dimension state (.shift operator left right) =
+      (wordShiftHOL operator (holWordToBitVec dimension leftValue)
+        (holWordToBitVec dimension rightValue).toNat).map
+          (bitVecToHolWord dimension) := by
+  letI : HolFiniteDimension ι := dimension
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
+    holFiniteWordSourceMemoryModel]
+
 theorem crepSimpExpCorrect1CmpHolFiniteWordSourceCase
     {ι : Type} {σ : Type} [dimension : HolFiniteDimension ι]
     (f : FunName × (List Nat × CrepProg (ι → Bool)) →

@@ -275,6 +275,10 @@ run_probe crep_to_loop_mem_lookup_probeScript.sml crep_to_loop_mem_lookup_probe.
   ml_hit ml_distinct \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_list_insert_probeScript.sml crep_to_loop_list_insert_probe.out \
+  li_mem_3 li_snoc_agrees \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -497,7 +501,7 @@ run_probe pan_sem_pan_primop_probeScript.sml pan_sem_pan_primop_probe.out \
   pan_primop_basic pan_primop_non_word "$cake_dir/pancake/semantics/panSemScript.sml"
 # The set_var probe checks local override, unrelated locals, globals, and clock.
 run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
-  set_var_new set_var_clock "$cake_dir/pancake/semantics/panSemScript.sml"
+  set_var_new set_var_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
   pan_dec_clock_five pan_dec_clock_zero \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -1562,3 +1566,16 @@ run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.ou
   ss_one ss_eq \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The is_wf_shape probe observes is_wf_shape/is_wf_flds/is_wf_ctxt over the
+# exact MlString-keyed context, including the duplicate-name and missing-field
+# rejections.
+run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
+  iwf_one iwf_ctxt_field_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The shape_of probe observes the total HOL shape_of over panSem$v.
+run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
+  so_valword so_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

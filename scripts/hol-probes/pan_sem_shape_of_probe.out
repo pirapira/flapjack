@@ -1,0 +1,5 @@
+so_valword=One
+so_rstruct=Comb [One; One]
+so_nstruct=Named «A»
+so_nested=Comb [Comb [One]]
+so_wordlab=One

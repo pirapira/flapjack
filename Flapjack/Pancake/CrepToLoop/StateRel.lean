@@ -3,6 +3,7 @@ import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.LoopStateResult
 import Flapjack.Compiler.Encoders.Asm
+import Flapjack.Misc.Sptree
 
 /-!
 State relation of the Crepe-to-Loop lowering, ported from
@@ -665,5 +666,17 @@ theorem allDistinctCtxtLookupAllDistinct (ctxt : CrepToLoopFiniteMapContext)
         rw [hka, hkb] at hfab
         exact Option.some.inj hfab
       exact hinj a b ka kb hka hkb hk
+
+/-- Exact port of HOL `list_insert_SNOC`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:386`): inserting the
+    snoc'd key list is the same as inserting the tail first and then the final
+    key. HOL `SNOC x y` is `y ++ [x]`; `list_insert`/`insert` are the sptree
+    operations, rendered here by the exact `Spt` carrier. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "list_insert_SNOC"]
+theorem sptListInsert_snoc (x : Nat) (ys : List Nat) (tree : NumSet) :
+    sptListInsert (ys ++ [x]) tree = sptInsert x () (sptListInsert ys tree) := by
+  induction ys generalizing tree with
+  | nil => rfl
+  | cons y ys ih => simp [sptListInsert, ih]
 
 end Flapjack

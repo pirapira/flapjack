@@ -235,6 +235,27 @@ DOCUMENTED_MISMATCHES = {
         "pan_globals_new_main_name_probe.out and sampled by "
         "Flapjack/Test/PanGlobalsNewMainNameParity.lean."
     ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalDeclShapes"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "dec_shapes_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.12) against "
+        "pan_globalsScript.sml:228-234: HOL dec_shapes is the five-clause "
+        "projection Function _::ds |-> dec_shapes ds, Decl sh _ _::ds |-> "
+        "sh::dec_shapes ds, Name _ _::ds |-> dec_shapes ds, ExnDecl _ _::ds |-> "
+        "dec_shapes ds, [] |-> []; the Lean globalDeclShapes clauses match this "
+        "order and shape selection clause-for-clause. The mismatch is the "
+        "imported declaration carrier: the executed function consumes production "
+        "Decl α whose Exp α.Const payload is a generic word α (not HOL's "
+        "fixed-width ExpHOL width.Const : 'a word) and whose identifiers/Shape "
+        "are String (not mlstring), so the statement ranges over inputs HOL "
+        "cannot represent. names_as_string cannot authorize a whole declaration "
+        "carrier and no byte witness applies, so the tag remains withdrawn "
+        "pending the exact-carrier replacement flapjack-6nn.3.1 / "
+        "flapjack-pxn.18.3.5.8. Direct HOL rows empty=[] / "
+        "mixed=[Comb [One; Named «S»]; One] / functions_only=[] are in "
+        "pan_globals_dec_shapes_probe.out and sampled by "
+        "Flapjack/Test/PanGlobalsDecShapesParity.lean."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "set_globals_def",

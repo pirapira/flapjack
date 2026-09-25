@@ -1683,3 +1683,11 @@ run_probe pan_props_size_with_ctxt_probeScript.sml pan_props_size_with_ctxt_prob
   ssc_one ssc_eq_nested \
   "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The panSem vshapes_args_rel_imp_eq_len_MAP probe observes the exact
+# LIST_REL (λvshape arg. SND vshape = shape_of arg) vshapes args relation and
+# its LENGTH / MAP SND / MAP shape_of consequences (panSemScript.sml:740).
+run_probe pan_sem_vshapes_args_rel_probeScript.sml pan_sem_vshapes_args_rel_probe.out \
+  vra_one vra_map_two \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"

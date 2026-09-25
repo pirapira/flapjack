@@ -148,4 +148,33 @@ theorem decCallStepHOLExact_timeout {width : Nat} {σ : Type} [NeZero width]
       evalExpressions evaluate = (some .timeOut, emptyLocalsHOLExact state) := by
   simp [decCallStepHOLExact, hargs, hlookup, hclock]
 
+/-! ## Exact `LIST_REL` carrier and the `vshapes`/`args` length/MAP lemma
+
+HOL `panSemScript.sml:740` states `vshapes_args_rel_imp_eq_len_MAP` for the
+exact `LIST_REL (λvshape arg. SND vshape = shape_of arg) vshapes args`
+relation used by `lookup_code`.  This Lean core does not provide
+`List.Forall₂` (see `Flapjack/FfiBridge.lean`), so the exact carrier is the
+propositional `ListRel` below. -/
+
+/-- Exact Lean rendering of HOL `LIST_REL`: pointwise relation with matching
+    list structure.  Untagged Flapjack infrastructure (the core here has no
+    `List.Forall₂`). -/
+inductive ListRel {α β : Type} (R : α → β → Prop) : List α → List β → Prop
+  | nil : ListRel R [] []
+  | cons {a b as bs} : R a b → ListRel R as bs → ListRel R (a :: as) (b :: bs)
+
+/-- Exact port of HOL `panSem$vshapes_args_rel_imp_eq_len_MAP`
+    (`panSemScript.sml:740`): the shape relation between declared parameters
+    and evaluated arguments implies both the length and the `MAP SND`/`MAP
+    shape_of` equalities. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "vshapes_args_rel_imp_eq_len_MAP"]
+theorem vshapesArgsRel_imp_eq_len_MAP {width : Nat} [NeZero width]
+    (vshapes : List (MlS × ShapeHOL)) (args : List (ValueHOL width))
+    (h : ListRel (fun vshape arg => vshape.2 = shapeOfHOLExact arg) vshapes args) :
+    vshapes.length = args.length ∧
+      vshapes.map Prod.snd = args.map shapeOfHOLExact := by
+  induction h with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons hd _ ih => exact ⟨by simpa using ih.1, by simp [hd, ih.2]⟩
+
 end Flapjack

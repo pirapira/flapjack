@@ -9086,5 +9086,13 @@
   "lean_name": "sizeOfShapeWithContextHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "mem_load_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoadHOL.lean",
+  "lean_name": "memLoadHOLExact",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

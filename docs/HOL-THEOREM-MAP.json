@@ -4481,6 +4481,30 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "kvar_simps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem kvar_simps (panSemScript.sml:422-429) is the four-conjunct simplification set_kvar Local/Global = set_var/set_global plus lookup_kvar Local/Global = FLOOKUP locals/globals; rendered over the exact MlString-keyed PanSemStateExact with the tagged exact setKvar/setVar/setGlobal/lookupKvar ports; direct HOL EVAL rows kvar_simps_set_local and kvar_simps_lookup_local in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem is_valid_value_simps (panSemScript.sml:476-487) is the two Local/Global clauses of is_valid_value whose RHS is case FLOOKUP s.locals/globals v of SOME w => shape_of value = shape_of w | NONE => F; rendered over the exact carrier with HOL Boolean shape equality as the Bool shapeEqHOL (bridge shapeEqHOL_eq_true); direct rows is_valid_value_local_shape/is_valid_value_global_shape/is_valid_value_mismatch/is_valid_value_missing in pan_sem_is_valid_value_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps2",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps2",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem is_valid_value_simps2 (panSemScript.sml:489-500) is the eight-conjunct invariance of is_valid_value and lookup_kvar under updating clock, ffi, code or memory; rendered over the exact MlString-keyed PanSemStateExact record updates; direct HOL EVAL rows is_valid_value_clock_update and is_valid_value_memory_update in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",

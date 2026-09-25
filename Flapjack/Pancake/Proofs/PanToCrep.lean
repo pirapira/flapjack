@@ -2766,11 +2766,18 @@ theorem elCompileToCrepElProgEq [NeZero width]
   refine Prod.ext (by simpa using g1) ?_
   exact Prod.ext (by simpa using g2) (by simpa using g3)
 
-/-- Exact port of HOL `first_compile_prog_all_distinct`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The original
-    premise is distinct names from `functions prog`; `compile_prog` preserves
-    those names while compiling each body and applying `compile_inl_top`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "first_compile_prog_all_distinct"]
+/-- Flapjack analogue of HOL `first_compile_prog_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The list
+    distinctness argument mirrors HOL, but this theorem quantifies over the
+    production `Decl (BitVec width)` carrier and concludes about
+    `compileProgTopHOL`, whose output uses production `FunName`/generic
+    `CrepProg`. HOL instead quantifies over the `DeclHOL`/`panLang` carrier
+    (with `mlstring` identifiers and HOL expression/shape types) and concludes
+    about the exact `compile_prog` output (`mlstring` names and HOL-shaped
+    `CrepProgHOL width` bodies). These input and output type differences are not covered by
+    `names_as_string`; therefore this analogue is intentionally untagged. An
+    exact-carrier replacement depends on the `DeclHOL` and compiler-boundary
+    work tracked by `flapjack-wur.1`. -/
 theorem firstCompileProgAllDistinct {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map

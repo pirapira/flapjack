@@ -5,7 +5,7 @@ import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.Pancake.Semantics.PanSem
 
 /-!
-# Exact state carriers for Crep expression proofs
+# HOL-shaped state carriers for Crep expression proofs
 
 This file records the field carriers from `crepSem$state` independently of
 the executable runtime adapter. Its finite maps carry an explicit finite
@@ -13,26 +13,31 @@ support witness, code names use `MlString`, code entries use `CrepProgHOL`,
 and memory domains are Lean sets. The word dimension is represented by the
 canonical `BitVec width` model for each positive HOL dimension.
 
-The expression-evaluator projection below deliberately forgets `code` and
-`ffi`: `crepSem$eval` for expressions never reads either field. It maps only
-the expression-observable fields into the all-width source evaluator state.
-This is a state-carrier prerequisite, not a port of the evaluator itself.
+These declarations are Flapjack representation infrastructure and carry no
+`@[hol]` tags: the word index is represented by its positive cardinality and
+`BitVec width`, rather than by an arbitrary HOL `finite_index` type together
+with an explicit carrier equivalence. The expression-evaluator projection
+below also deliberately forgets `code` and `ffi`, which expression `eval`
+does not read. It maps only the expression-observable fields into the
+all-width source evaluator state. This is a state-carrier prerequisite, not a
+port of the evaluator itself.
 -/
 
 namespace Flapjack
 
 open Flapjack.Basis.Pure.MlString
 
-/-- A total lookup function with a proof that its defined domain is finite,
-matching the observable representation of HOL `fmap`. -/
+/-- Flapjack finite-support map infrastructure: a total lookup function with a
+proof that its defined domain is finite. This models HOL `fmap` observations
+but is not separately tagged as the generic finite-map type declaration. -/
 structure HolFiniteMapExact (α β : Type) where
   lookup : α → Option β
   finiteSupport : ∃ keys : List α, ∀ key, lookup key ≠ none → key ∈ keys
 
 namespace HolFiniteMapExact
 
-/-- HOL `FMAP_MAP2`: preserve keys and map each present value with the key
-available to the callback. -/
+/-- Flapjack encoding of HOL `FMAP_MAP2`: preserve keys and map each present
+value with the key available to the callback. -/
 def map2 (f : α × β → γ) (map : HolFiniteMapExact α β) :
     HolFiniteMapExact α γ where
   lookup key := (map.lookup key).map (fun value => f (key, value))
@@ -49,11 +54,12 @@ def map2 (f : α × β → γ) (map : HolFiniteMapExact α β) :
 
 end HolFiniteMapExact
 
-/-- The `crepSem$state` record (`crepSemScript.sml:19-32`) with its HOL
-carriers: finite maps for locals/globals/code, a total word-to-word_lab memory
-function, set-valued memory domains, clock/endian fields, arbitrary FFI state,
-and base/top words. `width` represents the positive cardinality of the HOL
-word index. -/
+/-- Flapjack's HOL-shaped encoding of `crepSem$state`
+(`crepSemScript.sml:19-32`): finite maps for locals/globals/code, a total
+word-to-word_lab memory function, set-valued memory domains, clock/endian
+fields, arbitrary FFI state, and base/top words. It is untagged because its
+word index is represented by positive `width`/`BitVec width`; the explicit
+equivalence to each arbitrary HOL `finite_index` instance is not carried here. -/
 structure CrepSemHOLState (width : Nat) [NeZero width] (ffiState : Type) where
   locals : HolFiniteMapExact Nat (HolWordLab width)
   globals : HolFiniteMapExact (BitVec 5) (HolWordLab width)

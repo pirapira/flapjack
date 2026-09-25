@@ -324,6 +324,18 @@ def storeRows : Bool :=
     | _ => false
   storeOk && store32Ok && storeByteOk && storeErr
 
+/-! Direct recursive-dispatch checks for the HOL `store_clause_hit` and
+`store_clause_out_of_domain` rows in `pan_sem_e2e_probe.out`. -/
+def recursiveStoreRows : Bool :=
+  let storeOk := match recursiveExact (.store (.const 0) (.const 7)) baseState with
+    | some (none, state) => memoryWord state 0 == some 7
+    | _ => false
+  let outside := { baseState with memaddrs := fun _ => False }
+  let storeErr := match recursiveExact (.store (.const 0) (.const 7)) outside with
+    | some (some .error, state) => memoryWord state 0 == some 0
+    | _ => false
+  storeOk && storeErr
+
 def returnRaiseRows : Bool :=
   let returnOk := match exactDispatch (.return (.const 41)) baseState with
     | some (some (.returned (.val (.word value))), state) =>
@@ -674,6 +686,7 @@ def recursiveDecRows : Bool :=
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
 #guard storeRows
+#guard recursiveStoreRows
 #guard returnRaiseRows
 #guard sharedMemoryRows
 #guard extCallRows
@@ -704,6 +717,9 @@ def runChecks : IO Bool := do
   if storeRows then
     IO.println "PASS exact-state dispatcher Store/Store32/StoreByte rows match HOL"
   else IO.println "FAIL exact-state dispatcher Store/Store32/StoreByte rows match HOL"
+  if recursiveStoreRows then
+    IO.println "PASS exact-state recursive Store hit/out-of-domain rows match HOL"
+  else IO.println "FAIL exact-state recursive Store hit/out-of-domain rows match HOL"
   if returnRaiseRows then
     IO.println "PASS exact-state dispatcher Return/Raise rows match HOL"
   else IO.println "FAIL exact-state dispatcher Return/Raise rows match HOL"
@@ -762,7 +778,7 @@ def runChecks : IO Bool := do
     IO.println "PASS exact recursive dispatcher Primitive rows match HOL"
   else IO.println "FAIL exact recursive dispatcher Primitive rows match HOL"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
-    sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
+    sharedMemoryRows && extCallRows && recursiveStoreRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
     stateOwnedCallDestinationRows &&
     stateOwnedCallControlNegativeRows && stateOwnedCallExceptionNegativeRows &&
     stateOwnedSeqCallRows && stateOwnedLookupErrorRows &&

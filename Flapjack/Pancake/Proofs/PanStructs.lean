@@ -125,7 +125,24 @@ def structInfosOk (context : StructContext) : Prop :=
     (`pan_structsProofScript.sml:298`): compiling a shape, or a list of
     shapes, removes every `Named` constructor, so the result is well formed in
     any outer structure context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). HOL states
+-- this mutual theorem over fields-only contexts `(stcname # (fldname # shape)
+-- list) list`, with `stcname`/`fldname` = `mlstring`, and `compile_shape`
+-- consumes exactly that list. This Lean statement is keyed by the production
+-- carriers: `isWfShape`/`structCompileShapeWF` both take
+-- `StructContext = List (StructName × StructInfo)`, whose `StructName` and
+-- `FieldName` are `String` and whose `StructInfo` adds the production-only
+-- `shapedFields` cache (HOL `struct_info` is fields and size only). The
+-- wf-context and the compile-context are therefore a different carrier, not
+-- just a different name representation, and `structCompileShapeWF` receives
+-- the full cache-augmented context rather than HOL's fields projection
+-- `MAP (λ(nm,info).(nm,info.fields)) ctxt`; the `[BEq String]` argument is
+-- production `String` equality in the `Named` lookup. So a
+-- `(names_as_string := ...)` qualifier does not apply. The exact
+-- MlString/`ShapeHOL`/`StructContextExact` carriers are available for a
+-- faithful port, which is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Fixture:
+-- `Flapjack.Test.PanStructsCompileShapeParity.structCompileShapeWF_isWfShape_fixture`.
 theorem structCompileShapeWF_isWfShape [BEq String]
     (outer : StructContext) :
     (∀ (context : StructContext) (shape : Shape),

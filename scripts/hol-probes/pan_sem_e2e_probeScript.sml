@@ -668,4 +668,130 @@ val _ = print_eval "extcall_clause_final"
           ffi := ^final_ffi |>)) of
       (res, s') => (case res of SOME (FinalFFI _) => (T, FLOOKUP s'.locals «x») | _ => (F, FLOOKUP s'.locals «x»))``
 
+val dec_call_code =
+  ``FEMPTY |+ («f», ([(«a», panLang$One)],
+      panLang$Return (panLang$Var panLang$Local «a»), panLang$One))``;
+
+val _ = print_eval "lookup_code_ok"
+  ``case panSem$lookup_code ^dec_call_code «f» [ValWord (3w:8 word)] of
+      SOME (_, ls, _) => (T, FLOOKUP ls «a») | NONE => (F, NONE)``
+
+val _ = print_eval "lookup_code_bad_arg"
+  ``case panSem$lookup_code ^dec_call_code «f» [panSem$RStruct []] of
+      SOME (_, ls, _) => (T, FLOOKUP ls «a») | NONE => (F, NONE)``
+
+val _ = print_eval "lookup_code_dup_param"
+  ``case panSem$lookup_code
+      (FEMPTY |+ («f», ([(«a», panLang$One); («a», panLang$One)],
+        panLang$Skip, panLang$One))) «f» [ValWord (3w:8 word)] of
+      SOME (_, ls, _) => (T, FLOOKUP ls «a») | NONE => (F, NONE)``
+
+val dec_call_state_5 =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («r», ValWord (0w:8 word));
+      code := FEMPTY |+ («f», ([(«a», panLang$One)],
+        panLang$Return (panLang$Var panLang$Local «a»), panLang$One));
+      clock := 5 |>)``;
+
+val dec_call_state_0 =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («r», ValWord (0w:8 word));
+      code := FEMPTY |+ («f», ([(«a», panLang$One)],
+        panLang$Return (panLang$Var panLang$Local «a»), panLang$One));
+      clock := 0 |>)``;
+
+val dec_call_state_missing =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («r», ValWord (0w:8 word));
+      code := FEMPTY; clock := 5 |>)``;
+
+val _ = print_eval "deccall_clause_ok"
+  ``case panSem$evaluate
+      (panLang$DecCall «r» panLang$One «f» [panLang$Const (3w:8 word)]
+         (panLang$Return (panLang$Var panLang$Local «r»)),
+       ^dec_call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «r», FLOOKUP s'.locals «a»)``
+
+val _ = print_eval "deccall_clause_clock_zero"
+  ``case panSem$evaluate
+      (panLang$DecCall «r» panLang$One «f» [panLang$Const (3w:8 word)]
+         (panLang$Return (panLang$Var panLang$Local «r»)),
+       ^dec_call_state_0) of
+      (res, s') => (res, FLOOKUP s'.locals «r», s'.clock)``
+
+val _ = print_eval "deccall_clause_bad_shape"
+  ``case panSem$evaluate
+      (panLang$DecCall «r» (panLang$Comb []) «f» [panLang$Const (3w:8 word)]
+         (panLang$Return (panLang$Var panLang$Local «r»)),
+       ^dec_call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «r»)``
+
+val _ = print_eval "deccall_clause_missing_function"
+  ``case panSem$evaluate
+      (panLang$DecCall «r» panLang$One «g» [panLang$Const (3w:8 word)]
+         (panLang$Return (panLang$Var panLang$Local «r»)),
+       ^dec_call_state_missing) of
+      (res, s') => (res, FLOOKUP s'.locals «r»)``
+
+val call_state_5 =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («r», ValWord (0w:8 word)) |+ («ev», ValWord (0w:8 word));
+      code := FEMPTY |+ («f», ([(«a», panLang$One)],
+          panLang$Return (panLang$Var panLang$Local «a»), panLang$One))
+                     |+ («g», ([(«a», panLang$One)],
+          panLang$Raise «E» (panLang$Var panLang$Local «a»), panLang$One));
+      eshapes := FEMPTY |+ («E», panLang$One);
+      clock := 5 |>)``;
+
+val call_state_0 =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («r», ValWord (0w:8 word));
+      code := FEMPTY |+ («f», ([(«a», panLang$One)],
+          panLang$Return (panLang$Var panLang$Local «a»), panLang$One));
+      clock := 0 |>)``;
+
+val call_state_badshape =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY;
+      code := FEMPTY |+ («f», ([(«a», panLang$One)],
+          panLang$Return (panLang$RStruct []), panLang$One));
+      clock := 5 |>)``;
+
+val _ = print_eval "call_clause_ok_none"
+  ``case panSem$evaluate
+      (panLang$Call NONE «f» [panLang$Const (3w:8 word)], ^call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «a», FLOOKUP s'.locals «r»)``
+
+val _ = print_eval "call_clause_ok_nodest"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (NONE, NONE)) «f» [panLang$Const (3w:8 word)], ^call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «a», FLOOKUP s'.locals «r»)``
+
+val _ = print_eval "call_clause_ok_dest"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, «r»), NONE)) «f» [panLang$Const (3w:8 word)],
+       ^call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «r»)``
+
+val _ = print_eval "call_clause_bad_shape"
+  ``case panSem$evaluate
+      (panLang$Call NONE «f» [panLang$Const (3w:8 word)], ^call_state_badshape) of
+      (res, s') => (res, FLOOKUP s'.locals «a»)``
+
+val _ = print_eval "call_clause_handler"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (NONE, SOME («E», «ev», panLang$Skip))) «g»
+         [panLang$Const (3w:8 word)], ^call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «ev»)``
+
+val _ = print_eval "call_clause_missing_function"
+  ``case panSem$evaluate
+      (panLang$Call NONE «h» [panLang$Const (3w:8 word)], ^call_state_5) of
+      (res, s') => (res, FLOOKUP s'.locals «r»)``
+
+val _ = print_eval "call_clause_clock_zero"
+  ``case panSem$evaluate
+      (panLang$Call NONE «f» [panLang$Const (3w:8 word)], ^call_state_0) of
+      (res, s') => (res, FLOOKUP s'.locals «a»)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

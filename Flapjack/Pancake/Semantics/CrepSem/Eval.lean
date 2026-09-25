@@ -3138,6 +3138,35 @@ theorem evalCrepHolFiniteWordSourceExp_loadByte_eq_panMemLoadByteHOL
       (BitVec.ofNat dimension.width (dimension.width / 8)))
     state address
 
+/-- Complete `word_lab` result form of the source `LoadByte` equation above.
+    It transports the evaluator result through the word wrapper and matches
+    the tagged HOL `mem_load_byte_def` result, including the `w2w` conversion.
+    This is adapter support: it does not identify the surrounding recursive
+    source evaluator with HOL's implicit finite-index evaluator. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_loadByte_eq_panMemLoadByteHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression = some address) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.loadByte addressExpression)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    (panMemLoadByteHOL
+      (fun bitAddress =>
+        ((CrepHolState.toHolFiniteBitVecState dimension state).memory
+          bitAddress).toHolWordLab)
+      (fun bitAddress =>
+        (CrepHolState.toHolFiniteBitVecState dimension state).memaddrs
+          bitAddress = true)
+      state.bigEndian (holWordToBitVec dimension address)).map
+        (fun byte => PanWordLab.word
+          (BitVec.ofNat dimension.width byte.toNat)) := by
+  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab] using
+    congrArg (Option.map PanWordLab.word)
+      (evalCrepHolFiniteWordSourceExp_loadByte_eq_panMemLoadByteHOL
+        dimension state addressExpression address hAddress)
+
 theorem evalCrepRuntimeExp_finiteDimension_const {ι : Type}
     (dimension : HolFiniteDimension ι)
     (state : CrepHolState (ι → Bool) σ) (value : ι → Bool) :

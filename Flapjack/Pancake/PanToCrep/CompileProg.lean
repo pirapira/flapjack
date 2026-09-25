@@ -5,8 +5,9 @@ import Flapjack.Pancake.PanLang.Decl
 
 /-!
 HOL-shaped top-level Pancake-to-Crep compiler boundary. The compilation
-produces HOL's function triples and passes those directly to the exact
-`compile_inl_top` counterpart; metadata is attached only in a downstream
+produces HOL's function-triple shape and passes it through Flapjack's
+source-shaped inline traversal; the exact `compile_inl_top` carrier port is
+tracked by `flapjack-e7w.1`. Metadata is attached only in a downstream
 adapter for Flapjack's existing pipeline representation.
 -/
 
@@ -18,8 +19,9 @@ open Flapjack.Pancake.PanLang
     `pan_to_crep$compile_prog`
     (`cakeml/pancake/pan_to_crepScript.sml:393`). It compiles declarations to
     the HOL triple list, selects inline names using `functions (FILTER
-    inlinable declarations)`, and applies the exact triple-list
-    `compileInlTopHOL` pass. -/
+    inlinable declarations)`, and applies the source-shaped triple-list
+    `compileInlTopHOL` pass. That pass still uses String names and generic
+    `CrepProg α`; this boundary is therefore untagged. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the declarations and inline
 -- names are keyed by `FunName` = `String`, while HOL `pan_to_crepScript.sml`
 -- keys `compile_prog`/`functions` by `funname` = `mlstring` (tracked by

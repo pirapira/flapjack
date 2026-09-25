@@ -29,9 +29,12 @@ evaluate (Raise eid e, s) =
   | _ => (SOME Error, s)
 ```
 
-The exact `empty_locals_def` port `emptyLocalsHOLExact` over the exact,
+The `empty_locals_def`-shaped helper `emptyLocalsHOLExact` over the
 `mlstring`-keyed `PanSemStateExact` carrier lives in
-`Flapjack/Pancake/Semantics/PanSem/StateExact.lean` and is reused here.
+`Flapjack/Pancake/Semantics/PanSem/StateExact.lean` and is reused here. That
+helper is currently **untagged** because `PanSemStateExact` stores its map fields
+as unrestricted lookup functions rather than HOL finite maps (carrier gap tracked
+by bead `flapjack-pxn.18.3.7.1.3.1.1.2`).
 The two clause steps `returnStepHOLExact` / `raiseStepHOLExact` are
 callback-parameterised partial-evaluator infrastructure (the embedded `eval`
 is a parameter), so they are deliberately **untagged**: there is no full

@@ -1,5 +1,7 @@
 /-
-  Exact HOL `panSem$is_valid_value` over the exact MlString-keyed source state.
+  Function-backed rendering of HOL `panSem$is_valid_value`. Its source state
+  has unrestricted lookup functions, not HOL finite-map fields; the declaration
+  is kept untagged for that carrier mismatch.
 
   HOL reference: `cakeml/pancake/semantics/panSemScript.sml:469-475`:
 
@@ -77,10 +79,9 @@ mutual
     | _ :: _, [] => by simp [shapeEqHOL.shapeEqListHOL]
 end
 
-/-- Exact port of HOL `is_valid_value` (`panSemScript.sml:469-475`) over the
-exact MlString-keyed `PanSemStateExact`: a value is valid at a `Local`/`Global`
-destination exactly when the destination is bound and the payload shapes agree. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "is_valid_value_def"]
+/-- Function-backed rendering of HOL `is_valid_value` (`panSemScript.sml:469-475`).
+    Kept untagged because its `PanSemStateExact` argument admits arbitrary
+    lookup functions rather than HOL finite-map fields. -/
 def isValidValueHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (kind : VarKind) (name : MlS)
     (value : ValueHOL width) : Bool :=

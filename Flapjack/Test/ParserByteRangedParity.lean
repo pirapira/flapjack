@@ -343,5 +343,86 @@ example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gEqOps :=
 example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gRet :=
   Flapjack.Parser.gRet_treesSafe
 
+/-- `ShapeNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShape fuel) :=
+  Flapjack.Parser.gShape_treesSafe fuel
+
+/-- `ShapeCombNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapeComb fuel) :=
+  Flapjack.Parser.gShapeComb_treesSafe fuel
+
+/-- `ShapedIdentNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdent fuel) :=
+  Flapjack.Parser.gShapedIdent_treesSafe fuel
+
+/-- `ParamListNT`/`FieldNameListNT` are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdentList nonterminal fuel) :=
+  Flapjack.Parser.gShapedIdentList_treesSafe nonterminal fuel
+
+/-- Fuel exhaustion fails safely. -/
+example (message : String) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.P.fail (α := Flapjack.Parser.P.Trees) message) :=
+  Flapjack.Parser.PTreesSafe.fail message
+
+/-- The full expression grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) :=
+  Flapjack.Parser.gExp_treesSafe fuel
+
+/-- `EBaseNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gEBase fuel) :=
+  Flapjack.Parser.gEBase_treesSafe fuel
+
+/-- `ArgListNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  Flapjack.Parser.gArgList_treesSafe fuel
+
+/-- `NmdStructNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gNmdStruct fuel) :=
+  Flapjack.Parser.gNmdStruct_treesSafe fuel
+
+/-- The whole second grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock2_treesSafe fuel).1,
+    Flapjack.Parser.gArgList_treesSafe fuel⟩
+
+/-- `tryDefault` preserves tree-safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p)
+    (token : Flapjack.Parser.Token) (h : Flapjack.Parser.TokenNameByteRanged token) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.tryDefault p token) :=
+  Flapjack.Parser.tryDefault_treesSafe hp token h
+
+/-- Store-form and shared-load/store rules are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (keyword : Flapjack.Parser.Keyword)
+    (described : String) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.gStoreForm nonterminal keyword described fuel) :=
+  Flapjack.Parser.gStoreForm_treesSafe nonterminal keyword described fuel
+
+/-- The call/ext-call/dec-call rules are tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExtCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gDecCallHead fuel) :=
+  ⟨Flapjack.Parser.gCall_treesSafe fuel, Flapjack.Parser.gExtCall_treesSafe fuel,
+    Flapjack.Parser.gDecCallHead_treesSafe fuel⟩
+
+
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) :=
+  Flapjack.Parser.gProg_treesSafe fuel
+
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gTopDecList fuel) :=
+  Flapjack.Parser.gTopDecList_treesSafe fuel
+
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gProg fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gFun fuel) ∧
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gStmt fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock3_treesSafe fuel).1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.2.1,
+   (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.1⟩
 
 end Flapjack.Test.ParserByteRangedParity

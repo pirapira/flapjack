@@ -588,4 +588,33 @@ val _ = print_eval "primitive_arg_error"
           structs := []; clock := 5 |>)) of
       (res,s') => (res, FLOOKUP s'.locals «x»)``
 
+
+val _ = print_eval "store_clause_hit"
+  ``case panSem$evaluate
+      (panLang$Store (panLang$Const (0w:64 word)) (panLang$Const (7w:64 word)),
+       ((ARB:((64),unit) panSem$state) with
+          <| memaddrs := {0w}; memory := (\a:64 word. Word (0w:64 word)); be := F |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
+val _ = print_eval "store_clause_out_of_domain"
+  ``case panSem$evaluate
+      (panLang$Store (panLang$Const (0w:64 word)) (panLang$Const (7w:64 word)),
+       ((ARB:((64),unit) panSem$state) with
+          <| memaddrs := {}; memory := (\a:64 word. Word (0w:64 word)) |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
+val _ = print_eval "store32_clause_hit"
+  ``case panSem$evaluate
+      (panLang$Store32 (panLang$Const (0w:64 word)) (panLang$Const (0x11223344w:64 word)),
+       ((ARB:((64),unit) panSem$state) with
+          <| memaddrs := {0w}; memory := (\a:64 word. Word (0w:64 word)); be := F |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
+val _ = print_eval "storebyte_clause_hit"
+  ``case panSem$evaluate
+      (panLang$StoreByte (panLang$Const (0w:64 word)) (panLang$Const (0xABw:64 word)),
+       ((ARB:((64),unit) panSem$state) with
+          <| memaddrs := {0w}; memory := (\a:64 word. Word (0w:64 word)); be := F |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

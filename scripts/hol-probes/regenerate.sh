@@ -1630,6 +1630,20 @@ run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
   ms_hit_lookup mss_second_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 
+# The shared-memory probe observes panSem `sh_mem_load`/`sh_mem_store`:
+# nb = 0 in/out of `sh_memaddrs`, byte-aligned nb = 1, an FFI_final outcome
+# clearing locals, and the FFI_return event/state update for both primitives.
+run_probe pan_sem_sh_mem_probeScript.sml pan_sem_sh_mem_probe.out \
+  l_load_hit_local l_store_final_unchanged \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The declaration-context probe observes panSem `decs_stcnames`: the empty
+# context, a well-formed structure, its computed size, duplicate names,
+# duplicate field names, an unknown `Named` shape, and skipped decl forms.
+run_probe pan_sem_decs_stcnames_probeScript.sml pan_sem_decs_stcnames_probe.out \
+  dsc_empty dsc_skip_len \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
 # The panProps shape_of_val / res_var FLOOKUP probe observes the exact HOL
 # shape_of on the Val (word_lab) constructor and the res_var finite-map
 # update/delete semantics (panPropsScript.sml:14, :220, :228, :236).

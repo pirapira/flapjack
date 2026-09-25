@@ -9238,5 +9238,13 @@
   "lean_name": "emptyLocalsHOLExact",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "mem_store_32_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
+  "lean_name": "panMemStore32HOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

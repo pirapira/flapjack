@@ -46,7 +46,8 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
             raise ValueError(f"Lean export line {line_number} has non-string fields {non_string}")
     qualifiers = record.get("qualifiers", {})
     allowed_qualifiers = {
-        "list_as_array", "names_as_string", "names_as_string_boundary"
+        "list_as_array", "names_as_string", "names_as_string_boundary",
+        "fmap_as_finite_support",
     }
     if not isinstance(qualifiers, dict) or not set(qualifiers) <= allowed_qualifiers:
         raise ValueError(f"Lean export line {line_number} has invalid qualifiers")
@@ -119,6 +120,7 @@ def lock_records(
             "reviewed_list_as_array",
             "reviewed_names_as_string",
             "reviewed_list_as_array_names_as_string",
+            "reviewed_fmap_as_finite_support",
         }:
             continue
         key = (record["hol_path"], record["hol_name"], record["lean_name"])
@@ -137,6 +139,7 @@ def lock_records(
             "list_as_array": list(record.get("list_as_array", ())),
             "names_as_string": list(record.get("names_as_string", ())),
             "names_as_string_boundary": list(record.get("names_as_string_boundary", ())),
+            "fmap_as_finite_support": list(record.get("fmap_as_finite_support", ())),
         }
         exported_qualifiers = item.get("qualifiers", {})
         if any(exported_qualifiers.get(key, []) != value

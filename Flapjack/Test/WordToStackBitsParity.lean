@@ -873,6 +873,43 @@ example : storeConstsStub (α := BitVec 64) 3
 example : raiseStub (α := BitVec 64) false 3
     = spRaiseStubTail 3 spSkip 3 := rfl
 
+/-! ## `wShareInst` oracle parity
+
+Structural comparison and rows reproducing `word_to_stack_wshareinst_probe.out`
+for all eight memop forms (`word_to_stackScript.sml:186-224`). -/
+
+private def shareProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .seq a b, .seq c d => shareProgBEq a c && shareProgBEq b d
+  | .shMemOp op r a, .shMemOp op' r' a' =>
+      op == op' && r == r' &&
+        (match a, a' with | .addr b o, .addr b' o' => b == b' && o == o')
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | _, _ => false
+
+private def wsLoad (op : WordMemOp) : StackMoveProg :=
+  .seq (.shMemOp op 2 (.addr 1 9)) (.stackStore 2 6)
+private def wsStore (op : WordMemOp) : StackMoveProg :=
+  .seq (.stackLoad 3 6) (.shMemOp op 3 (.addr 1 9))
+
+def wShareInstParityGuard : Bool :=
+  shareProgBEq (wShareInst (α := BitVec 64) .load 5 (.addr 3 9) (2, 7, 9)) (wsLoad .load) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .load8 5 (.addr 3 9) (2, 7, 9)) (wsLoad .load8) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .load16 5 (.addr 3 9) (2, 7, 9)) (wsLoad .load16) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .load32 5 (.addr 3 9) (2, 7, 9)) (wsLoad .load32) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .store 5 (.addr 3 9) (2, 7, 9)) (wsStore .store) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .store8 5 (.addr 3 9) (2, 7, 9)) (wsStore .store8) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .store16 5 (.addr 3 9) (2, 7, 9)) (wsStore .store16) &&
+  shareProgBEq (wShareInst (α := BitVec 64) .store32 5 (.addr 3 9) (2, 7, 9)) (wsStore .store32)
+
+#eval wShareInstParityGuard
+#guard wShareInstParityGuard
+
+example : wShareInst (α := BitVec 64) .load 5 (.addr 3 9) (2, 7, 9)
+    = .seq (.shMemOp .load 2 (.addr 1 9)) (.stackStore 2 6) := rfl
+example : wShareInst (α := BitVec 64) .store 5 (.addr 3 9) (2, 7, 9)
+    = wsStore .store := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -883,6 +920,6 @@ def runChecks : IO Bool := do
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
     copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
-    callDestParityGuard && stubParityGuard)
+    callDestParityGuard && stubParityGuard && wShareInstParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

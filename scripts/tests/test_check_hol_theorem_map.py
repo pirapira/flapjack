@@ -185,10 +185,13 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             for record in manifest
         }
         exact_cases = {
-            ("Flapjack/Pancake/PanGlobals.lean", "freshNameHOL_not_mem"): (
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "freshNameHOL_not_mem_hol"): (
                 "fresh_name_correct",
             ),
-            ("Flapjack/Pancake/PanGlobals.lean", "freshNameHOL_not_mem_of_subset"): (
+            (
+                "Flapjack/Pancake/Proofs/PanGlobals.lean",
+                "freshNameHOL_not_mem_of_subset_hol",
+            ): (
                 "fresh_name_correct'",
             ),
         }

@@ -287,6 +287,69 @@ class HolAttributeSitesTest(unittest.TestCase):
             any("one owning carrier structure" in error for error in errors)
         )
 
+    def test_fmap_as_finite_support_reads_type_from_tagged_carrier(self):
+        lines = [
+            "structure BroadState where",
+            "  locals : Nat \u2192 Option Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : FiniteState) := s",
+        )
+        self.assertEqual(
+            errors, [],
+            "the type must be read from the disambiguated owning carrier, not the "
+            "first structure declaring the field",
+        )
+
+    def test_fmap_as_finite_support_rejects_raw_type_on_named_carrier(self):
+        lines = [
+            "structure BroadState where",
+            "  locals : Nat \u2192 Option Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : BroadState) := s",
+        )
+        self.assertTrue(
+            any(
+                "owning structure `BroadState`" in error
+                and "HolFiniteMapExact" in error
+                for error in errors
+            ),
+            errors,
+        )
+
+    def test_fmap_as_finite_support_matches_owner_as_identifier_token(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "structure FiniteState where",
+            "  locals : HolFiniteMapExact Nat Nat",
+            "",
+            "theorem holFmapAsFiniteSupportWitness :",
+            "    (\u2200 s : FiniteState, ofBroad (toBroad s) = s) := by rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Broad.lean",
+            "def helper (s : FiniteState) := s",
+        )
+        self.assertEqual(
+            errors, [],
+            "`State` must not match inside `FiniteState`; the owner is a whole "
+            "identifier token",
+        )
+
     def test_tagged_declaration_text_stops_before_next_declaration(self):
         lines = [
             '@[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"',

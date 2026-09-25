@@ -72,6 +72,19 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "is_wf_shape_drop",
+        "Codex (source comparison with pan_structsProofScript.sml:114-127: the "
+        "DROP-n implication and boolean is_wf_shape equations correspond, but "
+        "the Lean declaration quantifies over production StructContext/Shape "
+        "with unrestricted String identifiers and a production-only "
+        "shapedFields cache; HOL uses StructContextExact/ShapeHOL and mlstring. "
+        "There is no NameRanged premise, so names_as_string cannot bridge the "
+        "carriers. The direct pan_lang_is_wf_shape_probe.out examples cover "
+        "the HOL predicate only, not a carrier equivalence. Keep @[hol] "
+        "withheld pending exact-carrier work flapjack-pxn.18.3.5.8."
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "struct_infos_ok_def",

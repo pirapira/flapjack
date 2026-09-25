@@ -195,10 +195,15 @@ theorem lookupInfo_isSome_drop (name : String) (context : StructContext)
           · simp only [lookupInfo, hc]
             exact hrest
 
-/-- Exact API translation of HOL `is_wf_shape_drop`
+/-- Production-carrier analogue of HOL `is_wf_shape_drop`
     (`pan_structsProofScript.sml:114`): a shape well formed in a context
     suffix remains well formed in the full context. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): this statement quantifies over
+-- production `StructContext`/`Shape`, whose names use unrestricted `String`
+-- and whose struct records include the production-only `shapedFields` cache.
+-- HOL uses `StructContextExact`/`ShapeHOL` with `mlstring` names. There is no
+-- NameRanged premise, so `names_as_string` cannot bridge arbitrary inputs;
+-- the exact-carrier replacement is tracked by flapjack-pxn.18.3.5.8.
 theorem isWfShape_drop [BEq String] (context : StructContext) (shape : Shape)
     (n : Nat) :
     isWfShape (context.drop n) shape = true → isWfShape context shape = true :=

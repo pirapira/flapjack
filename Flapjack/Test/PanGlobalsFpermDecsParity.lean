@@ -1,4 +1,4 @@
-import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.Proofs.PanGlobals
 
 namespace Flapjack.Test.PanGlobalsFpermDecsParity
 
@@ -19,6 +19,14 @@ def targetFunction : FunDecl Nat :=
     params := []
     body := .decCall "x" .one "foo" [] .skip
     returnShape := .one }
+
+def singletonNonFunctionDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7)]
+
+theorem fpermDecsDeclsSingletonFixture :
+    globalRenameDecls "foo" "bar" singletonNonFunctionDecls =
+      singletonNonFunctionDecls :=
+  fperm_decs_decls "foo" "bar" singletonNonFunctionDecls [] (by decide)
 
 def parityGuard : Bool :=
   let renamed :=
@@ -48,8 +56,7 @@ def emptyGuard : Bool :=
 #guard emptyGuard
 
 def singletonGuard : Bool :=
-  match globalRenameDecls "foo" "bar"
-      ([.decl .one "g" (.const 7)] : List (Decl Nat)) with
+  match globalRenameDecls "foo" "bar" singletonNonFunctionDecls with
   | [.decl .one "g" (.const 7)] => true
   | _ => false
 
@@ -57,8 +64,8 @@ def singletonGuard : Bool :=
 
 def runChecks : IO Bool := do
   IO.println (if parityGuard && emptyGuard && singletonGuard then
-    "PASS pan_globals fperm_decs_def parity (3 HOL rows)"
-    else "FAIL pan_globals fperm_decs_def parity (3 HOL rows)")
+    "PASS pan_globals fperm_decs_def / fperm_decs_decls parity (3 HOL rows)"
+    else "FAIL pan_globals fperm_decs_def / fperm_decs_decls parity (3 HOL rows)")
   pure (parityGuard && emptyGuard && singletonGuard)
 
 end Flapjack.Test.PanGlobalsFpermDecsParity

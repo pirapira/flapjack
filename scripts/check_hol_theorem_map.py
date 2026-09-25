@@ -84,6 +84,18 @@ DOCUMENTED_MISMATCHES = {
         "bridge arbitrary names. Keep @[hol] withheld pending exact carrier work "
         "flapjack-pxn.18.3.5.8."
     ),
+    ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fperm_decs_decls"): (
+        "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+        "fperm_decs_decls",
+        "Codex (source comparison with pan_globalsProofScript.sml:2023-2029: "
+        "the unused ys binder, non-function premise, and rename-to-self equation "
+        "correspond. Lean quantifies over production Decl α, with String names "
+        "and arbitrary α global values; HOL uses mlstring names and word-valued "
+        "globals. The premise makes each renamer a no-op but does not equate the "
+        "declaration carriers. There is no NameRanged premise or checked "
+        "declaration bridge for names_as_string. Keep @[hol] withheld pending "
+        "exact-carrier work flapjack-pxn.18.3.5.8."
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "is_wf_shape_drop",
@@ -222,6 +234,27 @@ DOCUMENTED_MISMATCHES = {
         "Direct HOL rows empty / two_collisions / mixed / absent are in "
         "pan_globals_new_main_name_probe.out and sampled by "
         "Flapjack/Test/PanGlobalsNewMainNameParity.lean."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalDeclShapes"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "dec_shapes_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.12) against "
+        "pan_globalsScript.sml:228-234: HOL dec_shapes is the five-clause "
+        "projection Function _::ds |-> dec_shapes ds, Decl sh _ _::ds |-> "
+        "sh::dec_shapes ds, Name _ _::ds |-> dec_shapes ds, ExnDecl _ _::ds |-> "
+        "dec_shapes ds, [] |-> []; the Lean globalDeclShapes clauses match this "
+        "order and shape selection clause-for-clause. The mismatch is the "
+        "imported declaration carrier: the executed function consumes production "
+        "Decl α whose Exp α.Const payload is a generic word α (not HOL's "
+        "fixed-width ExpHOL width.Const : 'a word) and whose identifiers/Shape "
+        "are String (not mlstring), so the statement ranges over inputs HOL "
+        "cannot represent. names_as_string cannot authorize a whole declaration "
+        "carrier and no byte witness applies, so the tag remains withdrawn "
+        "pending the exact-carrier replacement flapjack-6nn.3.1 / "
+        "flapjack-pxn.18.3.5.8. Direct HOL rows empty=[] / "
+        "mixed=[Comb [One; Named «S»]; One] / functions_only=[] are in "
+        "pan_globals_dec_shapes_probe.out and sampled by "
+        "Flapjack/Test/PanGlobalsDecShapesParity.lean."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",

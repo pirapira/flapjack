@@ -694,6 +694,9 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_store_eval_probeScript.sml crep_store_eval_probe.out \
+  store_success store_address_error store_value_error store_domain_error \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -1507,3 +1510,17 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
   plx_alpha_206 plx_ascii_then_high \
   "$cake_dir/pancake/parser/panLexerScript.sml" \
   "$cake_dir/pancake/parser"
+# The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
+# initial_ffi_state and the call_FFI cases (identity, success, length
+# failure, oracle final).
+run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
+  ffi_outcome_failed call_final_event \
+  "$cake_dir/semantics/ffi/ffiScript.sml" \
+  "$cake_dir/semantics/ffi"
+
+# The crepLang exp probe observes the exact width-indexed Crepe expression
+# carrier (word payloads and fixed 5-word LoadGlob width).
+run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
+  cexp_const cexp_topaddr \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"

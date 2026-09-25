@@ -356,10 +356,24 @@ theorem panMemStoresHOL_cons_none {width : Nat} [NeZero width] (address : RiscV.
     equivalent structural scan over the context (needed for the Lean termination
     measure `(structs.length, sizeOf shape)`, the image of HOL's lexicographic
     `(LENGTH stcs, shape_size)`); the scan returns the first name match together
-    with the remaining context, exactly the `(nm,info)::stcs'` HOL destructures. -/
+    with the remaining context, exactly the `(nm,info)::stcs'` HOL destructures.
+
+    Two Lean-only binders are worth spelling out.  Each function carries
+    `[NeZero width]`: HOL words always have a positive dimension
+    (`dimindex (:'a) > 0`), so `width = 0` is not a HOL instance and the tagged
+    statements must not admit it.  The `[DecidablePred domain]` binder is
+    likewise only Lean decidability evidence, needed so that the `if domain
+    address` branch elaborates; it is not a HOL side condition (HOL `domain` is
+    a `'a word set` and membership is a `bool`-valued test there).
+
+    DELIBERATELY UNTAGGED: HOL `panLang$shape` and the structure/field names in
+    the context are `mlstring`, while the Lean carriers used here (`Shape`
+    names, `StructContextHOL`, `FieldName`) are `String` (`Flapjack/Pancake/PanLang.lean:15,28,67`).
+    Retagging requires an exact `MlString`-keyed `ShapeHOL`/context carrier; that
+    substitution is tracked by bead `flapjack-pxn.18.5.17.1.2.1`.  The `[NeZero
+    width]` improvement and the untagged implementation remain valid. -/
 mutual
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_def"]
-  def panMemLoadHOL {width : Nat} (shape : Shape) (address : RiscV.Word width)
+  def panMemLoadHOL {width : Nat} [NeZero width] (shape : Shape) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (HolValue width) :=
@@ -388,7 +402,7 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadsHOL {width : Nat} (shapes : List Shape) (address : RiscV.Word width)
+  def panMemLoadsHOL {width : Nat} [NeZero width] (shapes : List Shape) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (List (HolValue width)) :=
@@ -411,7 +425,7 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadFldsHOL {width : Nat} (fields : List (FieldName × Shape)) (address : RiscV.Word width)
+  def panMemLoadFldsHOL {width : Nat} [NeZero width] (fields : List (FieldName × Shape)) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (List (FieldName × HolValue width)) :=
@@ -982,8 +996,10 @@ theorem HolValue.toPanValue_nStruct {width : Nat} (name : StructName)
 /-! ## Structured `.load` fuel-indexed equivalence (flapjack-pxn.18.3.6.9.2.2.1.1.2/.3)
 
 Kernel-checked equivalence between the production fuel-indexed flattening loader and
-the tagged exact HOL `mem_load_def` port for arbitrary Comb/List/Fields/Named shapes,
-under the executed RV64 memory-access state. Untagged production-side adapter. -/
+the `mem_load_def`-shaped port for arbitrary Comb/List/Fields/Named shapes, under the
+executed RV64 memory-access state.  The port is currently UNTAGGED pending an exact
+`MlString`-keyed `ShapeHOL`/context carrier (bead flapjack-pxn.18.5.17.1.2.1); this is
+an untagged production-side adapter. -/
 
 abbrev panValueFlatMachineReadWord (state : PanSemState (RiscV.Word 64) ffi)
     (memory : RiscV.Word 64 → Option (PanValue (RiscV.Word 64))) : RiscV.Word 64 → Option (RiscV.Word 64) :=
@@ -1153,7 +1169,8 @@ theorem panValueFlatLoadFuel_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 6
 The production `panValueFlatLoad` guards on `isWfShape` and starts the fuel at
 `panValueFlatContextFuel + panValueFlatShapeFuel + 1`.  Combining that with the
 fuel-indexed equivalence above and the initial-fuel bound yields the executed
-`.load` result as the tagged exact HOL `mem_load_def` port.  Untagged
+`.load` result as the HOL `mem_load_def`-shaped port (currently untagged pending an
+exact `MlString`-keyed carrier; bead flapjack-pxn.18.5.17.1.2.1).  Untagged
 production-side adapter. -/
 
 theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) ffi)
@@ -1194,21 +1211,28 @@ HOL `=`.
 domain carries the classical `[DecidablePred]` instance that HOL membership
 has implicitly. -/
 
-/-- Exact port of HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`)
-    over the width-indexed `v` carrier `HolValue`; clause-for-clause the same
-    as the tagged `panSemShapeOf` (which is stated over `PanValue`).  Carries
-    `[NeZero width]` because HOL word types have positive `dimindex`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): clause-for-clause the
+    same as HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`), but
+    it recurses over the String-bearing `HolValue` carrier whose `nStruct` name
+    is `StructName = String` and returns `Shape.named (StructName)`, whereas HOL
+    `v`'s `stcname`/`fldname` and `shape`'s `Named` argument are `mlstring`.
+    The `@[hol]` tag is therefore withheld (bead `flapjack-0lj`); the exact
+    MlString-keyed carrier port is tracked by `flapjack-pxn.18.3.5.8`.  Kept for
+    the untagged `evalHOL` adapter.  Carries `[NeZero width]` because HOL word
+    types have positive `dimindex`. -/
 def holShapeOf {width : Nat} [NeZero width] : HolValue width → Shape
   | .val _ => .one
   | .rStruct values => .comb (values.map holShapeOf)
   | .nStruct name _ => .named name
 termination_by value => sizeOf value
 
-/-- Exact port of HOL `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`)
-    over the width-indexed `v` carrier `HolValue`.  Carries `[NeZero width]`
-    because HOL word types have positive `dimindex`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "isValWord_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): same clauses as HOL
+    `isValWord` (`cakeml/pancake/semantics/panSemScript.sml:35`), but over the
+    String-bearing `HolValue` carrier (HOL `v` uses `stcname`/`fldname` =
+    `mlstring`).  The `@[hol]` tag is therefore withheld (bead `flapjack-0lj`);
+    the exact MlString-keyed port is tracked by `flapjack-pxn.18.3.5.8`.  The
+    word-only port `isWordHOL` over `HolWordLab` below stays exact.  Carries
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
 def holValueIsWord {width : Nat} [NeZero width] : HolValue width → Bool
   | .val (.word _) => true
   | _ => false
@@ -1362,11 +1386,16 @@ structure PanSemHolState (width : Nat) (σ : Type) where
   baseAddr : RiscV.Word width
   topAddr : RiscV.Word width
 
-/- Exact width-indexed port of HOL `panSem$eval_def`.  HOL quantifies over
+/- FLAPJACK-SPECIFIC (not a statement-exact HOL port): clause-for-clause the
+   same as HOL `panSem$eval_def`, but the carrier `PanSemHolState` stores
+   `locals`/`globals`/`code`/`eshapes` keyed by `VarName`/`FunName`/`ExceptionId`
+   = `String` and holds String-bearing `HolValue`, whereas HOL
+   `varname`/`funname`/`eid`/`stcname`/`fldname` are `mlstring`.  The `@[hol]`
+   tag is therefore withheld (bead `flapjack-0lj`); the exact MlString-keyed
+   evaluator is tracked by `flapjack-pxn.18.3.5.8`.  HOL quantifies over
    `'a word`; Lean represents that polymorphic width by `BitVec width`
    (`RiscV.Word width`) with `[NeZero width]` (HOL `dimindex(:'a)` is nonzero). -/
 mutual
-  @[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"]
   def evalHOL {width : Nat} [NeZero width] [LawfulBEq String]
       (state : PanSemHolState width σ)
       [DecidablePred state.memaddrs] : Exp (BitVec width) → Option (HolValue width)

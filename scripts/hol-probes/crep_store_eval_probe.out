@@ -1,0 +1,4 @@
+store_success=T
+store_address_error=T
+store_value_error=T
+store_domain_error=T

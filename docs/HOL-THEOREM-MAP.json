@@ -248,54 +248,6 @@
     "reviewer": "Codex (source comparison; exact HOL arg order a,bs,m,dm,be over total word_loc memory and word-set domain, byte_align via mem_store_byte_aux = LOG2(width/8), no extra codec)"
   },
   {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameFunctionName",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameProg",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fperm_decs_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalRenameDecls",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "resort_decls_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalResortDecls",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "new_main_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalNewMainName",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "dec_shapes_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalDeclShapes",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_const_def",
     "lean_path": "Flapjack/Pancake/CrepArith.lean",
@@ -1112,14 +1064,6 @@
     "reviewer": "Codex (source comparison; List.mapM carrier; pointwise function agreement on members implies mapM equality)"
   },
   {
-    "hol_path": "cakeml/pancake/crep_inlineScript.sml",
-    "hol_name": "compile_inl_top_def",
-    "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
-    "lean_name": "compileInlTopHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (triple-list boundary, finite-map duplicate order, and direct HOL probes)"
-  },
-  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
@@ -1145,19 +1089,19 @@
   },
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/CrepLang/Exp.lean",
+    "lean_name": "CrepExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (inductive compared constructor-by-constructor against the Datatype exp at crepLangScript.sml:26-37: all 12 constructors and field types match, the `'a word` payloads are carried by BitVec width with [NeZero width], and LoadGlob keeps the fixed 5-word address; the generic production CrepExp (alpha) stays untagged; total kernel isomorphisms crepExpToHOL/crepExpOfHOL with @[simp] roundtrips live in Flapjack/Pancake/CrepLang/Exp.lean; direct HOL oracle scripts/hol-probes/crep_lang_exp_probe.{sml,out} and guards in Flapjack/Test/CrepExpHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "store_globals_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
     "lean_name": "storeGlobalsW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against store_globals_def; width-indexed exact wrapper over CrepProg/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; generic helper kept untagged as FLAPJACK-SPECIFIC; clauses/side conditions reviewed clause-by-clause)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_top_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalCompileTopCake",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory; executed fixed-word path now routes through the tagged compileDecsCake via globalCompileTopForStartSomeCake with [NeZero width]; globalCompileTopCake_eq proves it equals the polymorphic globalCompileTopForStart output; direct HOL compile_decs/compile_top probes unchanged)"
   },
   {
     "hol_path": "cakeml/pancake/pan_structsScript.sml",
@@ -3816,38 +3760,6 @@
     "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
   },
   {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_exp_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileExpCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with [NeZero width] mirroring HOL dimindex positivity; extensional finite-map globals used only through FLOOKUP, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port; bytes_in_word = n2w (width/8); all compile_exp_def clauses Var Local/Global, RStruct, RField, NStruct/NField, Load/LoadByte/Load32, Op/Panop/Cmp/Shift, TopAddr and the identity catch-all match)."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileProgCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause compile_def over CakeContext: Dec, Assign Global/Local via FLOOKUP, Primitive, Store/Store32/StoreByte, Return, Raise, Seq, If, While, all Call rtyp/handler cases including the global-return-handler fresh-name machinery built from the exact freshNameHOL and freeVarIds/expLocalVars ports, DecCall, ExtCall, ShMemStore, ShMemLoad Local/Global, and the identity catch-all; [LawfulBEq String] so == and != implement HOL =; globals consulted only through FLOOKUP)."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_decs_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileDecsCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause compile_decs_def over CakeContext: Function compiles its body under the context at its own position via compileProgCake, Decl computes globals_size + bytes_in_word * n2w (size_of_shape sh) then extends globals by FUPDATE and sets globals_size := address for the following declarations, ExnDecl conses the exception, Name is skipped, and nil returns the context unchanged; [NeZero width] mirrors HOL dimindex positivity; globals is consulted only through FLOOKUP/FUPDATE, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fresh_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "freshNameHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/∈ of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=«x», fresh_name_missing_empty=«», fresh_name_hit=«'''», fresh_name_seed=«vn''» match the Lean parity checks)."
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "ALOOKUP_MAP3",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
@@ -4454,22 +4366,6 @@
     "lean_name": "nbOpHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "dec_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
-    "lean_name": "decClockHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL dec_clock s = s with clock := s.clock - 1 ported over the word-indexed HOL-shaped source state PanSemHolState; direct HOL row dec_clock_step=<|clock := 4|>)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "fix_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
-    "lean_name": "fixClockHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL fix_clock clamps the returned clock to min(old,new) and threads res through; result-polymorphic in beta exactly as HOL leaves res unconstrained; direct HOL rows fix_clock_clamps=(NONE,2), fix_clock_keeps_new=(NONE,4))"
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8297,46 +8193,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "mem_load_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "panMemLoadHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL mem_load/mem_loads/mem_load_flds clauses over the HOL-shaped StructContextHOL, total HolWordLab memory and Prop domain; argument order follows HOL currying (sh addr dm m stcs) with no free bytes_in_word parameter - the canonical panBytesInWord width = n2w(width/8) is used internally; HOL's dropWhile Named lookup is inlined as an equivalent structural scan rendering the lexicographic (LENGTH stcs, shape_size) measure; direct HOL rows mem_load_def_one_hit/one_miss/comb_pair/named_found/named_missing)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "eval_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "evalHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; width-indexed over BitVec width with [NeZero width] and [LawfulBEq String], HOL-shaped PanSemHolState, reuses tagged panMemLoadHOL/panMemLoad32HOL/panMemLoadByteHOL/wordOpHOL/wordShiftHOL/wordCmpHOL/isWfShapeHOL/panOpHOL/holShapeOf/holValueIsWord/panBytesInWord; NStruct field-name equality is propositional list equality and the field-shape check is panShapeMatches whose truth equals HOL shape equality by panShapeMatches_eq_true; direct HOL rows incl. nstruct_ok/shape_mismatch/name_mismatch/missing in scripts/hol-probes/pan_sem_state_eval_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "shape_of_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "holShapeOf",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; shape_of over the width-indexed HolValue carrier, clause-for-clause identical to the tagged panSemShapeOf (Val/RStruct/NStruct -> One/Comb/Named); structural termination; [NeZero width] matching HOL positive dimindex)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "lookup_code_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/LookupCode.lean",
-    "lean_name": "panSemLookupCodeHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed lookup_code_def port over the HOL finite-map function carrier: FLOOKUP, duplicate-free formal names, recursive shape_of argument relation, and FEMPTY |++ ZIP output with body and return shape; lawful String equality makes the Boolean Shape equality exact; direct HOL-EVAL cases nonempty/missing/arity/shape/duplicate are in pan_sem_lookup_code_probe.out)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "isValWord_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
-    "lean_name": "holValueIsWord",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; isValWord over HolValue: ValWord -> true, all other constructors -> false, matching HOL isValWord_def; [NeZero width] matching HOL positive dimindex)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "isWord_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "isWordHOL",
@@ -9228,6 +9084,102 @@
     "hol_name": "MAP_FST_compile",
     "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
     "lean_name": "map_fst_compile",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_outcome",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiOutcome",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle_result",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracleResult",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "shmem_op",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolShmemOp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffiname",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiName",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle_function",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracleFunction",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracle",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "io_event",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolIoEvent",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "final_event",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFinalEvent",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_state",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiState",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "initial_ffi_state_def",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "initialHolFfiState",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_result",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiResult",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "call_FFI_def",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "callFFIHOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   }

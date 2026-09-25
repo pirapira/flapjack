@@ -214,9 +214,10 @@ that HOL accepts address zero and rejects address one; `byte_align_width1_addres
 records the source `byte_align` definition at that carrier width. The tagged
 Lean `panMemLoad32HOL` states the equivalent modulo-four guard directly; the
 matching Lean fixture checks that address zero returns `0x00010001` and address
-one returns `none`. HOL EVAL leaves the width-one pack as `get_byte`/shift/
-concatenation operations; the adjacent equality row records that expression
-against `0x00010001w`, while the Lean check fully computes the tagged result.
+one returns `none`. HOL EVAL leaves the raw width-one pack in
+`get_byte`/shift/concatenation form; a direct HOL simplifier/evaluator pass
+proves that expression equals `0x00010001w`. The Lean check computes the same
+tagged result.
 Direct `word_of_bytes` rows pin the four-byte
 little-endian and big-endian packs to `0x44332211` and `0x11223344`; the Lean
 fixture checks the same `RiscV.panRiscVWordOfBytes` results. The probe driver

@@ -44,11 +44,7 @@ load32_aligned_width1_address0=SOME
     (w2w (w2w (1w ⋙ (8 * (0 MOD 0)))) ≪ 16 ‖
      (w2w (w2w (1w ⋙ (8 * (1 MOD 0)))) ≪ 24 ‖ 0w) && 0xFF00FFFFw) &&
     0xFFFF00FFw) && 0xFFFFFF00w)
-load32_aligned_width1_address0_equals_expected=w2w (w2w (1w ⋙ (8 * (0 MOD 0)))) ‖
-(w2w (w2w (1w ⋙ (8 * (1 MOD 0)))) ≪ 8 ‖
- (w2w (w2w (1w ⋙ (8 * (0 MOD 0)))) ≪ 16 ‖
-  (w2w (w2w (1w ⋙ (8 * (1 MOD 0)))) ≪ 24 ‖ 0w) && 0xFF00FFFFw) && 0xFFFF00FFw) &&
-0xFFFFFF00w = 0x10001w
+load32_aligned_width1_address0_equals_expected=T
 aligned_width1_address0=T
 aligned_width1_address1=F
 byte_align_width1_address1=n2w

@@ -2,6 +2,7 @@
 load "bossLib";
 load "preamble";
 load "panSemTheory";
+load "wordsLib";
 open bossLib;
 open HolKernel Parse;
 open preamble;
@@ -16,6 +17,20 @@ fun print_thm label th =
 fun print_eval label q =
   let
     val th = EVAL q
+  in
+    print (label ^ "=");
+    print_term (rconc th);
+    print "\n"
+  end
+
+fun print_simp label rewrites q =
+  let
+    val ss = srw_ss() ++ ARITH_ss ++ wordsLib.WORD_BIT_EQ_ss
+    val rules = rewrites @ [arithmeticTheory.MOD_0, markerTheory.Abbrev_def]
+    val th0 = SIMP_CONV ss rules q
+    val th1 = EVAL (rconc th0)
+    val th2 = SIMP_CONV ss rules (rconc th1)
+    val th = EVAL (rconc th2)
   in
     print (label ^ "=");
     print_term (rconc th);
@@ -64,7 +79,12 @@ val _ = print_eval "load32_unaligned_width1_address1"
 val _ = print_eval "load32_aligned_width1_address0"
   ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
       UNIV F (0w : 1 word)``
-val _ = print_eval "load32_aligned_width1_address0_equals_expected"
+val _ = print_simp "load32_aligned_width1_address0_equals_expected"
+  [panSemTheory.mem_load_32_def, alignmentTheory.aligned_def,
+   alignmentTheory.byte_align_def, alignmentTheory.align_def,
+   byteTheory.get_byte_def, byteTheory.byte_index_def,
+   byteTheory.word_of_bytes_def, byteTheory.set_byte_bit_field_insert,
+   arithmeticTheory.MOD_0]
   ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
       UNIV F (0w : 1 word) = SOME (0x00010001w : word32)``
 val _ = print_eval "aligned_width1_address0"

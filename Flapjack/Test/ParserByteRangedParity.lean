@@ -366,5 +366,28 @@ example (message : String) :
       (Flapjack.Parser.P.fail (α := Flapjack.Parser.P.Trees) message) :=
   Flapjack.Parser.PTreesSafe.fail message
 
+/-- The full expression grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) :=
+  Flapjack.Parser.gExp_treesSafe fuel
+
+/-- `EBaseNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gEBase fuel) :=
+  Flapjack.Parser.gEBase_treesSafe fuel
+
+/-- `ArgListNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  Flapjack.Parser.gArgList_treesSafe fuel
+
+/-- `NmdStructNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gNmdStruct fuel) :=
+  Flapjack.Parser.gNmdStruct_treesSafe fuel
+
+/-- The whole second grammar block is tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExp fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gArgList fuel) :=
+  ⟨(Flapjack.Parser.grammarBlock2_treesSafe fuel).1,
+    Flapjack.Parser.gArgList_treesSafe fuel⟩
+
 
 end Flapjack.Test.ParserByteRangedParity

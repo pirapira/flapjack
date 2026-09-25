@@ -321,12 +321,26 @@ theorem flookup_setCrepHolGlobals_locals {α σ : Type}
     FLOOKUP (setCrepHolGlobals gv w s).locals n = FLOOKUP s.locals n :=
   rfl
 
-/-- Width-specialized analogue of Cake `crepProps$FLOOKUP_set_globals`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:297`). Its word payload is
-    `BitVec width`, but `CrepHolState.code` is keyed by `FunName = String`
-    and stores `CrepProg`, whose function names are also `String`; HOL's state
-    uses `funname = mlstring` and an `mlstring`-bearing program. The state
-    carrier therefore differs, so this lemma is intentionally untagged. -/
+/-- Flapjack width-specialized analogue of Cake `crepProps$FLOOKUP_set_globals`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:297-301`), kept untagged with
+    status `documented_mismatch` under audit bead `flapjack-dlc.101`.
+    The HOL equation `FLOOKUP (set_globals gv w s).locals n = FLOOKUP s.locals n`
+    holds pointwise here (`rfl`), because `setCrepHolGlobalsW` updates only the
+    `globals` component, exactly as HOL's `set_globals_def` does
+    (crepSemScript.sml:61-63). The mismatch is the quantified whole-state carrier:
+    `CrepHolState (BitVec width)` stores `locals`/`globals`/`code` as unrestricted
+    `Nat -> Option`, `BitVec 5 -> Option` and `FunName -> Option` functions that
+    admit infinite support, a strict superset of HOL's finite maps, and `code` is
+    keyed by `FunName = String` rather than `funname = mlstring`
+    (crepSemScript.sml:19-32). Because the quantifier ranges over a whole state,
+    `names_as_string` cannot qualify the identifier and no `NameRanged` byte
+    witness applies. The underlying update boundary is pinned directly by the
+    `set_globals_direct=(SOME (Word 22w),SOME (Word 7w),NONE)` row of
+    `scripts/hol-probes/crep_store_global_probe.out` (writing global `4w` leaves
+    local lookups `3` and `9` unchanged) and sampled by
+    `Flapjack/Test/CrepGlobalShapeParity.lean:110-116`. Restoring the tag depends
+    on the exact finite-support Crep carrier tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
 theorem flookup_setCrepHolGlobals_localsW {width : Nat} [NeZero width] {σ : Type}
     (gv : BitVec 5) (w : PanWordLab (BitVec width))
     (s : CrepHolState (BitVec width) σ) (n : Nat) :
@@ -518,19 +532,65 @@ theorem loadGlobals_crepExpVars_emptyW {width : Nat} [NeZero width]
     (loadGlobalsW (width := width) address count).flatMap crepExpVarsW = [] :=
   loadGlobals_crepExpVars_empty address count
 
-/-! The following program-level statements are useful width-specialized
-    analogues, but remain untagged because their `CrepProg` carrier includes
-    String-backed function names; exact HOL `prog` uses `mlstring` names. -/
+/-- Flapjack width-specialized analogue of Cake
+    `crepProps$assigned_free_vars_store_globals_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:458-465`), kept untagged with
+    status `documented_mismatch` under audit bead `flapjack-dlc.103`.
+    HOL proves `!es ad. assigned_free_vars (nested_seq (store_globals ad es)) = []`;
+    the Lean equation over `crepNestedSeqW`/`storeGlobalsW` matches it
+    pointwise, since `storeGlobals` builds only `StoreGlob` programs, whose
+    `assigned_free_vars` clause is empty (crepLangScript.sml:149-162). The
+    mismatch is the imported programme carrier: HOL's `crepLang$prog` embeds
+    `funname = mlstring` in `Call`/`ExtCall`, while Lean's `CrepProg` embeds
+    `FunName = String`; because the quantifier ranges over a `CrepProg`, its
+    function names can differ from HOL's and no `mlstring` identifier exists for
+    `names_as_string`, nor a `NameRanged` byte witness. The `store_globals` list
+    shape is pinned by `empty`/`one`/`two` rows of
+    `scripts/hol-probes/crep_store_globals_probe.out` and sampled by
+    `Flapjack/Test/CrepAssignedVarsParity.lean:84-86,108-111`. Restoring the tag
+    depends on the exact mlstring-carrier port `flapjack-pxn.18.3.5.8.8`. -/
 theorem crepAssignedFreeVars_nestedSeq_storeGlobalsW {width : Nat} [NeZero width]
     (address : BitVec 5) (values : List (CrepExp (BitVec width))) :
     crepAssignedFreeVarsW (crepNestedSeqW (storeGlobalsW address values)) = [] :=
   crepAssignedFreeVars_nestedSeq_storeGlobals address values
 
+/-- Flapjack width-specialized analogue of Cake
+    `crepProps$assigned_vars_store_globals_empty`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:449-456`), kept untagged with
+    status `documented_mismatch` under audit bead `flapjack-dlc.104`.
+    HOL proves `!es ad. assigned_vars (nested_seq (store_globals ad es)) = []`;
+    the Lean equation over `crepNestedSeqW`/`storeGlobalsW` matches it pointwise,
+    since `storeGlobals` builds only `StoreGlob` programs, whose `assigned_vars`
+    clause is empty. The mismatch is the imported programme carrier: HOL's
+    `crepLang$prog` embeds `funname = mlstring` in `Call`/`ExtCall`, while Lean's
+    `CrepProg` embeds `FunName = String`, so the quantified programmes need not
+    agree and no `mlstring` identifier or `NameRanged` byte witness is available.
+    The `store_globals` list shape is pinned by
+    `scripts/hol-probes/crep_store_globals_probe.out` and sampled by
+    `Flapjack/Test/CrepAssignedVarsParity.lean:88-90,111`. Restoring the tag
+    depends on the exact mlstring-carrier port `flapjack-pxn.18.3.5.8.8`. -/
 theorem crepAssignedVars_nestedSeq_storeGlobalsW {width : Nat} [NeZero width]
     (address : BitVec 5) (values : List (CrepExp (BitVec width))) :
     crepAssignedVarsW (crepNestedSeqW (storeGlobalsW address values)) = [] :=
   crepAssignedVars_nestedSeq_storeGlobals address values
 
+/-- Flapjack width-specialized analogue of Cake
+    `crepProps$assigned_free_vars_IMP_assigned_vars`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:373-378`), kept untagged with
+    status `documented_mismatch` under audit bead `flapjack-dlc.102`.
+    HOL proves `!prog x. MEM x (assigned_free_vars prog) ==> MEM x (assigned_vars prog)`;
+    the Lean implication over `crepAssignedFreeVarsW`/`crepAssignedVarsW` matches
+    it pointwise. The mismatch is the imported programme carrier: HOL's
+    `crepLang$prog` embeds `funname = mlstring` in `Call`/`ExtCall`, while Lean's
+    `CrepProg` embeds `FunName = String`, so the quantified `prog` ranges over a
+    carrier whose function names can differ from HOL's. The quantifiers are a
+    whole `CrepProg` and a `varname = num` name, so no `mlstring` identifier
+    exists for `names_as_string`, and no `NameRanged` byte witness applies.
+    Direct HOL rows `imp_mem=T` and `imp_mem_absent=T` are in
+    `scripts/hol-probes/crep_assigned_vars_probe.out` (probe header cites
+    crepPropsScript.sml:373) and sampled by
+    `Flapjack/Test/CrepAssignedVarsParity.lean:50-62`. Restoring the tag depends
+    on the exact mlstring-carrier port `flapjack-pxn.18.3.5.8.8`. -/
 theorem mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW {width : Nat} [NeZero width]
     (program : CrepProg (BitVec width)) (name : Nat)
     (h : name ∈ crepAssignedFreeVarsW program) : name ∈ crepAssignedVarsW program :=

@@ -5,7 +5,7 @@ import Flapjack.Compiler.Backend.LabProps
 
 Regression for the concrete configuration instantiation in
 `Flapjack/Compiler/Backend/LabProps.lean` (`asmConfigChecks`,
-`lineOkPreConfig`, `secOkPreConfig`, `allEncOkPreConfig`). The nine guards
+`lineOkPreConfig`, `secOkPreConfig`, `allEncOkPreConfig`). The fourteen guards
 below mirror the direct HOL `EVAL` rows in
 `scripts/hol-probes/lab_props_line_ok_pre_probe.out` at an 8-bit
 configuration identical to the probe fixture. -/
@@ -50,6 +50,9 @@ private def asmBadRegLine : L := .asm (.asmi (.inst (.const 9 (w8 0)))) [] 0
 
 private def secOk : Section L := { sectionId := 0, lines := [asmSkipLine] }
 private def secBad : Section L := { sectionId := 0, lines := [asmBadRegLine] }
+private def secEmpty : Section L := { sectionId := 0, lines := [] }
+private def secLabel : Section L := { sectionId := 0, lines := [labelLine] }
+private def secOk2 : Section L := { sectionId := 1, lines := [asmSkipLine] }
 
 example : lineOkPreConfig cfg8 asmSkipLine = true := by decide
 example : lineOkPreConfig cfg8 asmCbwLine = true := by decide
@@ -58,6 +61,11 @@ example : lineOkPreConfig cfg8 labAsmHaltLine = true := by decide
 example : lineOkPreConfig cfg8 asmBadRegLine = false := by decide
 example : allEncOkPreConfig cfg8 [secOk] = true := by decide
 example : allEncOkPreConfig cfg8 [secBad] = false := by decide
+example : secOkPreConfig cfg8 secOk = true := by decide
+example : secOkPreConfig cfg8 secBad = false := by decide
+example : secOkPreConfig cfg8 secEmpty = true := by decide
+example : allEncOkPreConfig cfg8 [secLabel, secOk2] = true := by decide
+example : allEncOkPreConfig cfg8 ([] : List (Section L)) = true := by decide
 example : cbwToAsm (asmConfigChecks cfg8) (.cbw 1 2) =
     (.inst (.mem .store8 2 (.addr 1 0)) : AsmData 8) := rfl
 example : cbwToAsm (asmConfigChecks cfg8) (.shareMem .load 4 (.addr 5 0)) =
@@ -172,12 +180,17 @@ def runChecks : IO Bool := do
     , decide (lineOkPreConfig cfg8 asmBadRegLine = false)
     , decide (allEncOkPreConfig cfg8 [secOk] = true)
     , decide (allEncOkPreConfig cfg8 [secBad] = false)
+    , decide (secOkPreConfig cfg8 secOk = true)
+    , decide (secOkPreConfig cfg8 secBad = false)
+    , decide (secOkPreConfig cfg8 secEmpty = true)
+    , decide (allEncOkPreConfig cfg8 [secLabel, secOk2] = true)
+    , decide (allEncOkPreConfig cfg8 ([] : List (Section L)) = true)
     , cbwRowOk (.cbw 1 2)
     , cbwRowOk (.shareMem .load 4 (.addr 5 0))
     ]
   let ok := guards.all id
   if ok then
-    IO.println "PASS labProps line_ok_pre/all_enc_ok_pre over concrete AsmConfig match all 9 oracle rows"
+    IO.println "PASS labProps line_ok_pre/all_enc_ok_pre over concrete AsmConfig match all 14 oracle rows"
   else
     IO.println "FAIL labProps line_ok_pre/all_enc_ok_pre over concrete AsmConfig"
   pure ok

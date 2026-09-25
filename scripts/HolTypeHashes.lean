@@ -50,6 +50,7 @@ import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.Primop
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.WordLang
 import Flapjack.Pancake.WordConvs
 import Flapjack.RiscV.CorrectnessEncoding

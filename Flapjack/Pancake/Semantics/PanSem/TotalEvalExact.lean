@@ -17,10 +17,11 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 `Return`, `Raise`, `Tick`, `ExtCall`, and `Annot`.
 
 The outer `Option` means that a constructor has no assembled clause in this
-fragment; it is distinct from the inner HOL result option. `Dec`, `Seq`, `If`,
-and `While` remain open here. A separate exact-state recursive Call/DecCall
-slice follows below. This file still does not claim the complete recursive HOL
-`evaluate_def` and has no `@[hol]` tag.
+fragment; it is distinct from the inner HOL result option. The nonrecursive
+dispatcher leaves `Dec`, `Seq`, `If`, `While`, `Call`, and `DecCall` open. The
+recursive evaluator below assembles `Dec`, `Seq`, `If`, `Call`, and `DecCall`;
+`While` and other unsupported clauses remain explicit gaps. This file does
+not claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
 
 namespace Flapjack
@@ -101,11 +102,12 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
       rw [hshared]
       exact context.shMemaddrsDecidable address }
 
-/-- Exact recursive Seq/Call/DecCall evaluator over the state-owned HOL code map.
+/-- Exact recursive Dec/Seq/If/Call/DecCall evaluator over the state-owned HOL code map.
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
-    results. `If` selects and recursively evaluates one branch. `Dec`, `Assign`,
+    results. `If` selects and recursively evaluates one branch. `Dec` installs
+    its binding for the body and restores the prior local afterwards. `Assign`,
     `Primitive`, stores, `While`, `ExtCall`, and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
@@ -116,7 +118,21 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
       letI : DecidablePred state.memaddrs := context.memaddrsDecidable
       letI : DecidablePred state.shMemaddrs := context.shMemaddrsDecidable
       exact match program with
-      | .dec _ _ _ _ => none
+      | .dec name shape initializer body =>
+          match evalHOLExact state initializer with
+          | none => some (some .error, context)
+          | some value =>
+              if shapeEqHOL shape (shapeOfHOLExact value) then
+                let bodyState := setVarHOLExact name value state
+                let bodyContext := context.withState bodyState rfl rfl
+                match evalPanSemRecursiveCallContextHOLExact body bodyContext with
+                | none => none
+                | some (result, postContext) =>
+                    let restored := { postContext.state with
+                      locals := resVarHOLExact postContext.state.locals
+                        (name, state.locals name) }
+                    some (result, postContext.withState restored rfl rfl)
+              else some (some .error, context)
       | .seq first second =>
           match evalPanSemRecursiveCallContextHOLExact first context with
           | none => none
@@ -285,12 +301,16 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               else
                 some (none, context.withState (decClockHOLExact state) rfl rfl)
           | .annot _ _ => some (none, context)
-          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
-            .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
+          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ | .store32 _ _ |
+            .storeByte _ _ | .seq _ _ | .ite _ _ _ |
             .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ | .extCall _ _ _ _ _ |
             .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none
 termination_by _program context => (context.state.clock, sizeOf _program)
 decreasing_by
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
   · simp_wf
     apply Prod.Lex.right
     simp_wf

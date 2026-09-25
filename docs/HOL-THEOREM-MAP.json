@@ -4345,11 +4345,27 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "word_lab",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "HolWordLab",
+    "hol_name": "v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "ValueHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
+    "reviewer": "Codex (source comparison; HOL Datatype v (panSemScript.sml:22) has Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list) with stcname/fldname = mlstring; ValueHOL has the same constructor arities 1/1/2 and field types HolWordLab width, List (ValueHOL width), List (MlStringHOL x ValueHOL width); no String anywhere; production String-backed PanValue stays untagged); carrier is positive-width via [NeZero width] on the inductive, matching HOL positive dimindex"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "flatten_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "flattenHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL flatten (panSemScript.sml:388) clauses Val -> [w], RStruct vs -> FLAT (MAP flatten vs), NStruct nm flds -> FLAT (MAP flatten (MAP SND flds)) reproduced over the exact ValueHOL carrier; direct HOL rows word/record/named in pan_flatten_probe.out reproduced by PanSemValueHOLParity); positive-width carrier via [NeZero width] on ValueHOL and flattenHOL"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "panPrimopHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL pan_primop (panSemScript.sml:196) AddCarry with LENGTH args = 3 and EVERY isValWord -> theValWord fields and word_add_carry -> SOME (RStruct [ValWord res; ValWord co]) else NONE, over the exact ValueHOL carrier; isValWord is automatic for the one-constructor word_lab carrier so the triple .val (.word _) pattern is the exact rendering; direct HOL rows pan_primop_basic/overflow/carry_is_bit/wrong_length/non_word in pan_sem_pan_primop_probe.out reproduced by PanSemValueHOLParity); positive-width carrier via [NeZero width]"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4412,8 +4428,8 @@
     "hol_name": "pan_primop_crep_primop",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/Primop.lean",
     "lean_name": "panPrimopCrepPrimop",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (original premise/conclusion shape and shared word_add_carry cases)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-deepseek-two (tag withdrawn: stated over production PanValue whose nStruct names are FieldName=String while HOL panSem$v uses fldname=mlstring; dependencies panPrimopHOL/panSemFlattenHOL were withdrawn under flapjack-0lj.3; exact MlString carrier tracked by flapjack-pxn.18.3.5.8 / flapjack-0lj)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4532,16 +4548,16 @@
     "hol_name": "is_wf_shape_nil_length_flatten",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "isWfShapeNil_length_flatten",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "flatten_nil_no_size",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "flattenNilNoSize",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source comparison) Flapjack-specific source-shaped port over String-keyed PanValue; not an exact HOL mlstring-carrier port (flapjack-pxn.18.3.5.8 / flapjack-0lj.7)."
   },
   {
     "hol_path": null,
@@ -5438,14 +5454,6 @@
     "lean_name": "panValueFldsOk_append",
     "statement_status": "reviewed_exact",
     "reviewer": "The HOL implication over ctxt, v, and the theorem's pfx is preserved over StructContextHOL: Bool-valued v_flds_ok is panValueFldsOk, ALL_DISTINCT (MAP FST pfx ++ MAP FST ctxt) is List.Nodup on the corresponding mapped keys, and lawful String BEq reflects HOL equality for first-match ALOOKUP. The direct original-HOL EVAL fixture includes a nonempty prefix and nested named value."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-    "hol_name": "is_wf_shape_v_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
-    "lean_name": "panIsWfShapeValueHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL clauses reproduced literally over the HOL-shaped StructContextHOL: scalar T, RStruct EVERY, NStruct as (lookupInfo name context).isSome (the Bool rendering of ALOOKUP sctxt nm <> NONE under [LawfulBEq String] first-match alist lookup) conjoined with panIsWfShapeValuesHOL context (fields.map Prod.snd), i.e. EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs); well-founded recursion justified by panSizeOfMapSndLe; direct original-HOL rows in scripts/hol-probes/pan_structs_value_validity_probe.out match, including the field-name-ignoring named_mismatch row)"
   },
   {
     "hol_path": null,
@@ -9078,5 +9086,13 @@
     "lean_name": "callFFIHOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  }
+  },
+{
+  "hol_path": "cakeml/pancake/panLangScript.sml",
+  "hol_name": "size_of_sh_with_ctxt_def",
+  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+  "lean_name": "sizeOfShapeWithContextHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

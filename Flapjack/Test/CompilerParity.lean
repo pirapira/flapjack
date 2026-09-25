@@ -219,6 +219,7 @@ import Flapjack.Test.PanSemSeqParity
 import Flapjack.Test.PanSemTotalParity
 import Flapjack.Test.PanSemTotalStepsParity
 import Flapjack.Test.PanRiscVByteAlignParity
+import Flapjack.Test.PanSemValueHOLParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseExactParity
@@ -348,6 +349,7 @@ import Flapjack.Test.WordSimpSeqAssocParity
 import Flapjack.Test.RiscVFarTransferParity
 import Flapjack.Test.FfiHOLParity
 import Flapjack.Test.FfiBridgeParity
+import Flapjack.Test.PanLangShapeSizeWithContextParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -858,6 +860,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSemTotalParity.runChecks,
     Flapjack.Test.PanSemTotalStepsParity.runChecks,
     Flapjack.Test.PanRiscVByteAlignParity.runChecks,
+    Flapjack.Test.PanSemValueHOLParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
@@ -963,6 +966,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.FfiBridgeParity.runChecks,
     Flapjack.Test.CrepSemTotalStoreParity.runChecks,
     Flapjack.Test.CrepSemTotalShMemParity.runChecks,
+    Flapjack.Test.PanLangShapeSizeWithContextParity.runChecks,
     Flapjack.Test.CrepSemTotalExtCallParity.runChecks
     ].mapM id
   unless results.all id do

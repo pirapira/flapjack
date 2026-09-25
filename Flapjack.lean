@@ -51,6 +51,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSem.TotalMeasureIf
 import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics
@@ -90,6 +91,7 @@ import Flapjack.Tests
 import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
 import Flapjack.Parser.ByteRanged
+import Flapjack.Parser.ConversionByteRanged
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.CrepLang.Prog

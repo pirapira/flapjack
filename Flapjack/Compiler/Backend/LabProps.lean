@@ -136,7 +136,19 @@ theorem cbwToAsm_asmConfigChecks {width : Nat}
       | .shareMem operator register address => .inst (.mem operator register address) := by
   cases instruction <;> rfl
 
-/-- HOL `labProps$line_ok_pre_def` over a concrete assembler configuration. -/
+/-! HOL `labProps$line_ok_pre_def` over a concrete assembler configuration.
+
+The exact HOL instantiation is `'a labLang$line` at `'a = BitVec width`, whose
+carrier is `Line (AsmOrCbw (AsmData width) WordMemOp (WordLangAddr (BitVec
+width))) (AsmWithLab Cmp (HolRegImm width) MlString) (BitVec width)`:
+`AsmData width` is the tagged `asm` port, `WordMemOp` the eight-constructor
+`asm$memop`, `WordLangAddr (BitVec width)` HOL `addr`, `HolRegImm width` HOL
+`reg_imm`, and the message type is the exact `MlString`. Because this definition
+is generic in `RegImm`/`MlString`, an all-instantiations `@[hol]` tag would
+over-claim; the tag is deliberately withheld pending review (bead
+`flapjack-pxn.18.5.15.9.5.5`). `secOkPreConfig`/`allEncOkPreConfig`.
+Direct HOL `EVAL` rows: `scripts/hol-probes/lab_props_line_ok_pre_probe.out`
+(14 rows); Lean fixtures: `Flapjack/Test/LabPropsLineOkPreParity.lean`. -/
 def lineOkPreConfig {width : Nat} {RegImm MlString : Type}
     (config : Flapjack.Compiler.Encoders.Asm.AsmConfig width)
     (line : Line (AsmOrCbw (Flapjack.Compiler.Encoders.Asm.AsmData width)

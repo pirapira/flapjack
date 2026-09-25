@@ -121,6 +121,19 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/PanSem.lean", "HolWordLab"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "word_lab",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.1; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL panSem$word_lab "
+        "(panSemScript.sml:16) is Word ('a word), one constructor wrapping a word "
+        "payload. HolWordLab (PanSem.lean:86) has the same single constructor .word "
+        "with payload BitVec width, but its binder is (width : Nat) and so admits "
+        "width = 0, an instance HOL's positive dimindex has no counterpart for. "
+        "The @[hol] tag stays withheld until [NeZero width] can be added by "
+        "flapjack-0lj.5. HolWordLab.toPanWordLab / PanWordLab.toHolWordLab are "
+        "Flapjack-specific isomorphisms. "
+    ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "localised_prog_def",

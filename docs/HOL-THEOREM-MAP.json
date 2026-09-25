@@ -5022,8 +5022,8 @@
     "hol_name": "tlc_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlc",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds3 (bead flapjack-4ac.5.37) Tag withdrawn: HOL `tlc_def` (pan_to_crepProofScript.sml:2317-2319) returns a finite map to `'a word_lab` (`FEMPTY |++ ZIP (ns, FLAT (MAP flatten args))` with `flatten : 'a v -> 'a word_lab list`), while Lean `tlc` returns `FiniteMap Nat α`, i.e. the raw word payload `α` with the `PanWordLab.word` wrapper dropped; `PanValue` is explicitly not statement-exact (its `.word` stores `α` while HOL `v` stores `'a word_lab`). The keys (`Nat` vs `num`) agree, but the element carrier is a genuine mismatch that no qualifier (`names_as_string`/`list_as_array`) authorizes. The untagged `tlcWordLab` (same file) is the `PanWordLab`-carrying analogue; a faithful exact port over the exact word_lab/MlString carriers is tracked by `flapjack-0lj` (word_lab) and `flapjack-pxn.18.3.5.8` (MlString). Same-file sibling `slc` is untagged for the String-vs-mlstring key mismatch (bead flapjack-4ac.5.36); untagged non-Proofs defs get no manifest entry."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",

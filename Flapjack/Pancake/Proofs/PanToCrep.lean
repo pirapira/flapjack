@@ -949,20 +949,29 @@ theorem ctxtMaxGetElemLe
     names[index] ≤ context.vmax := by
   exact hmax.2 varName shape names hlookup names[index] (List.getElem_mem hindex)
 
-/-- HOL `slc_def`: pair each source parameter name with its argument value,
-    with `ZIP` truncation represented by Lean's `List.zip`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `slc_def` (`pan_to_crepProofScript.sml:2313-2315`):
+    `slc vshs args = FEMPTY |++ ZIP (MAP FST vshs, args)`. -/
+-- FLAPJACK-SPECIFIC (documented mismatch; tag stays withdrawn, bead flapjack-4ac.5.36):
+-- the production `slc` keys by `VarName = String` and stores the raw `PanValue α`
+-- payload, while HOL keys by `varname = mlstring` and stores `'a v` (whose `Val`
+-- constructor carries `'a word_lab`). The `names_as_string` qualifier cannot
+-- authorize the value carrier, and `PanValue` is explicitly not statement-exact
+-- (`.word` stores `α`, not `'a word_lab`). Faithful exact port tracked by
+-- `flapjack-pxn.18.3.5.8` (MlString names) and `flapjack-0lj` (word_lab).
+-- Untagged non-Proofs def, so no theorem-map entry is possible.
 def slc (parameters : List (String × Shape))
     (arguments : List (PanValue α)) : FiniteMap String (PanValue α) :=
   FUPDATE_LIST FEMPTY ((parameters.map Prod.fst).zip arguments)
 
-/-- HOL `tlc_def`: pair target slots with the flattened argument words. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "tlc_def"]
+/-- HOL `tlc_def` (`pan_to_crepProofScript.sml:2317-2319`):
+    `tlc ns args = FEMPTY |++ ZIP (ns, FLAT (MAP flatten args))`. -/
+-- FLAPJACK-SPECIFIC (documented mismatch; tag withdrawn, bead flapjack-4ac.5.37):
+-- HOL `tlc` returns a finite map to `'a word_lab` (`flatten : 'a v -> 'a word_lab list`),
+-- while production `tlc` returns `FiniteMap Nat α`, dropping the `PanWordLab.word`
+-- wrapper (the keys `Nat`/`num` agree). `PanValue` is explicitly not statement-exact
+-- (`.word` stores `α`, not `'a word_lab`), and no qualifier authorizes this element
+-- carrier. The untagged `tlcWordLab` below is the `PanWordLab`-carrying analogue;
+-- a faithful exact port is tracked by `flapjack-0lj` (word_lab) / `flapjack-pxn.18.3.5.8`.
 def tlc (slots : List Nat) (arguments : List (PanValue α)) :
     FiniteMap Nat α :=
   FUPDATE_LIST FEMPTY (slots.zip (arguments.flatMap panValueFlatten))

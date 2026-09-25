@@ -38,6 +38,19 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "tlc_def",
+        "flapjack-ds3 (bead flapjack-4ac.5.37): HOL tlc_def (2317-2319) returns a "
+        "finite map to 'a word_lab (flatten : 'a v -> 'a word_lab list), while Lean "
+        "tlc returns FiniteMap Nat alpha, i.e. the raw word payload with the "
+        "PanWordLab.word wrapper dropped; PanValue is explicitly not statement-exact "
+        "(.word stores alpha, not 'a word_lab). Keys agree (Nat/num) but the element "
+        "carrier mismatch is not authorized by any qualifier. Untagged tlcWordLab is "
+        "the PanWordLab-carrying analogue; faithful port tracked by flapjack-0lj "
+        "(word_lab) and flapjack-pxn.18.3.5.8 (MlString). Same-file slc stays untagged "
+        "for the String-vs-mlstring key mismatch (bead flapjack-4ac.5.36)."
+    ),
     ("Flapjack/Pancake/Semantics/PanSem.lean", "panEmptyLocals"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "empty_locals_def",

@@ -305,11 +305,40 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
 
     Direct HOL rows (`none`/`empty_one`/`one_word`/`comb_empty`/`named`) are in
     `scripts/hol-probes/wrap_rt_probe.out`; Lean parity guards are in
-    `Flapjack/Test/WrapRtParity.lean`. -/
+    `Flapjack/Test/WrapRtParity.lean`.
+
+    The exact `mlstring`-backed port is `wrapRtHOL` in this file (tagged
+    `wrap_rt_def`), and `wrapRtHOL_map_shapeToHOL` relates the two through the
+    `shapeToHOL` codec. -/
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none
   | value => value
+
+/-! Exact HOL-shaped port of `pan_to_crep$wrap_rt`
+    (`cakeml/pancake/pan_to_crepScript.sml:131-136`) over the `mlstring`-backed
+    `ShapeHOL` carrier, so no String/MlString substitution remains: `NONE`
+    stays `NONE`, the empty one-word slot `SOME (One, [])` is normalized to
+    `NONE`, and every other option is returned unchanged. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "wrap_rt_def"]
+def wrapRtHOL : Option (Flapjack.Pancake.PanLang.ShapeHOL × List Nat) → Option (Flapjack.Pancake.PanLang.ShapeHOL × List Nat)
+  | none => none
+  | some (.one, []) => none
+  | value => value
+
+/-! Narrow bridge: the production `wrapRt` (String-named `Shape`) is the
+    `Flapjack.Pancake.PanLang.shapeToHOL` image of the exact port. The codec is applied elementwise and
+    `Flapjack.Pancake.PanLang.shapeToHOL` preserves the `One`/`Comb`/`Named` constructors, so no
+    byte-rangedness hypothesis is needed for this forward direction. -/
+theorem wrapRtHOL_map_shapeToHOL (n : Option (Shape × List Nat)) :
+    wrapRtHOL (n.map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2))) =
+      (wrapRt n).map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2)) := by
+  cases n with
+  | none => rfl
+  | some pair =>
+      obtain ⟨shape, names⟩ := pair
+      cases shape <;> cases names <;>
+        simp [wrapRtHOL, wrapRt, Flapjack.Pancake.PanLang.shapeToHOL]
 
 /-! ## Return-path bridge (Flapjack-only)
 

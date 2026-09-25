@@ -1215,6 +1215,45 @@ theorem evalCrepHolFiniteStateSource_shift
     dimension state.toSourceEvaluatorState operator left right leftValue rightValue
     hLeft hRight
 
+/-- Exact-state, arbitrary-index source support for HOL's local
+`simp_exp_correct1` statement shape. Both the expression words and state words
+use the same `ι → Bool` carrier; the implicit dimension witness is used only
+by the evaluator's word operations. The HOL `mapc` update remains on the exact
+MlString-keyed state, and the proof derives any induction result from the
+original non-NONE premise. This remains untagged until this source evaluator is
+identified with native `crepSem$eval` for the selected `finite_index`. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceWordLab
+    {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
+    (update : MlString × codeEntry → codeEntry)
+    (state : CrepSemHOLFiniteState ι codeEntry σ)
+    (expression : CrepExp (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (state.mapc update).toSourceEvaluatorState
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        expression) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState expression := by
+  obtain ⟨result, _hResult⟩ := Option.ne_none_iff_exists'.mp h
+  let source := state.toSourceEvaluatorState
+  have hSourceUpdate :
+      crepArithHolFiniteDimensionMapCode
+        (fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2)
+        source = source := by
+    cases source with
+    | mk locals globals code memory memaddrs shMemaddrs clock bigEndian ffi
+        baseAddress topAddress =>
+      simp [crepArithHolFiniteDimensionMapCode]
+  have hPreserved := crepSimpExpCorrect1HolFiniteWordSourceWordLab
+    (dimension := dimension)
+    (f := fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2)
+    source expression result h
+  rw [hSourceUpdate] at hPreserved
+  rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
+  exact hPreserved
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

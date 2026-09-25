@@ -26,3 +26,15 @@ val _ = print_eval "lookup_code_valid"
 
 val _ = print_eval "lookup_code_missing"
   ``crepSem$lookup_code ^code (strlit "missing") [] 0``;
+
+(* Arity mismatch: one declared parameter but two supplied arguments. *)
+val _ = print_eval "lookup_code_arity"
+  ``crepSem$lookup_code ^code (strlit "id")
+      [Word (7w : 8 word); Word (8w : 8 word)] 2``;
+
+(* Duplicate declared parameters: ALL_DISTINCT [1;1] is false. *)
+val code_dup = ``(FEMPTY |+ (strlit "dup", ([1;1], crepLang$Skip)))``;
+
+val _ = print_eval "lookup_code_duplicate"
+  ``crepSem$lookup_code ^code_dup (strlit "dup")
+      [Word (7w : 8 word); Word (8w : 8 word)] 2``;

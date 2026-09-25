@@ -442,11 +442,18 @@ def stateOwnedDecCallExceptionRows : Bool :=
   | _ => false
 
 def stateOwnedDecCallControlNegativeRows : Bool :=
+  let skipCase := recursiveExact
+    (.decCall (ml "answer") .one (ml "skip") [] .skip) (callControlState 10)
+  let breakCase := recursiveExact
+    (.decCall (ml "answer") .one (ml "break") [] .skip) (callControlState 10)
   let continueCase := recursiveExact
     (.decCall (ml "answer") .one (ml "continue") [] .skip) (callControlState 10)
-  match continueCase with
-  | some (some .error, post) => post.clock == 9 && (post.locals (ml "x")).isNone
-  | _ => false
+  let isErrorWithCalleeState result :=
+    match result with
+    | some (some .error, post) => post.clock == 9 && (post.locals (ml "x")).isNone
+    | _ => false
+  isErrorWithCalleeState skipCase && isErrorWithCalleeState breakCase &&
+    isErrorWithCalleeState continueCase
 
 def stateOwnedLookupErrorRows : Bool :=
   let missingCall := recursiveExact (.call none (ml "missing") []) baseState
@@ -597,8 +604,8 @@ def runChecks : IO Bool := do
     IO.println "PASS exact-state recursive DecCall propagates callee exceptions and clears locals"
   else IO.println "FAIL exact-state recursive DecCall propagates callee exceptions and clears locals"
   if stateOwnedDecCallControlNegativeRows then
-    IO.println "PASS exact-state recursive DecCall maps callee Continue to Error with callee state"
-  else IO.println "FAIL exact-state recursive DecCall maps callee Continue to Error with callee state"
+    IO.println "PASS exact-state recursive DecCall maps callee Skip/Break/Continue to Error with callee state"
+  else IO.println "FAIL exact-state recursive DecCall maps callee Skip/Break/Continue to Error with callee state"
   if stateOwnedTimeoutRows then
     IO.println "PASS exact-state recursive Call/DecCall timeout clocks match original HOL"
   else IO.println "FAIL exact-state recursive Call/DecCall timeout clocks match original HOL"

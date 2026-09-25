@@ -64,10 +64,12 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
 }
+# An untagged documented mismatch may be a definition-like declaration or a
+# theorem/lemma whose carrier or statement shape differs from HOL's.
 DEFINITION_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?"
     r"(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
-    r"(?:def|abbrev|opaque)\s+([^\s:({\[]+)"
+    r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
@@ -79,6 +81,147 @@ DOCUMENTED_MISMATCHES = {
         "uses unrestricted Nat-to-Option locals and FunName-to-Option code "
         "functions, unlike HOL finite maps. Keep the tag withdrawn pending "
         "finite-support state carrier flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedVars_nestedSeq_assign_zipWithW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "nested_seq_assigned_vars_eq",
+        "Codex (source comparison with crepPropsScript.sml:410-415: the list-length "
+        "premise and assigned-variable equation match. The Lean theorem and its "
+        "...W wrapper use production CrepProg, whose Call/ExtCall names are "
+        "String; HOL prog uses mlstring. CrepProgHOL is available, but no "
+        "assigned_vars helper or nested-seq theorem is ported over that exact "
+        "carrier. Existing direct HOL rows check concrete observations, not a "
+        "carrier bridge. Keep this analogue untagged until the exact-carrier "
+        "port is added."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolVarW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_var_def",
+        "Codex (source comparison with crepSemScript.sml:55-57: the clause "
+        "`set_var v w s = s with locals := s.locals |+ (v,w)` matches the "
+        "FUPDATE on the Nat key, and PanWordLab (BitVec width) is the single-Word "
+        "word_lab carrier at positive width. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/code as unrestricted "
+        "Nat-to-Option and FunName-to-Option functions that admit infinite "
+        "support, a strict superset of HOL's finite maps. names_as_string cannot "
+        "authorize that carrier (the key is not an mlstring), and no NameRanged "
+        "byte witness applies to a state result. Direct HOL rows set_var_hit / "
+        "set_var_keeps_other / set_var_fields_preserved are in "
+        "crep_local_updates_probe.out and sampled by the localBase examples in "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:227-269. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "decCrepHolClockW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "dec_clock_def",
+        "Codex (source comparison with crepSemScript.sml:145-148: the clause "
+        "`dec_clock s = s with clock := s.clock - 1` matches the Lean clock "
+        "decrement, and [NeZero width] excludes the invalid zero word dimension. "
+        "However the quantified whole-state carrier CrepHolState (BitVec width) "
+        "stores locals/globals/code as unrestricted Nat-to-Option, "
+        "BitVec-5-to-Option and FunName-to-Option functions that admit infinite "
+        "support, a strict superset of HOL's finite maps (crepSemScript.sml:20-31). "
+        "names_as_string cannot authorize that carrier and no NameRanged byte "
+        "witness applies to a state result. Direct HOL rows dec_clock_clock / "
+        "dec_clock_globals / dec_clock_be / dec_clock_top are in "
+        "crep_dec_clock_simp_probe.out and sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:288-289. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "emptyCrepHolLocalsW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "empty_locals_def",
+        "Codex (source comparison with crepSemScript.sml:71-74: the clause "
+        "`empty_locals s = s with <| locals := FEMPTY |>` matches the Lean "
+        "pointwise locals-clearing step. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/globals/code as "
+        "unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support, a strict superset of HOL's finite "
+        "maps (crepSemScript.sml:20-31). names_as_string cannot authorize that "
+        "carrier and no NameRanged byte witness applies to a state result. Direct "
+        "HOL rows empty_locals_locals / empty_locals_clock / empty_locals_memory "
+        "are in crep_dec_clock_simp_probe.out, and empty_locals_none / "
+        "empty_locals_fields_preserved in crep_local_updates_probe.out; sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:284-285. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "fixCrepHolClock_IMP_LESS_EQW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "fix_clock_IMP_LESS_EQ",
+        "Codex (source comparison with crepSemScript.sml:155-160: the bound "
+        "`fix_clock s x = (res,s1) ==> s1.clock <= s.clock` matches the Lean "
+        "inequality, with HOL's pair variable and implicit res/s1 exposed as the "
+        "explicit step/result/newState binders. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/globals/code as "
+        "unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support, a strict superset of HOL's finite "
+        "maps (crepSemScript.sml:20-31). names_as_string cannot authorize that "
+        "carrier and no NameRanged byte witness applies to a clock inequality. "
+        "Direct HOL rows fix_clock_clamps / fix_clock_keeps_lower are in "
+        "crep_fix_clock_probe.out and sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:307-312. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "decCrepHolClock_simp"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "dec_clock_simp",
+        "Codex (source comparison with crepPropsScript.sml:267-278: the ten field "
+        "equations for the clock decrement match the Lean conjunction clause for "
+        "clause, with HOL be/base_addr/top_addr/sh_memaddrs renamed "
+        "bigEndian/baseAddress/topAddress/shMemaddrs, and [NeZero width] excludes "
+        "the invalid zero word dimension. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/globals/code as "
+        "unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support and String-backed code names, a "
+        "strict superset of HOL's finite mlstring-keyed maps "
+        "(crepSemScript.sml:19-32). names_as_string cannot authorize a whole-state "
+        "carrier and no NameRanged byte witness applies. Direct HOL rows "
+        "dec_clock_clock / dec_clock_globals / dec_clock_be / dec_clock_top are in "
+        "crep_dec_clock_simp_probe.out and sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:601-605. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "emptyCrepHolLocals_simp"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "empty_locals_simp",
+        "Codex (source comparison with crepPropsScript.sml:282-294: the ten field "
+        "equations for clearing locals match the Lean conjunction clause for "
+        "clause, with HOL be/base_addr/top_addr/sh_memaddrs renamed "
+        "bigEndian/baseAddress/topAddress/shMemaddrs. However the quantified "
+        "whole-state carrier CrepHolState (BitVec width) stores locals/globals/code "
+        "as unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support and String-backed code names, a "
+        "strict superset of HOL's finite mlstring-keyed maps "
+        "(crepSemScript.sml:19-32). names_as_string cannot authorize a whole-state "
+        "carrier and no NameRanged byte witness applies. Direct HOL rows "
+        "empty_locals_locals / empty_locals_clock / empty_locals_memory are in "
+        "crep_dec_clock_simp_probe.out, and empty_locals_none / "
+        "empty_locals_fields_preserved in crep_local_updates_probe.out; sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:608-612. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedFreeVars_nestedSeq_assign_zipWithW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "nested_seq_assigned_free_vars_eq",
+        "Codex (source comparison with crepPropsScript.sml:420-427: the equation "
+        "`assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns` under "
+        "LENGTH ns = LENGTH vs matches the Lean zipWith/crepNestedSeqW form "
+        "pointwise. The mismatch is the imported programme carrier: HOL "
+        "crepLang$prog embeds funname = mlstring in Call/ExtCall, while Lean "
+        "CrepProg embeds FunName = String. The quantifiers are varname = num names "
+        "and a List Nat result, so no mlstring identifier exists for "
+        "names_as_string to qualify, and no NameRanged byte witness applies. "
+        "Direct HOL row nested_afv=[1; 2] is in crep_assigned_vars_probe.out "
+        "(probe header cites crepPropsScript.sml:420) and the equation is sampled "
+        "by Flapjack/Test/CrepAssignedVarsParity.lean:103-107. Keep the tag "
+        "withdrawn pending the exact mlstring-carrier port "
+        "flapjack-pxn.18.3.5.8.8."
     ),
 }
 VALID_STATUSES = {
@@ -161,11 +304,14 @@ def strip_comments(text: str) -> str:
 
 
 def lean_definition_exists(root: Path, lean_path: str, lean_name: str) -> bool:
-    """Check that a registered untagged mismatch still names a Lean definition."""
-    source = (root / lean_path).read_text(encoding="utf-8")
+    """Check that a registered untagged mismatch names a Lean declaration."""
+    source = strip_comments((root / lean_path).read_text(encoding="utf-8"))
     return any(
-        (match := DEFINITION_RE.match(line)) and match.group(1) == lean_name
-        for line in strip_comments(source).splitlines()
+        (match := DATA_DECLARATION_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
+    ) or any(
+        (match := THEOREM_RE.match(line)) and match.group(1) == lean_name
+        for line in source.splitlines()
     )
 
 
@@ -264,7 +410,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
 
     for (lean_path, lean_name), (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
         if not lean_definition_exists(root, lean_path, lean_name):
-            raise ValueError(f"documented mismatch is not a current definition: {lean_path}:{lean_name}")
+            raise ValueError(f"documented mismatch is not a current declaration: {lean_path}:{lean_name}")
         inventory[(lean_path, lean_name)] = {
             "hol_path": hol_path,
             "hol_name": hol_name,

@@ -2,12 +2,11 @@ import Flapjack.HolRef
 import Flapjack.Pancake.CrepArith
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.CrepSem.Eval
+import Flapjack.Pancake.Proofs.CrepArith.ExactStateProjection
 
 /-! Theorem counterparts and Flapjack support for CakeML's
-    `crep_arithProofScript.sml`. The tagged `dest_const_def` and
-    `dest_const_thm` statements use the canonical positive-width HOL word
-    carrier `Fin width → Bool`, with `[NeZero width]`. They do not quantify
-    over arbitrary value carriers or arbitrary finite-index types. Separate
+    `crep_arithProofScript.sml`. The tagged `dest_const_thm` uses the exact
+    width-indexed `CrepExpHOL` carrier with `[NeZero width]`. Separate
     untagged helpers support explicit `HolFiniteDimension` transports and
     executable RISC-V `BitVec` arithmetic. -/
 
@@ -177,30 +176,28 @@ private theorem crepMulConst_holFiniteDimension {ι : Type}
 /-- Generic Flapjack support lemma: a successful destination test identifies
     the expression as exactly that constant. This is not tagged as HOL's
     `dest_const_thm`, whose expression and value are restricted to the HOL
-    word type. The faithful positive-width word specialization is tagged below;
-    this arbitrary-carrier helper remains untagged for the local simp proof. -/
+    word type. This arbitrary-carrier helper remains untagged for the local
+    simp proof. -/
 theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     (value : α)
     (h : crepDestConst expression = some value) :
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Width-specialized word form of CakeML's `dest_const_thm`
-    (`crep_arithProofScript.sml:64`). The carrier is `Fin width → Bool` and
-    `NeZero width` supplies HOL's nonempty finite-index condition. The
-    arbitrary-carrier production helper remains untagged.
-
-    Type-convention note (see the direct HOL rows `word_carrier_bool`,
-    `dimindex_8`, `dimindex_pos` in
-    `scripts/hol-probes/crep_arith_dest_const_probe.out`): HOL `'a word` is
-    literally the finite boolean function space `bool[dimindex(:'a)]`, and
-    `dimindex` is always positive. Instantiating the HOL index type at
-    cardinality `width` therefore yields exactly the Lean carrier
-    `Fin width → Bool`, and `[NeZero width]` encodes `dimindex > 0`; no HOL word
-    dimension lies outside this family, so the width-indexed statement is the
-    exact HOL theorem, not a specialization. The paired Lean fixture lives in
-    `Flapjack/Test/CrepeDestConstParity.lean`. -/
+/-- Exact width-indexed port of CakeML's `dest_const_thm`
+    (`crep_arithProofScript.sml:64`) over HOL's expression carrier
+    `CrepExpHOL`. `[NeZero width]` supplies HOL's nonempty word dimension.
+    The generic production AST helper above remains untagged. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
+theorem crepDestConstHOL_eq_const {width : Nat} [NeZero width]
+    (expression : CrepExpHOL width)
+    (value : BitVec width)
+    (h : crepDestConstHOL expression = some value) :
+    expression = .const value := by
+  cases expression <;> simp_all [crepDestConstHOL]
+
+/-- Untagged extraction helper over the generic `CrepExp` syntax, retained for
+    existing support proofs. It is wider than HOL's exact `CrepExpHOL` carrier. -/
 theorem crepDestConstHolWord_eq_const {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool))
     (value : Fin width → Bool)

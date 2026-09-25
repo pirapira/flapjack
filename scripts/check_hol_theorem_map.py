@@ -38,6 +38,19 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/PanToCrep.lean", "expHdlHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "exp_hdl_def",
+        "flapjack-ds3 (bead flapjack-2s5/flapjack-2s5.1): HOL exp_hdl_def "
+        "quantifies over a finite map varname |-> (shape # num list), while "
+        "expHdlHOL takes a raw MlString -> Option (ShapeHOL × List Nat) "
+        "function and admits infinite support. The finite-support qualifier "
+        "requires a same-module owning structure field, not a bare parameter; "
+        "no input-only exception is justified. The raw-map helper and its "
+        "production bridge remain untagged; faithful finite-map port is "
+        "tracked by flapjack-pxn.18.3.5.8.13.2. Direct HOL rows remain in "
+        "Flapjack/Test/ExpHdlHOLParity.lean."
+    ),
     ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "tlc_def",
@@ -146,6 +159,20 @@ DOCUMENTED_MISMATCHES = {
         "The @[hol] tag stays withheld until [NeZero width] can be added by "
         "flapjack-0lj.5. HolWordLab.toPanWordLab / PanWordLab.toHolWordLab are "
         "Flapjack-specific isomorphisms. "
+    ),
+    ("Flapjack/Pancake/PanSimp.lean", "functions_eq_filterMap"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "functions_eq_FILTER",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL functions_eq_FILTER "
+        "(panPropsScript.sml:1487) writes functions prog as a MAP over "
+        "FILTER is_function with an ARB fallback, over the word-indexed decl "
+        "carrier with mlstring names. functions_eq_filterMap (PanSimp.lean:110) "
+        "is generic over production Decl alpha (FunName = String, arbitrary word "
+        "element type) and replaces MAP-with-ARB by List.filterMap/none, so the "
+        "carrier and the fallback both differ and names_as_string cannot bridge "
+        "it. Exact port over List (DeclHOL width) with a reviewed ARB rendering "
+        "is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8). "
     ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
@@ -1045,6 +1072,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
+        ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
+        ("Flapjack/Pancake/PanToCrep/Compile.lean", "storeMemOpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

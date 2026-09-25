@@ -35,6 +35,17 @@ val baseState = ``((ARB:((8),unit) panSem$state) with
         panLang$Return (panLang$Const (7w:8 word)),
         panLang$Comb [panLang$One; panLang$One])) |>)``;
 
+(* A well-shaped code-map entry returns its value even though the Lean
+   functions-list compatibility API can be supplied a conflicting, separate
+   return-contract table. HOL has only the code-map `returnShape` here. *)
+val goodState = ``(^baseState with code := FEMPTY |+ (strlit "goodret",
+  ([] : (mlstring # panLang$shape) list,
+   panLang$Return (panLang$Const (7w:8 word)), panLang$One)))``;
+
+val _ = print_eval "call_good_return_shape_result"
+  ``FST (panSem$evaluate
+      (panLang$Call NONE (strlit "goodret") [], ^goodState))``;
+
 val _ = print_eval "call_bad_return_shape_result"
   ``FST (panSem$evaluate
       (panLang$Call NONE (strlit "badret") [], ^baseState))``;

@@ -252,7 +252,7 @@ theorem compile_full_pan_value_shMemLoad_word_state_full_regression :
     (by simp)
     (by simp [firstCompiledExpAnyShape, compileExp])
     (by simp [evalCrepFullExpStateFull])
-    (by simp [defaultCrepSharedMemHandler, loadMemOp,
+    (by simp [defaultCrepSharedMemHandler, loadMemOpHOL,
       crepeFullLoadState])
     (by simp)
 

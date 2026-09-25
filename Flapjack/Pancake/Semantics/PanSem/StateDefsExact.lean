@@ -1,7 +1,7 @@
 import Flapjack.Pancake.Semantics.PanSem.StateSimpExact
 
 /-!
-# Exact `panSem` state-accessor definition bundle over the exact carrier
+# `panSem` state-accessor definition bundle over the function-backed carrier
 
 HOL `panSemScript.sml` collects the bodies of the five state-accessor
 definitions into a single conjunction:
@@ -27,11 +27,12 @@ Theorem kvar_defs = LIST_CONJ [set_var_def,set_global_def,set_kvar_def,
                                  | Global => FLOOKUP s.globals v`.
 
 The Lean rendering below is the five-way conjunction of those equations over
-the exact `mlstring`-keyed `PanSemStateExact`, reusing the already tagged exact
-accessor ports (`setVarHOLExact`, `setGlobalHOLExact`, `setKvarHOLExact`,
-`lookupKvarHOLExact`, `isValidValueHOLExact`).  HOL Boolean shape equality is
-rendered as the Boolean `shapeEqHOL`, whose propositional meaning is recorded
-by the tagged-adjacent bridge `shapeEqHOL_eq_true`.
+the `mlstring`-keyed, function-backed `PanSemStateExact`. These equations remain
+useful for Lean reduction, but HOL state fields are finite maps and this carrier
+admits non-finite-support functions. The theorem is therefore untagged pending
+the finite-map carrier prerequisite tracked by
+`flapjack-pxn.18.3.7.1.3.1.2`. HOL Boolean shape equality is rendered as
+`shapeEqHOL`, with bridge `shapeEqHOL_eq_true`.
 
 Scope: this is the conjunction of `Definition`s bundled by `LIST_CONJ`, not a
 statement about the recursive evaluator, so it is self-contained over the exact
@@ -44,11 +45,9 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
 
-/-- Exact port of HOL `kvar_defs` (`cakeml/pancake/semantics/panSemScript.sml`
-    `LIST_CONJ [set_var_def,set_global_def,set_kvar_def,is_valid_value_def,
-    lookup_kvar_def]`): the five accessor-definition equations as a
-    conjunction over the exact `mlstring`-keyed state. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "kvar_defs"]
+/-- Function-backed rendering of HOL `kvar_defs` (`panSemScript.sml:502-503`):
+    the five accessor-definition equations as a conjunction; untagged because
+    its map fields are unrestricted functions rather than HOL finite maps. -/
 theorem kvar_defs {width : Nat} {σ : Type} [NeZero width] :
     (∀ (name : MlS) (value : ValueHOL width) (state : PanSemStateExact width σ),
         setVarHOLExact name value state =

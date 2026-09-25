@@ -488,20 +488,18 @@ theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab wid
       Flapjack.Pancake.PanLang.ShapeHOL.one := by
   simp [shapeOfHOLExact]
 
-/-- Exact port of HOL `panProps$FLOOKUP_pan_res_var_thm`
-    (`panPropsScript.sml:236`):
-    `FLOOKUP (res_var l (m,v)) n = if n = m then v else FLOOKUP l n`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "FLOOKUP_pan_res_var_thm"]
+/-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
+    (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
+    while this Lean statement quantifies over every `MlS → Option _` function. -/
 theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (m n : MlS) (v : Option (ValueHOL width)) :
     resVarHOLExact locals (m, v) n = if n = m then v else locals n := by
   rcases v with _ | value <;> simp [resVarHOLExact]
 
-/-- Exact port of HOL `panProps$flookup_res_var_diff_eq_org`
-    (`panPropsScript.sml:228`):
-    `n <> m ==> FLOOKUP (res_var lc (n,v)) m = FLOOKUP lc m`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "flookup_res_var_diff_eq_org"]
+/-- Function-backed rendering of HOL `panProps$flookup_res_var_diff_eq_org`
+    (`panPropsScript.sml:228`); untagged because its lookup-function input
+    ranges beyond HOL finite maps. -/
 theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
@@ -509,11 +507,9 @@ theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
   have h' : m ≠ n := fun hm => h hm.symm
   rcases v with _ | value <;> simp [resVarHOLExact, h']
 
-/-- Exact port of HOL `panProps$flookup_res_var_some_eq_lookup`
-    (`panPropsScript.sml:220`):
-    `FLOOKUP (res_var lc (v,FLOOKUP lc' v)) v = SOME value ==>
-     FLOOKUP lc' v = SOME value`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "flookup_res_var_some_eq_lookup"]
+/-- Function-backed rendering of HOL `panProps$flookup_res_var_some_eq_lookup`
+    (`panPropsScript.sml:220`); untagged because the two lookup-function
+    arguments range beyond HOL finite maps. -/
 theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
     (lc lc' : MlS → Option (ValueHOL width))
     (v : MlS) (value : ValueHOL width)

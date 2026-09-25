@@ -233,4 +233,17 @@ example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) = 1 := by
   rw [sizeOfEids_map_declOfHOL]
   decide
 
+/-! ## Exact `size_of_eids` parity (bead flapjack-4ac.1.37)
+
+The HOL-EVAL rows `size_of_eids_empty=0` and `size_of_eids_mixed=1` from
+`scripts/hol-probes/pan_lang_decl_predicates_probe.out` are replayed over the
+exact `DeclHOL` carrier through the tagged `sizeOfEidsHOL`. -/
+
+example : sizeOfEidsHOL ([] : List (DeclHOL 64)) = 0 := rfl
+
+example : sizeOfEidsHOL exactDecls = 1 := rfl
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) = sizeOfEidsHOL exactDecls :=
+  sizeOfEids_map_declOfHOL exactDecls
+
 end Flapjack.Test.PanLangDeclHOLParity

@@ -198,6 +198,23 @@ def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .function _ => true
   | _ => false
 
+/-- Exact port of HOL `panLang$size_of_eids` (`panLangScript.sml:249-251`):
+`size_of_eids prog = LENGTH (FILTER is_exn_decl prog)`, the number of top-level
+exception declarations.  `List.filter` is the ordinary constructor-by-constructor
+rendering of HOL `FILTER`, and the predicate is the tagged `isExnDeclHOL`, so
+this is an exact port over `List (DeclHOL width)`.  The checked bridge
+`sizeOfEids_map_declOfHOL` (`Flapjack/Pancake/PanGlobals.lean`) relates it to
+production `Flapjack.sizeOfEids`; direct routing is unavailable because
+production is polymorphic over `Decl α` with `String` identifiers while this
+definition is over the word-indexed `DeclHOL`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "size_of_eids_def"]
+def sizeOfEidsHOL {width : Nat} [NeZero width] (code : List (DeclHOL width)) : Nat :=
+  (code.filter isExnDeclHOL).length
+
+@[simp] theorem sizeOfEidsHOL_eq_filter {width : Nat} [NeZero width]
+    (code : List (DeclHOL width)) :
+    sizeOfEidsHOL code = (code.filter isExnDeclHOL).length := rfl
+
 /-- Exact port of HOL `panLang$exceptions` (`panLangScript.sml:328-333`):
 projects the top-level exception declarations of a program in source order,
 returning `(eid, shape)` for each `ExnDecl` and dropping

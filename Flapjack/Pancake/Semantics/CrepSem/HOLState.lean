@@ -53,6 +53,84 @@ def map2 (f : α × β → γ) (map : HolFiniteMapExact α β) :
     (map : HolFiniteMapExact α β) (key : α) :
     (map.map2 f).lookup key = (map.lookup key).map (fun value => f (key, value)) := rfl
 
+/-- HOL `FEMPTY` on the finite-support carrier: the everywhere-undefined map.
+    Its support witness is the empty key list. -/
+def empty : HolFiniteMapExact α β where
+  lookup _ := none
+  finiteSupport := ⟨[], by intro key h; exact absurd rfl h⟩
+
+/-- HOL `FUPDATE` (`|+`) on the finite-support carrier: the updated key is added
+    to the support list, so the result keeps an explicit finite support. -/
+def update [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β) (entry : α × β) :
+    HolFiniteMapExact α β where
+  lookup := FUPDATE map.lookup entry
+  finiteSupport := by
+    obtain ⟨keys, hkeys⟩ := map.finiteSupport
+    refine ⟨entry.1 :: keys, ?_⟩
+    intro key hlookup
+    by_cases h : entry.1 == key
+    · have hk : entry.1 = key := beq_iff_eq.mp h
+      subst hk
+      exact List.mem_cons_self
+    · apply List.mem_cons_of_mem
+      apply hkeys
+      simpa [FUPDATE, h] using hlookup
+
+/-- HOL `FUPDATE_LIST` (`|++`) on the finite-support carrier, matching the raw
+    finite-map `FUPDATE_LIST` (`foldl FUPDATE`). Each update adds its key to the
+    support, so the result is finite-support by construction. -/
+def updateList [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β)
+    (entries : List (α × β)) : HolFiniteMapExact α β where
+  lookup := FUPDATE_LIST map.lookup entries
+  finiteSupport := by
+    induction entries generalizing map with
+    | nil => simpa [FUPDATE_LIST] using map.finiteSupport
+    | cons entry entries ih =>
+      simpa [FUPDATE_LIST_cons, update] using ih (update map entry)
+
+/-- HOL domain subtraction (`\\`) on the finite-support carrier: removing a key
+    can only shrink the support, so the original witness still covers it. -/
+def erase [BEq α] (map : HolFiniteMapExact α β) (key : α) :
+    HolFiniteMapExact α β where
+  lookup := FDOMSUB map.lookup key
+  finiteSupport := by
+    obtain ⟨keys, hkeys⟩ := map.finiteSupport
+    refine ⟨keys, ?_⟩
+    intro k hk
+    apply hkeys k
+    by_cases h : key == k
+    · simp [FDOMSUB, h] at hk
+    · simpa [FDOMSUB, h] using hk
+
+/-- HOL `res_var` on the finite-support carrier (`crepSemScript.sml:163`):
+    `NONE` subtracts the key from the domain, `SOME v` updates it. -/
+def resVar [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β)
+    (entry : α × Option β) : HolFiniteMapExact α β :=
+  match entry.2 with
+  | none => erase map entry.1
+  | some value => update map (entry.1, value)
+
+@[simp] theorem lookup_empty (key : α) :
+    (empty : HolFiniteMapExact α β).lookup key = none := rfl
+
+@[simp] theorem lookup_update [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β) (entry : α × β)
+    (key : α) :
+    (update map entry).lookup key = FUPDATE map.lookup entry key := rfl
+
+@[simp] theorem lookup_updateList [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β)
+    (entries : List (α × β)) (key : α) :
+    (updateList map entries).lookup key = FUPDATE_LIST map.lookup entries key := rfl
+
+@[simp] theorem lookup_erase [BEq α] (map : HolFiniteMapExact α β) (key k : α) :
+    (erase map key).lookup k = FDOMSUB map.lookup key k := rfl
+
+@[simp] theorem lookup_resVar_none [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β) (key : α) :
+    (resVar map (key, none)).lookup = FDOMSUB map.lookup key := rfl
+
+@[simp] theorem lookup_resVar_some [BEq α] [LawfulBEq α] (map : HolFiniteMapExact α β) (key : α)
+    (value : β) :
+    (resVar map (key, some value)).lookup = FUPDATE map.lookup (key, value) := rfl
+
 end HolFiniteMapExact
 
 /-- Flapjack's HOL-shaped encoding of `crepSem$state`
@@ -161,6 +239,175 @@ noncomputable def CrepSemHOLState.toBitVecEvaluatorState
       ffi := crepExpressionProjectionFfi
       baseAddress := state.baseAddr
       topAddress := state.topAddr }
+
+/-! ## Exact finite-support state updates
+
+HOL `crepSem$set_var_def` / `set_globals_def` / `upd_locals_def` /
+`empty_locals_def` / `res_var_def` (`crepSemScript.sml:55,61,66,71,163`) act on
+the finite-map fields of `crepSem$state`. The helpers below restate them over
+`CrepSemHOLState`, whose locals/globals/code fields are finite maps by type
+(`HolFiniteMapExact`), so each update is finite-support by construction. They
+carry no `@[hol]` tags: the word index is the canonical positive `BitVec width`
+rather than an arbitrary HOL `finite_index`. The kernel-checked bridges connect
+each update to the executable `CrepHolState` helper through the projection
+`toBitVecEvaluatorState`; `res_var` is a map operation and bridges to `resVarW`. -/
+
+namespace HolFiniteMapExact
+
+/-- Pointwise `Option.map` commutes with a single finite-map update. -/
+theorem map_update_eq [BEq α] (f : β → γ) (base : FiniteMap α β)
+    (entry : α × β) (key : α) :
+    (FUPDATE base entry key).map f =
+      FUPDATE (fun k => (base k).map f) (entry.1, f entry.2) key := by
+  by_cases h : entry.1 == key <;> simp [FUPDATE, h]
+
+/-- Pointwise `Option.map` commutes with `FUPDATE_LIST`, adding the mapped
+    entries in the same order. -/
+theorem map_updateList_eq [BEq α] (f : β → γ) (base : FiniteMap α β)
+    (entries : List (α × β)) (key : α) :
+    (FUPDATE_LIST base entries key).map f =
+      FUPDATE_LIST (fun k => (base k).map f)
+        (entries.map (fun entry => (entry.1, f entry.2))) key := by
+  induction entries generalizing base with
+  | nil => rfl
+  | cons entry entries ih =>
+    simp only [FUPDATE_LIST_cons]
+    rw [ih (FUPDATE base entry)]
+    simp only [map_update_eq f base entry, FUPDATE_LIST_cons, List.map_cons]
+
+end HolFiniteMapExact
+
+/-- Flapjack-only record extensionality for the evaluator-state carrier, used to
+    state the finite-support projection bridges field by field. -/
+private theorem crepHolState_eq_of_fields {α σ : Type}
+    {left right : CrepHolState α σ}
+    (hLocals : left.locals = right.locals)
+    (hGlobals : left.globals = right.globals)
+    (hCode : left.code = right.code)
+    (hMemory : left.memory = right.memory)
+    (hMemaddrs : left.memaddrs = right.memaddrs)
+    (hShMemaddrs : left.shMemaddrs = right.shMemaddrs)
+    (hClock : left.clock = right.clock)
+    (hBigEndian : left.bigEndian = right.bigEndian)
+    (hFfi : left.ffi = right.ffi)
+    (hBaseAddress : left.baseAddress = right.baseAddress)
+    (hTopAddress : left.topAddress = right.topAddress) :
+    left = right := by
+  cases left
+  cases right
+  simp_all
+
+namespace CrepSemHOLState
+
+/-- HOL `set_var` over the exact finite-support carrier. -/
+def setVar {width : Nat} [NeZero width] {ffiState : Type} (name : Nat)
+    (value : HolWordLab width) (state : CrepSemHOLState width ffiState) :
+    CrepSemHOLState width ffiState :=
+  { state with locals := state.locals.update (name, value) }
+
+/-- HOL `set_globals` over the exact finite-support carrier. -/
+def setGlobals {width : Nat} [NeZero width] {ffiState : Type} (key : BitVec 5)
+    (value : HolWordLab width) (state : CrepSemHOLState width ffiState) :
+    CrepSemHOLState width ffiState :=
+  { state with globals := state.globals.update (key, value) }
+
+/-- HOL `upd_locals` over the exact finite-support carrier: locals are replaced
+    by `FEMPTY |++ varargs`. -/
+def updLocals {width : Nat} [NeZero width] {ffiState : Type}
+    (varargs : List (Nat × HolWordLab width))
+    (state : CrepSemHOLState width ffiState) : CrepSemHOLState width ffiState :=
+  { state with locals := HolFiniteMapExact.empty.updateList varargs }
+
+/-- HOL `empty_locals` over the exact finite-support carrier. -/
+def emptyLocals {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemHOLState width ffiState) : CrepSemHOLState width ffiState :=
+  { state with locals := HolFiniteMapExact.empty }
+
+/-- HOL `res_var` acts on the locals finite map (`crepSemScript.sml:163`), so it
+    is stated on the map rather than as a whole-state update. -/
+def resVar {width : Nat} [NeZero width]
+    (map : HolFiniteMapExact Nat (HolWordLab width))
+    (entry : Nat × Option (HolWordLab width)) :
+    HolFiniteMapExact Nat (HolWordLab width) :=
+  map.resVar entry
+
+/-- Kernel-checked bridge: the finite-support `set_var` helper projects to the
+    executable `setCrepHolVarW` under `toBitVecEvaluatorState`. -/
+theorem toBitVecEvaluatorState_setVar {width : Nat} [NeZero width]
+    {ffiState : Type} (name : Nat) (value : HolWordLab width)
+    (state : CrepSemHOLState width ffiState) :
+    (setVar name value state).toBitVecEvaluatorState =
+      setCrepHolVarW name value.toPanWordLab state.toBitVecEvaluatorState := by
+  unfold setVar setCrepHolVarW
+  dsimp only [toBitVecEvaluatorState]
+  refine crepHolState_eq_of_fields ?_ rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
+  funext key
+  exact HolFiniteMapExact.map_update_eq HolWordLab.toPanWordLab state.locals.lookup
+    (name, value) key
+
+/-- Kernel-checked bridge: the finite-support `set_globals` helper projects to
+    the executable `setCrepHolGlobalsW` under `toBitVecEvaluatorState`. -/
+theorem toBitVecEvaluatorState_setGlobals {width : Nat} [NeZero width]
+    {ffiState : Type} (key : BitVec 5) (value : HolWordLab width)
+    (state : CrepSemHOLState width ffiState) :
+    (setGlobals key value state).toBitVecEvaluatorState =
+      setCrepHolGlobalsW key value.toPanWordLab state.toBitVecEvaluatorState := by
+  unfold setGlobals setCrepHolGlobalsW
+  dsimp only [toBitVecEvaluatorState]
+  refine crepHolState_eq_of_fields rfl ?_ rfl rfl rfl rfl rfl rfl rfl rfl rfl
+  funext k
+  exact HolFiniteMapExact.map_update_eq HolWordLab.toPanWordLab state.globals.lookup
+    (key, value) k
+
+/-- Kernel-checked bridge: the finite-support `upd_locals` helper projects to
+    the executable `updCrepHolLocalsW` under `toBitVecEvaluatorState`. -/
+theorem toBitVecEvaluatorState_updLocals {width : Nat} [NeZero width]
+    {ffiState : Type} (varargs : List (Nat × HolWordLab width))
+    (state : CrepSemHOLState width ffiState) :
+    (updLocals varargs state).toBitVecEvaluatorState =
+      updCrepHolLocalsW
+        (varargs.map (fun entry => (entry.1, entry.2.toPanWordLab)))
+        state.toBitVecEvaluatorState := by
+  unfold updLocals updCrepHolLocalsW
+  dsimp only [toBitVecEvaluatorState]
+  refine crepHolState_eq_of_fields ?_ rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
+  funext key
+  exact HolFiniteMapExact.map_updateList_eq HolWordLab.toPanWordLab
+    HolFiniteMapExact.empty.lookup varargs key
+
+/-- Kernel-checked bridge: the finite-support `empty_locals` helper projects to
+    the executable `emptyCrepHolLocalsW` under `toBitVecEvaluatorState`. -/
+theorem toBitVecEvaluatorState_emptyLocals {width : Nat} [NeZero width]
+    {ffiState : Type} (state : CrepSemHOLState width ffiState) :
+    (emptyLocals state).toBitVecEvaluatorState =
+      emptyCrepHolLocalsW state.toBitVecEvaluatorState := by
+  unfold emptyLocals emptyCrepHolLocalsW
+  dsimp only [toBitVecEvaluatorState]
+  refine crepHolState_eq_of_fields ?_ rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
+  funext key
+  rfl
+
+/-- Kernel-checked bridge: the finite-support `res_var` lookup is the
+    executable `resVarW` lookup after applying the `HolWordLab` projection. -/
+theorem lookup_resVarW {width : Nat} [NeZero width]
+    (map : HolFiniteMapExact Nat (HolWordLab width)) (key : Nat)
+    (value : Option (HolWordLab width)) :
+    (fun k => ((resVar map (key, value)).lookup k).map HolWordLab.toPanWordLab) =
+      resVarW (fun k => (map.lookup k).map HolWordLab.toPanWordLab)
+        (key, value.map HolWordLab.toPanWordLab) := by
+  cases value with
+  | none =>
+    funext k
+    by_cases h : key = k <;>
+      simp [CrepSemHOLState.resVar, HolFiniteMapExact.resVar,
+        HolFiniteMapExact.erase, resVarW, Flapjack.resVar, FDOMSUB, h]
+  | some value =>
+    funext k
+    by_cases h : key = k <;>
+      simp [CrepSemHOLState.resVar, HolFiniteMapExact.resVar,
+        HolFiniteMapExact.update, resVarW, Flapjack.resVar, FUPDATE, h]
+
+end CrepSemHOLState
 
 /-- Project expression-observable fields of the arbitrary-index state to the
 existing source evaluator. Code and FFI observations are fixed because

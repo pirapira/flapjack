@@ -1,9 +1,12 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Proofs.PanGlobals.ShapeInfrastructure
 import Flapjack.Pancake.Semantics.PanSem
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang
 
 /-! Flapjack-specific generalization for the parameterized
     \`globalCompileTopForStart\` analogue. The exact HOL-tagged theorem is
@@ -472,6 +475,48 @@ theorem MEM_functions {declarations : List (Decl α)}
           declaration.returnShape) :=
   mem_functions hmem
 
+/-- Exact HOL port of Cake's `MEM_functions`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2380-2387`): every entry
+    of `functions decs` comes from a `Function` declaration of `decs`, and is
+    that declaration's `(name, params, body, return)`.
+
+    This is the faithful word-indexed port and uses the exact carriers:
+    `DeclHOL`/`FunDeclHOL`/`ProgHOL width` with `MlS` names and `ShapeHOL`
+    shapes, and the exact `functions` projection `functionsHOL`.  The
+    Flapjack-specific production analogue `MEM_functions` above is keyed by
+    Lean `String` identifiers and generic `Prog α`, so it is untagged. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "MEM_functions"]
+theorem MEM_functionsHOL {width : Nat} [NeZero width]
+    {declarations : List (DeclHOL width)}
+    {entry : MlS × List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL}
+    (hmem : entry ∈ functionsHOL declarations) :
+    ∃ declaration : FunDeclHOL width,
+      (.function declaration : DeclHOL width) ∈ declarations ∧
+        entry = (declaration.name, declaration.params, declaration.body,
+          declaration.returnShape) := by
+  induction declarations with
+  | nil => simp [functionsHOL] at hmem
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function funDecl =>
+          simp only [functionsHOL, List.mem_cons] at hmem
+          rcases hmem with hentry | htail
+          · exact ⟨funDecl, by simp, hentry⟩
+          · rcases ih htail with ⟨fi, hmem, heq⟩
+            exact ⟨fi, by simp [hmem], heq⟩
+      | decl shape name value =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
+      | exnDecl exceptionName shape =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
+      | name struct fields =>
+          simp only [functionsHOL] at hmem
+          rcases ih hmem with ⟨fi, hmem, heq⟩
+          exact ⟨fi, by simp [hmem], heq⟩
+
 /-- Exact HOL port of Cake's `fperm_name_cancel`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1626`):
     `fperm_name f g (fperm_name f g name) = name`.
@@ -789,12 +834,17 @@ theorem resort_decls_preserve_functions (declarations : List (Decl α)) :
     with filtering to the function declarations. HOL `fperm_decs` is the
     production `globalRenameDecls` and HOL `FILTER is_function` is Lean
     `globalDeclsFilter globalDeclIsFunction`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides the identifier-carrier
+-- difference (production `FunName`/`VarName`/`ExceptionId`/`StructName`/`DeclarationName`
+-- are `String`, whereas HOL keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`),
+-- the statement ranges over production `Decl α`, whose `Const : α` and
+-- `Prog α`/`Exp α` payloads generalise HOL's word-indexed `'a decl`
+-- (`exp = Const ('a word)`, `panLangScript.sml`). The `names_as_string`
+-- qualifier cannot cover that expression/program value-index difference while
+-- the compiled functions `globalRenameDecls`/`globalDeclsFilter` keep their
+-- production carriers. The exact MlString identifier carrier is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`) and the
+-- exact-carrier production transformation by `flapjack-6nn.3.1`.
 theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
     (declarations : List (Decl α)) :
     globalRenameDecls source target

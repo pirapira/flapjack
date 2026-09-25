@@ -234,4 +234,64 @@ decreasing_by
   all_goals (intro h <;>
     simp_all [CrepProgNameRanged, crepProgOfHOL])
 
+/-! ## Exact-carrier `crepLang` helpers
+
+The `...W` wrappers in `Flapjack/Pancake/CrepLang.lean` carry the HOL tags but
+are indexed over the production `CrepProg (BitVec width)`, whose `Call`/`ExtCall`
+names are `String` rather than HOL's `mlstring`. The definitions below are the
+genuine exact-carrier versions over `CrepProgHOL`/`CrepExpHOL`, needed by the
+exact `pan_to_crep$compile_def` path (`flapjack-pxn.18.3.5.8.13`). -/
+
+/-- Exact port of HOL `crepLang$nested_seq_def`
+    (`cakeml/pancake/crepLangScript.sml:89`):
+    `nested_seq [] = Skip` and `nested_seq (e::es) = Seq e (nested_seq es)`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "nested_seq_def"]
+def crepNestedSeqHOL {width : Nat} [NeZero width] :
+    List (CrepProgHOL width) → CrepProgHOL width
+  | [] => .skip
+  | statement :: statements => .seq statement (crepNestedSeqHOL statements)
+
+/-- Exact port of HOL `crepLang$load_globals_def`
+    (`cakeml/pancake/crepLangScript.sml:115-119`):
+    `load_globals _ 0 = []` and
+    `load_globals ad (SUC n) = LoadGlob ad :: load_globals (ad+1w) n`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "load_globals_def"]
+def loadGlobalsHOL {width : Nat} [NeZero width] (address : BitVec 5) (count : Nat) :
+    List (CrepExpHOL width) :=
+  match count with
+  | 0 => []
+  | count + 1 => .loadGlob address :: loadGlobalsHOL (address + 1) count
+
+@[simp] theorem crepProgToHOL_crepNestedSeqHOL {width : Nat} [NeZero width]
+    (statements : List (CrepProg (BitVec width))) :
+    crepProgToHOL (crepNestedSeq statements) =
+      crepNestedSeqHOL (statements.map crepProgToHOL) := by
+  induction statements with
+  | nil => simp [crepNestedSeq, crepNestedSeqHOL, crepProgToHOL]
+  | cons head tail ih => simp [crepNestedSeq, crepNestedSeqHOL, crepProgToHOL, ih]
+
+@[simp] theorem crepProgOfHOL_crepNestedSeqHOL {width : Nat} [NeZero width]
+    (statements : List (CrepProgHOL width)) :
+    crepProgOfHOL (crepNestedSeqHOL statements) =
+      crepNestedSeq (statements.map crepProgOfHOL) := by
+  induction statements with
+  | nil => simp [crepNestedSeq, crepNestedSeqHOL, crepProgOfHOL]
+  | cons head tail ih => simp [crepNestedSeq, crepNestedSeqHOL, crepProgOfHOL, ih]
+
+@[simp] theorem crepExpMapToHOL_loadGlobals {width : Nat} [NeZero width]
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobals (α := BitVec width) address count).map crepExpToHOL =
+      loadGlobalsHOL address count := by
+  induction count generalizing address with
+  | zero => simp [loadGlobals, loadGlobalsHOL]
+  | succ count ih => simp [loadGlobals, loadGlobalsHOL, crepExpToHOL, ih]
+
+@[simp] theorem crepExpMapOfHOL_loadGlobals {width : Nat} [NeZero width]
+    (address : BitVec 5) (count : Nat) :
+    (loadGlobalsHOL address count).map crepExpOfHOL =
+      loadGlobals (α := BitVec width) address count := by
+  induction count generalizing address with
+  | zero => simp [loadGlobals, loadGlobalsHOL]
+  | succ count ih => simp [loadGlobals, loadGlobalsHOL, crepExpOfHOL, ih]
+
 end Flapjack

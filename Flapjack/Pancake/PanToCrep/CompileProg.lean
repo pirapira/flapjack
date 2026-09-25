@@ -17,15 +17,35 @@ open Flapjack.Pancake.PanLang
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's
     `pan_to_crep$compile_prog`
-    (`cakeml/pancake/pan_to_crepScript.sml:393`). It compiles declarations to
-    the HOL triple list, selects inline names using `functions (FILTER
-    inlinable declarations)`, and applies the source-shaped triple-list
-    `compileInlTopHOL` pass. That pass still uses String names and generic
-    `CrepProg α`; this boundary is therefore untagged. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the declarations and inline
--- names are keyed by `FunName` = `String`, while HOL `pan_to_crepScript.sml`
--- keys `compile_prog`/`functions` by `funname` = `mlstring` (tracked by
--- `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`).
+    (`cakeml/pancake/pan_to_crepScript.sml:393-397`). It compiles declarations
+    to a triple list, selects inline names using `functions (FILTER inlinable
+    declarations)`, and applies the source-shaped triple-list `compileInlTopHOL`
+    pass; the `let` structure and operand order match HOL clause-for-clause.
+    The tag is WITHDRAWN as a documented carrier mismatch; see the note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port), source-reviewed mismatch. HOL
+-- `compile_prog` (`pan_to_crepScript.sml:393-397`) is
+-- `compile_inl_top (MAP FST (functions (FILTER inlinable prog)))
+--    (compile_to_crep prog)` over a word-indexed `'a prog`; its result is
+-- `(mlstring # num list # 'a crepLang$prog) list`. This definition differs on
+-- carriers, not just names: (1) declarations and inline names use
+-- `FunName` = `String` vs HOL `funname` = `mlstring`; (2) the source is a
+-- production `Decl (BitVec width)` with production `Shape` vs HOL's
+-- word-indexed `decl` carrying `mlstring`/`shape`; (3) the target is
+-- production `CrepProg (BitVec width)` (whose `Call`/`ExtCall` funnames are
+-- `String`) via untagged `compileToCrepHOL` vs HOL `'a crepLang$prog` via
+-- `compile_to_crep`; (4) `compileInlTopHOL` is the source-shaped pass over
+-- generic `CrepProg α` vs HOL `compile_inl_top`. The `[BEq FunName]
+-- [LawfulBEq FunName] [LawfulHashable FunName] [OfNat (BitVec width) 0/1]`
+-- arguments are executable artifacts HOL does not have. `names_as_string`
+-- cannot authorize the `Decl`/`Shape`/`CrepProg` carriers and no `NameRanged`
+-- witness exists (the output is a triple list, not a name). Direct HOL-EVAL
+-- rows `empty`, `duplicate_first`, `nested_inline` in
+-- `scripts/hol-probes/compile_prog_probe.out` are reproduced by
+-- `Flapjack/Test/CompileProgParity.lean`; the `params_two_words` row is
+-- reproduced by `Flapjack/Test/CompileProgParamsParity.lean`. Faithful-port
+-- dependency `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; exact
+-- `compile` by `.18.3.5.8.13`, exact `compile_inl_top` carrier by
+-- `flapjack-e7w.1`).
 def compileProgTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1]

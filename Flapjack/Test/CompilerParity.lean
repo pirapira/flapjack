@@ -31,6 +31,7 @@ import Flapjack.Test.CrepInlineRelParity
 import Flapjack.Test.CrepSemTotalClockLeavesParity
 import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Test.CrepSemTotalAssignParity
+import Flapjack.Test.CrepSemTotalStoreParity
 import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -340,6 +341,7 @@ import Flapjack.Test.LoopToWordBoundaryParity
 import Flapjack.Test.SptreeOrderParity
 import Flapjack.Test.WordSimpSeqAssocParity
 import Flapjack.Test.RiscVFarTransferParity
+import Flapjack.Test.FfiHOLParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -949,7 +951,9 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
     Flapjack.Test.CrepFuelCutoffParity.runChecks,
     Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
-    Flapjack.Test.CrepSemTotalAssignParity.runChecks
+    Flapjack.Test.FfiHOLParity.runChecks,
+    Flapjack.Test.CrepSemTotalAssignParity.runChecks,
+    Flapjack.Test.CrepSemTotalStoreParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

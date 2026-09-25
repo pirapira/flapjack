@@ -1,13 +1,17 @@
 import Flapjack.Pancake.Semantics.PanSem
 
 /-!
-# Exact PanSem `lookup_code`
+# PanSem `lookup_code` over String-keyed carriers
 
-This module ports `panSem$lookup_code_def` from
-`cakeml/pancake/semantics/panSemScript.sml:458-467`. The tagged definition uses
-the width-indexed HOL value carrier and the same finite-map interface as the
-source. `lookupPanSemStateCodeHOL` adapts the finite-support production
-`PanSemState.code` through its extensional lookup view.
+This module renders `panSem$lookup_code_def`
+(`cakeml/pancake/semantics/panSemScript.sml:458-467`) over the width-indexed
+`HolValue` carrier and the finite-map interface. It is FLAPJACK-SPECIFIC, not a
+statement-exact HOL port: HOL's `varname`/`funname` are `mlstring` while Lean
+uses `VarName`/`FunName` = `String`, and `HolValue.nStruct` uses String names.
+The `@[hol]` tag is therefore withheld (bead `flapjack-0lj` / `flapjack-4w9`);
+the exact MlString-keyed port is tracked by `flapjack-pxn.18.3.5.8`.
+`lookupPanSemStateCodeHOL` adapts the finite-support production `PanSemState.code`
+through its extensional lookup view.
 -/
 
 namespace Flapjack
@@ -30,11 +34,15 @@ def panSemLookupCodeArgumentsValid {width : Nat} [NeZero width] [LawfulBEq Strin
   decide (parameters.map Prod.fst).Nodup &&
     panSemLookupCodeShapeRel parameters arguments
 
-/-- Exact width-indexed port of HOL `panSem$lookup_code_def` over the finite
-    map view. It rejects duplicate formal names or any argument list that does
-    not satisfy HOL's pointwise `shape_of` relation, and on success returns the
-    body, `FEMPTY |++ ZIP (MAP FST vshapes,args)`, and declared return shape. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_code_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): same clauses as HOL
+    `panSem$lookup_code_def` (`cakeml/pancake/semantics/panSemScript.sml:458`),
+    but `code`/`function` are keyed by `FunName` = `String` and `arguments` are
+    String-bearing `HolValue`, whereas HOL uses `mlstring` keys and `v`.  The
+    `@[hol]` tag is therefore withheld (bead `flapjack-0lj`); the exact
+    MlString-keyed port is tracked by `flapjack-4w9` / `flapjack-pxn.18.3.5.8`.
+    It rejects duplicate formal names or any argument list that does not satisfy
+    HOL's pointwise `shape_of` relation, and on success returns the body,
+    `FEMPTY |++ ZIP (MAP FST vshapes,args)`, and declared return shape. -/
 def panSemLookupCodeHOL {width : Nat} [NeZero width]
     [LawfulBEq String] (code : FiniteMap FunName
       (List (VarName × Shape) × Prog (BitVec width) × Shape))
@@ -49,9 +57,9 @@ def panSemLookupCodeHOL {width : Nat} [NeZero width]
           returnShape)
       else none
 
-/-- Apply the exact `lookup_code` port to the finite-support code map owned by
-    a production source state. Arguments are converted to the exact HOL `v`
-    carrier before the tagged lookup is called. -/
+/-- Apply the String-keyed HOL-shaped `lookup_code` helper to the finite-support
+    code map owned by a production source state. Arguments are converted to the
+    Flapjack-specific `HolValue` carrier before the lookup is called. -/
 def panSemLookupStateCodeHOL {width : Nat} [NeZero width] [LawfulBEq String]
     (state : PanSemState (BitVec width) ffi) (function : FunName)
     (arguments : List (PanValue (BitVec width))) :
@@ -296,9 +304,9 @@ theorem panSemLookupStateCodeHOL_of_production_success {width : Nat}
   subst producedLocals
   exact ⟨holLocals, hhol, hlocals⟩
 
-/-- The state-owned wrapper is definitionally the tagged lookup over exactly
-    the finite `state.code` support view; this bridge does not introduce a
-    detached function table. -/
+/-- The state-owned wrapper is definitionally the String-keyed `lookup_code`
+    helper over exactly the finite `state.code` support view; this bridge does
+    not introduce a detached function table. -/
 theorem panSemLookupStateCodeHOL_eq_lookupView {width : Nat} [NeZero width]
     [LawfulBEq String] (state : PanSemState (BitVec width) ffi)
     (function : FunName) (arguments : List (PanValue (BitVec width))) :

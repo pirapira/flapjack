@@ -154,6 +154,63 @@ DOCUMENTED_MISMATCHES = {
         "finite-support carrier; tag remains withdrawn pending "
         "flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "decCrepHolClock_simp"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "dec_clock_simp",
+        "Codex (source comparison with crepPropsScript.sml:267-278: the ten field "
+        "equations for the clock decrement match the Lean conjunction clause for "
+        "clause, with HOL be/base_addr/top_addr/sh_memaddrs renamed "
+        "bigEndian/baseAddress/topAddress/shMemaddrs, and [NeZero width] excludes "
+        "the invalid zero word dimension. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/globals/code as "
+        "unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support and String-backed code names, a "
+        "strict superset of HOL's finite mlstring-keyed maps "
+        "(crepSemScript.sml:19-32). names_as_string cannot authorize a whole-state "
+        "carrier and no NameRanged byte witness applies. Direct HOL rows "
+        "dec_clock_clock / dec_clock_globals / dec_clock_be / dec_clock_top are in "
+        "crep_dec_clock_simp_probe.out and sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:601-605. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "emptyCrepHolLocals_simp"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "empty_locals_simp",
+        "Codex (source comparison with crepPropsScript.sml:282-294: the ten field "
+        "equations for clearing locals match the Lean conjunction clause for "
+        "clause, with HOL be/base_addr/top_addr/sh_memaddrs renamed "
+        "bigEndian/baseAddress/topAddress/shMemaddrs. However the quantified "
+        "whole-state carrier CrepHolState (BitVec width) stores locals/globals/code "
+        "as unrestricted Nat-to-Option, BitVec-5-to-Option and FunName-to-Option "
+        "functions that admit infinite support and String-backed code names, a "
+        "strict superset of HOL's finite mlstring-keyed maps "
+        "(crepSemScript.sml:19-32). names_as_string cannot authorize a whole-state "
+        "carrier and no NameRanged byte witness applies. Direct HOL rows "
+        "empty_locals_locals / empty_locals_clock / empty_locals_memory are in "
+        "crep_dec_clock_simp_probe.out, and empty_locals_none / "
+        "empty_locals_fields_preserved in crep_local_updates_probe.out; sampled by "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:608-612. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepProps.lean", "crepAssignedFreeVars_nestedSeq_assign_zipWithW"): (
+        "cakeml/pancake/semantics/crepPropsScript.sml",
+        "nested_seq_assigned_free_vars_eq",
+        "Codex (source comparison with crepPropsScript.sml:420-427: the equation "
+        "`assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns` under "
+        "LENGTH ns = LENGTH vs matches the Lean zipWith/crepNestedSeqW form "
+        "pointwise. The mismatch is the imported programme carrier: HOL "
+        "crepLang$prog embeds funname = mlstring in Call/ExtCall, while Lean "
+        "CrepProg embeds FunName = String. The quantifiers are varname = num names "
+        "and a List Nat result, so no mlstring identifier exists for "
+        "names_as_string to qualify, and no NameRanged byte witness applies. "
+        "Direct HOL row nested_afv=[1; 2] is in crep_assigned_vars_probe.out "
+        "(probe header cites crepPropsScript.sml:420) and the equation is sampled "
+        "by Flapjack/Test/CrepAssignedVarsParity.lean:103-107. Keep the tag "
+        "withdrawn pending the exact mlstring-carrier port "
+        "flapjack-pxn.18.3.5.8.8."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

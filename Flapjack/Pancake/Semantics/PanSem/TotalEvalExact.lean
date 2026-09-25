@@ -4,6 +4,7 @@ import Flapjack.Pancake.Semantics.PanSem.StoreExact
 import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
 import Flapjack.Pancake.Semantics.PanSem.TickShMemExact
 import Flapjack.Pancake.Semantics.PanSem.ExtCallExact
+import Flapjack.Pancake.Semantics.PanSem.DecCallExact
 
 /-!
 # Exact-state dispatcher for reviewed nonrecursive PanSem clauses
@@ -16,8 +17,9 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 
 The outer `Option` means that a constructor has no assembled clause in this
 fragment; it is distinct from the inner HOL result option. `Dec`, `Seq`, `If`,
-`While`, `Call`, and `DecCall` remain open here. This fragment does not claim
-the recursive HOL `evaluate_def` and has no `@[hol]` tag.
+and `While` remain open here. A separate exact-state recursive Call/DecCall
+slice follows below. This file still does not claim the complete recursive HOL
+`evaluate_def` and has no `@[hol]` tag.
 -/
 
 namespace Flapjack
@@ -74,5 +76,225 @@ def evalPanSemNonrecursiveHOLExact {width : Nat} {σ : Type}
         (fun _ expression => evalHOLExact state expression))
   | .tick => some (tickStepHOLExact state)
   | .annot _ _ => some (none, state)
+
+theorem fixClockHOLExact_clock_le {width : Nat} {σ : Type} [NeZero width] {β : Type}
+    (oldState : PanSemStateExact width σ) (step : β × PanSemStateExact width σ) :
+    (fixClockHOLExact oldState step).2.clock ≤ oldState.clock := by
+  by_cases h : oldState.clock < step.2.clock <;>
+    simp [fixClockHOLExact, h] <;> omega
+
+/-! Internal recursion carries decidability for the exact state's memory sets
+    alongside the state. HOL states store arbitrary sets, so these instances
+    cannot be reconstructed after a state update by computation. -/
+structure PanSemExactEvalContext (width : Nat) (σ : Type) [NeZero width] where
+  state : PanSemStateExact width σ
+  memaddrsDecidable : DecidablePred state.memaddrs
+  shMemaddrsDecidable : DecidablePred state.shMemaddrs
+
+/-- Reuse exact memory-set decisions when a HOL state update preserves both
+    set fields. -/
+def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
+    (context : PanSemExactEvalContext width σ) (state : PanSemStateExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    PanSemExactEvalContext width σ :=
+  { state := state
+    memaddrsDecidable := fun address => by
+      rw [hmem]
+      exact context.memaddrsDecidable address
+    shMemaddrsDecidable := fun address => by
+      rw [hshared]
+      exact context.shMemaddrsDecidable address }
+
+/-- Exact recursive Call/DecCall evaluator over the state-owned HOL code map.
+    Its outer `Option` marks constructors not yet assembled in this fragment;
+    it is not a HOL result. `Dec`, `Assign`, `Primitive`, stores, `Seq`, `If`,
+    `While`, `ExtCall`, and ShMem leaves remain explicit gaps, so this
+    definition does not claim or tag the full `evaluate_def`. -/
+def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
+    ProgHOL width → PanSemExactEvalContext width σ →
+      Option (Option (PanSemResultExact width) × PanSemExactEvalContext width σ)
+  | program, context => by
+      let state := context.state
+      letI : DecidablePred state.memaddrs := context.memaddrsDecidable
+      letI : DecidablePred state.shMemaddrs := context.shMemaddrsDecidable
+      exact match program with
+      | .dec _ _ _ _ => none
+      | .seq _ _ => none
+      | .ite _ _ _ => none
+      | .while _ _ => none
+      | .call info function arguments =>
+          match evalListHOLExact state arguments with
+          | none => some (some .error, context)
+          | some values =>
+              match lookupCodeHOLExact state.code function values with
+              | none => some (some .error, context)
+              | some (body, calleeLocals, returnShape) =>
+                  if state.clock = 0 then
+                    some (some .timeOut,
+                      context.withState (emptyLocalsHOLExact state) rfl rfl)
+                  else
+                    let entry : PanSemStateExact width σ :=
+                      { state with clock := state.clock - 1, locals := calleeLocals }
+                    let entryContext := context.withState entry rfl rfl
+                    match evalPanSemRecursiveCallContextHOLExact body entryContext with
+                    | none => none
+                    | some (bodyResult, bodyContext) =>
+                        let fixed := fixClockHOLExact entry (bodyResult, bodyContext.state)
+                        let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                        match bodyResult with
+                        | none => some (some .error, fixedContext)
+                        | some .break => some (some .error, fixedContext)
+                        | some .continue => some (some .error, fixedContext)
+                        | some (.returned value) =>
+                            if shapeEqHOL (shapeOfHOLExact value) returnShape then
+                              match info with
+                              | none =>
+                                  some (some (.returned value),
+                                    fixedContext.withState
+                                      (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+                              | some (none, _) =>
+                                  some (none, fixedContext.withState
+                                    { fixedContext.state with locals := state.locals } rfl rfl)
+                              | some (some (kind, name), _) =>
+                                  if isValidValueHOLExact state kind name value then
+                                    some (none, fixedContext.withState
+                                      (setKvarHOLExact kind name value
+                                        { fixedContext.state with locals := state.locals })
+                                      (by cases kind <;> rfl) (by cases kind <;> rfl))
+                                  else some (some .error, fixedContext)
+                            else some (some .error, fixedContext)
+                        | some (.exception exceptionId value) =>
+                            match info with
+                            | none =>
+                                some (some (.exception exceptionId value),
+                                  fixedContext.withState
+                                    (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+                            | some (_, none) =>
+                                some (some (.exception exceptionId value),
+                                  fixedContext.withState
+                                    (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+                            | some (_, some (handlerId, handlerVar, handlerProgram)) =>
+                                if exceptionId = handlerId then
+                                  match state.eshapes exceptionId with
+                                  | some shape =>
+                                      if shapeEqHOL (shapeOfHOLExact value) shape &&
+                                          isValidValueHOLExact state .local handlerVar value then
+                                        let handlerState := setVarHOLExact handlerVar value
+                                          { fixedContext.state with locals := state.locals }
+                                        let handlerContext := fixedContext.withState
+                                          handlerState rfl rfl
+                                        evalPanSemRecursiveCallContextHOLExact handlerProgram
+                                          handlerContext
+                                      else some (some .error, fixedContext)
+                                  | none => some (some .error, fixedContext)
+                                else
+                                  some (some (.exception exceptionId value),
+                                    fixedContext.withState
+                                      (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+                        | some other =>
+                            some (some other, fixedContext.withState
+                              (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+      | .decCall resultName shape function arguments continuation =>
+          match evalListHOLExact state arguments with
+          | none => some (some .error, context)
+          | some values =>
+              match lookupCodeHOLExact state.code function values with
+              | none => some (some .error, context)
+              | some (body, calleeLocals, returnShape) =>
+                  if state.clock = 0 then
+                    some (some .timeOut,
+                      context.withState (emptyLocalsHOLExact state) rfl rfl)
+                  else
+                    let entry : PanSemStateExact width σ :=
+                      { state with clock := state.clock - 1, locals := calleeLocals }
+                    let entryContext := context.withState entry rfl rfl
+                    match evalPanSemRecursiveCallContextHOLExact body entryContext with
+                    | none => none
+                    | some (bodyResult, bodyContext) =>
+                        let fixed := fixClockHOLExact entry (bodyResult, bodyContext.state)
+                        let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                        match bodyResult with
+                        | none => some (some .error, fixedContext)
+                        | some .break => some (some .error, fixedContext)
+                        | some .continue => some (some .error, fixedContext)
+                        | some (.returned value) =>
+                            if shapeEqHOL (shapeOfHOLExact value) shape &&
+                                shapeEqHOL (shapeOfHOLExact value) returnShape then
+                              let continuationState := setVarHOLExact resultName value
+                                { fixedContext.state with locals := state.locals }
+                              let continuationContext := fixedContext.withState
+                                continuationState rfl rfl
+                              match evalPanSemRecursiveCallContextHOLExact continuation
+                                  continuationContext with
+                              | none => none
+                              | some (continuationResult, continuationPost) =>
+                                  let restored := { continuationPost.state with
+                                    locals := resVarHOLExact continuationPost.state.locals
+                                      (resultName, state.locals resultName) }
+                                  some (continuationResult,
+                                    continuationPost.withState restored rfl rfl)
+                            else some (some .error, fixedContext)
+                        | some other =>
+                            some (some other, fixedContext.withState
+                              (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+      | other =>
+          match other with
+          | .skip => some (none, context)
+          | .break => some (some .break, context)
+          | .continue => some (some .continue, context)
+          | .return value =>
+              match evalHOLExact state value with
+              | none => some (some .error, context)
+              | some returned =>
+                  if Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL state.structs
+                      (shapeOfHOLExact returned) ≤ 32 then
+                    some (some (.returned returned),
+                      context.withState (emptyLocalsHOLExact state) rfl rfl)
+                  else some (some .error, context)
+          | .raise exception value =>
+              match evalHOLExact state value with
+              | none => some (some .error, context)
+              | some raised =>
+                  match state.eshapes exception with
+                  | none => some (some .error, context)
+                  | some shape =>
+                      if shapeEqHOL (shapeOfHOLExact raised) shape then
+                        if Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL state.structs
+                            (shapeOfHOLExact raised) ≤ 32 then
+                          some (some (.exception exception raised),
+                            context.withState (emptyLocalsHOLExact state) rfl rfl)
+                        else some (some .error, context)
+                      else some (some .error, context)
+          | .tick =>
+              if state.clock = 0 then
+                some (some .timeOut,
+                  context.withState (emptyLocalsHOLExact state) rfl rfl)
+              else
+                some (none, context.withState (decClockHOLExact state) rfl rfl)
+          | .annot _ _ => some (none, context)
+          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
+            .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
+            .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ | .extCall _ _ _ _ _ |
+            .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none
+termination_by _program context => context.state.clock
+decreasing_by
+  all_goals
+    simp_wf
+    simp_all [PanSemExactEvalContext.withState, setVarHOLExact]
+    first
+    | exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+    | exact Nat.lt_of_le_of_lt (fixClockHOLExact_clock_le _ _)
+        (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+
+/-- Plain-state view of the recursive context evaluator. -/
+def evalPanSemRecursiveCallHOLExact {width : Nat} {σ : Type} [NeZero width]
+    (program : ProgHOL width) (state : PanSemStateExact width σ)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :
+    Option (Option (PanSemResultExact width) × PanSemStateExact width σ) :=
+  match evalPanSemRecursiveCallContextHOLExact program
+      ⟨state, inferInstance, inferInstance⟩ with
+  | none => none
+  | some (result, context) => some (result, context.state)
 
 end Flapjack

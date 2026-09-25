@@ -48,4 +48,7 @@ while_timeout=(SOME TimeOut,NONE)
 while_break=(NONE,4,SOME (ValWord 1w))
 while_continue_then_zero=(NONE,4,SOME (ValWord 0w))
 while_error_condition=SOME Error
+dec_clock_step=<|clock := 4|>
+fix_clock_clamps=(NONE,2)
+fix_clock_keeps_new=(NONE,4)
 pan_sem_e2e_done=0

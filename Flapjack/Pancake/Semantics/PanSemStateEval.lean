@@ -356,10 +356,18 @@ theorem panMemStoresHOL_cons_none {width : Nat} [NeZero width] (address : RiscV.
     equivalent structural scan over the context (needed for the Lean termination
     measure `(structs.length, sizeOf shape)`, the image of HOL's lexicographic
     `(LENGTH stcs, shape_size)`); the scan returns the first name match together
-    with the remaining context, exactly the `(nm,info)::stcs'` HOL destructures. -/
+    with the remaining context, exactly the `(nm,info)::stcs'` HOL destructures.
+
+    Two Lean-only binders are worth spelling out.  Each function carries
+    `[NeZero width]`: HOL words always have a positive dimension
+    (`dimindex (:'a) > 0`), so `width = 0` is not a HOL instance and the tagged
+    statements must not admit it.  The `[DecidablePred domain]` binder is
+    likewise only Lean decidability evidence, needed so that the `if domain
+    address` branch elaborates; it is not a HOL side condition (HOL `domain` is
+    a `'a word set` and membership is a `bool`-valued test there). -/
 mutual
   @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_def"]
-  def panMemLoadHOL {width : Nat} (shape : Shape) (address : RiscV.Word width)
+  def panMemLoadHOL {width : Nat} [NeZero width] (shape : Shape) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (HolValue width) :=
@@ -388,7 +396,7 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadsHOL {width : Nat} (shapes : List Shape) (address : RiscV.Word width)
+  def panMemLoadsHOL {width : Nat} [NeZero width] (shapes : List Shape) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (List (HolValue width)) :=
@@ -411,7 +419,7 @@ mutual
          have := List.sizeOf_lt_of_mem hmem
          omega)
 
-  def panMemLoadFldsHOL {width : Nat} (fields : List (FieldName × Shape)) (address : RiscV.Word width)
+  def panMemLoadFldsHOL {width : Nat} [NeZero width] (fields : List (FieldName × Shape)) (address : RiscV.Word width)
       (domain : RiscV.Word width → Prop) [DecidablePred domain]
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (List (FieldName × HolValue width)) :=

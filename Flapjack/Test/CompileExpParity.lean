@@ -197,19 +197,20 @@ def runChecks : IO Bool := do
     IO.println "FAIL compile_exp parity"
   pure parityGuard
 
-/-- The exact width-indexed tag `compileExpHOLW` is definitionally the generic
+/-- The width-indexed delegation `compileExpHOLW` (whose `compile_exp_def` tag
+    is withdrawn as a documented carrier mismatch) is definitionally the generic
     `compileExpHOL` instantiated at the `BitVec` carrier. -/
 example (context : PanToCrepHOLContext (BitVec 64)) (expression : Exp (BitVec 64)) :
     compileExpHOLW context expression = compileExpHOL context expression := rfl
 
 /-! Bridge-only fixture (`flapjack-pxn.18.3.1.3.2`): the shipped RV64 path
     `compileProgRiscV`/`compileProgHOL` still executes the generic
-    `compileExpHOL`, which at the word carrier is definitionally the tagged
-    `compile_exp_def` port `compileExpHOLW` by
-    `compileExpHOLW_eq_compileExpHOL`.  This is NOT textual routing: production
-    does not call the tagged definition, and the production-path rule is
-    therefore not met (full routing tracked by `flapjack-pxn.18.3.5.3.1.2`).
-    The rows below re-check the direct HOL oracle
+    `compileExpHOL`, which at the word carrier is definitionally the
+    width-indexed `compileExpHOLW` by `compileExpHOLW_eq_compileExpHOL`. That
+    delegation's `compile_exp_def` tag stays withdrawn (documented carrier
+    mismatch). This is NOT textual routing: production does not call it, and the
+    production-path rule is therefore not met (full routing tracked by
+    `flapjack-pxn.18.3.5.3.1.2`). The rows below re-check the direct HOL oracle
     (`scripts/hol-probes/compile_exp_probe.out`) through `compileExpHOLW` at the
     `BitVec 64` carrier. -/
 def riscvContext : PanToCrepHOLContext (BitVec 64) :=

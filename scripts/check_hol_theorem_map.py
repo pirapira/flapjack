@@ -63,6 +63,8 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "finite-support carrier; tag remains withdrawn pending "
         "flapjack-pxn.18.3.7.1.3.1.1.3.1."
     ),
+}
+DOCUMENTED_MISMATCHES = {
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "set_globals_def",
@@ -290,6 +292,19 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             "reviewer": reviewer,
         }
 
+    current_definitions = data_declarations(root)
+    for key, (hol_path, hol_name, reviewer) in DOCUMENTED_MISMATCHES.items():
+        if key not in current_definitions:
+            raise ValueError(f"documented mismatch is not a current definition: {key[0]}:{key[1]}")
+        inventory[key] = {
+            "hol_path": hol_path,
+            "hol_name": hol_name,
+            "lean_path": key[0],
+            "lean_name": key[1],
+            "statement_status": "documented_mismatch",
+            "reviewer": reviewer,
+        }
+
     return [inventory[key] for key in sorted(inventory)]
 
 
@@ -414,12 +429,18 @@ def validate_inventory(
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
             if key in tagged:
                 errors.append(f"{key[0]}:{key[1]}: documented mismatch must not carry an @[hol] tag")
-            if key not in proof_declarations and key not in WITHDRAWN_HOL_DECLARATIONS:
+            if (key not in proof_declarations
+                    and key not in WITHDRAWN_HOL_DECLARATIONS
+                    and key not in DOCUMENTED_MISMATCHES):
                 errors.append(f"{key[0]}:{key[1]}: untagged HOL mismatch is not source-reviewed")
             if key in WITHDRAWN_HOL_DECLARATIONS and hol_path is not None:
                 expected_path, expected_name, _reviewer = WITHDRAWN_HOL_DECLARATIONS[key]
                 if (hol_path, hol_name) != (expected_path, expected_name):
                     errors.append(f"{key[0]}:{key[1]}: withdrawn declaration HOL candidate differs from source review")
+            if key in DOCUMENTED_MISMATCHES and hol_path is not None:
+                expected_path, expected_name, _reviewer = DOCUMENTED_MISMATCHES[key]
+                if (hol_path, hol_name) != (expected_path, expected_name):
+                    errors.append(f"{key[0]}:{key[1]}: documented mismatch HOL candidate differs from source review")
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
@@ -448,7 +469,7 @@ def validate_inventory(
         if key not in tagged and key not in proof_declarations and not (
             key in WITHDRAWN_HOL_DECLARATIONS
             and (data_declarations_ is None or key in data_declarations_)
-        ):
+        ) and key not in DOCUMENTED_MISMATCHES:
             errors.append(f"manifest entry is not a current declaration: {key[0]}:{key[1]}")
     return errors
 

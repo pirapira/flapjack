@@ -63,7 +63,6 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertIn("infinite support", record["reviewer"])
         self.assertIn(key, MAP["data_declarations"]())
         self.assertNotIn(key, MAP["tagged_declarations"]())
-        self.assertNotIn(key, MAP["tagged_declarations"]())
 
     def test_pan_empty_locals_definition_mismatch_is_in_review_inventory(self):
         key = (

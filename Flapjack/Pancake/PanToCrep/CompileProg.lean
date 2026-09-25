@@ -14,12 +14,16 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang
 
-/-- Exact port of Cake `pan_to_crep$compile_prog`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's
+    `pan_to_crep$compile_prog`
     (`cakeml/pancake/pan_to_crepScript.sml:393`). It compiles declarations to
     the HOL triple list, selects inline names using `functions (FILTER
     inlinable declarations)`, and applies the exact triple-list
     `compileInlTopHOL` pass. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "compile_prog_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the declarations and inline
+-- names are keyed by `FunName` = `String`, while HOL `pan_to_crepScript.sml`
+-- keys `compile_prog`/`functions` by `funname` = `mlstring` (tracked by
+-- `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`).
 def compileProgTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1]

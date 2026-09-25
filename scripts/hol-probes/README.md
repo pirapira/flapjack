@@ -204,6 +204,20 @@ their equations to `panModelReadByte`/`panModelRead32`, are in
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
+The direct width-1 row `load32_unaligned_width1_address1=NONE` was refreshed
+with `HOL4=/home/zksecurity/HOL CAKEML=/home/zksecurity/flapjack2/cakeml
+HOL_PROBE_ONLY=pan_fixed_load_probeScript.sml scripts/hol-probes/regenerate.sh`
+against matching CakeML source commit `857f0d98da8f8a3580f3442338e697809308ede`.
+The accompanying `aligned_width1_address1=F` row confirms HOL rejects the
+address, and `byte_align_width1_address1` records the source `byte_align`
+definition at that carrier width. The tagged Lean `panMemLoad32HOL` now states
+the equivalent modulo-four guard directly; the matching Lean fixture checks
+that address 1 returns `none`. Direct `word_of_bytes` rows pin the four-byte
+little-endian and big-endian packs to `0x44332211` and `0x11223344`; the Lean
+fixture checks the same `RiscV.panRiscVWordOfBytes` results. The probe driver
+runs this script from `pancake/semantics/.hol/objs` when that directory is
+present so it resolves the built `panSemTheory` without modifying the source
+submodule.
 `word_byte_memory_probeScript.sml` is run from HOL4's built
 `src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
 depend on built CakeML Pancake theories. Refresh it with

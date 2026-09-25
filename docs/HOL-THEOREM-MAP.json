@@ -8091,6 +8091,46 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+    "lean_name": "setVar",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL set_var_def (crepSemScript.sml:55-57) `set_var v w s = s with locals := s.locals |+ (v,w)` over the finite-support CrepSemHOLState carrier, whose locals field is a HolFiniteMapExact (finite support by type, unlike the withdrawn raw-function CrepHolState port). The Nat key's BEq is lawful, so update agrees with HOL |+. The positive BitVec width word index is the accepted canonical model (same representation as HolWordLab/CrepProgHOL and PanSem memLoadHOLExact). Direct HOL rows set_var_hit/set_var_keeps_other/set_var_fields_preserved in crep_local_updates_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "set_globals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+    "lean_name": "setGlobals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL set_globals_def (crepSemScript.sml:61-63) over the finite-support CrepSemHOLState carrier, whose globals field is a HolFiniteMapExact keyed by BitVec 5 with HolWordLab cells. The BitVec 5 key BEq is lawful, so update agrees with HOL |+; the positive BitVec width word index is the accepted canonical model. Direct HOL rows set_globals_direct in crep_store_global_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "upd_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+    "lean_name": "updLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL upd_locals_def (crepSemScript.sml:66-68) `upd_locals varargs s = s with locals := FEMPTY |++ varargs` over the finite-support CrepSemHOLState carrier: HolFiniteMapExact.empty.updateList varargs, and HolFiniteMapExact.updateList is defined by foldl of the HOL-equality update, matching |++. The Nat key BEq is lawful. Direct HOL rows empty_locals_none/empty_locals_fields_preserved and set_var rows in crep_local_updates_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+    "lean_name": "emptyLocals",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL empty_locals_def (crepSemScript.sml:71-74) `empty_locals s = s with locals := FEMPTY` over the finite-support CrepSemHOLState carrier, whose locals field is a HolFiniteMapExact and HolFiniteMapExact.empty is the everywhere-undefined finite-support map. Direct HOL rows empty_locals_locals/empty_locals_clock/empty_locals_memory in crep_dec_clock_simp_probe.out and empty_locals_none in crep_local_updates_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "res_var_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
+    "lean_name": "resVarEq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): faithful HOL-equality port of crepSem$res_var_def (crepSemScript.sml:163-166) on the finite-support HolFiniteMapExact carrier: NONE subtracts the key from the domain (FDOMSUB_HOL) and SOME v updates it (FUPDATE_HOL), both using DecidableEq (Lean's encoding of HOL =). HOL's res_var is polymorphic in the key type and this port adds no BEq/LawfulBEq side conditions, so it never narrows the key type; the finite-support type removes the raw-function infinite-support mismatch that forced the withdrawal of the earlier resVarW/BEq-based tags. Direct HOL rows res_var_delete_hit/res_var_update_hit in crep_res_var_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "res_var_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "resVarW",

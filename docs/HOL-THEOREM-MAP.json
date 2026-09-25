@@ -9190,5 +9190,13 @@
   "lean_name": "isWfCtxtExactHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "empty_locals_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
+  "lean_name": "emptyLocalsHOLExact",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

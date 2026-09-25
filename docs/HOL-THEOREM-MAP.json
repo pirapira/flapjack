@@ -9133,6 +9133,6 @@
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "HolLoopProg",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-two (independent constructor/field audit against loopLangScript.sml: all 24 HOL prog constructors match HolLoopProg in name/arity/order and field types; aux carriers RegImm (Reg/Imm with Imm = word), CrepMemOp from memop, NumSet from unit spt with Spt mirroring spt exactly, MlString, BinOp/Cmp/Shift/PrimOp verified exact at the width-indexed [NeZero width] instantiation)"
+    "reviewer": "flapjack-deepseek-two (independent HOL/Lean comparison: all 24 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
   }
 ]

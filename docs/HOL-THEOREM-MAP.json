@@ -2215,7 +2215,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_decs_decls",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-dlc.51): HOL fperm_decs_decls (pan_globalsProofScript.sml:2023-2029) is over the word-indexed decl carrier (mlstring funname/varname/eid/stcname, exp = Const ('a word)) and filters with HOL is_function. The Lean theorem fperm_decs_decls ranges over the generic production Decl alpha (Exp alpha.Const : alpha, names = String) with executable-only [BEq String], and mirrors EVERY (not o is_function) by the Flapjack-specific globalDeclIsFunction rather than a tagged HOL port. The Decl alpha/word carrier difference is beyond names_as_string, so the tag stays withdrawn; exact-carrier work is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2) and flapjack-6nn.3.1. Regression evidence Flapjack/Test/PanGlobalsDeclPredicateParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

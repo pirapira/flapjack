@@ -731,12 +731,22 @@ theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
     reproduced here for statement parity.  HOL `EVERY ($¬ ∘ is_function)` is
     Lean `declarations.all (fun declaration => !globalDeclIsFunction declaration)`
     and HOL `fperm_decs` is the reviewed production `globalRenameDecls`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag): the mismatch is
+-- the executed carrier, not only the name representation. HOL
+-- `pan_globalsProofScript.sml:2023` is over the word-indexed `decl`/`prog`
+-- carriers with `funname`/`varname`/`eid`/`stcname` = `mlstring` and
+-- `exp = Const ('a word)`; this Lean statement ranges over the generic production
+-- `Decl α`/`FunDecl α` with `Exp α.Const : α` and `FunName`/`VarName`/
+-- `ExceptionId`/`StructName` = `String`, and its `[BEq String]` is executable-only
+-- equality (HOL equality needs no typeclass side condition). `names_as_string`
+-- cannot cover the `Decl α`/word-carrier difference, and the HOL filter predicate
+-- `EVERY ($¬ ∘ is_function)` is mirrored by the Flapjack-specific
+-- `globalDeclIsFunction` rather than a tagged port of HOL `is_function`.
+-- Exact-carrier work is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`) and `flapjack-6nn.3.1`; the untagged supporting lemma
+-- `globalRenameDecls_eq_self_of_no_functions` is retained as production
+-- infrastructure. Regression evidence:
+-- `Flapjack/Test/PanGlobalsDeclPredicateParity.lean`.
 theorem fperm_decs_decls [BEq String] (source target : FunName)
     (declarations _unused : List (Decl α))
     (hnone : declarations.all

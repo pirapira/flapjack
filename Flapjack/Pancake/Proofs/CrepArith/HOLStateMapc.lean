@@ -482,6 +482,50 @@ theorem evalCrepHolFiniteStateSource_load
       by_cases hDomain : decide (state.memaddrs address) = true <;>
         simp [hDomain]
 
+/-- Arbitrary-index finite-state `Const` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:91`). The entire word_lab wrapper is
+preserved. This remains untagged with the enclosing evaluator because its
+word type is interpreted through the explicit finite-dimension adapter. -/
+theorem evalCrepHolFiniteStateSource_const
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (value : ι → Bool) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.const value) =
+    some (.word value) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp]
+
+/-- Arbitrary-index finite-state `Var` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:92`). It returns the exact finite-map
+lookup, including lookup failure, with no success premise. It remains untagged
+because the enclosing evaluator still uses an explicit finite-dimension
+projection. -/
+theorem evalCrepHolFiniteStateSource_var
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (name : Nat) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.var name) =
+    state.locals.lookup name := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState,
+    panTheWord, Function.comp_def]
+
+/-- Arbitrary-index finite-state `LoadGlob` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:111`). It returns the exact finite-map
+global lookup, including a miss. This stays untagged because the enclosing
+evaluator/state still use the explicit finite-dimension projection. -/
+theorem evalCrepHolFiniteStateSource_loadGlob
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (address : BitVec 5) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.loadGlob address) =
+    state.globals.lookup address := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState,
+    panTheWord, Function.comp_def]
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

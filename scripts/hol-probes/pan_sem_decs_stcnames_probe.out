@@ -1,0 +1,7 @@
+dsc_empty=T
+dsc_name_len=SOME 1
+dsc_name_size=SOME 1
+dsc_dup=T
+dsc_dupfield=T
+dsc_wfmiss=T
+dsc_skip_len=SOME 1

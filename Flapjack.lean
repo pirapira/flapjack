@@ -62,6 +62,7 @@ import Flapjack.Pancake.Semantics.PanSem.EvalExact
 import Flapjack.Pancake.Semantics.PanSem.StoreExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact
+import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics

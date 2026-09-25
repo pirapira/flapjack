@@ -326,10 +326,10 @@ def wrapRtHOL : Option (Flapjack.Pancake.PanLang.ShapeHOL × List Nat) → Optio
   | some (.one, []) => none
   | value => value
 
-/-! Narrow bridge: the production `wrapRt` (String-named `Shape`) is the
-    `Flapjack.Pancake.PanLang.shapeToHOL` image of the exact port. The codec is applied elementwise and
-    `Flapjack.Pancake.PanLang.shapeToHOL` preserves the `One`/`Comb`/`Named` constructors, so no
-    byte-rangedness hypothesis is needed for this forward direction. -/
+/-! Narrow bridge: encoding the production input shape and running the exact
+    `wrapRtHOL` gives the encoding of the production `wrapRt` result. The codec
+    preserves `One`/`Comb`/`Named`, so this direction needs no byte-rangedness
+    hypothesis. -/
 theorem wrapRtHOL_map_shapeToHOL (n : Option (Shape × List Nat)) :
     wrapRtHOL (n.map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2))) =
       (wrapRt n).map (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2)) := by

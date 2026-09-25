@@ -17,8 +17,10 @@ map is **held** until the exact MlString carriers land (see
 `Flapjack/Pancake/PanLang/Shape.lean` `ShapeHOL`, and the MlString state
 carrier work under `flapjack-pxn.18.3.5.8`).
 
-This document is descriptive only. No tag is changed by it; the classification
-is a conservative review frontier.
+This document records the review frontier. The four PanSem.lean tags for
+`v`, `shape_of_def`, `empty_locals_def`, and `evaluate_decls_def` were withdrawn
+in commit `7dd5e7f7b`; their definitions remain as documented Flapjack-specific
+infrastructure until exact carriers are ported.
 
 ## Carrier-safe tags (word payload / `OpSize` only)
 
@@ -44,15 +46,11 @@ by the name mismatch.
 
 | Lean module:line | HOL name | offending carrier(s) | tracking |
 |---|---|---|---|
-| `Pancake/Semantics/PanSem.lean:95` | `v` | `HolValue.nStruct name : StructName`, `fields : List (FieldName × …)` | `flapjack-0lj` |
 | `Pancake/Semantics/PanSemStateEval.lean:1369` | `eval_def` | returns `HolValue`; `PanSemHolState` (structs, code, eshapes) | same hold |
 | `Pancake/Semantics/PanSemStateEval.lean:361` | `mem_load_def` | `StructContextHOL`, `HolValue.nStruct` | same hold |
-| `Pancake/Semantics/PanSem.lean:36` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | same hold |
 | `Pancake/Semantics/PanSemStateEval.lean:1201` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | same hold |
 | `Pancake/Semantics/PanSemStateEval.lean:1211` | `isValWord_def` | `HolValue` | same hold |
 | `Pancake/Semantics/PanSem/LookupCode.lean:37` | `lookup_code_def` | `FunName`-keyed code map | `flapjack-4w9` |
-| `Pancake/Semantics/PanSem.lean:24` | `empty_locals_def` | `PanSemState` (`StructContext`, `VarName`) | review |
-| `Pancake/Semantics/PanSem.lean:2421` | `evaluate_decls_def` | `PanSemState` | review |
 | `Pancake/Semantics/PanSem/TotalSteps.lean:1058` | `dec_clock_def` | `PanSemHolState` | review (clock-only body) |
 | `Pancake/Semantics/PanSem/TotalSteps.lean:1067` | `fix_clock_def` | `PanSemHolState` | review (clock-only body) |
 | `Pancake/Semantics/PanSem/Primop.lean:16` | `flatten_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |

@@ -1556,3 +1556,9 @@ run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with
 run_probe pan_sem_mem_load_exact_probeScript.sml pan_sem_mem_load_exact_probe.out \
   ml_one_hit ml_comb_offset \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The size_of_shape probe observes the exact context-free HOL size_of_shape.
+run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
+  ss_one ss_eq \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"

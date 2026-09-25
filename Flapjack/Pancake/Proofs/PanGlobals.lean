@@ -466,64 +466,72 @@ theorem MEM_functions {declarations : List (Decl α)}
           declaration.returnShape) :=
   mem_functions hmem
 
-/-- Cake's `fperm_name_cancel` (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622`):
-`fperm_name f g (fperm_name f g name) = name`.
+/-- Exact HOL port of Cake's `fperm_name_cancel`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1622-1626`):
+    `fperm_name f g (fperm_name f g name) = name`.
 
-Reviewed under `(names_as_string := [source, target, name])`. The statement is
-clause-for-clause identical to HOL; the only difference is that the three
-`mlstring` names are carried by the production `FunName` (= `String`) and the
-renaming is the tagged `globalRenameFunctionName` (`@[hol fperm_name_def]`,
-`pan_globalsScript.sml:184`), whose definition already matches HOL's
-`fperm_name` clause-for-clause. The identifiers `source`, `target`, `name` are
-classified `equality/map-key-only`, exactly as for the tagged definition: the
-renaming turns equality tests and finite-map keys, and no byte-observable use
-appears in the statement, so no `names_as_string_boundary` entry or
-`holMlStringWitness_*` theorem is needed. The `[BEq String] [LawfulBEq String]`
-instance arguments are executable-only (decidable equality for the `String`
-carrier modelling `mlstring`); they add no logical side condition.
+    HOL's `fperm_name_cancel` carries no type annotation, so HOL states it
+    polymorphically (`!f g name. fperm_name f g (fperm_name f g name) = name`
+    at `'a -> 'a -> 'a -> 'a`).  The faithful Lean port is correspondingly
+    generic in `α` with `[DecidableEq α]`, and uses the exact polymorphic
+    `fpermName` (`Flapjack/Pancake/PanGlobals.lean`).  There is no side
+    condition.  The production `String`-specialized `fperm_name_cancel` below
+    is only an instance of this polymorphic original and is left untagged.
+    Direct HOL/Lean edge-case fixtures:
+    `scripts/hol-probes/pan_globals_fperm_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cancel"]
+theorem fpermName_cancel {α : Type u} [DecidableEq α] (f g name : α) :
+    fpermName f g (fpermName f g name) = name := by
+  unfold fpermName
+  repeat' split <;> simp_all
 
-Evidence: the function-level HOL oracle rows in
-`scripts/hol-probes/pan_globals_fperm_name_probe.out` (replayed by
-`Flapjack/Test/PanGlobalsFpermNameParity.lean`) pin `fperm_name`; the
-cancellation/congruence facts are exercised by
-`Flapjack/Test/PanGlobalsDecShapesParity.lean:288-289`.
+/-- Exact HOL port of Cake's `fperm_name_cong`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629-1632`):
+    `fperm_name f g x = fperm_name f g y ⇔ x = y`, i.e. the source/target
+    renaming is injective.
 
-The alternative exact `MlString` identifier carrier remains tracked by
-`flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cancel"
-  (names_as_string := [source, target, name])]
+    HOL's `fperm_name_cong` carries no type annotation, so HOL states it
+    polymorphically; the faithful Lean port is correspondingly generic in `α`
+    with `[DecidableEq α]` and uses the exact polymorphic `fpermName`.  There
+    is no side condition.  The production `String`-specialized
+    `fperm_name_cong` below is only an instance of this polymorphic original
+    and is left untagged.  Direct HOL/Lean edge-case fixtures:
+    `scripts/hol-probes/pan_globals_fperm_name_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cong"]
+theorem fpermName_cong {α : Type u} [DecidableEq α] (f g left right : α) :
+    fpermName f g left = fpermName f g right ↔ left = right := by
+  constructor
+  · intro h
+    have := congrArg (fpermName f g) h
+    rw [fpermName_cancel, fpermName_cancel] at this
+    exact this
+  · intro h
+    rw [h]
+
+/-- Production `String`-specialized form of Cake's polymorphic
+    `fperm_name_cancel`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
+-- mismatch, audit bead `flapjack-dlc.52`): HOL's `fperm_name_cancel` has no
+-- type annotation and HOL states it polymorphically, while this theorem
+-- instantiates `α := String` (`FunName`).  It is a specialization of the HOL
+-- original, not the original itself, so `names_as_string` does not justify the
+-- tag.  The exact polymorphic port is `fpermName_cancel` above; this statement
+-- is retained as production infrastructure.
 theorem fperm_name_cancel [BEq String] [LawfulBEq String]
     (source target name : FunName) :
     globalRenameFunctionName source target
         (globalRenameFunctionName source target name) = name :=
   globalRenameFunctionName_cancel source target name
 
-/-- Cake's `fperm_name_cong` (`cakeml/pancake/proofs/pan_globalsProofScript.sml:1629`):
-`fperm_name f g x = fperm_name f g y <=> x = y`, i.e. the renaming is injective.
-
-Reviewed under `(names_as_string := [source, target, left, right])`. The
-statement is clause-for-clause identical to HOL; the only difference is that
-the four `mlstring` names are carried by the production `FunName` (= `String`)
-and the renaming is the tagged `globalRenameFunctionName`
-(`@[hol fperm_name_def]`, `pan_globalsScript.sml:184`), whose definition already
-matches HOL's `fperm_name` clause-for-clause. The identifiers are classified
-`equality/map-key-only`, exactly as for the tagged definition: the statement
-only compares names for equality, and no byte-observable use appears, so no
-`names_as_string_boundary` entry or `holMlStringWitness_*` theorem is needed.
-The `[BEq String] [LawfulBEq String]` instance arguments are executable-only
-(decidable equality for the `String` carrier modelling `mlstring`); they add no
-logical side condition.
-
-Evidence: the function-level HOL oracle rows in
-`scripts/hol-probes/pan_globals_fperm_name_probe.out` (replayed by
-`Flapjack/Test/PanGlobalsFpermNameParity.lean`) pin `fperm_name`; the
-cancellation/congruence facts are exercised by
-`Flapjack/Test/PanGlobalsDecShapesParity.lean:288-289`.
-
-The alternative exact `MlString` identifier carrier remains tracked by
-`flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fperm_name_cong"
-  (names_as_string := [source, target, left, right])]
+/-- Production `String`-specialized form of Cake's polymorphic
+    `fperm_name_cong`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port; @[hol] tag WITHDRAWN, documented
+-- mismatch, audit bead `flapjack-dlc.53`): HOL's `fperm_name_cong` has no type
+-- annotation and HOL states it polymorphically, while this theorem
+-- instantiates `α := String` (`FunName`).  It is a specialization of the HOL
+-- original, not the original itself, so `names_as_string` does not justify the
+-- tag.  The exact polymorphic port is `fpermName_cong` above; this statement is
+-- retained as production infrastructure.
 theorem fperm_name_cong [BEq String] [LawfulBEq String]
     (source target left right : FunName) :
     globalRenameFunctionName source target left =
@@ -850,14 +858,22 @@ theorem new_main_name_correct [BEq String] [LawfulBEq String]
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fresh_name_correct`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:993`): the name produced
     by the fresh-name search is not a member of the input list.  HOL
-    `MEM (fresh_name name names) names ⇒ F` is `globalFreshName name names ∈
-    names → False`; the production counterpart is `globalFreshName_not_mem`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    `MEM (fresh_name name names) names ⇒ F` is proved here about the production
+    fuel-bounded search `globalFreshName` (`globalFreshName_not_mem`), whereas
+    the `@[hol]`-tagged source-shaped port of `fresh_name` is the separate
+    recursive `freshNameHOL`, whose matching theorem is `freshNameHOL_not_mem`.
+    The tag therefore stays withdrawn for this declaration. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): besides production String names
+-- versus HOL mlstring names (production identifiers `FunName`/`VarName`/
+-- `ExceptionId`/`StructName` = `String` via `Decl`/`FunDecl`/`Shape`/
+-- `functionEntries`/`exceptionEntries` versus HOL `funname`/`varname`/`eid`/
+-- `stcname` = `mlstring`), this theorem is proved about the production
+-- `globalFreshName` (candidate counter plus `names.length` fuel), not the
+-- reviewed `freshNameHOL`.  The exact source-shaped counterpart over
+-- `freshNameHOL` is `freshNameHOL_not_mem`; unifying the executable path so the
+-- production search is the tagged definition is tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).  Direct HOL rows
+-- are in `scripts/hol-probes/pan_globals_fresh_name_probe.out`.
 theorem fresh_name_correct [BEq String] [LawfulBEq String]
     (name : String) (names : List String) :
     globalFreshName name names ∈ names → False :=
@@ -872,8 +888,11 @@ theorem fresh_name_correct [BEq String] [LawfulBEq String]
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- As for `fresh_name_correct`, the proof is over the production `globalFreshName`
+-- rather than the reviewed source-shaped `freshNameHOL`, and there is not yet a
+-- `freshNameHOL` subset lemma, so the tag remains withdrawn. The exact MlString
+-- identifier carrier and executable-path unification are tracked by
+-- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem fresh_name_correct' [BEq String] [LawfulBEq String]
     (name : String) (names names' : List String)
     (hmem : globalFreshName name names ∈ names')

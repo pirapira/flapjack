@@ -72,6 +72,44 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "fields_in_order_reorder_noop",
+        "Codex (source comparison with pan_structsProofScript.sml:218-239: the "
+        "matching field-name-list and distinctness premises and reorder equation "
+        "correspond, but production FieldName/StructPassContext/Exp identifiers "
+        "are String while HOL uses mlstring and exact expression/context carriers. "
+        "The conclusion preserves compiled expression identifiers, which are "
+        "byte-observable. No NameRanged premise exists, so names_as_string cannot "
+        "bridge arbitrary names. Keep @[hol] withheld pending exact carrier work "
+        "flapjack-pxn.18.3.5.8."
+    ),
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "is_wf_shape_drop",
+        "Codex (source comparison with pan_structsProofScript.sml:114-127: the "
+        "DROP-n implication and boolean is_wf_shape equations correspond, but "
+        "the Lean declaration quantifies over production StructContext/Shape "
+        "with unrestricted String identifiers and a production-only "
+        "shapedFields cache; HOL uses StructContextExact/ShapeHOL and mlstring. "
+        "There is no NameRanged premise, so names_as_string cannot bridge the "
+        "carriers. The direct pan_lang_is_wf_shape_probe.out examples cover "
+        "the HOL predicate only, not a carrier equivalence. Keep @[hol] "
+        "withheld pending exact-carrier work flapjack-pxn.18.3.5.8."
+    ),
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "structOldExpShapes_eq_map"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "old_exp_shapes_eq",
+        "Codex (source comparison with pan_structsProofScript.sml:679-683: the "
+        "recursive list equation and induction argument match, but production "
+        "Exp α/Shape/StructPassContext use unrestricted String identifiers while "
+        "HOL uses mlstring names and HOL expression/shape carriers. NStruct "
+        "returns its name as a byte-observable named shape; no NameRanged premise "
+        "is present, so names_as_string cannot bridge arbitrary inputs. The Lean "
+        "kernel proof and HOL's source proof establish the list equation only "
+        "within their respective carriers. Keep @[hol] withheld pending exact "
+        "carrier work flapjack-pxn.18.3.5.8."
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "struct_infos_ok_def",
@@ -99,6 +137,91 @@ DOCUMENTED_MISMATCHES = {
         "seq, global load, and handled global destination. Keep this useful "
         "source analogue untagged pending the exact-carrier compile port "
         "(flapjack-pxn.18.3.5.8)."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalRenameFunctionName"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "fperm_name_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.52) HOL "
+        "fperm_name_def (pan_globalsScript.sml:184-189) carries no type "
+        "annotation and HOL generalizes it to the polymorphic "
+        "'a -> 'a -> 'a -> 'a (HOL equality is defined on every type). Lean "
+        "globalRenameFunctionName instantiates alpha := String (FunName), so it "
+        "is a specialization of the HOL constant, not the constant itself; the "
+        "names_as_string qualifier does not authorize specializing a "
+        "polymorphic HOL name to String. The exact polymorphic port is fpermName "
+        "(reviewed_exact); globalRenameFunctionName is retained as production "
+        "infrastructure. Direct HOL rows in pan_globals_fperm_name_probe.out."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalRenameProg"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "fperm_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.14) against "
+        "pan_globalsScript.sml:191-214: the seven fperm equations (Dec, Seq, If, "
+        "While, Call with optional rtyp/handler, DecCall, default) match "
+        "globalRenameProg clause-for-clause; fperm recurses only on program "
+        "structure and leaves expression payloads untouched. The mismatch is the "
+        "imported program/expression carrier: HOL fperm maps 'a prog with "
+        "Const : 'a word and mlstring identifiers, while Lean ranges over generic "
+        "Prog α with Exp α.Const : α, Shape.Named : String and String identifiers "
+        "(PanLang.lean:14-28, 226-269). names_as_string can only classify the "
+        "call/decCall FunName arguments (equality/map-key-only); it cannot "
+        "authorize the program carrier, so the tag remains withdrawn pending the "
+        "exact-carrier transformation flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. "
+        "Direct HOL rows recursive_control / handler / deccall / unchanged / "
+        "fperm_done are in pan_globals_fperm_probe.out and sampled by "
+        "Flapjack/Test/PanGlobalsFpermParity.lean."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalRenameDecls"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "fperm_decs_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.13) against "
+        "pan_globalsScript.sml:216-221: the three fperm_decs equations ([], "
+        "Function fi::decs renaming fi.name via fperm_name and fi.body via fperm, "
+        "other d::decs unchanged) match globalRenameDecls clause-for-clause. The "
+        "mismatch is the imported declaration carrier: production Decl α contains "
+        "Prog α/Exp α (Const : α, String identifiers) and Shape (Named : String), "
+        "while HOL decl carries word-valued expressions with mlstring identifiers "
+        "and shape (PanLang.lean:14-28, 226-269). names_as_string cannot repair "
+        "the expression/Shape carrier difference, so the tag remains withdrawn "
+        "pending the exact-carrier transformation flapjack-6nn.3.1 / "
+        "flapjack-pxn.18.3.5.8. Direct HOL rows mixed / empty / "
+        "singleton_nonfunction are in pan_globals_fperm_decs_probe.out and sampled "
+        "by Flapjack/Test/PanGlobalsFpermDecsParity.lean."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalResortDecls"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "resort_decls_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.16) against "
+        "pan_globalsScript.sml:179: the filter order FILTER is_name ++ "
+        "FILTER is_exn_decl ++ FILTER is_decl ++ FILTER is_function matches "
+        "globalResortDecls, and globalDeclIsName/globalDeclIsException/"
+        "globalDeclIsGlobal/globalDeclIsFunction are the HOL predicates. The "
+        "mismatch is the executed Decl α carrier, which is not DeclHOL width: "
+        "production Exp α stores α in Const, HOL ExpHOL width stores BitVec width "
+        "('a word), and names/Shape use String instead of mlstring. "
+        "names_as_string only accounts for the name difference, so the tag "
+        "remains withdrawn pending the exact-carrier transformation "
+        "flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows mixed / "
+        "stable_groups / empty are in pan_globals_resort_decls_probe.out and "
+        "sampled by Flapjack/Test/PanGlobalsResortDeclsParity.lean."
+    ),
+    ("Flapjack/Pancake/PanGlobals.lean", "globalNewMainName"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "new_main_name_def",
+        "flapjack-ds4 (source comparison, bead flapjack-dlc.15) against "
+        "pan_globalsScript.sml:224: new_main_name decls = fresh_name «main» "
+        "(MAP FST (functions decls)) matches freshNameHOL \"main\" "
+        "(globalFunctionNames declarations) once the production projections stand "
+        "for HOL functions/fresh_name. The mismatch is the input carrier: this "
+        "consumes generic production List (Decl α) with Const : α and String "
+        "identifiers/Shape, while HOL consumes word-valued declarations with "
+        "Const : 'a word and mlstring identifiers. names_as_string and the "
+        "generated-name boundary witness only address the name difference, not "
+        "this input carrier, so the tag remains withdrawn pending the "
+        "exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. "
+        "Direct HOL rows empty / two_collisions / mixed / absent are in "
+        "pan_globals_new_main_name_probe.out and sampled by "
+        "Flapjack/Test/PanGlobalsNewMainNameParity.lean."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
@@ -526,6 +649,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "tuple_4_o"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP3"),
         ("Flapjack/Pancake/Proofs/PanGlobals.lean", "ALOOKUP_MAP4"),
+        ("Flapjack/Pancake/PanGlobals.lean", "fpermName"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cancel"),
+        ("Flapjack/Pancake/Proofs/PanGlobals.lean", "fpermName_cong"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "mod_eq_of_lt_eq"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),

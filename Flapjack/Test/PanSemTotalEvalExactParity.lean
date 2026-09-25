@@ -298,7 +298,15 @@ def assignPrimitiveRows : Bool :=
             sum.toNat == 90 && carry.toNat == 0
         | _ => false
     | _ => false
-  assignOk && primitiveOk
+  let recursiveAssignOk := match recursiveExact
+      (.assign .local (ml "x") (.const 9)) baseState with
+    | some (none, state) => localWord state "x" == some 9
+    | _ => false
+  let recursiveAssignError := match recursiveExact
+      (.assign .local (ml "x") (.var .local (ml "missing"))) baseState with
+    | some (some .error, state) => localWord state "x" == some 7 && state.clock == 5
+    | _ => false
+  assignOk && primitiveOk && recursiveAssignOk && recursiveAssignError
 
 def storeRows : Bool :=
   let storeOk := match exactDispatch (.store (.const 0) (.const 7)) baseState with
@@ -545,10 +553,9 @@ def stateOwnedTimeoutRows : Bool :=
 
 /-- The outer `none` is a documented unassembled-constructor gap, not HOL
     `SOME Error`. -/
-def recursiveGapRows : Bool :=
-  let assignOpen := evalPanSemRecursiveCallHOLExact
-    (.assign .local (ml "x") (.const 2)) baseState
-  assignOpen.isNone
+def recursivePrimitiveGapRows : Bool :=
+  evalPanSemRecursiveCallHOLExact
+    (.primitive (ml "x") .addCarry [.const 1, .const 2, .const 0]) baseState |>.isNone
 
 /-- Direct original-HOL While equations for false/true conditions, recursive
     normal and Continue iterations to timeout, Break exit, terminal Return, and
@@ -667,7 +674,7 @@ def recursiveDecRows : Bool :=
 #guard recursiveIfRows
 #guard recursiveWhileRows
 #guard recursiveDecRows
-#guard recursiveGapRows
+#guard recursivePrimitiveGapRows
 
 def runChecks : IO Bool := do
   if skipBreakTickRows then
@@ -733,9 +740,9 @@ def runChecks : IO Bool := do
   if recursiveDecRows then
     IO.println "PASS exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
   else IO.println "FAIL exact-state recursive Dec matches HOL initializer, body, shape, control, and local restoration rows"
-  if recursiveGapRows then
-    IO.println "PASS exact-state dispatcher keeps unassembled constructors explicitly open"
-  else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"
+  if recursivePrimitiveGapRows then
+    IO.println "PASS exact-state dispatcher keeps Primitive explicitly open"
+  else IO.println "FAIL exact-state dispatcher keeps Primitive explicitly open"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
     sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
     stateOwnedCallDestinationRows &&
@@ -744,6 +751,6 @@ def runChecks : IO Bool := do
     stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
     stateOwnedDecCallExceptionRows && stateOwnedDecCallControlNegativeRows &&
     stateOwnedTimeoutRows && recursiveIfRows && recursiveWhileRows && recursiveDecRows &&
-    recursiveGapRows)
+    recursivePrimitiveGapRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

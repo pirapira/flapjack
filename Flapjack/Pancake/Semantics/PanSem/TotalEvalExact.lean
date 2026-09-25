@@ -19,7 +19,8 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 The outer `Option` means that a constructor has no assembled clause in the
 nonrecursive dispatcher; it is distinct from the inner HOL result option. The
 recursive evaluator below assembles `Dec`, `Seq`, `If`, `While`, `Call`, and
-`DecCall`. `Assign`, `Primitive`, stores, `ExtCall`, and ShMem remain explicit gaps.
+`DecCall`, plus the `Assign` clause whose memory-set fields are proved preserved.
+`Primitive`, stores, `ExtCall`, and ShMem remain explicit gaps.
 This file does not
 claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
@@ -102,14 +103,16 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
       rw [hshared]
       exact context.shMemaddrsDecidable address }
 
-/-- Exact recursive Dec/Seq/If/While/Call/DecCall evaluator over the state-owned HOL code map.
+/-- Exact recursive Dec/Seq/If/While/Call/DecCall and Assign evaluator over the
+    state-owned HOL code map.
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
     results. `If` selects and recursively evaluates one branch. `While` decrements
     the clock before its body and recurses only on normal or Continue outcomes.
     `Dec` installs its binding for the body and restores the prior local afterwards.
-    `Assign`, `Primitive`, stores, `ExtCall`, and ShMem leaves remain explicit
+    `Assign` uses the reviewed nonrecursive clause and preserves both memory
+    predicates. `Primitive`, stores, `ExtCall`, and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
@@ -289,6 +292,26 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                         | some other =>
                             some (some other, fixedContext.withState
                               (emptyLocalsHOLExact fixedContext.state) rfl rfl)
+      | .assign kind name source =>
+          let output := assignStepHOLExact state kind name source
+            (fun _ expression => evalHOLExact state expression)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            cases hEval : evalHOLExact state source with
+            | none => simp [output, assignStepHOLExact, hEval]
+            | some value =>
+                by_cases hvalid : isValidValueHOLExact state kind name value = true
+                · cases kind <;>
+                    simp [output, assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+                · simp [output, assignStepHOLExact, hEval, hvalid]
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            cases hEval : evalHOLExact state source with
+            | none => simp [output, assignStepHOLExact, hEval]
+            | some value =>
+                by_cases hvalid : isValidValueHOLExact state kind name value = true
+                · cases kind <;>
+                    simp [output, assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+                · simp [output, assignStepHOLExact, hEval, hvalid]
+          some (output.1, context.withState output.2 hmem hshared)
       | other =>
           match other with
           | .skip => some (none, context)

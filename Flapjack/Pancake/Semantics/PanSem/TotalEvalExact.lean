@@ -21,8 +21,8 @@ nonrecursive dispatcher; it is distinct from the inner HOL result option. The
 recursive evaluator below assembles `Dec`, `Seq`, `If`, `While`, `Call`, and
 `DecCall`, plus the `Assign` and `Primitive` clauses whose memory-set fields
 are proved preserved. Store clauses are assembled below with the same
-preservation proof, and `ExtCall` is routed through its exact clause after
-proving both memory predicates unchanged. ShMem remains an explicit gap.
+preservation proof. `ExtCall`, `ShMemLoad`, and `ShMemStore` are routed through
+their exact clauses after proving both memory predicates unchanged.
 This file does not
 claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
@@ -115,9 +115,10 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
     `Dec` installs its binding for the body and restores the prior local afterwards.
     `Assign` and `Primitive` use reviewed nonrecursive clauses and preserve
     both memory predicates. Store clauses are assembled below with the same
-    preservation proof. `ExtCall` is routed through its exact clause and both
-    memory predicates are preserved. ShMem leaves remain an explicit gap, so
-    this definition does not claim or tag the full `evaluate_def`. -/
+    preservation proof. `ExtCall`, `ShMemLoad`, and `ShMemStore` use their exact
+    clauses and preserve both memory predicates. The whole-state carrier still
+    admits unrestricted function maps, so this definition is not tagged as the
+    finite-map HOL `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
       Option (Option (PanSemResultExact width) × PanSemExactEvalContext width σ)
@@ -439,14 +440,31 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                 extCallStepHOLExact_memaddrs state evalExpression function
                   configuration configurationLength array arrayLength
               have hshared : output.2.shMemaddrs = state.shMemaddrs :=
-                extCallStepHOLExact_shMemaddrs state evalExpression function
+                  extCallStepHOLExact_shMemaddrs state evalExpression function
                   configuration configurationLength array arrayLength
               some (output.1, context.withState output.2 hmem hshared)
+          | .shMemLoad size kind name address =>
+              let evalExpression := fun (_ : PanSemStateExact width σ)
+                  (expression : ExpHOL width) => evalHOLExact state expression
+              let output := shMemLoadClauseHOLExact state size kind name address
+                evalExpression
+              have hdomains :=
+                shMemLoadClauseHOLExact_preservesDomains state size kind name address
+                  evalExpression
+              some (output.1, context.withState output.2 hdomains.1 hdomains.2)
+          | .shMemStore size address value =>
+              let evalExpression := fun (_ : PanSemStateExact width σ)
+                  (expression : ExpHOL width) => evalHOLExact state expression
+              let output := shMemStoreClauseHOLExact state size address value
+                evalExpression
+              have hdomains :=
+                shMemStoreClauseHOLExact_preservesDomains state size address value
+                  evalExpression
+              some (output.1, context.withState output.2 hdomains.1 hdomains.2)
           | .annot _ _ => some (none, context)
           | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
             .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
-            .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ |
-            .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none
+            .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ => none
 termination_by _program context => (context.state.clock, sizeOf _program)
 decreasing_by
   · simp_wf

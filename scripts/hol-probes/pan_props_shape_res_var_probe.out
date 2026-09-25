@@ -1,0 +1,5 @@
+spv_one=One
+rv_hit=SOME (ValWord 7w)
+rv_miss=SOME (ValWord 3w)
+rv_diff=T
+rv_some=T

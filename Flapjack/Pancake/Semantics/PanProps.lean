@@ -3,6 +3,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -12,6 +13,8 @@ starts with the value-well-formedness definition used by PanStructs
 -/
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang (MlS)
 
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
@@ -465,5 +468,60 @@ theorem allDistinctAlistCtxtMax {α : Type} [BEq α] [LawfulBEq α]
     rw [← hshapeget] at hx
     exact mem_of_withShape_mem sh ns n x (by rw [withShape_length]; exact hnsh) hlen1 hx
   exact maxList_ge_of_mem ns x hxmem
+
+/-! ## Exact `res_var` / `shape_of` lemmas over the exact carriers
+
+`panPropsScript.sml` states four small properties of HOL `shape_of`
+(`panPropsScript.sml:14`) and `res_var` (`panPropsScript.sml:220-240`) over the
+exact `panSem` carriers.  The exact Lean counterparts are `shapeOfHOLExact`
+(`PanSem/ValueHOL.lean`, tagged `shape_of_def`) and `resVarHOLExact`
+(`PanSem/LocalUpdatesExact.lean`, tagged `res_var_def`), so these lemmas are
+ported over those definitions rather than the production generic carriers used
+by the `panValueShape`/`panValueResVar` bridges. -/
+
+/-- Exact port of HOL `panProps$shape_of_val` (`panPropsScript.sml:14`):
+    `shape_of (Val x) = One`.  The `Val` payload is ignored, so the
+    `HolWordLab` carrier does not affect the result. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "shape_of_val"]
+theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab width) :
+    shapeOfHOLExact (.val value : ValueHOL width) =
+      Flapjack.Pancake.PanLang.ShapeHOL.one := by
+  simp [shapeOfHOLExact]
+
+/-- Exact port of HOL `panProps$FLOOKUP_pan_res_var_thm`
+    (`panPropsScript.sml:236`):
+    `FLOOKUP (res_var l (m,v)) n = if n = m then v else FLOOKUP l n`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "FLOOKUP_pan_res_var_thm"]
+theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
+    (locals : MlS → Option (ValueHOL width))
+    (m n : MlS) (v : Option (ValueHOL width)) :
+    resVarHOLExact locals (m, v) n = if n = m then v else locals n := by
+  rcases v with _ | value <;> simp [resVarHOLExact]
+
+/-- Exact port of HOL `panProps$flookup_res_var_diff_eq_org`
+    (`panPropsScript.sml:228`):
+    `n <> m ==> FLOOKUP (res_var lc (n,v)) m = FLOOKUP lc m`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "flookup_res_var_diff_eq_org"]
+theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
+    (locals : MlS → Option (ValueHOL width))
+    (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
+    resVarHOLExact locals (n, v) m = locals m := by
+  have h' : m ≠ n := fun hm => h hm.symm
+  rcases v with _ | value <;> simp [resVarHOLExact, h']
+
+/-- Exact port of HOL `panProps$flookup_res_var_some_eq_lookup`
+    (`panPropsScript.sml:220`):
+    `FLOOKUP (res_var lc (v,FLOOKUP lc' v)) v = SOME value ==>
+     FLOOKUP lc' v = SOME value`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "flookup_res_var_some_eq_lookup"]
+theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
+    (lc lc' : MlS → Option (ValueHOL width))
+    (v : MlS) (value : ValueHOL width)
+    (h : resVarHOLExact lc (v, lc' v) v = some value) : lc' v = some value := by
+  cases hv : lc' v with
+  | none => simp [resVarHOLExact, hv] at h
+  | some w =>
+      have hw : some w = some value := by simpa [resVarHOLExact, hv] using h
+      exact hw
 
 end Flapjack

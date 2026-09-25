@@ -1155,4 +1155,32 @@ example :
     (fixClockHOL (width := 64) { holEvalState with clock := 9 }
       ((none : Option Nat), { holEvalState with clock := 4 })).2.clock = 4 := rfl
 
+/-! ### Exact `mem_store`/`mem_stores` parity (flapjack-pxn.18.4.3.77.12)
+
+Direct original-HOL EVAL rows for `mem_store_def`/`mem_stores_def`
+(`cakeml/pancake/semantics/panSemScript.sml:373-386`) are checked in
+`scripts/hol-probes/pan_flat_store_probe.out` (`store_hit`, `store_miss`,
+`stores_hit`, `stores_blocked`). -/
+
+abbrev flatStoreMemory : Word64 → HolWordLab 64 := fun _ => .word 0
+
+abbrev flatStoreDomain : Word64 → Prop := fun address => address = 10 ∨ address = 18
+
+#guard (panMemStoreHOL (10 : Word64) (.word 3) flatStoreDomain flatStoreMemory).map
+  (fun memory => memory 10) == some (.word 3)
+#guard (panMemStoreHOL (11 : Word64) (.word 3) flatStoreDomain flatStoreMemory).isNone
+#guard (panMemStoresHOL (10 : Word64) [(.word 3), (.word 5)] flatStoreDomain
+  flatStoreMemory).map (fun memory => (memory 10, memory 18)) == some ((.word 3), (.word 5))
+#guard (panMemStoresHOL (10 : Word64) [(.word 3), (.word 5)]
+  (fun address => address = 10) flatStoreMemory).isNone
+
+/- Exact HOL `word_lab` helpers: `scripts/hol-probes/pan_sem_e2e_probe.out` rows
+   `isWord_def_word=T` and `theWord_def_word=3w`. -/
+example : isWordHOL (width := 64) (HolWordLab.word (3 : Word64)) = true :=
+  isWordHOL_word 3
+example : theWordHOL (width := 64) (HolWordLab.word (3 : Word64)) = 3 :=
+  theWordHOL_word 3
+#guard isWordHOL (width := 64) (HolWordLab.word (3 : Word64)) == true
+#guard theWordHOL (width := 64) (HolWordLab.word (3 : Word64)) == 3
+
 end Flapjack.Test.PanSemStateEvalParity

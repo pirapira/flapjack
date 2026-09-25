@@ -26,3 +26,12 @@ val _ = print_eval "multiplication"
   ``crep_arith$dest_const
       (crepLang$Crepop crepLang$Mul
         [crepLang$Const (2w : 8 word); crepLang$Const (4w : 8 word)])``;
+(* Word-carrier convention rows: HOL `'a word` is literally `bool[dimindex(:'a)]`
+   (a finite boolean function space) and `dimindex` is always positive, which is
+   the property encoded by `[NeZero width]` on the width-indexed Lean tags. *)
+val _ = print_eval "word_carrier_bool"
+  (``((7w : 8 word) : bool[8]) = 7w``);
+val _ = print_eval "dimindex_8"
+  (``dimindex (:8) = 8``);
+val _ = print_eval "dimindex_pos"
+  (``0 < dimindex (:8)``);

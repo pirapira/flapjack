@@ -116,6 +116,8 @@ import Flapjack.Parser
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.ConversionByteRanged
 import Flapjack.Parser.GrammarByteRanged
+import Flapjack.Parser.LocaliseByteRanged
+import Flapjack.Parser.ParseTopDecsByteRanged
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.CrepLang.Prog

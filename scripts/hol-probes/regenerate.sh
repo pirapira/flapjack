@@ -680,10 +680,11 @@ run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_
 run_probe pan_sem_return_raise_memory_probeScript.sml pan_sem_return_raise_memory_probe.out \
   ret_mem_fail_result raise_mem_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-# The ExtCall error probe observes the non-word argument and failing
-# byte-read rejections, each returning `SOME Error` with unchanged state.
+# The ExtCall error probe observes the argument-evaluation failure, the
+# non-word argument and failing byte-read rejections, each returning
+# `SOME Error` with unchanged state.
 run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
-  ext_nonword_result ext_read_fail_ffi_io \
+  ext_nonword_result ext_argfail_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
@@ -882,7 +883,7 @@ run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
 run_probe crep_exps_probeScript.sml crep_exps_probe.out \
   leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
 run_probe cexp_heads_probeScript.sml cexp_heads_probe.out \
-  empty heads empty_head empty_tail "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty heads empty_head empty_tail inferred_type "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe comp_field_probeScript.sml comp_field_probe.out \
   first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \

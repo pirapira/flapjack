@@ -15,16 +15,23 @@ namespace Flapjack.Test.CexpHeadsParity
 open Flapjack
 
 def parityGuard : Bool :=
-  cexpHeads ([] : List (List (CrepExp Nat))) == some [] &&
+  cexpHeads (β := CrepExp Nat) ([] : List (List (CrepExp Nat))) == some [] &&
   cexpHeadsSimp ([] : List (List (CrepExp Nat))) == some [] &&
-  cexpHeads [[.const 1, .const 2], [.var 3, .var 4]] ==
+  cexpHeads (β := CrepExp Nat) [[.const 1, .const 2], [.var 3, .var 4]] ==
     some [.const 1, .var 3] &&
   cexpHeadsSimp [[.const 1, .const 2], [.var 3, .var 4]] ==
     some [.const 1, .var 3] &&
-  cexpHeads ([[], [.const 5]] : List (List (CrepExp Nat))) == none &&
+  cexpHeads (β := CrepExp Nat) ([[], [.const 5]] : List (List (CrepExp Nat))) == none &&
   cexpHeadsSimp ([[], [.const 5]] : List (List (CrepExp Nat))) == none &&
-  cexpHeads ([[.const 6], []] : List (List (CrepExp Nat))) == none &&
-  cexpHeadsSimp ([[.const 6], []] : List (List (CrepExp Nat))) == none
+  cexpHeads (β := CrepExp Nat) ([[.const 6], []] : List (List (CrepExp Nat))) == none &&
+  cexpHeadsSimp ([[.const 6], []] : List (List (CrepExp Nat))) == none &&
+  cexpHeads (β := CrepExp (BitVec 64)) ([] : List (List (CrepExp (BitVec 64)))) == some [] &&
+  cexpHeads (β := CrepExp (BitVec 64)) [[.const (1 : BitVec 64)], [.var 3]] ==
+    some [.const 1, .var 3] &&
+  cexpHeads (β := CrepExp (BitVec 64)) ([[], [.const (5 : BitVec 64)]] :
+    List (List (CrepExp (BitVec 64)))) == none &&
+  cexpHeads (β := CrepExp (BitVec 64)) ([[.const (6 : BitVec 64)], []] :
+    List (List (CrepExp (BitVec 64)))) == none
 
 #eval parityGuard
 #guard parityGuard

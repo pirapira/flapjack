@@ -29,3 +29,4 @@ val _ = print_eval "empty_head"
 val _ = print_eval "empty_tail"
   ``pan_to_crep$cexp_heads
       [[Const (6w : 8 word)]; []]``;
+val _ = print ("inferred_type=" ^ type_to_string (type_of ``pan_to_crep$cexp_heads``) ^ "\n");

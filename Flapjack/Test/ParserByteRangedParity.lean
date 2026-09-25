@@ -1,6 +1,7 @@
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.ConversionByteRanged
 import Flapjack.Parser.GrammarByteRanged
+import Flapjack.Parser.ParseTopDecsByteRanged
 
 /-! Kernel checks for the byte-rangedness foundation (bead
     `flapjack-pxn.18.3.5.8.7.1`).  These are the reusable lemmas the parser
@@ -424,5 +425,17 @@ example (fuel : Nat) :
   ⟨(Flapjack.Parser.grammarBlock3_treesSafe fuel).1,
    (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.2.1,
    (Flapjack.Parser.grammarBlock3_treesSafe fuel).2.2.2.2.2.2.1⟩
+
+
+example {width : Nat} (declarations : List (Flapjack.Decl (BitVec width)))
+    (h : ∀ d ∈ declarations, DeclByteRanged d) :
+    ∀ d ∈ localiseDecls declarations, DeclByteRanged d :=
+  localiseDecls_byteRanged declarations h
+
+example {width : Nat} (ofInt : Int → BitVec width) (source : String) (locations : Bool)
+    (declarations : List (Flapjack.Decl (BitVec width)))
+    (h : parseTopDecs ofInt source locations = .ok declarations) :
+    ∀ d ∈ declarations, DeclByteRanged d :=
+  parseTopDecs_declByteRanged ofInt source locations declarations h
 
 end Flapjack.Test.ParserByteRangedParity

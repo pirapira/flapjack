@@ -752,6 +752,71 @@ def panValueRaiseResult
         some (.raised (fun _ => none) globals memory ffi exception value, valueSteps + 1)
       else some (.error locals globals memory ffi, valueSteps + 1)
 
+/-- The `ExtCall` program clause as a non-recursive helper.  Factoring it out
+keeps the recursive `evalPanValueFfiProgSteps` match shape (and its generated
+induction principle) unchanged while restoring the HOL `SOME Error` outcome on
+argument-evaluation failure (`panSemScript.sml:711-729`). -/
+def panValueFfiExtCallSteps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    Option (PanValueFfiSteppedResult α σ) :=
+  match evalPanValueExpsCounted structs locals globals memory baseAddress topAddress bytesInWord
+      [configuration, configurationLength, array, arrayLength]
+      (memoryAccess := memoryAccess) with
+  | none => some (.error locals globals memory ffi, 0)
+  | some (values, expressionSteps) => do
+      let [.word configuration, .word configurationLength, .word array, .word arrayLength] := values |
+        some (.error locals globals memory ffi, expressionSteps)
+      match memoryHandler with
+      | some memoryHandler =>
+          match memoryHandler function configuration configurationLength array arrayLength
+              locals memory ffi with
+          | some (locals, memory, ffi) =>
+              pure (.normal locals globals memory ffi, expressionSteps + 1)
+          | none =>
+              match memoryAccess with
+              | none =>
+                  let (locals, ffi) ←
+                    handler function configuration configurationLength array arrayLength locals ffi
+                  pure (.normal locals globals memory ffi, expressionSteps + 1)
+              | some access =>
+                  match panValueFfiExtCall access context memory bytesInWord ffi function
+                      configuration configurationLength array arrayLength with
+                  | some (.returned memory ffi) =>
+                      pure (.normal locals globals memory ffi, expressionSteps + 1)
+                  | some (.final ffi event) =>
+                      pure (.finalFfi (fun _ => none) globals memory ffi event,
+                        expressionSteps + 1)
+                  | none =>
+                      some (.error locals globals memory ffi, expressionSteps + 1)
+      | none =>
+          match memoryAccess with
+          | none =>
+              let (locals, ffi) ←
+                handler function configuration configurationLength array arrayLength locals ffi
+              pure (.normal locals globals memory ffi, expressionSteps + 1)
+          | some access =>
+              match panValueFfiExtCall access context memory bytesInWord ffi function
+                  configuration configurationLength array arrayLength with
+              | some (.returned memory ffi) =>
+                  pure (.normal locals globals memory ffi, expressionSteps + 1)
+              | some (.final ffi event) =>
+                  pure (.finalFfi (fun _ => none) globals memory ffi event,
+                    expressionSteps + 1)
+              | none =>
+                  some (.error locals globals memory ffi, expressionSteps + 1)
+
 mutual
   def evalPanValueFfiCallSteps
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -972,51 +1037,10 @@ mutual
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess,
-        _contracts, memoryHandler => do
-        let (values, expressionSteps) ← evalPanValueExpsCounted structs locals globals memory
-          baseAddress topAddress bytesInWord
-          [configuration, configurationLength, array, arrayLength]
-          (memoryAccess := memoryAccess)
-        let [.word configuration, .word configurationLength, .word array, .word arrayLength] := values |
-          some (.error locals globals memory ffi, expressionSteps)
-        match memoryHandler with
-        | some memoryHandler =>
-            match memoryHandler function configuration configurationLength array arrayLength
-                locals memory ffi with
-            | some (locals, memory, ffi) =>
-                pure (.normal locals globals memory ffi, expressionSteps + 1)
-            | none =>
-                match memoryAccess with
-                | none =>
-                    let (locals, ffi) ←
-                      handler function configuration configurationLength array arrayLength locals ffi
-                    pure (.normal locals globals memory ffi, expressionSteps + 1)
-                | some access =>
-                    match panValueFfiExtCall access context memory bytesInWord ffi function
-                        configuration configurationLength array arrayLength with
-                    | some (.returned memory ffi) =>
-                        pure (.normal locals globals memory ffi, expressionSteps + 1)
-                    | some (.final ffi event) =>
-                        pure (.finalFfi (fun _ => none) globals memory ffi event,
-                          expressionSteps + 1)
-                    | none =>
-                        some (.error locals globals memory ffi, expressionSteps + 1)
-        | none =>
-            match memoryAccess with
-            | none =>
-                let (locals, ffi) ←
-                  handler function configuration configurationLength array arrayLength locals ffi
-                pure (.normal locals globals memory ffi, expressionSteps + 1)
-            | some access =>
-                match panValueFfiExtCall access context memory bytesInWord ffi function
-                    configuration configurationLength array arrayLength with
-                | some (.returned memory ffi) =>
-                    pure (.normal locals globals memory ffi, expressionSteps + 1)
-                | some (.final ffi event) =>
-                    pure (.finalFfi (fun _ => none) globals memory ffi event,
-                      expressionSteps + 1)
-                | none =>
-                    some (.error locals globals memory ffi, expressionSteps + 1)
+        _contracts, memoryHandler =>
+        panValueFfiExtCallSteps context handler structs baseAddress topAddress bytesInWord
+          locals globals memory ffi function configuration configurationLength array arrayLength
+          memoryAccess memoryHandler
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
         contracts, memoryHandler =>
         (panValueIteCondition structs baseAddress topAddress bytesInWord locals globals
@@ -1109,7 +1133,7 @@ theorem evalPanValueFfiProgSteps_extCall_memoryHandler
       (memoryAccess := access) (contracts := contracts)
       (memoryHandler := some memoryHandler) =
       some (.normal nextLocals globals nextMemory nextFfi, expressionSteps + 1) := by
-  simp [evalPanValueFfiProgSteps, hvalues, hhandler]
+  simp [evalPanValueFfiProgSteps, panValueFfiExtCallSteps, hvalues, hhandler]
 
 theorem evalPanValueFfiProgSteps_extCall_returned_ioEvents_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1145,7 +1169,7 @@ theorem evalPanValueFfiProgSteps_extCall_returned_ioEvents_prefix
       (memoryHandler := none) =
       some (.normal nextLocals globals nextMemory nextFfi, expressionSteps + 1)) :
     ffi.ioEvents <+: nextFfi.ioEvents := by
-  simp [evalPanValueFfiProgSteps, hvalues] at hresult
+  simp [evalPanValueFfiProgSteps, panValueFfiExtCallSteps, hvalues] at hresult
   cases hcall : panValueFfiExtCall access context memory bytesInWord ffi function
       configuration configurationLength array arrayLength with
   | none => simp [hcall] at hresult

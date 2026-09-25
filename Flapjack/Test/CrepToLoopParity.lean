@@ -530,7 +530,7 @@ example : crepToLoopLocalsRel localsRelContext (fun _ => false)
   · intro vname v hv
     simp [FLOOKUP, FEMPTY] at hv
 
-/-- Finite-map context carrier for the tagged exact `locals_rel_def` port
+/-- Finite-map context carrier for the untagged documented-mismatch `crepToLoopLocalsRelHOL` rendering of `locals_rel_def`
     (bead `flapjack-pxn.18.5.6.9.1`); empty vars/maxVar satisfy the two
     context clauses vacuously. -/
 def localsRelHOLContext : CrepToLoopFiniteMapContext :=
@@ -538,7 +538,7 @@ def localsRelHOLContext : CrepToLoopFiniteMapContext :=
     funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
     vmax := 5, target := .riscv }
 
-/-- The tagged exact `locals_rel_def` port satisfies every clause vacuously for
+/-- The untagged `crepToLoopLocalsRelHOL` rendering of `locals_rel_def` satisfies every clause vacuously for
     an empty context and empty source locals. -/
 example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
     (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
@@ -556,7 +556,7 @@ example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
 /-- HOL `locals_rel_insert_gt_vmax` oracle rows (`insert_same`,
     `insert_other_unchanged`, `gt_vmax_bounded_survives`, `subset_preserved` in
     `scripts/hol-probes/crep_to_loop_locals_insert_probe.out`): inserting a
-    fresh `num_map` binding above `ctxt.vmax` preserves the tagged relation and
+    fresh `num_map` binding above `ctxt.vmax` preserves the relation and
     is visible at its own key. -/
 example :
     crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
@@ -578,7 +578,7 @@ example :
         exact absurd hv (fun h => Option.some_ne_none v h.symm))
     (by decide)
 
-/-- The `∃n` clause of the tagged exact relation for a present binding: source
+/-- The `∃n` clause of the untagged `crepToLoopLocalsRelHOL` relation for a present binding: source
     local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
     `wlab` value in the target map. -/
 example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some n ∧
@@ -592,7 +592,7 @@ example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some 
     `cutset_domain_trans` in
     `scripts/hol-probes/crep_to_loop_locals_cutset_probe.out`): shrinking the
     live set (`subspt cset cset'` rendered as `live n = true → live' n = true`)
-    preserves the tagged relation against the same target locals. -/
+    preserves the relation against the same target locals. -/
 example :
     crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
       (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))

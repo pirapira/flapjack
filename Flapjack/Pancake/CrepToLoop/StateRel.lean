@@ -417,12 +417,37 @@ structure CrepToLoopFiniteMapContext where
   vmax : Nat
   target : Compiler.Encoders.Asm.AsmArchitecture
 
-/-- Flapjack analogue of HOL `locals_rel_def`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`). The relation
-    uses the right extensional `sptree$num_set`/`num_map` renderings, but its
-    context parameter includes `funcs : FiniteMap FunName ...` with
-    `FunName = String`; HOL context uses `mlstring` keys. The declaration is
-    intentionally untagged until the context carrier is exact. -/
+/-- Flapjack analogue of HOL `crep_to_loop$locals_rel_def`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:101-111`, withdrawn tag
+    `flapjack-dlc.28`), deliberately untagged. HOL states, over a `ctxt` whose
+    `vars : num |-> num`, `vmax : num`, `funcs : (mlstring |-> ...)` and
+    `target` fields,
+
+      `locals_rel ctxt (l:sptree$num_set) (s_locals:num |-> 'a word_lab)
+        t_locals <=> distinct_vars ctxt.vars /\ ctxt_max ctxt.vmax ctxt.vars /\
+        domain l ⊆ domain t_locals /\
+        !vname v. FLOOKUP s_locals vname = SOME v ==>
+          ?n. FLOOKUP ctxt.vars vname = SOME n /\ n ∈ domain l /\
+            lookup n t_locals = SOME (wlab_wloc v)`.
+
+    The clause structure matches, but the carriers are only representations:
+    `ctxt.funcs : FiniteMap FunName (...)` with `FunName = String` versus HOL
+    `mlstring` (this field is ignored by the relation, yet still fixes the
+    quantified context's type, so it is a mismatch); `sptree$num_set` `l` with
+    `domain l`/`n ∈ domain l` versus the Boolean predicate `live`; `sptree$num_map`
+    `t_locals` with `lookup n t_locals` versus the Option-valued function
+    `tLocals`; and `'a word_lab` versus `LoopValue (BitVec width)`. The
+    `distinct_vars`/`ctxt_max` conjuncts are the parametric Flapjack renderings
+    `crepToLoopDistinctVars`/`crepToLoopCtxtMax`. `names_as_string` cannot
+    authorize the `num_set`/`num_map`/`word_lab`/`FunName` carriers, and no
+    `NameRanged` byte witness applies (`locals_rel` is a `Prop`).
+
+    Direct HOL oracle: `scripts/hol-probes/crep_to_loop_locals_rel_probe.out`
+    rows `ctxt_vars_lookup`, `distinct_component`, `ctxt_max_component`,
+    `set_domain_mem`, `map_lookup`, `subset_domain_component`; exercised by
+    `Flapjack/Test/CrepToLoopParity.lean` (`localsRelContext` and the
+    `crepToLoopLocalsRelHOL` examples/fixtures). Faithful exact-carrier port
+    tracked by `flapjack-pxn.18.5.6.9.1`. -/
 def crepToLoopLocalsRelHOL {width : Nat} [NeZero width]
     (ctxt : CrepToLoopFiniteMapContext)
     (live : Nat → Bool)

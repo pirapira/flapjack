@@ -1499,3 +1499,10 @@ run_probe word_to_stack_copy_ret_probeScript.sml word_to_stack_copy_ret_probe.ou
   cra_zero cr_handle \
   "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+
+# The panLexer byte probe observes the original lexer's ASCII-only identifier
+# predicates (HOL char is 8-bit; bytes >= 128 are not alpha/digit).
+run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
+  plx_alpha_206 plx_ascii_then_high \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"

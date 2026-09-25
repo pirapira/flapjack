@@ -14,6 +14,15 @@ free of well-founded recursion.
 
 namespace Flapjack.Parser
 
+/-- Encode a source string to the list of bytes the original CakeML lexer
+    observes. HOL `string` is a `char list` with 256 possible characters, and the
+    executed compiler reads the source file as bytes through CakeML's UTF-8 file
+    input; re-encoding the Lean decoded string recovers exactly those bytes.
+    This keeps accepted identifiers byte-valued, so `MlString.ofString`
+    round-trips without silent truncation. -/
+def utf8Bytes (s : String) : List Char :=
+  s.toUTF8.toList.map (fun b => Char.ofNat b.toNat)
+
 /-- Reserved words, mirroring `panLexer$keyword`. -/
 inductive Keyword where
   | skipK | stK | stwK | st8K | st16K | st32K | ifK | elseK | whileK
@@ -101,7 +110,45 @@ def isAtomBeginGroup (c : Char) : Bool := "#=><!&|".toList.contains c
 
 def isAtomInGroup (c : Char) : Bool := "=<>|&+".toList.contains c
 
-def isAlphaNumOrWild (c : Char) : Bool := c.isAlphanum || c == '_'
+/-- ASCII range tests matching HOL `string$isDigit`/`isLower`/`isUpper`/`isAlpha`/`isAlphaNum`
+    (`HOL/src/string/stringScript.sml:74-95`). The original Pancake lexer operates on
+    `char list` where HOL `char` has exactly 256 values, so a byte >= 128 is neither a
+    letter nor a digit; Lean's Unicode `Char.isAlpha`/`isDigit`/`isAlphanum` would wrongly
+    accept such codepoints and later truncate them in `MlString.ofString`. -/
+def isDigitAscii (c : Char) : Bool := decide (48 ≤ c.toNat ∧ c.toNat ≤ 57)
+
+def isLowerAscii (c : Char) : Bool := decide (97 ≤ c.toNat ∧ c.toNat ≤ 122)
+
+def isUpperAscii (c : Char) : Bool := decide (65 ≤ c.toNat ∧ c.toNat ≤ 90)
+
+def isAlphaAscii (c : Char) : Bool := isLowerAscii c || isUpperAscii c
+
+def isAlphaNumAscii (c : Char) : Bool := isAlphaAscii c || isDigitAscii c
+
+/-- HOL `string$isSpace` (`stringScript.sml:95`): `ORD c = 32 \/ 9 <= ORD c /\ ORD c <= 13`. -/
+def isSpaceAscii (c : Char) : Bool := decide (c.toNat = 32 ∨ (9 ≤ c.toNat ∧ c.toNat ≤ 13))
+
+def isAlphaNumOrWild (c : Char) : Bool := isAlphaNumAscii c || c == '_'
+
+/-- Every character the lexer admits into a digit is a byte below 128. -/
+theorem isDigitAscii_lt128 {c : Char} (h : isDigitAscii c = true) : c.toNat < 128 := by
+  simp only [isDigitAscii, decide_eq_true_eq] at h
+  omega
+
+/-- Every character the lexer admits into an identifier is a byte below 128. -/
+theorem isAlphaNumOrWild_lt128 {c : Char} (h : isAlphaNumOrWild c = true) : c.toNat < 128 := by
+  simp only [isAlphaNumOrWild, Bool.or_eq_true] at h
+  rcases h with h | h
+  · simp only [isAlphaNumAscii, Bool.or_eq_true] at h
+    rcases h with h | h
+    · simp only [isAlphaAscii, Bool.or_eq_true] at h
+      rcases h with h | h
+      · simp only [isLowerAscii, decide_eq_true_eq] at h; omega
+      · simp only [isUpperAscii, decide_eq_true_eq] at h; omega
+    · exact isDigitAscii_lt128 h
+  · have : c = '_' := by simpa using h
+    subst this
+    decide
 
 def isLexErrorT : Token → Bool
   | .lexErrorT _ => true
@@ -262,14 +309,15 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
   | _ + 1, [], _ => none
   | fuel + 1, c :: cs, loc =>
       if c == '\n' then nextAtom fuel cs (nextLine loc)
-      -- CakeML `isSpace` (panLexerScript.sml:230) also skips \v (11) and \f (12).
-      else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
-      else if c.isDigit then
-        let (n, cs') := readWhile Char.isDigit cs [c]
+      -- CakeML `isSpace` (`panLexerScript.sml:230`) is the ASCII test
+      -- `ORD c = 32 \/ 9 <= ORD c /\ ORD c <= 13`.
+      else if isSpaceAscii c then nextAtom fuel cs (nextLoc 1 loc)
+      else if isDigitAscii c then
+        let (n, cs') := readWhile isDigitAscii cs [c]
         some (.numberA (Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, cs')
-      else if c == '-' && (cs.head?.map Char.isDigit).getD false then
-        let (n, rest) := readWhile Char.isDigit cs []
+      else if c == '-' && (cs.head?.map isDigitAscii).getD false then
+        let (n, rest) := readWhile isDigitAscii cs []
         some (.numberA (0 - Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, rest)
       else if c == '/' && cs.head? == some '/' then
@@ -291,7 +339,7 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
       else if isAtomBeginGroup c then
         let (n, rest) := readWhile isAtomInGroup cs [c]
         some (.symA n, { start := loc, stop := nextLoc (n.length - 1) loc }, rest)
-      else if c.isAlpha || c == '@' || c == '_' then
+      else if isAlphaAscii c || c == '@' || c == '_' then
         let (n, rest) := readWhile isAlphaNumOrWild cs [c]
         some (.wordA n, { start := loc, stop := nextLoc n.length loc }, rest)
       else
@@ -313,7 +361,7 @@ def lexAux : Nat → List Char → Posn → List (Token × Locs)
 
 /-- Lex Pancake source into tokens paired with their source ranges. -/
 def pancakeLex (input : String) : List (Token × Locs) :=
-  let chars := input.toList
+  let chars := utf8Bytes input
   lexAux (chars.length + 1) chars initLoc
 
 /--

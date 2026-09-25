@@ -155,6 +155,7 @@ import Flapjack.Test.PanLangExpHOLParity
 import Flapjack.Test.PanLangProgHOLParity
 import Flapjack.Test.PanLangDeclHOLParity
 import Flapjack.Test.CrepLookupCodeHOLParity
+import Flapjack.Test.ParserByteNamesParity
 
 /-!
 # Flapjack regression tests

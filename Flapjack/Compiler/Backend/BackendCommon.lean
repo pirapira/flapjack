@@ -17,4 +17,12 @@ def wordAddCarryHOL {width : Nat} [NeZero width]
   (BitVec.ofNat width result,
     if 2 ^ width ≤ result then BitVec.ofNat width 1 else BitVec.ofNat width 0)
 
+/-- HOL `backend_common$stack_num_stubs`: number of stack-language stubs. -/
+@[hol "cakeml/compiler/backend/backend_commonScript.sml" "stack_num_stubs_def"]
+def stackNumStubs : Nat := 5
+
+/-- HOL `backend_common$word_num_stubs = stack_num_stubs + 1 + 1`. -/
+@[hol "cakeml/compiler/backend/backend_commonScript.sml" "word_num_stubs_def"]
+def wordNumStubs : Nat := stackNumStubs + 1 + 1
+
 end Flapjack

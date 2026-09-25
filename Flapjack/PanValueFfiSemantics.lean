@@ -835,10 +835,11 @@ mutual
       (memoryAccess : Option (PanValueMemoryAccess α) := none) →
       (contracts : Option PanValueCallContracts := none) →
       (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none) →
+      (preserveReturnLocals : Bool := false) →
       Option (PanValueFfiSteppedResult α σ)
-    | 0, _, _, _, _, _, _, _, _, _, _ => none
+    | 0, _, _, _, _, _, _, _, _, _, _, _ => none
     | fuel + 1, locals, globals, memory, ffi, info, function, arguments, memoryAccess,
-        contracts, memoryHandler => do
+        contracts, memoryHandler, preserveReturnLocals => do
         (panValueCallArguments structs baseAddress topAddress bytesInWord locals globals memory
           arguments memoryAccess).elim
           (some (.error locals globals memory ffi, 0))
@@ -864,8 +865,11 @@ mutual
                     -- payload-size limit is enforced by the callee `Return`.
                     if panValueReturnValid structs contracts function values then
                       match info with
-                      | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory calleeFfi values,
-                          argumentSteps + steps)
+                      | none =>
+                          let returnedLocals :=
+                            if preserveReturnLocals then calleeLocals else fun _ => none
+                          pure (.returned returnedLocals calleeGlobals calleeMemory calleeFfi values,
+                            argumentSteps + steps)
                       | some (destination, _) => do
                           let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
                             destination values
@@ -1011,11 +1015,10 @@ mutual
         let oldValue := locals name
         let (callResult, callSteps) ← evalPanValueFfiCallSteps context primitive handler structs
           functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-          none function arguments
-          (memoryAccess := memoryAccess) (contracts := contracts)
-          (memoryHandler := memoryHandler)
+          none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
+          (memoryHandler := memoryHandler) (preserveReturnLocals := true)
         match callResult with
-        | .returned _ globals memory ffi [value] =>
+        | .returned returnedLocals globals memory ffi [value] =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
@@ -1024,7 +1027,8 @@ mutual
                 (memoryHandler := memoryHandler)
               pure (restorePanValueFfiLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
-            else some (.error (fun _ => none) globals memory ffi, callSteps + 1)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else some (.error returnedLocals globals memory ffi, callSteps + 1)
         | .raised _ globals memory ffi exception value =>
             pure (.raised (fun _ => none) globals memory ffi exception value,
               callSteps + 1)

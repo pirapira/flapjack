@@ -507,7 +507,8 @@ example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi [.word 5]), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -537,7 +538,8 @@ example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8
       (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi [.word 5]), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -567,7 +569,8 @@ example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8
       (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi "E" (.word 5)), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -588,7 +591,8 @@ example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8
       (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
       [] [] 0 0 8
@@ -608,7 +612,8 @@ example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8
       (max 7 (progCallFuel 7 (.annot "tag" "text" : Prog Nat)))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi event), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -1024,7 +1029,8 @@ example
         (value : PanValue Nat) (callClock : Nat),
         evalPanValueFfiClockCall evaluatorContext (fun _ _ => none) evaluatorHandler [] []
           0 0 8 (max 7 (progCallFuel 7 (.skip : Prog Nat))) locals globals memory ffi 5
-          none "f" [] (memoryAccess := none) (contracts := none) (memoryHandler := none) =
+          none "f" [] (memoryAccess := none) (contracts := none) (memoryHandler := none)
+          (preserveReturnLocals := true) =
           some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
             callClock))
     (hmatch : ∀ value : PanValue Nat,
@@ -1233,7 +1239,7 @@ example
         (value : PanValue Nat) (callClock : Nat),
         evalPanValueFfiClockCall evaluatorContext (fun _ _ => none) evaluatorHandler
           [] [] 0 0 8 (max 7 (progCallFuel 7 (.skip : Prog Nat))) locals globals memory
-          ffi clock none "f" [] =
+          ffi clock none "f" [] (preserveReturnLocals := true) =
           some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
             callClock))
     (hmatch : ∀ value : PanValue Nat,
@@ -1268,7 +1274,8 @@ example :
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.raised (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi "E" (.word 5)), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -1288,7 +1295,8 @@ example
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.timeout (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi, 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
       [] [] 0 0 8
@@ -1305,7 +1313,8 @@ example
 example (event : FfiFinalEvent)
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 (progSize (.annot "tag" "text" : Prog Nat))
-      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) (fun _ => none) (fun _ => none) evaluatorFfi 1 none "f" []
+      (preserveReturnLocals := true) =
       some (.control (.finalFfi (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi event), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler
@@ -1780,7 +1789,7 @@ example (outcome : PanValueFfiClockOutcome Nat Unit) (nextClock : Nat)
 example
     (hcall : evalPanValueFfiClockCall evaluatorContext (fun _ _ => none)
       evaluatorHandler [] [] 0 0 8 1 (fun _ => none) (fun _ => none)
-      (fun _ => none) evaluatorFfi 1 none "f" [] =
+      (fun _ => none) evaluatorFfi 1 none "f" [] (preserveReturnLocals := true) =
       some (.control (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         evaluatorFfi [.word 5]), 1)) :
     evalPanValueFfiClockProg evaluatorContext (fun _ _ => none) evaluatorHandler

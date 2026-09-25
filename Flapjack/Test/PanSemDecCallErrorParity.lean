@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.PanValueFfiClockSemantics
 import Flapjack.Test.PanValueFfiSemantics
 
 /-!
@@ -44,6 +45,34 @@ def calleeCode : PanSemCodeMap Word64 :=
 def calleeErrorCode : PanSemCodeMap Word64 :=
   [("f", ([], calleeErrorBody, Shape.one))]
 
+/-- The bad function has a parameter `p = 42`. Its nested DecCall also writes
+    `p`, then returns `p`; HOL's `res_var` restores the original parameter
+    after the continuation's Return clears locals. -/
+def nestedBadShapeCode : PanSemCodeMap Word64 :=
+  [("bad", ([ ("p", Shape.one) ],
+      .decCall "p" Shape.one "id" [] (.return (.var .local "p")), Shape.one)),
+    ("id", ([], .return (.const (BitVec.ofNat 64 7)), Shape.one))]
+
+def nestedBadShapeProgram : Prog Word64 :=
+  .decCall "answer" (.named "Other") "bad" [.const (BitVec.ofNat 64 42)] .skip
+
+def nestedBadShapeLocals : VarName → Option (PanValue Word64) :=
+  updatePanValueMap (fun _ => none) "p" (.word (BitVec.ofNat 64 42))
+
+theorem nestedBadShapeBindParameters :
+    bindPanValueParameters ["p"] [.word (BitVec.ofNat 64 42)] =
+      some nestedBadShapeLocals := by
+  simp [bindPanValueParameters, nestedBadShapeLocals]
+
+theorem emptyPanValueBindParameters :
+    bindPanValueParameters (α := Word64) ([] : List VarName)
+      ([] : List (PanValue Word64)) = some (fun _ => none) := by
+  rfl
+
+def isWord (value : BitVec 64) : Option (PanValue Word64) → Bool
+  | some (.word w) => w == value
+  | _ => false
+
 def decCallState (clock : Nat) (code : PanSemCodeMap Word64) :
     PanSemState Word64 (FfiState Unit) :=
   { locals := fun name =>
@@ -67,15 +96,128 @@ def decCallEvaluate (clock : Nat) (code : PanSemCodeMap Word64)
   panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
     statefulTestHandler (BitVec.ofNat 64 8) (decCallState clock code) program
 
+def nestedBadShapeExpectedState : PanSemState Word64 (FfiState Unit) :=
+  { decCallState 10 nestedBadShapeCode with
+    locals := nestedBadShapeLocals
+    clock := 8 }
+
+def nestedBadShapeResult := decCallEvaluate 10 nestedBadShapeCode nestedBadShapeProgram
+
+/- Exact equality of the complete source post-state. This checks the whole
+    local function, globals, memory, FFI, clock, code, structs, domains, and
+    source addresses carried by `PanSemState`, not selected map lookups. The
+    direct HOL probe also EVALs a Boolean comparison of its entire returned
+    `SND` against the corresponding `nestedState` update; the oracle row is
+    `nested_deccall_bad_shape_state_exact=T`. -/
+set_option linter.unusedSimpArgs false in
+theorem nestedBadShapeResultExact : nestedBadShapeResult = some
+    ((.control (.error nestedBadShapeLocals (fun _ => none) (fun _ => none)
+        statefulTestFfiState), 8), nestedBadShapeExpectedState) := by
+  simp (config := { decide := true }) [nestedBadShapeResult, decCallEvaluate,
+    panSemEvaluateCodeStateWithPostState,
+    panSemEvaluateCodeState, panSemEvaluateCodeStateWithFuel, panSemCodeEvaluateFuel,
+    panSemProgFuel, panSemExpFuel, panSemExpListFuel, panSemCodeBodyFuel,
+    panSemCodeStateAfter,
+    evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+    evalPanValueFfiClockLeaf, evalPanValueFfiClockProg, evalPanValueFfiClockCall,
+    evalPanValueFfiProgSteps, evalPanValueFfiCallSteps,
+    evalPanValueExpCounted, evalPanValueExpsCounted, panValueReturnResult,
+    panValuePayloadWithinLimit, panValueExpStepCost, updatePanValueMap,
+    restorePanValueLocal, restorePanValueFfiLocal, panValueFfiClockRestoreLocal,
+    fixPanClock, decPanClock,
+    lookupPanSemCodeCall,
+    panSemCodeLookup, lookupInfo, panSemCodeArgumentsMatch, bindPanValueParameters,
+    panValueCallArgumentsValue, panValueCallArguments, panValueCallTarget,
+    panValueParametersValid, nestedBadShapeBindParameters, bindPanValueParameters,
+    lookupPanFunction, panValueReturnValid,
+    panValueShape, panShapeMatches, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp,
+    nestedBadShapeExpectedState, nestedBadShapeLocals, nestedBadShapeProgram,
+    nestedBadShapeCode, decCallState]
+  all_goals
+    funext key
+    simp [restorePanValueLocal, updatePanValueMap, nestedBadShapeLocals, beq_iff_eq]
+
+def nestedBadShapeClockedListResult :
+    Option (PanValueFfiClockResult Word64 Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive statefulTestHandler
+    [] [("bad", ["p"], (.decCall "p" .one "id" [] (.return (.var .local "p")) : Prog Word64)),
+        ("id", [], (.return (.const (BitVec.ofNat 64 7)) : Prog Word64))]
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 10
+    nestedBadShapeProgram
+
+/- Exact outcome for the clocked list-function evaluator, including its
+    complete returned locals function. -/
+set_option linter.unusedSimpArgs false in
+theorem nestedBadShapeClockedListExact : nestedBadShapeClockedListResult = some
+    (.control (.error nestedBadShapeLocals (fun _ => none) (fun _ => none)
+      statefulTestFfiState), 8) := by
+  simp (config := { decide := true }) [nestedBadShapeClockedListResult,
+    evalPanValueFfiClockProg, evalPanValueFfiClockCall, evalPanValueFfiClockLeaf,
+    evalPanValueFfiProgSteps, evalPanValueFfiCallSteps, evalPanValueExpCounted,
+    evalPanValueExpsCounted, panValueReturnResult, panValuePayloadWithinLimit,
+    panValueExpStepCost, updatePanValueMap, restorePanValueLocal,
+    restorePanValueFfiLocal, panValueFfiClockRestoreLocal, fixPanClock, decPanClock,
+    panValueCallArgumentsValue, panValueCallArguments, panValueCallTarget,
+    panValueParametersValid, nestedBadShapeBindParameters, emptyPanValueBindParameters,
+    lookupPanFunction, panValueReturnValid,
+    panValueShape, panShapeMatches, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp, nestedBadShapeLocals, nestedBadShapeProgram]
+  all_goals first
+    | simpa [panValueExpStepCost.panValueExpsStepCost, panValueExpStepCost]
+    | (funext key; simp [nestedBadShapeLocals, restorePanValueLocal,
+        updatePanValueMap, beq_iff_eq])
+
+def nestedBadShapeClockedListGuard : Bool :=
+  match nestedBadShapeClockedListResult with
+  | some (.control (.error locals _ _ _), clock) =>
+      clock == 8 && isWord 42 (locals "p")
+  | _ => false
+
+def nestedBadShapeNonClockedFunctions : List (FunName × List VarName × Prog Word64) :=
+  [("bad", ["p"], .decCall "p" .one "id" [] (.return (.var .local "p"))),
+    ("id", [], .return (.const (BitVec.ofNat 64 7)))]
+
+def nestedBadShapeNonClockedResult : Option (PanValueFfiSteppedResult Word64 Unit) :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive statefulTestHandler
+    [] nestedBadShapeNonClockedFunctions (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
+    statefulTestFfiState nestedBadShapeProgram
+
+/- Exact result and step count for the nonclocked step evaluator. -/
+set_option linter.unusedSimpArgs false in
+theorem nestedBadShapeNonClockedExact : nestedBadShapeNonClockedResult = some
+    (.error nestedBadShapeLocals (fun _ => none) (fun _ => none)
+      statefulTestFfiState, 7) := by
+  simp (config := { decide := true }) [nestedBadShapeNonClockedResult,
+    evalPanValueFfiProgramSteps, evalPanValueFfiProgSteps,
+    evalPanValueFfiCallSteps, evalPanValueExpCounted, evalPanValueExpsCounted,
+    panValueReturnResult, panValuePayloadWithinLimit, panValueExpStepCost,
+    panValueExpsStepCost,
+    updatePanValueMap, restorePanValueLocal, restorePanValueFfiLocal,
+    panValueCallArguments, panValueCallTarget, panValueReturnValid, panValueShape,
+    nestedBadShapeBindParameters, emptyPanValueBindParameters,
+    bindPanValueParameters, lookupPanFunction,
+    panShapeMatches, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp, nestedBadShapeNonClockedFunctions, nestedBadShapeProgram,
+    nestedBadShapeLocals]
+  all_goals first
+    | simp [panValueExpStepCost.panValueExpsStepCost, panValueExpStepCost]
+    | (funext key; simp [nestedBadShapeLocals, restorePanValueLocal,
+        updatePanValueMap, beq_iff_eq])
+
+def nestedBadShapeNonClockedGuard : Bool :=
+  match nestedBadShapeNonClockedResult with
+  | some (.error locals _ _ _, _) => isWord 42 (locals "p")
+  | _ => false
+
+
 def deccallOkProgram : Prog Word64 :=
   .decCall "r" Shape.one "f" [] .skip
 
 def deccallShapeProgram : Prog Word64 :=
   .decCall "r" (Shape.named "Other") "f" [] .skip
-
-def isWord (value : BitVec 64) : Option (PanValue Word64) → Bool
-  | some (.word w) => w == value
-  | _ => false
 
 /-- True when evaluation yields exactly an explicit `Error` control result. -/
 def isErrorResult
@@ -118,6 +260,7 @@ def deccallShapeGuard : Bool := isErrorResult (decCallEvaluate 5 calleeCode decc
 def deccallCalleeErrorGuard : Bool := isErrorResult (decCallEvaluate 5 calleeErrorCode deccallOkProgram)
 def deccallNonClockedShapeGuard : Bool := nonClockedIsError calleeBody deccallShapeProgram
 def deccallNonClockedErrorGuard : Bool := nonClockedIsError calleeErrorBody deccallOkProgram
+def deccallNestedBadShapeGuard : Bool := nestedBadShapeClockedListGuard && nestedBadShapeNonClockedGuard
 
 def calleeSkipCode : PanSemCodeMap Word64 := [("s", ([], .skip, Shape.one))]
 def calleeBreakCode : PanSemCodeMap Word64 := [("b", ([], .break, Shape.one))]
@@ -187,6 +330,7 @@ def deccallNcArgFailMissingGuard : Bool :=
 #guard deccallCalleeErrorGuard
 #guard deccallNonClockedShapeGuard
 #guard deccallNonClockedErrorGuard
+#guard deccallNestedBadShapeGuard
 #guard deccallMissingGuard
 #guard deccallSkipGuard
 #guard deccallBreakGuard
@@ -216,6 +360,9 @@ def runChecks : IO Bool := do
   let ncErr := deccallNonClockedErrorGuard
   IO.println (if ncErr then "PASS non-clocked DecCall callee Error propagated"
     else "FAIL non-clocked DecCall callee Error propagated")
+  let nested := deccallNestedBadShapeGuard
+  IO.println (if nested then "PASS nested DecCall mismatch preserves parameter across all evaluator paths"
+    else "FAIL nested DecCall mismatch preserves parameter across all evaluator paths")
   let missing := deccallMissingGuard && deccallNcMissingGuard
   IO.println (if missing then "PASS panSem Call missing function rejected with Error"
     else "FAIL panSem Call missing function rejected with Error")
@@ -232,6 +379,6 @@ def runChecks : IO Bool := do
     deccallNcArgFailGuard && deccallNcArgFailMissingGuard
   IO.println (if argFail then "PASS panSem Call failing argument rejected with Error before lookup"
     else "FAIL panSem Call failing argument rejected with Error before lookup")
-  pure (ok && shape && callee && ncShape && ncErr && missing && skip && brk && cont && argFail)
+  pure (ok && shape && callee && ncShape && ncErr && nested && missing && skip && brk && cont && argFail)
 
 end Flapjack.Test.PanSemDecCallErrorParity

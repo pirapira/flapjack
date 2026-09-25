@@ -474,7 +474,21 @@ theorem disjoint_take_drop_sum {α : Type} (n m p : Nat) (values : List α)
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_drop_take_sum"]
 theorem disjoint_drop_take_sum {α : Type} (n m p : Nat) (values : List α)
     (h : values.Nodup) :
-    ListDisjoint ((values.drop (n + m)).take p) (values.take n) :=
-  listDisjoint_drop_take_sum values n m p h
+     ListDisjoint ((values.drop (n + m)).take p) (values.take n) :=
+   listDisjoint_drop_take_sum values n m p h
+
+/-- Exact port of HOL `fm_update_diff_vars`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:780`): updating a
+    finite map at `a`, then at a distinct key `b`, then at `a` again, then at
+    `b` again is the same as updating once at `a` and once at `b`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_update_diff_vars"]
+theorem fm_update_diff_vars [BEq α] [LawfulBEq α] (fm : FiniteMap α β)
+    (a b : α) (a' b' b'' : β) (h : a ≠ b) :
+    FUPDATE (FUPDATE (FUPDATE (FUPDATE fm (a, a')) (b, b')) (a, a')) (b, b'') =
+      FUPDATE (FUPDATE fm (a, a')) (b, b'') := by
+  rw [FUPDATE_comm fm a a' b b' h]
+  rw [FUPDATE_FUPDATE_same (FUPDATE fm (b, b')) a a' a']
+  rw [FUPDATE_comm fm b b' a a' h.symm]
+  rw [FUPDATE_FUPDATE_same (FUPDATE fm (a, a')) b b' b'']
 
 end Flapjack

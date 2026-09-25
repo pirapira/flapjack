@@ -9526,5 +9526,13 @@
     "lean_name": "crepExpVars_of_mem_loadShapeW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:215. Uses the exact loadShapeBytes port of load_shape_def with the fixed stride bytes_in_word, width-indexed over CrepExp (BitVec width); var_cexp is crepExpVars. Oracle row vels in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_update_diff_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fm_update_diff_vars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL pan_commonPropsScript.sml:780 states a <> b ==> fm |+ (a,a') |+ (b,b') |+ (a,a') |+ (b,b'') = fm |+ (a,a') |+ (b,b'') over fmap; the Lean theorem is the same FUPDATE chain over FiniteMap with the distinct-key hypothesis, and the oracle rows fmdv_eq_1/fmdv_eq_2/fmdv_eq_3/fmdv_lhs_a/fmdv_lhs_b/fmdv_lhs_absent in scripts/hol-probes/pan_common_props_fm_update_diff_vars_probe.out are reproduced by Flapjack/Test/PanCommonPropsZipDisjointParity.lean)"
   }
 ]

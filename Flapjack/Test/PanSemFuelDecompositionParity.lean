@@ -145,6 +145,68 @@ example : panSemCodeEvaluateFuel sampleState (.call none "f" []) - 1 =
     (panSemCodeEvaluateFuel sampleState (.call none "f" []) - 2) + 1 :=
   panSemCodeEvaluateFuel_call_sub_one_eq sampleState none "f" []
 
+/-- At canonical fuel, `DecCall` dispatches to the new state-code helper,
+    retaining the source code map, clock, and caller state. -/
+example :
+    evalPanValueFfiClockCodeProg statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        (panSemCodeEvaluateFuel sampleRiscvState
+          (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip))
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock
+        (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip) none none none =
+      evalPanValueFfiClockCodeDecCall statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        (panSemCodeEvaluateFuel sampleRiscvState
+          (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip) - 1)
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock "r" Shape.one "f"
+        ([] : List (Exp W64)) Prog.skip none none none :=
+  panSemCodeEvaluateFuel_decCall_delegates statefulTestContext
+    statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8) sampleRiscvState
+    "r" Shape.one "f" [] Prog.skip none none none
+
+/-- The canonical DecCall budget leaves room for the code-map helper and its
+    callee body. -/
+example : 2 ≤ panSemCodeEvaluateFuel sampleState
+    (.decCall "r" Shape.one "f" [] Prog.skip) :=
+  panSemCodeEvaluateFuel_decCall_two_le sampleState "r" Shape.one "f" [] Prog.skip
+
+example : panSemCodeEvaluateFuel sampleState
+      (.decCall "r" Shape.one "f" [] Prog.skip) - 1 =
+    (panSemCodeEvaluateFuel sampleState
+      (.decCall "r" Shape.one "f" [] Prog.skip) - 2) + 1 :=
+  panSemCodeEvaluateFuel_decCall_sub_one_eq sampleState "r" Shape.one "f" [] Prog.skip
+
+/-- The DecCall branch decomposition exposes the helper's successor budget,
+    matching the actual code-bearing helper call. -/
+example :
+    evalPanValueFfiClockCodeProg statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        (panSemCodeEvaluateFuel sampleRiscvState
+          (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip))
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock
+        (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip) none none none =
+      evalPanValueFfiClockCodeDecCall statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        ((panSemCodeEvaluateFuel sampleRiscvState
+          (.decCall "r" Shape.one "f" ([] : List (Exp W64)) Prog.skip) - 2) + 1)
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock "r" Shape.one "f"
+        ([] : List (Exp W64)) Prog.skip none none none :=
+  panSemCodeEvaluateFuel_decCall_decomposition statefulTestContext
+    statefulTestPrimitive statefulTestHandler (BitVec.ofNat 64 8) sampleRiscvState
+    "r" Shape.one "f" [] Prog.skip none none none
+
 /-- The exact `Call` branch decomposition: canonical fuel dispatches to the
     state-owned call clause at the syntactically-successor fuel
     `(canonical - 2) + 1`, exposing the callee body recursion at `canonical - 2`. -/
@@ -175,6 +237,9 @@ def runChecks : IO Bool := do
   IO.println "PASS PanSem fuel decomposition: canonical Call handler fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical DecCall continuation fuel = canonical - 1"
   IO.println "PASS PanSem fuel decomposition: state-owned DecCall callee fuel = canonical - 2"
+  IO.println "PASS PanSem fuel decomposition: canonical DecCall dispatches to the code-map helper"
+  IO.println "PASS PanSem fuel decomposition: canonical DecCall helper fuel = canonical - 1"
+  IO.println "PASS PanSem fuel decomposition: canonical DecCall decomposition preserves helper state"
   IO.println "PASS PanSem fuel decomposition: canonical Call dispatches at canonical - 1"
   IO.println "PASS PanSem fuel decomposition: canonical Call decomposition exposes body at canonical - 2"
   pure true

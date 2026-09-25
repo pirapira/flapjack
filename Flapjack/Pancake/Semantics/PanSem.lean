@@ -631,6 +631,109 @@ theorem panSemCodeEvaluateFuel_call_decomposition
   rw [panSemCodeEvaluateFuel_call_delegates,
     panSemCodeEvaluateFuel_call_sub_one_eq]
 
+/-- **DecCall dispatch decomposition.** At production canonical fuel, a
+    `DecCall` dispatches to its state-owned helper at canonical fuel minus one.
+    That helper performs the state-owned code-map Call and continuation, with
+    `preserveReturnLocals` enabled for the destination binding. -/
+theorem panSemCodeEvaluateFuel_decCall_delegates
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.decCall name shape function arguments continuation))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.decCall name shape function arguments continuation)
+        memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeDecCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state
+          (.decCall name shape function arguments continuation) - 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        name shape function arguments continuation memoryAccess contracts memoryHandler := by
+  obtain ⟨k, hk⟩ : ∃ k,
+      panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) = k + 1 := by
+    refine ⟨panSemCodeEvaluateFuel state
+      (.decCall name shape function arguments continuation) - 1, ?_⟩
+    have hpos : 0 < panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) := by
+      simp only [panSemCodeEvaluateFuel]
+      omega
+    omega
+  rw [hk]
+  simp only [evalPanValueFfiClockCodeProg, Nat.add_sub_cancel]
+
+/-- The production canonical fuel of a `DecCall` is at least two, leaving a
+    nonnegative body budget after the program and code-map dispatch steps. -/
+theorem panSemCodeEvaluateFuel_decCall_two_le
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α) :
+    2 ≤ panSemCodeEvaluateFuel state
+      (.decCall name shape function arguments continuation) := by
+  have hclock : 1 ≤ state.clock + 1 := Nat.succ_le_succ (Nat.zero_le _)
+  have hbody : 1 ≤ max
+      (panSemProgFuel (.decCall name shape function arguments continuation))
+      (panSemCodeBodyFuel state.code) + 1 :=
+    Nat.succ_le_succ (Nat.zero_le _)
+  have hmul := Nat.mul_le_mul hclock hbody
+  simp only [panSemCodeEvaluateFuel]
+  omega
+
+/-- The DecCall helper's canonical fuel is one more than the body/continuation
+    budget `canonical - 2`. -/
+theorem panSemCodeEvaluateFuel_decCall_sub_one_eq
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α) :
+    panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) - 1 =
+      (panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) - 2) + 1 := by
+  have htwo := panSemCodeEvaluateFuel_decCall_two_le state name shape function
+    arguments continuation
+  omega
+
+/-- Flapjack-specific `DecCall` branch decomposition: the production
+    evaluator at canonical fuel dispatches to the state-owned DecCall helper at
+    `(canonical - 2) + 1`, and preserves the callee locals needed by the
+    continuation. This is a fuel-interface lemma, not a HOL theorem port. -/
+theorem panSemCodeEvaluateFuel_decCall_decomposition
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.decCall name shape function arguments continuation))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.decCall name shape function arguments continuation)
+        memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeDecCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        ((panSemCodeEvaluateFuel state
+          (.decCall name shape function arguments continuation) - 2) + 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        name shape function arguments continuation memoryAccess contracts memoryHandler := by
+  rw [panSemCodeEvaluateFuel_decCall_delegates,
+    panSemCodeEvaluateFuel_decCall_sub_one_eq]
+
 /-- A body stored under the called function in a `DecCall` has a canonical
     recursive fuel budget derived from the enclosing state and code map. -/
 theorem panSemCodeEvaluateFuel_decCall_callee_le

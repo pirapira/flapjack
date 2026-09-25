@@ -239,13 +239,27 @@ def setCrepHolVar (name : Nat) (value : PanWordLab α)
     (state : CrepHolState α σ) : CrepHolState α σ :=
   { state with locals := FUPDATE state.locals (name, value) }
 
-/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port): the clause
-    `set_var v w s = s with locals := s.locals |+ (v,w)` is HOL's
-    (`crepSemScript.sml:55-57`), but the carrier `CrepHolState (BitVec width) σ`
-    stores `locals`/`code` as raw functions that admit infinite-support
-    inhabitants, a strict superset of HOL's finite maps. The `@[hol set_var_def]`
-    tag was withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit; exact
-    finite-support carrier restoration is tracked by
+/-! FLAPJACK-SPECIFIC (not a statement-exact HOL port). Source-reviewed against
+    HOL `crepSem$set_var_def` (`cakeml/pancake/semantics/crepSemScript.sml:55-57`),
+    which states `set_var v w s = s with locals := s.locals |+ (v,w)`. The Lean
+    clause matches that update: the `Nat` key is HOL's `varname = num`, the
+    `PanWordLab (BitVec width)` value is the single-`Word` `word_lab` carrier at
+    positive width, and `FUPDATE state.locals (name, value)` is the finite-map
+    `|+` update. The mismatch is the quantified whole-state carrier: in
+    `CrepHolState (BitVec width) σ` both `locals : Nat → Option _` and
+    `code : FunName → Option _` are raw functions that admit infinite-support
+    inhabitants, a strict superset of HOL's finite maps, so the statement ranges
+    over states HOL's `num |-> 'a word_lab` cannot represent. The
+    `names_as_string` qualifier cannot authorize that carrier (the key is not a
+    String-backed `mlstring` here), and no `NameRanged` byte witness applies
+    because the result is a whole state, not a name. Direct HOL rows are recorded
+    in `scripts/hol-probes/crep_local_updates_probe.out`
+    (`set_var_hit=T`, `set_var_keeps_other=T`, `set_var_fields_preserved=T`) and
+    sampled by the `localBase` examples and `#guard` in
+    `Flapjack/Test/CrepGlobalShapeParity.lean:227-269`. The `@[hol set_var_def]`
+    tag was withdrawn in the `flapjack-pxn.18.3.7.1.3.1.1.3` audit and remains
+    WITHDRAWN (`docs/HOL-THEOREM-MAP.json` records `setCrepHolVarW` as
+    `documented_mismatch`); exact finite-support carrier restoration is tracked by
     `flapjack-pxn.18.3.7.1.3.1.1.3.1`. -/
 def setCrepHolVarW {width : Nat} [NeZero width] {σ : Type} (name : Nat)
     (value : PanWordLab (BitVec width)) (state : CrepHolState (BitVec width) σ) :

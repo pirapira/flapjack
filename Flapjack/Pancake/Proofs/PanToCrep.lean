@@ -27,15 +27,12 @@ context.
 
 namespace Flapjack
 
-/-! Exact Lean port of HOL `globals_lookup_def`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The production
-    globals field has HOL's `5 word` keys and `word_lab` cells; `panSemShapeOf`
-    is the exact `shape_of` port constructor by constructor, with no premises.
-    `Shape.shapeSize` matches HOL `size_of_shape_def` on `One`, `Comb` (sum of
-    child sizes), and `Named`, also without side conditions. `List.range` with
-    `BitVec.ofNat` represents `GENLIST n2w` including 5-bit truncation, and
-    `List.mapM` represents `OPT_MMAP`. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "globals_lookup_def"]
+/-! Flapjack analogue of HOL `globals_lookup_def`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The lookup
+    algorithm uses the same 5-bit indices, shape-size count, and optional-map
+    traversal. It is untagged: the input `PanValue` embeds String-backed
+    struct/field names where HOL `v` embeds `mlstring`, and `CrepRuntimeState`
+    is only a production projection of the HOL state. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
@@ -387,9 +384,11 @@ theorem noOverlapWrapRtNodup
         rcases hwrap with ⟨_, hslots⟩ <;>
         simpa [← hslots] using hnodup
 
-/-- HOL `mem_comp_field_lem`: selecting a compiled record field retains an
-    input expression or produces the zero fallback. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field_lem"]
+/-- Flapjack analogue of HOL `mem_comp_field_lem`: selecting a compiled record
+    field retains an input expression or produces the zero fallback. This is
+    deliberately untagged: the production `Shape` embedded in `shapes` uses
+    `String` for `Named`, whereas HOL `shape` uses `mlstring`, and the HOL
+    expression payload is an indexed word rather than arbitrary `α`. -/
 theorem compileField_mem_or_zero
     [OfNat α 0]
     (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))
@@ -438,10 +437,13 @@ private theorem compileField_mem_of_index_lt
           exact List.mem_of_mem_drop
             (ih index (expressions.drop (Shape.shapeSize shape)) hindex' hmem')
 
-/-- HOL `mem_comp_field`: with a valid record-field index and matching
-    source record shape, every expression selected by the pair-valued
-    `compileField` is from the flattened record input. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "mem_comp_field"]
+/-- Flapjack analogue of the field-selection fact used by HOL
+    `mem_comp_field_lem`: with a valid index and matching source record shape,
+    every expression selected by the pair-valued `compileField` is from the
+    flattened record input. It is untagged because it uses production
+    `Shape` (String-backed `Named`) and generic `PanValue α`; HOL `shape`
+    contains `mlstring` names and its expressions are word-indexed. There is no
+    separate HOL declaration named `mem_comp_field`. -/
 theorem compileField_mem_of_record_shape
     [OfNat α 0] (shapes : List Shape) (index : Nat)
     (expressions : List (CrepExp α)) (selectedShape : Shape)

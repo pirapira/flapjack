@@ -4752,14 +4752,6 @@
     "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "globals_lookup_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "globalsLookup",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; exact state globals, shape_of, n2w, and OPT_MMAP ports)"
-  },
-  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
@@ -4780,8 +4772,8 @@
     "hol_name": "mem_comp_field_lem",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileField_mem_or_zero",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (tag withdrawn): Lean uses production Shape with String-backed Named and arbitrary α expressions; HOL shape embeds mlstring names and the expression carrier is word-indexed. The matching algorithm is preserved as an untagged Flapjack analogue."
   },
   {
     "hol_path": null,
@@ -4792,12 +4784,12 @@
     "reviewer": "Codex (Flapjack support: excludes unreachable zero fallback for valid field index)"
   },
   {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "mem_comp_field",
+    "hol_path": null,
+    "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileField_mem_of_record_shape",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source statement and pair-valued compileField comparison)"
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (tag withdrawn): no HOL declaration named mem_comp_field exists in pan_to_crepProofScript.sml; the Lean analogue additionally uses production String-backed Shape and generic PanValue α. The related HOL lemma is mem_comp_field_lem."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

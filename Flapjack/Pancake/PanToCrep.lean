@@ -76,9 +76,9 @@ def compilePanOp : PanOp → CrepOp
     with the assignments nested in source order.  The second component of the
     stored pair is the flattened word list; the shape is not consulted.
 
-    Calls the generic `crepNestedSeq`; the tagged width-indexed `crepNestedSeqW`
-    is a definitional delegation of it, so this executed use computes the
-    identical function (`flapjack-pxn.18.4.3.82`).
+    Calls the generic `crepNestedSeq`; the width-indexed `crepNestedSeqW` is a
+    definitional delegation of it, so this executed use computes the identical
+    function (`flapjack-pxn.18.4.3.82`). Neither production helper is tagged.
 
     FLAPJACK-SPECIFIC (not an exact HOL port): HOL `exp_hdl` keys its finite map
     by `varname`, which is `mlstring`, while this carriage uses
@@ -109,8 +109,8 @@ theorem FUPDATE_LIST_append [BEq α] (fm : FiniteMap α β)
 
 /-- Kernel-checked representation theorem: the list-backed first-match
     `lookupInfo` and `FLOOKUP` of the bridged finite map agree at every key,
-    including duplicate names.  This is what licenses the executable handler
-    compilation to call the faithful `expHdlFiniteMap`. -/
+    including duplicate names. This licenses the executable handler
+    compilation to call `expHdlFiniteMap`; both use production String keys. -/
 theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
     (name : String) (entries : InfoMap β) :
     lookupInfo name entries = FLOOKUP (infoMapToFiniteMap entries) name := by
@@ -130,11 +130,12 @@ theorem lookupInfo_eq_flookup_infoMapToFiniteMap [BEq String] [LawfulBEq String]
   (lookupInfo_eq_flookup_infoMapToFiniteMap name entries).symm
 
 /-- Kernel-checked association-list adapter retained for tests and lemmas.  It
-    builds HOL's finite map from the compiler's `InfoMap` context and invokes
-    the tagged faithful port `expHdlFiniteMap`.  Production handler compilation
-    does not use this wrapper: `compileProg` calls `expHdlFiniteMap` directly on
-    `infoMapToFiniteMap context.vars`, so the executed path is the tagged
-    definition itself.  Untagged: HOL has no association-list helper.
+    builds a finite map from the compiler's `InfoMap` context and invokes
+    `expHdlFiniteMap`. Production handler compilation does not use this
+    wrapper: `compileProg` calls `expHdlFiniteMap` directly on
+    `infoMapToFiniteMap context.vars`. Both definitions are untagged because
+    their production keys/shapes use `String`, whereas HOL uses `mlstring`.
+    HOL has no association-list helper.
 
     A known variable is initialized from the global return area, one word per
     flattened local, and the assignments are nested in source order. -/
@@ -215,15 +216,16 @@ Those two definitions are used only inside the `Call_Ret` case of
 `pc_compile_correct` (`proofs/pan_to_crepProofScript.sml`, e.g. `:2622`,
 `:2727`) and by `pan_to_wordProofScript.sml:1083` when simplifying
 `exps_of (compile ...)`.  The executable path therefore already routes its
-handler setup and call destination through the faithful `expHdlFiniteMap` /
+handler setup and call destination through the production `expHdlFiniteMap` /
 `wrapRt`; re-routing `compileProg` through `retHdl` / `retVar` would be a
 behavior change with no HOL counterpart.
 
 The lemmas below are Flapjack-only infrastructure (HOL proves no such
-statements); they connect the tagged `ret_hdl_def`, `ret_var_def`, and
-`exp_hdl_def` to the tagged `assign_ret_def` so a future return-path proof can
+statements); they compare the production `retHdl`, `retVar`, and
+`expHdlFiniteMap` helpers with `assignRet` so a future return-path proof can
 switch between the proof-level handler form and the emitted assignment form.
-They carry no `@[hol]` attribute because HOL has no corresponding declaration.
+These helpers use production `Shape`/`VarName` carriers and carry no `@[hol]`
+attribute.
 Bead `flapjack-pxn.18.2.4.1`. -/
 
 /-- Cake's `MAP2` truncates like `List.zipWith`, so the finite-map return
@@ -235,9 +237,10 @@ theorem panMap2_eq_zipWith {α : Type u} {β : Type v} {γ : Type w}
   | nil => rfl
   | cons x xs ih => cases ys <;> simp [panMap2, ih]
 
-/-- Known-variable form of `pan_to_crep$exp_hdl`: when `FLOOKUP` finds the
-    name, the emitted handler setup is exactly the tagged `assign_ret`
-    program that copies the global return slots into the flattened local. -/
+/-- Production known-variable form of `pan_to_crep$exp_hdl`: when `FLOOKUP`
+    finds the name, the emitted handler setup equals `assignRet`, which copies
+    the global return slots into the flattened local. The exact HOL tag belongs
+    to the separate width-indexed `assignRetW`. -/
 theorem expHdlFiniteMap_eq_assignRet
     {α : Type u} [OfNat α 0] [OfNat α 1] [Add α]
     {fm : FiniteMap VarName (Shape × List Nat)} {v : VarName}
@@ -250,8 +253,8 @@ theorem expHdlFiniteMap_eq_assignRet
     (γ := CrepProg α) _ _ _
 
 /-- Executable-adapter form of the previous lemma: the association-list
-    `expHdl` computes the tagged `assign_ret` whenever `lookupInfo` finds the
-    variable. -/
+    `expHdl` computes the production `assignRet` whenever `lookupInfo` finds
+    the variable. -/
 theorem expHdl_eq_assignRet_of_lookupInfo {α : Type u} [BEq String] [LawfulBEq String]
     [OfNat α 0] [OfNat α 1] [Add α]
     {vars : InfoMap (Shape × List Nat)} {name : VarName}
@@ -262,7 +265,7 @@ theorem expHdl_eq_assignRet_of_lookupInfo {α : Type u} [BEq String] [LawfulBEq 
   exact expHdlFiniteMap_eq_assignRet (α := α)
     (fm := infoMapToFiniteMap vars) (v := name) (by simpa using h)
 
-/-- `pan_to_crep$ret_hdl` on a multi-word `Comb` is the tagged `assign_ret`. -/
+/-- The production `retHdl` on a multi-word `Comb` is `assignRet`. -/
 theorem retHdl_comb_eq_assignRet [OfNat α 0] [OfNat α 1] [Add α]
     (fields : List Shape) (names : List Nat)
     (h : 1 < Shape.shapeSize (.comb fields)) :

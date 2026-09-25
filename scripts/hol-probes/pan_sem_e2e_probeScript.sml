@@ -859,4 +859,24 @@ val _ = print_eval "annot_clause"
           locals := FEMPTY; structs := []; clock := 5 |>)) of
       (res,s') => (res, s'.clock)``
 
+val semantics_decls_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY; globals := FEMPTY; structs := []; code := FEMPTY;
+      eshapes := FEMPTY; clock := 5 |>):((8),unit) panSem$state``
+
+val _ = print_eval "semantics_decls_bad_struct"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$Name «S» [(«f», panLang$Named «Missing»)]]``
+
+val _ = print_eval "semantics_decls_bad_function"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$Function <|
+         name := «f»; inline := F; export := F;
+         params := [(«x», panLang$Named «Missing»)];
+         body := panLang$Skip; return := panLang$One |>]``
+
+val _ = print_eval "semantics_decls_bad_exception"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$ExnDecl «E» (panLang$Named «Missing»)]``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

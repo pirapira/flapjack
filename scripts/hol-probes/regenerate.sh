@@ -1029,6 +1029,7 @@ run_probe afindi_probeScript.sml afindi_probe.out \
   map_uncurry_zip_again struct_infos_ok_drop struct_infos_ok_append \
   struct_infos_ok_cons alookup_map_structs_ok fields_in_order_reorder_noop \
   opt_mmap_eq_every alookup_drop_helper map_fst_eq_alookup \
+  map_fst_eq_alookup_different_value_types map_fst_eq_alookup_inferred_types \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml"
 run_probe pan_structs_compile_exp_probeScript.sml pan_structs_compile_exp_probe.out \
   rstruct old_shapes_map "$cake_dir/pancake/pan_structsScript.sml"

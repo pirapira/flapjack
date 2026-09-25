@@ -4642,13 +4642,8 @@
     "hol_name": "map_fst_eq_alookup",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "map_fst_eq_lookup",
-    "statement_status": "reviewed_names_as_string",
-    "names_as_string": [
-      "nm",
-      "xs",
-      "ys"
-    ],
-    "reviewer": "Codex (P0 source review: HOL premise MAP FST xs = MAP FST ys and ALOOKUP xs nm = SOME v, existential shared afindi index, both in-bounds facts, selected xs value, and selected ys ALOOKUP conclusion match the Lean theorem. Lean expresses the selected-value clauses using Option.map Prod.snd; under the explicit index bounds these are exactly the SND (EL i ...) observations. The only carrier difference is String for HOL mlstring identifiers. Reviewed with names_as_string: nm: equality/map-key-only; xs: equality/map-key-only; ys: equality/map-key-only. No name bytes are output or observed, so no boundary witness is needed. Direct HOL instance result is scripts/hol-probes/afindi_probe.out:18 and the Lean fixture is Flapjack/Test/PanStructsAfindiParity.lean: map_fst_eq_lookup_fixture."
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact source comparison against pan_structsProofScript.sml:278. The direct HOL statement inference probe reports nm: α, xs: (α × β) list, ys: (α × γ) list, and v: β; Lean keeps the independent generic key and value types. Premises, existential afindi index, bounds, and selected-value/ALOOKUP conclusions match; Option.map Prod.snd is the indexed Lean API form of SND (EL i ...) under the bounds. Direct HOL rows (including Nat values in xs and Bool values in ys) and inferred types are in scripts/hol-probes/afindi_probe.out; matching Lean regressions are map_fst_eq_lookup_fixture and map_fst_eq_lookup_different_value_types_fixture in Flapjack/Test/PanStructsAfindiParity."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

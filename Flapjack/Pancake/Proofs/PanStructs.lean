@@ -1145,7 +1145,7 @@ theorem afindi_lookup [DecidableEq α] (key : α) (entries : List (α × β)) :
     identical `afindi` positions. This intermediate theorem is not a separate
     HOL declaration, so it has no `@[hol]` tag. -/
 theorem afindi_eq_of_map_fst_eq [DecidableEq α] (key : α) :
-    ∀ (xs ys : List (α × β)), xs.map Prod.fst = ys.map Prod.fst →
+    ∀ (xs : List (α × β)) (ys : List (α × γ)), xs.map Prod.fst = ys.map Prod.fst →
       afindi key xs = afindi key ys := by
   intro xs
   induction xs with
@@ -1172,19 +1172,15 @@ theorem afindi_eq_of_map_fst_eq [DecidableEq α] (key : α) :
           · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
               if_neg hbc, if_neg hbc, ih ys htail]
 
-/-- HOL `map_fst_eq_alookup` (`pan_structsProofScript.sml:278`): matching key
-    lists and a successful lookup in `xs` yield the same first-match index in
-    both lists, with the selected values matching the lookup results. The
-    `Option.map` projections are the Lean list-index API form of HOL `EL` at
-    the accompanying in-bounds indices, so the conclusion has the same
-    information as `SND (EL i xs)` and `ALOOKUP ys nm`. The declaration is
-    qualified with `names_as_string`: `nm`, `xs`, and `ys` carry `mlstring`
-    identifiers in HOL, and every such identifier is equality/map-key-only;
-    none is rendered or otherwise byte-observable. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_fst_eq_alookup"
-  (names_as_string := [nm, xs, ys])]
-theorem map_fst_eq_lookup
-    (xs ys : List (String × β)) (nm : String) {v : β}
+/-- HOL `map_fst_eq_alookup` (`pan_structsProofScript.sml:278`) has key type
+    `α`, xs value type `β`, and ys value type `γ`; the source syntax leaves all
+    three polymorphic. The direct HOL type probe confirms
+    `xs : (α × β) list`, `ys : (α × γ) list`, `nm : α`, and `v : β`. Lean keeps
+    those independent carriers. Its `Option.map` projections are the list-index
+    API form of HOL `SND (EL i ...)` under the explicit bounds. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_fst_eq_alookup"]
+theorem map_fst_eq_lookup [DecidableEq α]
+    (xs : List (α × β)) (ys : List (α × γ)) (nm : α) {v : β}
     (hlen : xs.map Prod.fst = ys.map Prod.fst)
     (hlookup : xs.lookup nm = some v) :
     ∃ i, afindi nm xs = some i ∧ afindi nm ys = some i ∧

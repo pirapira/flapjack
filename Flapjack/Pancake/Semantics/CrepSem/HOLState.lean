@@ -84,6 +84,12 @@ private def holWordLabToBits {width : Nat} (cell : HolWordLab width) :
   match cell with
   | .word word => .word (bitVecToHolWordBits word)
 
+/-- Flapjack representation helper exposing the exact-state word-cell
+projection for carrier-bridge proofs; it has no HOL theorem of its own. -/
+@[simp] theorem holWordLabToBits_word {width : Nat} (word : BitVec width) :
+    holWordLabToBits (HolWordLab.word word) =
+      PanWordLab.word (bitVecToHolWordBits word) := rfl
+
 /-- Project just the observable fields to the existing all-width source
 evaluator. Code is empty and FFI is a fixed witness because expression `eval`
 does not inspect either field; memory domains are converted from HOL sets to

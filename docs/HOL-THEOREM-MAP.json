@@ -400,6 +400,30 @@
     "reviewer": "Flapjack-only source evaluator invariance under the CrepArith-local mapc projection; native HOL eval correspondence remains open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memory",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only representation equation connecting the exact HOL-shaped state memory projection through Fin width to the direct BitVec view; it does not identify arbitrary HOL finite_index."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_memaddrs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only representation equation connecting the exact HOL-shaped address-domain projection through Fin width to the direct BitVec view; it does not identify arbitrary HOL finite_index."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepSemHOLStateSource_load32_eq_memLoad32HOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

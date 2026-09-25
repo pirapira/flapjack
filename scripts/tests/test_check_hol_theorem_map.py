@@ -928,6 +928,20 @@ class ValidateInventoryTest(unittest.TestCase):
             self.assertEqual(got_hol_name, hol_name)
             self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
 
+    def test_pan_value_evaluator_stability_mismatches_are_documented(self):
+        expected = {
+            "evalPanValueExps_update_local_not_mem": "update_locals_not_vars_eval_mmap",
+            "evalPanValueExps_update_locals_not_mem": "opt_mmap_eval_distinct_lists_not_affect",
+            "evalPanValueExp_update_locals_not_mem": "eval_distinct_lists_not_affect",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/PanValueEvaluatorStability.lean", lean_name)
+            self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+            hol_path, got_hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+            self.assertEqual(hol_path, "cakeml/pancake/proofs/pan_to_crepProofScript.sml")
+            self.assertEqual(got_hol_name, hol_name)
+            self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
+
 
 if __name__ == "__main__":
     unittest.main()

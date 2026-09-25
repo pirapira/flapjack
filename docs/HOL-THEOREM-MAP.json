@@ -5443,6 +5443,30 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "update_locals_not_vars_eval_mmap",
+    "lean_path": "Flapjack/PanValueEvaluatorStability.lean",
+    "lean_name": "evalPanValueExps_update_local_not_mem",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.55): HOL `update_locals_not_vars_eval_mmap` (`pan_to_crepProofScript.sml:4082-4087`) says a single fresh local binding `|+ (x,v)` leaves `OPT_MMAP (eval ·) es` unchanged when no `e ∈ es` mentions `x`; Lean `evalPanValueExps_update_local_not_mem` matches that shape (list of expressions, single `updatePanValueMap`, freshness premise). Carrier differs: Lean is generic over the word payload `α` with `Exp α`/`PanValue α` and `VarName = String` functional local/global maps, while HOL is word-indexed `exp`/`value` with `varname` = `mlstring` finite maps. Beyond name representation; tag stays withheld pending exact-carrier work flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "opt_mmap_eval_distinct_lists_not_affect",
+    "lean_path": "Flapjack/PanValueEvaluatorStability.lean",
+    "lean_name": "evalPanValueExps_update_locals_not_mem",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.50): HOL `opt_mmap_eval_distinct_lists_not_affect` (`pan_to_crepProofScript.sml:3077-3089`) preserves `OPT_MMAP (eval ·) es` under a list binding `|++ ZIP (vs,nvals)` when the bound names are distinct from `FLAT (MAP var_cexp es)`; Lean `evalPanValueExps_update_locals_not_mem` matches that shape (list of expressions, `updatePanValueMapList`, per-binding freshness premise). Carrier differs: Lean is generic over the word payload `α` with `Exp α`/`PanValue α` and `VarName = String` functional maps, while HOL is word-indexed with `varname` = `mlstring`. Beyond name representation; tag stays withheld pending exact-carrier work flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "eval_distinct_lists_not_affect",
+    "lean_path": "Flapjack/PanValueEvaluatorStability.lean",
+    "lean_name": "evalPanValueExp_update_locals_not_mem",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.58): HOL `eval_distinct_lists_not_affect` (`pan_to_crepProofScript.sml:4111-4123`) states `eval (s with locals |++ ZIP (vs,nvals)) e = eval s e` when `LENGTH vs = LENGTH nvals` and the bound names are distinct from `var_cexp e`; Lean `evalPanValueExp_update_locals_not_mem` matches that shape (single expression, `updatePanValueMapList`, freshness premise). Carrier differs: Lean is generic over the word payload `α` with `Exp α`/`PanValue α` and `VarName = String` functional maps, while HOL is word-indexed with `varname` = `mlstring`. Beyond name representation; tag stays withheld pending exact-carrier work flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "EL_load_globals",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "elLoadGlobals",

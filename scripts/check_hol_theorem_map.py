@@ -186,6 +186,40 @@ DOCUMENTED_MISMATCHES = {
         "and uses word_lab. Beyond name representation; keep @[hol] withheld "
         "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
     ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExps_update_local_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "update_locals_not_vars_eval_mmap",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:4082-4087: "
+        "single fresh local binding leaves OPT_MMAP (eval) es unchanged; Lean "
+        "evalPanValueExps_update_local_not_mem matches the shape, but is generic "
+        "over the word payload α with Exp α/PanValue α and VarName = String "
+        "functional maps, while HOL is word-indexed with varname = mlstring. "
+        "Beyond name representation; keep @[hol] withheld pending exact-carrier "
+        "work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExps_update_locals_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "opt_mmap_eval_distinct_lists_not_affect",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:3077-3089: "
+        "list binding |++ ZIP (vs,nvals) preserves OPT_MMAP (eval) es under a "
+        "distinct-names premise; Lean evalPanValueExps_update_locals_not_mem "
+        "matches the shape, but is generic over the word payload α with Exp α/"
+        "PanValue α and VarName = String functional maps, while HOL is "
+        "word-indexed with varname = mlstring. Beyond name representation; keep "
+        "@[hol] withheld pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExp_update_locals_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "eval_distinct_lists_not_affect",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:4111-4123: "
+        "list binding |++ ZIP (vs,nvals) preserves eval of one expression when "
+        "the bound names are distinct from var_cexp e; Lean "
+        "evalPanValueExp_update_locals_not_mem matches the shape, but is generic "
+        "over the word payload α with Exp α/PanValue α and VarName = String "
+        "functional maps, while HOL is word-indexed with varname = mlstring. "
+        "Beyond name representation; keep @[hol] withheld pending exact-carrier "
+        "work flapjack-pxn.18.3.5.8.)"
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "is_wf_shape_drop",

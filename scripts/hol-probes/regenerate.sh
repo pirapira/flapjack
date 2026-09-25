@@ -719,7 +719,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
   call_total_return_success call_total_return_destination call_total_missing_code \
-  call_total_wrong_arity call_total_timeout \
+  call_total_wrong_arity call_total_timeout call_total_callee_normal \
+  call_total_callee_break call_total_callee_continue call_total_callee_exception \
+  call_total_return_arity_error call_total_duplicate_destinations \
+  call_total_missing_destination \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \

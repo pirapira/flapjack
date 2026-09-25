@@ -5111,8 +5111,8 @@
     "hol_name": "first_compile_prog_all_distinct",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "firstCompileProgAllDistinct",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (HOL source comparison, flapjack-wur): HOL panLang prog uses the DeclHOL declaration carrier with mlstring identifiers and HOL expression/shape types, and compile_prog returns HOL-shaped CrepProgHOL bodies. Lean quantifies over production Decl (BitVec width) and concludes over compileProgTopHOL's production FunName/generic CrepProg output. These input and output type differences exceed identifier representation, so names_as_string cannot qualify this analogue. It is untagged; exact-carrier replacement depends on DeclHOL and compiler-boundary work, tracked by flapjack-wur.1."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

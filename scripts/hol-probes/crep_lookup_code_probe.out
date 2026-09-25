@@ -1,3 +1,4 @@
 lookup_code_valid=SOME (Word 7w)
-
 lookup_code_missing=NONE
+lookup_code_arity=NONE
+lookup_code_duplicate=NONE

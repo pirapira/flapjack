@@ -41,12 +41,33 @@ def crepInvalid : Bool :=
   (crepPrimopHOL .addCarry
     [.word (3 : BitVec 8), .word 4]).isNone
 
+/-- HOL `crep_zero_args=NONE`: only exactly three cells are accepted. -/
+def crepZeroArgs : Bool :=
+  (crepPrimopHOL .addCarry ([] : List (PanWordLab (BitVec 8)))).isNone
+
+/-- HOL `crep_four_args=NONE`. -/
+def crepFourArgs : Bool :=
+  (crepPrimopHOL .addCarry
+    [.word (3 : BitVec 8), .word 4, .word 2, .word 0]).isNone
+
+/-- HOL `crep_nonzero_carry=SOME [0; 1]`: any nonzero carry counts as one, and
+    the result wraps at the word width. -/
+def crepNonzeroCarry : Bool :=
+  match crepPrimopHOL .addCarry
+      [.word (255 : BitVec 8), .word 0, .word 7] with
+  | some [.word result, .word overflow] =>
+      result.toNat == 0 && overflow.toNat == 1
+  | _ => false
+
 #guard panValid
 #guard panOverflow
 #guard panInvalid
 #guard crepValid
 #guard crepOverflow
 #guard crepInvalid
+#guard crepZeroArgs
+#guard crepFourArgs
+#guard crepNonzeroCarry
 
 /-- Apply the exact HOL bridge to the nonzero-carry oracle case. -/
 theorem bridgeFixture :

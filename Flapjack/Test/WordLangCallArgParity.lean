@@ -15,8 +15,8 @@ open Flapjack
 
 private abbrev W := BitVec 8
 private def w8 (n : Nat) : W := BitVec.ofNat 8 n
-private def emptySet : WordLangNumSet := fun _ => none
-private def cutsets : WordLangCutsets := (emptySet, emptySet)
+private def emptySet : WordLangNumSetHOL := .ln
+private def cutsets : WordLangCutsetsHOL := (emptySet, emptySet)
 
 private def instAddCarryOk : WordLangInst W := .arith (.addCarry 1 2 3 0)
 private def instAddCarryBad : WordLangInst W := .arith (.addCarry 1 2 3 1)
@@ -28,21 +28,21 @@ private def instAddOverflowOk : WordLangInst W := .arith (.addOverflow 1 2 3 0)
 private def instSubOverflowBad : WordLangInst W := .arith (.subOverflow 1 2 3 1)
 private def instConst : WordLangInst W := .const 1 (w8 0)
 
-private def returnOk : WordLangProg W := .return 1 [2, 4]
-private def returnBad : WordLangProg W := .return 1 [4, 2]
-private def raiseOk : WordLangProg W := .raise 2
-private def raiseBad : WordLangProg W := .raise 3
-private def installOk : WordLangProg W := .install 2 4 0 0 cutsets
-private def installBad : WordLangProg W := .install 2 5 0 0 cutsets
-private def allocOk : WordLangProg W := .alloc 2 cutsets
-private def allocBad : WordLangProg W := .alloc 3 cutsets
-private def storeConstsOk : WordLangProg W := .storeConsts 0 2 4 6 []
-private def callNoneOk : WordLangProg W := .call none none [0, 2, 4] none
-private def callNoneBad : WordLangProg W := .call none none [0, 4] none
-private def callSomeOk : WordLangProg W :=
+private def returnOk : WordLangProgHOL W := .return 1 [2, 4]
+private def returnBad : WordLangProgHOL W := .return 1 [4, 2]
+private def raiseOk : WordLangProgHOL W := .raise 2
+private def raiseBad : WordLangProgHOL W := .raise 3
+private def installOk : WordLangProgHOL W := .install 2 4 0 0 cutsets
+private def installBad : WordLangProgHOL W := .install 2 5 0 0 cutsets
+private def allocOk : WordLangProgHOL W := .alloc 2 cutsets
+private def allocBad : WordLangProgHOL W := .alloc 3 cutsets
+private def storeConstsOk : WordLangProgHOL W := .storeConsts 0 2 4 6 []
+private def callNoneOk : WordLangProgHOL W := .call none none [0, 2, 4] none
+private def callNoneBad : WordLangProgHOL W := .call none none [0, 4] none
+private def callSomeOk : WordLangProgHOL W :=
   .call (some ([2, 4], cutsets, .skip, 10, 11)) none [2, 4] none
-private def callInstOk : WordLangProg W := .inst instAddCarryOk
-private def seqBad : WordLangProg W := .seq (.raise 2) (.raise 3)
+private def callInstOk : WordLangProgHOL W := .inst instAddCarryOk
+private def seqBad : WordLangProgHOL W := .seq (.raise 2) (.raise 3)
 
 example : instArgConvention instAddCarryOk = true := by decide
 example : instArgConvention instAddCarryBad = false := by decide
@@ -54,20 +54,20 @@ example : instArgConvention instAddOverflowOk = true := by decide
 example : instArgConvention instSubOverflowBad = false := by decide
 example : instArgConvention instConst = true := by decide
 
-example : callArgConvention returnOk = true := by decide
-example : callArgConvention returnBad = false := by decide
-example : callArgConvention raiseOk = true := by decide
-example : callArgConvention raiseBad = false := by decide
-example : callArgConvention installOk = true := by decide
-example : callArgConvention installBad = false := by decide
-example : callArgConvention allocOk = true := by decide
-example : callArgConvention allocBad = false := by decide
-example : callArgConvention storeConstsOk = true := by decide
-example : callArgConvention callNoneOk = true := by decide
-example : callArgConvention callNoneBad = false := by decide
-example : callArgConvention callSomeOk = true := by decide
-example : callArgConvention callInstOk = true := by decide
-example : callArgConvention seqBad = false := by decide
+example : callArgConventionHOL returnOk = true := by decide
+example : callArgConventionHOL returnBad = false := by decide
+example : callArgConventionHOL raiseOk = true := by decide
+example : callArgConventionHOL raiseBad = false := by decide
+example : callArgConventionHOL installOk = true := by decide
+example : callArgConventionHOL installBad = false := by decide
+example : callArgConventionHOL allocOk = true := by decide
+example : callArgConventionHOL allocBad = false := by decide
+example : callArgConventionHOL storeConstsOk = true := by decide
+example : callArgConventionHOL callNoneOk = true := by decide
+example : callArgConventionHOL callNoneBad = false := by decide
+example : callArgConventionHOL callSomeOk = true := by decide
+example : callArgConventionHOL callInstOk = true := by decide
+example : callArgConventionHOL seqBad = false := by decide
 
 private def guards : List Bool :=
   [ instArgConvention instAddCarryOk, instArgConvention instAddCarryBad
@@ -75,14 +75,14 @@ private def guards : List Bool :=
   , instArgConvention instLongMulOk, instArgConvention instLongDivOk
   , instArgConvention instAddOverflowOk, instArgConvention instSubOverflowBad
   , instArgConvention instConst
-  , callArgConvention returnOk, callArgConvention returnBad
-  , callArgConvention raiseOk, callArgConvention raiseBad
-  , callArgConvention installOk, callArgConvention installBad
-  , callArgConvention allocOk, callArgConvention allocBad
-  , callArgConvention storeConstsOk
-  , callArgConvention callNoneOk, callArgConvention callNoneBad
-  , callArgConvention callSomeOk, callArgConvention callInstOk
-  , callArgConvention seqBad ]
+  , callArgConventionHOL returnOk, callArgConventionHOL returnBad
+  , callArgConventionHOL raiseOk, callArgConventionHOL raiseBad
+  , callArgConventionHOL installOk, callArgConventionHOL installBad
+  , callArgConventionHOL allocOk, callArgConventionHOL allocBad
+  , callArgConventionHOL storeConstsOk
+  , callArgConventionHOL callNoneOk, callArgConventionHOL callNoneBad
+  , callArgConventionHOL callSomeOk, callArgConventionHOL callInstOk
+  , callArgConventionHOL seqBad ]
 
 private def expected : List Bool :=
   [ true, false, true, false, true, true, true, false, true

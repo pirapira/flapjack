@@ -3,6 +3,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -12,6 +13,8 @@ starts with the value-well-formedness definition used by PanStructs
 -/
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang (MlS)
 
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
@@ -101,7 +104,7 @@ theorem sizeOfFieldsLtNStruct (name : StructName)
   omega
 
 /-
-Exact executable port of HOL `panProps$is_wf_shape_v`
+Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `panProps$is_wf_shape_v`
     (`cakeml/pancake/semantics/panPropsScript.sml:24`). The HOL clauses are
     reproduced literally: a scalar is `T`; `RStruct vs` is
     `EVERY (is_wf_shape_v sctxt) vs`; `NStruct nm nm_vs` is
@@ -117,7 +120,12 @@ Exact executable port of HOL `panProps$is_wf_shape_v`
     original-HOL rows are pinned in
     `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
 mutual
-  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): stated over the production
+  -- `PanValue` carrier (whose `nStruct` names are `FieldName` = `String`) and a
+  -- `StructContextHOL` keyed by `StructName` = `String`, while HOL
+  -- `panPropsScript.sml` uses `fldname`/`stcname` = `mlstring`. The exact
+  -- MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` /
+  -- `flapjack-0lj`.
   def panIsWfShapeValueHOL [LawfulBEq String] (context : StructContextHOL) :
       PanValue α → Bool
     | .word _ => true
@@ -460,5 +468,147 @@ theorem allDistinctAlistCtxtMax {α : Type} [BEq α] [LawfulBEq α]
     rw [← hshapeget] at hx
     exact mem_of_withShape_mem sh ns n x (by rw [withShape_length]; exact hnsh) hlen1 hx
   exact maxList_ge_of_mem ns x hxmem
+
+/-! ## Exact `res_var` / `shape_of` lemmas over the exact carriers
+
+`panPropsScript.sml` states four small properties of HOL `shape_of`
+(`panPropsScript.sml:14`) and `res_var` (`panPropsScript.sml:220-240`) over the
+exact `panSem` carriers.  The exact Lean counterparts are `shapeOfHOLExact`
+(`PanSem/ValueHOL.lean`, tagged `shape_of_def`) and `resVarHOLExact`
+(`PanSem/LocalUpdatesExact.lean`, tagged `res_var_def`), so these lemmas are
+ported over those definitions rather than the production generic carriers used
+by the `panValueShape`/`panValueResVar` bridges. -/
+
+/-- Exact port of HOL `panProps$shape_of_val` (`panPropsScript.sml:14`):
+    `shape_of (Val x) = One`.  The `Val` payload is ignored, so the
+    `HolWordLab` carrier does not affect the result. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "shape_of_val"]
+theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab width) :
+    shapeOfHOLExact (.val value : ValueHOL width) =
+      Flapjack.Pancake.PanLang.ShapeHOL.one := by
+  simp [shapeOfHOLExact]
+
+/-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
+    (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
+    while this Lean statement quantifies over every `MlS → Option _` function. -/
+theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
+    (locals : MlS → Option (ValueHOL width))
+    (m n : MlS) (v : Option (ValueHOL width)) :
+    resVarHOLExact locals (m, v) n = if n = m then v else locals n := by
+  rcases v with _ | value <;> simp [resVarHOLExact]
+
+/-- Function-backed rendering of HOL `panProps$flookup_res_var_diff_eq_org`
+    (`panPropsScript.sml:228`); untagged because its lookup-function input
+    ranges beyond HOL finite maps. -/
+theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
+    (locals : MlS → Option (ValueHOL width))
+    (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
+    resVarHOLExact locals (n, v) m = locals m := by
+  have h' : m ≠ n := fun hm => h hm.symm
+  rcases v with _ | value <;> simp [resVarHOLExact, h']
+
+/-- Function-backed rendering of HOL `panProps$flookup_res_var_some_eq_lookup`
+    (`panPropsScript.sml:220`); untagged because the two lookup-function
+    arguments range beyond HOL finite maps. -/
+theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
+    (lc lc' : MlS → Option (ValueHOL width))
+    (v : MlS) (value : ValueHOL width)
+    (h : resVarHOLExact lc (v, lc' v) v = some value) : lc' v = some value := by
+  cases hv : lc' v with
+  | none => simp [resVarHOLExact, hv] at h
+  | some w =>
+      have hw : some w = some value := by simpa [resVarHOLExact, hv] using h
+      exact hw
+
+/-! ## Exact `size_of_sh_with_ctxt_eq` over the exact carriers
+
+`panPropsScript.sml:184` states that a shape that is well-formed under the empty
+struct context has the same size with or without a context.  The exact Lean
+counterparts are `sizeOfShapeWithContextHOL` (tagged `size_of_sh_with_ctxt_def`)
+and `sizeOfShapeHOL` (tagged `size_of_shape_def`) over `ShapeHOL`, with the
+context-less well-formedness rendered as `isWfShapeExactHOL [] shape = true`
+(HOL `is_wf_shape_nil` is the overload `is_wf_shape []`). -/
+
+open Flapjack.Pancake.PanLang
+
+/- Untagged support: context-free well-formed shapes have the same
+    with-context size as their plain `size_of_shape` size, for every context. -/
+mutual
+  theorem sizeOfShapeWithContextHOL_eq_nil : ∀ (shape : ShapeHOL),
+      isWfShapeExactHOL ([] : StructContextExact) shape = true →
+      ∀ context, sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape
+    | .one, _ => by simp
+    | .comb shapes, h => by
+        simp only [isWfShapeExactHOL_comb] at h
+        intro context
+        simp [sizeOfShapeWithContextHOL_comb, sizeOfShapeHOL_comb,
+          sizeOfShapesWithContextHOL_eq_nil shapes h context]
+    | .named name, h => by
+        simp [isWfShapeExactHOL_named, structContextLookupHOL_nil] at h
+  theorem sizeOfShapesWithContextHOL_eq_nil : ∀ (shapes : List ShapeHOL),
+      isWfShapesExactHOL ([] : StructContextExact) shapes = true →
+      ∀ context, sizeOfShapesWithContextHOL context shapes = sizeOfShapesHOL shapes
+    | [], _ => by simp
+    | shape :: shapes, h => by
+        simp only [isWfShapesExactHOL_cons, Bool.and_eq_true] at h
+        intro context
+        simp [sizeOfShapesWithContextHOL_cons, sizeOfShapesHOL_cons,
+          sizeOfShapeWithContextHOL_eq_nil shape h.1 context,
+          sizeOfShapesWithContextHOL_eq_nil shapes h.2 context]
+end
+
+/-- Exact port of HOL `panProps$size_of_sh_with_ctxt_eq`
+    (`panPropsScript.sml:184`). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "size_of_sh_with_ctxt_eq"]
+theorem sizeOfShapeWithContextHOL_eq (shape : ShapeHOL) (context : StructContextExact)
+    (h : isWfShapeExactHOL ([] : StructContextExact) shape = true) :
+    sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape :=
+  sizeOfShapeWithContextHOL_eq_nil shape h context
+
+/-! ## Exact `length_flatten_eq_size_of_shape` over the exact carriers
+
+`panPropsScript.sml:171` states that a value whose `shape_of` is well-formed under
+the empty struct context has `LENGTH (flatten v) = size_of_shape (shape_of v)`.
+The exact Lean counterparts are `flattenHOL` (tagged `flatten_def`),
+`shapeOfHOLExact` (tagged `shape_of_def`), and `sizeOfShapeHOL` (tagged
+`size_of_shape_def`) over `ValueHOL`, with the context-less well-formedness
+rendered as `isWfShapeExactHOL [] shape = true` (HOL `is_wf_shape_nil` is the
+overload `is_wf_shape []`). -/
+
+/- Untagged support: the flattened word list of a value has length equal to the
+    plain `size_of_shape` size of its shape, for values whose shape is
+    well-formed under the empty struct context. -/
+mutual
+  theorem lengthFlattenHOL_eq_sizeOfShapeHOL {width : Nat} [NeZero width]
+      : ∀ (v : ValueHOL width),
+        isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact v) = true →
+        (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v)
+    | .val w, _ => by simp [flattenHOL, shapeOfHOLExact]
+    | .rStruct fields, h => by
+        simp only [shapeOfHOLExact, isWfShapeExactHOL_comb] at h
+        simp only [flattenHOL, shapeOfHOLExact, sizeOfShapeHOL_comb]
+        exact lengthFlattenHOLs_eq_sizeOfShapesHOL fields h
+    | .nStruct name fields, h => by
+        simp [shapeOfHOLExact, isWfShapeExactHOL_named, structContextLookupHOL_nil] at h
+  theorem lengthFlattenHOLs_eq_sizeOfShapesHOL {width : Nat} [NeZero width]
+      : ∀ (vs : List (ValueHOL width)),
+        isWfShapesExactHOL ([] : StructContextExact) (vs.map shapeOfHOLExact) = true →
+        (vs.map flattenHOL).flatten.length = sizeOfShapesHOL (vs.map shapeOfHOLExact)
+    | [], _ => by simp
+    | v :: vs, h => by
+        simp only [List.map_cons, isWfShapesExactHOL_cons, Bool.and_eq_true] at h
+        have h1 := lengthFlattenHOL_eq_sizeOfShapeHOL v h.1
+        have h2 := lengthFlattenHOLs_eq_sizeOfShapesHOL vs h.2
+        simp [List.flatten_cons, List.length_append, h1, h2]
+end
+
+/-- Exact port of HOL `panProps$length_flatten_eq_size_of_shape`
+    (`panPropsScript.sml:171`). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "length_flatten_eq_size_of_shape"]
+theorem flattenHOL_length_eq_sizeOfShapeHOL {width : Nat} [NeZero width]
+    (v : ValueHOL width)
+    (h : isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact v) = true) :
+    (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v) :=
+  lengthFlattenHOL_eq_sizeOfShapeHOL v h
 
 end Flapjack

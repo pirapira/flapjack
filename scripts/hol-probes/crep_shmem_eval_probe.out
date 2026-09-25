@@ -1,0 +1,7 @@
+shmem_load_success=T
+shmem_store_success=T
+shmem_load8_success=T
+shmem_store8_success=T
+shmem_load_domain_error=T
+shmem_missing_local_error=T
+shmem_load_final=T

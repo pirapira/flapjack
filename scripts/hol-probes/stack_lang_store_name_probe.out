@@ -1,0 +1,7 @@
+sn_count=18
+sn_temp_eq=T
+sn_temp_ne=F
+sn_find=T
+sn_absent=F
+sn_temp_w2n=3
+sn_temp_word_bits=31

@@ -1,4 +1,7 @@
 import Flapjack.Pancake.CrepLang
+import Flapjack.Basis.Pure.MlString
+import Flapjack.FiniteMap.Basic
+import Flapjack.Misc.Sptree
 
 /-!
 The Loop intermediate language used after Crepe lowering. The constructors
@@ -21,16 +24,90 @@ inductive LoopExp (α : Type u) where
   | topAddr
   deriving Repr
 
+/-- Faithful Cake `loopLang$exp` over a fixed word width. HOL's generic `'a word`
+carrier is instantiated at `BitVec width`, and unlike the executable `LoopExp`
+there are no extra `crepOp`/`cmp` cases. -/
+@[hol "cakeml/pancake/loopLangScript.sml" "exp"]
+inductive HolLoopExp (width : Nat) [NeZero width] where
+  | const (value : BitVec width)
+  | var (name : Nat)
+  | lookup (address : BitVec 5)
+  | load (address : HolLoopExp width)
+  | op (operator : BinOp) (args : List (HolLoopExp width))
+  | shift (operator : Shift) (left right : HolLoopExp width)
+  | baseAddr
+  | topAddr
+  deriving Repr
+
+/-- Executable `LoopExp` view of a faithful `HolLoopExp`. Every HOL constructor
+has a direct executable counterpart; the executable language has additional
+constructors that are not part of HOL `loopLang$exp`. -/
+def holLoopExpToExecutable {width : Nat} [NeZero width] :
+    HolLoopExp width → LoopExp (BitVec width)
+  | .const value => .const value
+  | .var name => .var name
+  | .lookup address => .lookup address
+  | .load address => .load (holLoopExpToExecutable address)
+  | .op operator args => .op operator (args.map holLoopExpToExecutable)
+  | .shift operator left right =>
+      .shift operator (holLoopExpToExecutable left) (holLoopExpToExecutable right)
+  | .baseAddr => .baseAddr
+  | .topAddr => .topAddr
+
 inductive RegImm (α : Type u) where
   | imm (value : α)
   | reg (name : Nat)
   deriving Repr
 
+/-- Faithful Cake `loopLang$loop_arith`; constructor and field shapes match this
+executable `LoopArith` name for name (HOL uses `LLongMul`/`LLongDiv`/`LDiv`). -/
+@[hol "cakeml/pancake/loopLangScript.sml" "loop_arith"]
 inductive LoopArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | div (destination dividend divisor : Nat)
-  deriving Repr
+  deriving Repr, DecidableEq
+
+/-- Faithful Cake `loopLang$prog` over a fixed word width. HOL's generic `'a word`
+carrier is instantiated at `BitVec width`, `num_set` fields use the exact
+`spt`-backed `NumSet` (`miscScript.sml:787`, `unit spt`), `shMem` uses
+`CrepMemOp`, whose eight constructors (`load/load8/load16/load32/store/store8/
+store16/store32`) match `asm$memop` (`asmScript.sml:125-128`) name for name, and
+the FFI name is the exact `MlString` carrier rather than the executable
+`FunName = String`. The executable `LoopProg` is a one-parameter superset
+(`LoopExp` adds `crepOp`/`cmp`; FFI names are `String`), so the
+executable/faithful bridge is tracked by bead `flapjack-pxn.18.5.17.1.1`. -/
+@[hol "cakeml/pancake/loopLangScript.sml" "prog"]
+inductive HolLoopProg (width : Nat) [NeZero width] where
+  | skip
+  | assign (name : Nat) (value : HolLoopExp width)
+  | primitive (destinations : List Nat) (operator : PrimOp) (arguments : List Nat)
+  | arith (operation : LoopArith)
+  | store (address : HolLoopExp width) (value : Nat)
+  | setGlobal (address : BitVec 5) (value : HolLoopExp width)
+  | load32 (address destination : Nat)
+  | loadByte (address destination : Nat)
+  | store32 (address value : Nat)
+  | storeByte (address value : Nat)
+  | seq (first second : HolLoopProg width)
+  | ite (operator : Cmp) (condition : Nat) (right : RegImm (BitVec width))
+      (thenBranch elseBranch : HolLoopProg width) (live : NumSet)
+  | loop (liveIn : NumSet) (body : HolLoopProg width) (liveOut : NumSet)
+  | break (label : Nat)
+  | continue (label : Nat)
+  | raise (exception : Nat)
+  | return (values : List Nat)
+  | shMem (operator : CrepMemOp) (name : Nat) (address : HolLoopExp width)
+  | tick
+  | mark (body : HolLoopProg width)
+  | fail
+  | locValue (destination source : Nat)
+  | call (returns : Option (List Nat × NumSet)) (target : Option Nat)
+      (arguments : List Nat)
+      (handler : Option (Nat × HolLoopProg width × HolLoopProg width × NumSet))
+  | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
+      (configuration configurationLength array arrayLength : Nat)
+      (live : NumSet)
 
 inductive LoopProg (α : Type u) where
   | skip

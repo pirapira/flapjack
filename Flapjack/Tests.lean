@@ -148,6 +148,20 @@ import Flapjack.Test.LongMulMixedRelation
 import Flapjack.RiscV.CorrectnessDirectLongMulMixed
 import Flapjack.Test.PanValueFfiClockFuel
 import Flapjack.Test.WordToStackBitsParity
+import Flapjack.Test.MlStringParity
+import Flapjack.Test.MlStringBridgeParity
+import Flapjack.Test.PanLangShapeHOLParity
+import Flapjack.Test.PanLangExpHOLParity
+import Flapjack.Test.PanLangProgHOLParity
+import Flapjack.Test.PanLangDeclHOLParity
+import Flapjack.Test.CrepLookupCodeHOLParity
+import Flapjack.Test.CrepExpHOLParity
+import Flapjack.Test.CrepProgHOLParity
+import Flapjack.Test.CrepHolStateParity
+import Flapjack.Test.ParserByteNamesParity
+import Flapjack.Test.ParserByteRangedParity
+import Flapjack.Test.ParserKeywordParity
+import Flapjack.Test.PanGlobalsNameByteRangedParity
 
 /-!
 # Flapjack regression tests

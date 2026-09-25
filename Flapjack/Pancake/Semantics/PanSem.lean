@@ -21,7 +21,12 @@ source semantics.
 namespace Flapjack
 
 /-- HOL `panSem$empty_locals`: clear only the source state's local map. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `empty_locals`
+-- (`panSemScript.sml:74`) clears a `panSem$state` whose `locals` is
+-- `varname |-> v` with `varname = mlstring`, whereas this Lean state's
+-- `locals : VarName → Option (PanValue α)` is keyed by `VarName = String`.
+-- The tag is withheld until an exact MlString-keyed source state lands
+-- (tracked by `flapjack-pxn.18.3.5.8`, parent `flapjack-0lj`).
 def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
   { state with locals := fun _ => none }
 
@@ -33,7 +38,13 @@ def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
     fields` maps to `Named nm`, with fields ignored on both sides. The HOL
     definition has no premises or side conditions, and these three Lean cases
     have exactly the same behavior. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `shape_of` returns the
+-- `mlstring`-named `panLang$shape`, whereas this Lean function returns the
+-- production `Shape` whose `Named` field is `StructName = String`
+-- (PanLang.lean aliases `stcname = ``:mlstring```). Constructor clauses match,
+-- but the codomain carrier differs, so the tag is withheld until the exact
+-- MlString-named `ShapeHOL` is routed here (tracked by `flapjack-pxn.18.3.5.8`,
+-- parent `flapjack-0lj`).
 def panSemShapeOf : PanValue α → Shape
   | .word _ => .one
   | .rStruct values => .comb (values.map panSemShapeOf)
@@ -56,15 +67,20 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
       exact congrArg Shape.comb (List.map_congr_left ih)
   | case3 name fields => simp only [panValueShape, panSemShapeOf]
 
-/-- Statement-exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`,
+/-- Counterpart of HOL `panSem$word_lab` (`panSemScript.sml:17`,
     `word_lab = Word ('a word) End`): a single `word` constructor carrying the
-    word payload.  HOL's `'a word` is width-indexed, so the port is indexed by
-    `width` with a `BitVec width` payload.  This is declared here, in the
-    `panSemScript.sml` counterpart file, so the Datatype tag is a source-shaped
-    port; the executable code uses the generic `PanWordLab`
-    (`Flapjack/PanValues.lean`), and the two are related by the checked
-    isomorphism below at each width. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
+    word payload, indexed by `width` with a `BitVec width` payload.  The
+    executable code uses the generic `PanWordLab` (`Flapjack/PanValues.lean`),
+    and the two are related by the checked isomorphism below at each width. -/
+-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
+-- `word_lab = Word ('a word)` has one constructor and one word payload, which
+-- matches `.word (BitVec width)` at every positive width. This Lean inductive
+-- quantifies over every `width : Nat`, including zero; HOL's finite word
+-- carrier has a positive `dimindex` and has no width-zero instance. The extra
+-- width-zero carrier in this family has no HOL counterpart. Adding
+-- `[NeZero width]` to this inductive (as on `CrepProgHOL`) propagates through
+-- `HolValue`, `CrepLocalsExact`, and the frozen `PanSemStateEval.lean`, so the
+-- tag stays withheld until the dependency slice in `flapjack-0lj.5` lands.
 inductive HolWordLab (width : Nat) where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr
@@ -89,10 +105,20 @@ def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWor
 @[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
-/-- Statement-exact port of HOL `panSem$v` (`panSemScript.sml:22`,
+/-- Source-shaped port of HOL `panSem$v` (`panSemScript.sml:22`,
     `v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list) End`).
-    As with `HolWordLab`, the payload word is width-indexed. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
+    As with `HolWordLab`, the payload word is width-indexed. The HOL name
+    carriers `stcname`/`fldname` are `mlstring`, while Lean uses `String`, so
+    the datatype is not an exact HOL port and carries no `@[hol]` tag; see the
+    note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `panSem$v`
+-- (`panSemScript.sml:22`) is
+-- `Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`
+-- with `stcname`/`fldname` = `mlstring`, whereas this Lean `nStruct` carries
+-- `StructName`/`FieldName = String`. Constructor names/arities match, but the
+-- name carriers differ, so no tag is attached until an exact MlString-backed
+-- value datatype is introduced (tracked by `flapjack-pxn.18.3.5.8`, parent
+-- `flapjack-0lj`).
 inductive HolValue (width : Nat) where
   | val (value : HolWordLab width)
   | rStruct (fields : List (HolValue width))
@@ -569,6 +595,40 @@ theorem panSemCodeEvaluateFuel_call_sub_one_eq
   have htwo := panSemCodeEvaluateFuel_call_two_le state info function arguments
   omega
 
+/-- Flapjack-specific `Call` branch decomposition at canonical fuel. The production
+    code evaluator on a `Call` at canonical fuel equals the state-owned call
+    clause evaluated at the syntactically-successor fuel `(canonical - 2) + 1`,
+    which exposes the call clause's `fuel + 1` branch and hence the callee body
+    recursion at exactly `canonical - 2`.  This turns the callee/handler body
+    evaluation premises used by the Pan-to-Crep `Call` case into conclusions
+    rather than assumptions. This has no HOL theorem original: HOL's evaluator
+    does not use this Flapjack canonical-fuel function. -/
+theorem panSemCodeEvaluateFuel_call_decomposition
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.call info function arguments))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.call info function arguments) memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        ((panSemCodeEvaluateFuel state (.call info function arguments) - 2) + 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        info function arguments memoryAccess contracts memoryHandler := by
+  rw [panSemCodeEvaluateFuel_call_delegates,
+    panSemCodeEvaluateFuel_call_sub_one_eq]
+
 /-- A continuation/body program of a `DecCall` has canonical fuel within the
     canonical DecCall fuel after the dispatch steps. -/
 theorem panSemCodeEvaluateFuel_decCall_body_le
@@ -759,6 +819,33 @@ theorem panSemEvaluateCodeStateWithPostState_eq_map
       program (memoryAccess := memoryAccess) (contracts := contracts)
       (memoryHandler := memoryHandler) <;>
     simp [panSemEvaluateCodeStateWithPostState, hresult]
+
+/-- Recursive source-state evaluation leaves the finite, state-owned
+    `PanSemState.code` map unchanged. Call and DecCall resolve every callee from
+    this map, so this post-state invariant is available to the corresponding
+    compiler-correctness cases. -/
+theorem panSemEvaluateCodeStateWithPostState_preserves_code
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (bytesInWord : α) (state : PanSemState α (FfiState σ))
+    (program : Prog α)
+    (result : PanValueFfiClockResult α σ)
+    (postState : PanSemState α (FfiState σ))
+    (heval : panSemEvaluateCodeStateWithPostState context primitive handler
+      bytesInWord state program = some (result, postState)) :
+    postState.code = state.code := by
+  unfold panSemEvaluateCodeStateWithPostState at heval
+  cases hresult : panSemEvaluateCodeState context primitive handler bytesInWord
+      state program with
+  | none => simp [hresult] at heval
+  | some evaluated =>
+      simp [hresult] at heval
+      rcases heval with ⟨rfl, rfl⟩
+      exact panSemCodeStateAfter_preserves_code state evaluated
 
 /-! Production-evaluator counterpart of the HOL `evaluate_def` Tick equation
     (`cakeml/pancake/semantics/panSemScript.sml:683-685`) over the production
@@ -2418,7 +2505,12 @@ def panSemCompileTopAdmissible : Decl α → Bool
     source exception map. The legacy runtime `functions` list is not used as a
     substitute for the source code map. Unlike `evalPanValueDeclarations`,
     this definition does no struct-name prepass: HOL's `Name` case is a no-op. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `evaluate_decls` operates on
+-- a `panSem$state` whose `code`/`eshapes` are `mlstring`-keyed finite maps,
+-- whereas `PanSemDeclarationState` uses `InfoMap` lists keyed by
+-- `FunName`/`ExceptionId = String`. The clauses match but the key carrier
+-- differs, so the tag is withheld until an exact MlString-keyed state lands
+-- (tracked by `flapjack-pxn.18.3.5.8`, parent `flapjack-0lj`).
 def evaluateDecls
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

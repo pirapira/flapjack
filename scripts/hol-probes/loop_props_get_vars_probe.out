@@ -1,0 +1,6 @@
+get_vars_two=SOME [Word 5w; Word 9w]
+get_vars_miss=NONE
+get_vars_empty=SOME []
+get_vars_clock_upd_eq=T
+get_vars_local_clock_upd_eq=T
+get_var_imm_add_clk_eq=T

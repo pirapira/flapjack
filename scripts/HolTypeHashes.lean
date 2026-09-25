@@ -1,14 +1,29 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Compiler.Backend.StackLang
+import Flapjack.Compiler.Backend.StackLang.Prog
+import Flapjack.Basis.Pure.MlString
 import Flapjack.Compiler.Backend.WordToStack
+import Flapjack.Compiler.Backend.WordToStackRegFormat
+import Flapjack.Compiler.Backend.LabSem
+import Flapjack.Compiler.Backend.LabProps
+import Flapjack.Compiler.Backend.StackNames
+import Flapjack.Compiler.Backend.StackRemove
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.AppList
+import Flapjack.Misc.Sptree
 import Flapjack.Pancake.CrepInline.Pass
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.CrepToLoop.StateRel
 import Flapjack.Pancake.PanCommon
 import Flapjack.Pancake.PanGlobals
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.PanLang.Exp
+import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
@@ -23,13 +38,30 @@ import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.CrepSem.LookupCode
 import Flapjack.Pancake.Semantics.CrepSem.Primop
+import Flapjack.Pancake.LoopLang
+import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.Pancake.Semantics.LoopSem
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.Primop
 import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Pancake.Semantics.PanSem.TotalSteps
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
+import Flapjack.Pancake.Semantics.PanSem.StateExact
+import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
+import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
+import Flapjack.Pancake.Semantics.PanSem.DecExact
+import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
+import Flapjack.Pancake.Semantics.PanSem.EvalExact
+import Flapjack.Pancake.Semantics.PanSem.DecCallExact
+import Flapjack.Pancake.Semantics.PanSem.EvaluateDeclsExact
+import Flapjack.Pancake.Semantics.PanSem.ClockExact
+import Flapjack.Pancake.Semantics.PanSem.StateSimpExact
+import Flapjack.Pancake.Semantics.PanSem.StateDefsExact
 import Flapjack.Pancake.WordLang
 import Flapjack.Pancake.WordConvs
 import Flapjack.RiscV.CorrectnessEncoding
@@ -74,7 +106,11 @@ elab "#emit_hol_type_hashes" : command => do
           ("lean_name", toJson name.toString),
           ("hol_path", toJson ref.path),
           ("hol_name", toJson ref.name),
-          ("type_expr", toJson (reprStr (canonicalExpr info.type)))]
+          ("type_expr", toJson (reprStr (canonicalExpr info.type))),
+          ("qualifiers", Json.mkObj [
+            ("list_as_array", toJson ref.listAsArray),
+            ("names_as_string", toJson ref.namesAsString),
+            ("names_as_string_boundary", toJson ref.namesAsStringBoundary)])]
         match definitionBody? info with
         | some body =>
             fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]

@@ -1,0 +1,6 @@
+ms32_aligned=Word 0x11223344w
+ms32_aligned4=Word 0x1122334400000000w
+ms32_unaligned=Word 0w
+ms32_outside_domain=Word 0w
+ms32_bigendian=Word 0x1122334400000000w
+ms32_other_cell=Word 0w

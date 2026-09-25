@@ -108,7 +108,7 @@ run_probe riscv_encode_length_probeScript.sml riscv_encode_length_probe.out \
   "$cake_dir/compiler/encoders/riscv/riscv_targetScript.sml" \
   "$cake_dir/compiler/encoders/riscv"
 run_probe pan_crep_primop_probeScript.sml pan_crep_primop_probe.out \
-  pan_valid crep_invalid "$cake_dir/pancake/semantics/panSemScript.sml"
+  pan_valid crep_primop_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_structs_opt_mmap_probeScript.sml pan_structs_opt_mmap_probe.out \
   success pointwise "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
@@ -199,7 +199,8 @@ run_probe pan_op_probeScript.sml pan_op_probe.out \
   mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   mem_load_byte_definition load32_width24_address4 \
-  "$cake_dir/pancake/semantics/panSemScript.sml"
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_runtime_word_boundary_probeScript.sml crep_runtime_word_boundary_probe.out \
@@ -212,7 +213,11 @@ run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_
   valid_zero_mem align_16 "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
-  constant multiplication "$cake_dir/pancake/crep_arithScript.sml"
+  constant dimindex_pos "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_state_mapc_probeScript.sml crep_state_mapc_probe.out \
+  fmap_map2_keyed_lookup \
+  "$hol_dir/src/finite_maps/finite_mapScript.sml" \
+  "$hol_dir/src/finite_maps"
 run_probe crep_arith_lookup_code_probeScript.sml crep_arith_lookup_code_probe.out \
   simp_prog_after_lookup \
   "$cake_dir/pancake/proofs/crep_arithProofScript.sml" \
@@ -262,11 +267,55 @@ run_probe crep_to_loop_locals_rel_probeScript.sml crep_to_loop_locals_rel_probe.
   ctxt_vars_lookup subset_domain_component \
   "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_locals_insert_probeScript.sml crep_to_loop_locals_insert_probe.out \
+  insert_same subset_preserved \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_locals_cutset_probeScript.sml crep_to_loop_locals_cutset_probe.out \
+  cutset_sub_0 cutset_domain_trans \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_mem_lookup_probeScript.sml crep_to_loop_mem_lookup_probe.out \
+  ml_hit ml_distinct \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_list_insert_probeScript.sml crep_to_loop_list_insert_probe.out \
+  li_mem_3 li_snoc_agrees \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_insert_insert_probeScript.sml crep_to_loop_insert_insert_probe.out \
+  iie_hit iie_agrees_deep \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_list_insert2_probeScript.sml crep_to_loop_list_insert2_probe.out \
+  lii_ty_nonmember lia_absent \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_assigned_vars_mapidx_probeScript.sml crep_to_loop_assigned_vars_mapidx_probe.out \
+  avma_nil avma_offset_zero \
+  "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe loop_props_assigned_vars_probeScript.sml loop_props_assigned_vars_probe.out \
+  avs_seq_split avs_nested_assign_three \
+  "$cake_dir/pancake/semantics/loopPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe crep_to_loop_context_defs_probeScript.sml crep_to_loop_context_defs_probe.out \
   find_var_hit find_lab_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_mk_ctxt_probeScript.sml crep_to_loop_mk_ctxt_probe.out \
   mk_ctxt_vars make_vmap_empty_miss "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_make_vmap_dup_probeScript.sml crep_to_loop_make_vmap_dup_probe.out \
+  mvd_single_hit mvd_dup_last_wins "$cake_dir/pancake/crep_to_loopScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_rt_vars_distinct_probeScript.sml crep_to_loop_rt_vars_distinct_probe.out \
+  acd_distinct acd_missing "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_map_map2_fst_probeScript.sml crep_to_loop_map_map2_fst_probe.out \
+  mm2_pair_eq mm2_empty "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+run_probe crep_to_loop_alookup_el_probeScript.sml crep_to_loop_alookup_el_probe.out \
+  ael_shape_0 ael_result "$cake_dir/pancake/proofs/crep_to_loopProofScript.sml" \
   "$cake_dir/pancake/proofs"
 run_probe crep_to_loop_make_funcs_probeScript.sml crep_to_loop_make_funcs_probe.out \
   mkf_f mkf_dup_first "$cake_dir/pancake/crep_to_loopScript.sml" \
@@ -285,7 +334,7 @@ run_probe pan_common_distinct_lists_probeScript.sml pan_common_distinct_lists_pr
   genlist_vmax_disjoint "$cake_dir/pancake/pan_commonScript.sml" \
   "$cake_dir/pancake"
 run_probe word_to_stack_bits_to_word_probeScript.sml word_to_stack_bits_to_word_probe.out \
-  bits_empty bits_equation "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  bits_empty wordlist_chunk "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe word_to_stack_word_list_probeScript.sml word_to_stack_word_list_probe.out \
   wl_empty_d3 wl_twostep "$cake_dir/compiler/backend/word_to_stackScript.sml" \
@@ -296,6 +345,30 @@ run_probe word_to_stack_chunk_to_bits_probeScript.sml word_to_stack_chunk_to_bit
 run_probe word_to_stack_chunk_to_bitmap_probeScript.sml word_to_stack_chunk_to_bitmap_probe.out \
   cbm_empty cwb_split8 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_to_stack_write_bitmap_probeScript.sml word_to_stack_write_bitmap_probe.out \
+  wb_empty wb_order_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_insert_bitmap_probeScript.sml word_to_stack_insert_bitmap_probe.out \
+  ib_empty ib_new_len "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_stack_slots_probeScript.sml word_to_stack_stack_slots_probe.out \
+  ss_num_stack_ret_pair ss_stack_free_inl "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_perf_slots_probeScript.sml word_to_stack_perf_slots_probe.out \
+  ps_perf_rsp ps_handler_slots_false "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe word_to_stack_reg_format_probeScript.sml word_to_stack_reg_format_probe.out \
+  rf_reg1_high wma_two "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe stack_lang_prog_combinators_probeScript.sml stack_lang_prog_combinators_probe.out \
+  lc_empty wss_two "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe stack_lang_store_name_probeScript.sml stack_lang_store_name_probe.out \
+  sn_count sn_temp_word_bits "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe asm_inst_fragment_probeScript.sml asm_inst_fragment_probe.out \
+  ar_reg as_loc "$cake_dir/compiler/encoders/asm/asmScript.sml" \
+  "$cake_dir/compiler/encoders/asm"
 run_probe pan_props_alist_probeScript.sml pan_props_alist_probe.out \
   alist_a_nodup alist_duplicate_first "$cake_dir/pancake/semantics/panPropsScript.sml" \
   "$cake_dir/pancake/semantics"
@@ -448,7 +521,7 @@ run_probe pan_sem_pan_primop_probeScript.sml pan_sem_pan_primop_probe.out \
   pan_primop_basic pan_primop_non_word "$cake_dir/pancake/semantics/panSemScript.sml"
 # The set_var probe checks local override, unrelated locals, globals, and clock.
 run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
-  set_var_new set_var_clock "$cake_dir/pancake/semantics/panSemScript.sml"
+  set_var_new set_var_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
   pan_dec_clock_five pan_dec_clock_zero \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -518,7 +591,25 @@ run_probe pan_sem_seq_e2e_probeScript.sml pan_sem_seq_e2e_probe.out \
 # plus Const, Var Local, and operator-expression branch selection in the
 # restricted total evaluators.
 run_probe pan_sem_ite_e2e_probeScript.sml pan_sem_ite_e2e_probe.out \
-  if_true_result if_op_sub_zero_tick_clock \
+  if_true_result exact_if_failed_local \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+# The measure-driven total fragment probe observes Assign/Return/Raise result
+# and state branches, plus their interaction with If selection and Seq stopping.
+run_probe pan_sem_total_fragment_stmt_probeScript.sml pan_sem_total_fragment_stmt_probe.out \
+  total_assign_ok_result total_assign_ok_local \
+  total_assign_bad_result total_assign_bad_local \
+  total_return_ok_result total_return_ok_local \
+  total_return_bad_result total_return_bad_local \
+  total_return_oversize_result total_return_oversize_local \
+  total_raise_ok_result total_raise_ok_local \
+  total_raise_bad_result total_raise_bad_local \
+  total_raise_shape_mismatch_result total_raise_shape_mismatch_local \
+  total_raise_missing_shape_result total_raise_oversize_result \
+  total_raise_oversize_local total_if_assign_true_result \
+  total_if_assign_true_local total_if_assign_false_result \
+  total_if_assign_false_local total_seq_assign_return_result \
+  total_seq_assign_return_local total_seq_raise_stop_result \
+  total_seq_raise_stop_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 # The If memory probe observes a memory-reading condition: a nonzero cell
 # selecting the then branch, a zero cell selecting the else branch, an address
@@ -536,8 +627,9 @@ run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out 
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
-  deccall_ok_result deccall_missing_result \
-  "$cake_dir/pancake/semantics/panSemScript.sml"
+  deccall_ok_result nested_deccall_bad_shape_state_exact \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 # The Call argument probe observes that a failing argument rejects the call
 # with `SOME Error` before callee lookup, preserving clock and locals.
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
@@ -593,10 +685,11 @@ run_probe pan_sem_return_raise_error_probeScript.sml pan_sem_return_raise_error_
 run_probe pan_sem_return_raise_memory_probeScript.sml pan_sem_return_raise_memory_probe.out \
   ret_mem_fail_result raise_mem_ok_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-# The ExtCall error probe observes the non-word argument and failing
-# byte-read rejections, each returning `SOME Error` with unchanged state.
+# The ExtCall error probe observes the argument-evaluation failure, the
+# non-word argument and failing byte-read rejections, each returning
+# `SOME Error` with unchanged state.
 run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
-  ext_nonword_result ext_read_fail_ffi_io \
+  ext_nonword_result ext_argfail_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \
@@ -607,9 +700,13 @@ run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
 run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_lookup_code_probeScript.sml pan_sem_lookup_code_probe.out \
+  lookup_code_nonempty_success lookup_code_missing_function \
+  lookup_code_wrong_arity lookup_code_wrong_shape lookup_code_duplicate_formals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 call_code_map_7 recursive_call_code_map_7 deccall_code_map_7 \
-  recursive_call_timeout recursive_deccall_timeout \
+  recursive_call_timeout recursive_deccall_timeout pan_sem_e2e_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   skip_eval break_eval continue_eval tick_zero_eval tick_positive_eval \
@@ -617,9 +714,30 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   seq_skip_break_eval seq_break_stops_eval seq_tick_skip_eval seq_tick_zero_eval \
   seq_fix_clock_upper_clamp_eval return_word_eval return_empty_eval \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
+  while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
+  while_break_zero_eval while_break_label_eval while_continue_label_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
+  call_total_return_success call_total_return_destination call_total_missing_code \
+  call_total_wrong_arity call_total_timeout call_total_callee_normal \
+  call_total_callee_break call_total_callee_continue call_total_callee_exception \
+  call_total_return_arity_error call_total_duplicate_destinations \
+  call_total_missing_destination \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_store_eval_probeScript.sml crep_store_eval_probe.out \
+  store_success store_address_error store_value_error store_domain_error \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_ext_call_eval_probeScript.sml crep_ext_call_eval_probe.out \
+  extcall_return_eval extcall_final_eval extcall_missing_local_eval \
+  extcall_read_error_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_shmem_eval_probeScript.sml crep_shmem_eval_probe.out \
+  shmem_load_success shmem_store_success shmem_load8_success shmem_store8_success \
+  shmem_load_domain_error \
+  shmem_missing_local_error shmem_load_final \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
   call_bad_return_shape_result call_bad_return_shape_param_local \
@@ -638,7 +756,7 @@ run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
   ret tau return length_failure final div_ret div_tau \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe ffi_call_probeScript.sml ffi_call_probe.out \
-  oracle_return empty_extcall "$cake_dir/semantics/ffi/ffiScript.sml"
+  oracle_return extcall_name_len "$cake_dir/semantics/ffi/ffiScript.sml"
 run_probe pan_itree_trace_prefix_probeScript.sml pan_itree_trace_prefix_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_trace_prefix0_probeScript.sml pan_itree_trace_prefix0_probe.out \
@@ -691,6 +809,9 @@ run_probe pan_sem_is_valid_value_probeScript.sml pan_sem_is_valid_value_probe.ou
 run_probe pan_sem_write_bytearray_probeScript.sml pan_sem_write_bytearray_probe.out \
   write_empty write_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_mem_store_byte_probeScript.sml pan_sem_mem_store_byte_probe.out \
+  store_byte_hit_some write_bytearray_out_of_domain \
+  "$cake_dir/pancake/semantics/panSemScript.sml" "$cake_dir/pancake/semantics"
 run_probe pan_sem_evaluate_fixed_load_probeScript.sml \
   pan_sem_evaluate_fixed_load_probe.out \
   eval_byte_hit eval_load32_alignment_failure \
@@ -770,9 +891,9 @@ run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
 run_probe crep_exps_probeScript.sml crep_exps_probe.out \
   leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
 run_probe cexp_heads_probeScript.sml cexp_heads_probe.out \
-  empty heads empty_head empty_tail "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty heads empty_head empty_tail inferred_type "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe comp_field_probeScript.sml comp_field_probe.out \
-  first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
+  first short "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
@@ -915,7 +1036,7 @@ run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
   res_var_delete_hit res_var_update_hit \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
-  lookup_code_valid lookup_code_missing \
+  lookup_code_valid lookup_code_duplicate \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
@@ -1025,6 +1146,11 @@ run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
 run_probe loop_sem_get_var_imm_probeScript.sml \
   loop_sem_get_var_imm_probe.out \
   reg_hit reg_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_props_get_vars_probeScript.sml \
+  loop_props_get_vars_probe.out \
+  get_vars_two get_var_imm_add_clk_eq \
+  "$cake_dir/pancake/semantics/loopPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
 run_probe loop_sem_call_env_probeScript.sml \
   loop_sem_call_env_probe.out \
   arg_zero arg_missing "$cake_dir/pancake/semantics/loopSemScript.sml"
@@ -1250,7 +1376,7 @@ run_probe word_convs_alloc_conventions_probeScript.sml word_convs_alloc_conventi
 # The labProps probe pins `line_ok_pre`/`all_enc_ok_pre` and the concrete
 # `cbw_to_asm` mapping at an 8-bit configuration.
 run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out \
-  line_ok_asm_skip cbw_to_asm_sharemem \
+  line_ok_asm_skip all_enc_ok_empty \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
 
@@ -1287,4 +1413,385 @@ run_probe misc_app_list_probeScript.sml misc_app_list_probe.out \
 run_probe stack_to_lab_flatten_app_list_probeScript.sml stack_to_lab_flatten_app_list_probe.out \
   flatten_app_tick flatten_app_ite_tick \
   "$cake_dir/compiler/backend/stack_to_labScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The labProps sec_ends_with_label probe observes the `is_Label` classifier and
+# the `¬NULL ls ∧ is_Label (LAST ls)` section test used by
+# `EVERY_sec_ends_with_label_MAP_prog_to_section`.
+run_probe lab_props_sec_ends_label_probeScript.sml lab_props_sec_ends_label_probe.out \
+  is_label_label sec_empty \
+  "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
+  "$cake_dir/compiler/backend/semantics"
+
+# The stack_names probe observes the pure register-renaming transformation
+# (ri_find_name / inst_find_name / dest_find_name / comp / prog_comp /
+# compile / names_ok) against a small renaming map.
+run_probe stack_names_ports_probeScript.sml stack_names_ports_probe.out \
+  ri_reg compile_map_fst_src \
+  "$cake_dir/compiler/backend/stack_namesScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The stack_remove make_init probe observes the state-free prerequisites used by
+# init_reduce / init_prop: is_SOME_Word, read_mem (and its LENGTH) and the
+# addresses set with its membership characterization.
+run_probe stack_remove_init_probeScript.sml stack_remove_init_probe.out \
+  is_word_some in_addr_out \
+  "$cake_dir/compiler/backend/proofs/stack_removeProofScript.sml" \
+  "$cake_dir/compiler/backend/proofs"
+
+# The word_loc probe pins the exact width-indexed HOL stackLang word_loc
+# datatype (Word ('a word) | Loc num num) used by StackRemove.
+run_probe word_lang_word_loc_probeScript.sml word_lang_word_loc_probe.out \
+  wl_word wl_match \
+  "$cake_dir/compiler/backend/wordLangScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The stack_remove value-helper probe pins max_stack_alloc, word_offset (8/64),
+# store_list (length/head/last), store_length and stack_err_lab from the
+# stack_remove compiler script.
+run_probe stack_remove_helpers_probeScript.sml stack_remove_helpers_probe.out \
+  max_stack_alloc stack_err_lab \
+  "$cake_dir/compiler/backend/stack_removeScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The stackLang instruction-overload probe pins left_shift_inst,
+# right_shift_inst, const_inst, load_inst, store_inst (stackLangScript.sml:80-84)
+# and halt_inst (stack_removeScript.sml:58) against explicit constructor terms.
+run_probe stack_lang_inst_overloads_probeScript.sml stack_lang_inst_overloads_probe.out \
+  left_shift_inst_2_3 halt_inst_0 \
+  "$cake_dir/compiler/backend/stack_removeScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The mlstring carrier probe pins the exact HOL `mlstring = implode string`
+# datatype (string = char list, char the 256-element type) needed by the
+# stackLang/stack_names program FFI field.
+run_probe mlstring_carrier_probeScript.sml mlstring_carrier_probe.out \
+  ml_strlen ml_concat_len \
+  "$cake_dir/basis/pure/mlstringScript.sml" \
+  "$cake_dir/basis/pure"
+
+# The loopSem state-carrier probe pins the exact field shapes of a concrete
+# (8,'ffi) loopSem$state: num_map locals/code, total memory, set domain, clock, be.
+run_probe loop_sem_state_carrier_probeScript.sml loop_sem_state_carrier_probe.out \
+  locals_0 base_self \
+  "$cake_dir/pancake/semantics/loopSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The stackLang prog-carrier probe pins the exact `prog` datatype FFI field
+# (mlstring) and representative constructor shapes at word type 64.
+run_probe stack_lang_prog_carrier_probeScript.sml stack_lang_prog_carrier_probe.out \
+  pg_skip pg_ffi_eq \
+  "$cake_dir/compiler/backend/stackLangScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The panLang shape probe pins the exact `panLang$shape` name field as
+# `mlstring` via `shape_to_str` (Named nm returns nm), plus constructor
+# equality and arity.
+run_probe pan_lang_shape_probeScript.sml pan_lang_shape_probe.out \
+  shp_one_str shp_comb_len \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The loopLang exp/loop_arith probe pins the exact constructor and field shapes
+# of the faithful width-indexed carriers HolLoopExp/LoopArith.
+run_probe loop_lang_exp_probeScript.sml loop_lang_exp_probe.out \
+  exp_const arith_div \
+  "$cake_dir/pancake/loopLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The loopLang prog probe records HOL constructor outputs for comparison with
+# the untagged finite-map approximation (which is not an exact num_set port).
+run_probe loop_lang_prog_probeScript.sml loop_lang_prog_probe.out \
+  prog_skip prog_ffi \
+  "$cake_dir/pancake/loopLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The panLang exp probe pins the `exp` word payload (`Const`), its `mlstring`
+# identifier fields, and representative constructor arities at word type 64.
+run_probe pan_lang_exp_probeScript.sml pan_lang_exp_probe.out \
+  ex_const ex_bytesinword \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+# The num_set/spt probe observes the exact HOL sptree lookup/insert/wf/isEmpty
+# behaviour for the unit-spt carrier used as num_set.
+run_probe num_set_spt_probeScript.sml num_set_spt_probe.out \
+  lookup_ln insert_ovw \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"
+
+# The panLang prog probe pins the `prog` constructor arities, the `mlstring`
+# identifier fields, and the word-indexed exp payloads at word type 64.
+run_probe pan_lang_prog_probeScript.sml pan_lang_prog_probe.out \
+  pg_skip pg_annot_len \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The num_set toAList probe observes the exact HOL sptree enumeration order
+# (mixed order, but deterministic).
+run_probe num_set_to_alist_probeScript.sml num_set_to_alist_probe.out \
+  toalist_ln toalist_four \
+  "$cake_dir/misc/miscScript.sml" \
+  "$cake_dir/misc"
+# The panLang decl probe pins the `fun_decl` / `decl` / `struct_info` field
+# shapes (mlstring names, bool flags, param lists, record size) at word type 64.
+run_probe pan_lang_decl_probeScript.sml pan_lang_decl_probe.out \
+  fd_name_len si_size \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The word_to_stack copy_ret_aux/copy_ret probe pins the return-slot copy
+# fragments (list_Seq of StackLoad/StackStore, SeqStackFree) at word type 64.
+run_probe word_to_stack_copy_ret_probeScript.sml word_to_stack_copy_ret_probe.out \
+  cra_zero cr_handle \
+  "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The panLexer byte probe observes the original lexer's ASCII-only identifier
+# predicates (HOL char is 8-bit; bytes >= 128 are not alpha/digit).
+run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
+  plx_alpha_206 plx_ascii_then_high \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"
+# The get_keyword probe pins the original keyword table for every entry plus
+# the empty / foreign / plain-identifier fallbacks.
+run_probe pan_lexer_get_keyword_probeScript.sml pan_lexer_get_keyword_probe.out \
+  gk_skip gk_done \
+  "$cake_dir/pancake/parser/panLexerScript.sml" \
+  "$cake_dir/pancake/parser"
+# The ffi_state carrier probe observes the exact HOL ffi datatype shapes,
+# initial_ffi_state and the call_FFI cases (identity, success, length
+# failure, oracle final).
+run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
+  ffi_outcome_failed call_shmem_final_event \
+  "$cake_dir/semantics/ffi/ffiScript.sml" \
+  "$cake_dir/semantics/ffi"
+
+# The crepLang exp probe observes the exact width-indexed Crepe expression
+# carrier (word payloads and fixed 5-word LoadGlob width).
+run_probe crep_lang_exp_probeScript.sml crep_lang_exp_probe.out \
+  cexp_const cexp_topaddr \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The crepLang prog probe observes the exact width-indexed Crepe program
+# carrier (MlString Call/ExtCall names, word payloads, fixed 5-word StoreGlob).
+run_probe crep_lang_prog_probeScript.sml crep_lang_prog_probe.out \
+  prg_skip prg_tick \
+  "$cake_dir/pancake/crepLangScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
+  sswc_one sswc_comb_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The mem_load probe observes the exact HOL mem_load over the faithful carriers.
+run_probe pan_sem_mem_load_exact_probeScript.sml pan_sem_mem_load_exact_probe.out \
+  ml_one_hit ml_comb_offset \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The size_of_shape probe observes the exact context-free HOL size_of_shape.
+run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
+  ss_one ss_eq \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The is_wf_shape probe observes is_wf_shape/is_wf_flds/is_wf_ctxt over the
+# exact MlString-keyed context, including the duplicate-name and missing-field
+# rejections.
+run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
+  iwf_one iwf_ctxt_field_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The shape_of probe observes the total HOL shape_of over panSem$v.
+run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
+  so_valword so_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The isValWord probe observes the exact boolean `panSem$isValWord` on
+# Val/RStruct/NStruct and on the raw Word payload.
+run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
+  is_valword_val is_valword_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The empty_locals probe observes the exact `panSem$empty_locals` state update:
+# the locals map is cleared while other fields are preserved.
+run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
+  el_lookup el_globals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The mem_store_32 probe observes the exact four-byte replacement (little and
+# big endian), plus the unaligned and out-of-domain NONE cases.
+run_probe pan_sem_mem_store_32_probeScript.sml pan_sem_mem_store_32_probe.out \
+  ms32_aligned ms32_other_cell \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The result probe observes the exact panSem result constructor shapes.
+run_probe pan_sem_result_probeScript.sml pan_sem_result_probe.out \
+  res_error res_distinct \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The panSem mem_store/mem_stores probe observes in-domain replacement, pointwise
+# preservation of other cells, out-of-domain failure, the bytes_in_word stride (8w
+# for 64-bit words), the empty list, and a later-list store failure.
+run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
+  ms_hit_lookup mss_second_miss \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The shared-memory probe observes panSem `sh_mem_load`/`sh_mem_store`:
+# nb = 0 in/out of `sh_memaddrs`, byte-aligned nb = 1, an FFI_final outcome
+# clearing locals, and the FFI_return event/state update for both primitives.
+run_probe pan_sem_sh_mem_probeScript.sml pan_sem_sh_mem_probe.out \
+  l_load_hit_local l_store_final_unchanged \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The declaration-context probe observes panSem `decs_stcnames`: the empty
+# context, a well-formed structure, its computed size, duplicate names,
+# duplicate field names, an unknown `Named` shape, and skipped decl forms.
+run_probe pan_sem_decs_stcnames_probeScript.sml pan_sem_decs_stcnames_probe.out \
+  dsc_empty dsc_skip_len \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The panProps shape_of_val / res_var FLOOKUP probe observes the exact HOL
+# shape_of on the Val (word_lab) constructor and the res_var finite-map
+# update/delete semantics (panPropsScript.sml:14, :220, :228, :236).
+run_probe pan_props_shape_res_var_probeScript.sml pan_props_shape_res_var_probe.out \
+  spv_one rv_some \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The pan_commonProps zip/fupdate and disjoint take/drop probe observes the
+# finite-map update-not-mem and list-disjointness lemmas
+# (pan_commonPropsScript.sml:289, :399, :413).
+run_probe pan_common_props_zip_disjoint_probeScript.sml pan_common_props_zip_disjoint_probe.out \
+  fzn_notmem ddt_disjoint \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The crepProps assigned_vars / var_cexp probe observes the nested_decs append,
+# stores emptiness, and load_shape EXACT lemmas
+# (crepPropsScript.sml:390, :400, :429, :439, :215).
+run_probe crep_props_assigned_vars_probeScript.sml crep_props_assigned_vars_probe.out \
+  avnda vels \
+  "$cake_dir/pancake/semantics/crepPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The pan_commonProps fm_update_diff_vars probe observes that updating a finite
+# map at `a`, then a distinct `b`, then `a`, then `b` collapses to one update
+# at each key (pan_commonPropsScript.sml:780).
+run_probe pan_common_props_fm_update_diff_vars_probeScript.sml pan_common_props_fm_update_diff_vars_probe.out \
+  fmdv_eq_1 fmdv_lhs_absent \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The panProps size_of_sh_with_ctxt_eq probe observes that a context-free
+# well-formed shape has the same with-context size as its plain size_of_shape
+# size (panPropsScript.sml:184, using panLang size_of_sh_with_ctxt/size_of_shape).
+run_probe pan_props_size_with_ctxt_probeScript.sml pan_props_size_with_ctxt_probe.out \
+  ssc_one ssc_eq_nested \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The panSem vshapes_args_rel_imp_eq_len_MAP probe observes the exact
+# LIST_REL (λvshape arg. SND vshape = shape_of arg) vshapes args relation and
+# its LENGTH / MAP SND / MAP shape_of consequences (panSemScript.sml:740).
+run_probe pan_sem_vshapes_args_rel_probeScript.sml pan_sem_vshapes_args_rel_probe.out \
+  vra_one vra_map_two \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The pan_commonProps take/drop disjoint, EL disjoint, and empty zip lookup
+# probe observes pan_commonPropsScript.sml:534, :606, and :575.
+run_probe pan_common_props_take_drop_el_zip_probeScript.sml pan_common_props_take_drop_el_zip_probe.out \
+  atdd_disjoint nmfz_hit \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The panProps length_flatten_eq_size_of_shape probe observes that under the
+# empty-constructor context the flattened length of a well-formed value equals
+# its shape size (panPropsScript.sml:171).
+run_probe pan_props_length_flatten_probeScript.sml pan_props_length_flatten_probe.out \
+  lfs_val lfs_wf_nested \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The pan_to_crep is_wf_shape_nil_length_flatten probe observes the exact
+# flatten/size_of_shape relationship under the empty constructor context
+# (pan_to_crepProofScript.sml:2469).
+run_probe pan_to_crep_is_wf_shape_nil_probeScript.sml pan_to_crep_is_wf_shape_nil_probe.out \
+  iwf_val iwf_wf_struct \
+  "$cake_dir/pancake/proofs/pan_to_crepProofScript.sml" \
+  "$cake_dir/pancake/proofs"
+
+# The pan_globals fresh_name probe observes that the source-shaped fresh-name
+# search only ever appends apostrophes (pan_globalsScript.sml:55).
+run_probe pan_globals_fresh_name_probeScript.sml pan_globals_fresh_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals new_main_name probe observes the synthesized entry-point name
+# for representative declaration lists (pan_globalsScript.sml:224).
+run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_probe.out \
+  empty absent \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals fperm_name probe observes the source-shape name permutation
+# `fperm_name f g h` (pan_globalsScript.sml:185-188) for unchanged and
+# colliding keys, including names that already carry apostrophes.
+run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.out \
+  source_collision fperm_name_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out \
+  shaF pop_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+run_probe word_to_stack_call_dest_probeScript.sml word_to_stack_call_dest_probe.out \
+  cd_some wl_store "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+# The pan_globals fperm probe observes the source-shape program permutation
+# `fperm f g p` (pan_globalsScript.sml:191-214) for the recursive control
+# constructs, the Call handler case, the DecCall case and the catch-all.
+run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
+  recursive_control fperm_done \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals fperm_decs probe observes the source-shape declaration-list
+# permutation `fperm_decs f g ds` (pan_globalsScript.sml:216-221) for a mixed
+# declaration list and the empty list.
+run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.out \
+  mixed singleton_nonfunction \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals resort_decls probe observes the declaration regrouping
+# `resort_decls ds` (pan_globalsScript.sml:179-182) for a mixed list, an
+# already-grouped list, and the empty list.
+run_probe pan_globals_resort_decls_probeScript.sml pan_globals_resort_decls_probe.out \
+  mixed empty \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals dec_shapes probe observes the shape projection
+# `dec_shapes ds` (pan_globalsScript.sml:228-233) for the empty list, a mixed
+# list, and a function-only list.
+run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.out \
+  empty functions_only \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
+  pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+# The word_to_stack wShareInst probe observes the shared-memory instruction
+# helper `wShareInst` (word_to_stackScript.sml:186-224) for all eight memop
+# forms at word type 64.
+run_probe word_to_stack_wshareinst_probeScript.sml word_to_stack_wshareinst_probe.out \
+  ws_load ws_store32 "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"

@@ -7,12 +7,25 @@ becomes `lParT`) so that the two can be read side by side.
 
 Upstream recurses on the remaining input and discharges termination with a
 `measure (LENGTH o FST)` relation. Here the recursion is structural on an
-explicit fuel bound instead: every step consumes at least one character, so
-seeding the fuel with the input length loses nothing, and it keeps the lexer
-free of well-founded recursion.
+explicit fuel bound instead: each lexer step consumes at least one input byte,
+so seeding the fuel with the UTF-8 byte length loses nothing and keeps the
+lexer free of well-founded recursion.
 -/
 
 namespace Flapjack.Parser
+
+/-- Encode a source string to the list of bytes the original CakeML lexer
+    observes. HOL `string` is a `char list` with 256 possible characters, and the
+    executed compiler reads the source file as bytes through CakeML's UTF-8 file
+    input; for well-formed UTF-8 input, re-encoding the Lean decoded string
+    recovers exactly those bytes (Lean `String` does not represent invalid UTF-8).
+    This keeps accepted identifiers byte-valued, so `MlString.ofString`
+    round-trips without silent truncation. For non-ASCII source, lexer columns
+    and the text recovered from `/@ ... @/` annotations follow this byte view;
+    exact diagnostic-text/column parity for those inputs is not covered by the
+    current fixtures. -/
+def utf8Bytes (s : String) : List Char :=
+  s.toUTF8.toList.map (fun b => Char.ofNat b.toNat)
 
 /-- Reserved words, mirroring `panLexer$keyword`. -/
 inductive Keyword where
@@ -101,7 +114,45 @@ def isAtomBeginGroup (c : Char) : Bool := "#=><!&|".toList.contains c
 
 def isAtomInGroup (c : Char) : Bool := "=<>|&+".toList.contains c
 
-def isAlphaNumOrWild (c : Char) : Bool := c.isAlphanum || c == '_'
+/-- ASCII range tests matching HOL `string$isDigit`/`isLower`/`isUpper`/`isAlpha`/`isAlphaNum`
+    (`HOL/src/string/stringScript.sml:74-95`). The original Pancake lexer operates on
+    `char list` where HOL `char` ranges over byte values. These explicit range checks
+    implement those HOL character classes directly; they do not rely on host-language
+    character classification or on the later `MlString.ofString` conversion. -/
+def isDigitAscii (c : Char) : Bool := decide (48 ≤ c.toNat ∧ c.toNat ≤ 57)
+
+def isLowerAscii (c : Char) : Bool := decide (97 ≤ c.toNat ∧ c.toNat ≤ 122)
+
+def isUpperAscii (c : Char) : Bool := decide (65 ≤ c.toNat ∧ c.toNat ≤ 90)
+
+def isAlphaAscii (c : Char) : Bool := isLowerAscii c || isUpperAscii c
+
+def isAlphaNumAscii (c : Char) : Bool := isAlphaAscii c || isDigitAscii c
+
+/-- HOL `string$isSpace` (`stringScript.sml:95`): `ORD c = 32 \/ 9 <= ORD c /\ ORD c <= 13`. -/
+def isSpaceAscii (c : Char) : Bool := decide (c.toNat = 32 ∨ (9 ≤ c.toNat ∧ c.toNat ≤ 13))
+
+def isAlphaNumOrWild (c : Char) : Bool := isAlphaNumAscii c || c == '_'
+
+/-- Every character the lexer admits into a digit is a byte below 128. -/
+theorem isDigitAscii_lt128 {c : Char} (h : isDigitAscii c = true) : c.toNat < 128 := by
+  simp only [isDigitAscii, decide_eq_true_eq] at h
+  omega
+
+/-- Every character the lexer admits into an identifier is a byte below 128. -/
+theorem isAlphaNumOrWild_lt128 {c : Char} (h : isAlphaNumOrWild c = true) : c.toNat < 128 := by
+  simp only [isAlphaNumOrWild, Bool.or_eq_true] at h
+  rcases h with h | h
+  · simp only [isAlphaNumAscii, Bool.or_eq_true] at h
+    rcases h with h | h
+    · simp only [isAlphaAscii, Bool.or_eq_true] at h
+      rcases h with h | h
+      · simp only [isLowerAscii, decide_eq_true_eq] at h; omega
+      · simp only [isUpperAscii, decide_eq_true_eq] at h; omega
+    · exact isDigitAscii_lt128 h
+  · have : c = '_' := by simpa using h
+    subst this
+    decide
 
 def isLexErrorT : Token → Bool
   | .lexErrorT _ => true
@@ -111,85 +162,53 @@ def destLexErrorT : Token → Option String
   | .lexErrorT message => some message
   | _ => none
 
+/-- Association list for the symbolic-token table (`getToken`). Order and
+    values match the original if-chain exactly. -/
+def symbolTable : List (String × Token) :=
+  [("&&", .boolAndT), ("||", .boolOrT), ("&", .andT), ("|", .orT), ("^", .xorT),
+   ("==", .eqT), ("=>", .arrowT), ("!=", .neqT), ("<", .lessT), (">", .greaterT),
+   (">=", .geqT), ("<=", .leqT), ("<+", .lowerT), (">+", .higherT), (">=+", .higheqT),
+   ("<=+", .loweqT), ("!", .notT), ("+", .plusT), ("-", .minusT), ("*", .starT),
+   (".", .dotT), ("<<", .lslT), (">>>", .lsrT), (">>", .asrT), ("#>>", .rorT),
+   ("(", .lParT), (")", .rParT), (",", .commaT), (";", .semiT), (":", .colonT),
+   ("[", .lBrakT), ("]", .rBrakT), ("{", .lCurT), ("}", .rCurT), ("=", .assignT)]
+
+/-- Association list for the keyword table (`getKeyword`). Cake maps both
+    `@base` and `@top` to `BaseK`; the duplicate is intentional. -/
+def keywordTable : List (String × Keyword) :=
+  [("skip", .skipK), ("st", .stK), ("stw", .stwK), ("st8", .st8K), ("st16", .st16K),
+   ("st32", .st32K), ("if", .ifK), ("else", .elseK), ("while", .whileK),
+   ("break", .brK), ("continue", .contK), ("throw", .throwK), ("return", .retK),
+   ("tick", .ticK), ("var", .varK), ("in", .inK), ("try", .tryK), ("catch", .catchK),
+   ("lds", .ldsK), ("ldw", .ldwK), ("ld8", .ld8K), ("ld16", .ld16K), ("ld32", .ld32K),
+   ("@base", .baseK), ("@top", .baseK), ("@biw", .biwK), ("true", .trueK),
+   ("false", .falseK), ("fun", .funK), ("export", .exportK), ("inline", .inlineK),
+   ("exception", .exceptionK), ("struct", .namedK)]
+
+/-- First-match association-list lookup used by the token tables. -/
+def lookupTable {α : Type} : List (String × α) → String → Option α
+  | [], _ => none
+  | (key, value) :: rest, s => if s == key then some value else lookupTable rest s
+
+/-- Symbolic-token lookup. Behaviourally identical to the previous if-chain:
+    `lookupTable` scans `symbolTable` in the same first-match order. -/
 def getToken (s : String) : Token :=
-  if s == "&&" then .boolAndT
-  else if s == "||" then .boolOrT
-  else if s == "&" then .andT
-  else if s == "|" then .orT
-  else if s == "^" then .xorT
-  else if s == "==" then .eqT
-  else if s == "=>" then .arrowT
-  else if s == "!=" then .neqT
-  else if s == "<" then .lessT
-  else if s == ">" then .greaterT
-  else if s == ">=" then .geqT
-  else if s == "<=" then .leqT
-  else if s == "<+" then .lowerT
-  else if s == ">+" then .higherT
-  else if s == ">=+" then .higheqT
-  else if s == "<=+" then .loweqT
-  else if s == "!" then .notT
-  else if s == "+" then .plusT
-  else if s == "-" then .minusT
-  else if s == "*" then .starT
-  else if s == "." then .dotT
-  else if s == "<<" then .lslT
-  else if s == ">>>" then .lsrT
-  else if s == ">>" then .asrT
-  else if s == "#>>" then .rorT
-  else if s == "(" then .lParT
-  else if s == ")" then .rParT
-  else if s == "," then .commaT
-  else if s == ";" then .semiT
-  else if s == ":" then .colonT
-  else if s == "[" then .lBrakT
-  else if s == "]" then .rBrakT
-  else if s == "{" then .lCurT
-  else if s == "}" then .rCurT
-  else if s == "=" then .assignT
-  else .lexErrorT s!"Unrecognised symbolic token: {s}"
+  match lookupTable symbolTable s with
+  | some token => token
+  | none => .lexErrorT s!"Unrecognised symbolic token: {s}"
 
 /--
-Keyword lookup, mirroring `panLexer$get_keyword`. Cake maps both `@base` and
-`@top` to `BaseK`; this intentionally preserves that source behavior.
+Keyword lookup, mirroring `panLexer$get_keyword`, via the ordered table
+`keywordTable`. Cake maps both `@base` and `@top` to `BaseK`; this
+intentionally preserves that source behavior.
 -/
 def getKeyword (s : String) : Token :=
-  if s == "skip" then .keywordT .skipK
-  else if s == "st" then .keywordT .stK
-  else if s == "stw" then .keywordT .stwK
-  else if s == "st8" then .keywordT .st8K
-  else if s == "st16" then .keywordT .st16K
-  else if s == "st32" then .keywordT .st32K
-  else if s == "if" then .keywordT .ifK
-  else if s == "else" then .keywordT .elseK
-  else if s == "while" then .keywordT .whileK
-  else if s == "break" then .keywordT .brK
-  else if s == "continue" then .keywordT .contK
-  else if s == "throw" then .keywordT .throwK
-  else if s == "return" then .keywordT .retK
-  else if s == "tick" then .keywordT .ticK
-  else if s == "var" then .keywordT .varK
-  else if s == "in" then .keywordT .inK
-  else if s == "try" then .keywordT .tryK
-  else if s == "catch" then .keywordT .catchK
-  else if s == "lds" then .keywordT .ldsK
-  else if s == "ldw" then .keywordT .ldwK
-  else if s == "ld8" then .keywordT .ld8K
-  else if s == "ld16" then .keywordT .ld16K
-  else if s == "ld32" then .keywordT .ld32K
-  else if s == "@base" then .keywordT .baseK
-  else if s == "@top" then .keywordT .baseK
-  else if s == "@biw" then .keywordT .biwK
-  else if s == "true" then .keywordT .trueK
-  else if s == "false" then .keywordT .falseK
-  else if s == "fun" then .keywordT .funK
-  else if s == "export" then .keywordT .exportK
-  else if s == "inline" then .keywordT .inlineK
-  else if s == "exception" then .keywordT .exceptionK
-  else if s == "struct" then .keywordT .namedK
-  else if s == "" then .lexErrorT "Expected keyword, found empty string"
-  else if 2 ≤ s.length && s.front == '@' then .foreignIdent (String.ofList (s.toList.drop 1))
-  else .identT s
+  match lookupTable keywordTable s with
+  | some keyword => .keywordT keyword
+  | none =>
+    if s == "" then .lexErrorT "Expected keyword, found empty string"
+    else if 2 ≤ s.length && s.front == '@' then .foreignIdent (String.ofList (s.toList.drop 1))
+    else .identT s
 
 def tokenOfAtom : Atom → Token
   | .numberA value => .intT value
@@ -255,21 +274,22 @@ def numFromDecString (s : String) : Nat :=
 `next_atom`: read one lexeme, skipping whitespace and comments.
 
 `fuel` bounds only the whitespace- and comment-skipping recursion; each such
-step consumes at least one character, so `input.length` always suffices.
+step consumes at least one input byte, so the UTF-8 byte count always suffices.
 -/
 def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
   | 0, _, _ => none
   | _ + 1, [], _ => none
   | fuel + 1, c :: cs, loc =>
       if c == '\n' then nextAtom fuel cs (nextLine loc)
-      -- CakeML `isSpace` (panLexerScript.sml:230) also skips \v (11) and \f (12).
-      else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
-      else if c.isDigit then
-        let (n, cs') := readWhile Char.isDigit cs [c]
+      -- CakeML `isSpace` (`panLexerScript.sml:230`) is the ASCII test
+      -- `ORD c = 32 \/ 9 <= ORD c /\ ORD c <= 13`.
+      else if isSpaceAscii c then nextAtom fuel cs (nextLoc 1 loc)
+      else if isDigitAscii c then
+        let (n, cs') := readWhile isDigitAscii cs [c]
         some (.numberA (Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, cs')
-      else if c == '-' && (cs.head?.map Char.isDigit).getD false then
-        let (n, rest) := readWhile Char.isDigit cs []
+      else if c == '-' && (cs.head?.map isDigitAscii).getD false then
+        let (n, rest) := readWhile isDigitAscii cs []
         some (.numberA (0 - Int.ofNat (numFromDecStringAlt n)),
               { start := loc, stop := nextLoc n.length loc }, rest)
       else if c == '/' && cs.head? == some '/' then
@@ -291,7 +311,7 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
       else if isAtomBeginGroup c then
         let (n, rest) := readWhile isAtomInGroup cs [c]
         some (.symA n, { start := loc, stop := nextLoc (n.length - 1) loc }, rest)
-      else if c.isAlpha || c == '@' || c == '_' then
+      else if isAlphaAscii c || c == '@' || c == '_' then
         let (n, rest) := readWhile isAlphaNumOrWild cs [c]
         some (.wordA n, { start := loc, stop := nextLoc n.length loc }, rest)
       else
@@ -313,7 +333,7 @@ def lexAux : Nat → List Char → Posn → List (Token × Locs)
 
 /-- Lex Pancake source into tokens paired with their source ranges. -/
 def pancakeLex (input : String) : List (Token × Locs) :=
-  let chars := input.toList
+  let chars := utf8Bytes input
   lexAux (chars.length + 1) chars initLoc
 
 /--

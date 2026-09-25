@@ -31,10 +31,19 @@ val _ = print_eval "word_load_miss"
       (panLang$Load One (panLang$Const 0w))``;
 val _ = print_eval "byte_little_first"
   ``eval ^little (panLang$LoadByte (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_byte_little"
+  ``eval ^little (panLang$LoadByte (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_byte_domain_failure"
+  ``eval (^little with memaddrs := {})
+      (panLang$LoadByte (panLang$Const 0w))``;
 val _ = print_eval "byte_little_last"
   ``eval ^little (panLang$LoadByte (panLang$Const 7w))``;
 val _ = print_eval "word32_little"
   ``eval ^little (panLang$Load32 (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_word32_little"
+  ``eval ^little (panLang$Load32 (panLang$Const 0w))``;
+val _ = print_eval "state_rel_source_word32_misaligned"
+  ``eval ^little (panLang$Load32 (panLang$Const 1w))``;
 val _ = print_eval "byte_big_first"
   ``eval ^big (panLang$LoadByte (panLang$Const 0w))``;
 val _ = print_eval "byte_big_last"
@@ -122,5 +131,17 @@ val _ = print_eval "nstruct_name_mismatch"
   ``eval ^with_pair (panLang$NStruct (strlit "Pair") [(strlit "g", panLang$Const 7w)])``;
 val _ = print_eval "nstruct_missing_struct"
   ``eval ^little (panLang$NStruct (strlit "Pair") [(strlit "f", panLang$Const 7w)])``;
+
+(* RStruct/RField rows: structure construction and index projection. *)
+val _ = print_eval "rstruct_pair"
+  ``eval ^little (panLang$RStruct [panLang$Const 3w; panLang$Const 4w])``;
+val _ = print_eval "rfield_first"
+  ``eval ^little (panLang$RField 0 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_second"
+  ``eval ^little (panLang$RField 1 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_out_of_range"
+  ``eval ^little (panLang$RField 2 (panLang$RStruct [panLang$Const 3w; panLang$Const 4w]))``;
+val _ = print_eval "rfield_not_rstruct"
+  ``eval ^little (panLang$RField 0 (panLang$Const 3w))``;
 
 val _ = print_eval "pan_sem_state_eval_done" ``0``;

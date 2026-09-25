@@ -31,10 +31,61 @@ def fallbackOK : Bool :=
   | (expressions, .one) => expressions == [.const 0]
   | _ => false
 
-def parityGuard : Bool := firstOK && secondOK && fallbackOK
+def holFirstOK : Bool :=
+  match compFieldHOL (width := 8) 0
+      ([.one, .comb [.one, .one]] : List Flapjack.Pancake.PanLang.ShapeHOL)
+      ([.const 1, .const 2, .const 3] : List (CrepExpHOL 8)) with
+  | (expressions, .one) => expressions.map crepExpOfHOL == [.const 1]
+  | _ => false
+
+def holSecondOK : Bool :=
+  match compFieldHOL (width := 8) 1
+      ([.one, .comb [.one, .one]] : List Flapjack.Pancake.PanLang.ShapeHOL)
+      ([.const 1, .const 2, .const 3] : List (CrepExpHOL 8)) with
+  | (expressions, .comb [.one, .one]) =>
+      expressions.map crepExpOfHOL == [.const 2, .const 3]
+  | _ => false
+
+def holFallbackOK : Bool :=
+  match compFieldHOL (width := 8) 2
+      ([.one] : List Flapjack.Pancake.PanLang.ShapeHOL)
+      ([.const 4] : List (CrepExpHOL 8)) with
+  | (expressions, .one) => expressions.map crepExpOfHOL == [.const 0]
+  | _ => false
+
+def holEmptyOK : Bool :=
+  match compFieldHOL (width := 8) 0
+      ([] : List Flapjack.Pancake.PanLang.ShapeHOL)
+      ([] : List (CrepExpHOL 8)) with
+  | (expressions, .one) => expressions.map crepExpOfHOL == [.const 0]
+  | _ => false
+
+def holShortOK : Bool :=
+  match compFieldHOL (width := 8) 0
+      ([.comb [.one, .one]] : List Flapjack.Pancake.PanLang.ShapeHOL)
+      ([.const 5] : List (CrepExpHOL 8)) with
+  | (expressions, .comb [.one, .one]) =>
+      expressions.map crepExpOfHOL == [.const 5]
+  | _ => false
+
+def parityGuard : Bool :=
+  firstOK && secondOK && fallbackOK && holFirstOK && holSecondOK &&
+    holFallbackOK && holEmptyOK && holShortOK
 
 #eval parityGuard
 #guard parityGuard
+
+example :
+    (compileField (α := BitVec 8) 1
+        [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]]
+        [.const 1, .const 2, .const 3]).1.map crepExpToHOL
+      = (compFieldHOL 1
+          (List.map Flapjack.Pancake.PanLang.shapeToHOL
+            [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]])
+          (List.map crepExpToHOL [.const 1, .const 2, .const 3])).1 :=
+  (compileField_map_codecs 1
+    [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]]
+    [.const 1, .const 2, .const 3]).1
 
 example :
     ∀ expression ∈

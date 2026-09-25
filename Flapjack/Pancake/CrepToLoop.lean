@@ -37,11 +37,16 @@ def crepMkCtxt {α : Type u}
   { vars := vmap, functions := functions, maxVar := maxVar, target := target }
 
 /-! Source-named port of CakeML Pancake's `make_vmap_def`
-    (`crep_to_loopScript.sml:230`).  Cake's finite map is populated by
-    `ZIP (params, GENLIST I (LENGTH params))`; the list-backed context uses
-    the same positional pairs and preserves their lookup order. -/
+    (`crep_to_loopScript.sml:230`).  Cake populates `FEMPTY |++ ZIP (params,
+    GENLIST I (LENGTH params))`, a left fold of `|+`, so for a *duplicate*
+    parameter name the LAST binding wins.  The list-backed context is consulted
+    with `lookupNatInfo`'s first match, so the positional pairs are replayed
+    most-recent-first (reversed): the first match then reproduces HOL's
+    last-binding-wins behaviour.  `lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL`
+    proves the result agrees with the tagged `makeVmapHOL` for every parameter
+    list, duplicates included. -/
 def crepMakeVmap (params : List Nat) : NatInfoMap Nat :=
-  params.zip (List.range params.length)
+  (params.zip (List.range params.length)).reverse
 
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
@@ -224,6 +229,33 @@ def progIf [OfNat α 0] [OfNat α 1]
        (.assign condition (.const (1 : α)))
        (.assign condition (.const (0 : α)))
        (loopListInsert [condition, rightRegister] live)]
+
+/-- Width-specialized Flapjack analogue of `crep_to_loop$prog_if`
+    (`prog_if_def`, `crep_to_loopScript.sml:34`). The word expressions have the
+    right positive-width carrier, but the result uses production `LoopProg`,
+    whose `ffi` constructor stores Lean `String` instead of HOL `mlstring`; this
+    declaration is therefore intentionally untagged. `HolLoopProg` is the exact
+    program carrier.
+
+    Executed-path tracking (AGENTS porting rule): production does not call
+    `progIf`; the `.cmp` case of `loopCompileExp` inlines the identical
+    statement list (same `first ++ second ++ [Assign; Assign; If ...]` shape
+    with the same `loopListInsert` live set), and it is generic over the word
+    element type, so it cannot call this width-indexed wrapper without the
+    deferred width-indexing migration (`flapjack-pxn.18.3.5.3.1`). -/
+def progIfW {width : Nat} [NeZero width]
+    (operator : Cmp) (first second : List (LoopProg (BitVec width)))
+    (left right : LoopExp (BitVec width)) (condition rightRegister : Nat)
+    (live : List Nat) : List (LoopProg (BitVec width)) :=
+  progIf operator first second left right condition rightRegister live
+
+/-- The width-indexed `progIfW` is definitionally the generic `progIf`. -/
+theorem progIfW_eq_progIf {width : Nat} [NeZero width]
+    (operator : Cmp) (first second : List (LoopProg (BitVec width)))
+    (left right : LoopExp (BitVec width)) (condition rightRegister : Nat)
+    (live : List Nat) :
+    progIfW operator first second left right condition rightRegister live =
+      progIf operator first second left right condition rightRegister live := rfl
 
 /-! Source-named RISC-V port of `crep_to_loop$compile_crepop`
     (`compile_crepop_def`, `crep_to_loopScript.sml:42`).  CakeML has an ARMv7

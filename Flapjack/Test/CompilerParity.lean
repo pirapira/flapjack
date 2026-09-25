@@ -21,11 +21,20 @@ import Flapjack.Test.PanNestedSeqParity
 import Flapjack.Test.PanExpIdsParity
 import Flapjack.Test.PanLangFunIdsParity
 import Flapjack.Test.PanLangFreeVarIdsParity
+import Flapjack.Test.PanLangShapeHOLParity
+import Flapjack.Test.PanLangExpHOLParity
+import Flapjack.Test.PanLangProgHOLParity
+import Flapjack.Test.PanLangDeclHOLParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.CrepInlineGenlistParity
 import Flapjack.Test.CrepInlineRelParity
 import Flapjack.Test.CrepSemTotalClockLeavesParity
+import Flapjack.Test.CrepSemTotalCallParity
+import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Test.CrepSemTotalAssignParity
+import Flapjack.Test.CrepSemTotalStoreParity
+import Flapjack.Test.CrepSemTotalShMemParity
+import Flapjack.Test.CrepSemTotalExtCallParity
 import Flapjack.Test.CrepInlineFmapParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -37,6 +46,7 @@ import Flapjack.Test.PanGlobalsFpermNameParity
 import Flapjack.Test.PanGlobalsFpermParity
 import Flapjack.Test.PanGlobalsFpermDecsParity
 import Flapjack.Test.PanGlobalsNewMainNameParity
+import Flapjack.Test.PanGlobalsNameByteRangedParity
 import Flapjack.Test.PanGlobalsDecShapesParity
 import Flapjack.Test.PanGlobalsExpIdsParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
@@ -144,6 +154,9 @@ import Flapjack.Test.CrepeStoresParity
 import Flapjack.Test.CrepeNestedDecsParity
 import Flapjack.Test.CrepeStoreGlobalsParity
 import Flapjack.Test.CrepGlobalShapeParity
+import Flapjack.Test.CrepLookupCodeHOLParity
+import Flapjack.Test.CrepExpHOLParity
+import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
@@ -194,6 +207,7 @@ import Flapjack.Test.PanShMemLoadParity
 import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
+import Flapjack.Test.PanSemLookupCodeParity
 import Flapjack.Test.PanSemTickParity
 import Flapjack.Test.PanSemSkipParity
 import Flapjack.Test.PanSemAssignParity
@@ -205,9 +219,36 @@ import Flapjack.Test.PanSemReturnRaiseErrorParity
 import Flapjack.Test.PanSemExtCallErrorParity
 import Flapjack.Test.PanSemSeqParity
 import Flapjack.Test.PanSemTotalParity
+import Flapjack.Test.PanSemTotalStepsParity
+import Flapjack.Test.PanSemTotalEvalExactParity
+import Flapjack.Test.PanRiscVByteAlignParity
+import Flapjack.Test.PanSemValueHOLParity
+import Flapjack.Test.PanSemStateExactParity
+import Flapjack.Test.PanSemLocalUpdatesExactParity
+import Flapjack.Test.PanPropsShapeResVarParity
+import Flapjack.Test.PanCommonPropsZipDisjointParity
+import Flapjack.Test.CrepPropsAssignedVarsParity
+import Flapjack.Test.PanSemIsValidValueExactParity
+import Flapjack.Test.PanSemDecExactParity
+import Flapjack.Test.PanSemAssignPrimitiveExactParity
+import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
-import Flapjack.Test.PanSemReturnRaiseExactParity
+import Flapjack.Test.PanSemReturnRaiseMemoryParity
+import Flapjack.Test.PanSemEvalExactParity
+import Flapjack.Test.PanSemStoreExactParity
+import Flapjack.Test.PanSemTickShMemExactParity
+import Flapjack.Test.PanSemExtCallExactParity
+import Flapjack.Test.PanSemDecCallExactParity
+import Flapjack.Test.PanSemCallExactParity
+import Flapjack.Test.PanSemControlExactParity
+import Flapjack.Test.PanSemEvaluateDeclsExactParity
+import Flapjack.Test.PanSemClockExactParity
+import Flapjack.Test.PanSemStateSimpExactParity
+import Flapjack.Test.PanSemStateDefsExactParity
+import Flapjack.Test.PanSemMemByteAssemblyParity
+import Flapjack.Test.PanSemMemLoad32AltParity
+import Flapjack.Test.PanSemMemStore32AltParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.PanSemDecErrorExactParity
 import Flapjack.Test.PanSemPrimitiveErrorExactParity
@@ -232,6 +273,20 @@ import Flapjack.Test.NumSetAuditParity
 import Flapjack.Test.WordLangEveryNameParity
 import Flapjack.Test.WordLangAllocConventionsParity
 import Flapjack.Test.LabPropsLineOkPreParity
+import Flapjack.Test.LabPropsSecEndsLabelParity
+import Flapjack.Test.CakeAllocatorBitsBridgeParity
+import Flapjack.Test.StackNamesParity
+import Flapjack.Test.StackRemoveInitParity
+import Flapjack.Test.WordLocWParity
+import Flapjack.Test.StackRemoveHelpersParity
+import Flapjack.Test.LoopSemStateParity
+import Flapjack.Test.LoopLangExpParity
+import Flapjack.Test.LoopLangProgParity
+import Flapjack.Test.SptreeParity
+import Flapjack.Test.MlStringCodecParity
+import Flapjack.Test.MlStringParity
+import Flapjack.Test.MlStringBridgeParity
+import Flapjack.Test.StackLangInstOverloadsParity
 import Flapjack.Test.RiscvConfigParity
 import Flapjack.Test.MiscAppListParity
 import Flapjack.Test.StackToLabFlattenOpsParity
@@ -253,6 +308,9 @@ import Flapjack.Test.ParserKeepAnnotParity
 import Flapjack.Test.ParserTryProgParity
 import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.ParserParseStatementParity
+import Flapjack.Test.ParserByteNamesParity
+import Flapjack.Test.ParserByteRangedParity
+import Flapjack.Test.ParserKeywordParity
 import Flapjack.Test.PanLangWfShapeParity
 import Flapjack.Test.PanLangWfFieldsContextParity
 import Flapjack.Test.PanHHandleCallRetParity
@@ -315,6 +373,18 @@ import Flapjack.Test.LoopToWordBoundaryParity
 import Flapjack.Test.SptreeOrderParity
 import Flapjack.Test.WordSimpSeqAssocParity
 import Flapjack.Test.RiscVFarTransferParity
+import Flapjack.Test.FfiHOLParity
+import Flapjack.Test.FfiBridgeParity
+import Flapjack.Test.PanLangShapeSizeWithContextParity
+import Flapjack.Test.PanLangShapeSizeParity
+import Flapjack.Test.PanLangIsWfShapeParity
+import Flapjack.Test.PanSemIsValWordHOLParity
+import Flapjack.Test.PanSemEmptyLocalsHOLParity
+import Flapjack.Test.PanSemMemStore32HOLParity
+import Flapjack.Test.PanSemMemStoreHOLParity
+import Flapjack.Test.PanSemShMemHOLParity
+import Flapjack.Test.PanSemDecsStcnamesHOLParity
+import Flapjack.Test.PanSemMemLoadExactParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -716,6 +786,11 @@ def main : IO Unit := do
     Flapjack.Test.PanGlobalsExceptionsFilterIsFunctionParity.runChecks,
     Flapjack.Test.PanGlobalsDeclPredicateParity.runChecks,
     Flapjack.Test.PanGlobalsFunctionsFilterNilParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermNameParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermParity.runChecks,
+    Flapjack.Test.PanGlobalsFpermDecsParity.runChecks,
+    Flapjack.Test.PanGlobalsResortDeclsParity.runChecks,
+    Flapjack.Test.PanGlobalsDecShapesParity.runChecks,
     Flapjack.Test.PanGlobalsFpermClusterParity.runChecks,
     Flapjack.Test.PanGlobalsDecShapesClusterParity.runChecks,
     Flapjack.Test.PanGlobalsFunctionPreservationParity.runChecks,
@@ -811,6 +886,7 @@ def main : IO Unit := do
     Flapjack.Test.PanShMemStoreParity.runChecks,
     Flapjack.Test.PanEvalParity.runChecks,
     Flapjack.Test.PanEvaluateParity.runChecks,
+    Flapjack.Test.PanSemLookupCodeParity.runChecks,
     Flapjack.Test.PanSemTickParity.runChecks,
     Flapjack.Test.PanSemSkipParity.runChecks,
     Flapjack.Test.PanSemAssignParity.runChecks,
@@ -822,9 +898,36 @@ def main : IO Unit := do
     Flapjack.Test.PanSemExtCallErrorParity.runChecks,
     Flapjack.Test.PanSemSeqParity.runChecks,
     Flapjack.Test.PanSemTotalParity.runChecks,
+    Flapjack.Test.PanSemTotalStepsParity.runChecks,
+    Flapjack.Test.PanSemTotalEvalExactParity.runChecks,
+    Flapjack.Test.PanRiscVByteAlignParity.runChecks,
+    Flapjack.Test.PanSemValueHOLParity.runChecks,
+    Flapjack.Test.PanSemStateExactParity.runChecks,
+    Flapjack.Test.PanSemLocalUpdatesExactParity.runChecks,
+    Flapjack.Test.PanPropsShapeResVarParity.runChecks,
+    Flapjack.Test.PanCommonPropsZipDisjointParity.runChecks,
+    Flapjack.Test.CrepPropsAssignedVarsParity.runChecks,
+    Flapjack.Test.PanSemIsValidValueExactParity.runChecks,
+    Flapjack.Test.PanSemDecExactParity.runChecks,
+    Flapjack.Test.PanSemAssignPrimitiveExactParity.runChecks,
+    Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
-Flapjack.Test.PanSemReturnRaiseExactParity.runChecks,
+Flapjack.Test.PanSemReturnRaiseMemoryParity.runChecks,
+    Flapjack.Test.PanSemEvalExactParity.runChecks,
+  Flapjack.Test.PanSemStoreExactParity.runChecks,
+  Flapjack.Test.PanSemTickShMemExactParity.runChecks,
+  Flapjack.Test.PanSemExtCallExactParity.runChecks,
+  Flapjack.Test.PanSemDecCallExactParity.runChecks,
+  Flapjack.Test.PanSemCallExactParity.runChecks,
+  Flapjack.Test.PanSemControlExactParity.runChecks,
+  Flapjack.Test.PanSemEvaluateDeclsExactParity.runChecks,
+  Flapjack.Test.PanSemClockExactParity.runChecks,
+  Flapjack.Test.PanSemStateSimpExactParity.runChecks,
+  Flapjack.Test.PanSemStateDefsExactParity.runChecks,
+  Flapjack.Test.PanSemMemByteAssemblyParity.runChecks,
+  Flapjack.Test.PanSemMemLoad32AltParity.runChecks,
+Flapjack.Test.PanSemMemStore32AltParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
 Flapjack.Test.PanSemDecErrorExactParity.runChecks,
 Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,
@@ -849,6 +952,18 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.WordLangEveryNameParity.runChecks,
     Flapjack.Test.WordLangAllocConventionsParity.runChecks,
     Flapjack.Test.LabPropsLineOkPreParity.runChecks,
+    Flapjack.Test.LabPropsSecEndsLabelParity.runChecks,
+    Flapjack.Test.CakeAllocatorBitsBridgeParity.runChecks,
+    Flapjack.Test.StackNamesParity.runChecks,
+    Flapjack.Test.StackRemoveInitParity.runChecks,
+    Flapjack.Test.WordLocWParity.runChecks,
+    Flapjack.Test.StackRemoveHelpersParity.runChecks,
+    Flapjack.Test.LoopSemStateParity.runChecks,
+    Flapjack.Test.LoopLangExpParity.runChecks,
+    Flapjack.Test.LoopLangProgParity.runChecks,
+    Flapjack.Test.SptreeParity.runChecks,
+    Flapjack.Test.MlStringCodecParity.runChecks,
+    Flapjack.Test.StackLangInstOverloadsParity.runChecks,
     Flapjack.Test.RiscvConfigParity.runChecks,
     Flapjack.Test.MiscAppListParity.runChecks,
     Flapjack.Test.StackToLabFlattenOpsParity.runChecks,
@@ -910,7 +1025,23 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepMemoryRelParity.runChecks,
     Flapjack.Test.CrepFuelCutoffParity.runChecks,
     Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
-    Flapjack.Test.CrepSemTotalAssignParity.runChecks
+    Flapjack.Test.CrepSemTotalCallParity.runChecks,
+    Flapjack.Test.FfiHOLParity.runChecks,
+    Flapjack.Test.CrepSemTotalAssignParity.runChecks,
+    Flapjack.Test.FfiBridgeParity.runChecks,
+    Flapjack.Test.CrepSemTotalStoreParity.runChecks,
+    Flapjack.Test.CrepSemTotalShMemParity.runChecks,
+    Flapjack.Test.PanLangShapeSizeWithContextParity.runChecks,
+    Flapjack.Test.PanLangShapeSizeParity.runChecks,
+    Flapjack.Test.PanLangIsWfShapeParity.runChecks,
+    Flapjack.Test.PanSemIsValWordHOLParity.runChecks,
+    Flapjack.Test.PanSemEmptyLocalsHOLParity.runChecks,
+    Flapjack.Test.PanSemMemStore32HOLParity.runChecks,
+    Flapjack.Test.PanSemMemStoreHOLParity.runChecks,
+    Flapjack.Test.PanSemShMemHOLParity.runChecks,
+    Flapjack.Test.PanSemDecsStcnamesHOLParity.runChecks,
+    Flapjack.Test.PanSemMemLoadExactParity.runChecks,
+    Flapjack.Test.CrepSemTotalExtCallParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

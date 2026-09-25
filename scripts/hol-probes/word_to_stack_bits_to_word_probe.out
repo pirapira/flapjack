@@ -5,3 +5,6 @@ bits_true_false_true=5w
 bits_all_true_3=7w
 bits_pattern=18w
 bits_equation=T
+bits_overflow_65=0xFFFFFFFFFFFFFFFFw
+wordlist_short=[1w]
+wordlist_chunk=[7w; 7w; 1w]

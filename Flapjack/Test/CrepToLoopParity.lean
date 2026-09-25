@@ -1,5 +1,6 @@
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.CrepToLoop.StateRel
+import Flapjack.Misc.Sptree
 
 /-!
 Direct parity for `crep_to_loop$compile` (`crep_to_loopScript.sml:120`).
@@ -552,6 +553,31 @@ example : crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
   · intro vname v hv
     exact absurd hv (fun h => Option.some_ne_none v h.symm)
 
+/-- HOL `locals_rel_insert_gt_vmax` oracle rows (`insert_same`,
+    `insert_other_unchanged`, `gt_vmax_bounded_survives`, `subset_preserved` in
+    `scripts/hol-probes/crep_to_loop_locals_insert_probe.out`): inserting a
+    fresh `num_map` binding above `ctxt.vmax` preserves the tagged relation and
+    is visible at its own key. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun m => if m = 7 then some (LoopValue.word (5 : BitVec 64)) else none) :=
+  crepToLoopLocalsRelHOL_insert_gt_vmax localsRelHOLContext (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    7 (LoopValue.word (5 : BitVec 64))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by decide)
+
 /-- The `∃n` clause of the tagged exact relation for a present binding: source
     local `1 ↦ wlab 9` sits at finite-map slot `5`, which is live and holds the
     `wlab` value in the target map. -/
@@ -560,6 +586,43 @@ example : ∃ n, FLOOKUP (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 5)) 1 = some 
     (fun m => if m == 5 then some (LoopValue.word (9 : BitVec 64)) else none) n =
       some (wlabWloc (PanWordLab.word (9 : BitVec 64))) :=
   ⟨5, by simp [FLOOKUP, FUPDATE], by decide, by simp [wlabWloc]⟩
+
+/-- HOL `locals_rel_cutset_prop` oracle rows (`cutset_sub_0`, `cutset_sub_1`,
+    `cutset_sub_absent`, `cutset_lookup_preserved`, `cutset_lookup_other`,
+    `cutset_domain_trans` in
+    `scripts/hol-probes/crep_to_loop_locals_cutset_probe.out`): shrinking the
+    live set (`subspt cset cset'` rendered as `live n = true → live' n = true`)
+    preserves the tagged relation against the same target locals. -/
+example :
+    crepToLoopLocalsRelHOL (width := 64) localsRelHOLContext
+      (fun _ => false) (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+      (fun _ => (none : Option (LoopValue (BitVec 64)))) :=
+  crepToLoopLocalsRelHOL_cutset_prop localsRelHOLContext
+    (fun _ => false) (fun _ => false)
+    (FEMPTY : FiniteMap Nat (PanWordLab (BitVec 64)))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (fun _ => (none : Option (LoopValue (BitVec 64))))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro x y n m hx
+        exact absurd hx (fun h => Option.some_ne_none n h.symm)
+      · intro v m hv
+        exact absurd hv (fun h => Option.some_ne_none m h.symm)
+      · intro n hn
+        exact absurd hn (Bool.false_ne_true)
+      · intro vname v hv
+        exact absurd hv (fun h => Option.some_ne_none v h.symm))
+    (by intro n hn; exact absurd hn Bool.false_ne_true)
 
 /-- The `∃n` clause of `crepToLoopLocalsRel` for a present binding: the source
     local `1 ↦ wlab 9` maps to varname `5`, which is live, and the target
@@ -695,5 +758,199 @@ example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 
 
 example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
   simp [rtVars, FLOOKUP]
+
+/-! Exact `Spt` regression for HOL `mem_lookup_fromalist_some`; these checks
+    reproduce `ml_hit`, `ml_miss`, and `ml_distinct` in
+    `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`. -/
+private def memLookupOracleEntries : List (Nat × Nat) := [(1, 7), (2, 9)]
+
+example : memLookupOracleEntries.map Prod.fst = [1, 2] := by decide
+
+example : (memLookupOracleEntries.map Prod.fst).Nodup := by decide
+
+example : (2, 9) ∈ memLookupOracleEntries := by decide
+
+example : sptLookup 2 (sptFromAList memLookupOracleEntries) = some 9 :=
+  memLookupFromAListSomeExact (by decide) (by decide)
+
+example : sptLookup 3 (sptFromAList memLookupOracleEntries) = none := by
+  simp [sptFromAList, memLookupOracleEntries, sptLookup, sptInsert]
+
+/-- HOL `make_vmap` is a left fold of `|+`, so a duplicate parameter keeps the
+    LAST binding (`mvd_dup_last_wins` in
+    `scripts/hol-probes/crep_to_loop_make_vmap_dup_probe.out`).  The executed
+    `crepMakeVmap` replays the positional pairs most-recent-first so its
+    first-match lookup reproduces that, and agrees with the tagged
+    `makeVmapHOL` for every parameter list. -/
+example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = some 1 := by decide
+
+example : lookupNatInfo 7 (crepMakeVmap [7, 7]) = FLOOKUP (makeVmapHOL [7, 7]) 7 :=
+  lookupNatInfo_crepMakeVmap_eq_flookup_makeVmapHOL [7, 7] 7
+
+/-- HOL `map_map2_fst` oracle rows (`mm2_*` in
+    `scripts/hol-probes/crep_to_loop_map_map2_fst_probe.out`). -/
+example :
+    (panMap2
+        (fun x y =>
+          (x, List.range y.2.1.length, (fun (_ : List Nat) (_ : Unit) => true) y.2.1 y.2.2))
+        [1, 2] ([(0, [], ()), (1, [7, 8], ())] : List (Nat × List Nat × Unit))).map
+      Prod.fst = [1, 2] :=
+  mapMap2FstHOL (fun _ _ => true) [1, 2] [(0, [], ()), (1, [7, 8], ())] rfl
+
+/-- HOL `alookup_el_pair_eq_el` oracle rows (`ael_*` in
+    `scripts/hol-probes/crep_to_loop_alookup_el_probe.out`). -/
+def alookupElProg : List (String × List Nat × Nat) :=
+  [("a", ([], 7)), ("b", ([], 9))]
+
+example : alookupElProg[1]'(by decide) = ("b", [], 9) :=
+  alookupElPairEqEl alookupElProg "b" 9 1
+    (by decide) (by decide) (by decide) (by decide)
+
+/-- HOL `all_distinct_ctxt_lookup_all_distinct` oracle rows (`acd_*` in
+    `scripts/hol-probes/crep_to_loop_rt_vars_distinct_probe.out`): a distinct
+    context (`1 ↦ 10`, `2 ↦ 20`) keeps `rt_vars` distinct on the success list
+    `[1, 2]`, and the `OPT_MMAP`-failure list `[1, 3]` still yields `[n+1]`. -/
+def rtVarsCtxtFm : FiniteMap Nat Nat :=
+  FUPDATE (FUPDATE (FEMPTY : FiniteMap Nat Nat) (1, 10)) (2, 20)
+
+theorem rtVarsCtxtFm_distinct : crepToLoopDistinctVars rtVarsCtxtFm := by
+  intro x y n m hx hy h
+  simp only [rtVarsCtxtFm, FLOOKUP_update] at hx hy
+  split at hx <;> split at hy <;> simp_all <;> omega
+
+def rtVarsCtxt : CrepToLoopFiniteMapContext :=
+  { vars := rtVarsCtxtFm, funcs := (FEMPTY : FiniteMap FunName (Nat × Nat)),
+    vmax := 5, target := .riscv }
+
+example : (rtVars rtVarsCtxtFm [1, 2] 0).Nodup :=
+  allDistinctCtxtLookupAllDistinct rtVarsCtxt [1, 2] 0 (by decide) rtVarsCtxtFm_distinct
+
+example : (rtVars rtVarsCtxtFm [1, 3] 0).Nodup :=
+  allDistinctCtxtLookupAllDistinct rtVarsCtxt [1, 3] 0 (by decide) rtVarsCtxtFm_distinct
+
+/-- HOL `list_insert_SNOC` oracle rows (`li_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert_probe.out`): `list_insert [3;4]`
+    records 3 and 4 but not 5; appending 5 records it; and the SNOC form agrees
+    with `insert 5 ()` after `list_insert [3;4]`. -/
+example : sptLookup 3 (sptListInsert [3, 4] (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 4 (sptListInsert [3, 4] (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 5 (sptListInsert [3, 4] (Spt.ln : NumSet)) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example : sptLookup 5 (sptListInsert ([3, 4] ++ [5]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 9 (sptListInsert ([3, 4] ++ [5]) (Spt.ln : NumSet)) =
+      sptLookup 9 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_SNOC` (`crep_to_loopProofScript.sml:386`): appending a key
+    to a key list is the same as inserting it into the resulting set. -/
+example (x : Nat) (ys : List Nat) (tree : NumSet) :
+    sptListInsert (ys ++ [x]) tree = sptInsert x () (sptListInsert ys tree) :=
+  sptListInsert_snoc x ys tree
+
+/-- HOL `insert_insert_eq` oracle rows (`iie_*` in
+    `scripts/hol-probes/crep_to_loop_insert_insert_probe.out`): inserting the
+    same key with the same value twice overwrites rather than duplicates, so
+    the inserted key reads back the value, a neighbouring key is preserved, and
+    the double insert agrees with the single insert. -/
+example : sptLookup 5 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) = some 7 := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 11 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat)))) =
+      some 7 := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 5 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 1 (Spt.ln : Spt Nat)))) =
+      some 1 := by
+  simp [sptLookup, sptInsert]
+
+example : sptLookup 4 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) = none := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 5 (sptInsert 5 7 (sptInsert 5 7 (Spt.ln : Spt Nat))) =
+      sptLookup 5 (sptInsert 5 7 (Spt.ln : Spt Nat)) := by
+  simp [sptLookup, sptInsert]
+
+example :
+    sptLookup 11 (sptInsert 11 7 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat)))) =
+      sptLookup 11 (sptInsert 11 7 (sptInsert 5 3 (Spt.ln : Spt Nat))) := by
+  simp [sptLookup, sptInsert]
+
+/-- HOL `insert_insert_eq` (`crep_to_loopProofScript.sml:380`): inserting the
+    same key with the same value twice is the same as inserting it once. -/
+example {α : Type} (a : Nat) (b : α) (tree : Spt α) :
+    sptInsert a b (sptInsert a b tree) = sptInsert a b tree :=
+  sptInsert_insert_eq a b tree
+
+/-- HOL `list_insert_insert` oracle rows (`lii_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert2_probe.out`): moving a lone
+    `insert` across `list_insert` preserves the tree both for a non-member and a
+    member key, and the inserted key reads back while neighbours and absent keys
+    are unchanged. -/
+example :
+    sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet)) =
+      sptListInsert [3, 4] (sptInsert 5 () (Spt.ln : NumSet)) :=
+  sptListInsert_insert 5 [3, 4] (Spt.ln : NumSet)
+
+example :
+    sptInsert 3 () (sptListInsert [3, 4] (Spt.ln : NumSet)) =
+      sptListInsert [3, 4] (sptInsert 3 () (Spt.ln : NumSet)) :=
+  sptListInsert_insert 3 [3, 4] (Spt.ln : NumSet)
+
+example :
+    sptLookup 5 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 4 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 7 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_append` oracle rows (`lia_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert2_probe.out`): inserting a
+    concatenation equals inserting the two lists in turn, with each member
+    present and an absent key still missing. -/
+example :
+    sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet) =
+      sptListInsert [3, 4] (sptListInsert [5, 6] (Spt.ln : NumSet)) :=
+  sptListInsert_append [3, 4] [5, 6] (Spt.ln : NumSet)
+
+example :
+    sptLookup 6 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 3 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 7 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_insert` (`crep_to_loopProofScript.sml:406`): a lone
+    `insert` may be moved to the front of `list_insert` when it keeps the same
+    key and unit value. -/
+example (x : Nat) (xs : List Nat) (tree : NumSet) :
+    sptInsert x () (sptListInsert xs tree) = sptListInsert xs (sptInsert x () tree) :=
+  sptListInsert_insert x xs tree
+
+/-- HOL `list_insert_append` (`crep_to_loopProofScript.sml:414`): inserting a
+    concatenated key list equals inserting the two lists in turn. -/
+example (xs ys : List Nat) (tree : NumSet) :
+    sptListInsert (xs ++ ys) tree = sptListInsert xs (sptListInsert ys tree) :=
+  sptListInsert_append xs ys tree
 
 end Flapjack.Test.CrepToLoopParity

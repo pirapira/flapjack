@@ -1,0 +1,4 @@
+extcall_return_eval=T
+extcall_final_eval=T
+extcall_missing_local_eval=T
+extcall_read_error_eval=T

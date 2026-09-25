@@ -840,6 +840,17 @@ theorem loopAssignedVars_seq (first second : LoopProg α) :
       loopAssignedVars first ++ loopAssignedVars second := by
   simp [loopAssignedVars]
 
+/-- Width-specialized Flapjack analogue of Cake's `assigned_vars_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:890`). It quantifies over
+    production `LoopProg`, whose `ffi` constructor uses Lean `String`; HOL's
+    `loopLang$prog` uses `mlstring`, so this theorem is intentionally untagged.
+    The exact carrier is `HolLoopProg` in `LoopLang.lean`. -/
+theorem loopAssignedVars_seqW {width : Nat} [NeZero width]
+    (first second : LoopProg (BitVec width)) :
+    loopAssignedVars (.seq first second) =
+      loopAssignedVars first ++ loopAssignedVars second :=
+  loopAssignedVars_seq first second
+
 theorem loopAccVars_skip (names : List Nat) :
     loopAccVars (.skip : LoopProg α) names = names := by
   rfl
@@ -860,13 +871,28 @@ theorem loopAssignedVars_nestedSeq (statements : List (LoopProg α)) :
 /-- Cake's `assigned_vars_nested_seq_split`
     (`cakeml/pancake/semantics/loopPropsScript.sml:880`): the variables
     assigned by a nested sequence of two statement lists is the concatenation
-    of the two lists' assigned variables. -/
+    of the two lists' assigned variables. This generic production helper and
+    its width-specialized counterpart are untagged because both use
+    String-backed production `LoopProg`; exact HOL proofs can use `HolLoopProg`. -/
 theorem loopAssignedVars_nestedSeq_append (statements rest : List (LoopProg α)) :
     loopAssignedVars (loopNestedSeq (statements ++ rest)) =
       loopAssignedVars (loopNestedSeq statements) ++
         loopAssignedVars (loopNestedSeq rest) := by
   rw [loopAssignedVars_nestedSeq, loopAssignedVars_nestedSeq,
     loopAssignedVars_nestedSeq, List.flatMap_append]
+
+/-- Width-specialized Flapjack analogue of Cake's
+    `assigned_vars_nested_seq_split`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:880`). It quantifies over
+    production `LoopProg`, whose `ffi` constructor uses Lean `String`; HOL's
+    `loopLang$prog` uses `mlstring`, so this theorem is intentionally untagged.
+    The exact carrier is `HolLoopProg` in `LoopLang.lean`. -/
+theorem loopAssignedVars_nestedSeq_appendW {width : Nat} [NeZero width]
+    (statements rest : List (LoopProg (BitVec width))) :
+    loopAssignedVars (loopNestedSeq (statements ++ rest)) =
+      loopAssignedVars (loopNestedSeq statements) ++
+        loopAssignedVars (loopNestedSeq rest) :=
+  loopAssignedVars_nestedSeq_append statements rest
 
 def loopAssignNames (names : List Nat) (expression : LoopExp α) :
     List (LoopProg α) :=
@@ -911,6 +937,36 @@ theorem loopAssignPairs_cons (name : Nat) (names : List Nat)
       .assign name expression :: loopAssignPairs names expressions := by
   simp [loopAssignPairs]
 
+/-- The `loopTempNames` numbering with `loopAssignPairs` is Cake's
+    `MAPi (λn. Assign (n + offset)) les`.  This bridge lets the exact
+    `crep_to_loopProofScript.sml` `assigned_vars_MAPi_Assign` statement be
+    phrased with `List.mapIdx`, the direct counterpart of HOL's `MAPi`. -/
+theorem loopAssignPairs_loopTempNames_eq_mapIdx {α : Type}
+    (les : List (LoopExp α)) (offset : Nat) :
+    les.mapIdx (fun n e => LoopProg.assign (n + offset) e) =
+      loopAssignPairs (loopTempNames offset les.length) les := by
+  induction les generalizing offset with
+  | nil => simp [loopTempNames, loopAssignPairs]
+  | cons a as ih =>
+      simp only [List.length_cons]
+      rw [List.mapIdx_cons]
+      rw [show loopTempNames offset (as.length + 1) =
+            offset :: loopTempNames (offset + 1) as.length by
+        simp only [loopTempNames, List.range_succ_eq_map, List.map_cons, List.map_map]
+        congr 1
+        apply List.map_congr_left
+        intro x _
+        show offset + (x + 1) = offset + 1 + x
+        omega]
+      rw [loopAssignPairs_cons]
+      have hfun : (fun (i : Nat) (e : LoopExp α) => LoopProg.assign (i + 1 + offset) e) =
+          (fun (n : Nat) (e : LoopExp α) => LoopProg.assign (n + (offset + 1)) e) := by
+        funext i e
+        congr 1
+        omega
+      rw [hfun, ih (offset + 1)]
+      simp
+
 theorem loopAssignedVars_loopAssignPairs (names : List Nat)
     (expressions : List (LoopExp α)) (hlen : names.length = expressions.length) :
     loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) =
@@ -929,6 +985,31 @@ theorem loopAssignedVars_loopAssignPairs (names : List Nat)
           rw [← loopAssignedVars_nestedSeq (loopAssignPairs names expressions)]
           rw [ih expressions (by simpa using hlen)]
           rfl
+
+/-- Width-specialized Flapjack analogue of Cake's
+    `assigned_vars_nested_assign`
+    (`cakeml/pancake/semantics/loopPropsScript.sml:897`); HOL's
+    `MAP2 Assign xs ys` is `loopAssignPairs`. The production `LoopProg` carrier
+    has a String-backed `ffi` name, unlike HOL's `mlstring`, so this theorem is
+    intentionally untagged. The exact carrier is `HolLoopProg` in `LoopLang.lean`.
+    -/
+theorem loopAssignedVars_loopAssignPairsW {width : Nat} [NeZero width]
+    (names : List Nat) (expressions : List (LoopExp (BitVec width)))
+    (hlen : names.length = expressions.length) :
+    loopAssignedVars (loopNestedSeq (loopAssignPairs names expressions)) = names :=
+  loopAssignedVars_loopAssignPairs names expressions hlen
+
+/-- Flapjack analogue of `crep_to_loopProof$assigned_vars_MAPi_Assign`
+    (`crep_to_loopProofScript.sml:355`). The production `LoopProg` carrier has
+    a String-backed `ffi` name, unlike HOL's `mlstring`; this theorem is
+    intentionally untagged. An exact version can quantify over `HolLoopProg`. -/
+theorem loopAssignedVars_mapIdxAssign {width : Nat} [NeZero width]
+    (les : List (LoopExp (BitVec width))) (offset : Nat) :
+    loopAssignedVars (loopNestedSeq (les.mapIdx (fun n e => LoopProg.assign (n + offset) e))) =
+      (List.range les.length).map (fun n => n + offset) := by
+  rw [loopAssignPairs_loopTempNames_eq_mapIdx]
+  rw [loopAssignedVars_loopAssignPairs _ _ (by simp [loopTempNames])]
+  simp [loopTempNames, Nat.add_comm]
 
 /-! Cake `loopPropsScript.sml:40` `cut_sets_def`: the list-backed live set
     after executing a Loop statement.  Cake's HOL `insert`/`num_set` is

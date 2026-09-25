@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.TotalMeasure
 import Flapjack.Pancake.Semantics.PanSemStateEval
 
 /-!
@@ -37,8 +38,9 @@ This module starts the genuinely HOL-shaped total interface:
 
 The state half is the production `PanSemState`, so the eventual total
 `panSemEvaluate` returns a `PanSemProgResult α σ × PanSemState α (FfiState σ)`
-pair with no `Option`/fuel wrapper, recursing on the HOL termination measure
-`(state.clock, program size)`.  `panSemTotalOfExecuted` is only a proved
+pair with no `Option`/fuel wrapper, using the source recursion measure
+`panSemEvalMeasure`, whose coordinates are `(state.clock, panSemProgFuel
+program)`.  `panSemTotalOfExecuted` is only a proved
 relation between the executed evaluator and this interface; it never defines
 total evaluation.  Everything here is untagged until that total evaluator and
 its exact HOL statement are established.
@@ -452,6 +454,11 @@ def panSemFixClock (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
     PanSemState α (FfiState σ) :=
   { state with clock := min entryClock state.clock }
 
+@[simp] theorem panSemFixClock_clock_le
+    (entryClock : Nat) (state : PanSemState α (FfiState σ)) :
+    (panSemFixClock entryClock state).clock ≤ entryClock := by
+  exact Nat.min_le_left _ _
+
 /-! A small source-program fragment gives the clock leaves, `Seq`, and `If`
     with `Const` or `Var Local` conditions a real recursive evaluator over the
     complete production state.  This is a total interpreter for the declared
@@ -517,9 +524,9 @@ def panSemEvaluateSeqFragment [DecidableEq α] [OfNat α 0]
 
 /-! A second restricted fragment makes the `If` condition an arbitrary source
     expression and evaluates it from the full RISC-V 64-bit `PanSemState`.
-    Branch recursion remains structural, so this removes the callback boundary
-    from the earlier `If` helper while still covering only clock leaves, `Seq`,
-    and `If`; it is not the full `evaluate_def` over `Prog`. -/
+    Branch recursion remains structural. The fragment also includes the exact
+    `Dec`, `Assign`, `Return`, and `Raise` clause shapes, but omits other `Prog`
+    constructors and is not the full `evaluate_def` over `Prog`. -/
 
 /-- RISC-V 64-bit source-program fragment with unrestricted `Exp` conditions
     on its recursive `If` constructor. This is a support fragment rather than
@@ -530,24 +537,36 @@ inductive PanSemExprIfFragmentRiscV64 where
   | seq (first second : PanSemExprIfFragmentRiscV64)
   | ite (condition : Exp (RiscV.Word 64))
       (thenBranch elseBranch : PanSemExprIfFragmentRiscV64)
+  | dec (name : VarName) (shape : Shape) (value : Exp (RiscV.Word 64))
+      (body : PanSemExprIfFragmentRiscV64)
+  | assign (kind : VarKind) (name : VarName) (value : Exp (RiscV.Word 64))
+  | returnValue (value : Exp (RiscV.Word 64))
+  | raiseException (exception : ExceptionId) (value : Exp (RiscV.Word 64))
   deriving Repr
 
-/-- Embed the restricted expression-If fragment into production Pancake syntax. -/
+/-- Embed the restricted expression/control fragment into production Pancake
+    syntax without changing its represented constructors. -/
 def PanSemExprIfFragmentRiscV64.toProg :
     PanSemExprIfFragmentRiscV64 → Prog (RiscV.Word 64)
   | PanSemExprIfFragmentRiscV64.leaf clockCtor => PanSemClockLeaf.toProg clockCtor
   | PanSemExprIfFragmentRiscV64.seq first second => .seq first.toProg second.toProg
   | PanSemExprIfFragmentRiscV64.ite condition thenBranch elseBranch =>
       .ite condition thenBranch.toProg elseBranch.toProg
+  | PanSemExprIfFragmentRiscV64.dec name shape value body =>
+      .dec name shape value body.toProg
+  | PanSemExprIfFragmentRiscV64.assign kind name value => .assign kind name value
+  | PanSemExprIfFragmentRiscV64.returnValue value => .return value
+  | PanSemExprIfFragmentRiscV64.raiseException exception value => .raise exception value
 
-/-- Total recursive RV64 evaluator for clock leaves, `Seq`, and `If` with any
-    `Exp` condition. It evaluates the condition through `evalPanSemStateExp`
-    using the complete state and recursively evaluates the chosen branch in
-    that same state. A missing or non-word result returns `(some Error, state)`.
-    The evaluator has no branch callback or evaluator-fuel `Option`; the
-    remaining `Prog` constructors and HOL-polymorphic word carrier are outside
-    this fragment, so it remains untagged and does not close the full
-    `evaluate_def` port. -/
+/-- Total recursive RV64 evaluator for clock leaves, `Seq`, `If`, `Dec`,
+    `Assign`, `Return`, and `Raise`. It evaluates every expression through
+    `evalPanSemStateExp` using the complete state; `If` recursively evaluates
+    its chosen branch in that state, `Dec` restores its shadowed local after
+    recursively evaluating the body, and `Seq` applies HOL `fix_clock` before
+    continuing. The evaluator has no branch callback or evaluator-fuel
+    `Option`; remaining `Prog` constructors and HOL-polymorphic words remain
+    outside this explicit fragment, so it stays untagged and does not claim the
+    full `evaluate_def` port. -/
 def panSemEvaluateExprIfFragmentRiscV64 [NeZero 64]
     [BEq (RiscV.Word 64)] [DecidableEq (RiscV.Word 64)]
     [OfNat (RiscV.Word 64) 0] [OfNat (RiscV.Word 64) 1]
@@ -580,6 +599,49 @@ def panSemEvaluateExprIfFragmentRiscV64 [NeZero 64]
           else
             panSemEvaluateExprIfFragmentRiscV64 thenBranch state
       | _ => (some .error, state)
+  | PanSemExprIfFragmentRiscV64.dec name shape expression body =>
+      match evalPanSemStateExp state expression with
+      | some value =>
+          if panShapeMatches shape (panSemShapeOf value) then
+            let (result, bodyState) := panSemEvaluateExprIfFragmentRiscV64 body
+              ({ state with locals := updatePanValueMap state.locals name value })
+            (result, { bodyState with
+              locals := resVar bodyState.locals (name, state.locals name) })
+          else (some .error, state)
+      | none => (some .error, state)
+  | PanSemExprIfFragmentRiscV64.assign kind name expression =>
+      match evalPanSemStateExp state expression with
+      | none => (some .error, state)
+      | some value =>
+          if panValueAssignmentValid state.structs state.locals state.globals
+              kind name value then
+            match kind with
+            | .local =>
+                (none, { state with locals := updatePanValueMap state.locals name value })
+            | .global =>
+                (none, { state with globals := updatePanValueMap state.globals name value })
+          else
+            (some .error, state)
+  | PanSemExprIfFragmentRiscV64.returnValue expression =>
+      match evalPanSemStateExp state expression with
+      | some value =>
+          if sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
+            (some (.returned value), panEmptyLocals state)
+          else
+            (some .error, state)
+      | none => (some .error, state)
+  | PanSemExprIfFragmentRiscV64.raiseException exception expression =>
+      match evalPanSemStateExp state expression with
+      | some value =>
+          match state.exceptionShapes exception with
+          | some shape =>
+              if panShapeMatches shape (panSemShapeOf value) &&
+                  sizeOfShWithCtxt state.structs.toHOL (panSemShapeOf value) ≤ 32 then
+                (some (.exception exception value), panEmptyLocals state)
+              else
+                (some .error, state)
+          | none => (some .error, state)
+      | none => (some .error, state)
 
 /-! ## Compositional `Seq` step
 

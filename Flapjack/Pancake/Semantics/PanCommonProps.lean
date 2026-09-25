@@ -164,8 +164,8 @@ theorem fmEmptyZipFlookup [BEq α] [LawfulBEq α] (xs : List α) (ys : List β)
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:512`): the slot list of
     any binding in a `no_overlap` context is duplicate-free. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_flookup_all_distinct"]
-theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat))
-    (x : String) (y : Shape) (zs : List Nat)
+theorem allDistinctFlookupAllDistinct {α β : Type} (fm : FiniteMap α (β × List Nat))
+    (x : α) (y : β) (zs : List Nat)
     (hno : noOverlap fm) (hlookup : FLOOKUP fm x = some (y, zs)) : zs.Nodup :=
   hno.1 x y zs hlookup
 
@@ -173,8 +173,8 @@ theorem allDistinctFlookupAllDistinct (fm : FiniteMap String (Shape × List Nat)
     (`cakeml/pancake/semantics/pan_commonPropsScript.sml:519`): two distinct
     variables in a `no_overlap` context have `distinct_lists` slot lists. -/
 @[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "no_overlap_flookup_distinct"]
-theorem noOverlapFlookupDistinct (fm : FiniteMap String (Shape × List Nat))
-    (x y : String) (a b : Shape) (xs ys : List Nat)
+theorem noOverlapFlookupDistinct {α β : Type} (fm : FiniteMap α (β × List Nat))
+    (x y : α) (a b : β) (xs ys : List Nat)
     (hno : noOverlap fm) (hxy : x ≠ y)
     (hx : FLOOKUP fm x = some (a, xs)) (hy : FLOOKUP fm y = some (b, ys)) :
     distinctListsHol xs ys = true :=
@@ -449,5 +449,74 @@ theorem all_distinct_el_fst_same_eq {α β : Type} (xs : List (α × β)) (n n' 
     {x : α} {y y' : β} (heq : xs[n]'hn = (x, y)) (heq' : xs[n']'hn' = (x, y')) :
     n = n' :=
   getElem_fst_inj xs n n' hnodup hn hn' heq heq'
+
+/-- Exact port of HOL `flookup_fupdate_zip_not_mem`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:289`): a lookup at a
+    key absent from the update keys is unchanged by the zipped update. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "flookup_fupdate_zip_not_mem"]
+theorem flookup_fupdate_zip_not_mem [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (f : FiniteMap α β) (n : α)
+    (hlen : xs.length = ys.length) (h : n ∉ xs) :
+    FLOOKUP (FUPDATE_LIST f (xs.zip ys)) n = FLOOKUP f n :=
+  FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys f n hlen h
+
+/-- Exact port of HOL `disjoint_take_drop_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:399`): a prefix and a
+    suffix separated by `m` elements of a duplicate-free list are disjoint. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_take_drop_sum"]
+theorem disjoint_take_drop_sum {α : Type} (n m p : Nat) (values : List α)
+    (h : values.Nodup) :
+    ListDisjoint (values.take n) ((values.drop (n + m)).take p) :=
+  listDisjoint_take_drop_sum values n m p h
+
+/-- Exact port of HOL `disjoint_drop_take_sum`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:413`). -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_drop_take_sum"]
+theorem disjoint_drop_take_sum {α : Type} (n m p : Nat) (values : List α)
+    (h : values.Nodup) :
+     ListDisjoint ((values.drop (n + m)).take p) (values.take n) :=
+   listDisjoint_drop_take_sum values n m p h
+
+/-- Exact port of HOL `fm_update_diff_vars`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:780`): updating a
+    finite map at `a`, then at a distinct key `b`, then at `a` again, then at
+    `b` again is the same as updating once at `a` and once at `b`. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "fm_update_diff_vars"]
+theorem fm_update_diff_vars [BEq α] [LawfulBEq α] (fm : FiniteMap α β)
+    (a b : α) (a' b' b'' : β) (h : a ≠ b) :
+    FUPDATE (FUPDATE (FUPDATE (FUPDATE fm (a, a')) (b, b')) (a, a')) (b, b'') =
+      FUPDATE (FUPDATE fm (a, a')) (b, b'') := by
+  rw [FUPDATE_comm fm a a' b b' h]
+  rw [FUPDATE_FUPDATE_same (FUPDATE fm (b, b')) a a' a']
+  rw [FUPDATE_comm fm b b' a a' h.symm]
+  rw [FUPDATE_FUPDATE_same (FUPDATE fm (a, a')) b b' b'']
+
+/-- Exact port of HOL `all_distinct_take_frop_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:534`): the first `n`
+    elements and the remaining suffix of a distinct list are disjoint. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_take_frop_disjoint"]
+theorem all_distinct_take_frop_disjoint {α : Type} (ns : List α) (n : Nat)
+    (h : ns.Nodup) (_hn : n ≤ ns.length) :
+    ListDisjoint (ns.take n) (ns.drop n) :=
+  listDisjoint_take_drop ns n h
+
+/-- Exact port of HOL `disjoint_not_mem_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:606`): an element of a
+    list disjoint from another list does not belong to that other list. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_not_mem_el"]
+theorem disjoint_not_mem_el {α : Type} (xs ys : List α) (n : Nat)
+    (h : ListDisjoint xs ys) (hn : n < xs.length) :
+    xs[n] ∉ ys :=
+  not_mem_of_listDisjoint_getElem xs ys n h hn
+
+/-- Exact port of HOL `not_mem_fst_zip_flookup_empty`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:575`): updating the
+    empty finite map with `ZIP (xs, ys)` leaves a key outside `xs` unmapped. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "not_mem_fst_zip_flookup_empty"]
+theorem not_mem_fst_zip_flookup_empty [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (x : α)
+    (hnot : x ∉ xs) (_hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) x = none := by
+  rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys FEMPTY x hlen hnot, FLOOKUP_empty]
 
 end Flapjack

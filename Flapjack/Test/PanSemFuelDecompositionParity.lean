@@ -132,12 +132,37 @@ example : panSemCodeEvaluateFuel sampleState (.call none "f" []) - 1 =
     (panSemCodeEvaluateFuel sampleState (.call none "f" []) - 2) + 1 :=
   panSemCodeEvaluateFuel_call_sub_one_eq sampleState none "f" []
 
+/-- The exact `Call` branch decomposition: canonical fuel dispatches to the
+    state-owned call clause at the syntactically-successor fuel
+    `(canonical - 2) + 1`, exposing the callee body recursion at `canonical - 2`. -/
+example :
+    evalPanValueFfiClockCodeProg statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        (panSemCodeEvaluateFuel sampleRiscvState (.call none "f" ([] : List (Exp W64))))
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock
+        (.call none "f" ([] : List (Exp W64))) none none none =
+      evalPanValueFfiClockCodeCall statefulTestContext statefulTestPrimitive
+        statefulTestHandler sampleRiscvState.structs sampleRiscvState.code
+        sampleRiscvState.exceptionShapes sampleRiscvState.baseAddress
+        sampleRiscvState.topAddress (BitVec.ofNat 64 8)
+        ((panSemCodeEvaluateFuel sampleRiscvState (.call none "f" ([] : List (Exp W64))) - 2) + 1)
+        sampleRiscvState.locals sampleRiscvState.globals sampleRiscvState.memory
+        sampleRiscvState.ffi sampleRiscvState.clock none "f" ([] : List (Exp W64))
+        none none none :=
+  panSemCodeEvaluateFuel_call_decomposition statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8) sampleRiscvState none "f" []
+    none none none
+
 def runChecks : IO Bool := do
   IO.println "PASS PanSem fuel decomposition: stored body bounded by code body fuel"
   IO.println "PASS PanSem fuel decomposition: canonical Call callee fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical Call handler fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical DecCall continuation fuel = canonical - 1"
   IO.println "PASS PanSem fuel decomposition: canonical Call dispatches at canonical - 1"
+  IO.println "PASS PanSem fuel decomposition: canonical Call decomposition exposes body at canonical - 2"
   pure true
 
 end Flapjack.Test.PanSemFuelDecompositionParity

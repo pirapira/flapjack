@@ -1,0 +1,11 @@
+fd_name_len=2
+fd_inline=T
+fd_export=F
+fd_params_len=2
+fd_body_is_skip=T
+d_function_name_len=2
+d_decl_name_len=1
+d_exn_name_len=2
+d_name_fields_len=1
+si_fields_len=1
+si_size=7

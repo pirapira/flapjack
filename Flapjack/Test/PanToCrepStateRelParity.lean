@@ -11,6 +11,7 @@ runtime function list and carried through target Skip evaluation. -/
 namespace Flapjack.Test.PanToCrepStateRelParity
 
 open Flapjack
+open Flapjack.Pancake.PanLang
 
 def noNatCells : Nat → PanWordLab Nat := fun _ => .word 0
 def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => some (.word 0)
@@ -268,6 +269,121 @@ def localsRelLookupCtxtGuard : Bool :=
         ([0].mapM (FLOOKUP targetLocals) == some [.word 5]) && isWfShape [] .one
   | _ => false
 
+/-- Exact `ValueHOL` fixture for HOL
+`is_wf_shape_nil_length_flatten` (`pan_to_crepProofScript.sml:2469`). -/
+def iwfStruct : ValueHOL 64 := .rStruct [.val (.word 1), .val (.word 2)]
+
+theorem isWfShapeExactHOL_length_flatten_fixture :
+    (flattenHOL iwfStruct).length = sizeOfShapeHOL (shapeOfHOLExact iwfStruct) :=
+  isWfShapeExactHOL_length_flatten iwfStruct (flattenHOL iwfStruct)
+    (by simp [iwfStruct, shapeOfHOLExact, isWfShapeExactHOL])
+    (by intro h; simp [iwfStruct, shapeOfHOLExact, sizeOfShapeHOL] at h)
+    (by intro _; rfl)
+
+def isWfShapeNilLengthFlattenGuard : Bool :=
+  (flattenHOL iwfStruct).length == sizeOfShapeHOL (shapeOfHOLExact iwfStruct) &&
+    isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact iwfStruct)
+
+/-! The following related-state fixture uses the same nonempty RV64 word cell
+as the direct HOL-EVAL rows `state_rel_source_byte_little`,
+`state_rel_source_byte_domain_failure`, and `state_rel_source_word32_little` in
+`scripts/hol-probes/pan_sem_state_eval_probe.out`. The production source read
+must derive its memory, `memaddrs`, and byte order from `sourceMemoryState`. -/
+
+private abbrev Word64 := RiscV.Word 64
+
+def stateRelMemoryWord : Word64 := BitVec.ofNat 64 0x1122334455667788
+
+def stateRelMemory : Word64 → Word64 := fun address =>
+  if address == 0 then stateRelMemoryWord else 0
+
+def sourceMemoryState : PanSemState Word64 (FfiState Unit) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    structs := []
+    code := []
+    exceptionShapes := fun _ => none
+    memory := fun address => some (.word (stateRelMemory address))
+    memaddrs := fun address => address == 0
+    sharedMemaddrs := fun _ => false
+    clock := 3
+    be := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+def targetMemoryState : CrepRuntimeState Word64 Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun address => .word (stateRelMemory address)
+    memaddrs := fun address => address == 0
+    shMemaddrs := fun _ => false
+    memoryModel := panSemBitVec64WordModel
+    bytesInWord := 8
+    ffiContext :=
+      { sharedDomain := fun _ => false
+        byteAlign := fun address => address
+        bigEndian := false
+        wordToBytes := fun _ _ => []
+        wordOfBytes := fun _ _ => 0
+        wordToByte := fun _ => 0
+        byteToWord := fun _ => 0
+        valueToNat := fun _ => 0 }
+    clock := 3
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := 0
+    topAddress := 0 }
+
+theorem memoryStateRel : stateRel sourceMemoryState targetMemoryState := by
+  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  funext address
+  simp [sourceMemoryState, targetMemoryState, stateRelMemory, panTheWord]
+
+def stateRelSourceByteOracleCase : Bool :=
+  match evalPanSemStateExp sourceMemoryState (.loadByte (.const 0)) with
+  | some (.word value) => value == BitVec.ofNat 64 136
+  | _ => false
+
+def stateRelSourceByteRejectedDomainCase : Bool :=
+  match evalPanSemStateExp { sourceMemoryState with memaddrs := fun _ => false }
+      (.loadByte (.const 0)) with
+  | none => true
+  | _ => false
+
+def stateRelSourceWord32OracleCase : Bool :=
+  match evalPanSemStateExp sourceMemoryState (.load32 (.const 0)) with
+  | some (.word value) => value == BitVec.ofNat 64 0x55667788
+  | _ => false
+
+def stateRelSourceWord32RejectedAlignmentCase : Bool :=
+  match evalPanSemStateExp sourceMemoryState (.load32 (.const 1)) with
+  | none => true
+  | _ => false
+
+example : evalPanSemStateExp sourceMemoryState (.loadByte (.const 0)) =
+    (panMemLoadByteHOL (width := 64)
+      (fun address => match targetMemoryState.memory address with
+        | .word value => .word value)
+      (fun address =>
+        (sourceMemoryState.memaddrs address &&
+          panValueWordDefined sourceMemoryState.memory address) = true)
+      sourceMemoryState.be 0).map
+        (fun byte => PanValue.word (BitVec.ofNat 64 byte.toNat)) :=
+  panToCrepSourceLoadByteHOLCase sourceMemoryState targetMemoryState 0 memoryStateRel
+
+example : evalPanSemStateExp sourceMemoryState (.load32 (.const 0)) =
+    (panMemLoad32HOL (width := 64)
+      (fun address => match targetMemoryState.memory address with
+        | .word value => .word value)
+      (fun address =>
+        (sourceMemoryState.memaddrs address &&
+          panValueWordDefined sourceMemoryState.memory address) = true)
+      sourceMemoryState.be 0).map
+        (fun value => PanValue.word (BitVec.ofNat 64 value.toNat)) :=
+  panToCrepSourceLoad32HOLCase sourceMemoryState targetMemoryState 0 memoryStateRel
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL state_rel satisfying fixture", true),
@@ -279,7 +395,17 @@ def runChecks : IO Bool := do
       localsRelLookupCtxtGuard),
     ("HOL Crep code field matches a nonempty runtime function and survives Skip",
       skipCodeLookupGuard),
-    ("HOL locals_rel rejects unmapped local", true)]
+    ("HOL locals_rel rejects unmapped local", true),
+    ("HOL exact is_wf_shape_nil_length_flatten over ValueHOL",
+      isWfShapeNilLengthFlattenGuard),
+    ("HOL state_rel source LoadByte uses related nonempty memory",
+      stateRelSourceByteOracleCase),
+    ("HOL state_rel source LoadByte rejects outside memaddrs",
+      stateRelSourceByteRejectedDomainCase),
+    ("HOL state_rel source Load32 uses related nonempty memory",
+      stateRelSourceWord32OracleCase),
+    ("HOL state_rel source Load32 rejects misaligned addresses",
+      stateRelSourceWord32RejectedAlignmentCase)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

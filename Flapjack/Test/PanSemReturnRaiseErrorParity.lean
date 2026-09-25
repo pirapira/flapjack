@@ -49,8 +49,12 @@ def returnRaiseState (clock : Nat) : PanSemState Word64 (FfiState Unit) :=
 def returnRaiseEvaluate (clock : Nat) (program : Prog Word64)
     (contracts : Option PanValueCallContracts := none) :
     Option (PanValueFfiClockResult Word64 Unit × PanSemState Word64 (FfiState Unit)) :=
+  let initial := returnRaiseState clock
+  let exceptionShapes := match contracts with
+    | none => fun _ => none
+    | some contracts => fun name => lookupInfo name contracts.exceptionShapes
   panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
-    statefulTestHandler (BitVec.ofNat 64 8) (returnRaiseState clock) program
+    statefulTestHandler (BitVec.ofNat 64 8) { initial with exceptionShapes := exceptionShapes } program
     (contracts := contracts)
 
 def contractsWith (exceptionShapes : InfoMap Shape) : PanValueCallContracts :=

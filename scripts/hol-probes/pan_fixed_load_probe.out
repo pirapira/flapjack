@@ -37,6 +37,20 @@ load32_domain_miss=NONE
 load32_big_endian=SOME 0x8070605w
 byte_hit_width8=SOME 165w
 load32_hit_width8=SOME 0xA5A5A5A5w
+load32_unaligned_width1_address1=NONE
+load32_aligned_width1_address0=SOME
+  (w2w (w2w (1w ⋙ (8 * (0 MOD 0)))) ‖
+   (w2w (w2w (1w ⋙ (8 * (1 MOD 0)))) ≪ 8 ‖
+    (w2w (w2w (1w ⋙ (8 * (0 MOD 0)))) ≪ 16 ‖
+     (w2w (w2w (1w ⋙ (8 * (1 MOD 0)))) ≪ 24 ‖ 0w) && 0xFF00FFFFw) &&
+    0xFFFF00FFw) && 0xFFFFFF00w)
+load32_aligned_width1_address0_equals_expected=T
+aligned_width1_address0=T
+aligned_width1_address1=F
+byte_align_width1_address1=n2w
+  (if numeral_bit$iMOD_2EXP (LOG2 0) <..num comp'n..> < <..num comp'n..> then
+     <..num comp'n..>
+   else 0)
 byte_align_width24_address5=4w
 byte_load_width24_address5=SOME 51w
 byte_load_width24_address5_big_endian=SOME 17w
@@ -54,6 +68,8 @@ load32_width4_address0_nonzero_little_endian=SOME
 load32_width4_address0_nonzero_big_endian=SOME 0xB0B0B0Bw
 word_of_bytes_width4_little_endian_expected=11w
 word_of_bytes_width4_big_endian_expected=0xB0B0B0Bw
+word_of_bytes_width32_distinct_little=0x44332211w
+word_of_bytes_width32_distinct_big=0x11223344w
 byte_align_width4_address1=n2w
   (if numeral_bit$iMOD_2EXP (LOG2 0) <..num comp'n..> < <..num comp'n..> then
      <..num comp'n..>

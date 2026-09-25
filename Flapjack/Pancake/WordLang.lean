@@ -2,6 +2,9 @@ import Flapjack.Pancake.PanLang
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Word
+import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Basis.Pure.MlString
+import Flapjack.Misc.Sptree
 
 /-!
 # Pancake wordLang word operations
@@ -162,7 +165,9 @@ inductive WordLangInst (α : Type u) where
   | fp (operation : WordLangFp)
   deriving Repr
 
-/-- `wordLang$exp` (`cakeml/compiler/backend/wordLangScript.sml:14-21`). -/
+/-- Production `wordLang$exp` shape. Use `WordLangExpHOL` when an exact carrier
+is required: this version inherits `WordStore α`'s phantom parameter for
+`Lookup`. -/
 inductive WordLangExp (α : Type u) where
   | const (value : α)
   | var (name : Nat)
@@ -207,19 +212,92 @@ inductive WordLangProg (α : Type u) where
       (live : WordLangCutsets)
   | shareInst (operator : WordMemOp) (name : Nat) (address : WordLangExp α)
 
-/-- HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises a
-`Var` or `Op Add [Var; Const]` address expression. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp_to_addr_def"]
+/-- Exact HOL `num_set` carrier (`num |-> unit`) for the faithful backend AST.
+Unlike `WordLangNumSet`, this retains the source `spt` representation. -/
+abbrev WordLangNumSetHOL := Spt Unit
+
+/-- Exact HOL `wordLang$cutsets = num_set # num_set` carrier. -/
+abbrev WordLangCutsetsHOL := WordLangNumSetHOL × WordLangNumSetHOL
+
+/-- Exact HOL `store_name` carrier. `WordStore` has only a phantom word-type
+parameter; fixing it to `Unit` leaves exactly the source constructor fields. -/
+@[hol "cakeml/compiler/backend/stackLangScript.sml" "store_name"]
+abbrev WordStoreHOL := WordStore Unit
+
+/-- Exact HOL `wordLang$exp` carrier, with `store_name` separate from its
+width-indexed word values. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp"]
+inductive WordLangExpHOL (α : Type u) where
+  | const (value : α)
+  | var (name : Nat)
+  | lookup (store : WordStoreHOL)
+  | load (address : WordLangExpHOL α)
+  | op (operator : BinOp) (args : List (WordLangExpHOL α))
+  | shift (operator : Shift) (left right : WordLangExpHOL α)
+
+/-- HOL-shaped backend program carrier with the exact `spt` cut sets and
+`mlstring` FFI name. Other syntax components are shared with `WordLangProg`
+because their constructors and fields already match the HOL declarations. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "prog"]
+inductive WordLangProgHOL (α : Type u) where
+  | skip
+  | move (priority : Nat) (moves : List (Nat × Nat))
+  | inst (instruction : WordLangInst α)
+  | assign (name : Nat) (value : WordLangExpHOL α)
+  | get (destination : Nat) (store : WordStoreHOL)
+  | set (store : WordStoreHOL) (value : WordLangExpHOL α)
+  | store (address : WordLangExpHOL α) (value : Nat)
+  | mustTerminate (body : WordLangProgHOL α)
+  | call (returns : Option
+      (List Nat × WordLangCutsetsHOL × WordLangProgHOL α × Nat × Nat))
+      (target : Option Nat) (arguments : List Nat)
+      (handler : Option (Nat × WordLangProgHOL α × Nat × Nat))
+  | seq (first second : WordLangProgHOL α)
+  | ite (operator : Cmp) (condition : Nat) (right : WordRegImm α)
+      (thenBranch elseBranch : WordLangProgHOL α)
+  | loop (liveIn : WordLangNumSetHOL) (body : WordLangProgHOL α)
+      (liveOut : WordLangNumSetHOL)
+  | alloc (destination : Nat) (cutsets : WordLangCutsetsHOL)
+  | storeConsts (source bitmap codeLength dataLength : Nat)
+      (constants : List (Bool × α))
+  | raise (exception : Nat)
+  | return (label : Nat) (values : List Nat)
+  | break (label : Nat)
+  | continue (label : Nat)
+  | tick
+  | opCurrHeap (operator : BinOp) (destination source : Nat)
+  | locValue (destination source : Nat)
+  | install (codeBuffer codeLength dataBuffer dataLength : Nat)
+      (cutsets : WordLangCutsetsHOL)
+  | codeBufferWrite (address value : Nat)
+  | dataBufferWrite (address value : Nat)
+  | ffi (function : Flapjack.Basis.Pure.MlString.MlString)
+      (configuration configurationLength array arrayLength : Nat)
+      (live : WordLangCutsetsHOL)
+  | shareInst (operator : WordMemOp) (name : Nat)
+      (address : WordLangExpHOL α)
+
+/-- Production helper corresponding to HOL `exp_to_addr_def`; untagged because
+its input inherits `WordStore α`'s phantom parameter. -/
 def expToAddr {width : Nat} :
     WordLangExp (BitVec width) -> Option (WordLangAddr (BitVec width))
   | .var name => some (.addr name 0)
   | .op .add [.var name, .const offset] => some (.addr name offset)
   | _ => none
 
+/-- Exact HOL `wordLang$exp_to_addr` (`wordLangScript.sml:323-326`): recognises
+a `Var` or `Op Add [Var; Const]` address expression. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "exp_to_addr_def"]
+def expToAddrHOL {width : Nat} :
+    WordLangExpHOL (BitVec width) → Option (WordLangAddr (BitVec width))
+  | .var name => some (.addr name 0)
+  | .op .add [.var name, .const offset] => some (.addr name offset)
+  | _ => none
+
 mutual
-/-- HOL `wordLang$every_var_exp` (`wordLangScript.sml:85-91`): every register
-occurring in an expression satisfies `P`. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_exp_def"]
+/-- Production expression-register helper corresponding to HOL
+`every_var_exp_def`; untagged because `WordLangExp` uses the phantom-parameter
+`WordStore α`. The exact carrier version is `everyVarExpHOL`. -/
 def everyVarExp {width : Nat} (P : Nat -> Bool) :
     WordLangExp (BitVec width) -> Bool
   | .var num => P num
@@ -235,6 +313,27 @@ def everyVarExps {width : Nat} (P : Nat -> Bool) :
   | [] => true
   | expression :: expressions =>
       everyVarExp P expression && everyVarExps P expressions
+end
+
+mutual
+/-- Exact HOL `wordLang$every_var_exp` (`wordLangScript.sml:85-91`): every
+register occurring in an exact expression satisfies `P`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_exp_def"]
+def everyVarExpHOL {width : Nat} (P : Nat → Bool) :
+    WordLangExpHOL (BitVec width) → Bool
+  | .var num => P num
+  | .load exp => everyVarExpHOL P exp
+  | .op _ expressions => everyVarExpsHOL P expressions
+  | .shift _ left right => everyVarExpHOL P left && everyVarExpHOL P right
+  | _ => true
+
+/-- Flapjack helper for the HOL `EVERY (every_var_exp P)` traversal on exact
+expressions. -/
+def everyVarExpsHOL {width : Nat} (P : Nat → Bool) :
+    List (WordLangExpHOL (BitVec width)) → Bool
+  | [] => true
+  | expression :: expressions =>
+      everyVarExpHOL P expression && everyVarExpsHOL P expressions
 end
 
 /-- HOL `wordLang$every_var_imm` (`wordLangScript.sml:93-96`). -/
@@ -349,5 +448,58 @@ def everyStackVar {width : Nat} (P : Nat -> Bool) :
   | .ite _ _ _ e2 e3 => everyStackVar P e2 /\ everyStackVar P e3
   | .loop _ body _ => everyStackVar P body
   | _ => True
+
+/-! ## Word locations
+
+HOL `wordLang$word_loc = Word ('a word) | Loc num num`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`).  Deliberately UNTAGGED:
+HOL's constructor payload is the fixed-width `'a word`, so only width-indexed
+uses such as `StackRemove.isSomeWord` over `WordLoc (BitVec width)` are
+HOL-shaped. -/
+inductive WordLoc (α : Type u) where
+  | word (value : α)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
+/-- Exact width-indexed port of HOL `wordLang$word_loc`
+(`cakeml/compiler/backend/wordLangScript.sml:331-333`
+`word_loc = Word ('a word) | Loc num num`).  The payload is the fixed-width
+`BitVec width`, matching HOL's `'a word`.  HOL word dimensions are nonzero
+(`dimindex(:'a) > 0`), so the exact carrier requires `[NeZero width]`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "word_loc"]
+inductive WordLocW (width : Nat) [NeZero width] where
+  | word (value : BitVec width)
+  | loc (block offset : Nat)
+  deriving Repr, DecidableEq
+
+/-- Untagged bridge: the exact width-indexed carrier maps onto the generic
+`WordLoc` instantiated at `BitVec width`. -/
+def wordLocWToGeneric {width : Nat} [NeZero width] : WordLocW width → WordLoc (BitVec width)
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge: the generic `WordLoc (BitVec width)` is the exact
+width-indexed carrier. -/
+def wordLocWOfGeneric {width : Nat} [NeZero width] : WordLoc (BitVec width) → WordLocW width
+  | .word value => .word value
+  | .loc block offset => .loc block offset
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWOfGeneric_toGeneric {width : Nat} [NeZero width] (location : WordLocW width) :
+    wordLocWOfGeneric (wordLocWToGeneric location) = location := by
+  cases location <;> rfl
+
+/-- Untagged bridge round-trip. -/
+theorem wordLocWToGeneric_ofGeneric {width : Nat} [NeZero width] (location : WordLoc (BitVec width)) :
+    wordLocWToGeneric (wordLocWOfGeneric location) = location := by
+  cases location <;> rfl
+
+/-- HOL `wordLang$raise_stub_location = word_num_stubs - 2`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "raise_stub_location_def"]
+def raiseStubLocation : Nat := wordNumStubs - 2
+
+/-- HOL `wordLang$store_consts_stub_location = word_num_stubs - 1`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "store_consts_stub_location_def"]
+def storeConstsStubLocation : Nat := wordNumStubs - 1
 
 end Flapjack

@@ -85,6 +85,13 @@ the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
 `pan_to_crepProof$globals_lookup_def` for a present singleton word and a
 missing global; the matching Lean guards live in
 `Flapjack.Test.PanToCrepGlobalsLookupParity`.
+`crep_store_eval_probe.out` records direct HOL `evaluate_def` Store cases from
+`cakeml/pancake/semantics/crepSemScript.sml:267`: successful in-domain write,
+address-expression failure, value-expression failure, and address-domain
+failure. The matching restricted total state evaluator and Lean guards are in
+`Flapjack.Pancake.Semantics.CrepSem.TotalEval` and
+`Flapjack.Test.CrepSemTotalStoreParity`; the restricted evaluator has no
+whole-definition `@[hol]` tag.
 `crep_arith_dest_const_probe.out` records direct HOL EVAL of
 `crep_arith$dest_const_def` at
 `cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,
@@ -197,6 +204,26 @@ their equations to `panModelReadByte`/`panModelRead32`, are in
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
+The direct width-1 rows `load32_aligned_width1_address0=SOME ...` and
+`load32_unaligned_width1_address1=NONE` were refreshed
+with `HOL4=/home/zksecurity/HOL CAKEML=/home/zksecurity/flapjack2/cakeml
+HOL_PROBE_ONLY=pan_fixed_load_probeScript.sml scripts/hol-probes/regenerate.sh`
+against matching CakeML source commit `857f0d98da8f8a3580f3442338e697809308ede`.
+The `aligned_width1_address0=T` and `aligned_width1_address1=F` rows confirm
+that HOL accepts address zero and rejects address one; `byte_align_width1_address1`
+records the source `byte_align` definition at that carrier width. The tagged
+Lean `panMemLoad32HOL` states the equivalent modulo-four guard directly; the
+matching Lean fixture checks that address zero returns `0x00010001` and address
+one returns `none`. HOL EVAL leaves the raw width-one pack in
+`get_byte`/shift/concatenation form; a direct HOL simplifier/evaluator pass
+proves that expression equals `0x00010001w`. The Lean check computes the same
+tagged result.
+Direct `word_of_bytes` rows pin the four-byte
+little-endian and big-endian packs to `0x44332211` and `0x11223344`; the Lean
+fixture checks the same `RiscV.panRiscVWordOfBytes` results. The probe driver
+runs this script from `pancake/semantics/.hol/objs` when that directory is
+present so it resolves the built `panSemTheory` without modifying the source
+submodule.
 `word_byte_memory_probeScript.sml` is run from HOL4's built
 `src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
 depend on built CakeML Pancake theories. Refresh it with
@@ -234,6 +261,11 @@ projection equations live beside `evalCrepRuntimeExp` in
 `Flapjack/Pancake/Semantics/CrepSem.lean`. These equations cover a constructor
 scope slice only: the target-extended runtime state and the remaining
 word-operation and byte-load cases still need an evaluator correspondence.
+For the isolated `Const` case of local `simp_exp_correct1`, this direct
+`eval_def` observation pairs with the constant-preserving simp results in
+`crep_simp_exp_probe.out`; the exact word_lab theorem case and Fin 4 fixture
+are `crepSimpExpCorrect1ConstHolFiniteWordSourceCase` and its nearby example
+in `Flapjack.Test.CrepeSimpExpParity`. The assembling theorem remains open.
 `crep_eval_cmp_rv64_probe.out` records direct HOL `crepSem$eval` results for all
 eight `asm$word_cmp_def` constructors, including signed-versus-unsigned order,
 negations, and overlapping/disjoint bit tests. Matching source-runtime

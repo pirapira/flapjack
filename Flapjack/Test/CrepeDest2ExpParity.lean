@@ -14,6 +14,9 @@ def word (value : Nat) : RiscV.Word 8 := BitVec.ofNat 8 value
 def finiteWord8 (value : Nat) : Fin 8 → Bool :=
   bitVecToHolWord finiteWordDimension8 (word value)
 
+def canonicalWordBits8 (value : Nat) : Fin 8 → Bool :=
+  bitVecToHolWordBits (word value)
+
 def parityGuard : Bool :=
   crepDest2Exp 0 (word 0) == none &&
   crepDest2Exp 3 (word 1) == some 3 &&
@@ -28,6 +31,25 @@ def parityGuard : Bool :=
 
 #eval parityGuard
 #guard parityGuard
+
+/-! The bounded production helper agrees with the unbounded recursive spec
+    on every direct HOL-EVAL row above, including the rejected odd values and
+    the width-boundary all-ones value. The theorem is generic in the BitVec
+    width; these observations keep the fixture tied to the direct HOL rows. -/
+def recursiveSpecParity : Bool :=
+  (crepDest2Exp 0 (word 0) == crepDest2ExpBitVecSpec 0 (word 0)) &&
+  (crepDest2Exp 3 (word 1) == crepDest2ExpBitVecSpec 3 (word 1)) &&
+  (crepDest2Exp 0 (word 1) == crepDest2ExpBitVecSpec 0 (word 1)) &&
+  (crepDest2Exp 0 (word 2) == crepDest2ExpBitVecSpec 0 (word 2)) &&
+  (crepDest2Exp 4 (word 4) == crepDest2ExpBitVecSpec 4 (word 4)) &&
+  (crepDest2Exp 0 (word 4) == crepDest2ExpBitVecSpec 0 (word 4)) &&
+  (crepDest2Exp 0 (word 8) == crepDest2ExpBitVecSpec 0 (word 8)) &&
+  (crepDest2Exp 0 (word 3) == crepDest2ExpBitVecSpec 0 (word 3)) &&
+  (crepDest2Exp 0 (word 6) == crepDest2ExpBitVecSpec 0 (word 6)) &&
+  (crepDest2Exp 0 (word 255) == crepDest2ExpBitVecSpec 0 (word 255))
+
+#eval recursiveSpecParity
+#guard recursiveSpecParity
 
 /-! These are the three successful input/exponent rows also recorded by the
     direct HOL destination-recognizer probe above. They exercise the wrapped
@@ -48,6 +70,19 @@ example : word 2 = BitVec.shiftLeft (1 : RiscV.Word 8) 1 :=
 
 example : word 8 = BitVec.shiftLeft (1 : RiscV.Word 8) 3 :=
   crepDest2Exp_eq_shift (word 8) 3 (by native_decide)
+
+/-! These canonical finite-index rows check the all-width support theorem on
+    the same successful `8w` and highest-bit (`128w`) shifts printed by the
+    direct HOL probe. -/
+example : canonicalWordBits8 8 =
+    bitVecToHolWordBits (BitVec.shiftLeft (1 : BitVec 8) 3) :=
+  crepDest2ExpHolWordBits_eq_lsl_support (canonicalWordBits8 8) 3
+    (by decide +kernel)
+
+example : canonicalWordBits8 128 =
+    bitVecToHolWordBits (BitVec.shiftLeft (1 : BitVec 8) 7) :=
+  crepDest2ExpHolWordBits_eq_lsl_support (canonicalWordBits8 128) 7
+    (by decide +kernel)
 
 example : 3 < 8 :=
   crepDest2Exp_lt_width (word 8) 3 (by native_decide)

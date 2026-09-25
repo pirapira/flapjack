@@ -1,0 +1,12 @@
+call_total_return_success=T
+call_total_return_destination=T
+call_total_missing_code=T
+call_total_wrong_arity=T
+call_total_timeout=T
+call_total_callee_normal=T
+call_total_callee_break=T
+call_total_callee_continue=T
+call_total_callee_exception=T
+call_total_return_arity_error=T
+call_total_duplicate_destinations=T
+call_total_missing_destination=T

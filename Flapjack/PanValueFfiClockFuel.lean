@@ -42,14 +42,14 @@ def CallClockMono
     (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
     (function : FunName) (arguments : List (Exp α))
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
-    (mh : Option (PanValueMemoryFfiHandler α σ)) : Prop :=
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (preserveReturnLocals : Bool) : Prop :=
   ∀ fuel' result, fuel ≤ fuel' →
     evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock info
-      function arguments ma c mh = some result →
+      function arguments ma c mh (preserveReturnLocals := preserveReturnLocals) = some result →
     evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel' locals globals memory ffi clock info
-      function arguments ma c mh = some result
+      function arguments ma c mh (preserveReturnLocals := preserveReturnLocals) = some result
 
 /-- Monotonicity statement for the clocked program evaluator (`motive2`). -/
 def ProgClockMono
@@ -95,7 +95,7 @@ theorem call_clock_succ_mono
     (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
     (function : FunName) (arguments : List (Exp α))
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
-    (mh : Option (PanValueMemoryFfiHandler α σ))
+    (mh : Option (PanValueMemoryFfiHandler α σ)) (preserveReturnLocals : Bool)
     (ihBody : ∀ (body : Prog α) (calleeLocals : VarName → Option (PanValue α)),
       ProgClockMono context primitive handler structs functions baseAddress topAddress
         bytesInWord fuel calleeLocals globals memory ffi (clock - 1) body ma c mh)
@@ -107,7 +107,8 @@ theorem call_clock_succ_mono
         bytesInWord fuel (updatePanValueMap locals handlerVariable value) calleeGlobals
         calleeMemory calleeFfi calleeClock handlerProgram ma c mh) :
     CallClockMono context primitive handler structs functions baseAddress topAddress
-      bytesInWord (fuel + 1) locals globals memory ffi clock info function arguments ma c mh := by
+      bytesInWord (fuel + 1) locals globals memory ffi clock info function arguments ma c mh
+      preserveReturnLocals := by
   intro fuel' result hle h
   obtain ⟨k, rfl⟩ : ∃ k, fuel' = k + 1 := ⟨fuel' - 1, by omega⟩
   have hfk : fuel ≤ k := by omega
@@ -189,17 +190,20 @@ theorem evalPanValueFfiClockProg_fuel_mono'
       bytesInWord fuel locals globals memory ffi clock program ma c mh := by
   intro fuel locals globals memory ffi clock program ma c mh
   induction fuel, locals, globals, memory, ffi, clock, program, ma, c, mh using
-    evalPanValueFfiClockProg.induct (motive1 := CallClockMono context primitive handler
-      structs functions baseAddress topAddress bytesInWord) with
+    evalPanValueFfiClockProg.induct
+    (motive1 := fun fuel locals globals memory ffi clock info function arguments ma c mh preserveReturnLocals =>
+      CallClockMono context primitive handler structs functions baseAddress topAddress
+        bytesInWord fuel locals globals memory ffi clock info function arguments ma c mh
+        preserveReturnLocals) with
   | case1 =>
     intro fuel' result hle h
     rw [evalPanValueFfiClockCall] at h
     simp at h
-  | case2 fuel locals globals memory ffi clock info function arguments ma c mh
+  | case2 fuel locals globals memory ffi clock info function arguments ma c mh preserveReturnLocals
       ihBody ihHandler =>
     exact call_clock_succ_mono context primitive handler structs functions baseAddress
       topAddress bytesInWord fuel locals globals memory ffi clock info function arguments
-      ma c mh ihBody ihHandler
+      ma c mh preserveReturnLocals ihBody ihHandler
   | case3 =>
     intro fuel' result hle h
     rw [evalPanValueFfiClockProg] at h
@@ -294,7 +298,7 @@ theorem evalPanValueFfiClockProg_fuel_mono'
     rw [evalPanValueFfiClockProg]
     cases hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none
-        function arguments ma c mh with
+        function arguments ma c mh (preserveReturnLocals := true) with
     | none => rw [hcall] at h; simp at h
     | some p =>
       obtain ⟨callOutcome, callClock⟩ := p
@@ -325,9 +329,9 @@ theorem evalPanValueFfiClockProg_fuel_mono'
               · rw [if_neg hshape] at h ⊢
                 exact h
         | raised l g m f e v => exact h
-        | normal l g m f => simp at h
-        | broke l g m f => simp at h
-        | continued l g m f => simp at h
+        | normal l g m f => dsimp only at h ⊢; exact h
+        | broke l g m f => dsimp only at h ⊢; exact h
+        | continued l g m f => dsimp only at h ⊢; exact h
         | error l g m f => exact h
         | finalFfi l g m f ev => exact h
       | timeout l g m f => exact h
@@ -429,7 +433,7 @@ theorem evalPanValueFfiClockCall_fuel_mono'
     (ma : Option (PanValueMemoryAccess α)) (c : Option PanValueCallContracts)
     (mh : Option (PanValueMemoryFfiHandler α σ)),
     CallClockMono context primitive handler structs functions baseAddress topAddress
-      bytesInWord fuel locals globals memory ffi clock info function arguments ma c mh := by
+      bytesInWord fuel locals globals memory ffi clock info function arguments ma c mh false := by
   intro fuel locals globals memory ffi clock info function arguments ma c mh
   cases fuel with
   | zero =>
@@ -438,7 +442,7 @@ theorem evalPanValueFfiClockCall_fuel_mono'
     simp at h
   | succ n =>
     exact call_clock_succ_mono context primitive handler structs functions baseAddress
-      topAddress bytesInWord n locals globals memory ffi clock info function arguments ma c mh
+      topAddress bytesInWord n locals globals memory ffi clock info function arguments ma c mh false
       (fun body calleeLocals => evalPanValueFfiClockProg_fuel_mono' context primitive
         handler structs functions baseAddress topAddress bytesInWord n calleeLocals globals
         memory ffi (clock - 1) body ma c mh)

@@ -35,9 +35,10 @@ def parityGuard : Bool :=
 
 /-! ## Return-path bridge checks (Flapjack-only)
 
-Kernel-checked reductions, not HOL fixtures: they confirm the tagged
-`ret_hdl_def` / `exp_hdl_def` agree with the tagged `assign_ret_def` on the
-emitted program, as recorded by `flapjack-pxn.18.2.4.1`. -/
+Kernel-checked reductions, not HOL fixtures: they compare the production
+String-backed `retHdl` / `expHdlFiniteMap` helpers with the production
+`assignRet` output. Only the separate width-indexed `assignRetW` carries the
+exact `assign_ret_def` tag. -/
 
 example : retHdl (α := Nat) (.comb [.one, .one]) [1, 2] = assignRet (α := Nat) [1, 2] :=
   retHdl_comb_eq_assignRet _ _ (by simp [Shape.shapeSize])

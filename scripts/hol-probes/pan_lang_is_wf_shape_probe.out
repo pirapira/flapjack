@@ -1,0 +1,9 @@
+iwf_one=T
+iwf_comb=T
+iwf_named_hit=T
+iwf_named_miss=F
+iwf_flds_ok=T
+iwf_flds_miss=F
+iwf_ctxt_ok=T
+iwf_ctxt_dup=F
+iwf_ctxt_field_miss=F

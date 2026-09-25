@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.RiscV.Model
 
 /-!
@@ -16,31 +17,45 @@ namespace Flapjack
 /-- Generic Flapjack helper for extracting a value from a Const node.
     This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
     stores an `'a word`, while this production helper accepts arbitrary `α`.
-    The exact word-carrier definition is tagged below; this generic helper is
-    retained for the executable simplifier and connected to it on word values. -/
+    The exact word-carrier definition below uses `CrepExpHOL`; this helper is
+    retained for the executable simplifier. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
 
-/-- Word-valued counterpart of CakeML's `crep_arith$dest_const_def`
-    (`crep_arithScript.sml:10-12`). HOL's `Const` payload is an `'a word`,
-    represented here by the Boolean function `Fin width → Bool`; `NeZero`
-    records HOL's nonempty finite index requirement. Width-specializing the
-    tagged declaration avoids claiming that an arbitrary Boolean function
-    carrier is a HOL word. -/
-@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+/-- Flapjack-only word-valued adapter over the generic production AST. It is
+    not the HOL definition because its syntax carrier is generic `CrepExp`,
+    rather than the exact width-indexed `CrepExpHOL`. -/
 def crepDestConstHolWord {width : Nat} [NeZero width] :
     CrepExp (Fin width → Bool) → Option (Fin width → Bool)
   | .const value => some value
   | _ => none
 
-/-- The executable arbitrary-carrier extractor reduces to the tagged HOL
-    word definition whenever its carrier is a word. This keeps the production
-    simp implementation reusable while exposing its exact word behavior. -/
+/-- Flapjack-only reduction of the word-valued adapter to the generic helper. -/
 theorem crepDestConstHolWord_eq_production {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool)) :
     crepDestConstHolWord expression = crepDestConst expression := by
   cases expression <;> rfl
+
+/-- Exact port of CakeML's `crep_arith$dest_const_def`
+    (`crep_arithScript.sml:10-12`) over `CrepExpHOL`. Its implicit `width`
+    ranges over every positive HOL word dimension; `BitVec width` is the
+    canonical `Fin width → Bool` representation, so any finite HOL word index
+    of that cardinality is transported by reindexing. The generic executable
+    helper above stays untagged because it accepts any value carrier. -/
+@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+def crepDestConstHOL {width : Nat} [NeZero width] :
+    CrepExpHOL width → Option (BitVec width)
+  | .const value => some value
+  | _ => none
+
+/-- Flapjack-only connection between the exact HOL carrier and the generic
+    production syntax. This has no HOL counterpart because it crosses two
+    different Lean expression carriers. -/
+theorem crepDestConstHOL_eq_production {width : Nat} [NeZero width]
+    (expression : CrepExpHOL width) :
+    crepDestConstHOL expression = crepDestConst (crepExpOfHOL expression) := by
+  cases expression <;> simp [crepDestConstHOL, crepDestConst, crepExpOfHOL]
 
 def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat
@@ -59,6 +74,29 @@ termination_by fuel => fuel
 def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] (n : Nat) (word : α) : Option Nat :=
   crepDest2ExpFuel (PanShiftWidth.width (α := α) + 1) n word
+
+/-! A value-recursive specification support for `dest_2exp`. Unlike the
+    executable recognizer above, this follows the source recursion until the
+    word is zero, one, or odd. It is currently untagged because it is stated on
+    Lean `BitVec`; the HOL `finite_index` word carrier and source definition
+    still need to be related. -/
+def crepDest2ExpBitVecSpec {width : Nat} [NeZero width] (exponent : Nat)
+    (word : BitVec width) : Option Nat :=
+  if word == 0 then none
+  else if word == 1 then some exponent
+  else if AndOp.and word 1 != 0 then none
+  else crepDest2ExpBitVecSpec (exponent + 1)
+    (BitVec.ushiftRight word 1)
+termination_by word.toNat
+decreasing_by
+  simp_wf
+  have hword : word.toNat ≠ 0 := by
+    intro hzero
+    have hEq : word = 0 := BitVec.eq_of_toNat_eq (by simpa using hzero)
+    simp [hEq] at *
+  change (BitVec.ushiftRight word 1).toNat < word.toNat
+  rw [BitVec.ushiftRight_eq, BitVec.toNat_ushiftRight]
+  exact Nat.div_lt_self (Nat.pos_of_ne_zero hword) (by decide)
 
 /-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
     Constants zero and one are handled directly; powers of two become a left

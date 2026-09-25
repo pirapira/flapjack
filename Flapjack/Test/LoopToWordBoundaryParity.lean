@@ -143,10 +143,12 @@ def sourceCompileProgParameterShape : Bool :=
 #guard sourceCompileProgParameterShape
 
 /-! `make_vmap_def` oracle: parameter names receive their dense positional
-    slots, in source order, and no entries are invented for an empty list. -/
+    slots and no entries are invented for an empty list.  Cake's `FEMPTY |++`
+    is a left fold, so the executed list-backed map replays the pairs
+    most-recent-first (reversed); lookups are unchanged. -/
 def sourceMakeVmapOracle : Bool :=
   crepMakeVmap [] == [] &&
-  crepMakeVmap [10, 20, 30] == [(10, 0), (20, 1), (30, 2)] &&
+  crepMakeVmap [10, 20, 30] == [(30, 2), (20, 1), (10, 0)] &&
   lookupNatInfo 10 (crepMakeVmap [10, 20, 30]) == some 0 &&
   lookupNatInfo 30 (crepMakeVmap [10, 20, 30]) == some 2
 
@@ -191,7 +193,7 @@ def sourceMakeFuncsSequenceOracle : Bool :=
 def sourceMkCtxtOracle : Bool :=
   let context := crepMkCtxt (α := Nat) .rv64i (crepMakeVmap [10, 20])
     [("f", (64, 2))] 1
-  context.vars == [(10, 0), (20, 1)] &&
+  context.vars == [(20, 1), (10, 0)] &&
     findLoopVar context 20 == 1 && context.maxVar == 1 &&
     context.functions == [("f", (64, 2))] &&
     match context.target with

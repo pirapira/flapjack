@@ -2,6 +2,9 @@ import Flapjack.HolRef
 import Flapjack.Pancake.Proofs.PanStructs
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
+import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 Source-state conversion and evaluator support for porting HOL
@@ -21,14 +24,19 @@ private theorem lookupInfoStringDefault_eq_panPropsALookupEq
   exact lookupInfo_eq_panPropsALookupEq key entries
 
 mutual
-  /-- Exact executable counterpart of HOL `convert_v_def`. The HOL datatype
+  /-- Source-shaped executable counterpart (Flapjack-specific; NOT an exact HOL port) of HOL `convert_v_def`. The HOL datatype
       cases are `Val (Word w)`, `RStruct xs`, and `NStruct nm flds`; these
       correspond respectively to `.word`, `.rStruct`, and `.nStruct` in
       `PanValue`. The first case is unchanged, the second maps recursively in
       order, and the third drops both record and field names while recursively
       mapping field values in order. The direct HOL-EVAL regression is recorded
       in the adjacent probe fixture. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "convert_v_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+  -- production PanValue carrier whose nStruct record/field names are
+  -- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+  -- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+  -- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+  -- (parent flapjack-pxn.18.3.5.7.2).
   def panStructConvertValue : PanValue α → PanValue α
     | .word value => .word value
     | .rStruct fields => .rStruct (panStructConvertValues fields)
@@ -72,7 +80,7 @@ mutual
 end
 
 mutual
-  /-- Exact executable port of HOL `pan_structsProof$v_flds_ok`
+  /-- Source-shaped executable port (Flapjack-specific; NOT an exact HOL port) of HOL `pan_structsProof$v_flds_ok`
       (`cakeml/pancake/proofs/pan_structsProofScript.sml:39`). The HOL clauses
       are reproduced literally: a scalar is `T`; `RStruct vs` is
       `EVERY (v_flds_ok ctxt) vs`; `NStruct nm flds` is the conjunction of the
@@ -84,13 +92,18 @@ mutual
       `lookupInfo` is the first-match association-list lookup, i.e. the exact
       `alist$ALOOKUP` counterpart, and under `[LawfulBEq String]` its `==`
       reflects HOL's `=`. The context is the HOL-shaped `StructContextHOL`
-      (fields and size only). `panSemShapeOf` is the tagged exact port of HOL
+      (fields and size only). `panSemShapeOf` is the source-shaped (currently untagged) counterpart of HOL
       `shape_of` (`panSemScript.sml:80`), and `panStructShapeListEqBool`
       computes HOL's `=` on `shape` lists constructor-by-constructor, since
       Lean `Shape` intentionally has no `BEq`/`DecidableEq` instance. The
       direct original-HOL rows are pinned in
       `scripts/hol-probes/pan_structs_value_validity_probe.out`. -/
-  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+  -- production PanValue carrier whose nStruct record/field names are
+  -- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+  -- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+  -- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+  -- (parent flapjack-pxn.18.3.5.7.2).
   def panValueFldsOk [LawfulBEq String] (context : StructContextHOL) :
       PanValue α → Bool
     | .word _ => true
@@ -162,13 +175,18 @@ private theorem lookupInfo_append_eq_of_some [LawfulBEq String]
       have hresult := ih htailNodup
       simpa [lookupInfo, hmatch] using hresult
 
-/-- Exact HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`): extending
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`): extending
     the HOL-shaped structure context preserves Bool field validity when the
     prefix keys are distinct from the original context keys. This is the
     invariant-preservation prerequisite used by `compile_correct`. The direct
     original-HOL EVAL row and a named-value Lean regression with nonempty
     prefix are recorded in `pan_structs_value_validity_probe.out`. -/
-@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_append"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
+-- production PanValue carrier whose nStruct record/field names are
+-- StructName/FieldName = String and over StructContextHOL (String-keyed), while
+-- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
+-- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
+-- (parent flapjack-pxn.18.3.5.7.2).
 theorem panValueFldsOk_append [LawfulBEq String]
     (pfx context : StructContextHOL) (value : PanValue α)
     (hvalue : panValueFldsOk context value = true)
@@ -213,6 +231,140 @@ theorem panValueFldsOk_append [LawfulBEq String]
     simp [panValuesFldsOk]
   · intro value values ihValue ihValues pfx hvalue hkeys
     simp only [panValuesFldsOk, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihValues pfx hvalue.2 hkeys⟩
+
+/-! ## Exact HOL `v_flds_ok` carrier and append theorem
+
+The preceding source-shaped Bool predicate remains useful to production
+PanValue code, but it cannot state the HOL theorem: HOL `v` carries mlstring
+names and `word_lab` words. The declarations in this section use `ValueHOL`,
+`ShapeHOL`, and `StructContextExact` directly. -/
+
+open Flapjack.Pancake.PanLang (MlS ShapeHOL StructInfoHOLExact StructContextExact)
+
+mutual
+  /-- Exact Bool rendering of HOL `v_flds_ok_def` over the faithful HOL value,
+      shape, and struct-context carriers. Field-name and shape-list equality
+      implement HOL datatype equality. -/
+  @[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_def"]
+  def valueFldsOkHOLExact {width : Nat} [NeZero width]
+      (context : StructContextExact) : ValueHOL width → Bool
+    | .val _ => true
+    | .rStruct values => valuesFldsOkHOLExact context values
+    | .nStruct name fields =>
+        fieldsFldsOkHOLExact context fields &&
+          match Flapjack.Pancake.PanLang.structContextLookupHOL name context with
+          | none => false
+          | some info =>
+              (fields.map Prod.fst == info.fields.map Prod.fst) &&
+                shapeEqHOL.shapeEqListHOL
+                  (fields.map (fun field => shapeOfHOLExact field.2))
+                  (info.fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def valuesFldsOkHOLExact {width : Nat} [NeZero width]
+      (context : StructContextExact) : List (ValueHOL width) → Bool
+    | [] => true
+    | value :: values =>
+        valueFldsOkHOLExact context value && valuesFldsOkHOLExact context values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  def fieldsFldsOkHOLExact {width : Nat} [NeZero width]
+      (context : StructContextExact) : List (MlS × ValueHOL width) → Bool
+    | [] => true
+    | (_, value) :: fields =>
+        valueFldsOkHOLExact context value && fieldsFldsOkHOLExact context fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+private theorem structContextLookupHOL_mem_of_some
+    (name : MlS) (entries : StructContextExact) (info : StructInfoHOLExact)
+    (hlookup : Flapjack.Pancake.PanLang.structContextLookupHOL name entries = some info) :
+    name ∈ entries.map Prod.fst := by
+  induction entries with
+  | nil => simp [Flapjack.Pancake.PanLang.structContextLookupHOL] at hlookup
+  | cons entry entries ih =>
+      obtain ⟨candidate, candidateInfo⟩ := entry
+      by_cases hmatch : name = candidate
+      · subst name
+        simp
+      · simp only [Flapjack.Pancake.PanLang.structContextLookupHOL, if_neg hmatch] at hlookup
+        have htail := ih hlookup
+        simp [hmatch, htail]
+
+private theorem structContextLookupHOL_append_eq_of_some
+    (pfx context : StructContextExact) (name : MlS) (info : StructInfoHOLExact)
+    (hdisjoint : (pfx.map Prod.fst ++ context.map Prod.fst).Nodup)
+    (hlookup : Flapjack.Pancake.PanLang.structContextLookupHOL name context = some info) :
+    Flapjack.Pancake.PanLang.structContextLookupHOL name (pfx ++ context) = some info := by
+  induction pfx with
+  | nil => exact hlookup
+  | cons entry pfx ih =>
+      obtain ⟨candidate, candidateInfo⟩ := entry
+      rcases List.nodup_cons.mp hdisjoint with ⟨hnot, htailNodup⟩
+      have hnameMem := structContextLookupHOL_mem_of_some name context info hlookup
+      have hne : name ≠ candidate := by
+        intro heq
+        subst name
+        exact hnot (List.mem_append_right _ hnameMem)
+      have hlookupTail := ih htailNodup
+      simp [hne, hlookupTail]
+
+/-- Exact port of HOL `v_flds_ok_append` (`pan_structsProofScript.sml:522`).
+    Its value, context keys, field keys, and shape keys are the faithful HOL
+    carriers: `ValueHOL`, `MlString`, `ShapeHOL`, and `StructContextExact`.
+    The premises and conclusion match HOL: validity in `ctxt`, distinct keys
+    across `pfx ++ ctxt`, then validity in the appended context. The direct
+    HOL EVAL fixture is `v_flds_ok_append_nonempty_prefix_named` in
+    `pan_structs_value_validity_probe.out`. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "v_flds_ok_append"]
+theorem valueFldsOkHOLExact_append {width : Nat} [NeZero width]
+    (ctxt pfx : StructContextExact) (value : ValueHOL width)
+    (hvalue : valueFldsOkHOLExact ctxt value = true)
+    (hkeys : (pfx.map Prod.fst ++ ctxt.map Prod.fst).Nodup) :
+    valueFldsOkHOLExact (pfx ++ ctxt) value = true := by
+  revert hvalue hkeys pfx
+  apply valueFldsOkHOLExact.induct
+    (motive1 := fun value =>
+      ∀ pfx, valueFldsOkHOLExact ctxt value = true →
+        (pfx.map Prod.fst ++ ctxt.map Prod.fst).Nodup →
+          valueFldsOkHOLExact (pfx ++ ctxt) value = true)
+    (motive2 := fun fields =>
+      ∀ pfx, fieldsFldsOkHOLExact ctxt fields = true →
+        (pfx.map Prod.fst ++ ctxt.map Prod.fst).Nodup →
+          fieldsFldsOkHOLExact (pfx ++ ctxt) fields = true)
+    (motive3 := fun values =>
+      ∀ pfx, valuesFldsOkHOLExact ctxt values = true →
+        (pfx.map Prod.fst ++ ctxt.map Prod.fst).Nodup →
+          valuesFldsOkHOLExact (pfx ++ ctxt) values = true)
+  · intro word pfx hvalue hkeys
+    simp [valueFldsOkHOLExact]
+  · intro values ih pfx hvalue hkeys
+    simpa [valueFldsOkHOLExact] using ih pfx
+      (by simpa [valueFldsOkHOLExact] using hvalue) hkeys
+  · intro name fields ih pfx hvalue hkeys
+    simp only [valueFldsOkHOLExact, Bool.and_eq_true] at hvalue ⊢
+    cases hlookup : Flapjack.Pancake.PanLang.structContextLookupHOL name ctxt with
+    | none => simp [hlookup] at hvalue
+    | some info =>
+        simp only [hlookup, Bool.and_eq_true] at hvalue
+        obtain ⟨hfields, hnames, hshapes⟩ := hvalue
+        have hlookupExtended := structContextLookupHOL_append_eq_of_some
+          pfx ctxt name info hkeys hlookup
+        simp only [hlookupExtended, Bool.and_eq_true]
+        exact ⟨ih pfx hfields hkeys, hnames, hshapes⟩
+  · intro pfx hvalue hkeys
+    simp [fieldsFldsOkHOLExact]
+  · intro name value fields ihValue ihFields pfx hvalue hkeys
+    simp only [fieldsFldsOkHOLExact, Bool.and_eq_true] at hvalue ⊢
+    exact ⟨ihValue pfx hvalue.1 hkeys, ihFields pfx hvalue.2 hkeys⟩
+  · intro pfx hvalue hkeys
+    simp [valuesFldsOkHOLExact]
+  · intro value values ihValue ihValues pfx hvalue hkeys
+    simp only [valuesFldsOkHOLExact, Bool.and_eq_true] at hvalue ⊢
     exact ⟨ihValue pfx hvalue.1 hkeys, ihValues pfx hvalue.2 hkeys⟩
 
 mutual

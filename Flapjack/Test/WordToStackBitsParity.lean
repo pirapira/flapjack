@@ -662,6 +662,131 @@ def wLiveParityGuard : Bool :=
 #eval wLiveParityGuard
 #guard wLiveParityGuard
 
+/-! ## StackHandlerArgs / PushHandler / PopHandler oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_handler_probe.out` (bead
+`flapjack-pxn.18.5.15.3.19`), for `StackHandlerArgs` (`word_to_stackScript.sml:350`),
+`PushHandler` (`:355`) and `PopHandler` (`:378`):
+
+```
+shaF=T   shaT=T   phF_top=T   phT_top=T   phF_eq=T   pop_eq=T
+```
+
+-/
+
+/-- Structural equality for the handler-argument fragment of `ProgM`. -/
+def handlerInstBEq : WordLangInst (BitVec 64) → WordLangInst (BitVec 64) → Bool
+  | .const r v, .const r' v' => r == r' && v == v'
+  | .arith (.binop op d a (.reg n)), .arith (.binop op' d' a' (.reg n')) =>
+      op == op' && d == d' && a == a' && n == n'
+  | _, _ => false
+
+def handlerProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => handlerProgBEq a c && handlerProgBEq b d
+  | .inst i, .inst j => handlerInstBEq i j
+  | .stackAlloc n, .stackAlloc m => n == m
+  | .stackFree n, .stackFree m => n == m
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackGetSize r, .stackGetSize s => r == s
+  | .locValue r a b, .locValue r' a' b' => r == r' && a == a' && b == b'
+  | .get r .handler, .get r' .handler => r == r'
+  | .set .handler r, .set .handler r' => r == r'
+  | _, _ => false
+
+def hpInstConst (k v : Nat) : StackMoveProg := .inst (.const k (BitVec.ofNat 64 v))
+def hpInstOr (k a b : Nat) : StackMoveProg := .inst (.arith (.binop .or k a (.reg b)))
+def hpLoc (k l1 l2 : Nat) : StackMoveProg := .locValue k l1 l2
+def hpGet (k : Nat) : StackMoveProg := .get k .handler
+def hpSet (k : Nat) : StackMoveProg := .set .handler k
+def hpSize (k : Nat) : StackMoveProg := .stackGetSize k
+def hpFree (k : Nat) : StackMoveProg := .stackFree k
+
+def handlerParityGuard : Bool :=
+  (Flapjack.Compiler.Backend.WordToStack.handlerSlots false == 3) &&
+  (Flapjack.Compiler.Backend.WordToStack.handlerSlots true == 5) &&
+  handlerProgBEq
+    (stackHandlerArgs (α := BitVec 64)
+      false (Sum.inl 4) 7 (2, 7, 9))
+    (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inl 4) 7 (2, 10, 12)) &&
+  handlerProgBEq
+    (stackHandlerArgs (α := BitVec 64)
+      true (Sum.inr 4) 7 (2, 7, 9))
+    (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inr 4) 7 (2, 12, 14)) &&
+  handlerProgBEq
+    (popHandler (α := BitVec 64) false (1, 2, 3) smSkip)
+    (smSeq (smLoad 1 2) (smSeq ((.set .handler 1) : StackMoveProg)
+      (smSeq (hpFree 3) smSkip))) &&
+  handlerProgBEq
+    (pushHandlerW (width := 64) false 1 2 (3, 4, 5))
+    (smSeq (smAlloc 3) (smSeq (hpInstConst 3 1) (smSeq (smStore 3 0)
+      (smSeq (hpLoc 3 1 2) (smSeq (smStore 3 1) (smSeq (hpGet 3)
+        (smSeq (smStore 3 2) (smSeq smSkip (smSeq (hpSize 3) (hpSet 3)))))))))) &&
+  handlerProgBEq
+    (pushHandlerW (width := 64) true 1 2 (3, 4, 5))
+    (smSeq (smAlloc 5) (smSeq (hpInstConst 3 1) (smSeq (smStore 3 0)
+      (smSeq (hpLoc 3 1 2) (smSeq (smStore 3 1) (smSeq (hpGet 3)
+        (smSeq (smStore 3 2) (smSeq (smSeq (hpInstOr 3 14 14)
+          (smSeq (smStore 3 3) (smSeq (hpInstOr 3 15 15) (smStore 3 4))))
+          (smSeq (hpSize 3) (hpSet 3))))))))))
+
+#eval handlerParityGuard
+#guard handlerParityGuard
+
+example : stackHandlerArgs (α := BitVec 64)
+    false (Sum.inl 4) 7 (2, 7, 9)
+    = stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inl 4) 7 (2, 10, 12) := rfl
+example : popHandler (α := BitVec 64) false (1, 2, 3) .skip
+    = .seq (.stackLoad 1 2) (.seq (.set .handler 1) (.seq (.stackFree 3) .skip)) := rfl
+
+/-!
+## `call_dest` and stub-constant oracle parity
+
+`call_dest_def` (`word_to_stackScript.sml:264`) plus `stack_num_stubs_def` /
+`word_num_stubs_def` (`backend_commonScript.sml:124/128`) and
+`raise_stub_location_def` / `store_consts_stub_location_def`
+(`wordLangScript.sml:70/73`), checked in
+`scripts/hol-probes/word_to_stack_call_dest_probe.out`.
+-/
+
+private def callDestSomeSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inl 3) => true
+  | _ => false
+
+private def callDestNoneRegSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inr 1) => true
+  | _ => false
+
+private def callDestNoneStackSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.seq (.stackLoad 3 4) .skip, .inr 3) => true
+  | _ => false
+
+private def callDestEmptySum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inl 5) => true
+  | _ => false
+
+def callDestParityGuard : Bool :=
+  (callDestSomeSum (callDest (some 3) [1, 2] (2, 7, 9))) &&
+  (callDestNoneRegSum (callDest none [1, 2] (2, 7, 9))) &&
+  (callDestNoneStackSum (callDest none [1, 8] (2, 7, 9))) &&
+  (callDestEmptySum (callDest none [] (2, 7, 9))) &&
+  (Flapjack.stackNumStubs == 5) &&
+  (Flapjack.wordNumStubs == 7) &&
+  (Flapjack.raiseStubLocation == 5) &&
+  (Flapjack.storeConstsStubLocation == 6)
+
+#eval callDestParityGuard
+#guard callDestParityGuard
+
+example : callDest (α := Nat) (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
+example : callDest (α := Nat) none [1, 2] (2, 7, 9) = (.skip, .inr 1) := rfl
+example : callDest (α := Nat) none [1, 8] (2, 7, 9)
+    = (.seq (.stackLoad 3 4) .skip, .inr 3) := rfl
+example : callDest (α := Nat) none [] (2, 7, 9) = (.skip, .inl 5) := rfl
+example : Flapjack.raiseStubLocation = 5 := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -671,6 +796,7 @@ def runChecks : IO Bool := do
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
-    copyRetIndependentGuard && wLiveParityGuard)
+    copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
+    callDestParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

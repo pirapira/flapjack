@@ -2,6 +2,7 @@ import Flapjack.Pancake.PanLang
 import Flapjack.FiniteMap.Basic
 import Flapjack.HolRef
 import Flapjack.Word
+import Flapjack.Compiler.Backend.BackendCommon
 
 /-!
 # Pancake wordLang word operations
@@ -394,5 +395,13 @@ theorem wordLocWOfGeneric_toGeneric {width : Nat} [NeZero width] (location : Wor
 theorem wordLocWToGeneric_ofGeneric {width : Nat} [NeZero width] (location : WordLoc (BitVec width)) :
     wordLocWToGeneric (wordLocWOfGeneric location) = location := by
   cases location <;> rfl
+
+/-- HOL `wordLang$raise_stub_location = word_num_stubs - 2`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "raise_stub_location_def"]
+def raiseStubLocation : Nat := wordNumStubs - 2
+
+/-- HOL `wordLang$store_consts_stub_location = word_num_stubs - 1`. -/
+@[hol "cakeml/compiler/backend/wordLangScript.sml" "store_consts_stub_location_def"]
+def storeConstsStubLocation : Nat := wordNumStubs - 1
 
 end Flapjack

@@ -8825,6 +8825,30 @@
     "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree. Corrected 2026-09-25 by flapjack-deepseek-two (bead flapjack-pxn.18.5.15.3.17): HOL `copy_ret` keeps the return-value list `vs` as an independent `num list` carrier (only `LENGTH vs` is used), so the Lean signature is now `{α β : Type} ... (vs : List β) (kont : ProgM α)`. HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T (with vs=[10;20;30] : num list against a 64-bit prog) reproduced by copyRetParityGuard and the β=Nat independent-carrier fixture copyRetIndependentGuard.)"
   },
   {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "StackHandlerArgs_def",
+    "lean_name": "stackHandlerArgs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `StackHandlerArgs_def` at word_to_stackScript.sml:350 - StackArgs dest arg_count (k, f + handler_slots perf, f' + handler_slots perf). `'a` is arbitrary in HOL and only num/sum/list are touched, so the generic-alpha statement over the exact shared-word carrier ProgM is exact; HOL-EVAL rows shaF=T/shaT=T reproduced by handlerParityGuard in Flapjack/Test/WordToStackBitsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "PopHandler_def",
+    "lean_name": "popHandler",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `PopHandler_def` at word_to_stackScript.sml:378 - Seq (StackLoad k 2) (Seq (Set Handler k) (Seq (StackFree (handler_slots perf)) prog)). `'a` arbitrary in HOL, so exact over ProgM alpha; HOL-EVAL row pop_eq=T reproduced by handlerParityGuard.)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "hol_name": "PushHandler_def",
+    "lean_name": "pushHandlerW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `PushHandler_def` at word_to_stackScript.sml:355 - StackAlloc (handler_slots perf) then Const k 1w, StackStore k 0, LocValue k l1 l2, StackStore k 1, Get k Handler, StackStore k 2, the perf list_Seq [Or k perf_rsp (Reg perf_rsp); StackStore k 3; Or k perf_rbp (Reg perf_rbp); StackStore k 4] (or Skip), StackGetSize k, Set Handler k. HOL `Const k 1w` is word-indexed, so the exact statement is width-indexed ProgM (BitVec width) with [NeZero width]; HOL-EVAL rows phF_top=T/phT_top=T/phF_eq=T plus the full perf=T structural row phT_eq=T reproduced by handlerParityGuard.)"
+  },
+  {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_name",
     "lean_path": "Flapjack/Compiler/Backend/StackLang.lean",
@@ -9599,5 +9623,45 @@
     "lean_name": "isWfShapeExactHOL_length_flatten",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; exact ValueHOL/ShapeHOL rendering: is_wf_shape_nil rendered as isWfShapeExactHOL ([] : StructContextExact), shape_of as shapeOfHOLExact, size_of_shape as sizeOfShapeHOL, flatten as flattenHOL, LENGTH as .length; both HOL side conditions preserved; reused the exact flattenHOL_length_eq_sizeOfShapeHOL (panPropsScript.sml:171); oracle rows iwf_val/iwf_struct/iwf_nested/iwf_val_len/iwf_size_val/iwf_wf_val/iwf_wf_struct in scripts/hol-probes/pan_to_crep_is_wf_shape_nil_probe.out, reproduced by Flapjack/Test/PanToCrepStateRelParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
+    "hol_name": "stack_num_stubs_def",
+    "lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean",
+    "lean_name": "stackNumStubs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL stack_num_stubs = 5n; Lean stackNumStubs : Nat := 5, no side conditions; direct HOL row bc_stack in scripts/hol-probes/word_to_stack_call_dest_probe.out."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
+    "hol_name": "word_num_stubs_def",
+    "lean_path": "Flapjack/Compiler/Backend/BackendCommon.lean",
+    "lean_name": "wordNumStubs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL word_num_stubs = stack_num_stubs + 1 + 1; Lean wordNumStubs : Nat := stackNumStubs + 1 + 1; direct HOL row bc_word in scripts/hol-probes/word_to_stack_call_dest_probe.out."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "raise_stub_location_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "raiseStubLocation",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL raise_stub_location = word_num_stubs - 2; Lean raiseStubLocation : Nat := wordNumStubs - 2; HOL row wl_raise in scripts/hol-probes/word_to_stack_call_dest_probe.out."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "store_consts_stub_location_def",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "storeConstsStubLocation",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL store_consts_stub_location = word_num_stubs - 1; Lean storeConstsStubLocation : Nat := wordNumStubs - 1; HOL row wl_store in scripts/hol-probes/word_to_stack_call_dest_probe.out."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "call_dest_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "callDest",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL call_dest SOME pos args kf = (Skip, INL pos); NONE with LENGTH args = 0 gives (Skip, INL raise_stub_location) and otherwise takes LAST args through wReg2 then wStackLoad; the argument type is monomorphic num (LAST args is fed to wReg2), rendered as List Nat; Lean callDest matches on Option and on args.getLast? (none iff empty) so the empty branch is exactly HOL's, and uses the ported wReg2/wStackLoad/raiseStubLocation; HOL is polymorphic in the stack-program word type, so the exact statement returns ProgM alpha for an arbitrary alpha (Lean callDest is `{alpha : Type} ... : ProgM alpha x Sum Nat Nat`); the argument list alone is monomorphic num; no word operation and no dimindex; HOL rows cd_some/cd_none_reg/cd_none_stack/cd_empty in scripts/hol-probes/word_to_stack_call_dest_probe.out, reproduced by callDestParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
   }
 ]

@@ -62,7 +62,7 @@ open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL ExpHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
-    is the extensionality half of the canonical finite-map translation witness. -/
+    is separate from the canonical roundtrip witness below. -/
 theorem HolFiniteMapExact.ext {α β : Type} {left right : HolFiniteMapExact α β}
     (h : left.lookup = right.lookup) : left = right := by
   obtain ⟨lleft, pleft⟩ := left
@@ -181,8 +181,9 @@ theorem ofExact_toExact {width : Nat} {σ : Type} [NeZero width]
   rfl
 
 /-- Canonical global kernel witness for the `fmap_as_finite_support` `@[hol]`
-    qualifier: `HolFiniteMapExact` is extensional and the finite-support carrier
-    is invertibly related to the broad exact one.  The checker requires this
+    qualifier: the finite-support carrier is invertibly related to the broad
+    exact one. Extensionality is the separate `HolFiniteMapExact.ext` theorem.
+    The checker requires this
     declaration in the module of a `fmap_as_finite_support`-qualified tag. -/
 theorem holFmapAsFiniteSupportWitness {width : Nat} {σ : Type} [NeZero width] :
     (∀ (state : PanSemStateExact width σ) (h : state.FiniteSupport),
@@ -255,9 +256,12 @@ def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
 /-- HOL `set_var_def` (`cakeml/pancake/semantics/panSemScript.sml:398-401`):
     `set_var v value s = s with locals := s.locals |+ (v,value)`.  The `|+`
     (FUPDATE) is the canonical `HolFiniteMapExact.update` on the finite-support
-    carrier.  Untagged canonical-update wrapper used by the tagged
-    `setKvarHOLFinite`; the carrier's map fields are recorded there by the
-    `fmap_as_finite_support` qualifier. -/
+    carrier.  The `locals`/`globals`/`code`/`eshapes` fields are the canonical
+    finite-map representation, recorded by the `fmap_as_finite_support`
+    qualifier (canonical witness `holFmapAsFiniteSupportWitness` in this
+    module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_var_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
     PanSemStateFiniteExact width σ :=
@@ -265,7 +269,11 @@ def setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
 
 /-- HOL `set_global_def` (`cakeml/pancake/semantics/panSemScript.sml:403-406`):
     `set_global v value s = s with globals := s.globals |+ (v,value)`, i.e. the
-    canonical `HolFiniteMapExact.update` on the `globals` component. -/
+    canonical `HolFiniteMapExact.update` on the `globals` component.  Its
+    finite-map fields are recorded by the `fmap_as_finite_support` qualifier
+    (canonical witness `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_global_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def setGlobalHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
     PanSemStateFiniteExact width σ :=

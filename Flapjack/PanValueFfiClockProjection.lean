@@ -231,7 +231,7 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
       some (.returned (fun _ => none) finalGlobals finalMemory finalFfi values,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock,
       hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hstepBody]
@@ -418,7 +418,7 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
       some (.normal assignedLocals assignedGlobals finalMemory finalFfi,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget, Option.elim_some, hargs, hlookup, hbind, hparameters, hclock,
       hassign, hclockBody]
   · simp [evalPanValueFfiCallSteps, panValueCallArguments, panValueCallTarget, Option.elim_some, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hassign, hstepBody]

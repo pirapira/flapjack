@@ -106,7 +106,19 @@ abbrev functions :
     exactly the projection of the function declarations, with every other
     declaration contributing nothing.  Cake writes the projection as a `MAP`
     over `FILTER is_function` with an `ARB` default branch; `List.filterMap`
-    states the same content without needing a default value. -/
+    states the same content without needing a default value.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag): beyond the
+    identifier carrier (production `Decl α`/`Prog α` are generic in the word
+    element type and use `FunName = String`, while HOL `decl` is word-indexed
+    with `funname`/`varname`/`eid`/`stcname` = `mlstring`), the statement is
+    not HOL's: HOL maps the tuple projection over `FILTER is_function` with an
+    unspecified `ARB` fallback on non-function declarations, whereas
+    `List.filterMap` drops those declarations via `none` instead of producing
+    an `ARB` tuple.  Rendering `ARB` faithfully (and an exact `functions`
+    over `List (DeclHOL width)`) is tracked by `flapjack-4ac.4.109`, itself
+    gated on the exact MlString/width-indexed carriers of
+    `flapjack-pxn.18.3.5.8`. -/
 theorem functions_eq_filterMap (declarations : List (Decl α)) :
     functions declarations =
       declarations.filterMap (fun declaration =>

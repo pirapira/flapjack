@@ -5,6 +5,7 @@ import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
+import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -1273,5 +1274,39 @@ theorem functionsHOL_filter_isDecl {width : Nat} [NeZero width]
   | cons declaration declarations ih =>
       cases declaration <;>
         simp [functionsHOL, isDeclHOL, List.filter_cons, ih]
+
+/-- Exact port of HOL `panProps$decs_stcnames_only_functions`
+    (`panPropsScript.sml:1596`): a declaration list whose entries are all
+    functions, value declarations, or exception declarations leaves the
+    structure context unchanged.  The `EVERY` premise is the `List.all ... =
+    true` side condition; the predicate is the exact `isFunctionHOL ||
+    isDeclHOL || isExnDeclHOL` disjunction of the tagged HOL predicates. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "decs_stcnames_only_functions"]
+theorem decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls
+    {width : Nat} [NeZero width] (context : StructContextExact)
+    (code : List (DeclHOL width))
+    (h : code.all (fun declaration =>
+      isFunctionHOL declaration || isDeclHOL declaration ||
+        isExnDeclHOL declaration) = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL, isDeclHOL, isExnDeclHOL]
+
+/-- Exact port of HOL `panProps$decs_stcnames_only_functions2`
+    (`panPropsScript.sml:1604`): the `EVERY is_function` specialisation of
+    `decs_stcnames_only_functions`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "decs_stcnames_only_functions2"]
+theorem decsStcnamesHOLExact_of_functions {width : Nat} [NeZero width]
+    (context : StructContextExact) (code : List (DeclHOL width))
+    (h : code.all isFunctionHOL = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL]
 
 end Flapjack

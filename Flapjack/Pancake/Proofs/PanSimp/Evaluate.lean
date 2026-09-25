@@ -2259,7 +2259,9 @@ def PanValueFfiClockFunctionsReturnSucceed
 /-- General call adequacy from the forall-functions hypothesis: a
     destination-free call at the callee-body budget `progSize body + 1` returns
     the callee's values once the arguments evaluate, the callee binds, the clock
-    is nonzero, and the parameter/return validity checks pass. -/
+    is nonzero, and the parameter check passes. This list-backed interface has
+    no source code-map return shape, so its optional return-contract table is
+    not treated as HOL `state.code` metadata. -/
 theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
@@ -2282,7 +2284,6 @@ theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
     (hclock : clock ≠ 0)
     (hparams : panValueParametersValid structs c function values = true)
-    (hreturn : panValueReturnValid structs c function values = true)
     (_hwithin : panValueValuesWithinLimit structs values = true) :
     ∃ (finalGlobals : VarName → Option (PanValue α))
       (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
@@ -2298,8 +2299,8 @@ theorem evalPanValueFfiClockCall_returned_no_destination_of_functions
       memory ffi (decPanClock clock) values (Nat.le_refl (progSize body))
   exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
     by
-      simp [evalPanValueFfiClockCall, panValueCallTarget, panValueCallArgumentsValue, hargs, hlookup, hbind, hclock, hbody, hparams,
-        hreturn]⟩
+      simp [evalPanValueFfiClockCall, panValueCallTarget, panValueCallArgumentsValue,
+        hargs, hlookup, hbind, hclock, hbody, hparams]⟩
 
 /-- Program-level form of general call adequacy: the `Call` node itself costs
     one structural step, so the destination-free call succeeds at
@@ -2326,7 +2327,6 @@ theorem evalPanValueFfiClockProg_call_none_of_functions
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
     (hclock : clock ≠ 0)
     (hparams : panValueParametersValid structs c function values = true)
-    (hreturn : panValueReturnValid structs c function values = true)
     (hwithin : panValueValuesWithinLimit structs values = true) :
     ∃ (finalGlobals : VarName → Option (PanValue α))
       (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
@@ -2340,7 +2340,7 @@ theorem evalPanValueFfiClockProg_call_none_of_functions
     evalPanValueFfiClockCall_returned_no_destination_of_functions context primitive
       handler structs functions baseAddress topAddress bytesInWord locals globals memory ffi
       clock function arguments parameters body values calleeLocals ma c mh hfunctions hargs
-      hlookup hbind hclock hparams hreturn hwithin
+      hlookup hbind hclock hparams hwithin
   exact ⟨finalGlobals, finalMemory, finalFfi, finalClock,
     evalPanValueFfiClockProg_call_some context primitive handler structs functions
       baseAddress topAddress bytesInWord (progSize body + 1) locals globals memory ffi clock
@@ -2376,7 +2376,6 @@ theorem evalPanValueFfiClockProg_call_none_of_functions_progCallFuel
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
     (hclock : clock ≠ 0)
     (hparams : panValueParametersValid structs c function values = true)
-    (hreturn : panValueReturnValid structs c function values = true)
     (hwithin : panValueValuesWithinLimit structs values = true) :
     ∃ (finalGlobals : VarName → Option (PanValue α))
       (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
@@ -2391,7 +2390,7 @@ theorem evalPanValueFfiClockProg_call_none_of_functions_progCallFuel
     evalPanValueFfiClockProg_call_none_of_functions context primitive handler structs
       functions baseAddress topAddress bytesInWord locals globals memory ffi clock function
       arguments parameters body values calleeLocals ma c mh hfunctions hargs hlookup hbind
-      hclock hparams hreturn hwithin
+      hclock hparams hwithin
   refine ⟨finalGlobals, finalMemory, finalFfi, finalClock, ?_⟩
   have hsize : progCallFuel callBudget (.call none function arguments) = 1 + callBudget := by
     simp [progCallFuel]

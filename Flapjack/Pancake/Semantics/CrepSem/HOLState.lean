@@ -303,8 +303,9 @@ theorem CrepSemBroadState.ofBroad_toBroad {width : Nat} [NeZero width]
 namespace CrepSemHOLState
 
 /-- Canonical kernel witness for the `fmap_as_finite_support` `@[hol]`
-qualifier on `CrepSemHOLState`: `HolFiniteMapExact` is extensional and the
-finite-map carrier is invertibly related to the broad one. -/
+qualifier on `CrepSemHOLState`: the finite-map carrier is invertibly related
+to the broad one. Extensionality is the separate `HolFiniteMapExact.ext`
+theorem. -/
 theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width] {ffiState : Type} :
     (∀ (state : CrepSemBroadState width ffiState) (h : state.FiniteSupport),
         (CrepSemBroadState.ofBroad state h).toBroad = state) ∧

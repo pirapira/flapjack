@@ -17,10 +17,12 @@ map is **held** until the exact MlString carriers land (see
 `Flapjack/Pancake/PanLang/Shape.lean` `ShapeHOL`, and the MlString state
 carrier work under `flapjack-pxn.18.3.5.8`).
 
-This document records the review frontier. The four PanSem.lean tags for
-`v`, `shape_of_def`, `empty_locals_def`, and `evaluate_decls_def` were withdrawn
-in commit `7dd5e7f7b`; their definitions remain as documented Flapjack-specific
-infrastructure until exact carriers are ported.
+Eight false tags have been withdrawn: four in `PanSem.lean` by
+`flapjack-0lj.1` and four `HolValue`-dependent tags in
+`PanSemStateEval.lean`/`PanSem/LookupCode.lean` by `flapjack-0lj.2`.
+Their declarations remain as documented Flapjack-specific infrastructure.
+The remaining rows below are the conservative review frontier, not claims of
+completed exact ports.
 
 ## Carrier-safe tags (word payload / `OpSize` only)
 
@@ -46,11 +48,7 @@ by the name mismatch.
 
 | Lean module:line | HOL name | offending carrier(s) | tracking |
 |---|---|---|---|
-| `Pancake/Semantics/PanSemStateEval.lean:1369` | `eval_def` | returns `HolValue`; `PanSemHolState` (structs, code, eshapes) | same hold |
 | `Pancake/Semantics/PanSemStateEval.lean:361` | `mem_load_def` | `StructContextHOL`, `HolValue.nStruct` | same hold |
-| `Pancake/Semantics/PanSemStateEval.lean:1201` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | same hold |
-| `Pancake/Semantics/PanSemStateEval.lean:1211` | `isValWord_def` | `HolValue` | same hold |
-| `Pancake/Semantics/PanSem/LookupCode.lean:37` | `lookup_code_def` | `FunName`-keyed code map | `flapjack-4w9` |
 | `Pancake/Semantics/PanSem/TotalSteps.lean:1058` | `dec_clock_def` | `PanSemHolState` | review (clock-only body) |
 | `Pancake/Semantics/PanSem/TotalSteps.lean:1067` | `fix_clock_def` | `PanSemHolState` | review (clock-only body) |
 | `Pancake/Semantics/PanSem/Primop.lean:16` | `flatten_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |
@@ -61,11 +59,9 @@ by the name mismatch.
 1. Land the exact MlString syntax/state carriers (`ShapeHOL` done by
    `flapjack-deepseek-three`; MlString-keyed context/state pending
    `flapjack-pxn.18.3.5.8`).
-2. Withdraw or retarget the `v`, `eval_def`, `mem_load_def`, `shape_of_def`,
-   `isValWord_def` tags once a `HolValue`-equivalent over `MlString` exists
-   (`flapjack-0lj`).
+2. Withdraw or retarget the remaining `mem_load_def` tag; the other
+   `HolValue`-dependent tags have already been withdrawn (`flapjack-9x4`).
 3. Retarget `lookup_code_def` (`flapjack-4w9`).
 4. Re-review the clock-only and name-ignoring tags (`dec_clock_def`,
-   `fix_clock_def`, `flatten_def`, `pan_primop_def`, `empty_locals_def`,
-   `evaluate_decls_def`) against the landed exact carriers; do not assume the
+   `fix_clock_def`, `flatten_def`, `pan_primop_def`) against the landed exact carriers; do not assume the
    strict transitive reading without a decision from the reviewer.

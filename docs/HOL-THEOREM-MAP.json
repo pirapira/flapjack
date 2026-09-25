@@ -1404,8 +1404,8 @@
     "hol_name": "cexp_heads_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "cexpHeads",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (direct HOL type probe and source comparison at pan_to_crepScript.sml:19-26): HOL infers cexp_heads as α list list -> α list option because the definition only inspects lists. Lean cexpHeads has the same arbitrary-element type; production uses it at β := CrepExp α. Inferred type is recorded in scripts/hol-probes/cexp_heads_probe.out; direct HOL-EVAL list rows are checked in CexpHeadsParity.lean."
   },
   {
     "hol_path": null,
@@ -1564,8 +1564,8 @@
     "hol_name": "compile_panop_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "compilePanOp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against pan_to_crepScript.sml:35-37): maps the sole panLang Mul constructor to the sole crepLang Mul constructor, matching compile_panop_def exactly; neither type carries String-backed names."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -4509,7 +4509,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadGlobals_crepExpVars_emptyW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:698): expression-only statement over List (CrepExp (BitVec width)); variables are Nat and loadGlobals uses the HOL 5-bit global address. No function names or other String-backed identifiers occur. [NeZero width] reflects positive HOL word dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -4517,7 +4517,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadGlobals_getElemW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:474): expression-only list statement over CrepExp (BitVec width), with Nat variable identifiers and BitVec 5 global indices; no String-backed names occur. [NeZero width] reflects positive HOL word dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -4525,7 +4525,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadGlobals_lengthW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:467): expression-list length statement over CrepExp (BitVec width); the elements carry no String-backed names. [NeZero width] reflects positive HOL word dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -4533,7 +4533,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "map_var_crepExpVars_eqW",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (reference inventory) Carrier is width-indexed over CrepProg (BitVec width)/CrepExp (BitVec width) with [NeZero width] because HOL word types have positive dimindex; the generic-α helper stays untagged."
+    "reviewer": "Codex (source comparison against crepPropsScript.sml:227): maps Var over Nat names and flattens expression variables; CrepExp contains no String-backed identifiers. The word carrier is width-indexed by BitVec width and [NeZero width] reflects positive HOL word dimindex; the generic-α helper stays untagged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",

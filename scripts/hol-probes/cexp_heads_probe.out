@@ -2,3 +2,4 @@ empty=SOME []
 heads=SOME [Const 1w; Var 3]
 empty_head=NONE
 empty_tail=NONE
+inferred_type=:α list list -> α list option

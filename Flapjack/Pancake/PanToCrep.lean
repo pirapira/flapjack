@@ -42,8 +42,12 @@ def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
     (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
   { vars, funcs, eids, vmax }
 
+/-- HOL infers `cexp_heads_def` as `α list list -> α list option` because its
+    body only inspects list structure; no `crepLang$exp` constructors constrain
+    the element type. The production compiler uses this polymorphic definition
+    at `β := CrepExp α`. -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
-def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
+def cexpHeads {β : Type u} : List (List β) → Option (List β)
   | [] => some []
   | expressions :: rest =>
       match expressions, cexpHeads rest with

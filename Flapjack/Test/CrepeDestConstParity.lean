@@ -47,4 +47,15 @@ example (expression : CrepExp (Fin 4 → Bool)) (value : Fin 4 → Bool)
     expression = .const value :=
   crepDestConstHolWord_eq_const expression value h
 
+/-! Type-convention fixture for the width-indexed word carrier. HOL `'a word` is
+    the finite boolean function space `bool[dimindex(:'a)]` with `dimindex > 0`
+    (oracle rows `word_carrier_bool`, `dimindex_8`, `dimindex_pos` in
+    `scripts/hol-probes/crep_arith_dest_const_probe.out`), realized in Lean by
+    `Fin width → Bool` with `[NeZero width]`; instantiating the HOL index type at
+    cardinality `width` gives exactly this carrier. -/
+example (width : Nat) [NeZero width] : (List.finRange width).length = width :=
+  List.length_finRange
+
+example : (List.finRange 8).length = 8 := rfl
+
 end Flapjack.Test.CrepeDestConstParity

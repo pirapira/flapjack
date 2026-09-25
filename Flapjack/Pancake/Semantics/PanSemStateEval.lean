@@ -1165,31 +1165,22 @@ theorem panValueFlatLoad_eq_panMemLoadHOL (state : PanSemState (RiscV.Word 64) f
       (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)).1
     structs shape address (by omega)
 
-/-! ## Exact HOL `panSem$eval_def` expression evaluator (flapjack-pxn.18.3.6.9.3)
+/-! ## HOL-shaped `panSem$eval_def` expression adapter (flapjack-pxn.18.3.6.9.3)
 
-Statement-exact port of Cake's expression evaluator `eval_def`
-(`cakeml/pancake/semantics/panSemScript.sml:209-283`).  The state is the
-HOL-shaped source state: `locals`/`globals` are finite maps into the exact
-`v` carrier, `structs` is the HOL `(stcname # struct_info) list`, the memory is
-HOL's total `'a word -> 'a word_lab`, and `memaddrs` is the source word set
-(rendered as a `Prop` predicate, exactly as in the tagged `mem_load_*`
-definitions).  Every clause reuses the HOL-shaped helpers
-(`panMemLoadHOL` (core currently untagged pending the exact MlString-keyed carrier,
-bead flapjack-pxn.18.5.17.1.2.1)/`panMemLoad32HOL`/`panMemLoadByteHOL`/`wordOpHOL`/
-`wordShiftHOL`/`wordCmpHOL`/`isWfShapeHOL`/`panOpHOL`/`holShapeOf`/
-`holValueIsWord`/`panBytesInWord`).
+The clauses below follow Cake's `eval_def`
+(`cakeml/pancake/semantics/panSemScript.sml:209-283`), but the adapter is not
+an exact HOL port and is untagged: its `HolValue` and struct context still use
+Lean `String` where HOL uses `mlstring`. In particular, lawful `String`
+equality proves only the adapter's own field-name comparisons, not the
+corresponding HOL statement. The exact value carrier is being introduced in
+`PanSem/ValueHOL.lean`; an exact source-state/evaluator route remains tracked
+by `flapjack-0lj` and `flapjack-pxn.18.3.5.8`.
 
-HOL's `NStruct` field-name equality `field_names' = field_names` is rendered as
-the propositional list equality `info.fields.map Prod.fst = fields.map Prod.fst`
-(decided by the lawful `String` equality instance), and the field-shape check
-`EVERY (\(s,v). s = shape_of v)` is rendered as `panShapeMatches s (holShapeOf v)`,
-whose truth is exactly `s = shape_of v` by `panShapeMatches_eq_true`; hence
-`[LawfulBEq String]` is required, tying the Boolean `ALOOKUP`/equality uses to
-HOL `=`.
-
-`bytes_in_word` is HOL's global `n2w (dimindex(:'a) DIV 8)`; the `word set`
-domain carries the classical `[DecidablePred]` instance that HOL membership
-has implicitly. -/
+The structured-load helper `panMemLoadHOL` is likewise untagged pending the
+exact MlString-keyed shape/context carrier (`flapjack-pxn.18.5.17.1.3`).
+`bytes_in_word` is modeled by `n2w (dimindex(:'a) DIV 8)`, and the domain
+predicate's `[DecidablePred]` supplies Lean decision evidence for HOL set
+membership; neither removes the identifier-carrier gap. -/
 
 /-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): clause-for-clause the
     same as HOL `shape_of` (`cakeml/pancake/semantics/panSemScript.sml:80`), but

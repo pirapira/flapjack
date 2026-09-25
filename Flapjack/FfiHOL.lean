@@ -163,4 +163,37 @@ def callFFIHOL (state : HolFfiState σ) (name : HolFfiName)
           { name := name, configuration := configuration, bytes := bytes,
             outcome := outcome }
 
+/-- Flapjack-only helper: the terminal-oracle branch of `callFFIHOL`,
+stated as an equation lemma so callers avoid reducing the dependent `match`
+on the oracle result directly. -/
+theorem callFFIHOL_final {σ : Type u} (state : HolFfiState σ) (name : HolFfiName)
+    (configuration bytes : List (BitVec 8)) (outcome : HolFfiOutcome)
+    (hne : name ≠ .extCall (Flapjack.Basis.Pure.MlString.MlString.implode []))
+    (h : state.oracle name state.ffiState configuration bytes = .final outcome) :
+    callFFIHOL state name configuration bytes =
+      .final { name := name, configuration := configuration, bytes := bytes,
+               outcome := outcome } := by
+  unfold callFFIHOL
+  rw [if_neg hne, h]
+
+/-- Flapjack-only helper: the returning-oracle branch of `callFFIHOL`. -/
+theorem callFFIHOL_ret {σ : Type u} (state : HolFfiState σ) (name : HolFfiName)
+    (configuration bytes : List (BitVec 8)) (nextState : σ) (nextBytes : List (BitVec 8))
+    (hne : name ≠ .extCall (Flapjack.Basis.Pure.MlString.MlString.implode []))
+    (h : state.oracle name state.ffiState configuration bytes = .ret nextState nextBytes) :
+    callFFIHOL state name configuration bytes =
+      (if nextBytes.length = bytes.length then
+        .ret
+          { state with
+            ffiState := nextState
+            ioEvents := state.ioEvents ++
+              [{ name := name, configuration := configuration,
+                 bytes := bytes.zip nextBytes }] }
+          nextBytes
+      else
+        .final { name := name, configuration := configuration, bytes := bytes,
+                 outcome := .failed }) := by
+  unfold callFFIHOL
+  rw [if_neg hne, h]
+
 end Flapjack

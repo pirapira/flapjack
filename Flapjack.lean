@@ -89,8 +89,10 @@ import Flapjack.FlatCorrectness
 import Flapjack.Tests
 import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
+import Flapjack.Parser.ByteRanged
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.WordConvs
 import Flapjack.Pancake.PanToCrep
